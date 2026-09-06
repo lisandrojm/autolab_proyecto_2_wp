@@ -634,6 +634,15 @@ const GRUPO_ENCUADRE = 'bg-blue-500/[0.04] dark:bg-blue-400/[0.05]';
 const GRUPO_ENCUADRE_INICIO = `${GRUPO_ENCUADRE} border-l-2 border-l-blue-500/40 dark:border-l-blue-400/40`;
 const GRUPO_ENCUADRE_FIN = `${GRUPO_ENCUADRE} border-r-2 border-r-blue-500/40 dark:border-r-blue-400/40`;
 /** La flecha que va al final de cada cabecera del grupo menos la última. */
+/**
+ * Cuántas columnas hay antes de que empiece la banda, en la pestaña de Alta temprana.
+ *
+ * Son: el check, «Datos ARCA», «Alta / Baja», «Alta ARCA», «Usuario» y «CUIT». Lo usa el colSpan
+ * de la fila que rotula el grupo: si se agrega una columna a la izquierda y esto no se actualiza,
+ * el rótulo se corre y termina titulando columnas que no son.
+ */
+const COLUMNAS_ANTES_DEL_GRUPO = 6;
+
 const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
 const ObraSocialCell: React.FC<{
@@ -2309,8 +2318,31 @@ export const ContractBulkAfipTab: React.FC<{
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
+                {/*
+                  LA FILA QUE NOMBRA AL GRUPO. Seis columnas que son una sola cosa.
+
+                  Empresa Contrato, Convenio, Categoría, Obra Social, Sucursal y Actividad no son seis
+                  datos sueltos: son los que la EMPLEADORA declaró ante ARCA y los que se eligen dentro
+                  de eso. La banda azul ya los pintaba juntos, pero un color no dice de qué son — con
+                  quince columnas al lado, había que deducirlo.
+
+                  `COLUMNAS_ANTES_DEL_GRUPO` es el offset hasta ahí. Va como constante y no como número
+                  suelto porque si mañana se agrega una columna a la izquierda, el rótulo se corre y
+                  queda titulando las columnas equivocadas — un error que se ve pero no se entiende.
+
+                  Las de la derecha no se completan: una fila con menos celdas es válida, y así no hay
+                  un segundo número que mantener sincronizado.
+                */}
+                {hayEncuadre && (
+                  <tr>
+                    <th colSpan={COLUMNAS_ANTES_DEL_GRUPO} className="p-0 bg-gray-50 dark:bg-gray-900" />
+                    <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-center ${GRUPO_ENCUADRE}`}>
+                      Datos que declara la empleadora ante ARCA
+                    </th>
+                  </tr>
+                )}
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="sticky top-0 left-0 z-[15] px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+                  <th className="sticky left-0 z-[15] px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title="Seleccionar todos los del listado" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   {/*
@@ -2324,7 +2356,7 @@ export const ContractBulkAfipTab: React.FC<{
                     *    lleva la única forma de hacer el trámite de esa fila.
                     */}
                   {filterTipo === 'alta_temprana_afip' ? (
-                    <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
+                    <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
                       <span className="inline-flex items-center gap-1.5">
                         Datos ARCA
                         <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
@@ -2333,7 +2365,7 @@ export const ContractBulkAfipTab: React.FC<{
                       </span>
                     </th>
                   ) : (
-                    <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
+                    <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
                   )}
                   {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
                       y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
@@ -2402,22 +2434,29 @@ export const ContractBulkAfipTab: React.FC<{
                       empleadora, así que las dos columnas se leen juntas —sin empresa, esta no se
                       puede resolver—. */}
                   {hayEncuadre && (
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_FIN}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
+                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
                       <button type="button" onClick={() => setOrdenObraSocial((v) => !v)} className={`uppercase tracking-wider font-bold inline-flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-300 ${ordenObraSocial ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                         Obra Social
                         <FontAwesomeIcon icon={faSort} className="h-2.5 w-2.5" />
                       </button>
                     </th>
                   )}
-                  {/* Los dos últimos editables que solo estaban en el modal. Van juntos y en este
-                      orden: la actividad depende del domicilio, no al revés. */}
+                  {/*
+                    SUCURSAL Y ACTIVIDAD, ADENTRO DE LA BANDA. Son datos del alta igual que los otros.
+
+                    Quedaron afuera al agregarlas y eso las hacía leer como algo aparte, cuando salen
+                    del mismo lugar: los domicilios de explotación son los que la EMPLEADORA declaró
+                    ante ARCA, igual que sus convenios y sus obras sociales registradas. La banda es
+                    justamente «todo lo que cuelga de la empleadora», así que el cierre pasa a ser la
+                    Actividad y ya no la Obra Social.
+                  */}
                   {hayEncuadre && (
                     <>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
+                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE}`} title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
                         Sucursal
                         <FlechaEncuadre />
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
+                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_FIN}`} title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
                         Actividad
                       </th>
                     </>
@@ -2547,7 +2586,7 @@ export const ContractBulkAfipTab: React.FC<{
                       </>
                     )}
                     {hayEncuadre && (
-                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE_FIN}`} onClick={(e) => e.stopPropagation()}>
+                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
                         <ObraSocialCell
                           record={r}
                           valores={resolveAfipValues(r, afipCat)}
@@ -2561,10 +2600,10 @@ export const ContractBulkAfipTab: React.FC<{
                     {/* Mismo orden que los encabezados: Sucursal y después Actividad, que depende de ella. */}
                     {hayEncuadre && (
                       <>
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
                           <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
                         </td>
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <td className={`px-4 py-3 ${GRUPO_ENCUADRE_FIN}`} onClick={(e) => e.stopPropagation()}>
                           <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
                         </td>
                       </>

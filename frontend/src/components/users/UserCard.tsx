@@ -226,10 +226,10 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
   if (isSolicitud && user.metadata?.projectIds) {
     user.metadata.projectIds.forEach((pId: any) => {
       const id = typeof pId === "object" ? pId?._id : pId;
-      const project = allProjects.find(p => p._id === id);
+      const project = allProjects.find((p) => p._id === id);
       if (project) {
         solicitudProjectBadges.push({ text: project.name, variant: "cyan" as const });
-        const client = allClients.find(c => c._id === (typeof project.clientId === "object" ? (project.clientId as any)?._id : project.clientId));
+        const client = allClients.find((c) => c._id === (typeof project.clientId === "object" ? (project.clientId as any)?._id : project.clientId));
         if (client) {
           solicitudProjectBadges.push({ text: client.name, variant: "blue" as const });
         }
@@ -266,12 +266,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               if (!activeVac) return null;
               const dateRangeStr = `Vacaciones: del ${formatDateString(activeVac.startDate)} al ${formatDateString(activeVac.endDate)}`;
               return (
-                <button 
-                  type="button"
-                  onClick={(e) => showVacationInfo(user._id, fullName, e)}
-                  className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-all shadow-sm cursor-pointer focus:outline-none"
-                  title={dateRangeStr}
-                >
+                <button type="button" onClick={(e) => showVacationInfo(user._id, fullName, e)} className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-all shadow-sm cursor-pointer focus:outline-none" title={dateRangeStr}>
                   <FontAwesomeIcon icon={faUmbrellaBeach} className="text-[9px] mr-1" />
                   <span>VACACIONES</span>
                   <FontAwesomeIcon icon={faInfoCircle} className="text-[9px] ml-1 opacity-75 hover:opacity-100" />
@@ -279,19 +274,13 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               );
             })()}
             {user.metadata?.solicitaCreacionCuenta && !user.metadata?.cuentaBancariaConfirmada && (
-              <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm"
-                title="Solicitó que le creen una cuenta bancaria"
-              >
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm" title="Solicitó que le creen una cuenta bancaria">
                 <FontAwesomeIcon icon={faBell} className="text-[9px] animate-pulse" />
                 <span>CUENTA BANCARIA</span>
               </span>
             )}
             {user.metadata?.solicitaCambioCuenta && !user.metadata?.cambioCuentaConfirmada && (
-              <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm"
-                title="Solicitó un cambio de datos bancarios (pendiente de aplicar en el banco/FRAME)"
-              >
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm" title="Solicitó un cambio de datos bancarios (pendiente de aplicar en el banco/FRAME)">
                 <FontAwesomeIcon icon={faBell} className="text-[9px] animate-pulse" />
                 <span>CAMBIO BANCARIO</span>
               </span>
@@ -302,7 +291,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
         icon: faUser,
         iconClassName: isSolicitud ? "text-amber-600" : "text-blue-600",
         badges: [
-          ...(isSolicitud ? [{ text: "Solicitud de Alta", variant: "warning" as const }] : []),
+          ...(isSolicitud ? [{ text: "Solicitud de Contratación", variant: "warning" as const }] : []),
           // Alta pedida para una persona que YA es usuario: se avisa en su propia ficha en vez de
           // crear una tarjeta aparte (el detalle, con el proyecto, va en la sección Proyectos).
           ...(solicitudesPendientes.length > 0 ? [{ text: `⚠ ${solicitudesPendientes.length} solicitud${solicitudesPendientes.length > 1 ? "es" : ""} de alta`, variant: "warning" as const }] : []),
@@ -344,7 +333,6 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold cursor-text select-all" title="Haz clic para copiar">
               {user.metadata.documento}
             </div>
-
           </div>
         )}
         {user.metadata?.cuit && (
@@ -372,18 +360,15 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               Nombre
             </label>
             <div className="text-sm">
-              <NombreArca
-                estado={estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })}
-                fecha={user.metadata?.nombreValidadoArcaAt}
-                conTexto
-              />
+              <NombreArca estado={estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })} fecha={user.metadata?.nombreValidadoArcaAt} conTexto />
             </div>
           </div>
         )}
         {(() => {
-          const totalDaysCount = (user.metadata?.projects as any[])?.reduce((acc: number, p: any) => {
-            return acc + (p.contracts?.reduce((pAcc: number, c: any) => pAcc + (c.cantidad_jornadas_laborales || 0), 0) || 0);
-          }, 0) || 0;
+          const totalDaysCount =
+            (user.metadata?.projects as any[])?.reduce((acc: number, p: any) => {
+              return acc + (p.contracts?.reduce((pAcc: number, c: any) => pAcc + (c.cantidad_jornadas_laborales || 0), 0) || 0);
+            }, 0) || 0;
 
           if (totalDaysCount === 0 && !user.metadata?.documento) return null;
 
@@ -537,7 +522,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                   Proyectos
                 </label>
               </div>
-              
+
               <div className="space-y-1.5">
                 {Array.from(groups.values()).map((group, idx) => (
                   <div key={idx} className="grid grid-cols-[120px_1fr] gap-4 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 items-start">
@@ -604,9 +589,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               <FontAwesomeIcon icon={faUmbrellaBeach} className="text-3xl animate-pulse text-amber-500" />
             </div>
             <div className="space-y-2">
-              <p className="text-base font-semibold text-slate-850 dark:text-slate-200">
-                Período de Vacaciones Activo
-              </p>
+              <p className="text-base font-semibold text-slate-850 dark:text-slate-200">Período de Vacaciones Activo</p>
               {(() => {
                 const activeVac = getUserActiveVacation(selectedVacationUser.id);
                 if (!activeVac) return <p className="text-sm text-slate-500">No se encontraron vacaciones activas para este colaborador.</p>;

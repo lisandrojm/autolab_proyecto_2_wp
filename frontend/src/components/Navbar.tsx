@@ -107,23 +107,41 @@ const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias',
 const EMPRESAS_PATH = '/empresas';
 
 /**
- * Subgrupo "Usuarios" (dentro de Configuración).
+ * USUARIOS, ÁREAS, TURNOS Y ROLES EMPRESA VIVEN EN ADMIN GENERAL. Roles se queda en Configuración.
  *
- * Era una sección de primer nivel, "Admin USUARIOS", y no se sostenía: no es un módulo de trabajo
- * como Admin GENERAL —donde se opera todos los días con contratos, pedidos y vacaciones—, son los
- * catálogos con los que se clasifica a una persona. Es exactamente el mismo tipo de cosa que ARCA:
- * se configura y casi no se toca.
+ * Estaban los cinco juntos en un subgrupo «Usuarios» dentro de Configuración, con el argumento de que
+ * son catálogos con los que se clasifica a una persona. La práctica dijo otra cosa: a cuatro de los
+ * cinco se entra todos los días —se da de alta gente, se le asigna un área y un turno, se le pone el
+ * rol con el que figura en la empresa— y eso es trabajo, no configuración. Quedaban dos clicks abajo
+ * de un grupo plegado, al lado de nomencladores que se tocan una vez por año.
  *
- * `/users` va PRIMERO porque es la entidad; Áreas, Turnos, Roles y Roles Empresa son los atributos con los
- * que se la describe. Mismo criterio que el membrete en "Plantillas".
+ * El que sí es configuración es ROLES: define qué puede ver y hacer cada perfil dentro de la app. Se
+ * define una vez, se revisa cuando entra alguien nuevo, y equivocarlo abre o cierra pantallas. Ése se
+ * queda donde se toca poco y con cuidado.
  *
- * Turnos rompe el orden alfabético a propósito y va pegado a Áreas: son el mismo tipo de dato —el par
- * área/turno con el que se ubica a una persona en un proyecto y con el que se carga cada novedad—, y
- * separarlos por Cargos y Niveles obligaba a buscar en dos lugares lo que siempre se toca junto.
- * Estaba suelto en Configuración, entre catálogos que no tienen nada que ver.
+ * La división que quedó es la misma de siempre, aplicada bien: en Admin GENERAL lo que se opera, en
+ * Configuración lo que se define.
  */
 const USUARIOS_PATH = '/users';
-const USUARIOS_PATHS = [USUARIOS_PATH, '/areas', '/shifts', '/roles', '/roles-empresa'];
+/**
+ * Subgrupo «Usuarios» de Admin GENERAL. `/roles` NO está: ése tiene el suyo en Configuración.
+ *
+ * `/users` va PRIMERO porque es la entidad; Áreas, Turnos y Roles Empresa son los atributos con los
+ * que se la describe. Turnos rompe el alfabético a propósito y va pegado a Áreas: son el mismo tipo
+ * de dato —el par área/turno con el que se ubica a una persona en un proyecto— y separarlos obliga a
+ * buscar en dos lugares lo que siempre se toca junto.
+ */
+const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empresa'];
+/**
+ * Subgrupo «Usuarios» de Configuración, con Roles adentro.
+ *
+ * Es un grupo de un solo hijo, y sí: por sí mismo un plegable con un ítem adentro es un click de más.
+ * Se gana el lugar por SIMETRÍA — arriba hay un «Usuarios» y acá otro, así que quien busca algo de
+ * personas encuentra el mismo rótulo en las dos secciones y lo que cambia es qué hay adentro: lo que
+ * se opera arriba, lo que se define abajo. Sin el grupo, «Roles» quedaba suelto entre nomencladores
+ * y no se leía como parte de la misma familia.
+ */
+const ROLES_PATHS = ['/roles'];
 
 /**
  * Subgrupo "Documentos" (dentro de Configuración): la integración con Dropbox, entera.
@@ -148,8 +166,14 @@ const DOCUMENTOS_PATHS = ["/escaneo-dropbox", "/dropbox-sign"];
 const CONFIG_GROUPS = [
   { key: 'plantillas', storageKey: 'configPlantillasOpen', paths: PLANTILLAS_PATHS },
   { key: 'arca', storageKey: 'configArcaOpen', paths: ARCA_PATHS },
-  { key: 'usuarios', storageKey: 'configUsuariosOpen', paths: USUARIOS_PATHS },
   { key: 'documentos', storageKey: 'configDocumentosOpen', paths: DOCUMENTOS_PATHS },
+  /*
+    Los dos «Usuarios». El primero NO está en Configuración sino en Admin GENERAL — esta lista dejó de
+    ser solo de esa sección y pasó a ser el registro de todos los grupos plegables del menú, que es lo
+    que le da a cada uno su estado abierto/cerrado y su persistencia.
+  */
+  { key: 'usuariosGeneral', storageKey: 'generalUsuariosOpen', paths: USUARIOS_PATHS_GENERAL },
+  { key: 'usuariosConfig', storageKey: 'configUsuariosOpen', paths: ROLES_PATHS },
   /*
     ANIDADO dentro de «ARCA». Es el único grupo de dos niveles del menú, y se gana el lugar: son dos
     conexiones al mismo organismo que hacen cosas distintas, y sueltas había que ponerles el prefijo
@@ -446,11 +470,28 @@ export const MobileNavbar: React.FC = () => {
     // Orden alfabético (respeta español: ignora acentos y mayúsculas)
     const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' });
 
-    // Partición de items: Admin General y Configuración. Lo que era "Admin Usuarios" pasó a ser un
-    // subgrupo de Configuración (ver `usuariosGroup`), así arriba queda solo el módulo de trabajo.
-    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
+    // Partición de items: Admin General y Configuración. Usuarios, Áreas, Turnos y Roles Empresa
+    // están arriba porque se operan; Roles queda abajo porque se define (ver USUARIOS_PATHS_GENERAL).
+    /*
+      Los cuatro que se mudaron van en las DOS ramas, y eso no es una repetición al descuido.
 
-    // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA, Usuarios, Documentos) NO van acá: se sacan
+      En el tenant superadmin, Admin GENERAL era solo «Tenants» y Usuarios, Áreas y Turnos llegaban a
+      la pantalla por el subgrupo de Configuración. Al disolverlo se quedaban sin ningún lugar: no
+      están en `configPaths` y ya no hay grupo que los recoja, así que habrían desaparecido del menú
+      sin que nada avisara. Se suman acá para que la mudanza no le saque pantallas a nadie.
+    */
+    // Subgrupo «Usuarios» de Admin GENERAL: la entidad primero y sus catálogos detrás (ver USUARIOS_PATHS_GENERAL).
+    const usuariosGeneralChildren = USUARIOS_PATHS_GENERAL.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const usuariosGeneralGroup = { path: '#usuarios-general', groupKey: 'usuariosGeneral', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosGeneralChildren };
+
+    // Los sueltos de la sección. El grupo entra aparte y ordena por su propio rótulo, «Usuarios».
+    const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'];
+    const generalAdminItems = [
+      ...adminItems.filter((item) => generalSueltos.includes(item.path)),
+      ...(usuariosGeneralChildren.length > 0 ? [usuariosGeneralGroup] : []),
+    ].sort(byLabel) as any[];
+
+    // Ojo: los paths de los grupos (Plantillas, ARCA, Documentos, Usuarios) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
     const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/sindicatos', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
@@ -504,9 +545,9 @@ export const MobileNavbar: React.FC = () => {
     const documentosChildren = DOCUMENTOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
     const documentosGroup = { path: '#documentos', groupKey: 'documentos', icon: faDropbox, label: 'Documentos', scope: 'global' as const, children: documentosChildren };
 
-    // Subgrupo "Usuarios": la entidad primero y sus catálogos detrás, en el orden de USUARIOS_PATHS.
-    const usuariosChildren = USUARIOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
-    const usuariosGroup = { path: '#usuarios', groupKey: 'usuarios', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosChildren };
+    // Subgrupo «Usuarios» de Configuración: solo Roles (ver ROLES_PATHS para por qué el grupo existe).
+    const usuariosConfigChildren = ROLES_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const usuariosConfigGroup = { path: '#usuarios-config', groupKey: 'usuariosConfig', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosConfigChildren };
 
     /**
      * En Configuración queda solo el LISTADO de empresas.
@@ -522,8 +563,8 @@ export const MobileNavbar: React.FC = () => {
       ...(hasPermission('config_profile:view') ? [profileItem] : []),
       ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
       ...(arcaChildren.length > 0 ? [arcaGroup] : []),
-      ...(usuariosChildren.length > 0 ? [usuariosGroup] : []),
       ...(documentosChildren.length > 0 ? [documentosGroup] : []),
+      ...(usuariosConfigChildren.length > 0 ? [usuariosConfigGroup] : []),
       ...(empresasItem ? [empresasItem] : []),
     ].sort(byLabel) as any[];
     // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).

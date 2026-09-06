@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faUmbrellaBeach, faFileAlt, faReceipt, faUsers, faChartBar, faBell, faSignOutAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -71,15 +71,6 @@ export default function Home({ onNavigate }: HomeProps) {
     badgeText: "text-white",
   };
 
-  const legajosAction = {
-    icon: faFileAlt,
-    title: "Legajos",
-    description: "Consultá tus documentos",
-    view: "documents" as ViewType,
-    roles: ["coordinator", "collaborator"],
-    disabled: true,
-  };
-
   const userCreateAction = {
     icon: faUserPlus,
     title: "Usuarios",
@@ -87,33 +78,6 @@ export default function Home({ onNavigate }: HomeProps) {
     view: "user_history" as ViewType,
     roles: ["mobile-coordinador"],
     disabled: false,
-  };
-
-  const recibosAction = {
-    icon: faReceipt,
-    title: "Recibos",
-    description: "Accedé a tus nóminas",
-    view: "documents" as ViewType,
-    roles: ["coordinator", "collaborator"],
-    disabled: true,
-  };
-
-  const teamAction = {
-    icon: faUsers,
-    title: "Gestión de Equipo",
-    description: "Administra tu equipo",
-    view: "home" as ViewType,
-    roles: ["coordinator"],
-    disabled: true,
-  };
-
-  const reportsAction = {
-    icon: faChartBar,
-    title: "Reportes",
-    description: "Ver métricas y estadísticas",
-    view: "home" as ViewType,
-    roles: ["coordinator"],
-    disabled: true,
   };
 
   // Construct quickActions based on role and desired order
@@ -150,13 +114,18 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push(userCreateAction);
   }
 
-  quickActions.push(legajosAction);
-  quickActions.push(recibosAction);
+  /*
+    LEGAJOS, RECIBOS, GESTIÓN DE EQUIPO Y REPORTES NO SE MUESTRAN.
 
-  if (isMobileCoordinator) {
-    quickActions.push(teamAction);
-    quickActions.push(reportsAction);
-  }
+    Estaban en la grilla en gris, con `disabled: true`, ocupando cuatro de las ocho tarjetas. Un botón
+    apagado promete algo que existe y todavía no está habilitado —«será que me falta un permiso»,
+    «será que hay que pedirlo»— y estas cuatro pantallas no existen: no hay nada que habilitar ni a
+    quién pedírselo. Mostrarlas era hacer que la mitad de la pantalla de inicio no sirva para nada.
+
+    Se borraron también sus definiciones y sus íconos, en vez de dejarlas sin usar: cuatro objetos que
+    nadie lee envejecen apuntando a vistas que quizá nunca existan, y ensucian el chequeo de tipos. El
+    historial las conserva; volver a mostrarlas es escribirlas con lo que la pantalla sea ese día.
+  */
 
   const handleLogout = () => {
     logout();

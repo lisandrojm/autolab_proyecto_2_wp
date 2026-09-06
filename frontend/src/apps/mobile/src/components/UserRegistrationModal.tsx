@@ -3,7 +3,7 @@ import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
-import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
+import { DiasDeTrabajo, faltaDefinirDias } from "../../../../components/contratos/DiasDeTrabajo";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -156,6 +156,20 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       sweetAlert.warning("Campos incompletos", "Por favor completa los campos obligatorios.");
       return;
     }
+    /*
+      LOS DÍAS QUE TRABAJA SON OBLIGATORIOS TAMBIÉN ACÁ.
+
+      Una solicitud sin los días se convierte en un contrato sin los días: la carga la sigue alguien
+      del otro lado, que no sabe cuáles eran y termina preguntando por mensaje. Es más barato pedirlo
+      donde está la persona que lo sabe.
+
+      Misma regla que en «Agregar miembro» y «Configurar miembro» — se importa, no se reescribe.
+    */
+    const faltaDias = faltaDefinirDias(Number(formData.diasPorSemana) || 0, formData.diasRotativos, formData.diasSemana);
+    if (faltaDias) {
+      sweetAlert.warning("Faltan los días que trabaja", `${faltaDias.charAt(0).toUpperCase()}${faltaDias.slice(1)}.`);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -229,12 +243,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Solicitud de Alta de Usuario"
+      title="Solicitud de Contratación de Usuario"
       size="lg"
       customHeader={
         <div className="flex flex-col flex-shrink-0 sticky top-0 z-50 shadow-sm border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="p-4 flex justify-between items-center ">
-            <h3 className="font-bold text-lg text-slate-900 dark:text-white">{editingUser ? "Editar Solicitud" : "Solicitud de Alta"}</h3>
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">{editingUser ? "Editar Solicitud" : "Solicitud de Contratación"}</h3>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
               <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
             </button>
@@ -479,14 +493,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             {/* El rol sale del que ya tiene la persona: si tiene uno solo se completa y se bloquea
                 (no hay nada que elegir), y solo se habilita cuando tiene dos o más. Si el nombre se
                 escribió a mano —persona que todavía no es usuario— se ofrecen todos. */}
-            <select
-              name="roleFrameId"
-              value={formData.roleFrameId}
-              onChange={handleChange}
-              disabled={rolesDelUsuario.length === 1}
-              title={rolesDelUsuario.length === 1 ? "La persona tiene un solo rol frame asignado" : undefined}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white disabled:opacity-70 disabled:cursor-not-allowed"
-            >
+            <select name="roleFrameId" value={formData.roleFrameId} onChange={handleChange} disabled={rolesDelUsuario.length === 1} title={rolesDelUsuario.length === 1 ? "La persona tiene un solo rol frame asignado" : undefined} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white disabled:opacity-70 disabled:cursor-not-allowed">
               <option value="">Selecciona rol</option>
               {roleFrames
                 .filter((rf) => rolesDelUsuario.length === 0 || rolesDelUsuario.includes(rf._id))
@@ -548,19 +555,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
           {/* Y los días de la SEMANA, con el mismo componente que el escritorio. */}
           <div className="md:col-span-3">
-            <DiasDeTrabajo
-              variante="mobile"
-              jornadas={Number(formData.diasPorSemana) || 0}
-              onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))}
-              rotativos={formData.diasRotativos}
-              onRotativos={(v) => setFormData((p) => ({ ...p, diasRotativos: v }))}
-              dias={formData.diasSemana}
-              onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
-              desde={formData.startDate}
-              hasta={formData.dueDate}
-              jornadasTotales={Number(formData.workdaysCount) || 0}
-              onJornadasTotales={(n) => setFormData((p) => ({ ...p, workdaysCount: String(n) }))}
-            />
+            <DiasDeTrabajo variante="mobile" jornadas={Number(formData.diasPorSemana) || 0} onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))} rotativos={formData.diasRotativos} onRotativos={(v) => setFormData((p) => ({ ...p, diasRotativos: v }))} dias={formData.diasSemana} onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))} desde={formData.startDate} hasta={formData.dueDate} jornadasTotales={Number(formData.workdaysCount) || 0} onJornadasTotales={(n) => setFormData((p) => ({ ...p, workdaysCount: String(n) }))} />
           </div>
           <div className="space-y-1 md:col-span-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">

@@ -1,24 +1,24 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { usersAPI, User } from '../../api/users';
-import { rolesAPI, Role } from '../../api/roles';
-import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
-import { infoAPI, InfoItem } from '../../api/info';
-import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
-import { InfoModal } from '../ui/InfoModal';
-import { CuitInput, isValidCuit } from '../ui/CuitInput';
-import { Modal } from '../ui/Modal';
-import { BloqueEstado } from '../ui/BloqueEstado';
-import { sweetAlert } from '../../utils/sweetAlert';
-import { afipAPI } from '../../api/afip';
-import { cuitEsValido } from '../../utils/cuit';
-import { generarPassword } from '../../utils/password';
-import { mensajeErrorArca } from '../../utils/errorArca';
-import { fuzzyMatch } from '../../utils/searchHelpers';
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from '../../utils/nacionalidadDocumento';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from '@fortawesome/free-solid-svg-icons';
+import React, { useEffect, useRef, useState } from "react";
+import { usersAPI, User } from "../../api/users";
+import { rolesAPI, Role } from "../../api/roles";
+import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
+import { infoAPI, InfoItem } from "../../api/info";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
+import { InfoModal } from "../ui/InfoModal";
+import { CuitInput, isValidCuit } from "../ui/CuitInput";
+import { Modal } from "../ui/Modal";
+import { BloqueEstado } from "../ui/BloqueEstado";
+import { sweetAlert } from "../../utils/sweetAlert";
+import { afipAPI } from "../../api/afip";
+import { cuitEsValido } from "../../utils/cuit";
+import { generarPassword } from "../../utils/password";
+import { mensajeErrorArca } from "../../utils/errorArca";
+import { fuzzyMatch } from "../../utils/searchHelpers";
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from "../../utils/nacionalidadDocumento";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from "@fortawesome/free-solid-svg-icons";
 
-type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'sistema';
+type ModalTab = "general" | "domicilio" | "bancarios" | "sistema";
 
 /**
  * El orden de las pestañas, en un solo lugar.
@@ -27,9 +27,9 @@ type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'sistema';
  * (`general ? domicilio : bancarios`), que con una pestaña más habría que anidar otra vez y ya no
  * diría cuál es el orden de un vistazo.
  */
-const ORDEN_TABS: ModalTab[] = ['general', 'domicilio', 'bancarios', 'sistema'];
+const ORDEN_TABS: ModalTab[] = ["general", "domicilio", "bancarios", "sistema"];
 
-const sindicatosApi = createSimpleCatalogApi('/sindicatos');
+const sindicatosApi = createSimpleCatalogApi("/sindicatos");
 
 /**
  * El [+] que abre el selector de un campo de elección múltiple.
@@ -64,7 +64,7 @@ const BotonAgregar: React.FC<{ onClick: () => void; title: string }> = ({ onClic
  * sigla sola no alcanza para elegir bien. Si el registro no tiene sigla, queda solo el nombre.
  */
 const nombreSindicato = (s: SimpleCatalogItem): string => {
-  const sigla = typeof s.sigla === 'string' ? s.sigla.trim() : '';
+  const sigla = typeof s.sigla === "string" ? s.sigla.trim() : "";
   return sigla ? `${sigla} — ${s.name}` : s.name;
 };
 
@@ -115,13 +115,13 @@ interface UserFormData {
 const PASSWORD_MIN = 6;
 
 const emptyForm = (): UserFormData => ({
-  email: '',
-  password: '',
-  firstName: '',
-  lastName: '',
+  email: "",
+  password: "",
+  firstName: "",
+  lastName: "",
   isActive: true,
   roles: [],
-  hireDate: new Date().toISOString().split('T')[0],
+  hireDate: new Date().toISOString().split("T")[0],
   extraVacationDays: 0,
   clientIds: [],
   nacionalizado: false,
@@ -136,7 +136,7 @@ export interface UserFormModalProps {
   /** Usuario a editar / cambiar contraseña; null para alta */
   user: User | null;
   /** "edit" cubre alta y edición (distinguidas por `user`); "password" para cambio de contraseña */
-  mode?: 'edit' | 'password';
+  mode?: "edit" | "password";
   /** Se llama tras guardar con éxito (refrescar lista, cerrar, etc.) */
   onSaved?: () => void;
   /** z-index opcional para superponer sobre el navbar (host global) */
@@ -153,15 +153,15 @@ export interface UserFormModalProps {
 const proyectosQueCoordina = (u: User | null): string[] => {
   const nombres = new Set<string>();
   for (const up of ((u as any)?.metadata?.projects || []) as any[]) {
-    const proj = typeof up?.projectId === 'object' ? up.projectId : null;
+    const proj = typeof up?.projectId === "object" ? up.projectId : null;
     if (!proj?.coordinatorAssignments) continue;
-    const suyo = proj.coordinatorAssignments.some((asm: any) => String(typeof asm.userId === 'object' ? asm.userId?._id : asm.userId) === String(u?._id));
-    if (suyo) nombres.add(proj.name || up.nombre_proyecto || 'Proyecto sin nombre');
+    const suyo = proj.coordinatorAssignments.some((asm: any) => String(typeof asm.userId === "object" ? asm.userId?._id : asm.userId) === String(u?._id));
+    if (suyo) nombres.add(proj.name || up.nombre_proyecto || "Proyecto sin nombre");
   }
   return [...nombres];
 };
 
-export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, mode = 'edit', onSaved, zIndex }) => {
+export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, mode = "edit", onSaved, zIndex }) => {
   /*
     Si coordina turnos, el rol Mobile-Coordinador queda fijo.
 
@@ -188,9 +188,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [inactivoEnArca, setInactivoEnArca] = useState(false);
 
   const traerDeArca = async () => {
-    const cuit = String(formData.cuit || '').replace(/\D/g, '');
+    const cuit = String(formData.cuit || "").replace(/\D/g, "");
     if (!cuitEsValido(cuit)) {
-      sweetAlert.error('CUIT inválido', 'Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.');
+      sweetAlert.error("CUIT inválido", "Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.");
       return;
     }
     setConsultandoPadron(true);
@@ -204,7 +204,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         que hace falta para ir a buscarlo en vez de insistir.
       */
       if (r.yaExiste && !user) {
-        sweetAlert.error('CUIT ya registrado', `Ese CUIT ya figura a nombre de ${r.yaExiste.nombre}${r.yaExiste.email ? ` (${r.yaExiste.email})` : ''}.\n\nBuscá esa ficha en el listado, o revisá el número si esperabas otra persona.`);
+        sweetAlert.error("CUIT ya registrado", `Ese CUIT ya figura a nombre de ${r.yaExiste.nombre}${r.yaExiste.email ? ` (${r.yaExiste.email})` : ""}.\n\nBuscá esa ficha en el listado, o revisá el número si esperabas otra persona.`);
         return;
       }
       const tipoDni = tiposDocumentoDisponibles.find((it: any) => /dni/i.test(it.name));
@@ -219,21 +219,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         Se completa SOLO el documento, y no porque lo haya dicho ARCA: son los ocho dígitos del medio
         del propio CUIT. El nombre y el apellido los carga quien está dando el alta.
       */
-      if (r.estado === 'inactivo') {
+      if (r.estado === "inactivo") {
         setInactivoEnArca(true);
         setFormData((prev) => ({
           ...prev,
           documento: r.documento || prev.documento,
           tipoDocumentoId: tipoDni ? tipoDni.data.id : prev.tipoDocumentoId,
         }));
-        sweetAlert.warningAlert(
-          'El CUIT existe, pero figura INACTIVO en ARCA',
-          'El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo, y el Padrón —que es lo que consulta este botón— no devuelve el nombre de un CUIT inactivo.\n\nEl alta se puede hacer igual: cargá nombre y apellido a mano por ahora. La ficha queda SIN el sello de validada, y el nombre se corrige solo la primera vez que esta persona pase por «Validar obras sociales»: esa pantalla de ARCA sí lo muestra, aunque el CUIT esté de baja.',
-        );
+        sweetAlert.warningAlert("El CUIT existe, pero figura INACTIVO en ARCA", "El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo, y el Padrón —que es lo que consulta este botón— no devuelve el nombre de un CUIT inactivo.\n\nEl alta se puede hacer igual: cargá nombre y apellido a mano por ahora. La ficha queda SIN el sello de validada, y el nombre se corrige solo la primera vez que esta persona pase por «Validar obras sociales»: esa pantalla de ARCA sí lo muestra, aunque el CUIT esté de baja.");
         return;
       }
       if (!r.nombre || !r.apellido) {
-        sweetAlert.warningAlert('Es una persona jurídica', `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
+        sweetAlert.warningAlert("Es una persona jurídica", `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
       setFormData((prev) => ({
@@ -244,7 +241,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         tipoDocumentoId: tipoDni ? tipoDni.data.id : prev.tipoDocumentoId,
       }));
       setValidadoEnArca(true);
-      sweetAlert.success('Datos traídos de ARCA', `${r.nombre} ${r.apellido}${r.documento ? ` · DNI ${r.documento}` : ''}`);
+      sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · DNI ${r.documento}` : ""}`);
     } catch (e: any) {
       const m = mensajeErrorArca(e?.response?.status, e?.response?.data);
       sweetAlert.error(m.titulo, m.detalle);
@@ -274,9 +271,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   /** Un CBU argentino tiene exactamente 22 dígitos. */
   const CBU_DIGITOS = 22;
   /** Se queda con los dígitos: el CBU no lleva puntos, guiones ni espacios. */
-  const soloDigitos = (v: string) => String(v || '').replace(/[^0-9]/g, '');
+  const soloDigitos = (v: string) => String(v || "").replace(/[^0-9]/g, "");
 
-  const [modalActiveTab, setModalActiveTab] = useState<ModalTab>('general');
+  const [modalActiveTab, setModalActiveTab] = useState<ModalTab>("general");
   /** Solo para extranjeros: si declaró tener CUIL. Los argentinos siempre lo llevan. */
   const [tieneCuil, setTieneCuil] = useState(true);
   /** Explicación del circuito "Sin CUIT" de Contratos (modal del ⓘ al lado del CUIT/CUIL). */
@@ -285,9 +282,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [showPassword, setShowPassword] = useState(false);
 
   // Password mode
-  const [newPassword, setNewPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [repetirPassword, setRepetirPassword] = useState('');
+  const [repetirPassword, setRepetirPassword] = useState("");
   // Validación en vivo: el botón Actualizar queda deshabilitado hasta que las dos condiciones se
   // cumplan, así el error se ve mientras se escribe y no después de mandar.
   const largoOk = newPassword.length >= PASSWORD_MIN;
@@ -295,11 +292,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const passwordValida = largoOk && passwordsCoinciden;
 
   // Rol/es Empresa search
-  const [roleFrameSearch, setRoleFrameSearch] = useState('');
+  const [roleFrameSearch, setRoleFrameSearch] = useState("");
   const [rolesEmpresaInfoOpen, setRolesEmpresaInfoOpen] = useState(false);
   const [rolesEmpresaOpen, setRolesEmpresaOpen] = useState(false);
   const [sindicatoOpen, setSindicatoOpen] = useState(false);
-  const [sindicatoSearch, setSindicatoSearch] = useState('');
+  const [sindicatoSearch, setSindicatoSearch] = useState("");
 
   // Para inicializar el form una sola vez por apertura
   const initializedRef = useRef(false);
@@ -316,7 +313,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           dist commiteado—. Sin el catch, un 404 suyo dejaría el formulario entero sin nacionalidades,
           sin bancos y sin tipos de documento. Que falte la lista de gremios vacía un solo select.
         */
-        const [rolesRes, rf, g, dt, c, n, el, b, sind] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType('genero'), infoAPI.listByType('tipo-documento'), infoAPI.listByType('pais'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('banco'), sindicatosApi.list().catch(() => [] as SimpleCatalogItem[])]);
+        const [rolesRes, rf, g, dt, c, n, el, b, sind] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType("genero"), infoAPI.listByType("tipo-documento"), infoAPI.listByType("pais"), infoAPI.listByType("nacionalidad"), infoAPI.listByType("nivel-estudio"), infoAPI.listByType("banco"), sindicatosApi.list().catch(() => [] as SimpleCatalogItem[])]);
         if (cancelled) return;
         setRoles(rolesRes.roles);
         const rfArray = Array.isArray(rf) ? rf : rf && Array.isArray((rf as any).data) ? (rf as any).data : [];
@@ -330,7 +327,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         setBanks(b);
         setCatalogsLoaded(true);
       } catch (error) {
-        console.error('Error cargando catálogos del formulario de usuario:', error);
+        console.error("Error cargando catálogos del formulario de usuario:", error);
       }
     })();
     return () => {
@@ -342,7 +339,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   useEffect(() => {
     if (!isOpen) {
       initializedRef.current = false;
-      setRoleFrameSearch('');
+      setRoleFrameSearch("");
       /*
         El sello de ARCA también se limpia al cerrar.
 
@@ -358,10 +355,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     }
     if (initializedRef.current) return;
 
-    if (mode === 'password') {
+    if (mode === "password") {
       initializedRef.current = true;
-      setNewPassword('');
-      setRepetirPassword('');
+      setNewPassword("");
+      setRepetirPassword("");
       setShowNewPassword(false);
       return;
     }
@@ -369,7 +366,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     // edit/create necesitan los catálogos (allRoleFrames para resolver rolesFrameIds, roles para defaults)
     if (!catalogsLoaded) return;
     initializedRef.current = true;
-    setModalActiveTab('general');
+    setModalActiveTab("general");
     setShowPassword(false);
     // El sello ya existente manda: si la ficha dice validado, el formulario abre en ese estado, con los
     // campos de ARCA bloqueados igual que en el alta. Sin esto, editar a alguien confirmado permitía
@@ -379,17 +376,17 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     if (user) {
       // ── Edición ──
       const isSolicitud = user.metadata?.isSolicitud;
-      let hireDate = user.hireDate ? new Date(user.hireDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      let hireDate = user.hireDate ? new Date(user.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
 
       if (isSolicitud && user.metadata?.fullName && user.metadata.startDate) {
         hireDate = user.metadata.startDate;
       }
 
       setFormData({
-        email: user.email.startsWith('solicitud_') ? '' : user.email,
-        password: '',
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
+        email: user.email.startsWith("solicitud_") ? "" : user.email,
+        password: "",
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
         isActive: user.metadata?.activo ?? true,
         roles: user.roles.map((r) => r._id),
         hireDate,
@@ -400,25 +397,25 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         tipoDocumentoId: user.metadata?.tipoDocumentoId,
         documento: user.metadata?.documento,
         cuit: user.metadata?.cuit,
-        estadoCivil: user.metadata?.estadoCivil || '',
+        estadoCivil: user.metadata?.estadoCivil || "",
         calle: user.metadata?.calle,
         altura: user.metadata?.altura,
-        pisoDepto: user.metadata?.pisoDepto || '',
-        codigoPostal: user.metadata?.codigoPostal || '',
-        localidad: user.metadata?.localidad || '',
+        pisoDepto: user.metadata?.pisoDepto || "",
+        codigoPostal: user.metadata?.codigoPostal || "",
+        localidad: user.metadata?.localidad || "",
         paisId: user.metadata?.paisId,
         nacionalidadId: user.metadata?.nacionalidadId || user.metadata?.paisId,
         nacionalizado: user.metadata?.nacionalizado || false,
         paisNacimientoId: user.metadata?.paisNacimientoId,
         nivelEstudioId: user.metadata?.nivelEstudioId,
-        fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split('T')[0] : '',
+        fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split("T")[0] : "",
         telefono: user.metadata?.telefono,
         bancoId: user.metadata?.bancoId,
-        cbu: user.metadata?.cbu || '',
-        tipoDeCuentaBancaria: user.metadata?.tipoDeCuentaBancaria || '',
-        nroDeCuentaBancaria: user.metadata?.nroDeCuentaBancaria || '',
-        aliasBancario: user.metadata?.aliasBancario || '',
-        numeroLegajoTango: user.metadata?.numeroLegajoTango || '',
+        cbu: user.metadata?.cbu || "",
+        tipoDeCuentaBancaria: user.metadata?.tipoDeCuentaBancaria || "",
+        nroDeCuentaBancaria: user.metadata?.nroDeCuentaBancaria || "",
+        aliasBancario: user.metadata?.aliasBancario || "",
+        numeroLegajoTango: user.metadata?.numeroLegajoTango || "",
         afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
         sindicatoIds: user.metadata?.sindicatoIds || [],
         rolesFrameIds: (() => {
@@ -428,8 +425,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           const resolvedIds = new Set<string>();
           rfArray.forEach((rf: any) => {
             if (!rf) return;
-            const id = typeof rf === 'string' ? rf : rf._id;
-            const name = typeof rf === 'object' ? rf.name : null;
+            const id = typeof rf === "string" ? rf : rf._id;
+            const name = typeof rf === "object" ? rf.name : null;
 
             let match = allRoleFrames.find((item) => item._id === id);
             if (!match && id) {
@@ -440,7 +437,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             }
             if (match) {
               resolvedIds.add(match._id);
-            } else if (typeof id === 'string' && id.length === 24) {
+            } else if (typeof id === "string" && id.length === 24) {
               resolvedIds.add(id);
             }
           });
@@ -453,7 +450,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     } else {
       // ── Alta ──
       const defaultRole = roles.find((role) => role.isDefault);
-      const mobileCollabRole = roles.find((role) => role.name.toLowerCase() === 'mobile-colaborador');
+      const mobileCollabRole = roles.find((role) => role.name.toLowerCase() === "mobile-colaborador");
       const defaultRolesSet = new Set<string>();
       if (defaultRole) defaultRolesSet.add(defaultRole._id);
       if (mobileCollabRole) defaultRolesSet.add(mobileCollabRole._id);
@@ -489,21 +486,21 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       una transferencia falle contra un número que nunca fue un CBU.
     */
     if (cbuIncompleto) {
-      sweetAlert.error('CBU incompleto', `Un CBU tiene ${CBU_DIGITOS} dígitos y cargaste ${(formData.cbu || '').length}. Completalo o dejalo vacío.`);
-      setModalActiveTab('bancarios');
+      sweetAlert.error("CBU incompleto", `Un CBU tiene ${CBU_DIGITOS} dígitos y cargaste ${(formData.cbu || "").length}. Completalo o dejalo vacío.`);
+      setModalActiveTab("bancarios");
       return;
     }
     if (cuilVisible && formData.cuit && !isValidCuit(formData.cuit)) {
-      sweetAlert.error('CUIT/CUIL inválido', 'El CUIT/CUIL no es válido. Revisá los 11 dígitos.');
-      setModalActiveTab('general');
+      sweetAlert.error("CUIT/CUIL inválido", "El CUIT/CUIL no es válido. Revisá los 11 dígitos.");
+      setModalActiveTab("general");
       return;
     }
     // Se exige cuando la persona DICE TENERLO, no según la nacionalidad: el switch prendido es la
     // declaración de que tiene CUIL, y entonces hay que cargarlo. Si no lo tiene, se destilda y el
     // alta sigue por el circuito "Sin CUIT" — lo que no sirve es un CUIL a medias.
     if (cuilVisible && !formData.cuit) {
-      sweetAlert.error('Falta el CUIT/CUIL', cuilObligatorio ? 'Para una persona argentina nativa el CUIT/CUIL es obligatorio.' : 'Está tildado "Tiene CUIT / CUIL argentino": cargalo, o destildá el switch para seguir sin CUIT.');
-      setModalActiveTab('general');
+      sweetAlert.error("Falta el CUIT/CUIL", cuilObligatorio ? "Para una persona argentina nativa el CUIT/CUIL es obligatorio." : 'Está tildado "Tiene CUIT / CUIL argentino": cargalo, o destildá el switch para seguir sin CUIT.');
+      setModalActiveTab("general");
       return;
     }
     /*
@@ -514,13 +511,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       que además afirma una afiliación. O se elige el gremio, o se apaga el switch.
     */
     if (formData.afiliadoAlSindicato && (formData.sindicatoIds || []).length === 0) {
-      sweetAlert.error('Falta el sindicato', 'Está encendido "Afiliado a un sindicato": elegí al menos uno, o apagá el switch para registrar a la persona como no afiliada.');
-      setModalActiveTab('general');
+      sweetAlert.error("Falta el sindicato", 'Está encendido "Afiliado a un sindicato": elegí al menos uno, o apagá el switch para registrar a la persona como no afiliada.');
+      setModalActiveTab("general");
       return;
     }
     if (bloqueadoHastaValidar) {
-      sweetAlert.error('Falta validar el CUIT', 'Apretá «Validar CUIT»: nombre, apellido y documento los trae ARCA, y así el alta queda confirmada contra el organismo.');
-      setModalActiveTab('general');
+      sweetAlert.error("Falta validar el CUIT", "Apretá «Validar CUIT»: nombre, apellido y documento los trae ARCA, y así el alta queda confirmada contra el organismo.");
+      setModalActiveTab("general");
       return;
     }
     try {
@@ -584,18 +581,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         delete submitData.password;
         // Mismo criterio que el alta: el sello lo pone el servidor tras ver la respuesta de ARCA.
         await usersAPI.update(user._id, { ...submitData, validarConArca: validadoEnArca });
-        sweetAlert.success(formData.isSolicitud ? 'Solicitud Aprobada' : 'Usuario actualizado', formData.isSolicitud ? 'El usuario ha sido dado de alta correctamente' : 'Los cambios se han guardado correctamente');
+        sweetAlert.success(formData.isSolicitud ? "Solicitud Aprobada" : "Usuario actualizado", formData.isSolicitud ? "El usuario ha sido dado de alta correctamente" : "Los cambios se han guardado correctamente");
       } else {
         // `validarConArca`: el sello lo escribe el SERVIDOR después de ver la respuesta del organismo.
         // Mandar el `nombreValidadoArcaAt` desde acá sería marcar como confirmado algo que ARCA no vio.
         await usersAPI.create({ ...submitData, validarConArca: validadoEnArca });
-        sweetAlert.success('Usuario creado', 'El usuario se ha creado correctamente');
+        sweetAlert.success("Usuario creado", "El usuario se ha creado correctamente");
       }
       onSaved?.();
       onClose();
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Error al guardar el usuario';
-      sweetAlert.error('Error', message);
+      const message = error.response?.data?.error || "Error al guardar el usuario";
+      sweetAlert.error("Error", message);
     }
   };
 
@@ -604,40 +601,40 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     if (!user) return;
     // Doble chequeo: el botón ya está deshabilitado, pero el form también se puede mandar con Enter.
     if (!passwordValida) {
-      sweetAlert.error('Revisá la contraseña', `Tiene que tener al menos ${PASSWORD_MIN} caracteres y coincidir en los dos campos.`);
+      sweetAlert.error("Revisá la contraseña", `Tiene que tener al menos ${PASSWORD_MIN} caracteres y coincidir en los dos campos.`);
       return;
     }
     try {
       await usersAPI.updatePassword(user._id, newPassword);
-      sweetAlert.success('Contraseña actualizada', 'La contraseña se ha actualizado correctamente');
+      sweetAlert.success("Contraseña actualizada", "La contraseña se ha actualizado correctamente");
       onSaved?.();
       onClose();
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Error al actualizar la contraseña';
-      sweetAlert.error('Error', message);
+      const message = error.response?.data?.error || "Error al actualizar la contraseña";
+      sweetAlert.error("Error", message);
     }
   };
 
   const title =
-    mode === 'password' ? (
+    mode === "password" ? (
       <span className="flex items-center gap-2">
         <FontAwesomeIcon icon={faKey} className="h-4 w-4 text-blue-500" />
         Cambiar contraseña
       </span>
     ) : formData.isSolicitud ? (
-      'Aprobar Solicitud de Alta'
+      "Aprobar Solicitud de Contratación"
     ) : user ? (
-      `Editar Usuario: ${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
+      `Editar Usuario: ${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
     ) : (
-      'Nuevo Usuario'
+      "Nuevo Usuario"
     );
 
   // En "Cambiar contraseña" el subtítulo dice de QUIÉN es: el modal se abre desde la tarjeta de una
   // persona y antes no había forma de confirmar que era la correcta.
   const subtitle =
-    mode === 'password' ? (
+    mode === "password" ? (
       user ? (
-        `${`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}${user.firstName || user.lastName ? ` · ${user.email}` : ''}`
+        `${`${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}${user.firstName || user.lastName ? ` · ${user.email}` : ""}`
       ) : undefined
     ) : (
       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -708,7 +705,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     todo vuelve a quedar en blanco para validar de nuevo.
   */
   const camposDeArcaBloqueados = validadoEnArca;
-  const tituloArca = camposDeArcaBloqueados ? 'Lo trae ARCA para este CUIT. Para cambiarlo, corregí el CUIT y validá de nuevo.' : undefined;
+  const tituloArca = camposDeArcaBloqueados ? "Lo trae ARCA para este CUIT. Para cambiarlo, corregí el CUIT y validá de nuevo." : undefined;
   /*
     Bloqueado, pero con el texto en el color normal.
 
@@ -717,13 +714,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     placeholder: parecía que no se había completado nada. El fondo hundido sigue diciendo que no se
     edita; el texto en blanco dice que ahí hay contenido.
   */
-  const claseArca = camposDeArcaBloqueados ? 'input-field disabled:text-gray-900 dark:disabled:text-white' : 'input-field';
+  const claseArca = camposDeArcaBloqueados ? "input-field disabled:text-gray-900 dark:disabled:text-white" : "input-field";
 
   const actions =
-    mode === 'password'
+    mode === "password"
       ? [
-          { label: 'Actualizar', onClick: () => document.querySelector<HTMLFormElement>('#password-form')?.requestSubmit(), variant: 'primary' as const, disabled: !passwordValida },
-          { label: 'Cancelar', onClick: onClose, variant: 'ghost' as const },
+          { label: "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#password-form")?.requestSubmit(), variant: "primary" as const, disabled: !passwordValida },
+          { label: "Cancelar", onClick: onClose, variant: "ghost" as const },
         ]
       : [
           /*
@@ -744,15 +741,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             se lee como parte del recorrido: los pasos avanzaban con un botón y se volvía por otro
             lado. Editando no hace falta, porque ahí no hay recorrido.
           */
-          ...(!user && ORDEN_TABS.indexOf(modalActiveTab) > 0
-            ? [{ label: 'Anterior', onClick: () => setModalActiveTab(ORDEN_TABS[ORDEN_TABS.indexOf(modalActiveTab) - 1]), variant: 'secondary' as const }]
-            : []),
-          ...(user
-            ? [{ label: formData.isSolicitud ? 'Aprobar y Crear' : 'Actualizar', onClick: () => document.querySelector<HTMLFormElement>('#user-form')?.requestSubmit(), variant: 'primary' as const }]
-            : modalActiveTab !== ORDEN_TABS[ORDEN_TABS.length - 1]
-              ? [{ label: 'Siguiente', onClick: () => setModalActiveTab(ORDEN_TABS[ORDEN_TABS.indexOf(modalActiveTab) + 1]), variant: 'primary' as const, disabled: bloqueadoHastaValidar }]
-              : [{ label: 'Crear', onClick: () => document.querySelector<HTMLFormElement>('#user-form')?.requestSubmit(), variant: 'primary' as const }]),
-          { label: 'Cancelar', onClick: onClose, variant: 'ghost' as const },
+          ...(!user && ORDEN_TABS.indexOf(modalActiveTab) > 0 ? [{ label: "Anterior", onClick: () => setModalActiveTab(ORDEN_TABS[ORDEN_TABS.indexOf(modalActiveTab) - 1]), variant: "secondary" as const }] : []),
+          ...(user ? [{ label: formData.isSolicitud ? "Aprobar y Crear" : "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#user-form")?.requestSubmit(), variant: "primary" as const }] : modalActiveTab !== ORDEN_TABS[ORDEN_TABS.length - 1] ? [{ label: "Siguiente", onClick: () => setModalActiveTab(ORDEN_TABS[ORDEN_TABS.indexOf(modalActiveTab) + 1]), variant: "primary" as const, disabled: bloqueadoHastaValidar }] : [{ label: "Crear", onClick: () => document.querySelector<HTMLFormElement>("#user-form")?.requestSubmit(), variant: "primary" as const }]),
+          { label: "Cancelar", onClick: onClose, variant: "ghost" as const },
         ];
 
   /*
@@ -784,7 +775,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     // Vaciar los campos, solo en el alta. Editando a alguien existente sería borrarle datos guardados
     // por tocar un select; lo que hace falta ahí es destrabarlos para poder corregirlos.
     if (user) return;
-    setFormData((prev) => ({ ...prev, firstName: '', lastName: '', documento: '', tipoDocumentoId: undefined }));
+    setFormData((prev) => ({ ...prev, firstName: "", lastName: "", documento: "", tipoDocumentoId: undefined }));
   };
 
   /**
@@ -813,7 +804,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       nacionalizado,
       paisNacimientoId: undefined,
       // El CUIT también: quedó atado a la nacionalidad anterior.
-      cuit: '',
+      cuit: "",
     }));
     // Nativo/a argentino/a → obligatorio (el switch ni se muestra). Cualquier otro caso —incluido el
     // nacionalizado/a— arranca en "no tiene", que es lo más común y evita darlo por hecho.
@@ -822,8 +813,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   };
 
   return (
-    <InfoModal isOpen={isOpen} onClose={onClose} title={title} subtitle={subtitle} size={mode === 'password' ? 'sm' : 'lg'} actions={actions} zIndex={zIndex}>
-      {mode === 'password' ? (
+    <InfoModal isOpen={isOpen} onClose={onClose} title={title} subtitle={subtitle} size={mode === "password" ? "sm" : "lg"} actions={actions} zIndex={zIndex}>
+      {mode === "password" ? (
         <form id="password-form" onSubmit={handlePasswordSubmit}>
           <div className="space-y-4">
             <div>
@@ -831,8 +822,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 Nueva contraseña <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input type={showNewPassword ? 'text' : 'password'} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={PASSWORD_MIN} autoComplete="new-password" autoFocus />
-                <button type="button" onClick={() => setShowNewPassword((v) => !v)} title={showNewPassword ? 'Ocultar' : 'Mostrar'} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <input type={showNewPassword ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={PASSWORD_MIN} autoComplete="new-password" autoFocus />
+                <button type="button" onClick={() => setShowNewPassword((v) => !v)} title={showNewPassword ? "Ocultar" : "Mostrar"} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
                 </button>
               </div>
@@ -845,16 +836,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 Repetir contraseña <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input type={showNewPassword ? 'text' : 'password'} required value={repetirPassword} onChange={(e) => setRepetirPassword(e.target.value)} className={`input-field pr-10 ${repetirPassword && !passwordsCoinciden ? 'border-red-400 dark:border-red-600' : ''}`} placeholder="••••••••" autoComplete="new-password" />
+                <input type={showNewPassword ? "text" : "password"} required value={repetirPassword} onChange={(e) => setRepetirPassword(e.target.value)} className={`input-field pr-10 ${repetirPassword && !passwordsCoinciden ? "border-red-400 dark:border-red-600" : ""}`} placeholder="••••••••" autoComplete="new-password" />
               </div>
             </div>
 
             <ul className="space-y-1 text-xs">
-              <li className={`flex items-center gap-1.5 ${largoOk ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+              <li className={`flex items-center gap-1.5 ${largoOk ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
                 <FontAwesomeIcon icon={largoOk ? faCheck : faXmark} className="h-3 w-3" />
                 Al menos {PASSWORD_MIN} caracteres
               </li>
-              <li className={`flex items-center gap-1.5 ${repetirPassword ? (passwordsCoinciden ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-gray-500 dark:text-gray-400'}`}>
+              <li className={`flex items-center gap-1.5 ${repetirPassword ? (passwordsCoinciden ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : "text-gray-500 dark:text-gray-400"}`}>
                 <FontAwesomeIcon icon={repetirPassword && passwordsCoinciden ? faCheck : faXmark} className="h-3 w-3" />
                 Las dos contraseñas coinciden
               </li>
@@ -868,19 +859,19 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           {/* Tabs Header Sticky Container */}
           <div className="z-20 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm shrink-0">
             <div className="flex">
-              <button type="button" onClick={() => setModalActiveTab('general')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === 'general' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+              <button type="button" onClick={() => setModalActiveTab("general")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "general" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <FontAwesomeIcon icon={faUser} className="text-xs" />
                 Personales
               </button>
-              <button type="button" onClick={() => setModalActiveTab('domicilio')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'domicilio' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+              <button type="button" onClick={() => setModalActiveTab("domicilio")} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
                 Domicilio
               </button>
-              <button type="button" onClick={() => setModalActiveTab('bancarios')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'bancarios' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+              <button type="button" onClick={() => setModalActiveTab("bancarios")} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                 Bancarios
               </button>
-              <button type="button" onClick={() => setModalActiveTab('sistema')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'sistema' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+              <button type="button" onClick={() => setModalActiveTab("sistema")} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === "sistema" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <FontAwesomeIcon icon={faUserShield} className="text-xs" />
                 Sistema
               </button>
@@ -889,7 +880,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Tab Content */}
-            {modalActiveTab === 'general' && (
+            {modalActiveTab === "general" && (
               <div className="space-y-6 animate-fadeIn">
                 {/*
                   ORDEN DEL FORMULARIO: nacionalidad → CUIT → lo que ARCA completa.
@@ -924,7 +915,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                         País de nacimiento <span className="text-red-500">*</span>
                       </label>
-                      <select required value={formData.paisNacimientoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, paisNacimientoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                      <select required value={formData.paisNacimientoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, paisNacimientoId: parseInt(e.target.value) || undefined }))} className="input-field">
                         <option value="">Seleccionar...</option>
                         {countries.map((it) => (
                           <option key={it._id} value={it.data.id}>
@@ -973,14 +964,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         onClick={() => {
                           const nuevo = !tieneCuil;
                           setTieneCuil(nuevo);
-                          if (!nuevo) setFormData((prev) => ({ ...prev, cuit: '' }));
+                          if (!nuevo) setFormData((prev) => ({ ...prev, cuit: "" }));
                           // Con o sin CUIT, lo traído del Padrón deja de aplicar.
                           limpiarDatosDeArca();
                         }}
                         className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-300"
                       >
-                        <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? 'translate-x-[1.15rem]' : 'translate-x-0.5'}`} />
+                        <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? "translate-x-[1.15rem]" : "translate-x-0.5"}`} />
                         </span>
                         Tiene CUIT / CUIL argentino
                       </button>
@@ -989,14 +980,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <div className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
                         <CuitInput
-                          value={cuilVisible ? formData.cuit || '' : ''}
+                          value={cuilVisible ? formData.cuit || "" : ""}
                           onChange={(v) => {
                             setFormData((prev) => ({ ...prev, cuit: v }));
                             // Tocar el CUIT invalida lo traído: si no, se valida uno y se guarda otro.
                             setValidadoEnArca(false);
                             setInactivoEnArca(false);
                           }}
-                          className={`input-field ${cuilVisible ? '' : 'opacity-50 cursor-not-allowed'}`}
+                          className={`input-field ${cuilVisible ? "" : "opacity-50 cursor-not-allowed"}`}
                           placeholder="XX-XXXXXXXX-X"
                           disabled={!cuilVisible}
                         />
@@ -1010,9 +1001,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         permite hacerlo desde acá, sin ir hasta la columna ARCA del listado.
                       */}
                       {cuilVisible && (
-                        <button type="button" onClick={traerDeArca} disabled={consultandoPadron || validadoEnArca || !cuitEsValido(String(formData.cuit || '').replace(/\D/g, ''))} title={validadoEnArca ? 'Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.' : 'Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento con lo que tiene el organismo'} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 disabled:opacity-100' : 'border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50'}`}>
+                        <button type="button" onClick={traerDeArca} disabled={consultandoPadron || validadoEnArca || !cuitEsValido(String(formData.cuit || "").replace(/\D/g, ""))} title={validadoEnArca ? "Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado." : "Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento con lo que tiene el organismo"} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? "border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 disabled:opacity-100" : "border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"}`}>
                           <FontAwesomeIcon icon={consultandoPadron ? faSpinner : validadoEnArca ? faCircleCheck : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
-                          {consultandoPadron ? 'Validando…' : validadoEnArca ? 'Validado' : 'Validar CUIT'}
+                          {consultandoPadron ? "Validando…" : validadoEnArca ? "Validado" : "Validar CUIT"}
                         </button>
                       )}
                     </div>
@@ -1032,7 +1023,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   directos, y ahora el fieldset ES un único hijo: sin esto los bloques de adentro
                   quedaban pegados uno contra otro.
                 */}
-                <fieldset disabled={bloqueadoHastaValidar} className={`space-y-6 ${bloqueadoHastaValidar ? 'opacity-60' : ''}`}>
+                <fieldset disabled={bloqueadoHastaValidar} className={`space-y-6 ${bloqueadoHastaValidar ? "opacity-60" : ""}`}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
@@ -1051,7 +1042,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Documento</label>
-                      <select value={formData.tipoDocumentoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDocumentoId: parseInt(e.target.value) || undefined }))} className={claseArca} disabled={!nacionalidadElegida || camposDeArcaBloqueados} title={tituloArca}>
+                      <select value={formData.tipoDocumentoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDocumentoId: parseInt(e.target.value) || undefined }))} className={claseArca} disabled={!nacionalidadElegida || camposDeArcaBloqueados} title={tituloArca}>
                         <option value="">Seleccionar...</option>
                         {tiposDocumentoDisponibles.map((it) => (
                           <option key={it._id} value={it.data.id}>
@@ -1064,7 +1055,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                         Documento <span className="text-red-500">*</span>
                       </label>
-                      <input type="text" required value={formData.documento || ''} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className={claseArca} placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} disabled={!nacionalidadElegida || camposDeArcaBloqueados} title={tituloArca} />
+                      <input type="text" required value={formData.documento || ""} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className={claseArca} placeholder={esArgentino ? "Nº de documento" : "DNI / Pasaporte"} disabled={!nacionalidadElegida || camposDeArcaBloqueados} title={tituloArca} />
                     </div>
                   </div>
 
@@ -1085,18 +1076,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     */}
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
-                      <input type="text" value={formData.telefono || ''} onChange={(e) => setFormData((prev) => ({ ...prev, telefono: e.target.value }))} className="input-field" placeholder="Ej: 11 1234-5678" />
+                      <input type="text" value={formData.telefono || ""} onChange={(e) => setFormData((prev) => ({ ...prev, telefono: e.target.value }))} className="input-field" placeholder="Ej: 11 1234-5678" />
                     </div>
                     {(!user || formData.isSolicitud) && (
                       <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                          {formData.isSolicitud ? 'Asignar Contraseña' : 'Contraseña'} <span className="text-red-500">*</span>
+                          {formData.isSolicitud ? "Asignar Contraseña" : "Contraseña"} <span className="text-red-500">*</span>
                         </label>
                         {/* Mismo patrón que el CUIT: campo + acción a la derecha, en la misma línea. */}
                         <div className="flex items-start gap-2">
                           <div className="relative flex-1 min-w-0">
-                            <input type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                            <button type="button" onClick={() => setShowPassword((v) => !v)} title={showPassword ? 'Ocultar' : 'Mostrar'} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
+                            <button type="button" onClick={() => setShowPassword((v) => !v)} title={showPassword ? "Ocultar" : "Mostrar"} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                               <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
                             </button>
                           </div>
@@ -1110,10 +1101,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                               setShowPassword(true);
                               try {
                                 await navigator.clipboard.writeText(nueva);
-                                sweetAlert.success('Contraseña generada', 'Ya está copiada al portapapeles.');
+                                sweetAlert.success("Contraseña generada", "Ya está copiada al portapapeles.");
                               } catch {
                                 // Sin permiso de portapapeles (o sin HTTPS): igual queda visible en el campo.
-                                sweetAlert.success('Contraseña generada', 'Copiala del campo antes de guardar.');
+                                sweetAlert.success("Contraseña generada", "Copiala del campo antes de guardar.");
                               }
                             }}
                             title="Generar una contraseña segura al azar y copiarla al portapapeles"
@@ -1130,11 +1121,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Nacimiento</label>
-                      <input type="date" value={formData.fechaNac || ''} onChange={(e) => setFormData((prev) => ({ ...prev, fechaNac: e.target.value }))} className="input-field" />
+                      <input type="date" value={formData.fechaNac || ""} onChange={(e) => setFormData((prev) => ({ ...prev, fechaNac: e.target.value }))} className="input-field" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nivel de Estudio</label>
-                      <select value={formData.nivelEstudioId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, nivelEstudioId: parseInt(e.target.value) || undefined }))} className="input-field">
+                      <select value={formData.nivelEstudioId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nivelEstudioId: parseInt(e.target.value) || undefined }))} className="input-field">
                         <option value="">Seleccionar...</option>
                         {educationLevels.map((it) => (
                           <option key={it._id} value={it.data.id}>
@@ -1150,7 +1141,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Género</label>
-                      <select value={formData.generoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, generoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                      <select value={formData.generoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, generoId: parseInt(e.target.value) || undefined }))} className="input-field">
                         <option value="">Seleccionar...</option>
                         {genders.map((it) => (
                           <option key={it._id} value={it.data.id}>
@@ -1161,7 +1152,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado civil</label>
-                      <select value={formData.estadoCivil || ''} onChange={(e) => setFormData((prev) => ({ ...prev, estadoCivil: e.target.value }))} className="input-field">
+                      <select value={formData.estadoCivil || ""} onChange={(e) => setFormData((prev) => ({ ...prev, estadoCivil: e.target.value }))} className="input-field">
                         <option value="">Seleccionar...</option>
                         <option value="Soltero">Soltero/a</option>
                         <option value="Casado">Casado/a</option>
@@ -1188,7 +1179,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                    * son un dato que llega, no uno que se carga a mano.
                    */}
 
-
                   {/*
                     UN CAMPO QUE ABRE UN MODAL, no una grilla incrustada.
 
@@ -1203,12 +1193,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               </div>
             )}
 
-            {modalActiveTab === 'domicilio' && (
+            {modalActiveTab === "domicilio" && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">País</label>
-                    <select value={formData.paisId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, paisId: parseInt(e.target.value) || undefined }))} className="input-field">
+                    <select value={formData.paisId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, paisId: parseInt(e.target.value) || undefined }))} className="input-field">
                       <option value="">Seleccionar...</option>
                       {countries.map((it) => (
                         <option key={it._id} value={it.data.id}>
@@ -1219,23 +1209,23 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Localidad</label>
-                    <input type="text" value={formData.localidad || ''} onChange={(e) => setFormData((prev) => ({ ...prev, localidad: e.target.value }))} className="input-field" placeholder="Ej: CABA" />
+                    <input type="text" value={formData.localidad || ""} onChange={(e) => setFormData((prev) => ({ ...prev, localidad: e.target.value }))} className="input-field" placeholder="Ej: CABA" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Calle</label>
-                    <input type="text" value={formData.calle || ''} onChange={(e) => setFormData((prev) => ({ ...prev, calle: e.target.value }))} className="input-field" placeholder="Ej: Av. Libertador" />
+                    <input type="text" value={formData.calle || ""} onChange={(e) => setFormData((prev) => ({ ...prev, calle: e.target.value }))} className="input-field" placeholder="Ej: Av. Libertador" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Altura</label>
-                      <input type="text" value={formData.altura || ''} onChange={(e) => setFormData((prev) => ({ ...prev, altura: e.target.value }))} className="input-field" placeholder="Ej: 1234" />
+                      <input type="text" value={formData.altura || ""} onChange={(e) => setFormData((prev) => ({ ...prev, altura: e.target.value }))} className="input-field" placeholder="Ej: 1234" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Piso/Depto</label>
-                      <input type="text" value={formData.pisoDepto || ''} onChange={(e) => setFormData((prev) => ({ ...prev, pisoDepto: e.target.value }))} className="input-field" placeholder="Ej: 4B" />
+                      <input type="text" value={formData.pisoDepto || ""} onChange={(e) => setFormData((prev) => ({ ...prev, pisoDepto: e.target.value }))} className="input-field" placeholder="Ej: 4B" />
                     </div>
                   </div>
                 </div>
@@ -1245,18 +1235,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Código Postal</label>
-                    <input type="text" value={formData.codigoPostal || ''} onChange={(e) => setFormData((prev) => ({ ...prev, codigoPostal: e.target.value }))} className="input-field" placeholder="Ej: 1425" />
+                    <input type="text" value={formData.codigoPostal || ""} onChange={(e) => setFormData((prev) => ({ ...prev, codigoPostal: e.target.value }))} className="input-field" placeholder="Ej: 1425" />
                   </div>
                 </div>
               </div>
             )}
 
-            {modalActiveTab === 'bancarios' && (
+            {modalActiveTab === "bancarios" && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Banco</label>
-                    <select value={formData.bancoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                    <select value={formData.bancoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field">
                       <option value="">Seleccionar...</option>
                       {banks.map((it) => (
                         <option key={it._id} value={it.data.id}>
@@ -1278,19 +1268,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       Se filtra al escribir en vez de avisar después: un CBU con letras no es un CBU
                       mal cargado, es otra cosa, y no hay motivo para dejar que llegue al campo.
                     */}
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formData.cbu || ''}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, cbu: soloDigitos(e.target.value).slice(0, CBU_DIGITOS) }))}
-                      className="input-field"
-                      placeholder={`${CBU_DIGITOS} dígitos`}
-                    />
+                    <input type="text" inputMode="numeric" value={formData.cbu || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: soloDigitos(e.target.value).slice(0, CBU_DIGITOS) }))} className="input-field" placeholder={`${CBU_DIGITOS} dígitos`} />
                     {/* El contador y el aviso, mientras está incompleto: el largo es la única regla */}
                     {/* que hay que cumplir y verla evita contar dígitos a mano. */}
                     {cbuIncompleto && (
                       <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
-                        Faltan {CBU_DIGITOS - (formData.cbu || '').length} dígito(s): un CBU tiene {CBU_DIGITOS}.
+                        Faltan {CBU_DIGITOS - (formData.cbu || "").length} dígito(s): un CBU tiene {CBU_DIGITOS}.
                       </p>
                     )}
                   </div>
@@ -1299,7 +1282,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Cuenta</label>
-                    <select value={formData.tipoDeCuentaBancaria || ''} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
+                    <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
                       <option value="">Seleccionar...</option>
                       <option value="Caja de ahorro $">Caja de ahorro $</option>
                       <option value="Cuenta Corriente $">Cuenta Corriente $</option>
@@ -1308,18 +1291,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Número de Cuenta</label>
-                    <input type="text" value={formData.nroDeCuentaBancaria || ''} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
+                    <input type="text" value={formData.nroDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias Bancario</label>
-                  <input type="text" value={formData.aliasBancario || ''} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
+                  <input type="text" value={formData.aliasBancario || ""} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
                 </div>
               </div>
             )}
 
-            {modalActiveTab === 'sistema' && (
+            {modalActiveTab === "sistema" && (
               <div className="space-y-6 animate-fadeIn">
                 {/*
                   DATOS SISTEMA: lo que la plataforma necesita saber de la persona, no la persona.
@@ -1378,22 +1361,22 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     {(formData.rolesFrameIds || []).length > 0 && <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />}
                   </div>
                   <div>
-                  {(formData.rolesFrameIds || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {(formData.rolesFrameIds || []).map((id) => {
-                        const rf = allRoleFrames.find((x) => x._id === id);
-                        return (
-                          <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                            {rf?.name || 'Rol'}
-                            <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {/*
+                    {(formData.rolesFrameIds || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {(formData.rolesFrameIds || []).map((id) => {
+                          const rf = allRoleFrames.find((x) => x._id === id);
+                          return (
+                            <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                              {rf?.name || "Rol"}
+                              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || "rol"}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/*
                     El buscador ancho SOLO cuando no hay nada elegido.
 
                     Con roles ya puestos, ese campo repetía la invitación a elegir debajo de lo que
@@ -1402,23 +1385,19 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     ventana. Lo elegido va ARRIBA y no adentro del input: badges dentro de un campo
                     lo hacen crecer y se leen como texto escrito en el buscador.
                   */}
-                  {(formData.rolesFrameIds || []).length === 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setRolesEmpresaOpen(true)}
-                      className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-                    >
-                      <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
-                      <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
-                    </button>
-                  )}
+                    {(formData.rolesFrameIds || []).length === 0 && (
+                      <button type="button" onClick={() => setRolesEmpresaOpen(true)} className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
+                        <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
+                        <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>
-                    <input type="text" value={formData.numeroLegajoTango || ''} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
+                    <input type="text" value={formData.numeroLegajoTango || ""} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
                   </div>
                 </div>
 
@@ -1441,8 +1420,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   */}
                   <div className="flex items-center gap-3">
                     <label className="flex items-center space-x-3 cursor-pointer group w-fit">
-                      <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'translate-x-4' : ''}`}></div>
+                      <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? "translate-x-4" : ""}`}></div>
                       </div>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado a un sindicato</span>
                       <input type="checkbox" className="hidden" checked={!!formData.afiliadoAlSindicato} onChange={(e) => handleAfiliadoChange(e.target.checked)} />
@@ -1451,57 +1430,63 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         buscador ancho. Va FUERA del <label> del switch — adentro, apretarlo
                         también lo tildaría, porque un label propaga el click a su control. */}
                     {formData.afiliadoAlSindicato && sindicatosElegidos.length > 0 && (
-                      <BotonAgregar onClick={() => { setSindicatoSearch(''); setSindicatoOpen(true); }} title="Agregar otro sindicato" />
+                      <BotonAgregar
+                        onClick={() => {
+                          setSindicatoSearch("");
+                          setSindicatoOpen(true);
+                        }}
+                        title="Agregar otro sindicato"
+                      />
                     )}
                   </div>
 
-                    {/*
+                  {/*
                       La pregunta de seguimiento: solo existe si la respuesta anterior fue que sí.
 
                       Mismo patrón que Rol/es Empresa —badge arriba, campo que abre una ventana con
                       buscador— y no un <select>: son dos elecciones de catálogo en la misma pantalla,
                       y que se vieran distinto era la única razón para tener que mirarlas dos veces.
                     */}
-                    {formData.afiliadoAlSindicato && (
-                      <div className="mt-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                          Sindicato <span className="text-red-500">*</span>
-                        </label>
-                        {sindicatosElegidos.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {sindicatosElegidos.map((sind) => (
-                              <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                                {nombreSindicato(sind)}
-                                <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                                  <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {/*
+                  {formData.afiliadoAlSindicato && (
+                    <div className="mt-2">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Sindicato <span className="text-red-500">*</span>
+                      </label>
+                      {sindicatosElegidos.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {sindicatosElegidos.map((sind) => (
+                            <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                              {nombreSindicato(sind)}
+                              <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/*
                           El buscador ancho SOLO cuando no hay nada elegido: con sindicatos ya
                           puestos repetía la invitación a elegir debajo de lo elegido y se llevaba
                           el alto de una fila para eso. Lo elegido va ARRIBA y no adentro del input:
                           un badge dentro de un campo lo hace crecer y se lee como texto escrito.
                         */}
-                        {sindicatosElegidos.length === 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSindicatoSearch('');
-                              setSindicatoOpen(true);
-                            }}
-                            className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-                          >
-                            <span className="text-gray-400 dark:text-gray-500">Elegí uno o más sindicatos…</span>
-                            <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
-                          </button>
-                        )}
-                        {/* Un catálogo vacío sin explicación se lee como un error de la pantalla. */}
-                        {sindicatos.length === 0 && <p className="text-[11px] text-gray-400 mt-1">Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.</p>}
-                      </div>
-                    )}
+                      {sindicatosElegidos.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSindicatoSearch("");
+                            setSindicatoOpen(true);
+                          }}
+                          className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                        >
+                          <span className="text-gray-400 dark:text-gray-500">Elegí uno o más sindicatos…</span>
+                          <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                        </button>
+                      )}
+                      {/* Un catálogo vacío sin explicación se lee como un error de la pantalla. */}
+                      {sindicatos.length === 0 && <p className="text-[11px] text-gray-400 mt-1">Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.</p>}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1514,9 +1499,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {roles
-                          .filter((r) => r.name.toLowerCase() !== 'superadmin' && !r.name.toLowerCase().includes('mobile'))
+                          .filter((r) => r.name.toLowerCase() !== "superadmin" && !r.name.toLowerCase().includes("mobile"))
                           .map((r) => (
-                            <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
+                            <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.roles.includes(r._id)}
@@ -1524,8 +1509,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                                   let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
                                   const name = r.name.toLowerCase();
                                   if (e.target.checked) {
-                                    if (name === 'admin') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'user');
-                                    else if (name === 'user') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'admin');
+                                    if (name === "admin") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "user");
+                                    else if (name === "user") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "admin");
                                   }
                                   setFormData((prev) => ({ ...prev, roles: newRoles }));
                                 }}
@@ -1536,7 +1521,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                           ))}
                       </div>
                     </div>
-                    {roles.some((r) => r.name.toLowerCase().includes('mobile')) && (
+                    {roles.some((r) => r.name.toLowerCase().includes("mobile")) && (
                       <div>
                         <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
                           <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
@@ -1544,41 +1529,41 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         </h4>
                         {coordinacionBloqueada && (
                           <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-                            Coordina turnos en <strong>{coordinaEn.join(', ')}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
+                            Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
                           </p>
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {roles
-                            .filter((r) => r.name.toLowerCase().includes('mobile'))
+                            .filter((r) => r.name.toLowerCase().includes("mobile"))
                             .map((r) => (
-                              <label key={r._id} title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(', ')}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${formData.roles.includes(r._id) ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
+                              <label key={r._id} title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(", ")}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${formData.roles.includes(r._id) ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
                                 <input
                                   type="checkbox"
                                   checked={formData.roles.includes(r._id)}
                                   disabled={coordinacionBloqueada}
                                   onChange={(e) => {
                                     if (coordinacionBloqueada) {
-                                      sweetAlert.warningAlert('No se puede cambiar el rol Mobile', `${user?.firstName || 'Esta persona'} coordina turnos en ${coordinaEn.join(', ')}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
+                                      sweetAlert.warningAlert("No se puede cambiar el rol Mobile", `${user?.firstName || "Esta persona"} coordina turnos en ${coordinaEn.join(", ")}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
                                       return;
                                     }
                                     let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
                                     const name = r.name.toLowerCase();
                                     if (e.target.checked) {
-                                      if (name.includes('coordinador'))
+                                      if (name.includes("coordinador"))
                                         newRoles = newRoles.filter(
                                           (id) =>
                                             !roles
                                               .find((ro) => ro._id === id)
                                               ?.name.toLowerCase()
-                                              .includes('colaborador'),
+                                              .includes("colaborador"),
                                         );
-                                      else if (name.includes('colaborador'))
+                                      else if (name.includes("colaborador"))
                                         newRoles = newRoles.filter(
                                           (id) =>
                                             !roles
                                               .find((ro) => ro._id === id)
                                               ?.name.toLowerCase()
-                                              .includes('coordinador'),
+                                              .includes("coordinador"),
                                         );
                                     } else {
                                       if (
@@ -1586,10 +1571,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                                           roles
                                             .find((ro) => ro._id === id)
                                             ?.name.toLowerCase()
-                                            .includes('mobile'),
+                                            .includes("mobile"),
                                         )
                                       ) {
-                                        sweetAlert.warningAlert('Atención', 'Debe tener al menos un rol Mobile.');
+                                        sweetAlert.warningAlert("Atención", "Debe tener al menos un rol Mobile.");
                                         return;
                                       }
                                     }
@@ -1642,8 +1627,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   const rf = allRoleFrames.find((x) => x._id === id);
                   return (
                     <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                      {rf?.name || 'Rol'}
-                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                      {rf?.name || "Rol"}
+                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || "rol"}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
                         <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
                       </button>
                     </span>
@@ -1658,7 +1643,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               </div>
               <input type="text" autoFocus value={roleFrameSearch} onChange={(e) => setRoleFrameSearch(e.target.value)} placeholder="Buscar especialidad..." className="input-field pl-9 pr-8" />
               {roleFrameSearch && (
-                <button type="button" onClick={() => setRoleFrameSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <button type="button" onClick={() => setRoleFrameSearch("")} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                   <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -1668,7 +1653,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               {allRoleFrames
                 .filter((rf) => fuzzyMatch(rf.name, roleFrameSearch))
                 .map((rf) => (
-                  <label key={rf._id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300'}`}>
+                  <label key={rf._id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
                     <input
                       type="checkbox"
                       checked={formData.rolesFrameIds?.includes(rf._id)}
@@ -1681,9 +1666,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{rf.name}</span>
                   </label>
                 ))}
-              {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && (
-                <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>
-              )}
+              {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>}
             </div>
           </div>
         </Modal>
@@ -1713,15 +1696,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           <div className="h-[60vh] flex flex-col">
             {sindicatosElegidos.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
-                              {sindicatosElegidos.map((sind) => (
-                                <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                                  {nombreSindicato(sind)}
-                                  <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                                    <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
+                {sindicatosElegidos.map((sind) => (
+                  <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                    {nombreSindicato(sind)}
+                    <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                      <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
 
             <div className="relative mb-3 shrink-0">
@@ -1730,7 +1713,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               </div>
               <input type="text" autoFocus value={sindicatoSearch} onChange={(e) => setSindicatoSearch(e.target.value)} placeholder="Buscar sindicato..." className="input-field pl-9 pr-8" />
               {sindicatoSearch && (
-                <button type="button" onClick={() => setSindicatoSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <button type="button" onClick={() => setSindicatoSearch("")} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                   <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -1738,23 +1721,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 flex-1 overflow-y-auto content-start pr-1">
               {sindicatosFiltrados.map((sind) => (
-                <label key={sind._id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${(formData.sindicatoIds || []).includes(sind._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300'}`}>
-                  <input
-                    type="checkbox"
-                    checked={(formData.sindicatoIds || []).includes(sind._id)}
-                    onChange={(e) => toggleSindicato(sind._id, e.target.checked)}
-                    className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0"
-                  />
+                <label key={sind._id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${(formData.sindicatoIds || []).includes(sind._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
+                  <input type="checkbox" checked={(formData.sindicatoIds || []).includes(sind._id)} onChange={(e) => toggleSindicato(sind._id, e.target.checked)} className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0" />
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate" title={nombreSindicato(sind)}>
                     {nombreSindicato(sind)}
                   </span>
                 </label>
               ))}
-              {sindicatosFiltrados.length === 0 && (
-                <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">
-                  {sindicatos.length === 0 ? 'Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.' : `No se encontraron sindicatos que coincidan con "${sindicatoSearch}"`}
-                </div>
-              )}
+              {sindicatosFiltrados.length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">{sindicatos.length === 0 ? "Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos." : `No se encontraron sindicatos que coincidan con "${sindicatoSearch}"`}</div>}
             </div>
           </div>
         </Modal>
@@ -1776,13 +1750,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         <Modal isOpen={vacacionesInfoOpen} onClose={() => setVacacionesInfoOpen(false)} title="Vacaciones: días extra" size="md" zIndex={90}>
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
             <p>
-              Son días que <strong>se suman</strong> a los que ya le corresponden a la persona por antigüedad. No los reemplazan: el cálculo
-              habitual sigue funcionando igual y esto se agrega arriba.
+              Son días que <strong>se suman</strong> a los que ya le corresponden a la persona por antigüedad. No los reemplazan: el cálculo habitual sigue funcionando igual y esto se agrega arriba.
             </p>
             <p>
-              Es una <strong>excepción</strong>, no la regla. Se usa cuando la empresa decide reconocerle días adicionales a alguien en
-              particular —una política interna, un acuerdo puntual, una situación que se quiera compensar— y por eso se carga persona por
-              persona y no en una configuración general.
+              Es una <strong>excepción</strong>, no la regla. Se usa cuando la empresa decide reconocerle días adicionales a alguien en particular —una política interna, un acuerdo puntual, una situación que se quiera compensar— y por eso se carga persona por persona y no en una configuración general.
             </p>
             <p>
               Se aplica solo a quienes la empresa defina. Si a esta persona no le corresponde ninguno, dejalo en <strong>0</strong>.

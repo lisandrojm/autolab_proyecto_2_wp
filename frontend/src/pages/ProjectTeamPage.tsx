@@ -1,89 +1,89 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import axios from '../api/axiosConfig';
-import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
-import { usersAPI, User, Contract } from '../api/users';
-import { useAuthStore } from '../stores/authStore';
-import { sweetAlert } from '../utils/sweetAlert';
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
+import axios from "../api/axiosConfig";
+import { projectsAPI, Project, AreaShiftMembersResponse } from "../api/projects";
+import { usersAPI, User, Contract } from "../api/users";
+import { useAuthStore } from "../stores/authStore";
+import { sweetAlert } from "../utils/sweetAlert";
 
-import { PageLayout } from '../components/ui/PageLayout';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { EmptyState } from '../components/ui/EmptyState';
-import { UserCard } from '../components/users/UserCard';
-import { Modal } from '../components/ui/Modal';
-import { InfoModal } from '../components/ui/InfoModal';
-import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { PageLayout } from "../components/ui/PageLayout";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { EmptyState } from "../components/ui/EmptyState";
+import { UserCard } from "../components/users/UserCard";
+import { Modal } from "../components/ui/Modal";
+import { InfoModal } from "../components/ui/InfoModal";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 
-import { getHelp } from '../data/help/helpContent';
+import { getHelp } from "../data/help/helpContent";
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
-import { vacationsAPI, VacationRequest } from '../api/vacations';
-import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
-import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
-import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
-import { DiasDeTrabajo } from '../components/contratos/DiasDeTrabajo';
-import { EstadoSelect, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
-import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
-import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
-import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
-import { contratosAPI, ContratoItem } from '../api/contratos';
-import { releasesAPI, Release } from '../api/release';
-import { companiesAPI, Company } from '../api/companies';
-import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
-import { Area, areasAPI } from '../api/areas';
-import { userProjectsAPI } from '../api/userProjects';
-import { shiftsAPI, Shift } from '../api/shifts';
-import { clientsAPI } from '../api/clients';
-import { infoAPI, InfoItem } from '../api/info';
-import { categoriaSatAPI, CategoriaSatItem, esElegible } from '../api/categoriasSat';
-import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
-import { cachedFetch } from '../utils/refCache';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { vacationsAPI, VacationRequest } from "../api/vacations";
+import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
+import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
+import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
+import { DiasDeTrabajo, faltaDefinirDias } from "../components/contratos/DiasDeTrabajo";
+import { EstadoSelect, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
+import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
+import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
+import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
+import { contratosAPI, ContratoItem } from "../api/contratos";
+import { releasesAPI, Release } from "../api/release";
+import { companiesAPI, Company } from "../api/companies";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
+import { Area, areasAPI } from "../api/areas";
+import { userProjectsAPI } from "../api/userProjects";
+import { shiftsAPI, Shift } from "../api/shifts";
+import { clientsAPI } from "../api/clients";
+import { infoAPI, InfoItem } from "../api/info";
+import { categoriaSatAPI, CategoriaSatItem, esElegible } from "../api/categoriasSat";
+import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
+import { cachedFetch } from "../utils/refCache";
 
-const HELP_KEY = 'projectTeam' as const;
+const HELP_KEY = "projectTeam" as const;
 
 // Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
 function formatContractDate(d?: string): string {
-  if (!d) return '—';
+  if (!d) return "—";
   const iso = String(d).substring(0, 10);
-  const parts = iso.split('-');
+  const parts = iso.split("-");
   if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
     return `${Number(parts[2])}/${Number(parts[1])}/${parts[0]}`;
   }
   const dt = new Date(d);
-  return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString();
+  return isNaN(dt.getTime()) ? "—" : dt.toLocaleDateString();
 }
 
 // Roles de sistema con acceso a la app mobile. El valor viaja al server como `roleName=mobile-<value>`,
 // que matchea el nombre completo del rol tolerando el separador ("Mobile-Coordinador", "Mobile Coordinador", ...).
 const MOBILE_ROLE_OPTIONS = [
-  { value: 'colaborador', label: 'Mobile-Colaborador' },
-  { value: 'coordinador', label: 'Mobile-Coordinador' },
+  { value: "colaborador", label: "Mobile-Colaborador" },
+  { value: "coordinador", label: "Mobile-Coordinador" },
 ];
 
 function numeroALetras(num: number): string {
   const Unidades = (num: number): string => {
     switch (num) {
       case 1:
-        return 'UN';
+        return "UN";
       case 2:
-        return 'DOS';
+        return "DOS";
       case 3:
-        return 'TRES';
+        return "TRES";
       case 4:
-        return 'CUATRO';
+        return "CUATRO";
       case 5:
-        return 'CINCO';
+        return "CINCO";
       case 6:
-        return 'SEIS';
+        return "SEIS";
       case 7:
-        return 'SIETE';
+        return "SIETE";
       case 8:
-        return 'OCHO';
+        return "OCHO";
       case 9:
-        return 'NUEVE';
+        return "NUEVE";
       default:
-        return '';
+        return "";
     }
   };
 
@@ -94,37 +94,37 @@ function numeroALetras(num: number): string {
       case 1:
         switch (unidad) {
           case 0:
-            return 'DIEZ';
+            return "DIEZ";
           case 1:
-            return 'ONCE';
+            return "ONCE";
           case 2:
-            return 'DOCE';
+            return "DOCE";
           case 3:
-            return 'TRECE';
+            return "TRECE";
           case 4:
-            return 'CATORCE';
+            return "CATORCE";
           case 5:
-            return 'QUINCE';
+            return "QUINCE";
           default:
-            return 'DIECI' + Unidades(unidad);
+            return "DIECI" + Unidades(unidad);
         }
       case 2:
-        if (unidad === 0) return 'VEINTE';
-        return 'VEINTI' + Unidades(unidad);
+        if (unidad === 0) return "VEINTE";
+        return "VEINTI" + Unidades(unidad);
       case 3:
-        return 'TREINTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+        return "TREINTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
       case 4:
-        return 'CUARENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+        return "CUARENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
       case 5:
-        return 'CINCUENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+        return "CINCUENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
       case 6:
-        return 'SESENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+        return "SESENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
       case 7:
-        return 'SETENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+        return "SETENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
       case 8:
-        return 'OCHENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+        return "OCHENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
       case 9:
-        return 'NOVENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+        return "NOVENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
       default:
         return Unidades(num);
     }
@@ -135,24 +135,24 @@ function numeroALetras(num: number): string {
     const centenaDigito = Math.floor(num / 100);
     switch (centenaDigito) {
       case 1:
-        if (decenas === 0) return 'CIEN';
-        return 'CIENTO ' + Decenas(decenas);
+        if (decenas === 0) return "CIEN";
+        return "CIENTO " + Decenas(decenas);
       case 2:
-        return 'DOSCIENTOS ' + Decenas(decenas);
+        return "DOSCIENTOS " + Decenas(decenas);
       case 3:
-        return 'TRESCIENTOS ' + Decenas(decenas);
+        return "TRESCIENTOS " + Decenas(decenas);
       case 4:
-        return 'CUATROCIENTOS ' + Decenas(decenas);
+        return "CUATROCIENTOS " + Decenas(decenas);
       case 5:
-        return 'QUINIENTOS ' + Decenas(decenas);
+        return "QUINIENTOS " + Decenas(decenas);
       case 6:
-        return 'SEISCIENTOS ' + Decenas(decenas);
+        return "SEISCIENTOS " + Decenas(decenas);
       case 7:
-        return 'SETECIENTOS ' + Decenas(decenas);
+        return "SETECIENTOS " + Decenas(decenas);
       case 8:
-        return 'OCHOCIENTOS ' + Decenas(decenas);
+        return "OCHOCIENTOS " + Decenas(decenas);
       case 9:
-        return 'NOVECIENTOS ' + Decenas(decenas);
+        return "NOVECIENTOS " + Decenas(decenas);
       default:
         return Decenas(num);
     }
@@ -160,11 +160,11 @@ function numeroALetras(num: number): string {
 
   const Seccion = (num: number, divisor: number, strSingular: string, strPlural: string): string => {
     const cientos = Math.floor(num / divisor);
-    let letras = '';
+    let letras = "";
 
     if (cientos > 0) {
       if (cientos > 1) {
-        letras = Centenas(cientos) + ' ' + strPlural;
+        letras = Centenas(cientos) + " " + strPlural;
       } else {
         letras = strSingular;
       }
@@ -176,35 +176,35 @@ function numeroALetras(num: number): string {
   const Miles = (num: number): string => {
     const divisor = 1000;
     const resto = num % divisor;
-    let strMiles = Seccion(num, divisor, 'MIL', 'MIL');
+    let strMiles = Seccion(num, divisor, "MIL", "MIL");
     let strCentenas = Centenas(resto);
 
-    if (strMiles === '') return strCentenas;
-    if (strMiles === 'UN MIL') strMiles = 'MIL';
-    if (strCentenas === '') return strMiles;
-    return strMiles + ' ' + strCentenas;
+    if (strMiles === "") return strCentenas;
+    if (strMiles === "UN MIL") strMiles = "MIL";
+    if (strCentenas === "") return strMiles;
+    return strMiles + " " + strCentenas;
   };
 
   const Millones = (num: number): string => {
     const divisor = 1000000;
     const resto = num % divisor;
-    let strMillones = Seccion(num, divisor, 'UN MILLÓN', 'MILLONES');
+    let strMillones = Seccion(num, divisor, "UN MILLÓN", "MILLONES");
     let strMiles = Miles(resto);
 
-    if (strMillones === '') return strMiles;
-    if (strMiles === '') return strMillones;
-    return strMillones + ' ' + strMiles;
+    if (strMillones === "") return strMiles;
+    if (strMiles === "") return strMillones;
+    return strMillones + " " + strMiles;
   };
 
   const entero = Math.floor(num);
   const centavosVal = Math.round((num - entero) * 100);
-  const centavosStr = centavosVal.toString().padStart(2, '0') + '/100';
+  const centavosStr = centavosVal.toString().padStart(2, "0") + "/100";
 
   if (entero === 0) {
-    return 'CERO ' + centavosStr;
+    return "CERO " + centavosStr;
   }
 
-  return (Millones(entero) + ' ' + centavosStr).replace(/\s+/g, ' ').trim();
+  return (Millones(entero) + " " + centavosStr).replace(/\s+/g, " ").trim();
 }
 
 export const ProjectTeamPage: React.FC = () => {
@@ -275,19 +275,19 @@ export const ProjectTeamPage: React.FC = () => {
   const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState(''); // For Disponibles (Modal)
-  const [filterRole, setFilterRole] = useState(''); // Filter by Role
-  const [filterRoleFrame, setFilterRoleFrame] = useState(''); // Filter by Role Frame
-  const [filterProject, setFilterProject] = useState(''); // Filter by Project
+  const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
+  const [filterRole, setFilterRole] = useState(""); // Filter by Role
+  const [filterRoleFrame, setFilterRoleFrame] = useState(""); // Filter by Role Frame
+  const [filterProject, setFilterProject] = useState(""); // Filter by Project
   const [showFilters, setShowFilters] = useState(false); // Toggle filters UI
-  const [searchTermTeam, setSearchTermTeam] = useState(''); // For Equipo Actual
-  const [filterUserStatus, setFilterUserStatus] = useState<string>('');
-  const [filterVigencia, setFilterVigencia] = useState<string>(''); // "" | "vigente" | "novigente" (client-side sobre la página)
-  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(''); // nombre_contrato (client-side sobre la página)
-  const [filterAreaTurno, setFilterAreaTurno] = useState<string>(''); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
-  const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(''); // nombre_estado_empleado (client-side sobre la página)
-  const [filterRolMobile, setFilterRolMobile] = useState<string>(''); // "" | "colaborador" | "coordinador" (server-side, paginado)
-  const [filterReemplazo, setFilterReemplazo] = useState<string>(''); // "" | "con" | "sin" (server-side, paginado)
+  const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
+  const [filterUserStatus, setFilterUserStatus] = useState<string>("");
+  const [filterVigencia, setFilterVigencia] = useState<string>(""); // "" | "vigente" | "novigente" (client-side sobre la página)
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(""); // nombre_contrato (client-side sobre la página)
+  const [filterAreaTurno, setFilterAreaTurno] = useState<string>(""); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
+  const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(""); // nombre_estado_empleado (client-side sobre la página)
+  const [filterRolMobile, setFilterRolMobile] = useState<string>(""); // "" | "colaborador" | "coordinador" (server-side, paginado)
+  const [filterReemplazo, setFilterReemplazo] = useState<string>(""); // "" | "con" | "sin" (server-side, paginado)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   const [showEstadoInfo, setShowEstadoInfo] = useState(false);
@@ -313,27 +313,27 @@ export const ProjectTeamPage: React.FC = () => {
    *
    * `""` = todos los convenios de la empleadora.
    */
-  const [convenioFiltro, setConvenioFiltro] = useState<string>('');
+  const [convenioFiltro, setConvenioFiltro] = useState<string>("");
   /** Ignora el filtro por función Frame y ofrece TODAS las categorías del convenio elegido. */
   const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   /** Aviso inline cuando el cambio de convenio dejó sin efecto la categoría que estaba elegida. */
-  const [avisoConvenio, setAvisoConvenio] = useState('');
+  const [avisoConvenio, setAvisoConvenio] = useState("");
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
-    rol_frame_id: '',
-    categoria_sat_id: '',
-    contrato_id: '', // _id del Contrato elegido (Tipo de Contrato, valor del select principal)
-    contrato_frame_id: '', // _id de la Plantilla resuelta para ese Contrato (para el PDF/Estados/filtros)
-    nombre_contrato: '', // nombre de la Plantilla resuelta (identificador estable / match PDF)
-    tipo_contrato_id: '', // ID Externo numérico, solo si la contratos-frame lo tiene
-    estado_id: '',
+    rol_frame_id: "",
+    categoria_sat_id: "",
+    contrato_id: "", // _id del Contrato elegido (Tipo de Contrato, valor del select principal)
+    contrato_frame_id: "", // _id de la Plantilla resuelta para ese Contrato (para el PDF/Estados/filtros)
+    nombre_contrato: "", // nombre de la Plantilla resuelta (identificador estable / match PDF)
+    tipo_contrato_id: "", // ID Externo numérico, solo si la contratos-frame lo tiene
+    estado_id: "",
     // Empresas del proyecto elegidas para el contrato / release de este miembro (ObjectId o "")
-    empresaContratoId: '',
-    empresaReleaseId: '',
-    hora_inicio: '09:00',
-    hora_fin: '18:00',
-    fecha_alta_contrato: new Date().toISOString().split('T')[0],
-    fecha_baja_contrato: '',
+    empresaContratoId: "",
+    empresaReleaseId: "",
+    hora_inicio: "09:00",
+    hora_fin: "18:00",
+    fecha_alta_contrato: new Date().toISOString().split("T")[0],
+    fecha_baja_contrato: "",
     /*
       Los días del contrato. CAMPO PROPIO, separado de `cantidad_jornadas_laborales`.
 
@@ -348,24 +348,24 @@ export const ProjectTeamPage: React.FC = () => {
     cantidad_jornadas_laborales: 5,
     sueldo_jornada: 0,
     sueldo_mano: 0,
-    sueldo_mano_texto: '',
+    sueldo_mano_texto: "",
     sueldo_diario_neto: 0,
     diferencia_diaria_neto: 0,
     sueldo_neto: 0,
     sueldo_bruto: 0,
     // Step 3: Extras
-    sede_id: '',
+    sede_id: "",
     reemplazo: false,
-    empleado_id_reemplezado: '',
-    observaciones: '',
+    empleado_id_reemplezado: "",
+    observaciones: "",
     areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
   });
 
   // UI States
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  const [activeTab, setActiveTab] = useState<'equipo' | 'solicitudes' | 'coordinadores'>('equipo');
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
   const [showSinAreasInfo, setShowSinAreasInfo] = useState(false);
@@ -395,7 +395,7 @@ export const ProjectTeamPage: React.FC = () => {
   // se ofrecen TODAS las empresas del ABM (si no, no habría con qué generar el documento).
   const allEmpresas = companies.map((c) => ({ id: c._id, label: c.razonSocial })).filter((e) => e.label);
   const resolveEmpresas = (ids?: string[]) => {
-    const fromProject = (ids || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || '' })).filter((e) => e.label);
+    const fromProject = (ids || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || "" })).filter((e) => e.label);
     return fromProject.length > 0 ? fromProject : allEmpresas;
   };
   const contratoEmpresas = resolveEmpresas(project?.contratoEmpresas);
@@ -403,23 +403,23 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Persistence for view mode
   useEffect(() => {
-    const saved = localStorage.getItem('projectTeamViewMode');
-    if (saved === 'table' || saved === 'cards') {
-      setViewMode(saved as 'table' | 'cards');
+    const saved = localStorage.getItem("projectTeamViewMode");
+    if (saved === "table" || saved === "cards") {
+      setViewMode(saved as "table" | "cards");
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('projectTeamViewMode', viewMode);
+    localStorage.setItem("projectTeamViewMode", viewMode);
   }, [viewMode]);
 
   useEffect(() => {
     const handleResize = () => setIsLg(window.innerWidth >= 1024);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const effectiveViewMode = isLg ? viewMode : 'cards';
+  const effectiveViewMode = isLg ? viewMode : "cards";
 
   /* -------------------------- Auto-Calculations ---------------------------
    * El Sueldo NETO y BRUTO salen de la Categoría seleccionada (ya vienen
@@ -454,10 +454,7 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Página actual del equipo (datos completos). TODOS los filtros se resuelven en el server: si se
   // aplicaran acá sobre la página cargada, la paginación mostraría resultados salteados y páginas vacías.
-  const fetchTeamPage = async (
-    page: number,
-    opts?: { search?: string; status?: string; rolMobile?: string; vigencia?: string; tipoContrato?: string; areaTurno?: string; estadoContrato?: string; reemplazo?: string },
-  ) => {
+  const fetchTeamPage = async (page: number, opts?: { search?: string; status?: string; rolMobile?: string; vigencia?: string; tipoContrato?: string; areaTurno?: string; estadoContrato?: string; reemplazo?: string }) => {
     if (!projectId) return;
     const search = opts?.search ?? searchTermTeam;
     const status = opts?.status ?? filterUserStatus;
@@ -470,10 +467,10 @@ export const ProjectTeamPage: React.FC = () => {
     const reqId = ++teamReqIdRef.current;
     try {
       setTeamFetching(true);
-      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: 'name' };
+      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: "name" };
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
-      if (status === 'active') params.metadataActivo = 'true';
-      if (status === 'inactive') params.metadataActivo = 'false';
+      if (status === "active") params.metadataActivo = "true";
+      if (status === "inactive") params.metadataActivo = "false";
       if (rolMobile) params.roleName = `mobile-${rolMobile}`;
       if (vigencia) params.vigencia = vigencia;
       if (tipoContrato) params.tipoContrato = tipoContrato;
@@ -486,7 +483,7 @@ export const ProjectTeamPage: React.FC = () => {
       setTeamTotal(resp.pagination.total);
       setTeamTotalPages(resp.pagination.pages);
     } catch (e) {
-      if (reqId === teamReqIdRef.current) console.error('Error fetching team page:', e);
+      if (reqId === teamReqIdRef.current) console.error("Error fetching team page:", e);
     } finally {
       if (reqId === teamReqIdRef.current) setTeamFetching(false);
     }
@@ -500,7 +497,7 @@ export const ProjectTeamPage: React.FC = () => {
       setAllUsers(resp.users);
       return resp.users;
     } catch (e) {
-      console.error('Error fetching full team (lite):', e);
+      console.error("Error fetching full team (lite):", e);
       return [];
     }
   };
@@ -513,9 +510,9 @@ export const ProjectTeamPage: React.FC = () => {
         setLoading(true);
         const [projectData, vacationsData, areasData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId), // específico del proyecto: no se cachea
-          cachedFetch('vacations:all', () => vacationsAPI.getAll()),
-          cachedFetch('areas:all', () => areasAPI.listAll()),
-          cachedFetch('shifts:all', () => shiftsAPI.getAll()),
+          cachedFetch("vacations:all", () => vacationsAPI.getAll()),
+          cachedFetch("areas:all", () => areasAPI.listAll()),
+          cachedFetch("shifts:all", () => shiftsAPI.getAll()),
         ]);
 
         setAllShifts(shiftsData);
@@ -534,7 +531,7 @@ export const ProjectTeamPage: React.FC = () => {
             setTeamConfig(projectData.teamConfig || []);
           }
         } catch (cleanupError) {
-          console.warn('Could not cleanup team:', cleanupError);
+          console.warn("Could not cleanup team:", cleanupError);
           setProject(projectData);
           setTeamConfig(projectData.teamConfig || []);
         }
@@ -547,21 +544,13 @@ export const ProjectTeamPage: React.FC = () => {
         setAllAreas(areasData);
 
         // Fetch additional data for user cards
-        const [allClientsData, allProjectsResponse] = await Promise.all([cachedFetch('clients:all', () => clientsAPI.listAll()), cachedFetch('projects:all', () => projectsAPI.listAll({ limit: 500 }))]);
+        const [allClientsData, allProjectsResponse] = await Promise.all([cachedFetch("clients:all", () => clientsAPI.listAll()), cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 }))]);
 
         setAllClients(allClientsData);
         setAllProjects(allProjectsResponse);
 
         // Fetch Metadata Info (datos de referencia estables → cacheados)
-        const [sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([
-          cachedFetch('info:sede', () => infoAPI.listByType('sede')),
-          cachedFetch('categoriaSat:all', () => categoriaSatAPI.list()),
-          cachedFetch('info:estado-empleado', () => infoAPI.listByType('estado-empleado')),
-          cachedFetch('info:contrato', () => infoAPI.listByType('contrato')),
-          cachedFetch('roleFrames:all', () => roleFrameAPI.list()),
-          cachedFetch('contratoFrames:all', () => contratoFrameAPI.list()),
-          cachedFetch('contratos:all', () => contratosAPI.list()),
-        ]);
+        const [sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([cachedFetch("info:sede", () => infoAPI.listByType("sede")), cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()), cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")), cachedFetch("info:contrato", () => infoAPI.listByType("contrato")), cachedFetch("roleFrames:all", () => roleFrameAPI.list()), cachedFetch("contratoFrames:all", () => contratoFrameAPI.list()), cachedFetch("contratos:all", () => contratosAPI.list())]);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);
@@ -581,14 +570,14 @@ export const ProjectTeamPage: React.FC = () => {
         teamUsers.forEach((u: User) => {
           const metaId = (u.metadata as any)?.id;
           if (metaId) {
-            const name = u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : u.email.split('@')[0];
+            const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email.split("@")[0];
             lookupMap.set(metaId, name);
           }
         });
         setUserLookup(lookupMap);
       } catch (error) {
-        console.error('Error loading data:', error);
-        sweetAlert.error('Error', 'No se pudieron cargar los datos del equipo.');
+        console.error("Error loading data:", error);
+        sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
       } finally {
         setLoading(false);
       }
@@ -634,7 +623,7 @@ export const ProjectTeamPage: React.FC = () => {
         setAreaShiftCounts(counts);
         setAreaShiftUserIds(userIds);
       })
-      .catch((e) => console.error('Error fetching area/shift counts:', e));
+      .catch((e) => console.error("Error fetching area/shift counts:", e));
     return () => {
       cancelled = true;
     };
@@ -659,10 +648,10 @@ export const ProjectTeamPage: React.FC = () => {
       try {
         const solis = await usersAPI.listSolicitudes();
         // El badge cuenta solo las PENDIENTES: las rechazadas siguen listadas, pero ya no son tarea pendiente.
-        const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId) && (u.metadata?.solicitudStatus || 'pendiente') === 'pendiente').length;
+        const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId) && (u.metadata?.solicitudStatus || "pendiente") === "pendiente").length;
         setSolicitudesCount(count);
       } catch (e) {
-        console.error('Error fetching solicitudes count:', e);
+        console.error("Error fetching solicitudes count:", e);
       }
     };
     fetchCount();
@@ -678,7 +667,7 @@ export const ProjectTeamPage: React.FC = () => {
   useEffect(() => {
     if (!showAddModal) {
       setCandidateUsers([]);
-      setSearchTerm('');
+      setSearchTerm("");
       setCandTotal(0);
       setCandTotalPages(1);
       setCandPage(1);
@@ -690,13 +679,13 @@ export const ProjectTeamPage: React.FC = () => {
       try {
         setSearchingCandidates(true);
         // slimProjects (sin contratos) → carga liviana; el contrato se trae on-demand en handleOpenWizard.
-        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: 'true', email: searchTerm || undefined, slimProjects: true });
+        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: "true", email: searchTerm || undefined, slimProjects: true });
         if (reqId !== candReqIdRef.current) return;
         setCandidateUsers(response.users);
         setCandTotal(response.pagination.total);
         setCandTotalPages(response.pagination.pages);
       } catch (error) {
-        if (reqId === candReqIdRef.current) console.error('Error fetching candidates:', error);
+        if (reqId === candReqIdRef.current) console.error("Error fetching candidates:", error);
       } finally {
         if (reqId === candReqIdRef.current) setSearchingCandidates(false);
       }
@@ -710,11 +699,11 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Derived state
   const clientName = useMemo(() => {
-    if (!project) return '';
-    if (typeof project.clientId === 'object' && project.clientId?.name) {
+    if (!project) return "";
+    if (typeof project.clientId === "object" && project.clientId?.name) {
       return project.clientId.name;
     }
-    return '';
+    return "";
   }, [project]);
 
   const projectMap = useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
@@ -725,12 +714,12 @@ export const ProjectTeamPage: React.FC = () => {
     const opts: { value: string; label: string }[] = [];
     const seen = new Set<string>();
     (project?.areasConfig || []).forEach((ac: any) => {
-      const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
-      const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+      const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+      const aName = typeof ac.areaId === "object" ? ac.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
       if (!aId || !aName) return;
       (ac.shiftIds || []).forEach((sid: any) => {
-        const sId = typeof sid === 'object' ? sid?._id : sid;
-        const sName = typeof sid === 'object' ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
+        const sId = typeof sid === "object" ? sid?._id : sid;
+        const sName = typeof sid === "object" ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
         if (!sId || !sName) return;
         const key = `${aId}::${sId}`;
         if (seen.has(key)) return;
@@ -752,7 +741,7 @@ export const ProjectTeamPage: React.FC = () => {
     teamRows.forEach((u) => {
       const projectMeta = u.metadata?.projects?.find((p: any) => {
         const pId = p.projectId;
-        return String(typeof pId === 'object' ? (pId as any)?._id : pId) === String(projectId);
+        return String(typeof pId === "object" ? (pId as any)?._id : pId) === String(projectId);
       });
       const estado = (getContratoActivo(projectMeta?.contracts as any[]) as any)?.nombre_estado_empleado || null;
       if (estado) seen.add(estadoLabel(estado));
@@ -771,9 +760,7 @@ export const ProjectTeamPage: React.FC = () => {
   // este estado impositivo como una opción más (ver `estadosDisponibles`).
   const estadoImpositivoAuto = useMemo(() => {
     if (!wizardData.contrato_frame_id) return undefined;
-    return allEstados.find(
-      (e) => !!(e.data as any)?.esImpositivo && ((e.data as any)?.contratoFrameIds || []).some((id: string) => String(id) === String(wizardData.contrato_frame_id)),
-    );
+    return allEstados.find((e) => !!(e.data as any)?.esImpositivo && ((e.data as any)?.contratoFrameIds || []).some((id: string) => String(id) === String(wizardData.contrato_frame_id)));
   }, [allEstados, wizardData.contrato_frame_id]);
 
   /**
@@ -783,7 +770,7 @@ export const ProjectTeamPage: React.FC = () => {
    * se agrega igual para no perder el valor actual.
    */
   const estadosDisponibles = useMemo(() => {
-    const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : '';
+    const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : "";
     const filtrados = allEstados.filter((e) => {
       const vinculados = (e.data as any)?.contratoFrameIds || [];
       if (vinculados.length === 0) return true;
@@ -801,22 +788,22 @@ export const ProjectTeamPage: React.FC = () => {
   // Contrato durante la edición (ahí sí hay que re-sincronizar el estado impositivo). Se resetea al
   // abrir el wizard (ver `handleOpenWizard`) para que la primera corrida de este efecto no cuente
   // como "cambio".
-  const prevContratoFrameIdRef = useRef<string>('');
+  const prevContratoFrameIdRef = useRef<string>("");
 
   useEffect(() => {
     if (esAltaNueva) {
       // "Agregar Miembro": el estado siempre es el impositivo automático (no lo elige el usuario).
-      const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
+      const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : "";
       setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
-      prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
+      prevContratoFrameIdRef.current = wizardData.contrato_frame_id || "";
       return;
     }
 
     // "Configurar Miembro": el estado lo elige el usuario, pero si cambia el Tipo de Contrato/
     // Plantilla durante la edición, se re-sincroniza con el impositivo del tipo nuevo (si no tiene
     // ninguno vinculado, se deja el estado como está, para no pisarlo con algo sin sentido).
-    const cambioDeTipo = prevContratoFrameIdRef.current !== (wizardData.contrato_frame_id || '');
-    prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
+    const cambioDeTipo = prevContratoFrameIdRef.current !== (wizardData.contrato_frame_id || "");
+    prevContratoFrameIdRef.current = wizardData.contrato_frame_id || "";
     if (!cambioDeTipo || !estadoImpositivoAuto) return;
     const nuevoId = String(estadoImpositivoAuto.data.id);
     setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
@@ -830,20 +817,20 @@ export const ProjectTeamPage: React.FC = () => {
   const [client, setClient] = useState<any>(null);
 
   useEffect(() => {
-    if (project && typeof project.clientId === 'string' && !clientName) {
+    if (project && typeof project.clientId === "string" && !clientName) {
       // fetch client
       projectsAPI.getClient(project.clientId).then(setClient).catch(console.error);
     }
   }, [project, clientName]);
 
-  const displayedClientName = client?.name || clientName || 'Cliente';
+  const displayedClientName = client?.name || clientName || "Cliente";
 
   // Unificamos los IDs de usuarios asignados (cruce entre la lista del proyecto y los metadatos de los usuarios)
   const assignedUserIds = useMemo(() => {
     if (!project || !projectId) return [];
 
     // 1. Usuarios explícitamente asignados en el objeto Proyecto
-    const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === 'string' ? u : u._id));
+    const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === "string" ? u : u._id));
 
     return Array.from(new Set(fromProject));
   }, [project, projectId]);
@@ -868,7 +855,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       // 4. Filter by Role Frame (contratos/proyectos + propios del usuario en metadata.roles_frame)
       if (filterRoleFrame) {
-        const ownRFNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
+        const ownRFNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
         const userRFs = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRFNames]));
         if (!userRFs.includes(filterRoleFrame)) return false;
       }
@@ -897,18 +884,18 @@ export const ProjectTeamPage: React.FC = () => {
 
   /** Personas distintas asignadas como coordinadoras (una puede coordinar varias combinaciones área/turno). */
   const coordinadoresCount = useMemo(() => {
-    const coordIds = new Set((project?.coordinatorAssignments || []).map((asm) => (typeof asm.userId === 'object' ? asm.userId?._id : asm.userId)).filter(Boolean));
+    const coordIds = new Set((project?.coordinatorAssignments || []).map((asm) => (typeof asm.userId === "object" ? asm.userId?._id : asm.userId)).filter(Boolean));
     return coordIds.size;
   }, [project?.coordinatorAssignments]);
 
   const displayedCount = useMemo(() => {
-    if (activeTab === 'equipo') {
+    if (activeTab === "equipo") {
       return teamTotal;
     }
-    if (activeTab === 'coordinadores') {
+    if (activeTab === "coordinadores") {
       return coordinadoresCount;
     }
-    if (activeTab === 'solicitudes') {
+    if (activeTab === "solicitudes") {
       return solicitudesCount;
     }
     return teamMembers.length;
@@ -918,7 +905,7 @@ export const ProjectTeamPage: React.FC = () => {
     return teamMembers.some((u) =>
       u.roles?.some((r) => {
         const n = r.name.toLowerCase();
-        return n.includes('mobile') && n.includes('coordinador');
+        return n.includes("mobile") && n.includes("coordinador");
       }),
     );
   }, [teamMembers]);
@@ -942,7 +929,7 @@ export const ProjectTeamPage: React.FC = () => {
     const ids = (empresa.convenioIds || []).map(String);
     const codigos = allConvenios
       .filter((c) => ids.includes(c._id))
-      .map((c) => String(c.externalId || '').trim())
+      .map((c) => String(c.externalId || "").trim())
       .filter(Boolean);
     return codigos.length > 0 ? codigos : null;
   }, [companies, allConvenios, wizardData.empresaContratoId]);
@@ -971,12 +958,12 @@ export const ProjectTeamPage: React.FC = () => {
     setConvenioFiltro(nuevo);
     // El escape hatch es por convenio: al cambiar de convenio vuelve a su default.
     setVerTodasDelConvenio(false);
-    setAvisoConvenio('');
+    setAvisoConvenio("");
     if (!nuevo || !wizardData.categoria_sat_id) return;
     const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
-    if (String(cat?.data?.convenio || '').trim() !== nuevo) {
-      setWizardData((prev) => ({ ...prev, categoria_sat_id: '' }));
-      setAvisoConvenio('Se limpió la categoría: no pertenece al convenio elegido.');
+    if (String(cat?.data?.convenio || "").trim() !== nuevo) {
+      setWizardData((prev) => ({ ...prev, categoria_sat_id: "" }));
+      setAvisoConvenio("Se limpió la categoría: no pertenece al convenio elegido.");
     }
   };
 
@@ -990,15 +977,15 @@ export const ProjectTeamPage: React.FC = () => {
     const cantidadPorCct = new Map<string, number>();
     for (const c of allCategoriasSat) {
       if (!esElegible(c)) continue;
-      const cct = String(c.data?.convenio || '').trim();
+      const cct = String(c.data?.convenio || "").trim();
       if (cct) cantidadPorCct.set(cct, (cantidadPorCct.get(cct) || 0) + 1);
     }
-    const nombrePorCct = new Map(allConvenios.map((c) => [String(c.externalId || '').trim(), String(c.name || '')]));
+    const nombrePorCct = new Map(allConvenios.map((c) => [String(c.externalId || "").trim(), String(c.name || "")]));
 
     return [...codigos]
       .map((externalId) => ({
         externalId,
-        name: nombrePorCct.get(externalId) || '',
+        name: nombrePorCct.get(externalId) || "",
         cantidadCategorias: cantidadPorCct.get(externalId) || 0,
         registrado: (conveniosDeLaEmpleadora || []).includes(externalId),
       }))
@@ -1014,7 +1001,7 @@ export const ProjectTeamPage: React.FC = () => {
   } = useMemo(() => {
     // El convenio de cada categoría vive SOLO en el catálogo: la copia denormalizada de las funciones
     // FRAME no lo guarda, así que todo lo que use el CCT se resuelve contra este mapa por `data.id`.
-    const convenioPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.convenio || '').trim()]));
+    const convenioPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.convenio || "").trim()]));
 
     const delRol: any[] = (() => {
       if (!wizardData.rol_frame_id) return [];
@@ -1102,8 +1089,8 @@ export const ProjectTeamPage: React.FC = () => {
     // el número del GRUPO salarial, compartido por decenas de categorías distintas. La copia
     // denormalizada de las funciones FRAME guarda el código como número, así que se re-resuelve
     // contra el catálogo, donde está canónico con sus ceros.
-    const codigoPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.codigoArca || '').trim()]));
-    const conCodigo = list.map((c) => ({ ...c, codigoArca: codigoPorId.get(String(c.id)) || '' }));
+    const codigoPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.codigoArca || "").trim()]));
+    const conCodigo = list.map((c) => ({ ...c, codigoArca: codigoPorId.get(String(c.id)) || "" }));
 
     return { categorias: conCodigo, ocultasPorConvenio, ocultasPorFiltroConvenio, rolNoTieneCategoriasDelConvenio };
   }, [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio]);
@@ -1128,7 +1115,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Role frames propios del usuario (colección users.metadata.roles_frame / rolesFrameIds)
     const ownRoleFrameIds = (((selectedUserForWizard.metadata as any)?.rolesFrameIds || (selectedUserForWizard.metadata as any)?.roles_frame || []) as any[])
-      .map((rf: any) => (typeof rf === 'object' ? rf?._id : rf))
+      .map((rf: any) => (typeof rf === "object" ? rf?._id : rf))
       .filter(Boolean)
       .map(String);
     if (ownRoleFrameIds.length > 0) {
@@ -1165,7 +1152,7 @@ export const ProjectTeamPage: React.FC = () => {
   }, [allRoleFrames, selectedUserForWizard]);
 
   // Check Is Coordinator Helper
-  const checkIsCoordinator = (user: User) => (user.roles && user.roles.some((r) => r.name.toLowerCase().includes('coordinador'))) || user.firstName?.toLowerCase().includes('coordinador') || user.lastName?.toLowerCase().includes('coordinador');
+  const checkIsCoordinator = (user: User) => (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
 
   // Get standard shifts for a user assigned to an area
   const getStandardShifts = (user: User, userConfig: any, activeContract: any, areaId: string, areaName: string) => {
@@ -1177,11 +1164,11 @@ export const ProjectTeamPage: React.FC = () => {
       if (!project?.coordinatorAssignments) return [];
       return project.coordinatorAssignments
         .filter((asm) => {
-          const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
-          const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
+          const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+          const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
           return String(uid) === String(user._id) && String(aid) === String(areaId);
         })
-        .map((asm) => (typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId));
+        .map((asm) => (typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId));
     };
 
     const coordShiftIds = getCoordinatedShiftIds();
@@ -1189,7 +1176,7 @@ export const ProjectTeamPage: React.FC = () => {
     // 1. Check team configuration assignments (Wizard) and EXCLUDE coordinated ones
     const assignments = userConfig?.areaShiftAssignments || [];
     const areaAssign = assignments.find((a: any) => {
-      const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
+      const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
       if (String(aid) === String(areaId)) return true;
       const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
       return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
@@ -1198,7 +1185,7 @@ export const ProjectTeamPage: React.FC = () => {
     if (areaAssign) {
       const sids = areaAssign.shiftIds || [];
       sids.forEach((sid: any) => {
-        const actualSid = typeof sid === 'object' ? sid?._id : sid;
+        const actualSid = typeof sid === "object" ? sid?._id : sid;
         if (coordShiftIds.includes(actualSid)) return;
         const shift = allShifts.find((s) => String(s._id) === String(actualSid));
         if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
@@ -1211,7 +1198,7 @@ export const ProjectTeamPage: React.FC = () => {
     if (shifts.length === 0) {
       if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
         const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-          const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
+          const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
           if (String(aid) === String(areaId)) return true;
           const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
           return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
@@ -1220,7 +1207,7 @@ export const ProjectTeamPage: React.FC = () => {
         if (fallbackAssign) {
           const sids = fallbackAssign.shiftIds || [];
           sids.forEach((sid: any) => {
-            const actualSid = typeof sid === 'object' ? sid?._id : sid;
+            const actualSid = typeof sid === "object" ? sid?._id : sid;
             if (coordShiftIds.includes(actualSid)) return;
             const shift = allShifts.find((s) => String(s._id) === String(actualSid));
             if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
@@ -1233,7 +1220,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     // 3. Legacy members fallback
     if (shifts.length === 0) {
-      const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === 'object' ? user.turnos[0]._id : user.turnos[0]) : undefined;
+      const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
       const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
       const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
       if (shift) shifts = [shift];
@@ -1267,17 +1254,10 @@ export const ProjectTeamPage: React.FC = () => {
     setAreaShiftMembers(null);
     setLoadingAreaShiftMembers(true);
     try {
-      setAreaShiftMembers(
-        await projectsAPI.getAreaShiftMembers(
-          projectId,
-          areaId,
-          shift ? String(shift._id) : undefined,
-          shift ? undefined : (shiftsDelArea || []).map((s) => String(s._id)),
-        ),
-      );
+      setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, shift ? String(shift._id) : undefined, shift ? undefined : (shiftsDelArea || []).map((s) => String(s._id))));
     } catch (e) {
-      console.error('Error fetching area/shift members:', e);
-      sweetAlert.error('Error', 'No se pudo cargar el detalle del área/turno.');
+      console.error("Error fetching area/shift members:", e);
+      sweetAlert.error("Error", "No se pudo cargar el detalle del área/turno.");
       setViewingAreaShift(null);
     } finally {
       setLoadingAreaShiftMembers(false);
@@ -1290,12 +1270,12 @@ export const ProjectTeamPage: React.FC = () => {
     if (!user) return shifts;
     if (project?.coordinatorAssignments) {
       const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-        const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
-        const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
+        const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+        const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
         return String(uid) === String(user._id) && String(aid) === String(areaId);
       });
       myCoordAsgn.forEach((asm) => {
-        const sid = typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId;
+        const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
         const shift = allShifts.find((s) => String(s._id) === String(sid));
         if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
           shifts.push(shift);
@@ -1311,7 +1291,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     return vacations.find((v) => {
       if (v.userId !== userId) return false;
-      const isFinal = v.status === 'delivered' || v.signatureStatus === 'signed' || (v.status === 'approved' && v.signatureStatus === 'not_required');
+      const isFinal = v.status === "delivered" || v.signatureStatus === "signed" || (v.status === "approved" && v.signatureStatus === "not_required");
       if (!isFinal) return false;
 
       const start = new Date(v.startDate);
@@ -1324,11 +1304,11 @@ export const ProjectTeamPage: React.FC = () => {
   };
 
   const calculateDuration = (start: string, end: string) => {
-    if (!start || !end) return '';
+    if (!start || !end) return "";
     try {
-      const [startH, startM] = start.split(':').map(Number);
-      const [endH, endM] = end.split(':').map(Number);
-      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return '';
+      const [startH, startM] = start.split(":").map(Number);
+      const [endH, endM] = end.split(":").map(Number);
+      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return "";
 
       let startTotal = startH * 60 + startM;
       let endTotal = endH * 60 + endM;
@@ -1344,7 +1324,7 @@ export const ProjectTeamPage: React.FC = () => {
       if (mins === 0) return `${hours}hs`;
       return `${hours}h ${mins}m`;
     } catch (e) {
-      return '';
+      return "";
     }
   };
 
@@ -1356,8 +1336,8 @@ export const ProjectTeamPage: React.FC = () => {
       const updatedProject = await projectsAPI.updateTeamConfig(project._id, newConfig);
       setTeamConfig(updatedProject.teamConfig || []);
     } catch (err) {
-      console.error('Error updating team config', err);
-      sweetAlert.error('Error', 'No se pudo guardar la configuración del equipo.');
+      console.error("Error updating team config", err);
+      sweetAlert.error("Error", "No se pudo guardar la configuración del equipo.");
     }
   };
   const handleOpenScheduleModal = (user: User, contractOverride?: Contract, contractIndex?: number) => {
@@ -1369,7 +1349,7 @@ export const ProjectTeamPage: React.FC = () => {
   const handleOpenWizard = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
     // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
     // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
-    setEditingContractIndex(typeof contractIndex === 'number' ? contractIndex : null);
+    setEditingContractIndex(typeof contractIndex === "number" ? contractIndex : null);
     // Si viene de aprobar una solicitud, recordamos el id para marcarla aprobada al guardar.
     setApprovingSolicitudId(approveSolicitudId ?? null);
     // La lista de candidatos viene "slim" (sin contratos) para no cargar 100 historiales
@@ -1380,7 +1360,7 @@ export const ProjectTeamPage: React.FC = () => {
       const full = await usersAPI.get(userId);
       if (full) user = full;
     } catch (e) {
-      console.error('No se pudo traer el usuario completo, uso el de la lista:', e);
+      console.error("No se pudo traer el usuario completo, uso el de la lista:", e);
     }
     if (!user) return;
 
@@ -1388,47 +1368,46 @@ export const ProjectTeamPage: React.FC = () => {
     const metadataProjects = user.metadata?.projects || [];
 
     // Prioritize current project if existing
-    const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id));
+    const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === "string" ? p.projectId : p.projectId?._id) === String(project?._id));
 
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
     // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el que
     // rige hoy (el vigente más reciente), que no siempre es el último cargado.
     const contratoQueRige = getContratoActivo(lastProject?.contracts as any[]);
-    const lastContract =
-      contractOverride || (typeof contractIndex === "number" && lastProject?.contracts?.[contractIndex] != null ? lastProject.contracts[contractIndex] : contratoQueRige);
+    const lastContract = contractOverride || (typeof contractIndex === "number" && lastProject?.contracts?.[contractIndex] != null ? lastProject.contracts[contractIndex] : contratoQueRige);
 
     // Sin índice explícito el backend actualiza el ÚLTIMO contrato del array. Como acá se precargó el
     // que rige, se fija su índice para que se guarde sobre ese mismo y no sobre otro.
-    if (typeof contractIndex !== 'number' && !contractOverride && contratoQueRige && Array.isArray(lastProject?.contracts)) {
+    if (typeof contractIndex !== "number" && !contractOverride && contratoQueRige && Array.isArray(lastProject?.contracts)) {
       const idxQueRige = (lastProject!.contracts as any[]).indexOf(contratoQueRige);
       if (idxQueRige >= 0) setEditingContractIndex(idxQueRige);
     }
 
-    console.log('[Wizard] user:', user._id, 'lastProject:', lastProject?._id, 'lastContract keys:', lastContract ? Object.keys(lastContract) : 'null');
-    console.log('[Wizard] lastContract:', lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : 'null');
+    console.log("[Wizard] user:", user._id, "lastProject:", lastProject?._id, "lastContract keys:", lastContract ? Object.keys(lastContract) : "null");
+    console.log("[Wizard] lastContract:", lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : "null");
 
     // Default statuses and IDs
-    const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes('activo'));
+    const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes("activo"));
 
     // Prioritize IDs from last contract if they exist (numeric IDs stored in UserProject)
-    let initialCatId = '';
+    let initialCatId = "";
     if (lastContract) {
       const catIdFromDb = (lastContract as any).categoria_sat_id;
       const catNameFromDb = (lastContract as any).nombre_categoria_sat;
 
-      console.log('[Wizard] lastContract categoria_sat_id:', catIdFromDb, 'nombre_categoria_sat:', catNameFromDb);
+      console.log("[Wizard] lastContract categoria_sat_id:", catIdFromDb, "nombre_categoria_sat:", catNameFromDb);
       console.log(
-        '[Wizard] allCategoriasSat count:',
+        "[Wizard] allCategoriasSat count:",
         allCategoriasSat.length,
-        'sample:',
+        "sample:",
         allCategoriasSat.slice(0, 3).map((c) => ({ _id: c._id, dataId: c.data?.id, name: c.name })),
       );
 
       // Try to find the category in the global list first by numeric ID, MongoDB ID, or Name
       let matchedCat = allCategoriasSat.find((c) => {
-        const numericIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c.data?.id) === String(catIdFromDb);
-        const mongoIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c._id) === String(catIdFromDb);
-        const nameMatch = catNameFromDb && catNameFromDb !== 'Sin categoria' && (c.name?.toLowerCase() === catNameFromDb.toLowerCase() || c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase());
+        const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.data?.id) === String(catIdFromDb);
+        const mongoIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c._id) === String(catIdFromDb);
+        const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && (c.name?.toLowerCase() === catNameFromDb.toLowerCase() || c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase());
         return numericIdMatch || mongoIdMatch || nameMatch;
       });
 
@@ -1437,8 +1416,8 @@ export const ProjectTeamPage: React.FC = () => {
         const foundRF = allRoleFrames.find((rf) => rf.name === lastProject?.nombre_rol_frame);
         const rfCats = foundRF?.data?.categoriasSat || [];
         const matchedInRF = rfCats.find((c: any) => {
-          const numericIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c.id) === String(catIdFromDb);
-          const nameMatch = catNameFromDb && catNameFromDb !== 'Sin categoria' && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
+          const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.id) === String(catIdFromDb);
+          const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
           return numericIdMatch || nameMatch;
         });
 
@@ -1450,13 +1429,13 @@ export const ProjectTeamPage: React.FC = () => {
 
       if (matchedCat) {
         initialCatId = String(matchedCat.data?.id ?? matchedCat._id);
-        console.log('[Wizard] Matched cat:', matchedCat.name, '-> initialCatId:', initialCatId);
+        console.log("[Wizard] Matched cat:", matchedCat.name, "-> initialCatId:", initialCatId);
       } else {
-        console.log('[Wizard] No matched cat found. catIdFromDb:', catIdFromDb, 'catNameFromDb:', catNameFromDb);
+        console.log("[Wizard] No matched cat found. catIdFromDb:", catIdFromDb, "catNameFromDb:", catNameFromDb);
         // Last resort: if we have a numeric catIdFromDb, just use it directly
-        if (catIdFromDb != null && catIdFromDb !== '' && catIdFromDb !== 0) {
+        if (catIdFromDb != null && catIdFromDb !== "" && catIdFromDb !== 0) {
           initialCatId = String(catIdFromDb);
-          console.log('[Wizard] Using catIdFromDb directly as initialCatId:', initialCatId);
+          console.log("[Wizard] Using catIdFromDb directly as initialCatId:", initialCatId);
         }
       }
     }
@@ -1468,11 +1447,11 @@ export const ProjectTeamPage: React.FC = () => {
       initialCatId = String((user.metadata as any).categoria_sat_id);
     }
 
-    console.log('[Wizard] FINAL initialCatId:', initialCatId);
+    console.log("[Wizard] FINAL initialCatId:", initialCatId);
 
-    let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : '';
+    let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : "";
     if (!initialTipoContratoId && lastContract?.nombre_contrato) {
-      initialTipoContratoId = String(allTiposContrato.find((t) => t.name === lastContract.nombre_contrato)?.data.id || '');
+      initialTipoContratoId = String(allTiposContrato.find((t) => t.name === lastContract.nombre_contrato)?.data.id || "");
     }
     if (!initialTipoContratoId && (user.metadata as any)?.tipoContratoId) {
       initialTipoContratoId = String((user.metadata as any).tipoContratoId);
@@ -1484,42 +1463,42 @@ export const ProjectTeamPage: React.FC = () => {
     // Preseleccionar la contratos-frame del último contrato: primero por nombre (identificador estable),
     // fallback por ID Externo numérico.
     const initialCf = contratoFrames.find((cf) => cf.name === lastContract?.nombre_contrato) || (initialTipoContratoId ? contratoFrames.find((cf) => cf.data?.id != null && String(cf.data.id) === initialTipoContratoId) : undefined);
-    const initialContratoFrameId = initialCf?._id || '';
-    const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || '';
+    const initialContratoFrameId = initialCf?._id || "";
+    const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || "";
     if (initialCf?.data?.id != null) initialTipoContratoId = String(initialCf.data.id);
     // El Contrato (tipo) se resuelve a partir de la Plantilla del último contrato del miembro.
-    const initialContratoId = (typeof initialCf?.contratoId === 'object' ? initialCf?.contratoId?._id : initialCf?.contratoId) || '';
+    const initialContratoId = (typeof initialCf?.contratoId === "object" ? initialCf?.contratoId?._id : initialCf?.contratoId) || "";
 
-    let initialEstadoId = '';
+    let initialEstadoId = "";
     if (lastContract) {
       const estadoIdFromDb = (lastContract as any).estado_id;
       const estadoNameFromDb = (lastContract as any).nombre_estado_empleado;
-      console.log('[Wizard] lastContract estado_id:', estadoIdFromDb, 'nombre_estado_empleado:', estadoNameFromDb);
+      console.log("[Wizard] lastContract estado_id:", estadoIdFromDb, "nombre_estado_empleado:", estadoNameFromDb);
       console.log(
-        '[Wizard] allEstados count:',
+        "[Wizard] allEstados count:",
         allEstados.length,
-        'sample:',
+        "sample:",
         allEstados.slice(0, 3).map((e) => ({ _id: e._id, dataId: e.data?.id, name: e.name })),
       );
 
       // Match by numeric ID first
-      if (estadoIdFromDb != null && estadoIdFromDb !== '' && estadoIdFromDb !== 0) {
+      if (estadoIdFromDb != null && estadoIdFromDb !== "" && estadoIdFromDb !== 0) {
         const matchedEstado = allEstados.find((e) => String(e.data?.id) === String(estadoIdFromDb) || String(e._id) === String(estadoIdFromDb));
         if (matchedEstado) {
           initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
-          console.log('[Wizard] Matched estado by ID:', matchedEstado.name, '-> initialEstadoId:', initialEstadoId);
+          console.log("[Wizard] Matched estado by ID:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
         } else {
           // Use the numeric ID directly as fallback
           initialEstadoId = String(estadoIdFromDb);
-          console.log('[Wizard] Using estadoIdFromDb directly:', initialEstadoId);
+          console.log("[Wizard] Using estadoIdFromDb directly:", initialEstadoId);
         }
       }
       // Match by name as fallback
-      if (!initialEstadoId && estadoNameFromDb && estadoNameFromDb !== 'Activo') {
+      if (!initialEstadoId && estadoNameFromDb && estadoNameFromDb !== "Activo") {
         const matchedEstado = allEstados.find((e) => e.name?.toLowerCase() === estadoNameFromDb.toLowerCase());
         if (matchedEstado) {
           initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
-          console.log('[Wizard] Matched estado by name:', matchedEstado.name, '-> initialEstadoId:', initialEstadoId);
+          console.log("[Wizard] Matched estado by name:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
         }
       }
     }
@@ -1530,11 +1509,11 @@ export const ProjectTeamPage: React.FC = () => {
       initialEstadoId = String((user.metadata as any).estado_id);
     }
     if (!initialEstadoId) {
-      initialEstadoId = String(activoEstado?.data?.id || '');
+      initialEstadoId = String(activoEstado?.data?.id || "");
     }
-    console.log('[Wizard] FINAL initialEstadoId:', initialEstadoId);
+    console.log("[Wizard] FINAL initialEstadoId:", initialEstadoId);
 
-    let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : project?.metadata?.sedeId ? String(project.metadata.sedeId) : '';
+    let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : project?.metadata?.sedeId ? String(project.metadata.sedeId) : "";
     if (!initialSedeId && lastContract?.nombre_sede) {
       const foundSede = allSedes.find((s) => s.name === lastContract.nombre_sede);
       if (foundSede) initialSedeId = String(foundSede.data.id);
@@ -1543,7 +1522,7 @@ export const ProjectTeamPage: React.FC = () => {
       initialSedeId = String((user.metadata as any).sedeId);
     }
 
-    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : '';
+    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : "";
     if (!initialRolFrameId && lastProject?.nombre_rol_frame) {
       // Find role frame by name
       const foundRF = allRoleFrames.find((rf) => rf.name === lastProject.nombre_rol_frame);
@@ -1564,7 +1543,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Map existing assignments to the wizard format, ensuring we use string IDs
     const areaShiftAssignments = (existingAssignments || []).map((a: any) => ({
-      areaId: String(a.areaId?._id || a.areaId || ''),
+      areaId: String(a.areaId?._id || a.areaId || ""),
       shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
     }));
 
@@ -1583,7 +1562,7 @@ export const ProjectTeamPage: React.FC = () => {
     // permite ofrecer solo las categorías que ARCA le va a aceptar a esa empleadora. Si falla, la
     // lista queda vacía y no se filtra nada — mejor ofrecer de más que dejar al operador sin opciones.
     if (allConvenios.length === 0) {
-      createSimpleCatalogApi('/convenios')
+      createSimpleCatalogApi("/convenios")
         .list()
         .then(setAllConvenios)
         .catch(() => {});
@@ -1591,20 +1570,20 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Helper for date formatting
     const formatDate = (dateStr: any) => {
-      if (!dateStr) return '';
+      if (!dateStr) return "";
       try {
         const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return '';
-        return d.toISOString().split('T')[0];
+        if (isNaN(d.getTime())) return "";
+        return d.toISOString().split("T")[0];
       } catch {
-        return '';
+        return "";
       }
     };
 
     // Horario de la solicitud (metadata.schedule = "HH:MM - HH:MM") como fallback cuando no hay contrato
     // previo (p.ej. al aprobar una solicitud desde el wizard).
-    const metaSchedule = String((user.metadata as any)?.schedule || '');
-    const [metaHoraInicio, metaHoraFin] = metaSchedule.includes('-') ? metaSchedule.split('-').map((s) => s.trim()) : ['', ''];
+    const metaSchedule = String((user.metadata as any)?.schedule || "");
+    const [metaHoraInicio, metaHoraFin] = metaSchedule.includes("-") ? metaSchedule.split("-").map((s) => s.trim()) : ["", ""];
 
     // Se resetea ACÁ (no en el efecto) para que la primera corrida del auto-set de estado, tras este
     // reset, no confunda "recién abrí el wizard" con "el usuario cambió el Tipo de Contrato".
@@ -1621,9 +1600,9 @@ export const ProjectTeamPage: React.FC = () => {
       Sin categoría todavía, queda en «todos»: no hay nada de dónde deducirlo.
     */
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
-    setConvenioFiltro(String(catInicial?.data?.convenio || '').trim());
+    setConvenioFiltro(String(catInicial?.data?.convenio || "").trim());
     setVerTodasDelConvenio(false);
-    setAvisoConvenio('');
+    setAvisoConvenio("");
 
     // Reset wizard data with pulled data or defaults
     setWizardData({
@@ -1634,10 +1613,10 @@ export const ProjectTeamPage: React.FC = () => {
       nombre_contrato: initialNombreContrato,
       tipo_contrato_id: initialTipoContratoId,
       estado_id: initialEstadoId,
-      empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : '',
-      empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : '',
-      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || '09:00',
-      hora_fin: lastContract?.hora_fin || metaHoraFin || '18:00',
+      empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : "",
+      empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : "",
+      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || "09:00",
+      hora_fin: lastContract?.hora_fin || metaHoraFin || "18:00",
       fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
       fecha_baja_contrato: formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
@@ -1648,15 +1627,15 @@ export const ProjectTeamPage: React.FC = () => {
       dias_rotativos: !!(lastContract as any)?.dias_rotativos,
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
-      sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
+      sueldo_mano_texto: lastContract?.sueldo_mano_texto || "",
       sueldo_diario_neto: lastContract?.sueldo_diario_neto || 0,
       diferencia_diaria_neto: lastContract?.diferencia_diaria_neto || 0,
       sueldo_neto: lastContract?.sueldo_neto || 0,
       sueldo_bruto: lastContract?.sueldo_bruto || 0,
       sede_id: initialSedeId,
       reemplazo: lastContract?.reemplazo || false,
-      empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
-      observaciones: lastContract?.observaciones || '',
+      empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || "",
+      observaciones: lastContract?.observaciones || "",
       areaShiftAssignments: areaShiftAssignments,
     });
   };
@@ -1682,19 +1661,32 @@ export const ProjectTeamPage: React.FC = () => {
    */
   const faltantesPaso1 = (): string[] => {
     const faltan: string[] = [];
-    if (!wizardData.rol_frame_id) faltan.push('Role Frame a Desempeñar');
-    if (!wizardData.categoria_sat_id) faltan.push('Categoría');
-    if (!wizardData.contrato_id) faltan.push('Tipo de contrato');
+    if (!wizardData.rol_frame_id) faltan.push("Role Frame a Desempeñar");
+    if (!wizardData.categoria_sat_id) faltan.push("Categoría");
+    if (!wizardData.contrato_id) faltan.push("Tipo de contrato");
     // La Plantilla solo se elige a mano cuando el contrato tiene más de una (si hay una sola se
     // asigna sola, y si no hay ninguna se puede guardar igual: solo no se podrá generar el PDF).
-    const plantillas = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
-    if (plantillas.length > 1 && !wizardData.contrato_frame_id) faltan.push('Plantilla');
-    if (!wizardData.estado_id) faltan.push('Estado');
+    const plantillas = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+    if (plantillas.length > 1 && !wizardData.contrato_frame_id) faltan.push("Plantilla");
+    if (!wizardData.estado_id) faltan.push("Estado");
     // Un contrato a plazo tiene que decir cuándo termina; los de tiempo indeterminado no llevan baja
     // (de hecho el campo ni se muestra).
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
-    if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
-    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push('Área y turno (al menos uno)');
+    if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push("Fecha baja contrato");
+    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push("Área y turno (al menos uno)");
+    /*
+      LOS DÍAS QUE TRABAJA SON OBLIGATORIOS, no una sugerencia.
+
+      El aviso ámbar de abajo del campo («Elegí exactamente 5 día(s)») decía lo que faltaba pero no
+      frenaba nada: se guardaba igual, con la cantidad declarada y ningún día marcado. Eso deja un
+      contrato afirmando que trabaja cinco días sin decir cuáles — el dato queda a medias justo donde
+      importa, que es cuando hay que saber si un feriado o una licencia le caen en día laborable.
+
+      La regla vive en `faltaDefinirDias` y no se copia acá: comparte con el aviso del campo la parte
+      de los días, y agrega la cantidad — que al guardar tampoco puede quedar vacía.
+    */
+    const faltaDias = faltaDefinirDias(wizardData.dias_por_semana, wizardData.dias_rotativos, wizardData.dias_semana);
+    if (faltaDias) faltan.push(`Días que trabaja (${faltaDias})`);
     return faltan;
   };
 
@@ -1703,7 +1695,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     const faltan = faltantesPaso1();
     if (faltan.length > 0) {
-      sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
+      sweetAlert.error("Faltan campos obligatorios", `Completá: ${faltan.join(", ")}.`);
       setWizardStep(1);
       return;
     }
@@ -1717,8 +1709,8 @@ export const ProjectTeamPage: React.FC = () => {
       // backend will handle UserProject and internal assignedUsers
       // Extract first assignment for backward-compatible contract fields
       const firstAssignment = wizardData.areaShiftAssignments[0];
-      const primaryShiftId = firstAssignment?.shiftIds?.[0] || '';
-      const primaryAreaId = firstAssignment?.areaId || '';
+      const primaryShiftId = firstAssignment?.shiftIds?.[0] || "";
+      const primaryAreaId = firstAssignment?.areaId || "";
 
       // Los contratos de tiempo indeterminado no llevan fecha de baja
       // El Contrato (tipo) es la fuente de verdad de "tiempo indeterminado"; se resuelve por ahí y no
@@ -1739,7 +1731,7 @@ export const ProjectTeamPage: React.FC = () => {
         approveSolicitud: approvingSolicitudId ? true : undefined,
         contract: {
           ...wizardData,
-          fecha_baja_contrato: esTiempoIndeterminado ? '' : wizardData.fecha_baja_contrato,
+          fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
           areaId: primaryAreaId,
           shiftId: primaryShiftId,
           areaShiftAssignments: wizardData.areaShiftAssignments,
@@ -1750,7 +1742,7 @@ export const ProjectTeamPage: React.FC = () => {
           categoria_sat_id: Number(wizardData.categoria_sat_id),
           nombre_contrato: wizardData.nombre_contrato,
           tipo_contrato_id: wizardData.tipo_contrato_id ? Number(wizardData.tipo_contrato_id) : null,
-          nombre_rol_frame: rfSel?.name || '',
+          nombre_rol_frame: rfSel?.name || "",
           rol_frame_id: Number(wizardData.rol_frame_id),
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
           dias_por_semana: wizardData.dias_por_semana,
@@ -1763,8 +1755,8 @@ export const ProjectTeamPage: React.FC = () => {
       });
 
       const wasApproving = !!approvingSolicitudId;
-      const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || 'El usuario';
-      sweetAlert.success(wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
+      const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || "El usuario";
+      sweetAlert.success(wasApproving ? "Solicitud Aprobada" : isExistingMember ? "Miembro Actualizado" : "Miembro Agregado", `${nombre} ha sido ${wasApproving ? "aprobado e incorporado al equipo" : isExistingMember ? "actualizado" : "incorporado al equipo"}.`);
 
       // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id);
@@ -1779,7 +1771,7 @@ export const ProjectTeamPage: React.FC = () => {
         setSolicitudesRefresh((x) => x + 1);
         try {
           const solis = await usersAPI.listSolicitudes();
-          setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!) && (u.metadata?.solicitudStatus || 'pendiente') === 'pendiente').length);
+          setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!) && (u.metadata?.solicitudStatus || "pendiente") === "pendiente").length);
         } catch {
           /* noop */
         }
@@ -1789,15 +1781,15 @@ export const ProjectTeamPage: React.FC = () => {
       setSelectedUserForWizard(null);
       setShowAddModal(false);
     } catch (error: any) {
-      console.error('Assign member error:', error);
-      let errorMsg = 'Internal server error during assignment';
+      console.error("Assign member error:", error);
+      let errorMsg = "Internal server error during assignment";
       if (error.response?.data?.error) {
         errorMsg = error.response.data.error;
         if (error.response?.data?.details) {
           errorMsg += `\nDetalles: ${error.response.data.details}`;
         }
       }
-      sweetAlert.error('Error', errorMsg);
+      sweetAlert.error("Error", errorMsg);
     } finally {
       setLoading(false);
     }
@@ -1805,7 +1797,7 @@ export const ProjectTeamPage: React.FC = () => {
 
   const handleRemoveUser = async (userId: string) => {
     if (!project) return;
-    const result = await sweetAlert.confirm('¿Retirar del equipo?', 'El usuario será retirado del proyecto y se eliminarán sus asignaciones de áreas y turnos.');
+    const result = await sweetAlert.confirm("¿Retirar del equipo?", "El usuario será retirado del proyecto y se eliminarán sus asignaciones de áreas y turnos.");
     if (!result.isConfirmed) return;
 
     try {
@@ -1821,10 +1813,10 @@ export const ProjectTeamPage: React.FC = () => {
       await fetchFullTeamLite();
       fetchTeamPage(teamPage);
 
-      sweetAlert.success('Usuario Retirado', 'El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.');
+      sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.");
     } catch (error: any) {
-      console.error('Error removing user:', error);
-      sweetAlert.error('Error', error.response?.data?.error || 'No se pudo retirar al usuario.');
+      console.error("Error removing user:", error);
+      sweetAlert.error("Error", error.response?.data?.error || "No se pudo retirar al usuario.");
     } finally {
       setLoading(false);
     }
@@ -1846,7 +1838,7 @@ export const ProjectTeamPage: React.FC = () => {
           metadata: {
             ...prev.metadata,
             projects: prev.metadata.projects.map((p) => {
-              const pId = typeof p.projectId === 'object' ? (p.projectId as any)?._id : p.projectId;
+              const pId = typeof p.projectId === "object" ? (p.projectId as any)?._id : p.projectId;
               if (String(pId) !== String(projectId)) return p;
               const contracts = [...(p.contracts || [])];
               if (!contracts[contractIndex]) return p;
@@ -1856,23 +1848,23 @@ export const ProjectTeamPage: React.FC = () => {
           },
         };
       });
-      sweetAlert.success('Documento subido', 'El documento se guardó correctamente.');
+      sweetAlert.success("Documento subido", "El documento se guardó correctamente.");
     } catch (error: any) {
-      sweetAlert.error('Error', error.response?.data?.error || 'No se pudo subir el documento.');
+      sweetAlert.error("Error", error.response?.data?.error || "No se pudo subir el documento.");
     }
   };
 
   /* --------------------------------View ---------------------------------- */
 
   if (!project && !loading) {
-    return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: 'volver', onClick: () => navigate(-1) }} />;
+    return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: "volver", onClick: () => navigate(-1) }} />;
   }
 
   // Último contrato del empleado en ESTE proyecto (mismo criterio que la columna Contrato).
   const getActiveContract = (user: User): any => {
     const projectMeta = user.metadata?.projects?.find((p: any) => {
       const pId = p.projectId;
-      const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
+      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
       return String(idToCheck) === String(projectId);
     });
     return getContratoActivo(projectMeta?.contracts as any[]);
@@ -1889,7 +1881,7 @@ export const ProjectTeamPage: React.FC = () => {
       assignments = lastContract?.areaShiftAssignments || [];
     }
     return (assignments || []).map((a: any) => ({
-      areaId: String(a.areaId?._id || a.areaId || ''),
+      areaId: String(a.areaId?._id || a.areaId || ""),
       shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
     }));
   };
@@ -1905,16 +1897,16 @@ export const ProjectTeamPage: React.FC = () => {
       setHerenciaReemplazo(null);
       return;
     }
-    const replacedName = `${replaced.firstName || ''} ${replaced.lastName || ''}`.trim() || replaced.email;
-    const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes('mobile-coordinador'));
+    const replacedName = `${replaced.firstName || ""} ${replaced.lastName || ""}`.trim() || replaced.email;
+    const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes("mobile-coordinador"));
 
     const assignments = getMemberAssignments(replaced._id)
       .map((a) => {
-        const areaConfig = (project?.areasConfig || []).find((c: any) => String(typeof c.areaId === 'object' ? c.areaId?._id : c.areaId) === a.areaId);
+        const areaConfig = (project?.areasConfig || []).find((c: any) => String(typeof c.areaId === "object" ? c.areaId?._id : c.areaId) === a.areaId);
         if (!areaConfig) return null;
         const areaObj = allAreas.find((ar) => String(ar._id) === a.areaId);
         if (areaObj?.isSystem && !isCoordinadorRole) return null;
-        const allowedShiftIds = ((areaConfig as any).shiftIds || []).map((s: any) => String(typeof s === 'object' ? s._id : s));
+        const allowedShiftIds = ((areaConfig as any).shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
         const shiftIds = a.shiftIds.filter((s) => allowedShiftIds.includes(s));
         return shiftIds.length > 0 ? { areaId: a.areaId, shiftIds } : null;
       })
@@ -1926,10 +1918,7 @@ export const ProjectTeamPage: React.FC = () => {
       setHerenciaReemplazo({
         ok: false,
         replacedName,
-        detalle:
-          origen.length === 0
-            ? 'Esa persona no tiene área ni turno cargados en el proyecto. Elegí el área y el turno abajo.'
-            : 'Su área o sus turnos ya no están disponibles en la configuración del proyecto. Elegí el área y el turno abajo.',
+        detalle: origen.length === 0 ? "Esa persona no tiene área ni turno cargados en el proyecto. Elegí el área y el turno abajo." : "Su área o sus turnos ya no están disponibles en la configuración del proyecto. Elegí el área y el turno abajo.",
       });
       return;
     }
@@ -1937,10 +1926,10 @@ export const ProjectTeamPage: React.FC = () => {
     const detalle = assignments
       .map((a) => {
         const areaName = allAreas.find((ar) => String(ar._id) === a.areaId)?.name || a.areaId;
-        const turnos = a.shiftIds.map((s) => allShifts.find((sh) => String(sh._id) === s)?.name || s).join(', ');
+        const turnos = a.shiftIds.map((s) => allShifts.find((sh) => String(sh._id) === s)?.name || s).join(", ");
         return `${areaName} (${turnos})`;
       })
-      .join(' + ');
+      .join(" + ");
 
     setWizardData((prev) => ({ ...prev, areaShiftAssignments: assignments }));
     setHerenciaReemplazo({ ok: true, replacedName, detalle });
@@ -1951,10 +1940,10 @@ export const ProjectTeamPage: React.FC = () => {
     const userConfig = teamConfig.find((c) => c.userId === user._id);
     const projectMeta = user.metadata?.projects?.find((p: any) => {
       const pId = p.projectId;
-      const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
+      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
       return String(idToCheck) === String(projectId);
     });
-    const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : '-');
+    const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
     const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
 
     return (
@@ -1965,7 +1954,7 @@ export const ProjectTeamPage: React.FC = () => {
               <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="min-w-0">
-              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</p>
+              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
               <div className="flex flex-col gap-1.5 mt-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -1999,17 +1988,17 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
             {(() => {
-              const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes('responsable'));
+              const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes("responsable"));
 
               return (
                 <>
                   {filteredRoles.slice(0, 3).map((r) => {
                     const lower = r.name.toLowerCase();
-                    const isCoordinador = lower.includes('coordinador');
+                    const isCoordinador = lower.includes("coordinador");
 
-                    let badgeClasses = 'border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
+                    let badgeClasses = "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
                     if (isCoordinador) {
-                      badgeClasses = 'border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400';
+                      badgeClasses = "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400";
                     }
 
                     return (
@@ -2026,7 +2015,7 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
         <td className="px-4 py-3">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{user.metadata?.activo ? 'ACTIVO' : 'INACTIVO'}</span>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.metadata?.activo ? "ACTIVO" : "INACTIVO"}</span>
         </td>
         <td
           className="px-4 py-3 cursor-pointer"
@@ -2047,8 +2036,8 @@ export const ProjectTeamPage: React.FC = () => {
             if (config?.areaShiftAssignments && config.areaShiftAssignments.length > 0) {
               areaData = config.areaShiftAssignments
                 .map((asa: any) => {
-                  const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
-                  const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
+                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
                   return aName ? { id: String(aId), name: aName } : null;
                 })
                 .filter(Boolean) as { id: string; name: string }[];
@@ -2058,8 +2047,8 @@ export const ProjectTeamPage: React.FC = () => {
             if (areaData.length === 0 && activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
               areaData = activeContract.areaShiftAssignments
                 .map((asa: any) => {
-                  const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
-                  const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
                   return aName ? { id: String(aId), name: aName } : null;
                 })
                 .filter(Boolean) as { id: string; name: string }[];
@@ -2067,10 +2056,10 @@ export const ProjectTeamPage: React.FC = () => {
             // 2. Secondary: If coordinator and no detailed config, check coordinatorAssignments
             if (areaData.length === 0 && isCoord && project?.coordinatorAssignments) {
               const myAssignments = project.coordinatorAssignments.filter((asm) => {
-                const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
+                const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
                 return String(uid) === String(user._id);
               });
-              const areaIds = Array.from(new Set(myAssignments.map((asm) => (typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId))));
+              const areaIds = Array.from(new Set(myAssignments.map((asm) => (typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId))));
               areaData = areaIds
                 .map((id) => {
                   const a = allAreas.find((area) => String(area._id) === String(id));
@@ -2081,8 +2070,8 @@ export const ProjectTeamPage: React.FC = () => {
 
             // 3. Fallback: Global user area (legacy/basic)
             if (areaData.length === 0) {
-              const userAreaId = typeof user.areaId === 'object' ? user.areaId?._id : user.areaId;
-              const userAreaName = typeof user.areaId === 'object' ? user.areaId?.name : allAreas.find((a) => String(a._id) === String(userAreaId))?.name;
+              const userAreaId = typeof user.areaId === "object" ? user.areaId?._id : user.areaId;
+              const userAreaName = typeof user.areaId === "object" ? user.areaId?.name : allAreas.find((a) => String(a._id) === String(userAreaId))?.name;
               if (userAreaId && userAreaName) {
                 areaData = [{ id: String(userAreaId), name: userAreaName }];
               }
@@ -2102,7 +2091,7 @@ export const ProjectTeamPage: React.FC = () => {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' });
+                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: "standard" });
                           }}
                           className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black"
                           title="Ver turnos"
@@ -2130,7 +2119,7 @@ export const ProjectTeamPage: React.FC = () => {
           {(() => {
             const myCoordinatedAssignments =
               project?.coordinatorAssignments?.filter((asm) => {
-                const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+                const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
                 return String(uid) === String(user._id);
               }) || [];
 
@@ -2138,8 +2127,8 @@ export const ProjectTeamPage: React.FC = () => {
 
             const coordAreaDataMap = new Map<string, { id: string; name: string }>();
             myCoordinatedAssignments.forEach((asm) => {
-              const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
-              const aName = typeof asm.areaId === 'object' ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
+              const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+              const aName = typeof asm.areaId === "object" ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
               if (aid && aName) {
                 coordAreaDataMap.set(String(aid), { id: String(aid), name: aName });
               }
@@ -2153,7 +2142,10 @@ export const ProjectTeamPage: React.FC = () => {
                   const shifts = getCoordinatedShifts(user, ad.id);
                   // Total del área: personas distintas entre todos sus horarios (sin repetir a
                   // quien esté asignado a más de uno).
-                  const totalArea = getAreaPeopleCount(ad.id, shifts.map((s) => String(s._id)));
+                  const totalArea = getAreaPeopleCount(
+                    ad.id,
+                    shifts.map((s) => String(s._id)),
+                  );
                   return (
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-fit">
@@ -2164,7 +2156,7 @@ export const ProjectTeamPage: React.FC = () => {
                             handleOpenAreaShiftDetail(ad.id, ad.name, null, shifts);
                           }}
                           className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer"
-                          title={`Ver las personas de ${ad.name} en los horarios que coordina: ${totalArea} activa${totalArea === 1 ? '' : 's'} con contrato vigente (cada persona una sola vez)`}
+                          title={`Ver las personas de ${ad.name} en los horarios que coordina: ${totalArea} activa${totalArea === 1 ? "" : "s"} con contrato vigente (cada persona una sola vez)`}
                         >
                           {ad.name} ({totalArea})
                         </button>
@@ -2172,7 +2164,7 @@ export const ProjectTeamPage: React.FC = () => {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' });
+                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: "coordinated" });
                           }}
                           className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black"
                           title="Ver turnos coordinados"
@@ -2193,10 +2185,9 @@ export const ProjectTeamPage: React.FC = () => {
                                   handleOpenAreaShiftDetail(ad.id, ad.name, s);
                                 }}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors whitespace-nowrap w-fit cursor-pointer"
-                                title={`Ver las ${coordinados} persona${coordinados === 1 ? '' : 's'} activa${coordinados === 1 ? '' : 's'} con contrato vigente en ${ad.name} / ${s.name}`}
+                                title={`Ver las ${coordinados} persona${coordinados === 1 ? "" : "s"} activa${coordinados === 1 ? "" : "s"} con contrato vigente en ${ad.name} / ${s.name}`}
                               >
-                                {s.name} ({s.startTime} - {s.endTime})
-                                <span className="font-black text-amber-800 dark:text-amber-300">({coordinados})</span>
+                                {s.name} ({s.startTime} - {s.endTime})<span className="font-black text-amber-800 dark:text-amber-300">({coordinados})</span>
                               </button>
                             );
                           })}
@@ -2212,23 +2203,17 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3">
           <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
             <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-            {activeContract?.nombre_contrato || '-'}
+            {activeContract?.nombre_contrato || "-"}
           </span>
         </td>
         {/* Estado del contrato (Pedido servicios, Disponible, ...) — distinto del estado del usuario. */}
-        <td className="px-4 py-3">
-          {activeContract?.nombre_estado_empleado ? <EstadoBadge name={activeContract.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}
-        </td>
+        <td className="px-4 py-3">{activeContract?.nombre_estado_empleado ? <EstadoBadge name={activeContract.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
         {/* Estado impositivo (Alta ARCA / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
         <td className="px-4 py-3">
           {(() => {
             const estadoImpositivo = activeContract ? estadoImpositivoDelContrato(activeContract, contratoFrames, allEstados) : null;
             if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
-            return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? (
-              <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" />
-            ) : (
-              <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
-            );
+            return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" /> : <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />;
           })()}
         </td>
         {/* Reemplazo: a quién reemplaza esta persona en su contrato vigente. */}
@@ -2252,33 +2237,33 @@ export const ProjectTeamPage: React.FC = () => {
             <div className="flex flex-col gap-1">
               {(() => {
                 const vigente = esContratoVigente(activeContract);
-                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>;
+                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>;
               })()}
               <div className="flex flex-col gap-0.5">
                 <span>
                   <span className="text-gray-400">Alta:</span> {formatContractDate(activeContract.fecha_alta_contrato)}
                 </span>
                 <span>
-                  <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : '—'}
+                  <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : "—"}
                 </span>
               </div>
             </div>
           ) : (
-            '—'
+            "—"
           )}
         </td>
         {/* Monto / Jornadas del contrato vigente (mismo formato que la tabla de Contratos). */}
         <td className="px-4 py-3 text-right whitespace-nowrap">
           {activeContract?.sueldo_mano != null ? (
             <>
-              <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${Number(activeContract.sueldo_mano).toLocaleString('es-AR')}</div>
+              <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${Number(activeContract.sueldo_mano).toLocaleString("es-AR")}</div>
               {activeContract?.cantidad_jornadas_laborales ? <div className="text-xs text-gray-400">{activeContract.cantidad_jornadas_laborales} jor.</div> : null}
             </>
           ) : (
             <span className="text-xs text-gray-400">—</span>
           )}
         </td>
-        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : '-'}</td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}</td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
             <button
@@ -2323,14 +2308,14 @@ export const ProjectTeamPage: React.FC = () => {
         actions={[
           {
             icon: faEdit,
-            title: 'Editar Horario',
+            title: "Editar Horario",
             onClick: () => handleOpenScheduleModal(user),
           },
           {
             icon: faTrash,
-            title: 'Retirar del equipo',
+            title: "Retirar del equipo",
             onClick: () => handleRemoveUser(user._id),
-            className: 'text-red-500 hover:text-red-700',
+            className: "text-red-500 hover:text-red-700",
           },
         ]}
       />
@@ -2353,13 +2338,13 @@ export const ProjectTeamPage: React.FC = () => {
             }
           : undefined
       }
-      badge={project ? { text: project.name, variant: 'default' } : undefined}
-      badgeSecondary={sedeName ? { text: sedeName, variant: 'default' } : undefined}
+      badge={project ? { text: project.name, variant: "default" } : undefined}
+      badgeSecondary={sedeName ? { text: sedeName, variant: "default" } : undefined}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
         onClose: () => setOpenInfo(false),
-        title: helpEntry?.title || 'Información',
+        title: helpEntry?.title || "Información",
         content: helpEntry?.content,
       }}
       modal={
@@ -2367,7 +2352,7 @@ export const ProjectTeamPage: React.FC = () => {
           ? {
               isOpen: true,
               onClose: () => setOpenCoordinadoresInfo(false),
-              title: 'Asignación de Coordinadores',
+              title: "Asignación de Coordinadores",
               content: <p className="text-gray-600 dark:text-gray-300">Asigna un coordinador designado para cada combinación de Área y Turno del proyecto. Todas las combinaciones deben estar cubiertas.</p>,
             }
           : undefined
@@ -2378,11 +2363,7 @@ export const ProjectTeamPage: React.FC = () => {
             <FontAwesomeIcon icon={faPlus} />
           </button>
           {/* Atajo a Contratos → Gestión de Contratos, ya filtrado por este proyecto. */}
-          <button
-            onClick={() => navigate(`/admin/contracts?tab=management&projectId=${projectId}`)}
-            title="Gestión masiva de Contratos de este proyecto"
-            className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
-          >
+          <button onClick={() => navigate(`/admin/contracts?tab=management&projectId=${projectId}`)} title="Gestión masiva de Contratos de este proyecto" className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faFileContract} />
             <span className="hidden lg:block whitespace-nowrap">Gestión masiva de Contratos</span>
           </button>
@@ -2399,11 +2380,11 @@ export const ProjectTeamPage: React.FC = () => {
           {/* TABS */}
           <div className="sticky top-[144px] pb-1 pt-3 z-[40] bg-[#f3f4f6] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 flex items-center justify-between shadow-sm lg:shadow-none hover:shadow-md transition-shadow">
             <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar flex-nowrap">
-              <button onClick={() => setActiveTab('equipo')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'equipo' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+              <button onClick={() => setActiveTab("equipo")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "equipo" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                 <FontAwesomeIcon icon={faUsers} className="text-xs" />
                 Equipo ({teamTotal})
               </button>
-              <button onClick={() => setActiveTab('coordinadores')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'coordinadores' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+              <button onClick={() => setActiveTab("coordinadores")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "coordinadores" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                 <FontAwesomeIcon icon={faUserTie} className="text-xs" />
                 Coordinadores ({coordinadoresCount})
                 <span
@@ -2412,13 +2393,13 @@ export const ProjectTeamPage: React.FC = () => {
                     e.stopPropagation();
                     setOpenCoordinadoresInfo(true);
                   }}
-                  className={`ml-1.5 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer ${activeTab === 'coordinadores' ? 'text-blue-400' : ''}`}
+                  className={`ml-1.5 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer ${activeTab === "coordinadores" ? "text-blue-400" : ""}`}
                   title="Información de asignación"
                 >
                   <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                 </span>
               </button>
-              <button onClick={() => setActiveTab('solicitudes')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'solicitudes' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+              <button onClick={() => setActiveTab("solicitudes")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "solicitudes" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                 <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
                 Solicitudes
                 {solicitudesCount > 0 && <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">{solicitudesCount}</span>}
@@ -2430,7 +2411,7 @@ export const ProjectTeamPage: React.FC = () => {
 
           {/* Tab Content */}
           <div className="mt-0">
-            {activeTab === 'equipo' && (
+            {activeTab === "equipo" && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
                   <div className="flex-1 w-full">
@@ -2440,64 +2421,64 @@ export const ProjectTeamPage: React.FC = () => {
                       searchPlaceholder="Buscar en equipo actual..."
                       radioFilters={[
                         {
-                          label: 'Estado de usuarios',
+                          label: "Estado de usuarios",
                           value: filterUserStatus,
                           onChange: setFilterUserStatus,
                           options: [
-                            { label: 'Usuarios Activos', value: 'active' },
-                            { label: 'Usuarios Inactivos', value: 'inactive' },
-                            { label: 'Todos los usuarios', value: '' },
+                            { label: "Usuarios Activos", value: "active" },
+                            { label: "Usuarios Inactivos", value: "inactive" },
+                            { label: "Todos los usuarios", value: "" },
                           ],
                         },
                         {
-                          label: 'Contratos',
+                          label: "Contratos",
                           value: filterVigencia,
                           onChange: setFilterVigencia,
                           options: [
-                            { label: 'Vigentes', value: 'vigente' },
-                            { label: 'No Vigentes', value: 'novigente' },
-                            { label: 'Todos los contratos', value: '' },
+                            { label: "Vigentes", value: "vigente" },
+                            { label: "No Vigentes", value: "novigente" },
+                            { label: "Todos los contratos", value: "" },
                           ],
                         },
                       ]}
                       selectFilters={[
                         {
-                          label: 'Rol/es',
+                          label: "Rol/es",
                           value: filterRolMobile,
                           onChange: setFilterRolMobile,
-                          placeholder: 'Todos los roles',
+                          placeholder: "Todos los roles",
                           options: MOBILE_ROLE_OPTIONS,
                         },
                         {
-                          label: 'Tipo de contrato',
+                          label: "Tipo de contrato",
                           value: filterTipoContrato,
                           onChange: setFilterTipoContrato,
-                          placeholder: 'Todos los tipos',
+                          placeholder: "Todos los tipos",
                           options: contratoFrames.map((cf) => ({ value: cf.name, label: cf.name })),
                         },
                         {
-                          label: 'Área / Turno',
+                          label: "Área / Turno",
                           value: filterAreaTurno,
                           onChange: setFilterAreaTurno,
-                          placeholder: 'Todas las áreas/turnos',
-                          options: [{ value: '__none__', label: 'Sin área/turno' }, ...areaTurnoOptions],
+                          placeholder: "Todas las áreas/turnos",
+                          options: [{ value: "__none__", label: "Sin área/turno" }, ...areaTurnoOptions],
                         },
                         {
-                          label: 'Estado de contrato',
+                          label: "Estado de contrato",
                           value: filterEstadoContrato,
                           onChange: setFilterEstadoContrato,
-                          placeholder: 'Todos los estados',
+                          placeholder: "Todos los estados",
                           options: estadoContratoOptions,
                           renderOption: (opt) => <EstadoBadge name={opt.label} />,
                         },
                         {
-                          label: 'Reemplazo',
+                          label: "Reemplazo",
                           value: filterReemplazo,
                           onChange: setFilterReemplazo,
-                          placeholder: 'Con y sin reemplazo',
+                          placeholder: "Con y sin reemplazo",
                           options: [
-                            { value: 'con', label: 'Con reemplazo' },
-                            { value: 'sin', label: 'Sin reemplazo' },
+                            { value: "con", label: "Con reemplazo" },
+                            { value: "sin", label: "Sin reemplazo" },
                           ],
                         },
                       ]}
@@ -2505,10 +2486,10 @@ export const ProjectTeamPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => setViewMode('cards')} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
+                    <button onClick={() => setViewMode("cards")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
                       <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setViewMode('table')} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
+                    <button onClick={() => setViewMode("table")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
                       <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
                     </button>
                   </div>
@@ -2521,26 +2502,13 @@ export const ProjectTeamPage: React.FC = () => {
                       <FontAwesomeIcon icon={faTriangleExclamation} />
                       El proyecto no tiene áreas asignadas
                     </p>
-                    <p className="text-red-700 dark:text-red-500 text-xs leading-normal">
-                      La asignación por área y turno es obligatoria: hasta que el proyecto tenga al menos un área, no vas a poder
-                      configurar ni editar a los miembros del equipo.
-                    </p>
+                    <p className="text-red-700 dark:text-red-500 text-xs leading-normal">La asignación por área y turno es obligatoria: hasta que el proyecto tenga al menos un área, no vas a poder configurar ni editar a los miembros del equipo.</p>
                     <div className="flex items-center gap-3 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-400 hover:underline"
-                        title="Ir a Editar Proyecto para agregar áreas"
-                      >
+                      <button type="button" onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })} className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-400 hover:underline" title="Ir a Editar Proyecto para agregar áreas">
                         <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
                         Editar proyecto para agregar áreas
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowSinAreasInfo(true)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-red-700/80 dark:text-red-400/80 hover:underline"
-                        title="Qué implica que el proyecto no tenga áreas"
-                      >
+                      <button type="button" onClick={() => setShowSinAreasInfo(true)} className="inline-flex items-center gap-1.5 text-xs font-medium text-red-700/80 dark:text-red-400/80 hover:underline" title="Qué implica que el proyecto no tenga áreas">
                         <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
                         Más información
                       </button>
@@ -2571,14 +2539,14 @@ export const ProjectTeamPage: React.FC = () => {
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
-                        <p className="text-base font-medium">{hayFiltros ? 'No se encontraron miembros' : 'Aún no hay miembros en el equipo'}</p>
-                        <p className="text-sm mt-1">{hayFiltros ? 'Probá ajustar la búsqueda o los filtros.' : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
+                        <p className="text-base font-medium">{hayFiltros ? "No se encontraron miembros" : "Aún no hay miembros en el equipo"}</p>
+                        <p className="text-sm mt-1">{hayFiltros ? "Probá ajustar la búsqueda o los filtros." : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
                       </div>
                     );
                   }
 
-                  return effectiveViewMode === 'table' ? (
-                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>
+                  return effectiveViewMode === "table" ? (
+                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
@@ -2592,13 +2560,7 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">
                                 <span className="inline-flex items-center gap-1.5">
                                   Área/Turno Coordinada
-                                  <button
-                                    type="button"
-                                    onClick={() => setOpenCoordCountInfo(true)}
-                                    className="text-amber-500/70 hover:text-amber-500 transition-colors"
-                                    title="Qué significa el número entre paréntesis"
-                                    aria-label="Información del número de personas coordinadas"
-                                  >
+                                  <button type="button" onClick={() => setOpenCoordCountInfo(true)} className="text-amber-500/70 hover:text-amber-500 transition-colors" title="Qué significa el número entre paréntesis" aria-label="Información del número de personas coordinadas">
                                     <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                                   </button>
                                 </span>
@@ -2618,7 +2580,7 @@ export const ProjectTeamPage: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>{rows.map((u) => renderUserCard(u))}</div>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? "opacity-60" : ""}`}>{rows.map((u) => renderUserCard(u))}</div>
                   );
                 })()}
 
@@ -2648,7 +2610,7 @@ export const ProjectTeamPage: React.FC = () => {
                           const p = i + 1;
                           if (p === 1 || p === teamTotalPages || (p >= teamPage - 2 && p <= teamPage + 2)) {
                             return (
-                              <button key={p} onClick={() => setTeamPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${teamPage === p ? 'bg-primary-600 border-primary-600 text-white z-10' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                              <button key={p} onClick={() => setTeamPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${teamPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
                                 {p}
                               </button>
                             );
@@ -2672,13 +2634,13 @@ export const ProjectTeamPage: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'coordinadores' && project && (
+            {activeTab === "coordinadores" && project && (
               <TeamCoordinadoresTab
                 projectId={projectId!}
                 project={project}
                 allUsers={allUsers}
                 teamMembers={teamMembers}
-                onGoToTeam={() => setActiveTab('equipo')}
+                onGoToTeam={() => setActiveTab("equipo")}
                 onUpdated={async () => {
                   const updatedProject = await projectsAPI.getProject(projectId!);
                   setProject(updatedProject);
@@ -2687,7 +2649,7 @@ export const ProjectTeamPage: React.FC = () => {
               />
             )}
 
-            {activeTab === 'solicitudes' && project && <TeamSolicitudesTab projectId={projectId!} project={project} refreshSignal={solicitudesRefresh} onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)} />}
+            {activeTab === "solicitudes" && project && <TeamSolicitudesTab projectId={projectId!} project={project} refreshSignal={solicitudesRefresh} onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)} />}
           </div>
 
           {/* Modals */}
@@ -2715,7 +2677,7 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
                     <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
                   </div>
-                  <button onClick={() => setShowFilters(true)} className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>
+                  <button onClick={() => setShowFilters(true)} className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}>
                     <FontAwesomeIcon icon={faFilter} className="text-xs" />
                     Filtros
                     {activeAddFiltersCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800 shadow-sm">{activeAddFiltersCount}</span>}
@@ -2728,7 +2690,7 @@ export const ProjectTeamPage: React.FC = () => {
                     {filterRole && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                         <span className="opacity-60">Rol:</span> {filterRole}
-                        <button onClick={() => setFilterRole('')} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                        <button onClick={() => setFilterRole("")} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
                           <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                         </button>
                       </span>
@@ -2736,7 +2698,7 @@ export const ProjectTeamPage: React.FC = () => {
                     {filterRoleFrame && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                         <span className="opacity-60">Role Frame:</span> {filterRoleFrame}
-                        <button onClick={() => setFilterRoleFrame('')} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
+                        <button onClick={() => setFilterRoleFrame("")} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
                           <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                         </button>
                       </span>
@@ -2744,16 +2706,16 @@ export const ProjectTeamPage: React.FC = () => {
                     {filterProject && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
                         <span className="opacity-60">Proyecto:</span> {filterProject}
-                        <button onClick={() => setFilterProject('')} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
+                        <button onClick={() => setFilterProject("")} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
                           <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                         </button>
                       </span>
                     )}
                     <button
                       onClick={() => {
-                        setFilterRole('');
-                        setFilterRoleFrame('');
-                        setFilterProject('');
+                        setFilterRole("");
+                        setFilterRoleFrame("");
+                        setFilterProject("");
                       }}
                       className="text-[10px] text-gray-500 hover:text-red-500 font-bold ml-1 transition-colors uppercase tracking-wider"
                     >
@@ -2787,7 +2749,7 @@ export const ProjectTeamPage: React.FC = () => {
                       ) : filteredCandidates.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                            {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : 'No hay usuarios disponibles para asignar'}
+                            {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : "No hay usuarios disponibles para asignar"}
                           </td>
                         </tr>
                       ) : (
@@ -2795,7 +2757,7 @@ export const ProjectTeamPage: React.FC = () => {
                           const isCoordinator = checkIsCoordinator(user);
                           const metadataProjects = user.metadata?.projects || [];
                           // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
-                          const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
+                          const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
                           const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
                           const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
 
@@ -2803,7 +2765,7 @@ export const ProjectTeamPage: React.FC = () => {
                             <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                               <td className="px-4 py-3">
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</span>
+                                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</span>
                                   <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
                                 </div>
                               </td>
@@ -2811,14 +2773,14 @@ export const ProjectTeamPage: React.FC = () => {
                                 <div className="flex flex-wrap gap-1 max-w-[150px]">
                                   {(user.roles || []).map((r) => {
                                     const lower = r.name.toLowerCase();
-                                    const isCoord = lower.includes('coordinador');
-                                    const isResp = lower.includes('responsable');
+                                    const isCoord = lower.includes("coordinador");
+                                    const isResp = lower.includes("responsable");
 
-                                    let classes = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800';
+                                    let classes = "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800";
                                     if (isCoord) {
-                                      classes = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                                      classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800";
                                     } else if (isResp) {
-                                      classes = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
+                                      classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
                                     }
 
                                     return (
@@ -2859,9 +2821,9 @@ export const ProjectTeamPage: React.FC = () => {
                                 <div className="flex flex-col gap-1.5">
                                   {user.turnos && user.turnos.length > 0 ? (
                                     user.turnos.map((t) => (
-                                      <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === 'object' ? t.name : 'Turno'}</span>
-                                        {typeof t === 'object' && t.startTime && t.endTime && (
+                                      <div key={typeof t === "string" ? t : t._id} className="flex flex-col gap-0.5">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === "object" ? t.name : "Turno"}</span>
+                                        {typeof t === "object" && t.startTime && t.endTime && (
                                           <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
                                             {t.startTime} - {t.endTime}
                                           </span>
@@ -2921,9 +2883,9 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="flex items-center justify-between w-full">
                 <button
                   onClick={() => {
-                    setFilterRole('');
-                    setFilterRoleFrame('');
-                    setFilterProject('');
+                    setFilterRole("");
+                    setFilterRoleFrame("");
+                    setFilterProject("");
                     setShowFilters(false);
                   }}
                   className="btn-secondary"
@@ -2990,7 +2952,7 @@ export const ProjectTeamPage: React.FC = () => {
               {activeAddFiltersCount > 0 && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                   <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
-                    Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? 's' : ''} aplicado{activeAddFiltersCount > 1 ? 's' : ''}.
+                    Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? "s" : ""} aplicado{activeAddFiltersCount > 1 ? "s" : ""}.
                   </p>
                 </div>
               )}
@@ -3021,14 +2983,14 @@ export const ProjectTeamPage: React.FC = () => {
           <Modal
             isOpen={!!viewingShiftsData}
             onClose={() => setViewingShiftsData(null)}
-            title={`Turnos ${viewingShiftsData?.assignmentType === 'coordinated' ? 'Coordinados' : 'Asignados'} - ${viewingShiftsData?.areaName}`}
+            title={`Turnos ${viewingShiftsData?.assignmentType === "coordinated" ? "Coordinados" : "Asignados"} - ${viewingShiftsData?.areaName}`}
             subtitle={
               viewingShiftsData ? (
                 <p className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight">
                   {viewingShiftsData.user.firstName} {viewingShiftsData.user.lastName}
                 </p>
               ) : (
-                ''
+                ""
               )
             }
             size="md"
@@ -3045,25 +3007,25 @@ export const ProjectTeamPage: React.FC = () => {
                   if (!project?.coordinatorAssignments) return [];
                   return project.coordinatorAssignments
                     .filter((asm) => {
-                      const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
-                      const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
+                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
                       return String(uid) === String(user._id) && String(aid) === String(areaId);
                     })
-                    .map((asm) => (typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId));
+                    .map((asm) => (typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId));
                 };
 
                 const coordShiftIds = getCoordinatedShiftIds();
 
                 // 1. If viewing coordinated, check ONLY coordinatorAssignments
-                if (assignmentType === 'coordinated') {
+                if (assignmentType === "coordinated") {
                   if (project?.coordinatorAssignments) {
                     const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-                      const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
-                      const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
+                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
                       return String(uid) === String(user._id) && String(aid) === String(areaId);
                     });
                     myCoordAsgn.forEach((asm) => {
-                      const sid = typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId;
+                      const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
                       const shift = allShifts.find((s) => String(s._id) === String(sid));
                       if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) shifts.push(shift);
                     });
@@ -3072,7 +3034,7 @@ export const ProjectTeamPage: React.FC = () => {
                   // 2. If viewing standard, check team configuration assignments (Wizard) and EXCLUDE coordinated ones
                   const assignments = userConfig?.areaShiftAssignments || [];
                   const areaAssign = assignments.find((a: any) => {
-                    const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
+                    const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
                     if (String(aid) === String(areaId)) return true;
                     const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
                     const targetName = viewingShiftsData.areaName;
@@ -3082,7 +3044,7 @@ export const ProjectTeamPage: React.FC = () => {
                   if (areaAssign) {
                     const sids = areaAssign.shiftIds || [];
                     sids.forEach((sid: any) => {
-                      const actualSid = typeof sid === 'object' ? sid?._id : sid;
+                      const actualSid = typeof sid === "object" ? sid?._id : sid;
 
                       // EXCLUDE if it's in coordinated
                       if (coordShiftIds.includes(actualSid)) return;
@@ -3098,14 +3060,14 @@ export const ProjectTeamPage: React.FC = () => {
                   if (shifts.length === 0) {
                     const projectMeta = user.metadata?.projects?.find((p: any) => {
                       const pId = p.projectId;
-                      const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
+                      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
                       return String(idToCheck) === String(project?._id);
                     });
                     const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
 
                     if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
                       const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-                        const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
+                        const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
                         if (String(aid) === String(areaId)) return true;
                         const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
                         const targetName = viewingShiftsData.areaName;
@@ -3115,7 +3077,7 @@ export const ProjectTeamPage: React.FC = () => {
                       if (fallbackAssign) {
                         const sids = fallbackAssign.shiftIds || [];
                         sids.forEach((sid: any) => {
-                          const actualSid = typeof sid === 'object' ? sid?._id : sid;
+                          const actualSid = typeof sid === "object" ? sid?._id : sid;
 
                           // EXCLUDE if it's in coordinated
                           if (coordShiftIds.includes(actualSid)) return;
@@ -3133,7 +3095,7 @@ export const ProjectTeamPage: React.FC = () => {
                 // 4. Legacy members fallback
                 if (shifts.length === 0) {
                   // Fallback for legacy members (only if nothing found yet)
-                  const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === 'object' ? user.turnos[0]._id : user.turnos[0]) : undefined;
+                  const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
                   const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
                   const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
                   if (shift) shifts = [shift];
@@ -3146,7 +3108,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                         {s.name}
-                        {assignmentType === 'coordinated' && <span className="ml-1.5 text-amber-600 dark:text-amber-400">({getAreaShiftPeopleCount(areaId, String(s._id))})</span>}
+                        {assignmentType === "coordinated" && <span className="ml-1.5 text-amber-600 dark:text-amber-400">({getAreaShiftPeopleCount(areaId, String(s._id))})</span>}
                       </span>
                       <span className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[10px] font-black shadow-sm">
                         {s.startTime} — {s.endTime} HS
@@ -3154,8 +3116,8 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
                     {s.days && s.days.length > 0 && (
                       <div className="flex gap-1.5 mt-1">
-                        {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'].map((label, dIdx) => (
-                          <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? 'bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700' : 'text-gray-300 dark:text-gray-600'}`}>
+                        {["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"].map((label, dIdx) => (
+                          <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? "bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700" : "text-gray-300 dark:text-gray-600"}`}>
                             {label}
                           </span>
                         ))}
@@ -3174,18 +3136,8 @@ export const ProjectTeamPage: React.FC = () => {
               setViewingAreaShift(null);
               setAreaShiftMembers(null);
             }}
-            title={viewingAreaShift ? `Personas en ${viewingAreaShift.areaName}` : 'Personas'}
-            subtitle={
-              viewingAreaShift ? (
-                <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">
-                  {viewingAreaShift.shift
-                    ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})`
-                    : (viewingAreaShift.shifts || []).map((s: any) => s.name).join(' · ') || 'Todos los horarios del área'}
-                </p>
-              ) : (
-                ''
-              )
-            }
+            title={viewingAreaShift ? `Personas en ${viewingAreaShift.areaName}` : "Personas"}
+            subtitle={viewingAreaShift ? <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">{viewingAreaShift.shift ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})` : (viewingAreaShift.shifts || []).map((s: any) => s.name).join(" · ") || "Todos los horarios del área"}</p> : ""}
             size="lg"
           >
             {loadingAreaShiftMembers ? (
@@ -3202,7 +3154,7 @@ export const ProjectTeamPage: React.FC = () => {
                 const mostrarTurnos = !viewingAreaShift?.shift;
 
                 const renderMember = (m: (typeof areaShiftMembers.members)[number]) => (
-                  <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : 'bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80'}`}>
+                  <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" : "bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80"}`}>
                     <div className="flex flex-col min-w-0 gap-1">
                       <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{m.firstName || m.lastName ? `${m.firstName} ${m.lastName}`.trim() : m.email}</span>
                       <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{m.email}</span>
@@ -3212,7 +3164,7 @@ export const ProjectTeamPage: React.FC = () => {
                             const s: any = allShifts.find((x) => String(x._id) === String(sid));
                             return (
                               <span key={sid} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap">
-                                {s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Turno'}
+                                {s ? `${s.name} (${s.startTime} - ${s.endTime})` : "Turno"}
                               </span>
                             );
                           })}
@@ -3220,12 +3172,12 @@ export const ProjectTeamPage: React.FC = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.activo ? 'ACTIVO' : 'INACTIVO'}</span>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.activo ? "ACTIVO" : "INACTIVO"}</span>
                       {m.estadoContrato ? <EstadoBadge name={m.estadoContrato} className="text-[10px] whitespace-nowrap" /> : <span className="text-[10px] text-gray-400">Sin contrato</span>}
                       <div className="flex flex-col items-end gap-0.5 text-[10px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded uppercase font-bold ${m.vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded uppercase font-bold ${m.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.vigente ? "VIGENTE" : "NO VIGENTE"}</span>
                         <span>Alta: {formatContractDate(m.fechaAlta)}</span>
-                        <span>Baja: {m.fechaBaja ? formatContractDate(m.fechaBaja) : '—'}</span>
+                        <span>Baja: {m.fechaBaja ? formatContractDate(m.fechaBaja) : "—"}</span>
                       </div>
                     </div>
                   </div>
@@ -3235,14 +3187,14 @@ export const ProjectTeamPage: React.FC = () => {
                   <div className="space-y-4">
                     <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                       <p className="text-xs text-amber-800 dark:text-amber-300">
-                        <strong>{areaShiftMembers.cuentan}</strong> persona{areaShiftMembers.cuentan === 1 ? '' : 's'} activa{areaShiftMembers.cuentan === 1 ? '' : 's'} con contrato vigente
+                        <strong>{areaShiftMembers.cuentan}</strong> persona{areaShiftMembers.cuentan === 1 ? "" : "s"} activa{areaShiftMembers.cuentan === 1 ? "" : "s"} con contrato vigente
                         {areaShiftMembers.total !== areaShiftMembers.cuentan ? (
                           <>
-                            {' '}
-                            · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? '' : 's'} en total
+                            {" "}
+                            · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? "" : "s"} en total
                           </>
                         ) : null}
-                        {mostrarTurnos ? ' en los horarios que coordina de esta área.' : '. El número de la columna Área/Turno Coordinada es el primero.'}
+                        {mostrarTurnos ? " en los horarios que coordina de esta área." : ". El número de la columna Área/Turno Coordinada es el primero."}
                       </p>
                     </div>
 
@@ -3264,7 +3216,7 @@ export const ProjectTeamPage: React.FC = () => {
           <Modal
             isOpen={!!selectedUserForWizard}
             onClose={() => setSelectedUserForWizard(null)}
-            title={esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
+            title={esEdicionMiembro ? "Configurar Miembro" : "Agregar Miembro"}
             subtitle={
               selectedUserForWizard ? (
                 <div className="flex flex-col gap-0.5">
@@ -3292,7 +3244,7 @@ export const ProjectTeamPage: React.FC = () => {
                       if (wizardStep === 1) {
                         const faltan = faltantesPaso1();
                         if (faltan.length > 0) {
-                          sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
+                          sweetAlert.error("Faltan campos obligatorios", `Completá: ${faltan.join(", ")}.`);
                           return;
                         }
                       }
@@ -3318,9 +3270,9 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 pb-4 border-b border-gray-100 dark:border-gray-700 shrink-0 mb-4">
                 <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
                   {[
-                    { step: 1, label: 'Contrato' },
-                    { step: 2, label: 'Sueldo' },
-                    { step: 3, label: 'Extras' },
+                    { step: 1, label: "Contrato" },
+                    { step: 2, label: "Sueldo" },
+                    { step: 3, label: "Extras" },
                   ].map((s) => (
                     <button
                       key={s.step}
@@ -3330,13 +3282,13 @@ export const ProjectTeamPage: React.FC = () => {
                         if (wizardStep === 1 && s.step > 1) {
                           const faltan = faltantesPaso1();
                           if (faltan.length > 0) {
-                            sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
+                            sweetAlert.error("Faltan campos obligatorios", `Completá: ${faltan.join(", ")}.`);
                             return;
                           }
                         }
                         setWizardStep(s.step as any);
                       }}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${wizardStep === s.step ? 'bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${wizardStep === s.step ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                     >
                       {s.label}
                     </button>
@@ -3355,13 +3307,17 @@ export const ProjectTeamPage: React.FC = () => {
                 {wizardStep === 1 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2 space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Empleado <span className="text-red-500">*</span>
+                      </label>
                       <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Role Frame a Desempeñar <span className="text-red-500">*</span></label>
-                      <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: '' }))} required>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Role Frame a Desempeñar <span className="text-red-500">*</span>
+                      </label>
+                      <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))} required>
                         <option value="">Selecciona role frame...</option>
                         {userAssignedRoleFrames.map((rf) => (
                           <option key={rf._id} value={rf.data.rol.id}>
@@ -3382,7 +3338,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
                       <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
-                        <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
+                        <option value="">{contratoEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>
                         {contratoEmpresas.map((emp) => (
                           <option key={emp.id} value={emp.id}>
                             {emp.label}
@@ -3396,7 +3352,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
                       <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
-                        <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
+                        <option value="">{releaseEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>
                         {releaseEmpresas.map((emp) => (
                           <option key={emp.id} value={emp.id}>
                             {emp.label}
@@ -3420,27 +3376,22 @@ export const ProjectTeamPage: React.FC = () => {
                         {conveniosDisponibles.map((c) => (
                           <option key={c.externalId} value={c.externalId}>
                             {c.externalId}
-                            {c.name ? ` — ${c.name}` : ''} ({c.cantidadCategorias})
-                            {c.registrado ? '' : ' · no registrado en ARCA'}
+                            {c.name ? ` — ${c.name}` : ""} ({c.cantidadCategorias}){c.registrado ? "" : " · no registrado en ARCA"}
                           </option>
                         ))}
                       </select>
-                      {!wizardData.empresaContratoId ? (
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p>
-                      ) : conveniosDisponibles.length === 0 ? (
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p>
-                      ) : (
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>
-                      )}
+                      {!wizardData.empresaContratoId ? <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p> : conveniosDisponibles.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p> : <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>}
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoría <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Categoría <span className="text-red-500">*</span>
+                      </label>
                       <select
                         className="input-field w-full"
                         value={wizardData.categoria_sat_id}
                         onChange={(e) => {
-                          setAvisoConvenio('');
+                          setAvisoConvenio("");
                           setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
                         }}
                         required
@@ -3448,7 +3399,7 @@ export const ProjectTeamPage: React.FC = () => {
                         <option value="">Selecciona categoria...</option>
                         {availableCategoriasSat.map((c: any) => (
                           <option key={c.id} value={c.id}>
-                            {c.codigoArca ? `${c.codigoArca} — ` : ''}
+                            {c.codigoArca ? `${c.codigoArca} — ` : ""}
                             {c.nombre}
                           </option>
                         ))}
@@ -3466,22 +3417,11 @@ export const ProjectTeamPage: React.FC = () => {
                       */}
                       {convenioFiltro && wizardData.rol_frame_id && (
                         <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio}
-                            disabled={rolNoTieneCategoriasDelConvenio}
-                            onChange={(e) => setVerTodasDelConvenio(e.target.checked)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed"
-                          />
+                          <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
                           <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
                         </label>
                       )}
-                      {rolNoTieneCategoriasDelConvenio && (
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">
-                          La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este
-                          convenio; se muestran todas las del convenio.
-                        </p>
-                      )}
+                      {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
 
                       {/*
                         El filtro se dice, no se aplica en silencio: si una categoría que el operador
@@ -3493,15 +3433,17 @@ export const ProjectTeamPage: React.FC = () => {
                       */}
                       {conveniosDeLaEmpleadora && (
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(', ')}).`}
-                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ''}
-                          {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ''}
+                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(", ")}).`}
+                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ""}
+                          {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ""}
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Tipo de contrato <span className="text-red-500">*</span>
+                      </label>
                       <select
                         className="input-field w-full"
                         value={wizardData.contrato_id}
@@ -3510,15 +3452,15 @@ export const ProjectTeamPage: React.FC = () => {
                           const contrato = contratos.find((c) => c._id === contratoId);
                           // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
                           // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
-                          const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === contratoId);
+                          const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === contratoId);
                           const unicaPlantilla = plantillasDelContrato.length === 1 ? plantillasDelContrato[0] : undefined;
                           setWizardData((prev) => ({
                             ...prev,
                             contrato_id: contratoId,
-                            contrato_frame_id: unicaPlantilla?._id || '',
-                            nombre_contrato: unicaPlantilla?.name || '',
-                            tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : '',
-                            fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? '' : prev.fecha_baja_contrato,
+                            contrato_frame_id: unicaPlantilla?._id || "",
+                            nombre_contrato: unicaPlantilla?.name || "",
+                            tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : "",
+                            fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? "" : prev.fecha_baja_contrato,
                           }));
                         }}
                         required
@@ -3527,7 +3469,7 @@ export const ProjectTeamPage: React.FC = () => {
                         {contratos.map((c) => (
                           <option key={c._id} value={c._id}>
                             {c.name}
-                            {c.isActive === false ? ' (inactivo)' : ''}
+                            {c.isActive === false ? " (inactivo)" : ""}
                           </option>
                         ))}
                       </select>
@@ -3535,13 +3477,15 @@ export const ProjectTeamPage: React.FC = () => {
 
                     {(() => {
                       if (!wizardData.contrato_id) return null;
-                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
 
                       // Varias Plantillas para el mismo Contrato: hay que elegir cuál usar para el PDF.
                       if (plantillasDelContrato.length > 1) {
                         return (
                           <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Plantilla <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                              Plantilla <span className="text-red-500">*</span>
+                            </label>
                             <select
                               className="input-field w-full"
                               value={wizardData.contrato_frame_id}
@@ -3549,9 +3493,9 @@ export const ProjectTeamPage: React.FC = () => {
                                 const cf = plantillasDelContrato.find((p) => p._id === e.target.value);
                                 setWizardData((prev) => ({
                                   ...prev,
-                                  contrato_frame_id: cf?._id || '',
-                                  nombre_contrato: cf?.name || '',
-                                  tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : '',
+                                  contrato_frame_id: cf?._id || "",
+                                  nombre_contrato: cf?.name || "",
+                                  tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : "",
                                 }));
                               }}
                               required
@@ -3573,8 +3517,7 @@ export const ProjectTeamPage: React.FC = () => {
                         return (
                           <div className="md:col-span-2 -mt-2">
                             <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                              Este contrato todavía no tiene ninguna Plantilla asignada: se puede guardar, pero no se va a poder generar el PDF hasta asignarle una desde{' '}
-                              <strong>Plantillas | Contratos</strong>.
+                              Este contrato todavía no tiene ninguna Plantilla asignada: se puede guardar, pero no se va a poder generar el PDF hasta asignarle una desde <strong>Plantillas | Contratos</strong>.
                             </p>
                           </div>
                         );
@@ -3587,29 +3530,21 @@ export const ProjectTeamPage: React.FC = () => {
                       {esAltaNueva ? (
                         <>
                           <div className="flex items-center gap-1.5 ml-1">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Estado <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                              Estado <span className="text-red-500">*</span>
+                            </label>
                             <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
                               <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <div className="input-field w-full flex items-center">
-                            {estadoImpositivoAuto ? (
-                              <EstadoBadge name={estadoImpositivoAuto.name} />
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-500 text-sm">
-                                {wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}
-                              </span>
-                            )}
-                          </div>
+                          <div className="input-field w-full flex items-center">{estadoImpositivoAuto ? <EstadoBadge name={estadoImpositivoAuto.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_frame_id ? "Este tipo de contrato no tiene un estado impositivo configurado" : "Elegí primero el Tipo de contrato"}</span>}</div>
                         </>
                       ) : (
                         <>
-                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado <span className="text-red-500">*</span></label>
-                          <EstadoSelect
-                            options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))}
-                            value={wizardData.estado_id}
-                            onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
-                          />
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                            Estado <span className="text-red-500">*</span>
+                          </label>
+                          <EstadoSelect options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))} value={wizardData.estado_id} onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))} />
                         </>
                       )}
                     </div>
@@ -3628,10 +3563,12 @@ export const ProjectTeamPage: React.FC = () => {
                         <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
                       </div>
                       {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato <span className="text-red-500">*</span></label>
-                        <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
-                      </div>
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                            Fecha baja contrato <span className="text-red-500">*</span>
+                          </label>
+                          <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
+                        </div>
                       )}
                     </div>
 
@@ -3652,31 +3589,15 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     {/*
-                      Los días de la semana. EL MISMO componente que la Solicitud de Alta de mobile.
+                      Los días de la semana. EL MISMO componente que la Solicitud de Contratación de mobile.
 
                       Va debajo del horario porque es la otra mitad del mismo dato: el horario dice a
                       qué hora, esto dice qué días. Estaban separados —uno acá y el otro solo en
                       mobile— y el escritorio guardaba 5 jornadas fijas sin que nadie lo eligiera.
                     */}
                     <div className="md:col-span-2">
-                      <DiasDeTrabajo
-                        jornadas={wizardData.dias_por_semana}
-                        onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: n }))}
-                        rotativos={wizardData.dias_rotativos}
-                        onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))}
-                        dias={wizardData.dias_semana}
-                        onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))}
-                        desde={wizardData.fecha_alta_contrato}
-                        hasta={wizardData.fecha_baja_contrato}
-                        jornadasTotales={wizardData.cantidad_jornadas_laborales}
-                        onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))}
-                      />
+                      <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
                     </div>
-
-
-
-
-
 
                     {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
                     <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
@@ -3688,7 +3609,7 @@ export const ProjectTeamPage: React.FC = () => {
                           checked={wizardData.reemplazo}
                           onChange={(e) => {
                             const checked = e.target.checked;
-                            setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : '' }));
+                            setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : "" }));
                             if (!checked) setHerenciaReemplazo(null);
                           }}
                         />
@@ -3725,7 +3646,7 @@ export const ProjectTeamPage: React.FC = () => {
 
                       {/* Aviso de la herencia: qué se copió (o por qué no se pudo) antes de mostrar las áreas. */}
                       {herenciaReemplazo && (
-                        <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'}`}>
+                        <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"}`}>
                           <p className="font-bold flex items-center gap-2">
                             <FontAwesomeIcon icon={herenciaReemplazo.ok ? faInfoCircle : faTriangleExclamation} />
                             {herenciaReemplazo.ok ? `Área y turno heredados de ${herenciaReemplazo.replacedName}` : `No se pudo heredar el área de ${herenciaReemplazo.replacedName}`}
@@ -3756,22 +3677,11 @@ export const ProjectTeamPage: React.FC = () => {
                         <div className="flex flex-col items-center gap-2 py-4 text-center bg-gray-50 dark:bg-gray-900/30 rounded-lg">
                           <p className="text-sm text-gray-500">Este proyecto no tiene áreas configuradas.</p>
                           <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-                              title="Ir a Editar Proyecto para agregar áreas"
-                            >
+                            <button type="button" onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })} className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline" title="Ir a Editar Proyecto para agregar áreas">
                               <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
                               Editar proyecto para agregar áreas
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowSinAreasInfo(true)}
-                              className="text-blue-500 hover:text-blue-600 transition-colors"
-                              title="Por qué no puedo guardar los cambios del miembro"
-                              aria-label="Información: el proyecto no tiene áreas configuradas"
-                            >
+                            <button type="button" onClick={() => setShowSinAreasInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors" title="Por qué no puedo guardar los cambios del miembro" aria-label="Información: el proyecto no tiene áreas configuradas">
                               <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
                             </button>
                           </div>
@@ -3780,10 +3690,10 @@ export const ProjectTeamPage: React.FC = () => {
 
                       <div className="space-y-3">
                         {(() => {
-                          const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes('mobile-coordinador'));
+                          const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes("mobile-coordinador"));
                           // Helper to check time overlap
                           const timeToMinutes = (t: string) => {
-                            const [h, m] = t.split(':').map(Number);
+                            const [h, m] = t.split(":").map(Number);
                             return h * 60 + m;
                           };
                           const timesOverlap = (s1Start: string, s1End: string, s2Start: string, s2End: string) => {
@@ -3802,13 +3712,13 @@ export const ProjectTeamPage: React.FC = () => {
                           };
 
                           return (project?.areasConfig || []).map((ac: any) => {
-                            const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
+                            const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
                             const areaObj = allAreas.find((a) => a._id === aId);
-                            const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : areaObj?.name;
+                            const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
                             const isCoordinadorArea = areaObj?.isSystem;
                             const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
 
-                            const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === 'object' ? s._id : s));
+                            const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
                             const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
                             // Current assignment for this area
@@ -3826,16 +3736,16 @@ export const ProjectTeamPage: React.FC = () => {
                             });
 
                             return (
-                              <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10' : isAreaRestricted ? 'border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75' : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20'}`}>
+                              <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
                                 <div className="flex items-center justify-between px-4 py-3">
                                   <div className="flex items-center gap-2">
-                                    <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? 'text-blue-500' : isAreaRestricted ? 'text-amber-500' : 'text-gray-400'}`} />
+                                    <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
                                     <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
                                     {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Rol Coordinador</span>}
                                   </div>
                                   {isAreaActive && (
                                     <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
-                                      {selectedShiftIds.length} turno{selectedShiftIds.length > 1 ? 's' : ''}
+                                      {selectedShiftIds.length} turno{selectedShiftIds.length > 1 ? "s" : ""}
                                     </span>
                                   )}
                                 </div>
@@ -3844,7 +3754,7 @@ export const ProjectTeamPage: React.FC = () => {
                                     <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Este usuario no tiene el rol "mobile-coordinador". Debes asignarle el rol primero para habilitar esta área.</p>
                                   </div>
                                 )}
-                                <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? 'pointer-events-none grayscale-[0.5]' : ''}`}>
+                                <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
                                   {shiftsForArea.map((shift) => {
                                     const isSelected = selectedShiftIds.includes(String(shift._id));
 
@@ -3852,7 +3762,7 @@ export const ProjectTeamPage: React.FC = () => {
                                     const overlappingWith = allSelectedShiftData.find((sel) => (sel.areaId !== aId || sel.shiftId !== String(shift._id)) && timesOverlap(shift.startTime, shift.endTime, sel.start, sel.end) && daysOverlap(shift.days || [], sel.days));
                                     const isBlocked = !isSelected && !!overlappingWith;
 
-                                    const DAY_LABELS = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
+                                    const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
 
                                     return (
                                       <button
@@ -3906,17 +3816,17 @@ export const ProjectTeamPage: React.FC = () => {
                                             };
                                           });
                                         }}
-                                        className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50' : isBlocked ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 hover:border-blue-300 dark:hover:border-blue-600 opacity-80' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'}`}
+                                        className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50" : isBlocked ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 hover:border-blue-300 dark:hover:border-blue-600 opacity-80" : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}
                                         title={isBlocked ? `Se superpone con "${overlappingWith?.name}"` : shift.name}
                                       >
-                                        <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? 'text-blue-700 dark:text-blue-400' : isBlocked ? 'text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{shift.name}</span>
-                                        <span className={`text-[10px] font-medium uppercase mt-0.5 ${isSelected ? 'text-blue-600 dark:text-blue-500' : isBlocked ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-blue-700 dark:text-blue-400" : isBlocked ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-200"}`}>{shift.name}</span>
+                                        <span className={`text-[10px] font-medium uppercase mt-0.5 ${isSelected ? "text-blue-600 dark:text-blue-500" : isBlocked ? "text-gray-400" : "text-gray-500"}`}>
                                           {shift.startTime} — {shift.endTime} hs
                                         </span>
                                         {shift.days && shift.days.length > 0 && (
                                           <div className="flex gap-1 mt-1.5">
                                             {DAY_LABELS.map((label, dayIdx) => (
-                                              <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isSelected ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : isBlocked ? 'text-gray-400 dark:text-gray-600' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300') : 'text-gray-300 dark:text-gray-600'}`}>
+                                              <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isSelected ? "bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200" : isBlocked ? "text-gray-400 dark:text-gray-600" : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300") : "text-gray-300 dark:text-gray-600"}`}>
                                                 {label}
                                               </span>
                                             ))}
@@ -3943,11 +3853,15 @@ export const ProjectTeamPage: React.FC = () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de jornadas laborales <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                          Cantidad de jornadas laborales <span className="text-red-500">*</span>
+                        </label>
                         <input type="number" className="input-field w-full" value={wizardData.cantidad_jornadas_laborales} onChange={(e) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(e.target.value) }))} />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo por jornada <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                          Sueldo por jornada <span className="text-red-500">*</span>
+                        </label>
                         <input type="number" className="input-field w-full" value={wizardData.sueldo_jornada} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(e.target.value) }))} />
                       </div>
                     </div>
@@ -3958,7 +3872,9 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Sueldo en mano texto <span className="text-red-500">*</span>
+                      </label>
                       <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
                     </div>
 
@@ -3969,7 +3885,7 @@ export const ProjectTeamPage: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
-                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold" style={{ color: wizardData.diferencia_diaria_neto < 0 ? '#ef4444' : '#22c55e' }} value={wizardData.diferencia_diaria_neto} readOnly />
+                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold" style={{ color: wizardData.diferencia_diaria_neto < 0 ? "#ef4444" : "#22c55e" }} value={wizardData.diferencia_diaria_neto} readOnly />
                       </div>
                     </div>
 
@@ -3990,7 +3906,9 @@ export const ProjectTeamPage: React.FC = () => {
                 {wizardStep === 3 && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Sede <span className="text-red-500">*</span>
+                      </label>
                       <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))}>
                         <option value="">Selecciona sede...</option>
                         {allSedes.map((s) => (
@@ -4000,7 +3918,6 @@ export const ProjectTeamPage: React.FC = () => {
                         ))}
                       </select>
                     </div>
-
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Observaciones</label>
@@ -4019,7 +3936,7 @@ export const ProjectTeamPage: React.FC = () => {
         isOpen={!!selectedMemberForDetail}
         onClose={() => setSelectedMemberForDetail(null)}
         user={selectedMemberForDetail}
-        projectId={projectId || ''}
+        projectId={projectId || ""}
         contratoFrames={contratoFrames}
         releases={releases}
         contratoEmpresas={contratoEmpresas}
@@ -4044,14 +3961,20 @@ export const ProjectTeamPage: React.FC = () => {
         size="sm"
         zIndex={100}
         actions={[
-          { label: 'Ir a Editar Proyecto', onClick: () => { setShowSinAreasInfo(false); navigate(`/projects/${projectId}`, { state: { openEdit: true } }); }, variant: 'primary' },
-          { label: 'Entendido', onClick: () => setShowSinAreasInfo(false), variant: 'secondary' },
+          {
+            label: "Ir a Editar Proyecto",
+            onClick: () => {
+              setShowSinAreasInfo(false);
+              navigate(`/projects/${projectId}`, { state: { openEdit: true } });
+            },
+            variant: "primary",
+          },
+          { label: "Entendido", onClick: () => setShowSinAreasInfo(false), variant: "secondary" },
         ]}
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            La <strong>asignación por área y turno es obligatoria</strong> para guardar un miembro. Si el proyecto no tiene
-            áreas, no hay nada para seleccionar y cualquier cambio del miembro (sueldo, contrato, extras) queda bloqueado.
+            La <strong>asignación por área y turno es obligatoria</strong> para guardar un miembro. Si el proyecto no tiene áreas, no hay nada para seleccionar y cualquier cambio del miembro (sueldo, contrato, extras) queda bloqueado.
           </p>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
@@ -4062,29 +3985,24 @@ export const ProjectTeamPage: React.FC = () => {
             </li>
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Volvé al equipo y configurá el miembro: ya vas a poder elegir área y turno, y guardar.
-              </span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Volvé al equipo y configurá el miembro: ya vas a poder elegir área y turno, y guardar.</span>
             </li>
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Sin áreas, además, los usuarios no pueden cargar su área y los coordinadores no pueden informar novedades sobre ellos.
-              </span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Sin áreas, además, los usuarios no pueden cargar su área y los coordinadores no pueden informar novedades sobre ellos.</span>
             </li>
           </ul>
         </div>
       </InfoModal>
 
       {/* Info: de dónde sale el Estado del contrato (Agregar/Configurar miembro) */}
-      <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: 'Entendido', onClick: () => setShowEstadoInfo(false), variant: 'primary' }]}>
+      <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: "Entendido", onClick: () => setShowEstadoInfo(false), variant: "primary" }]}>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de ARCA" o "Pedido de Servicios"), se muestra acá.
-            Si no tiene ninguno, no hay nada para mostrar.
+            El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de ARCA" o "Pedido de Servicios"), se muestra acá. Si no tiene ninguno, no hay nada para mostrar.
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{' '}
+            Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{" "}
             <Link to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
               Contratos → Estados de Contratos
             </Link>
@@ -4094,41 +4012,28 @@ export const ProjectTeamPage: React.FC = () => {
       </InfoModal>
 
       {/* Info: qué significa el número entre paréntesis en Área/Turno Coordinada */}
-      <InfoModal
-        isOpen={openCoordCountInfo}
-        onClose={() => setOpenCoordCountInfo(false)}
-        title="Personas coordinadas por área y turno"
-        subtitle="Qué significa el número entre paréntesis"
-        size="sm"
-        zIndex={100}
-        actions={[{ label: 'Entendido', onClick: () => setOpenCoordCountInfo(false), variant: 'primary' }]}
-      >
+      <InfoModal isOpen={openCoordCountInfo} onClose={() => setOpenCoordCountInfo(false)} title="Personas coordinadas por área y turno" subtitle="Qué significa el número entre paréntesis" size="sm" zIndex={100} actions={[{ label: "Entendido", onClick: () => setOpenCoordCountInfo(false), variant: "primary" }]}>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong>{' '}
-            asignados a esa combinación exacta de área y turno, o sea a quiénes coordina esa persona en ese horario.
+            El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong> asignados a esa combinación exacta de área y turno, o sea a quiénes coordina esa persona en ese horario.
           </p>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                <strong>Estado activo</strong>: el usuario figura como ACTIVO. <strong>Contrato vigente</strong>: su contrato
-                no tiene fecha de baja, o la baja es de hoy en adelante. Quien no cumple las dos cosas no suma.
+                <strong>Estado activo</strong>: el usuario figura como ACTIVO. <strong>Contrato vigente</strong>: su contrato no tiene fecha de baja, o la baja es de hoy en adelante. Quien no cumple las dos cosas no suma.
               </span>
             </li>
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                Haciendo <strong>click en el turno</strong> se abre el detalle de esas personas con su estado, estado de
-                contrato y alta/baja. Las que no cumplen aparecen al final, en <strong>"No suman al total"</strong>.
+                Haciendo <strong>click en el turno</strong> se abre el detalle de esas personas con su estado, estado de contrato y alta/baja. Las que no cumplen aparecen al final, en <strong>"No suman al total"</strong>.
               </span>
             </li>
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es
-                el total de esos horarios contando a cada <strong>persona una sola vez</strong>: quien está asignado a dos turnos
-                de la misma área suma uno, no dos.
+                Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es el total de esos horarios contando a cada <strong>persona una sola vez</strong>: quien está asignado a dos turnos de la misma área suma uno, no dos.
               </span>
             </li>
             <li className="flex items-start gap-3">
@@ -4140,8 +4045,7 @@ export const ProjectTeamPage: React.FC = () => {
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                Se calcula sobre <strong>todo el equipo del proyecto</strong>, no solo sobre la página que estás viendo, y se
-                actualiza cuando cambian las asignaciones de los miembros.
+                Se calcula sobre <strong>todo el equipo del proyecto</strong>, no solo sobre la página que estás viendo, y se actualiza cuando cambian las asignaciones de los miembros.
               </span>
             </li>
           </ul>

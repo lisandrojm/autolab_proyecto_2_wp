@@ -430,6 +430,18 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
   const [ultimoResultado, setUltimoResultado] = useState<ResultadoConsultaPadron | null>(null);
   const [verDetalle, setVerDetalle] = useState(false);
   const cuit = fmtCuit(row.cuit);
+  /**
+   * POR QUÉ está apagado el botón, en una sola frase. `null` = se puede validar.
+   *
+   * Vive acá y no adentro del `title` para que la condición del `disabled` y el texto del tooltip
+   * salgan del MISMO lugar: si se escriben aparte, un día el botón se apaga por un motivo que el
+   * cartel no nombra, y desde afuera eso se ve como que la pantalla está rota.
+   */
+  const motivoDeshabilitado = !cuit
+    ? "Falta el CUIT/CUIL de esta persona."
+    : !row.empresaContratoId
+      ? "Para validar en ARCA hay que elegir primero la Empresa del Contrato: su CUIT va en el nombre del comprobante que se archiva en Dropbox."
+      : null;
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -517,17 +529,27 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={consultando || !cuit || !row.empresaContratoId}
-        /* El motivo, en el botón: gris y sin explicación se lee como que la pantalla está rota. */
-        title={!cuit ? "Falta el CUIT/CUIL de esta persona" : !row.empresaContratoId ? "Elegí la Empresa del Contrato: su CUIT va en el nombre del comprobante que se archiva en Dropbox" : `Validar ${cuit} en el Padrón de ARCA`}
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-      >
-        <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
-        {consultando ? "Validando..." : compacto ? "Validar ARCA" : "Validar CUIT"}
-      </button>
+      {/*
+        EL `title` VA EN UN SPAN QUE ENVUELVE, no en el botón.
+
+        Un botón `disabled` no recibe eventos de mouse, así que el navegador nunca muestra su tooltip:
+        el motivo estaba escrito y no se veía nunca — que es igual a no haberlo escrito. El span sí lo
+        recibe, y como el botón apagado no lo tapa, el hover cae en el envoltorio.
+
+        `inline-flex` para que el span no altere la fila: sin eso pasa a ser una caja de bloque y el
+        botón se despega del ícono de detalle que tiene al lado.
+      */}
+      <span className="inline-flex" title={motivoDeshabilitado || `Validar ${cuit} en el Padrón de ARCA`}>
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={consultando || !!motivoDeshabilitado}
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+        >
+          <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
+          {consultando ? "Validando..." : compacto ? "Validar ARCA" : "Validar CUIT"}
+        </button>
+      </span>
       {ultimoResultado && (
         <button
           type="button"

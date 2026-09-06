@@ -34,10 +34,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
       {/* HEADER */}
       <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => onNavigate("home")}
-            className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
-          >
+          <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
             <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
           </button>
           <div className="flex items-center gap-2">
@@ -48,7 +45,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
       </div>
 
       <div className="px-4 pt-4">
-        <h3 className="text-lg font-bold mb-4">Historial de Altas</h3>
+        <h3 className="text-lg font-bold mb-4">Historial de Solicitudes de Contratación</h3>
 
         {loading ? (
           <div className="space-y-3">
@@ -67,65 +64,53 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-3">
-             {users.map((user) => {
-               const isSolicitud = user.metadata?.isSolicitud;
-               const displayName = isSolicitud ? user.metadata?.fullName || `${user.firstName} ${user.lastName}` : `${user.firstName} ${user.lastName}`;
-               const initials = isSolicitud ? (user.metadata?.fullName?.charAt(0) || "S") : getInitials(user.firstName, user.lastName);
+            {users.map((user) => {
+              const isSolicitud = user.metadata?.isSolicitud;
+              const displayName = isSolicitud ? user.metadata?.fullName || `${user.firstName} ${user.lastName}` : `${user.firstName} ${user.lastName}`;
+              const initials = isSolicitud ? user.metadata?.fullName?.charAt(0) || "S" : getInitials(user.firstName, user.lastName);
 
-               return (
-                 <div
-                   key={user._id}
-                   onClick={() => {
-                     setSelectedUser(user);
-                     setShowDetailModal(true);
-                   }}
-                   className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
-                 >
-                   <div className="flex items-start gap-3 mb-3">
-                     <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-sm ${isSolicitud ? 'bg-blue-100 text-blue-600' : 'bg-primary/10 text-primary'}`}>
-                       {initials}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="flex items-center justify-between gap-2">
-                           <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">
-                             {displayName}
-                           </h4>
-                           {isSolicitud ? (
-                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">Solicitud</span>
-                           ) : user.isActive ? (
-                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">Activo</span>
-                           ) : (
-                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Inactivo</span>
-                           )}
-                       </div>
-                       <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                         <FontAwesomeIcon icon={faEnvelope} className="w-3 h-3 opacity-70" />
-                         <span className="truncate">{isSolicitud ? "Pendiente de aprobación" : user.email}</span>
-                       </div>
-                     </div>
-                   </div>
+              return (
+                <div
+                  key={user._id}
+                  onClick={() => {
+                    setSelectedUser(user);
+                    setShowDetailModal(true);
+                  }}
+                  className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-sm ${isSolicitud ? "bg-blue-100 text-blue-600" : "bg-primary/10 text-primary"}`}>{initials}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</h4>
+                        {isSolicitud ? <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">Solicitud</span> : user.isActive ? <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">Activo</span> : <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Inactivo</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <FontAwesomeIcon icon={faEnvelope} className="w-3 h-3 opacity-70" />
+                        <span className="truncate">{isSolicitud ? "Pendiente de aprobación" : user.email}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                       <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 opacity-70 text-primary" />
-                       <span className="truncate">
-                         {isSolicitud ? "Alta Pendiente" : "Sin cargo"}
-                       </span>
-                     </div>
-                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                       <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 opacity-70 text-primary" />
-                       <span className="truncate">
-                         {typeof user.areaId === "object" ? user.areaId?.name : "Sin área"}
-                       </span>
-                     </div>
-                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                       <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3 opacity-70 text-primary" />
-                       <span>{isSolicitud ? 'Solicitado' : 'Alta'}: {new Date(user.createdAt).toLocaleDateString("es-ES")}</span>
-                     </div>
-                   </div>
-                 </div>
-               );
-             })}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 opacity-70 text-primary" />
+                      <span className="truncate">{isSolicitud ? "Alta Pendiente" : "Sin cargo"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 opacity-70 text-primary" />
+                      <span className="truncate">{typeof user.areaId === "object" ? user.areaId?.name : "Sin área"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3 opacity-70 text-primary" />
+                      <span>
+                        {isSolicitud ? "Solicitado" : "Alta"}: {new Date(user.createdAt).toLocaleDateString("es-ES")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 dark:bg-slate-800/50">

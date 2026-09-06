@@ -250,6 +250,64 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
     }
   };
 
+  /**
+   * ELIMINAR TODO LO TILDADO, de a uno contra Dropbox.
+   *
+   * La API no tiene borrado en lote, así que se recorre. Se hace en SERIE y no en paralelo: son
+   * borrados, y un `Promise.all` que falla a la mitad deja la mitad borrada sin poder decir cuál —
+   * de a uno se sabe exactamente qué se fue y qué quedó, que es lo único que sirve para reintentar.
+   *
+   * Un fallo NO corta la tanda: se sigue con el resto y al final se informa. Cortar en el primer
+   * error obligaría a destildar a mano los que ya se borraron para volver a intentar.
+   *
+   * SOLO ARCHIVOS. Las carpetas no se pueden tildar en esta tabla (ver el `<td>` del check), así que
+   * acá no hay riesgo de llevarse una entera con lo que tenga adentro sin que nadie lo haya pedido.
+   */
+  const handleBulkDelete = async () => {
+    /*
+      Sale de `entries` y NO de la lista filtrada, por el mismo motivo que el peso del ZIP: el filtro
+      de texto esconde filas pero no las destilda. Tomando lo visible se borraría menos de lo que el
+      contador dice — y el que se salva es el que no está a la vista, o sea el que nadie va a notar.
+    */
+    const aBorrar = entries.filter((e) => e.tag === "file" && selected.has(e.path));
+    if (aBorrar.length === 0) return;
+
+    // Se nombran los primeros: «¿Eliminar 12 archivos?» sin decir cuáles se confirma a ciegas.
+    const muestra = aBorrar
+      .slice(0, 5)
+      .map((e) => `• ${e.name}`)
+      .join("\n");
+    const res = await sweetAlert.confirm(
+      aBorrar.length === 1 ? "¿Eliminar el archivo?" : `¿Eliminar ${aBorrar.length} archivos?`,
+      `Se van a eliminar de Dropbox y no se puede deshacer.\n\n${muestra}${aBorrar.length > 5 ? `\n…y ${aBorrar.length - 5} más.` : ""}`,
+      "Sí, eliminar",
+    );
+    if (!res.isConfirmed) return;
+
+    setBusy(true);
+    const fallaron: string[] = [];
+    try {
+      for (const e of aBorrar) {
+        try {
+          await dropboxAPI.remove(e.path, full);
+        } catch {
+          fallaron.push(e.name);
+        }
+      }
+      setSelected(new Set());
+      await loadFolder(currentPath);
+      const borrados = aBorrar.length - fallaron.length;
+      if (fallaron.length === 0) sweetAlert.success("Listo", `Se ${borrados === 1 ? "eliminó 1 archivo" : `eliminaron ${borrados} archivos`}.`);
+      else
+        sweetAlert.warningAlert(
+          "Quedaron algunos sin eliminar",
+          `Se eliminaron ${borrados} de ${aBorrar.length}.\n\nNo se pudo con:\n${fallaron.slice(0, 5).map((n) => `• ${n}`).join("\n")}${fallaron.length > 5 ? `\n…y ${fallaron.length - 5} más.` : ""}`,
+        );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // Breadcrumbs relativos al rootPath (o a `fixedRoot`, para las vistas de solo lectura).
   const crumbs = useMemo(() => {
     const root = fixedRoot || rootPath;
@@ -401,6 +459,30 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
           <button onClick={() => loadFolder(currentPath)} title="Actualizar" className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"><FontAwesomeIcon icon={faRotate} className={busy ? "animate-spin" : ""} /></button>
           <button onClick={handleCreateFolder} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faFolderPlus} /> Carpeta</button>
           <button onClick={handleUploadClick} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faUpload} /> Subir</button>
+          {/*
+            ELIMINAR LO TILDADO. Apagado hasta que haya algo tildado, y ROJO recién ahí.
+
+            Está siempre en la barra y no aparece solo cuando hay selección: un botón que se agrega
+            corre a los otros dos de lugar justo cuando alguien va a hacer click. Apagado ocupa el
+            mismo espacio y además enseña que existe.
+
+            El rojo llega con la selección y no antes: en gris permanente sería un botón destructivo
+            compitiendo por atención con «Subir» todo el tiempo. Encendido dice cuántos se lleva, así
+            el número está a la vista antes de apretar y no solo en la confirmación.
+          */}
+          <button
+            onClick={handleBulkDelete}
+            disabled={busy || selected.size === 0}
+            title={selected.size === 0 ? "Tildá archivos en la lista para poder eliminarlos juntos" : `Eliminar de Dropbox los ${selected.size} archivo(s) tildados`}
+            className={`text-xs py-1.5 px-3 rounded-md flex items-center gap-2 font-semibold transition-colors ${
+              selected.size === 0
+                ? "border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                : "bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            }`}
+          >
+            <FontAwesomeIcon icon={busy && selected.size > 0 ? faSpinner : faTrash} spin={busy && selected.size > 0} />
+            {selected.size > 0 ? `Eliminar (${selected.size})` : "Eliminar"}
+          </button>
           <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
         </div>
       </div>
