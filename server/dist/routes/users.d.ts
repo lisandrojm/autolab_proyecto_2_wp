@@ -1,0 +1,11 @@
+import "../models/User.js";
+import "../models/Role.js";
+import "../models/Project.js";
+import "../models/Tenant.js";
+import "../models/Info.js";
+import "../models/RoleFrame.js";
+import "../models/UserProject.js";
+import "../models/Area.js";
+import "../models/Client.js";
+declare const router: import("express-serve-static-core").Router;
+export { router as userRoutes };
