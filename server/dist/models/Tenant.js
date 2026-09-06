@@ -42,6 +42,8 @@ const tenantSchema = new Schema({
             refreshTokenEnc: { type: String },
             rootPath: { type: String, default: "/HelloSign" },
             accountEmail: { type: String },
+            // Índice: el webhook llega con el account_id y hay que resolver el tenant en cada notificación.
+            accountId: { type: String, index: true },
             connectedAt: { type: Date },
             scanIntervalMinutes: { type: Number, default: 20 },
         },

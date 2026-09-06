@@ -90,6 +90,7 @@ import { holidayRoutes } from "./routes/holidays.js";
 
 import { userProjectRoutes } from "./routes/userProjects.js";
 import { dropboxRoutes } from "./routes/dropbox.js";
+import { dropboxWebhookRoutes } from "./routes/dropboxWebhook.js";
 import { afipRoutes } from "./routes/afip.js";
 import { firmaDigitalRoutes } from "./routes/firmaDigital.js";
 import { dropboxSignRoutes } from "./routes/dropboxSign.js";
@@ -129,7 +130,22 @@ app.use((req, res, next) => {
   // actividades son ~250 KB, pero un catálogo más grande no tiene por qué chocar contra el tope y
   // volver a empujar a cargar de a un registro, que es el problema que `/bulk` viene a resolver.
   const limite = req.path.endsWith("/bulk") && req.method === "POST" ? "10mb" : "1mb";
-  express.json({ limit: limite })(req, res, next);
+  express.json({
+    limit: limite,
+    /*
+      EL CUERPO CRUDO DEL WEBHOOK DE DROPBOX, QUE ES LO QUE SE FIRMA.
+
+      La notificación viene con un HMAC-SHA256 del body TAL CUAL viajó. Reconstruirlo desde el objeto
+      ya parseado —`JSON.stringify(req.body)`— no sirve: cambia un espacio o el orden de una clave y
+      la firma deja de coincidir, así que el webhook rechazaría todo sin decir por qué.
+
+      Se guarda SOLO para esa ruta: quedarse con una copia del body de cada request de la app sería
+      pagar memoria en todas para usarla en una.
+    */
+    verify: (r: any, _res, buf: Buffer) => {
+      if (r.originalUrl?.startsWith("/api/v1/dropbox/webhook")) r.rawBody = Buffer.from(buf);
+    },
+  })(req, res, next);
 });
 
 app.use(cookieParser());
@@ -258,6 +274,10 @@ app.use("/api/v1/shifts", shiftRoutes);
 app.use("/api/v1/holidays", holidayRoutes);
 
 app.use("/api/v1/user-projects", userProjectRoutes);
+// ANTES que el router autenticado, y sobre el mismo prefijo: el webhook lo llama Dropbox, sin JWT ni
+// tenant. Adentro de «dropboxRoutes» quedaría detrás de `requireTenant, authenticateToken` y
+// devolvería 401 a cada notificación. Solo define /webhook; el resto cae al router de abajo.
+app.use("/api/v1/dropbox", dropboxWebhookRoutes);
 app.use("/api/v1/dropbox", dropboxRoutes);
 app.use("/api/v1/afip", afipRoutes);
 app.use("/api/v1/firma-digital", firmaDigitalRoutes);

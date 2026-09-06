@@ -114,7 +114,8 @@
     "cargos-niveles:eliminar": "dotenv -e .env.production -- tsx src/scripts/eliminarCargosNiveles.ts",
     "roles-empresa:permiso:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/otorgarPermisoRolesEmpresa.ts",
     "roles-empresa:permiso": "dotenv -e .env.production -- tsx src/scripts/otorgarPermisoRolesEmpresa.ts",
-    "test:cuit-inactivo": "tsx --test src/services/arca/cuitInactivo.test.ts"
+    "test:cuit-inactivo": "tsx --test src/services/arca/cuitInactivo.test.ts",
+    "test:dropbox-webhook": "tsx --test src/services/dropboxWebhookService.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

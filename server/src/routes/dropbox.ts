@@ -109,7 +109,7 @@ router.post("/connect", async (req: AuthenticatedRequest & TenantRequest, res) =
 
     // Validar contra Dropbox antes de guardar.
     const cfg = { appKey: String(appKey), appSecret: String(appSecret), refreshToken: String(refreshToken), rootPath: root };
-    let account: { email?: string; name?: string };
+    let account: { email?: string; name?: string; accountId?: string };
     try {
       account = await verifyAccount(String(req.tenantObjectId), cfg);
     } catch (e) {
@@ -126,6 +126,9 @@ router.post("/connect", async (req: AuthenticatedRequest & TenantRequest, res) =
           "integrations.dropbox.refreshTokenEnc": encryptSecret(String(refreshToken)),
           "integrations.dropbox.rootPath": root,
           "integrations.dropbox.accountEmail": account.email || null,
+          // Sin esto, una notificación del webhook no se puede atribuir a ningún tenant: la
+          // notificación trae el account_id y nada más. Ver `dropboxWebhookService.ts`.
+          "integrations.dropbox.accountId": account.accountId || null,
           "integrations.dropbox.connectedAt": new Date(),
         },
       },

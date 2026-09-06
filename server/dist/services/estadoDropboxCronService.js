@@ -3,14 +3,20 @@ import { Tenant } from "../models/Tenant.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
-import { getTenantDropboxConfig, listFolder, downloadFileContent } from "./dropboxService.js";
+import { getTenantDropboxConfig, listFolder, downloadFileContent, verifyAccount } from "./dropboxService.js";
 import { cargarEstadosPorEvento, aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
 import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
  * archivos nuevos en la carpeta de Dropbox configurada, y si matchean a un contrato que está esperando
- * ese paso, lo avanza. No hay webhooks de Dropbox en la app, así que esto se resuelve por polling.
+ * ese paso, lo avanza.
+ *
+ * ESTE RELOJ NO ES EL ÚNICO DISPARADOR, y sigue haciendo falta igual. Dropbox avisa por webhook
+ * cuando algo cambia (`dropboxWebhookService.ts`), y ese aviso baja la espera de minutos a segundos.
+ * Pero la entrega es «al menos una vez» y sin reintentos eternos: una notificación que llega mientras
+ * el servidor se reinicia se pierde y nadie la reclama. El polling es la red que recoge eso, y por eso
+ * ninguno de los dos reemplaza al otro.
  *
  * El intervalo de escaneo es configurable POR TENANT (`tenant.integrations.dropbox.scanIntervalMinutes`,
  * default 20 min) — por eso el scheduler despierta cada TICK_MS (mucho más seguido que el intervalo
@@ -167,6 +173,31 @@ async function scanTenant(tenant, estadosConTrigger) {
     const cfg = getTenantDropboxConfig(tenant);
     if (!cfg)
         return 0;
+    /*
+      RELLENO DEL `accountId`, para los tenants que ya estaban conectados.
+  
+      El id de cuenta de Dropbox se guarda al conectar, pero los que conectaron antes de que el webhook
+      existiera no lo tienen — y sin él, sus notificaciones no se pueden atribuir a nadie y se descartan
+      en silencio. Se completa acá, en el primer escaneo que corran, en lugar de pedirles que
+      desconecten y vuelvan a conectar para arreglar algo que el sistema puede resolver solo.
+  
+      VA EN `scanTenant` Y NO EN LOS QUE LLAMAN: el escaneo entra por dos puertas —el tick del reloj y
+      el botón de forzar— y ésta es la única que las dos atraviesan. Puesto en una sola, la mitad de los
+      tenants se quedaba sin completar según por dónde hubieran entrado.
+  
+      Cuesta una llamada, UNA vez: con el id guardado esta rama no se vuelve a entrar. Y si falla no
+      rompe nada — el escaneo sigue igual y se reintenta en la pasada siguiente.
+    */
+    if (!tenant?.integrations?.dropbox?.accountId) {
+        try {
+            const { accountId } = await verifyAccount(String(tenant._id), cfg);
+            if (accountId)
+                await Tenant.updateOne({ _id: tenant._id }, { $set: { "integrations.dropbox.accountId": accountId } });
+        }
+        catch (e) {
+            console.warn("[Dropbox] no se pudo completar el accountId del tenant (se reintenta):", e?.message || e);
+        }
+    }
     let transicionesAplicadas = 0;
     for (const estadoDestino of estadosConTrigger) {
         try {

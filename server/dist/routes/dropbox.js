@@ -108,6 +108,9 @@ router.post("/connect", async (req, res) => {
                 "integrations.dropbox.refreshTokenEnc": encryptSecret(String(refreshToken)),
                 "integrations.dropbox.rootPath": root,
                 "integrations.dropbox.accountEmail": account.email || null,
+                // Sin esto, una notificación del webhook no se puede atribuir a ningún tenant: la
+                // notificación trae el account_id y nada más. Ver `dropboxWebhookService.ts`.
+                "integrations.dropbox.accountId": account.accountId || null,
                 "integrations.dropbox.connectedAt": new Date(),
             },
         });

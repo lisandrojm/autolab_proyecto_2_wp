@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowsRotate, faBolt, faFolder, faSpinner, faCheck, faStopwatch, faSitemap, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faArrowsRotate, faBolt, faFolder, faSpinner, faCheck, faCopy, faStopwatch, faSitemap, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { infoAPI, InfoItem } from "../api/info";
@@ -34,6 +34,27 @@ export function EscaneoDropboxConfigPage() {
   /** Explicación de cómo funciona el escaneo (modal del ⓘ de la cabecera, como el resto de las páginas). */
   const [showInfo, setShowInfo] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+
+  /*
+    LA URL DEL WEBHOOK, ARMADA CON LA MISMA BASE QUE USA LA APP.
+
+    Sale de `VITE_API_URL`, que es exactamente el servidor con el que esta pantalla está hablando: si
+    se escribiera a mano, cada instalación tendría que acordarse de cambiarla y la de producción
+    terminaría pegada en la de prueba —o al revés—, que es el error más caro de todos porque el
+    webhook «anda», solo que le avisa al servidor equivocado.
+  */
+  const urlWebhook = `${String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')}/dropbox/webhook`;
+
+  const copiarWebhook = async () => {
+    try {
+      await navigator.clipboard.writeText(urlWebhook);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      sweetAlert.error('No se pudo copiar', 'Copiala a mano desde el recuadro de al lado.');
+    }
+  };
   const [intervaloInput, setIntervaloInput] = useState("");
   const [savingIntervalo, setSavingIntervalo] = useState(false);
   const [ahora, setAhora] = useState(() => Date.now());
@@ -216,6 +237,45 @@ export function EscaneoDropboxConfigPage() {
                 <FontAwesomeIcon icon={faArrowsRotate} spin={escaneando} />
                 <span>{escaneando ? "Escaneando…" : "Forzar escaneo"}</span>
               </button>
+            </div>
+
+            {/*
+              EL AVISO DE DROPBOX, que es lo que hace que este intervalo casi no importe.
+
+              Con el webhook dado de alta, cada archivo que entra o sale de las carpetas dispara el
+              escaneo en segundos, y el reloj de arriba queda como red por si un aviso se pierde. Sin
+              darlo de alta, la app funciona igual — solo que esperando el intervalo.
+
+              La URL va acá y no en la documentación porque es un dato de ESTA instalación: cambia
+              según el dominio, y buscarla en otro lado es la forma seguar de pegar la del servidor
+              equivocado. El botón de copiar existe por lo mismo: un carácter de menos y Dropbox
+              rechaza la verificación sin decir cuál.
+            */}
+            <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-700/60 space-y-2">
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faBolt} className="h-3 w-3 text-amber-500" />
+                Escanear apenas Dropbox avisa
+              </p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                Dropbox puede avisarle al servidor cada vez que se agrega o se saca un archivo de las carpetas, y entonces el escaneo corre en segundos en vez de esperar el intervalo de arriba. Se
+                da de alta <strong>una sola vez</strong>, en la App Console de Dropbox → tu app → <strong>Settings → Webhooks</strong>, pegando esta URL:
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <code className="px-2 py-1.5 rounded-md bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[11.5px] font-mono text-gray-700 dark:text-gray-200 break-all">{urlWebhook}</code>
+                <button
+                  type="button"
+                  onClick={copiarWebhook}
+                  title="Copiar la URL del webhook"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <FontAwesomeIcon icon={copiado ? faCheck : faCopy} className="h-3 w-3" />
+                  {copiado ? "Copiada" : "Copiar"}
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                Tiene que ser HTTPS y alcanzable desde internet: contra <span className="font-mono">localhost</span> Dropbox no llega. Si no lo das de alta no se rompe nada — el escaneo sigue
+                corriendo por el intervalo de arriba.
+              </p>
             </div>
           </div>
 

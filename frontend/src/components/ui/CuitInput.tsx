@@ -59,7 +59,7 @@ interface CuitInputProps {
    * Apaga el campo sin sacarlo del formulario.
    *
    * Se usa cuando el CUIL todavía no aplica (falta elegir la nacionalidad) o no corresponde (un
-   * extranjero que declaró no tenerlo). Un campo que desaparece hace saltar todo lo de abajo y deja
+   * extranjero que declaró no tenerlo). Un campo que desaparece hace saltar todo Lo siguientey deja
    * la duda de si se perdió el dato; apagado se ve que existe y por qué no se puede completar.
    */
   disabled?: boolean;
@@ -72,17 +72,7 @@ interface CuitInputProps {
  * - Valida con el algoritmo de ARCA (módulo 11) al perder el foco.
  * - Expone hacia afuera el valor limpio (11 dígitos, sin guiones).
  */
-export const CuitInput: React.FC<CuitInputProps> = ({
-  value,
-  onChange,
-  onValidityChange,
-  invalid,
-  className = "",
-  id,
-  placeholder = "XX-XXXXXXXX-X",
-  autoComplete = "off",
-  disabled = false,
-}) => {
+export const CuitInput: React.FC<CuitInputProps> = ({ value, onChange, onValidityChange, invalid, className = "", id, placeholder = "XX-XXXXXXXX-X", autoComplete = "off", disabled = false }) => {
   const ref = useRef<HTMLInputElement>(null);
   const caretRef = useRef<number | null>(null);
   const [formatError, setFormatError] = useState(false);
@@ -162,20 +152,7 @@ export const CuitInput: React.FC<CuitInputProps> = ({
 
   return (
     <div>
-      <input
-        ref={ref}
-        id={id}
-        type="text"
-        inputMode="numeric"
-        autoComplete={autoComplete}
-        placeholder={placeholder}
-        value={display}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        disabled={disabled}
-        className={`${className}${showError ? " !border-red-500 ring-2 ring-red-500/40" : ""}`}
-      />
+      <input ref={ref} id={id} type="text" inputMode="numeric" autoComplete={autoComplete} placeholder={placeholder} value={display} onChange={handleChange} onKeyDown={handleKeyDown} onBlur={handleBlur} disabled={disabled} className={`${className}${showError ? " !border-red-500 ring-2 ring-red-500/40" : ""}`} />
       {formatError && <p className="mt-2 text-xs text-red-400">El CUIT/CUIL no es válido. Revisá los 11 dígitos.</p>}
     </div>
   );

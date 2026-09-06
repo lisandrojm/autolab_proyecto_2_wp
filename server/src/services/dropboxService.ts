@@ -103,7 +103,7 @@ async function rpc(tenantId: string, cfg: TenantDropboxConfig, endpoint: string,
  * el access token ya valida appKey/appSecret/refreshToken). El email de la cuenta es
  * best-effort: requiere el scope account_info.read; si no está, NO rompe la conexión.
  */
-export async function verifyAccount(tenantId: string, cfg: TenantDropboxConfig): Promise<{ email?: string; name?: string }> {
+export async function verifyAccount(tenantId: string, cfg: TenantDropboxConfig): Promise<{ email?: string; name?: string; accountId?: string }> {
   const token = await getAccessToken(tenantId, cfg); // lanza si las credenciales son inválidas
   try {
     // get_current_account no lleva argumentos: body JSON `null` (string "null") + application/json.
@@ -111,7 +111,9 @@ export async function verifyAccount(tenantId: string, cfg: TenantDropboxConfig):
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       timeout: RPC_TIMEOUT_MS,
     });
-    return { email: data?.email, name: data?.name?.display_name };
+    // El `account_id` es lo ÚNICO que trae el webhook para decir DE QUIÉN es el cambio: la
+    // notificación no nombra ni la carpeta ni el archivo. Ver `dropboxWebhookService.ts`.
+    return { email: data?.email, name: data?.name?.display_name, accountId: data?.account_id };
   } catch (e: any) {
     console.warn("[Dropbox] get_current_account falló (se conecta igual):", e?.response?.data?.error_summary || e?.message);
     return {};

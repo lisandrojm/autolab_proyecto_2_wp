@@ -1,16 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock, faChevronDown, faChevronRight, faRotate, faArrowUpRightFromSquare, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
-import { ContractOverviewRow } from '../../api/users';
-import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO, buscarTipoContrato } from './afipCompleteness';
-import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
-import { ContratoItem } from '../../api/contratos';
-import { projectsAPI } from '../../api/projects';
-import { sweetAlert } from '../../utils/sweetAlert';
-import { CampoArca, FilaArca, DepGroup } from './CampoArca';
-import { useResaltadoDependencias } from './useResaltadoDependencias';
-import { CampoObraSocial } from './CampoObraSocial';
-import { PickerArca } from './PickerArca';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faLock, faChevronDown, faChevronRight, faRotate, faArrowUpRightFromSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { ContractOverviewRow } from "../../api/users";
+import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO, buscarTipoContrato } from "./afipCompleteness";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
+import { ContratoItem } from "../../api/contratos";
+import { projectsAPI } from "../../api/projects";
+import { sweetAlert } from "../../utils/sweetAlert";
+import { CampoArca, FilaArca, DepGroup } from "./CampoArca";
+import { useResaltadoDependencias } from "./useResaltadoDependencias";
+import { CampoObraSocial } from "./CampoObraSocial";
+import { PickerArca } from "./PickerArca";
 
 /**
  * El formulario de Datos ARCA, con la forma de la pantalla del organismo: trece campos en tres
@@ -27,13 +27,12 @@ import { PickerArca } from './PickerArca';
  * y el pie del picker.
  */
 
-const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
-const modalidadesContratoApi = createSimpleCatalogApi('/arca/modalidades-contratacion');
-const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
+const tiposServicioApi = createSimpleCatalogApi("/arca/tipos-servicio");
+const modalidadesContratoApi = createSimpleCatalogApi("/arca/modalidades-contratacion");
+const modalidadesLiqApi = createSimpleCatalogApi("/arca/modalidades-liquidacion");
 
 /** Qué campo tiene el picker abierto. */
-type CampoAbierto = null | 'sucursal' | 'actividad' | 'convenio' | 'categoria';
-
+type CampoAbierto = null | "sucursal" | "actividad" | "convenio" | "categoria";
 
 /**
  * La fecha como se lee, `dd/mm/aaaa`. Solo para mostrar: al archivo va `fechaAfip`, que no pasa por acá.
@@ -47,7 +46,7 @@ type CampoAbierto = null | 'sucursal' | 'actividad' | 'convenio' | 'categoria';
  * es feo, pero mostrar otra fecha es un error.
  */
 const fechaLegible = (valor?: string): string => {
-  if (!valor) return '';
+  if (!valor) return "";
   const iso = valor.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : valor;
 };
@@ -84,11 +83,7 @@ const CodigosDelTipo: React.FC<{
   /** Relee el tipo de contrato sin cerrar el modal. Es el mismo camino que usa guardar un código. */
   onRefrescar?: () => void;
 }> = ({ nombreTipo, tipoId, modalidadContrato, nombreModalidadContrato, tipoServicio, nombreTipoServicio, modalidadLiq, nombreModalidadLiq, onRefrescar }) => {
-  const faltantes = [
-    !modalidadContrato && 'modalidad de contrato',
-    !tipoServicio && 'tipo de servicio',
-    !modalidadLiq && 'modalidad de liquidación',
-  ].filter(Boolean) as string[];
+  const faltantes = [!modalidadContrato && "modalidad de contrato", !tipoServicio && "tipo de servicio", !modalidadLiq && "modalidad de liquidación"].filter(Boolean) as string[];
 
   /*
     SE REVALIDA AL VOLVER A LA PESTAÑA.
@@ -101,12 +96,12 @@ const CodigosDelTipo: React.FC<{
   useEffect(() => {
     if (!onRefrescar) return;
     const alVolver = () => onRefrescar();
-    window.addEventListener('focus', alVolver);
-    return () => window.removeEventListener('focus', alVolver);
+    window.addEventListener("focus", alVolver);
+    return () => window.removeEventListener("focus", alVolver);
   }, [onRefrescar]);
 
   /* `/contratos` no tenía forma de abrir UN tipo: lee `?tab=` y nada más. El `tipo` es nuevo. */
-  const href = tipoId ? `/contratos?tab=types&tipo=${encodeURIComponent(tipoId)}` : '/contratos?tab=types';
+  const href = tipoId ? `/contratos?tab=types&tipo=${encodeURIComponent(tipoId)}` : "/contratos?tab=types";
 
   return (
     <section className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-3 py-2.5" aria-label={`Códigos del tipo de contrato ${nombreTipo}`}>
@@ -132,7 +127,7 @@ const CodigosDelTipo: React.FC<{
         <p className="mb-2 rounded-md border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-2.5 py-2 text-[11.5px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
           <span>
-            Falta{faltantes.length === 1 ? '' : 'n'} <strong>{faltantes.join(', ')}</strong> en el tipo de contrato «{nombreTipo}». Sin {faltantes.length === 1 ? 'ese código' : 'esos códigos'} no se puede generar el TXT.
+            Falta{faltantes.length === 1 ? "" : "n"} <strong>{faltantes.join(", ")}</strong> en el tipo de contrato «{nombreTipo}». Sin {faltantes.length === 1 ? "ese código" : "esos códigos"} no se puede generar el TXT.
           </span>
         </p>
       )}
@@ -160,22 +155,17 @@ const CodigosDelTipo: React.FC<{
  * abrir. Pero se contesta una vez, y no ocupa un tercio del formulario mientras tanto.
  */
 const VALORES_FIJOS: Array<{ etiqueta: string; valor: string; nota: string }> = [
-  { etiqueta: 'Puesto desempeñado', valor: 'en blanco', nota: 'el registro de 130 lo deja vacío' },
-  { etiqueta: 'Situación de revista', valor: 'en blanco', nota: 'el registro de 130 lo deja vacío' },
-  { etiqueta: 'Trab. agropecuario', valor: 'N', nota: 'posición 16, siempre N' },
-  { etiqueta: 'Lic. COVID / CCG', valor: '0', nota: 'posición 130, siempre 0' },
+  { etiqueta: "Puesto desempeñado", valor: "en blanco", nota: "el registro de 130 lo deja vacío" },
+  { etiqueta: "Situación de revista", valor: "en blanco", nota: "el registro de 130 lo deja vacío" },
+  { etiqueta: "Trab. agropecuario", valor: "N", nota: "posición 16, siempre N" },
+  { etiqueta: "Lic. COVID / CCG", valor: "0", nota: "posición 130, siempre 0" },
 ];
 
 const ValoresFijos: React.FC = () => {
   const [abierto, setAbierto] = useState(false);
   return (
     <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setAbierto((v) => !v)}
-        aria-expanded={abierto}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-      >
+      <button type="button" onClick={() => setAbierto((v) => !v)} aria-expanded={abierto} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
         <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-gray-400" />
         <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Valores fijos ({VALORES_FIJOS.length})</span>
         <span className="text-[11px] text-gray-500 dark:text-gray-400">· van al TXT, no se editan</span>
@@ -244,7 +234,7 @@ export const FormularioArca: React.FC<{
     Sin categoría arranca vacío y lo completa el efecto de abajo con el habitual de la empleadora —
     que puede no estar elegida todavía cuando este componente monta.
   */
-  const [convenioFiltro, setConvenioFiltro] = useState<string>(valores.convenioCategoria || '');
+  const [convenioFiltro, setConvenioFiltro] = useState<string>(valores.convenioCategoria || "");
 
   /**
    * Las categorías que el picker ofrece, y el ÚNICO lugar donde se busca la elegida.
@@ -259,7 +249,7 @@ export const FormularioArca: React.FC<{
       cat.categorias
         .filter((c) => c.isActive !== false)
         .filter((c) => {
-          const cct = String(c.data?.convenio || '').trim();
+          const cct = String(c.data?.convenio || "").trim();
           if (!cct) return false;
           return convenioFiltro ? cct === convenioFiltro : (valores.conveniosEmpresa || []).includes(cct);
         }),
@@ -286,7 +276,7 @@ export const FormularioArca: React.FC<{
   useEffect(() => {
     const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null } } | undefined;
     const id = emp?.defaultsArca?.convenioId;
-    const convenioDefault = id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || '').trim() : '';
+    const convenioDefault = id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || "").trim() : "";
 
     if (empresaAnterior.current !== row.empresaContratoId) {
       empresaAnterior.current = row.empresaContratoId;
@@ -304,7 +294,7 @@ export const FormularioArca: React.FC<{
         se borre y a veces no, y una regla que depende de datos que no están a la vista se vuelve
         impredecible justo cuando importa.
       */
-      if (row.categoria_sat_id) void guardarEnContrato('categoria', '');
+      if (row.categoria_sat_id) void guardarEnContrato("categoria", "");
       return;
     }
     // Con categoría cargada manda ELLA: el convenio del alta es el de su categoría.
@@ -312,9 +302,18 @@ export const FormularioArca: React.FC<{
   }, [row.empresaContratoId, cat.empresas, cat.convenios, valores.convenioCategoria]);
 
   useEffect(() => {
-    tiposServicioApi.list().then(setTiposServicio).catch(() => setTiposServicio([]));
-    modalidadesContratoApi.list().then(setModalidadesContrato).catch(() => setModalidadesContrato([]));
-    modalidadesLiqApi.list().then(setModalidadesLiq).catch(() => setModalidadesLiq([]));
+    tiposServicioApi
+      .list()
+      .then(setTiposServicio)
+      .catch(() => setTiposServicio([]));
+    modalidadesContratoApi
+      .list()
+      .then(setModalidadesContrato)
+      .catch(() => setModalidadesContrato([]));
+    modalidadesLiqApi
+      .list()
+      .then(setModalidadesLiq)
+      .catch(() => setModalidadesLiq([]));
   }, []);
 
   /*
@@ -330,8 +329,7 @@ export const FormularioArca: React.FC<{
     Dos búsquedas del mismo objeto se separan solas. Ahora es una.
   */
   const tipo: ContratoItem | undefined = useMemo(() => buscarTipoContrato(cat.tipos, row.nombre_contrato), [cat.tipos, row.nombre_contrato]);
-  const nombreTipo = row.nombre_contrato || 'este tipo de contrato';
-
+  const nombreTipo = row.nombre_contrato || "este tipo de contrato";
 
   /*
     Acá estaba «guardarEnTipo», que escribía los tres códigos ARCA en el tipo de contrato desde este
@@ -339,30 +337,30 @@ export const FormularioArca: React.FC<{
     donde una edición alcanzaba a los 143 contratos que comparten ese tipo sin que se viera.
   */
 
-  const guardarEnContrato = async (campo: 'sucursal' | 'actividad' | 'categoria', valor: string) => {
+  const guardarEnContrato = async (campo: "sucursal" | "actividad" | "categoria", valor: string) => {
     // `valor` vacío en categoría = limpiarla (ver el picker de convenio).
     setGuardando(campo);
     try {
-      if (campo === 'categoria') {
+      if (campo === "categoria") {
         // El server recalcula los sueldos derivados y los devuelve: la fila de la grilla tiene que
         // quedar con el sueldo de la categoría nueva, no con el de la anterior.
-        const res = await projectsAPI.updateCategoriaSat(row.projectId, row.userId, row.contractIndex, valor === '' ? null : Number(valor));
+        const res = await projectsAPI.updateCategoriaSat(row.projectId, row.userId, row.contractIndex, valor === "" ? null : Number(valor));
         onGuardado({
           categoria_sat_id: res.categoria_sat_id,
           nombre_categoria_sat: res.nombre_categoria_sat,
           sueldo_neto: res.sueldo_neto,
           sueldo_bruto: res.sueldo_bruto,
         } as any);
-      } else if (campo === 'sucursal') {
+      } else if (campo === "sucursal") {
         const res = await projectsAPI.updateSucursalArca(row.projectId, row.userId, row.contractIndex, valor);
-        onGuardado({ sucursalArcaId: res.sucursalArcaId || '', actividadArca: res.actividadArca || '' });
+        onGuardado({ sucursalArcaId: res.sucursalArcaId || "", actividadArca: res.actividadArca || "" });
       } else {
         await projectsAPI.updateActividadArca(row.projectId, row.userId, row.contractIndex, valor);
         onGuardado({ actividadArca: valor });
       }
       setAbierto(null);
     } catch (e: any) {
-      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar.');
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar.");
     } finally {
       setGuardando(null);
     }
@@ -395,39 +393,39 @@ export const FormularioArca: React.FC<{
     convenio: hayEmpresa,
     categoria: hayEmpresa && !!convenioElegido,
     obraSocial: hayEmpresa && !!convenioElegido && !!valores.categoriaProf,
-    resto: hayEmpresa && !!convenioElegido && !!valores.categoriaProf && valores.constatacion !== 'sin_constatar',
+    resto: hayEmpresa && !!convenioElegido && !!valores.categoriaProf && valores.constatacion !== "sin_constatar",
   };
 
   /** Por qué un campo está en espera. Siempre el eslabón que falta, nunca «completá lo anterior». */
   const motivoDe = (paso: keyof typeof cascada): React.ReactNode => {
     if (!hayEmpresa) return <>se habilita al elegir la empleadora</>;
-    if (paso === 'categoria') return <>se habilita al elegir el convenio</>;
-    if (paso === 'obraSocial') return <>se habilita al elegir la categoría</>;
-    if (paso === 'resto') return !convenioElegido ? <>se habilita al elegir el convenio</> : !valores.categoriaProf ? <>se habilita al elegir la categoría</> : <>se habilita al validar la obra social</>;
+    if (paso === "categoria") return <>se habilita al elegir el convenio</>;
+    if (paso === "obraSocial") return <>se habilita al elegir la categoría</>;
+    if (paso === "resto") return !convenioElegido ? <>se habilita al elegir el convenio</> : !valores.categoriaProf ? <>se habilita al elegir la categoría</> : <>se habilita al validar la obra social</>;
     return <>se habilita al elegir la empleadora</>;
   };
 
   const bloqueadoPorPrevios = !cascada.resto;
-  const motivoBloqueo = motivoDe('resto');
+  const motivoBloqueo = motivoDe("resto");
   // Por el CÓDIGO ya resuelto y no por `row.sucursalArcaId`: cuando el contrato no eligió ninguna,
   // rige la habitual de la empleadora (ver `resolveAfipValues`) y el nombre tiene que acompañarla.
   const sucursalElegida = valores.sucursalesDisponibles.find((s) => String(s.codigo) === valores.sucursal);
   /** `true` si lo que se muestra es el default de la empleadora y no una elección de este contrato. */
   const sucursalEsDefault = !row.sucursalArcaId && !!valores.sucursal;
   /** El domicilio habitual de esta empleadora, si dejó uno marcado (ficha → ARCA → Domicilios). */
-  const sucursalPorDefecto = (cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { sucursalId?: string | null } } | undefined)?.defaultsArca?.sucursalId || '';
+  const sucursalPorDefecto = (cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { sucursalId?: string | null } } | undefined)?.defaultsArca?.sucursalId || "";
   /** El convenio habitual de esta empleadora, en código (ficha → ARCA → Convenios). */
   const convenioHabitual = (() => {
     const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null } } | undefined;
     const id = emp?.defaultsArca?.convenioId;
-    return id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || '').trim() : '';
+    return id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || "").trim() : "";
   })();
 
   // La fecha de fin depende de la modalidad: sin modalidad no se sabe si corresponde.
   const exigeFin = MODALIDADES_PLAZO_DETERMINADO.includes(valores.modalidadContrato);
   const prohibeFin = MODALIDADES_TIEMPO_INDETERMINADO.includes(valores.modalidadContrato);
 
-  const nombreDe = (lista: SimpleCatalogItem[], codigo: string) => lista.find((x) => String(x.externalId || '').trim() === codigo)?.name || '';
+  const nombreDe = (lista: SimpleCatalogItem[], codigo: string) => lista.find((x) => String(x.externalId || "").trim() === codigo)?.name || "";
 
   return (
     <>
@@ -437,19 +435,19 @@ export const FormularioArca: React.FC<{
           queda alineado donde el ojo ya lo busca. */}
       <div ref={camposRef}>
         <div data-campo="obraSocial" data-depende-de="convenio">
-        {/*
+          {/*
           BANDA 2 — CONVENIO, con la CATEGORÍA adentro.
 
           Mismo formato que las bandas de Empleador y Obra Social: ancho completo, borde propio, y el
           color dice si el paso está resuelto. Los tres van arriba y en el orden en que se resuelven,
-          para que se lea de un vistazo que se elige DE A UNO y que lo de abajo espera.
+          para que se lea de un vistazo que se elige DE A UNO y que Lo siguienteespera.
 
           La categoría va dentro de la misma caja, separada por una línea, porque no es un paso
           aparte: es lo que el convenio condiciona. Sacarla afuera la volvería un cuarto paso y
           rompería la correspondencia con lo que hace ARCA, donde se elige convenio y en el mismo
           lugar la categoría de ese convenio.
         */}
-        {/*
+          {/*
           EL RAIL ABRAZA LOS TRES: convenio → categoría → obra social.
 
           Es el mismo degradé que usa Sucursal → Actividad, y dice lo mismo: que están encadenadas y
@@ -458,16 +456,16 @@ export const FormularioArca: React.FC<{
           era el enlace que no se veía: la validación fija un valor que eligió el convenio, dos cajas
           más arriba.
         */}
-        <DepGroup etiqueta="Convenio, categoría y obra social">
-        <div className="mb-3">
-          <div className={`rounded-lg border px-3 py-2.5 ${valores.categoriaProf ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/40'}`}>
-            <div>
-              <CampoArca
-                rotulo="Convenio"
-                campo="convenio"
-                info="convenioCategoria"
-                rol="filtra"
-                /*
+          <DepGroup etiqueta="Convenio, categoría y obra social">
+            <div className="mb-3">
+              <div className={`rounded-lg border px-3 py-2.5 ${valores.categoriaProf ? "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/40"}`}>
+                <div>
+                  <CampoArca
+                    rotulo="Convenio"
+                    campo="convenio"
+                    info="convenioCategoria"
+                    rol="filtra"
+                    /*
                   Muestra EL FILTRO ELEGIDO, no el convenio derivado de la categoría.
 
                   Antes el campo era de solo lectura y mostrar el derivado era correcto. Ahora que se
@@ -479,50 +477,60 @@ export const FormularioArca: React.FC<{
                   CATEGORÍA, y hasta que no se elija una del convenio nuevo, la guardada sigue siendo
                   la de antes. Callar esa diferencia sería peor que la confusión original.
                 */
-                valor={cascada.convenio ? convenioFiltro || valores.convenioCategoria : ''}
-                nombre={cascada.convenio ? cat.convenios?.find((c) => String(c.externalId || '').trim() === (convenioFiltro || valores.convenioCategoria))?.name : undefined}
-                falta={cascada.convenio && !convenioFiltro && !valores.convenioCategoria}
-                enEspera={!cascada.convenio}
-                onEditar={cascada.convenio ? () => setAbierto('convenio') : undefined}
-                origen={
-                  !cascada.convenio ? (
-                    motivoDe('convenio')
-                  ) : convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? (
-                    <>
-                      filtro elegido · la categoría guardada sigue siendo del <strong>{valores.convenioCategoria}</strong>
-                    </>
-                  ) : (
-                    <>
-                      {/* Las dos cosas que cuelgan del convenio. La obra social se nombra acá porque
+                    valor={cascada.convenio ? convenioFiltro || valores.convenioCategoria : ""}
+                    nombre={cascada.convenio ? cat.convenios?.find((c) => String(c.externalId || "").trim() === (convenioFiltro || valores.convenioCategoria))?.name : undefined}
+                    falta={cascada.convenio && !convenioFiltro && !valores.convenioCategoria}
+                    enEspera={!cascada.convenio}
+                    onEditar={cascada.convenio ? () => setAbierto("convenio") : undefined}
+                    origen={
+                      !cascada.convenio ? (
+                        motivoDe("convenio")
+                      ) : convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? (
+                        <>
+                          filtro elegido · la categoría guardada sigue siendo del <strong>{valores.convenioCategoria}</strong>
+                        </>
+                      ) : (
+                        <>
+                          {/* Las dos cosas que cuelgan del convenio. La obra social se nombra acá porque
                           es la que rige cuando ARCA no devuelve una propia —el caso más común— y
                           hasta ahora eso solo se descubría al validar. */}
-                      define las <strong>categorías</strong> elegibles y la <strong>obra social por defecto</strong> · no va al archivo
-                    </>
-                  )
-                }
-              />
+                          define las <strong>categorías</strong> elegibles y la <strong>obra social por defecto</strong> · no va al archivo
+                        </>
+                      )
+                    }
+                  />
 
-              {/* Adentro y DEBAJO, separada por una línea: la categoría es lo que el convenio
+                  {/* Adentro y DEBAJO, separada por una línea: la categoría es lo que el convenio
                   condiciona, no un paso aparte. */}
-              <div className="mt-1 pt-2.5 border-t border-gray-200 dark:border-gray-700/60">
-                <CampoArca
-                  rotulo="Categoría"
-                  campo="categoria"
-                  dependeDe="convenio"
-                  info="categoriaProf"
-                  rol="campo"
-                  etiqueta="101–106"
-                  valor={valores.categoriaProf}
-                  nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.name}
-                  falta={!valores.categoriaProf}
-                  enEspera={!cascada.categoria}
-                  onEditar={cascada.categoria ? () => setAbierto('categoria') : undefined}
-                  guardando={guardando === 'categoria'}
-                  origen={!cascada.categoria ? motivoDe('categoria') : valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato</> : <>elegí una del convenio {convenioElegido}</>}
-                />
-              </div>
+                  <div className="mt-1 pt-2.5 border-t border-gray-200 dark:border-gray-700/60">
+                    <CampoArca
+                      rotulo="Categoría"
+                      campo="categoria"
+                      dependeDe="convenio"
+                      info="categoriaProf"
+                      rol="campo"
+                      etiqueta="101–106"
+                      valor={valores.categoriaProf}
+                      nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? "") === valores.categoriaProf)?.name}
+                      falta={!valores.categoriaProf}
+                      enEspera={!cascada.categoria}
+                      onEditar={cascada.categoria ? () => setAbierto("categoria") : undefined}
+                      guardando={guardando === "categoria"}
+                      origen={
+                        !cascada.categoria ? (
+                          motivoDe("categoria")
+                        ) : valores.convenioCategoria ? (
+                          <>
+                            del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato
+                          </>
+                        ) : (
+                          <>elegí una del convenio {convenioElegido}</>
+                        )
+                      }
+                    />
+                  </div>
 
-              {/*
+                  {/*
                 LA RETRIBUCIÓN VA ACÁ, DEBAJO DE LA CATEGORÍA. Es lo que la categoría decide.
 
                 Estaba sola en un grupo «Remuneración» al final del formulario, y ahí quedaba colgada:
@@ -541,52 +549,36 @@ export const FormularioArca: React.FC<{
                 que sí se eligen, así que parecía editable y roto. Como línea, se lee como lo que es:
                 un dato derivado.
               */}
-              {valores.categoriaProf && (
-                <div className="mt-1 pt-2.5 border-t border-gray-200 dark:border-gray-700/60">
-                  <FilaArca
-                    rotulo="Retribución pactada"
-                    campo="retribucion"
-                    dependeDe="categoria"
-                    info="retribucion"
-                    etiqueta="58–72"
-                    valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}
-                    vacio="— el grupo salarial de esta categoría no tiene sueldo bruto cargado"
-                    faltaEsError
-                    origen={<>del grupo salarial del convenio · se actualiza por paritaria</>}
-                  />
+                  {valores.categoriaProf && (
+                    <div className="mt-1 pt-2.5 border-t border-gray-200 dark:border-gray-700/60">
+                      <FilaArca rotulo="Retribución pactada" campo="retribucion" dependeDe="categoria" info="retribucion" etiqueta="58–72" valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString("es-AR", { minimumFractionDigits: 2 }) : ""} vacio="— el grupo salarial de esta categoría no tiene sueldo bruto cargado" faltaEsError origen={<>del grupo salarial del convenio · se actualiza por paritaria</>} />
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
 
-          {/*
+            {/*
             La obra social va DESPUÉS del convenio y la categoría.
 
             Cuando ARCA no devuelve una afiliación propia, la que rige es la del CONVENIO. Validar
             antes de tener convenio y categoría es validar contra un default que todavía puede
             cambiar: se elige otro convenio y esa validación queda hablando de otra obra social.
           */}
-          {cascada.obraSocial ? (
-            <CampoObraSocial
-              row={row}
-              valores={valores}
-              onGuardado={onGuardado}
-              onValidarEnPantalla={onValidarObraSocial}
-              convenioPendiente={convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? convenioFiltro : undefined}
-            />
-          ) : (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-4 py-3 flex items-center gap-3">
-              <FontAwesomeIcon icon={faLock} className="h-3 w-3 shrink-0 text-gray-400" />
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Obra social</p>
-                {/* El motivo concreto, no «completá lo anterior»: lo que falta es UN eslabón y hay que
+            {cascada.obraSocial ? (
+              <CampoObraSocial row={row} valores={valores} onGuardado={onGuardado} onValidarEnPantalla={onValidarObraSocial} convenioPendiente={convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? convenioFiltro : undefined} />
+            ) : (
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-4 py-3 flex items-center gap-3">
+                <FontAwesomeIcon icon={faLock} className="h-3 w-3 shrink-0 text-gray-400" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Obra social</p>
+                  {/* El motivo concreto, no «completá lo anterior»: lo que falta es UN eslabón y hay que
                     poder ir a ese. */}
-                <p className="text-[12.5px] text-gray-500 dark:text-gray-400">{motivoDe('obraSocial')}</p>
+                  <p className="text-[12.5px] text-gray-500 dark:text-gray-400">{motivoDe("obraSocial")}</p>
+                </div>
               </div>
-            </div>
-          )}
-        </DepGroup>
+            )}
+          </DepGroup>
         </div>
 
         {/*
@@ -604,7 +596,7 @@ export const FormularioArca: React.FC<{
           <div className="mb-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 px-3 py-2 flex items-center gap-2.5">
             <FontAwesomeIcon icon={faLock} className="h-3 w-3 shrink-0 text-gray-400" />
             <p className="text-[12px] text-gray-500 dark:text-gray-400">
-              Lo de abajo <strong>{motivoDe('resto')}</strong>. Se completa de a un paso: empleadora, convenio y categoría, obra social.
+              Lo siguiente<strong>{motivoDe("resto")}</strong>. Se completa de a un paso: empleadora, convenio y categoría, obra social.
             </p>
           </div>
         )}
@@ -621,7 +613,7 @@ export const FormularioArca: React.FC<{
           Zona 2 y los constantes a la Zona 3. Dos columnas y no tres: a tres, cada campo tenía menos
           de un cuarto del ancho y los domicilios y descripciones de actividad se cortaban al medio.
         */}
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-x-5 transition-opacity ${cascada.resto ? '' : 'opacity-60'}`}>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-x-5 transition-opacity ${cascada.resto ? "" : "opacity-60"}`}>
           {/* ── Domicilio y actividad ───────────────────────────────────────────── */}
           <div>
             <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Domicilio y actividad</h4>
@@ -649,8 +641,8 @@ export const FormularioArca: React.FC<{
                 nombre={sucursalElegida?.domicilio}
                 falta={hayEmpresa && !valores.sucursal}
                 enEspera={bloqueadoPorPrevios}
-                guardando={guardando === 'sucursal'}
-                onEditar={() => setAbierto('sucursal')}
+                guardando={guardando === "sucursal"}
+                onEditar={() => setAbierto("sucursal")}
                 origen={
                   bloqueadoPorPrevios ? (
                     motivoBloqueo
@@ -695,9 +687,17 @@ export const FormularioArca: React.FC<{
                   nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
                   falta={!!valores.sucursal && !valores.actividad}
                   enEspera={bloqueadoPorPrevios || !valores.sucursal}
-                  guardando={guardando === 'actividad'}
-                  onEditar={() => setAbierto('actividad')}
-                  origen={bloqueadoPorPrevios ? motivoBloqueo : <>{valores.actividadesDisponibles.length} declaradas en <strong>{valores.nombreSucursal || 'la sucursal'}</strong> · elegí cuál se declara</>}
+                  guardando={guardando === "actividad"}
+                  onEditar={() => setAbierto("actividad")}
+                  origen={
+                    bloqueadoPorPrevios ? (
+                      motivoBloqueo
+                    ) : (
+                      <>
+                        {valores.actividadesDisponibles.length} declaradas en <strong>{valores.nombreSucursal || "la sucursal"}</strong> · elegí cuál se declara
+                      </>
+                    )
+                  }
                 />
               ) : (
                 <FilaArca
@@ -708,9 +708,19 @@ export const FormularioArca: React.FC<{
                   etiqueta="79–84"
                   valor={valores.actividad}
                   nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
-                  vacio={bloqueadoPorPrevios ? '— en espera' : valores.sucursal ? '— la sucursal no tiene actividades declaradas' : '— se hereda al elegir la sucursal'}
+                  vacio={bloqueadoPorPrevios ? "— en espera" : valores.sucursal ? "— la sucursal no tiene actividades declaradas" : "— se hereda al elegir la sucursal"}
                   faltaEsError={!!valores.sucursal}
-                  origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>única de <strong>{valores.nombreSucursal || 'esta sucursal'}</strong>, se hereda</> : <>se hereda al elegir la sucursal</>}
+                  origen={
+                    bloqueadoPorPrevios ? (
+                      motivoBloqueo
+                    ) : valores.sucursal ? (
+                      <>
+                        única de <strong>{valores.nombreSucursal || "esta sucursal"}</strong>, se hereda
+                      </>
+                    ) : (
+                      <>se hereda al elegir la sucursal</>
+                    )
+                  }
                 />
               )}
             </DepGroup>
@@ -760,7 +770,21 @@ export const FormularioArca: React.FC<{
                 falta={exigeFin && !valores.fechaFin}
                 error={prohibeFin && !!valores.fechaFin}
                 enEspera={!valores.modalidadContrato}
-                origen={!valores.modalidadContrato ? <>se habilita al elegir la modalidad de contrato</> : exigeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es a plazo determinado: es obligatoria</> : prohibeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es indeterminada: va en blanco</> : <>del contrato del miembro</>}
+                origen={
+                  !valores.modalidadContrato ? (
+                    <>se habilita al elegir la modalidad de contrato</>
+                  ) : exigeFin ? (
+                    <>
+                      la modalidad <strong>{valores.modalidadContrato}</strong> es a plazo determinado: es obligatoria
+                    </>
+                  ) : prohibeFin ? (
+                    <>
+                      la modalidad <strong>{valores.modalidadContrato}</strong> es indeterminada: va en blanco
+                    </>
+                  ) : (
+                    <>del contrato del miembro</>
+                  )
+                }
               />
             )}
           </div>
@@ -770,24 +794,14 @@ export const FormularioArca: React.FC<{
               recuadro del convenio, debajo de la Categoría, que es la que la define. */}
         </div>
 
-        <CodigosDelTipo
-          nombreTipo={nombreTipo}
-          tipoId={tipo?._id}
-          modalidadContrato={valores.modalidadContrato}
-          nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)}
-          tipoServicio={valores.tipoServicio}
-          nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)}
-          modalidadLiq={valores.modalidadLiq}
-          nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)}
-          onRefrescar={onCambioNivel}
-        />
+        <CodigosDelTipo nombreTipo={nombreTipo} tipoId={tipo?._id} modalidadContrato={valores.modalidadContrato} nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)} tipoServicio={valores.tipoServicio} nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)} modalidadLiq={valores.modalidadLiq} nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)} onRefrescar={onCambioNivel} />
 
         <ValoresFijos />
       </div>
 
       {/* ── Pickers ─────────────────────────────────────────────────────────── */}
       <PickerArca
-        abierto={abierto === 'sucursal'}
+        abierto={abierto === "sucursal"}
         onCerrar={() => setAbierto(null)}
         titulo="Sucursal"
         subtitulo="Domicilios de explotación declarados por esta empleadora ante ARCA."
@@ -804,27 +818,18 @@ export const FormularioArca: React.FC<{
           .map((s) => ({
             codigo: s.codigo,
             nombre: s.domicilio,
-            etiqueta: s.actividades.length === 0 ? 'sin actividades' : s._id === sucursalPorDefecto ? '★ habitual' : undefined,
+            etiqueta: s.actividades.length === 0 ? "sin actividades" : s._id === sucursalPorDefecto ? "★ habitual" : undefined,
           }))}
         valor={valores.sucursal}
-        guardando={guardando === 'sucursal'}
+        guardando={guardando === "sucursal"}
         onElegir={(o) => {
           const s = valores.sucursalesDisponibles.find((x) => x.codigo === o.codigo);
-          if (s) guardarEnContrato('sucursal', s._id);
+          if (s) guardarEnContrato("sucursal", s._id);
         }}
         vacio={<>La empleadora no tiene domicilios de explotación cargados. Extraé su padrón en ARCA (Datos del Empleador → Domicilios de Explotación) y cargalo en su ficha.</>}
       />
 
-      <PickerArca
-        abierto={abierto === 'actividad'}
-        onCerrar={() => setAbierto(null)}
-        titulo="Actividad del domicilio"
-        subtitulo={`Solo las declaradas en ${valores.nombreSucursal || 'esta sucursal'}. ARCA rechaza cualquier otra.`}
-        opciones={valores.actividadesDisponibles.map((a) => ({ codigo: a.codigo, nombre: a.descripcion || '' }))}
-        valor={valores.actividad}
-        guardando={guardando === 'actividad'}
-        onElegir={(o) => guardarEnContrato('actividad', o.codigo)}
-      />
+      <PickerArca abierto={abierto === "actividad"} onCerrar={() => setAbierto(null)} titulo="Actividad del domicilio" subtitulo={`Solo las declaradas en ${valores.nombreSucursal || "esta sucursal"}. ARCA rechaza cualquier otra.`} opciones={valores.actividadesDisponibles.map((a) => ({ codigo: a.codigo, nombre: a.descripcion || "" }))} valor={valores.actividad} guardando={guardando === "actividad"} onElegir={(o) => guardarEnContrato("actividad", o.codigo)} />
 
       {/*
         CONVENIO — filtra la lista de abajo y NO se guarda.
@@ -835,18 +840,18 @@ export const FormularioArca: React.FC<{
         registró, así que ofrecerlos sería ofrecer errores.
       */}
       <PickerArca
-        abierto={abierto === 'convenio'}
+        abierto={abierto === "convenio"}
         onCerrar={() => setAbierto(null)}
         titulo="Convenio colectivo"
         subtitulo="Solo filtra las categorías de abajo. No se guarda ni va al archivo: ARCA lo deduce de la categoría."
         opciones={[
-          { codigo: '', nombre: 'Sin filtrar — ver todas las categorías de la empleadora' },
+          { codigo: "", nombre: "Sin filtrar — ver todas las categorías de la empleadora" },
           // El habitual primero y marcado: es sugerencia, los otros siguen elegibles.
           ...[...(valores.conveniosEmpresa || [])]
             .sort((a, b) => (a === convenioHabitual ? -1 : b === convenioHabitual ? 1 : 0))
             .map((cct) => {
-              const nombre = cat.convenios?.find((c) => String(c.externalId || '').trim() === cct)?.name || '';
-              const cuantas = cat.categorias.filter((c) => String(c.data?.convenio || '').trim() === cct && c.isActive !== false).length;
+              const nombre = cat.convenios?.find((c) => String(c.externalId || "").trim() === cct)?.name || "";
+              const cuantas = cat.categorias.filter((c) => String(c.data?.convenio || "").trim() === cct && c.isActive !== false).length;
               return { codigo: cct, nombre, etiqueta: cct === convenioHabitual ? `★ habitual · ${cuantas} categorías` : `${cuantas} categorías` };
             }),
         ]}
@@ -867,9 +872,9 @@ export const FormularioArca: React.FC<{
             mejor feedback que un cartel que hay que cerrar antes de seguir.
           */
           if (!o.codigo || !valores.categoriaProf) return;
-          const cat0 = cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf);
-          if (String(cat0?.data?.convenio || '').trim() === o.codigo) return;
-          await guardarEnContrato('categoria', '');
+          const cat0 = cat.categorias.find((c) => String(c.data?.codigoAfip ?? "") === valores.categoriaProf);
+          if (String(cat0?.data?.convenio || "").trim() === o.codigo) return;
+          await guardarEnContrato("categoria", "");
         }}
         vacio={<>Esta empleadora no tiene convenios registrados. Cargalos en su ficha (ARCA → Convenios): sin convenio no hay categoría que ARCA acepte.</>}
       />
@@ -881,19 +886,19 @@ export const FormularioArca: React.FC<{
         neto y el bruto salen de la escala del convenio, no se cargan a mano.
       */}
       <PickerArca
-        abierto={abierto === 'categoria'}
+        abierto={abierto === "categoria"}
         onCerrar={() => setAbierto(null)}
         titulo="Categoría profesional"
-        subtitulo={convenioFiltro ? `Las del convenio ${convenioFiltro}. Cambiarla recalcula el sueldo neto y bruto del contrato.` : 'Las de los convenios de esta empleadora. Cambiarla recalcula el sueldo neto y bruto del contrato.'}
-        opciones={categoriasOfrecidas.map((c) => ({ codigo: String(c.data?.codigoAfip ?? ''), nombre: c.name || '', etiqueta: String(c.data?.convenio || '').trim() }))}
+        subtitulo={convenioFiltro ? `Las del convenio ${convenioFiltro}. Cambiarla recalcula el sueldo neto y bruto del contrato.` : "Las de los convenios de esta empleadora. Cambiarla recalcula el sueldo neto y bruto del contrato."}
+        opciones={categoriasOfrecidas.map((c) => ({ codigo: String(c.data?.codigoAfip ?? ""), nombre: c.name || "", etiqueta: String(c.data?.convenio || "").trim() }))}
         valor={valores.categoriaProf}
-        guardando={guardando === 'categoria'}
+        guardando={guardando === "categoria"}
         onElegir={(o) => {
-          const elegida = categoriasOfrecidas.find((c) => String(c.data?.codigoAfip ?? '') === o.codigo);
+          const elegida = categoriasOfrecidas.find((c) => String(c.data?.codigoAfip ?? "") === o.codigo);
           // Al archivo va el código de 6 dígitos, pero lo que se guarda en el contrato es el id del
           // catálogo: son dos números distintos y confundirlos escribe una categoría que no existe.
           if (elegida?.data?.id != null) {
-            guardarEnContrato('categoria', String(elegida.data.id));
+            guardarEnContrato("categoria", String(elegida.data.id));
             return;
           }
           /*
@@ -904,10 +909,7 @@ export const FormularioArca: React.FC<{
             Se dice en voz alta en vez de no hacer nada. El silencio es lo que hacía que esto se
             leyera como «el botón está roto»: la lista la ofrece, se la clickea, y no pasa nada.
           */
-          sweetAlert.warningAlert(
-            'Esa categoría todavía no se puede elegir',
-            `«${elegida?.name || o.nombre}» no tiene número interno, y el contrato guarda la categoría por número. Es un dato que falta en el catálogo, no un error de esta pantalla.\n\nSe arregla de una vez corriendo la numeración de categorías en el servidor: npm run categorias:legacy-id`,
-          );
+          sweetAlert.warningAlert("Esa categoría todavía no se puede elegir", `«${elegida?.name || o.nombre}» no tiene número interno, y el contrato guarda la categoría por número. Es un dato que falta en el catálogo, no un error de esta pantalla.\n\nSe arregla de una vez corriendo la numeración de categorías en el servidor: npm run categorias:legacy-id`);
         }}
         vacio={<>No hay categorías para ese convenio en el catálogo. Cargalas en Configuración → ARCA → Categorías.</>}
       />

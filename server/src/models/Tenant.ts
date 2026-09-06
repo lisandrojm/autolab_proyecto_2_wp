@@ -38,6 +38,15 @@ export interface ITenant extends Document {
       refreshTokenEnc?: string; // cifrado en reposo
       rootPath?: string; // ej: "/HelloSign"
       accountEmail?: string; // solo para mostrar quién está conectado
+      /**
+       * El id de cuenta de Dropbox (dbid:...). NO es decorativo: es lo unico que trae el webhook.
+       *
+       * La notificacion de Dropbox dice «algo cambio para estas cuentas» y nada mas — ni carpeta ni
+       * archivo. Sin este id no hay forma de saber a que tenant escanear, y habria que escanearlos a
+       * todos por cada aviso. Se completa al conectar, y para los ya conectados lo rellena solo el
+       * primer escaneo que corra (ver `estadoDropboxCronService.ts`), sin pedirle nada a nadie.
+       */
+      accountId?: string;
       connectedAt?: Date;
       /** Cada cuántos minutos se revisan las carpetas vigiladas por transición automática. Default 20. */
       scanIntervalMinutes?: number;
@@ -227,6 +236,8 @@ const tenantSchema = new Schema<ITenant>(
         refreshTokenEnc: { type: String },
         rootPath: { type: String, default: "/HelloSign" },
         accountEmail: { type: String },
+        // Índice: el webhook llega con el account_id y hay que resolver el tenant en cada notificación.
+        accountId: { type: String, index: true },
         connectedAt: { type: Date },
         scanIntervalMinutes: { type: Number, default: 20 },
       },

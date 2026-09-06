@@ -26,6 +26,7 @@ export declare function clearTenantToken(tenantId: string): void;
 export declare function verifyAccount(tenantId: string, cfg: TenantDropboxConfig): Promise<{
     email?: string;
     name?: string;
+    accountId?: string;
 }>;
 /**
  * El argumento de las llamadas de CONTENIDO viaja en una cabecera HTTP, y una cabecera es ASCII.
