@@ -766,20 +766,8 @@ export const FormularioArca: React.FC<{
           </div>
 
           {/* ── Remuneración ────────────────────────────────────────────────────── */}
-          <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Remuneración</h4>
-
-            <CampoArca
-              rotulo="Retribución pactada"
-              campo="retribucion"
-              info="retribucion"
-              rol="campo"
-              etiqueta="58–72"
-              valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}
-              falta={!valores.retribucionOk}
-              origen={<>del grupo salarial del convenio · se actualiza por paritaria</>}
-            />
-          </div>
+          {/* Acá estaba el grupo «Remuneración», con la Retribución pactada sola adentro. Se mudó al
+              recuadro del convenio, debajo de la Categoría, que es la que la define. */}
         </div>
 
         <CodigosDelTipo

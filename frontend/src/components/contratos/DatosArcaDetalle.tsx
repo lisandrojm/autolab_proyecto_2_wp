@@ -293,7 +293,7 @@ const VistaPrevia: React.FC<{ campos: CampoRegistro[] }> = ({ campos }) => {
  * Escrito a mano y no derivado del JSX a propósito: así, agregar un campo al formulario obliga a
  * decidir si entra en la cuenta, en vez de moverla sin que nadie lo note.
  */
-const CLAVES_FORMULARIO = new Set(["sucursal", "actividad", "fechaInicio", "fechaFin", "retribucion"]);
+const CLAVES_FORMULARIO = new Set(["sucursal", "actividad", "fechaInicio", "fechaFin"]);
 /** Los que viven en el tipo de contrato. Se nombran en el segundo renglón del pie. */
 const CLAVES_DEL_TIPO = new Set(["modalidadContrato", "tipoServicio", "modalidadLiq"]);
 
