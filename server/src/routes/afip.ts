@@ -15,6 +15,7 @@ import { Info } from "../models/Info.js";
 import { AfipLog } from "../models/AfipLog.js";
 import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
 import { aplicarNombreDeArca, confirmarNombresConElPadron } from "../services/arca/nombreArca.js";
+import { nombresPorPantalla } from "../services/arca/nombresPorPantalla.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
@@ -347,8 +348,29 @@ router.post("/nombres/validar", async (req: AuthenticatedRequest & TenantRequest
     const tanda = validos.slice(0, limite).map((u) => String(u._id));
     const r = await confirmarNombresConElPadron({ tenantObjectId: req.tenantObjectId, tenantId: String(req.tenantObjectId), userIds: tanda });
 
+    /*
+      LOS QUE EL PADRÓN RECHAZÓ POR INACTIVOS, POR LA OTRA CONEXIÓN.
+
+      El padrón es el camino preferido y sigue yendo primero: es el único que devuelve nombre y
+      apellido SEPARADOS. Pero contesta con un fault a los CUIT dados de baja, y esas personas quedaban
+      sin corregir para siempre — aunque la pantalla de Simplificación Registral muestra su nombre
+      igual, que es de donde salió «CASTRO BRIAN EMANUEL» para un CUIL que el padrón rechaza.
+
+      Solo para los inactivos, y con tope: abrir el navegador cuesta segundos, no milisegundos. Son
+      pocos (6 sobre 273 consultas en el log de producción) y por eso se banca en el mismo pedido; si
+      alguna vez fueran cientos, para eso está la corrida de obras sociales.
+    */
+    const porPantalla = r.inactivos.length > 0 ? await nombresPorPantalla({ tenantId: String(req.tenantObjectId), tenantObjectId: req.tenantObjectId, cuits: r.inactivos.map((x) => x.cuit) }) : null;
+
+    // Los que la pantalla resolvió salen de la lista de inactivos sin resolver: ya tienen su nombre.
+    const resueltosPorPantalla = new Set(porPantalla?.confirmados || []);
+
     res.json({
       ...r,
+      inactivos: r.inactivos.filter((x) => !resueltosPorPantalla.has(x.cuit)),
+      renombrados: [...r.renombrados, ...(porPantalla?.renombrados || [])],
+      confirmados: [...r.confirmados, ...(porPantalla?.confirmados || [])],
+      porPantalla: porPantalla ? { resueltos: porPantalla.confirmados.length, sinResolver: porPantalla.sinResolver, motivoSinIntentar: porPantalla.motivoSinIntentar } : undefined,
       pendientes: Math.max(0, validos.length - tanda.length),
       cuitInvalido: invalidos,
     });

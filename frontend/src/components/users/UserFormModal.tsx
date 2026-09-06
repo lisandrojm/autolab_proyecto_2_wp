@@ -228,7 +228,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         }));
         sweetAlert.warningAlert(
           'El CUIT existe, pero figura INACTIVO en ARCA',
-          'El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo.\n\nEl alta se puede hacer igual, pero ARCA no devuelve nombre ni apellido de un CUIT inactivo: cargalos a mano. La ficha queda SIN el sello de validado, y se puede validar más adelante desde la columna ARCA de Usuarios si la persona regulariza su situación.',
+          'El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo, y el Padrón —que es lo que consulta este botón— no devuelve el nombre de un CUIT inactivo.\n\nEl alta se puede hacer igual: cargá nombre y apellido a mano por ahora. La ficha queda SIN el sello de validada, y el nombre se corrige solo la primera vez que esta persona pase por «Validar obras sociales»: esa pantalla de ARCA sí lo muestra, aunque el CUIT esté de baja.',
         );
         return;
       }

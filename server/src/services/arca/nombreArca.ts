@@ -64,6 +64,52 @@ const conGrafiaDeArca = (guardado: string, palabrasDeArca: string[]): string => 
     .join(" ");
 };
 
+/**
+ * PARTIR EL NOMBRE DE ARCA USANDO EL APELLIDO GUARDADO COMO ANCLA.
+ *
+ * El problema: la pantalla de altas muestra el nombre entero en un solo campo —«CASTRO BRIAN
+ * EMANUEL»— y para escribirlo hay que saber dónde termina el apellido. Adivinarlo escribe el nombre
+ * de una persona al revés, así que hasta acá el caso se descartaba y no se corregía nada.
+ *
+ * Pero no hace falta adivinar: el apellido YA ESTÁ DECIDIDO en la ficha. Lo que se busca es esa
+ * decisión adentro del string de ARCA, y lo que sobra son los nombres de pila. Con «castro» guardado
+ * como apellido, «CASTRO BRIAN EMANUEL» se parte en apellido «CASTRO» y nombre «BRIAN EMANUEL» — y
+ * eso no es una suposición sobre dónde corta, es leer el corte que ya estaba tomado.
+ *
+ * Resuelve el caso que motivó todo esto: ARCA tiene un nombre de pila más que la ficha, o la misma
+ * grafía con otras mayúsculas o acentos. Y resuelve el que la regla vieja daba por imposible: «DE LA
+ * TORRE JUAN» con apellido «De La Torre» se parte bien, porque el ancla son tres palabras.
+ *
+ * SE PRUEBA EL PRINCIPIO Y DESPUÉS EL FINAL: ARCA arma APELLIDO + NOMBRES, pero el padrón a veces
+ * manda el orden inverso en un solo campo, y las dos formas se anclan igual de bien.
+ *
+ * DEVUELVE `null` CUANDO NO ENCUENTRA EL ANCLA, y ahí no se escribe nada. Es el caso en que el
+ * apellido guardado es realmente otro —no una variante de escritura— y ahí sí hay que mirarlo a mano:
+ * puede ser un casamiento, una ficha con dos personas mezcladas o un CUIL mal cargado, y ninguna de
+ * las tres se arregla escribiendo por encima.
+ */
+export function partirConAncla(nombreEntero: string, apellidoGuardado: string): { nombre: string; apellido: string } | null {
+  const palabras = String(nombreEntero || "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const ancla = String(apellidoGuardado || "")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (palabras.length === 0 || ancla.length === 0 || ancla.length >= palabras.length) return null;
+
+  const iguales = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => clave(x) === clave(b[i]));
+
+  // APELLIDO + NOMBRES, que es como lo arma la pantalla de altas.
+  if (iguales(palabras.slice(0, ancla.length), ancla)) {
+    return { apellido: palabras.slice(0, ancla.length).join(" "), nombre: palabras.slice(ancla.length).join(" ") };
+  }
+  // NOMBRES + APELLIDO, por si viene al revés.
+  if (iguales(palabras.slice(-ancla.length), ancla)) {
+    return { apellido: palabras.slice(-ancla.length).join(" "), nombre: palabras.slice(0, palabras.length - ancla.length).join(" ") };
+  }
+  return null;
+}
+
 export async function aplicarNombreDeArca(opts: {
   tenantObjectId: any;
   userId: string;
@@ -91,7 +137,39 @@ export async function aplicarNombreDeArca(opts: {
   if (!arca.nombre || !arca.apellido) {
     const deArca = `${arca.nombre || ""} ${arca.apellido || ""}`.trim();
     const guardado = `${actual.firstName || ""} ${actual.lastName || ""}`.trim();
-    if (!deArca || !mismoNombre(deArca, guardado)) return null;
+    if (!deArca) return null;
+
+    /*
+      NO COINCIDE: SE CORRIGE CON EL DE ARCA, anclando en el apellido que ya está en la ficha.
+
+      Antes acá se devolvía `null` y no pasaba nada: el nombre quedaba como estaba, la persona sin el
+      sello, y la corrida siguiente volvía a encontrar la misma diferencia. Para un alta ante el
+      organismo eso es lo peor de los dos mundos —se detectó que el nombre no es el que ARCA tiene, y
+      se dejó el que va a hacer que la rechacen—.
+
+      El ancla es lo que permite escribirlo sin adivinar dónde termina el apellido (ver
+      `partirConAncla`). Si no la encuentra, sigue sin escribirse nada: ese es el caso en que el
+      apellido de verdad es otro, y eso lo mira una persona.
+    */
+    if (!mismoNombre(deArca, guardado)) {
+      const partido = partirConAncla(deArca, actual.lastName || "");
+      if (!partido) return null;
+      const antesTodo = guardado || "(sin nombre cargado)";
+      await User.updateOne(
+        { _id: userId, tenantId: tenantObjectId },
+        {
+          $set: {
+            firstName: partido.nombre,
+            lastName: partido.apellido,
+            "metadata.nombre": partido.nombre,
+            "metadata.apellido": partido.apellido,
+            "metadata.nombreValidadoArcaAt": new Date(),
+          },
+        },
+      );
+      const ahoraTodo = `${partido.nombre} ${partido.apellido}`.trim();
+      return antesTodo === ahoraTodo ? null : { userId, cuil, antes: antesTodo, ahora: ahoraTodo };
+    }
 
     // Mismas palabras: se conserva qué es nombre y qué apellido, y se toma de ARCA cómo se escriben.
     const palabras = deArca.split(/\s+/).filter(Boolean);
@@ -196,7 +274,7 @@ export interface ResultadoNombres {
    * en un CUIT de persona física los ocho dígitos del medio SON el DNI, una cuenta que se hace sin
    * consultar nada. Se compara con el guardado y se informa; no se escribe.
    */
-  inactivos: Array<{ cuit: string; documento: string; documentoGuardado: string; coincide: boolean }>;
+  inactivos: Array<{ cuit: string; documento: string; documentoGuardado: string; coincide: boolean; documentoCorregido: boolean }>;
   motivoSinConsultar?: string;
 }
 
@@ -274,7 +352,24 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
           if (r.estado === "inactivo") {
             const documento = dniDelCuit(cuit);
             const guardado = String(u?.metadata?.documento || "").replace(/\D/g, "");
-            inactivos.push({ cuit, documento, documentoGuardado: guardado, coincide: !!documento && !!guardado && String(Number(guardado)) === documento });
+            const coincide = !!documento && !!guardado && String(Number(guardado)) === documento;
+            /*
+              EL DOCUMENTO SE ESCRIBE, no solo se compara.
+
+              Antes esto informaba «la ficha dice X y el CUIT da Y» y no hacía nada, así que el dato
+              quedaba mal y había que ir a corregirlo a mano de a uno. No hay ninguna duda que
+              resolver: el CUIT ya pasó el dígito verificador, y en una persona física los ocho
+              dígitos del medio SON el documento. Si la ficha dice otra cosa, la ficha está mal.
+
+              No depende de que ARCA conteste —es una cuenta sobre el número que ya tenemos—, así que
+              se corrige igual con el CUIT inactivo, que es justo cuando el organismo no dice nada.
+            */
+            let documentoCorregido = false;
+            if (documento && !coincide) {
+              await User.updateOne({ _id: u._id, tenantId: tenantObjectId }, { $set: { "metadata.documento": documento } });
+              documentoCorregido = true;
+            }
+            inactivos.push({ cuit, documento, documentoGuardado: guardado, coincide, documentoCorregido });
             return;
           }
           if (!r.encontrado) {

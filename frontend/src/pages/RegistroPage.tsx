@@ -473,7 +473,7 @@ export const RegistroPage: React.FC = () => {
         setFieldErrors((prev) => ({ ...prev, documento: false, cuit: false }));
         sweetAlert.warningAlert(
           'Tu CUIT existe, pero figura INACTIVO en ARCA',
-          'El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo.\n\nPodés terminar el registro igual. Como ARCA no devuelve el nombre de un CUIT inactivo, cargá tu nombre y apellido a mano tal como figuran en tu documento.',
+          'El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo, y de un CUIT inactivo el Padrón no devuelve el nombre.\n\nPodés terminar el registro igual: cargá tu nombre y apellido tal como figuran en tu documento. Si más adelante no coincidieran con los que tiene ARCA, la productora los corrige de su lado.',
         );
         return;
       }

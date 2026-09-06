@@ -194,8 +194,15 @@ export const afipAPI = {
     cuitInvalido: number;
     /** Los que ARCA rechazó, con el motivo textual del organismo. */
     noEncontrados: Array<{ cuit: string; motivo: string }>;
-    /** CUIT que EXISTEN pero están de baja: no hay nombre que traer, y no son un rechazo. */
-    inactivos: Array<{ cuit: string; documento: string; documentoGuardado: string; coincide: boolean }>;
+    /**
+     * CUIT que EXISTEN pero están de baja, y que la pantalla de altas TAMPOCO pudo resolver.
+     *
+     * Los que sí se resolvieron por ahí ya no llegan acá: salen en `renombrados`/`confirmados` como
+     * cualquier otro. `documentoCorregido` dice si además se le arregló el DNI a la ficha.
+     */
+    inactivos: Array<{ cuit: string; documento: string; documentoGuardado: string; coincide: boolean; documentoCorregido: boolean }>;
+    /** Qué pasó con el reintento por la conexión de obras sociales. Ausente si no hizo falta. */
+    porPantalla?: { resueltos: number; sinResolver: Array<{ cuit: string; motivo: string }>; motivoSinIntentar?: string };
     motivoSinConsultar?: string;
   }> {
     const { data } = await axios.post("/afip/nombres/validar", opts || {});

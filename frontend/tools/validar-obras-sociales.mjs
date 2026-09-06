@@ -369,10 +369,16 @@ export async function leerFilas(page) {
       misma pasada. Preguntárselo aparte a otro servicio sería consultar dos veces al mismo organismo
       por la misma persona.
 
-      Viene APELLIDO + NOMBRES pegados y NO se parte: dónde termina el apellido no se puede saber
-      («DEL VALLE ROJAS ANA»), y partirlo mal escribe el nombre de una persona al revés. Lo que sale
-      de acá alcanza para COMPARAR; el que difiera se resuelve con el padrón, que los devuelve
-      separados.
+      Viene APELLIDO + NOMBRES pegados y ACÁ no se parte: dónde termina el apellido no se puede saber
+      mirando solo este string («DEL VALLE ROJAS ANA»), y partirlo mal escribe el nombre de una
+      persona al revés. Este archivo devuelve el string entero y no decide nada.
+
+      Del otro lado sí se puede, y por dos caminos (ver `services/arca/nombreArca.ts`):
+
+        - el PADRÓN, que devuelve nombre y apellido separados. Es el preferido;
+        - el APELLIDO YA GUARDADO como ancla, cuando el padrón no puede — el caso son los CUIT
+          INACTIVOS, que el padrón rechaza y esta pantalla muestra igual. Buscar el apellido de la
+          ficha adentro de este string no es adivinar el corte: es leer el que ya estaba tomado.
     */
     const ETIQUETAS = /\b(Obra\s*Social|Sucursal|Actividad|Convenio|Categor[ií]a|Puesto|Grupo|Tipo\s*Servicio|Modalidad|Situaci[oó]n|Retribuci[oó]n|Fecha|R[eé]gimen|Trab)\b/i;
     const nombreDeLaFila = (node, cuil) => {

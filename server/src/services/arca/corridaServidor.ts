@@ -1,11 +1,10 @@
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 import { Company } from "../../models/Company.js";
 import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
 import { abrirSesionArca, credencialesDe } from "./navegador.js";
 import { aplicarNombreDeArca, confirmarNombresConElPadron, mismoNombre, Renombre } from "./nombreArca.js";
 import { User } from "../../models/User.js";
+import { MOTOR } from "./motor.js";
 
 /**
  * Validar obras sociales contra ARCA desde el SERVIDOR, sin que nadie tenga que instalar nada.
@@ -21,19 +20,8 @@ import { User } from "../../models/User.js";
  * lo que se separa es lo que decide qué obra social se le declara a una persona.
  */
 
-/**
- * El motor vive en `frontend/tools/` y se importa en tiempo de ejecución.
- *
- * Es JavaScript plano fuera del `rootDir` del server, así que `tsc` ni lo mira: se resuelve con una
- * ruta calculada desde este archivo. La cuenta funciona igual en desarrollo y en producción porque
- * `src/services/arca/` y `dist/services/arca/` están a la misma profundidad — cuatro niveles bajo la
- * raíz del repo, que es lo que se despliega en el VPS.
- *
- * Está acá y no copiado adentro del server justamente para que haya UNA sola copia. Si algún día
- * `frontend/tools/` se mueve, esta constante es el único lugar que hay que tocar.
- */
-const RAIZ_REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
-const MOTOR = resolve(RAIZ_REPO, "frontend/tools/validar-obras-sociales.mjs");
+// La ruta al motor vive en «motor.ts»: la comparten esta corrida y la lectura de nombres de los
+// CUIT que el padrón rechaza (`nombresPorPantalla.ts`).
 
 export type EventoCorrida =
   | { tipo: "abriendo" }

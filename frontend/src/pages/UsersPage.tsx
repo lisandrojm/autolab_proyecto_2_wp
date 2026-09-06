@@ -494,17 +494,36 @@ export const UsersPage: React.FC = () => {
         informa. No se escribe nada: el nombre no se puede confirmar sin el organismo, y el DNI que
         no coincide es algo que alguien tiene que mirar, no que una corrida masiva decida.
       */
+      /*
+        LO QUE QUEDO SIN RESOLVER DESPUES DE LOS DOS CAMINOS.
+
+        El servidor ya intento los dos: el Padron primero, y para los CUIT que rechaza por inactivos,
+        la pantalla de altas de Simplificacion Registral, que los muestra igual. Los que resolvio por
+        ahi salen en «renombrados» como cualquier otro y no llegan a esta lista.
+
+        Asi que si algo llega aca es porque los DOS fallaron, y el aviso tiene que decir el motivo
+        concreto de cada uno en vez de repetir la explicacion general.
+      */
       const inactivos = r.inactivos || [];
+      const motivosPantalla = new Map((r.porPantalla?.sinResolver || []).map((x) => [x.cuit, x.motivo]));
       if (inactivos.length > 0) {
-        const linea = (x: { cuit: string; documento: string; documentoGuardado: string; coincide: boolean }) => {
-          if (!x.documento) return `• ${formatCuit(x.cuit)} — CUIT inactivo`;
-          if (x.coincide) return `• ${formatCuit(x.cuit)} — CUIT inactivo · DNI ${x.documento} ✓ coincide con la ficha`;
-          if (!x.documentoGuardado) return `• ${formatCuit(x.cuit)} — CUIT inactivo · la ficha no tiene DNI; el del CUIT es ${x.documento}`;
-          return `• ${formatCuit(x.cuit)} — CUIT inactivo · la ficha dice ${x.documentoGuardado} y el CUIT da ${x.documento}`;
+        const linea = (x: { cuit: string; documento: string; documentoGuardado: string; coincide: boolean; documentoCorregido: boolean }) => {
+          const dni = x.documentoCorregido ? ` · DNI corregido a ${x.documento}` : x.coincide ? ` · DNI ${x.documento} ✓` : '';
+          const motivo = motivosPantalla.get(x.cuit);
+          return `• ${formatCuit(x.cuit)} — CUIT inactivo${dni}${motivo ? `\n   ${motivo}` : ''}`;
         };
+        const corregidos = inactivos.filter((x) => x.documentoCorregido).length;
+        const cola = [
+          r.porPantalla?.motivoSinIntentar
+            ? `No se pudo intentar por la conexión de obras sociales: ${r.porPantalla.motivoSinIntentar}`
+            : 'Se intentó por los dos caminos: el Padrón —que no devuelve el nombre de un CUIT inactivo— y la pantalla de altas de ARCA, que sí lo muestra. Estos quedaron sin resolver por el motivo de cada uno.',
+          corregidos > 0 ? `El DNI sí se corrigió en ${corregidos === 1 ? 'una ficha' : `${corregidos} fichas`}: sale de los ocho dígitos del medio del CUIT y no depende de que ARCA conteste.` : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n');
         await sweetAlert.warningAlert(
           inactivos.length === 1 ? 'Ese CUIT existe, pero está INACTIVO' : `${inactivos.length} CUIT existen, pero están INACTIVOS`,
-          `${inactivos.map(linea).join('\n')}\n\nEl número está bien: lo que pasa es que ese CUIT está dado de baja en ARCA. El organismo no devuelve nombre ni apellido de un CUIT inactivo, así que no hay nada que corregir y la ficha queda sin el sello de validada.\n\nEl DNI sí se puede verificar sin consultar nada: son los ocho dígitos del medio del propio CUIT.`,
+          `${inactivos.map(linea).join('\n')}\n\n${cola}`,
         );
       }
 
