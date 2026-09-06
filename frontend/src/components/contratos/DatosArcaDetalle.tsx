@@ -284,11 +284,16 @@ const VistaPrevia: React.FC<{ campos: CampoRegistro[] }> = ({ campos }) => {
 /**
  * Los chequeos que se completan EN EL FORMULARIO de Datos ARCA. Son los que mide la barra.
  *
- * Los otros nueve de `result.checks` se resuelven en otro lado y por eso no entran acá:
+ * Los otros diez de `result.checks` se resuelven en otro lado y por eso no entran acá:
  *
  *   modalidadContrato · tipoServicio · modalidadLiq     en el TIPO DE CONTRATO (Zona 2, solo lectura)
  *   empresa · cuil · categoriaProf · convenioCategoria  en las bandas de arriba del modal
  *   rnos · obraSocialRegistrada                         idem, con su propio trámite
+ *   retribucion                                         la decide la CATEGORÍA, y se muestra ahí
+ *
+ * La retribución salió de esta cuenta al mudarse debajo de la categoría: su chequeo siempre tuvo
+ * origen `categoria_sat`, así que contarla como un campo del formulario decía que se completaba acá
+ * cuando en realidad aparece sola al elegir la categoría, dos bandas más arriba.
  *
  * Escrito a mano y no derivado del JSX a propósito: así, agregar un campo al formulario obliga a
  * decidir si entra en la cuenta, en vez de moverla sin que nadie lo note.
