@@ -1,0 +1,42 @@
+import PizZip from "pizzip";
+import Docxtemplater from "docxtemplater";
+/**
+ * Rellena una plantilla .docx reemplazando las variables `{variable}` por los
+ * valores del objeto `data`. Las variables no presentes en `data` se reemplazan
+ * por una cadena vacía (nullGetter), de modo que el render nunca falla por
+ * placeholders desconocidos.
+ */
+export function fillDocxTemplate(content, data) {
+    const zip = new PizZip(content);
+    const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+        // Para placeholders no mapeados: dejarlos visibles como {variable} (así se detectan
+        // las que faltan mapear) en vez de borrarlos silenciosamente.
+        nullGetter: (part) => {
+            if (part && !part.module && part.value)
+                return `{${part.value}}`;
+            return "";
+        },
+    });
+    doc.render(data);
+    return doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });
+}
+/** Formatea una fecha (ISO o dd/mm/yyyy) a dd/mm/yyyy. Devuelve "" si es inválida. */
+export function formatDateAr(s) {
+    if (!s)
+        return "";
+    if (typeof s === "string") {
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(s))
+            return s.slice(0, 10);
+        // Fechas "YYYY-MM-DD" (o ISO): armar DD/MM/YYYY con la parte de fecha tal cual, sin new Date().
+        // new Date("2026-03-17") se interpreta como UTC medianoche y en AR (UTC-3) retrocede al día anterior.
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+        if (m)
+            return `${m[3]}/${m[2]}/${m[1]}`;
+    }
+    const d = new Date(s);
+    if (isNaN(d.getTime()))
+        return typeof s === "string" ? s : "";
+    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
