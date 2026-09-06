@@ -9,6 +9,8 @@ import { CuitInput, isValidCuit } from "../ui/CuitInput";
 import { Modal } from "../ui/Modal";
 import { BloqueEstado } from "../ui/BloqueEstado";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto as esCbuIncompleto } from "../../utils/cbu";
+import { TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo, declaraSinBanco } from "../../utils/bancarios";
 import { afipAPI } from "../../api/afip";
 import { cuitEsValido } from "../../utils/cuit";
 import { generarPassword } from "../../utils/password";
@@ -100,6 +102,8 @@ interface UserFormData {
   fechaNac?: string;
   telefono?: string;
   bancoId?: number;
+  /** Qué clase de entidad es: decide qué campos se piden y si el número se llama CBU o CVU. */
+  tipoEntidadFinanciera?: string;
   cbu?: string;
   tipoDeCuentaBancaria?: string;
   nroDeCuentaBancaria?: string;
@@ -269,9 +273,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   // Estado del formulario
   const [formData, setFormData] = useState<UserFormData>(emptyForm());
   /** Un CBU argentino tiene exactamente 22 dígitos. */
-  const CBU_DIGITOS = 22;
-  /** Se queda con los dígitos: el CBU no lleva puntos, guiones ni espacios. */
-  const soloDigitos = (v: string) => String(v || "").replace(/[^0-9]/g, "");
+  // La regla del CBU —22 dígitos, sin guiones— vive en `utils/cbu.ts` y tiene tests: la comparten
+  // este modal («Nuevo Usuario» y «Editar Usuario») y el link de registro público.
 
   const [modalActiveTab, setModalActiveTab] = useState<ModalTab>("general");
   /** Solo para extranjeros: si declaró tener CUIL. Los argentinos siempre lo llevan. */
@@ -411,6 +414,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split("T")[0] : "",
         telefono: user.metadata?.telefono,
         bancoId: user.metadata?.bancoId,
+        tipoEntidadFinanciera: user.metadata?.tipoEntidadFinanciera || "",
         cbu: user.metadata?.cbu || "",
         tipoDeCuentaBancaria: user.metadata?.tipoDeCuentaBancaria || "",
         nroDeCuentaBancaria: user.metadata?.nroDeCuentaBancaria || "",
@@ -472,7 +476,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
    * Un CBU argentino tiene 22 dígitos. Los CVU también, pero acá el campo es el CBU: llamarlo
    * «CBU / CVU» daba a entender que acepta dos cosas distintas cuando el formato es uno solo.
    */
-  const cbuIncompleto = !!formData.cbu && formData.cbu.length > 0 && formData.cbu.length < CBU_DIGITOS;
+  const cbuIncompleto = esCbuIncompleto(formData.cbu || "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -554,6 +558,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           fechaNac: formData.fechaNac,
           telefono: formData.telefono,
           bancoId: formData.bancoId,
+          tipoEntidadFinanciera: formData.tipoEntidadFinanciera,
           cbu: formData.cbu,
           tipoDeCuentaBancaria: formData.tipoDeCuentaBancaria,
           nroDeCuentaBancaria: formData.nroDeCuentaBancaria,
@@ -1243,62 +1248,122 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
             {modalActiveTab === "bancarios" && (
               <div className="space-y-6 animate-fadeIn">
+                {/*
+                  LA MISMA CASCADA QUE EL REGISTRO. Vive en `utils/bancarios.ts`.
+
+                  Acá se pedían siempre los cuatro campos, para todo el mundo. Con una billetera
+                  virtual eso son dos que no existen —no hay tipo ni número de cuenta— y un rótulo que
+                  miente: lo que tiene es un CVU. La misma persona quedaba cargada distinto según si
+                  entró por el link de registro o por esta pantalla.
+
+                  Lo que NO se replica es el check de «autorizo que se cree una cuenta a mi nombre»:
+                  ahí la persona se autoriza a sí misma, y un administrativo no puede hacerlo por
+                  otro. Ese caso se ve como aviso en la ficha, para que alguien vaya a hacer el trámite.
+                */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de entidad financiera</label>
+                  <select
+                    value={formData.tipoEntidadFinanciera || ""}
+                    onChange={(e) => {
+                      /*
+                        Cambiar de tipo LIMPIA lo cargado, igual que en el registro.
+
+                        Los campos que quedan visibles no son los mismos, así que conservar los valores
+                        deja un CBU de banco pegado a una billetera, o un número de cuenta que ya no se
+                        muestra pero se guarda igual. Se limpia para que lo que está en pantalla y lo
+                        que se manda sean lo mismo.
+                      */
+                      const tipo = e.target.value;
+                      setFormData((prev) => ({ ...prev, tipoEntidadFinanciera: tipo, bancoId: undefined, tipoDeCuentaBancaria: "", nroDeCuentaBancaria: "", cbu: "", aliasBancario: prev.aliasBancario }));
+                    }}
+                    className="input-field"
+                  >
+                    <option value="">Seleccionar...</option>
+                    {TIPO_ENTIDAD_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Con «No tengo Banco» no hay ningún dato de cuenta que cargar: la cascada entera se
+                    apaga en vez de mostrar campos que no se pueden completar. */}
+                {declaraSinBanco(formData.tipoEntidadFinanciera || "") ? (
+                  <p className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2.5 text-[12.5px] text-blue-800 dark:text-blue-300">
+                    Declarado <strong>sin banco</strong>: no hay datos de cuenta para cargar. Si la persona autorizó que se le abra una, el pedido se ve en su ficha del listado.
+                  </p>
+                ) : (
+                  <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Banco</label>
-                    <select value={formData.bancoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field">
-                      <option value="">Seleccionar...</option>
-                      {banks.map((it) => (
-                        <option key={it._id} value={it.data.id}>
-                          {it.name}
-                        </option>
-                      ))}
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{labelTipo(formData.tipoEntidadFinanciera || "")}</label>
+                    {/* Solo las entidades de ESE tipo: ofrecer los bancos cuando se eligió billetera
+                        virtual es ofrecer un error, y el listado es largo. */}
+                    <select value={formData.bancoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field" disabled={!formData.tipoEntidadFinanciera}>
+                      <option value="">{formData.tipoEntidadFinanciera ? "Seleccionar..." : "Elegí primero el tipo de entidad"}</option>
+                      {banks
+                        .filter((it) => !formData.tipoEntidadFinanciera || ((it as any).tipoEntidad || "banco") === formData.tipoEntidadFinanciera)
+                        .map((it) => (
+                          <option key={it._id} value={it.data.id}>
+                            {it.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CBU</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      {/* CBU o CVU según la entidad: son los dos 22 dígitos, pero no se llaman igual y
+                          rotularlos mal hace dudar de si se está cargando lo correcto. */}
+                      {camposDe(formData.tipoEntidadFinanciera || "").cbuLabel} <span className="normal-case tracking-normal font-medium text-gray-400">(sin guiones)</span>
+                    </label>
                     {/*
-                      SOLO DÍGITOS, Y EXACTAMENTE 22.
+                      SOLO DÍGITOS, Y EXACTAMENTE 22. La regla vive en `utils/cbu.ts`, con tests.
 
                       Era un campo de texto libre con `minLength`/`maxLength`: `maxLength` frena el
                       largo pero no el contenido —entraba cualquier cosa tipeada— y `minLength` solo
                       actúa en una validación nativa de formulario que este modal no dispara, así que
                       un CBU de 12 caracteres se guardaba igual.
 
-                      Se filtra al escribir en vez de avisar después: un CBU con letras no es un CBU
-                      mal cargado, es otra cosa, y no hay motivo para dejar que llegue al campo.
+                      Se filtra al escribir en vez de avisar después: pegar «0170 0999 2000 0012 3456
+                      78» del homebanking entra limpio y del tirón, que es como se carga en la vida
+                      real. Y el «(sin guiones)» del rótulo explica por qué desaparecen al pegarlos.
                     */}
-                    <input type="text" inputMode="numeric" value={formData.cbu || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: soloDigitos(e.target.value).slice(0, CBU_DIGITOS) }))} className="input-field" placeholder={`${CBU_DIGITOS} dígitos`} />
-                    {/* El contador y el aviso, mientras está incompleto: el largo es la única regla */}
-                    {/* que hay que cumplir y verla evita contar dígitos a mano. */}
-                    {cbuIncompleto && (
-                      <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
-                        Faltan {CBU_DIGITOS - (formData.cbu || "").length} dígito(s): un CBU tiene {CBU_DIGITOS}.
-                      </p>
-                    )}
+                    <input type="text" inputMode="numeric" value={formData.cbu || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: soloDigitosCbu(e.target.value) }))} className="input-field" placeholder={`${CBU_DIGITOS} dígitos, sin guiones`} />
+                    {/* El contador va SIEMPRE, no solo cuando falta: contar 22 dígitos a ojo es lo que
+                        nadie hace, y es cuando se cuela uno de 21. */}
+                    <p className={`text-[11px] mt-1 ${cbuIncompleto ? "text-amber-700 dark:text-amber-400" : "text-gray-400"}`}>{contadorCbu(formData.cbu || "")}</p>
                   </div>
                 </div>
 
+                {/* Tipo y número de cuenta solo existen en algunas entidades: una billetera virtual
+                    no tiene ninguno de los dos. Se ocultan en vez de mostrarse vacíos. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Cuenta</label>
-                    <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
-                      <option value="">Seleccionar...</option>
-                      <option value="Caja de ahorro $">Caja de ahorro $</option>
-                      <option value="Cuenta Corriente $">Cuenta Corriente $</option>
-                      <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Número de Cuenta</label>
-                    <input type="text" value={formData.nroDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
-                  </div>
+                  {camposDe(formData.tipoEntidadFinanciera || "").tipoCuenta && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Cuenta</label>
+                      <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
+                        <option value="">Seleccionar...</option>
+                        <option value="Caja de ahorro $">Caja de ahorro $</option>
+                        <option value="Cuenta Corriente $">Cuenta Corriente $</option>
+                        <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
+                      </select>
+                    </div>
+                  )}
+                  {camposDe(formData.tipoEntidadFinanciera || "").nroCuenta && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Número de Cuenta</label>
+                      <input type="text" value={formData.nroDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias Bancario</label>
                   <input type="text" value={formData.aliasBancario || ""} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
                 </div>
+                  </>
+                )}
               </div>
             )}
 

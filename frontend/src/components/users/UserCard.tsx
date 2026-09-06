@@ -4,6 +4,7 @@ import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate,
 import { formatCuit } from "../../utils/cuit";
 import { noPoseeCuit } from "../contratos/ConstanciaBulk";
 import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
+import { esperaCuentaBancaria } from "../../utils/bancarios";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -362,6 +363,25 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             <div className="text-sm">
               <NombreArca estado={estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })} fecha={user.metadata?.nombreValidadoArcaAt} conTexto />
             </div>
+          </div>
+        )}
+        {/*
+          PIDIÓ QUE LE ABRAN UNA CUENTA BANCARIA. Es una tarea de la productora, no un dato de la ficha.
+
+          Sale del registro: la persona declaró «no tengo banco» y autorizó que se le abra una. Ese
+          pedido quedaba guardado en su metadata y no lo veía nadie — la ficha se veía igual que la de
+          cualquiera sin CBU cargado, así que nunca se sabía a quién había que hacerle el trámite.
+
+          Se apaga solo cuando aparece el CBU (ver `esperaCuentaBancaria`): si alguien ya le cargó la
+          cuenta, el pedido está cumplido y el aviso deja de tener sentido, sin que nadie tenga que
+          acordarse de bajarle una bandera.
+        */}
+        {esperaCuentaBancaria(user.metadata) && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-300 dark:border-amber-800/70 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-2">
+            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span className="text-[11.5px] text-amber-800 dark:text-amber-300 leading-snug">
+              <strong>Falta abrirle la cuenta bancaria.</strong> Declaró no tener banco y autorizó que se le cree una a su nombre.
+            </span>
           </div>
         )}
         {(() => {

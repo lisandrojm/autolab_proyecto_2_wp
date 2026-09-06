@@ -1,3 +1,5 @@
+import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto, faltanDigitosCbu } from "../utils/cbu";
+import { SIN_BANCO, TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo } from "../utils/bancarios";
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -92,7 +94,6 @@ const emptyForm: RegistroForm = {
 };
 
 // Valor especial: el usuario no tiene banco y pide que le creen una cuenta.
-const SIN_BANCO = "sin_banco";
 
 // Validación de formato de email (local@dominio.tld).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -112,30 +113,8 @@ const isValidEmail = (email: string): boolean => EMAIL_RE.test((email || "").tri
 const labelClass = "block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2";
 const fieldClass = "input-field";
 
-// Tipos de entidad financiera (espejo del ABM / enum del backend).
-const TIPO_ENTIDAD_OPTIONS = [
-  { value: "banco", label: "Banco" },
-  { value: "billetera_virtual", label: "Billetera Virtual" },
-  { value: "compania_financiera", label: "Compañía Financiera" },
-  { value: "caja_credito", label: "Caja de Crédito" },
-  { value: SIN_BANCO, label: "No tengo Banco" },
-];
-
-// Qué campos pide cada tipo (cascada). cbuLabel varía: CBU / CVU / CBU/CVU.
-interface CamposTipo {
-  tipoCuenta: boolean;
-  nroCuenta: boolean;
-  cbuLabel: string;
-}
-const CAMPOS_POR_TIPO: Record<string, CamposTipo> = {
-  banco: { tipoCuenta: true, nroCuenta: true, cbuLabel: "CBU" },
-  caja_credito: { tipoCuenta: true, nroCuenta: true, cbuLabel: "CBU" },
-  compania_financiera: { tipoCuenta: false, nroCuenta: true, cbuLabel: "CBU" },
-  billetera_virtual: { tipoCuenta: false, nroCuenta: false, cbuLabel: "CVU" },
-  otro: { tipoCuenta: false, nroCuenta: false, cbuLabel: "CBU/CVU" },
-};
-const camposDe = (tipo: string): CamposTipo => CAMPOS_POR_TIPO[tipo] || CAMPOS_POR_TIPO.otro;
-const labelTipo = (tipo: string): string => TIPO_ENTIDAD_OPTIONS.find((o) => o.value === tipo)?.label || "Entidad";
+// La cascada de datos bancarios vive en utils/bancarios.ts: la comparten esta pantalla y el
+// modal de Nuevo/Editar Usuario. Ver el comentario de ese archivo.
 
 /**
  * Qué son los Roles Empresa y por qué se puede elegir más de uno.
@@ -572,7 +551,16 @@ export const RegistroPage: React.FC = () => {
     const miss: { key: string; label: string }[] = [];
     if (!form.bancoId) miss.push({ key: "bancoId", label: labelTipo(t) });
     if (c.tipoCuenta && !form.tipoDeCuentaBancaria) miss.push({ key: "tipoDeCuentaBancaria", label: "Tipo de cuenta" });
+    /*
+      Vacío e INCOMPLETO se informan distinto, porque son dos problemas distintos.
+
+      Antes solo se miraba que no estuviera vacío, así que un CBU de 19 dígitos pasaba: la persona
+      terminaba el registro, el dato quedaba guardado y roto, y aparecía recién cuando alguien iba a
+      transferirle. Con el aviso genérico de campo faltante tampoco se entendía —el campo TIENE algo—,
+      por eso el mensaje dice cuántos le faltan.
+    */
     if (!form.cbu.trim()) miss.push({ key: "cbu", label: c.cbuLabel });
+    else if (cbuIncompleto(form.cbu)) miss.push({ key: "cbu", label: `${c.cbuLabel} (faltan ${faltanDigitosCbu(form.cbu)} de ${CBU_DIGITOS} dígitos)` });
     if (!form.aliasBancario.trim()) miss.push({ key: "aliasBancario", label: "Alias" });
     if (c.nroCuenta && !form.nroDeCuentaBancaria.trim()) miss.push({ key: "nroDeCuentaBancaria", label: "Número de cuenta" });
     return miss;
@@ -1301,7 +1289,27 @@ export const RegistroPage: React.FC = () => {
                           <label className={labelClass}>
                             {camposDe(form.tipoEntidadFinanciera).cbuLabel} <span className="text-red-500">*</span>
                           </label>
-                          <input className={inputClass("cbu")} autoComplete="off" placeholder="22 dígitos" minLength={22} maxLength={22} value={form.cbu} onChange={(e) => set("cbu", e.target.value)} />
+                          {/*
+                            SOLO DÍGITOS, Y EXACTAMENTE 22. Misma regla que «Nuevo Usuario» (`utils/cbu.ts`).
+
+                            Tenía `minLength`/`maxLength` y texto libre: `maxLength` frena el largo pero
+                            no el contenido, y `minLength` solo actúa en la validación nativa del
+                            formulario, que este flujo no dispara — así que un CBU corto o con letras
+                            se enviaba igual. Y acá importa más que en el alta interna: del otro lado
+                            hay una persona sola, pegando el número del homebanking, sin nadie a quien
+                            preguntarle por qué no le toma lo que copió.
+                          */}
+                          <input
+                            className={inputClass("cbu")}
+                            autoComplete="off"
+                            inputMode="numeric"
+                            placeholder={`${CBU_DIGITOS} dígitos, sin guiones`}
+                            value={form.cbu}
+                            onChange={(e) => set("cbu", soloDigitosCbu(e.target.value))}
+                          />
+                          {/* El contador va siempre: es la única regla que hay que cumplir y contar 22
+                              dígitos a ojo es lo que nadie hace. */}
+                          <p className={`text-[11px] mt-1 ${cbuIncompleto(form.cbu) ? "text-amber-400" : "text-gray-400"}`}>{contadorCbu(form.cbu)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

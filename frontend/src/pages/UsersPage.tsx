@@ -4,6 +4,7 @@ import { usersAPI, User } from '../api/users';
 import { afipAPI } from '../api/afip';
 import { motivoCuitInvalido, cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
+import { esperaCuentaBancaria } from '../utils/bancarios';
 import { registroLinksAPI, RegistroLink, buildRegistroUrl, registroLinkDaysLeft, isRegistroLinkExpired, registroLinkExpiry } from '../api/registroLinks';
 import { rolesAPI, Role } from '../api/roles';
 import { areasAPI, Area } from '../api/areas';
@@ -2048,6 +2049,24 @@ export const UsersPage: React.FC = () => {
                                   fecha={user.metadata?.nombreValidadoArcaAt}
                                   conInfo
                                 />
+                                {/*
+                                  El mismo aviso que la tarjeta, en el ancho que tiene una fila.
+
+                                  Acá no entra un recuadro con dos renglones, así que va como badge al
+                                  lado del nombre — el texto completo está en el `title`. Lo que no
+                                  podía pasar es que el pedido se viera solo en una de las dos vistas:
+                                  quien trabaja en tabla nunca se enteraría de a quién hay que
+                                  abrirle la cuenta. La condición es la misma función que la tarjeta.
+                                */}
+                                {esperaCuentaBancaria(user.metadata) && (
+                                  <span
+                                    title="Declaró no tener banco y autorizó que se le cree una cuenta a su nombre. Falta hacer el trámite y cargarle el CBU."
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 whitespace-nowrap"
+                                  >
+                                    <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+                                    Falta cuenta
+                                  </span>
+                                )}
                                 {(() => {
                                   const activeVac = getUserActiveVacation(user._id);
                                   if (!activeVac) return null;
