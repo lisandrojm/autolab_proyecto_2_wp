@@ -7,6 +7,16 @@ import { infoAPI, InfoItem } from "../api/info";
 import { dropboxAPI, DiagnosticoCarpeta, DropboxStatus, EscaneoConfig } from "../api/dropbox";
 import { DropboxConexionCard } from "../components/documents/DropboxConexionCard";
 import { sweetAlert } from "../utils/sweetAlert";
+import { urlWebhookDropbox } from "../utils/urlWebhook";
+
+/**
+ * El ancla de la sección del webhook adentro del modal de ayuda.
+ *
+ * La explicación del alta vive UNA sola vez, en el modal. La tarjeta de la pantalla tiene lo que se
+ * usa todos los días —la URL y el botón de copiar— y un link que abre el modal ahí. Con el texto
+ * repetido en los dos lados, el día que Dropbox cambie el nombre de una pestaña se corrige uno solo.
+ */
+const ID_SECCION_WEBHOOK = "ayuda-alta-webhook";
 
 /** Nombre de carpeta (última parte del path), para mostrar algo legible en vez del path completo. */
 const nombreCarpeta = (path: string): string => path.split("/").filter(Boolean).pop() || path;
@@ -37,14 +47,17 @@ export function EscaneoDropboxConfigPage() {
   const [copiado, setCopiado] = useState(false);
 
   /*
-    LA URL DEL WEBHOOK, ARMADA CON LA MISMA BASE QUE USA LA APP.
+    LA URL DEL WEBHOOK, SIEMPRE ABSOLUTA.
 
-    Sale de `VITE_API_URL`, que es exactamente el servidor con el que esta pantalla está hablando: si
-    se escribiera a mano, cada instalación tendría que acordarse de cambiarla y la de producción
-    terminaría pegada en la de prueba —o al revés—, que es el error más caro de todos porque el
-    webhook «anda», solo que le avisa al servidor equivocado.
+    Se armaba acá mismo concatenando `VITE_API_URL`, y en producción esa variable vale `/api/v1`: lo
+    que salía —y lo que copiaba el botón— era `/api/v1/dropbox/webhook`, una ruta relativa que en la
+    App Console de Dropbox no sirve para nada. El error que esta sección existía para evitar.
+
+    La cuenta se mudó a `urlWebhookDropbox`, que resuelve contra el origen del navegador cuando la
+    base es relativa y tiene tests: es una cadena que se copia y se pega en otro sistema, así que
+    equivocarla no se nota acá sino allá.
   */
-  const urlWebhook = `${String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')}/dropbox/webhook`;
+  const urlWebhook = urlWebhookDropbox(import.meta.env.VITE_API_URL, window.location.origin);
 
   const copiarWebhook = async () => {
     try {
@@ -54,6 +67,18 @@ export function EscaneoDropboxConfigPage() {
     } catch {
       sweetAlert.error('No se pudo copiar', 'Copiala a mano desde el recuadro de al lado.');
     }
+  };
+
+  /*
+    Abre el modal de ayuda Y baja hasta la sección del alta.
+
+    El modal es largo y esa sección está al final: abrirlo arriba deja a quien vino a dar de alta el
+    webhook buscándola. El frame de gracia es porque el contenido se monta con el modal, así que el
+    `id` todavía no existe cuando se pide el scroll.
+  */
+  const verComoDarDeAlta = () => {
+    setShowInfo(true);
+    setTimeout(() => document.getElementById(ID_SECCION_WEBHOOK)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
   };
   const [intervaloInput, setIntervaloInput] = useState("");
   const [savingIntervalo, setSavingIntervalo] = useState(false);
@@ -172,6 +197,77 @@ export function EscaneoDropboxConfigPage() {
                 patrón sin esos datos justamente por esto.
               </span>
             </p>
+
+            {/*
+              EL ALTA DEL WEBHOOK. Vive acá y no en la tarjeta, y en ningún README.
+
+              La tarjeta de la pantalla tiene la URL y el botón de copiar —que es lo que se necesita
+              todos los días— y un link que abre esto. La explicación completa está una sola vez: son
+              pasos que se siguen una vez por despliegue, y repetidos en dos lados se corrige uno solo.
+            */}
+            <div id={ID_SECCION_WEBHOOK} className="pt-3 mt-1 border-t border-gray-200 dark:border-gray-700 space-y-3 scroll-mt-4">
+              <p className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <FontAwesomeIcon icon={faBolt} className="h-3.5 w-3.5 text-amber-500" />
+                Dar de alta el aviso de Dropbox (webhook)
+              </p>
+              <p>
+                Con esto configurado, Dropbox le avisa al servidor cada vez que se agrega o se saca un archivo, y el escaneo corre en <strong>segundos</strong> en lugar de esperar el intervalo. El
+                escaneo por intervalo <strong>no se reemplaza</strong>: Dropbox entrega «al menos una vez» y no reintenta para siempre, así que un aviso que llega justo mientras el servidor se reinicia
+                se pierde y nadie lo reclama. Los dos conviven a propósito — el aviso da la velocidad, el reloj es la red.
+              </p>
+              <p>
+                Se hace una sola vez, en la <strong>App Console</strong> de Dropbox: entrá a tu app, pestaña <strong>Settings</strong>, sección <strong>Webhook URIs</strong>, pegá la URL que muestra
+                esta pantalla y apretá <strong>Add</strong>. Dropbox llama a esa URL en el momento con un <em>challenge</em> y solo la guarda si le responde bien; cuando la acepta, la fila queda en{" "}
+                <strong>Enabled</strong>. Si no responde como espera, no la guarda y hay que volver a empezar.
+              </p>
+              <p>
+                Por eso el orden importa: el servidor tiene que estar <strong>desplegado y con el endpoint andando antes</strong> de pegar la URL. Y tiene que ser <strong>HTTPS alcanzable desde
+                internet</strong> — contra <span className="font-mono text-[12px]">localhost</span> Dropbox no llega; para probar antes de desplegar hace falta un túnel.
+              </p>
+              <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Pegala sin barra final.</strong> Con la barra, el pedido no llega al endpoint: lo atiende el frontend, que responde <strong>200 con una página HTML</strong>. Dropbox acepta el
+                  alta y después da <strong>todas</strong> las entregas por exitosas contra una página estática — el servidor nunca se entera de nada y no queda rastro en ningún log. Es el modo de falla
+                  más caro que tiene esto, porque desde afuera se ve exactamente igual que funcionar.
+                </span>
+              </p>
+              <p>
+                <strong>Cómo confirmar que quedó bien:</strong> que la fila de la App Console diga <strong>Enabled</strong>, y que al agregar un archivo a una carpeta vigilada el cambio aparezca en
+                segundos en vez de esperar el intervalo. Si aparece recién cuando pasa el reloj, el aviso no está llegando.
+              </p>
+
+              <p className="text-sm font-bold text-gray-800 dark:text-gray-100 pt-1">Para replicarlo en otro sistema</p>
+              <p>
+                <strong>No hay variables de entorno de Dropbox.</strong> Las credenciales son <strong>de cada organización</strong> y se cargan en la tarjeta de arriba de esta misma pantalla, que pide
+                cuatro cosas: <strong>App key</strong>, <strong>App secret</strong>, <strong>Refresh token (offline)</strong> y la <strong>ruta raíz</strong> (por defecto{" "}
+                <span className="font-mono text-[12px]">/HelloSign</span>, que solo define dónde arranca el navegador de carpetas y no restringe el acceso). Se guardan cifradas contra la organización,
+                no en el servidor.
+              </p>
+              <p>
+                Esa es la razón de que la firma del webhook se verifique <strong>con el secret de la organización dueña de la cuenta</strong> y no contra un secret global: como cada una conecta su
+                propia app de Dropbox, un secret único no existiría. El aviso trae solo el identificador de cuenta, se resuelve a quién pertenece, y recién ahí se comprueba la firma con el suyo.
+              </p>
+              <p>
+                La app de Dropbox tiene que crearse con <strong>Access type: Full Dropbox</strong> —con «App folder» la API solo ve su propia carpeta y no se puede cambiar después— y con estos cuatro
+                permisos tildados y <strong>submiteados</strong> en la pestaña <strong>Permissions</strong> antes de autorizar:
+              </p>
+              <p className="font-mono text-[12px] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-2.5 py-2">
+                account_info.read · files.metadata.read · files.content.read · files.content.write
+              </p>
+              <p>
+                El orden importa acá también: Dropbox otorga la intersección entre lo que pide la autorización y lo que la app tiene habilitado, así que con Permissions incompleto el token sale con
+                menos permisos <strong>sin ningún error visible</strong> — la conexión parece hecha y después falla todo. Cambiarlos más tarde obliga a regenerar el refresh token.
+              </p>
+              <p>
+                <strong>No hay redirect URI</strong> ni pantalla de autorización en la app: el refresh token se genera a mano una vez, con la URL de autorización de Dropbox pidiendo{" "}
+                <span className="font-mono text-[12px]">token_access_type=offline</span> y esos cuatro permisos, y se pega en el formulario de arriba.
+              </p>
+              <p>
+                Y nada de esto sirve si el escaneo no puede identificar los archivos: eso depende del nombre y se configura en <strong>Plantillas → Nomenclatura de archivos</strong>, como dice el
+                recuadro de arriba.
+              </p>
+            </div>
           </div>
         ),
       }}
@@ -252,13 +348,19 @@ export function EscaneoDropboxConfigPage() {
               rechaza la verificación sin decir cuál.
             */}
             <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-700/60 space-y-2">
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
-                <FontAwesomeIcon icon={faBolt} className="h-3 w-3 text-amber-500" />
-                Escanear apenas Dropbox avisa
-              </p>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faBolt} className="h-3 w-3 text-amber-500" />
+                  Escanear apenas Dropbox avisa
+                </p>
+                {/* Los pasos completos están en el ⓘ de la pantalla, una sola vez. Acá va el link. */}
+                <button type="button" onClick={verComoDarDeAlta} className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+                  Cómo darlo de alta
+                </button>
+              </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                Dropbox puede avisarle al servidor cada vez que se agrega o se saca un archivo de las carpetas, y entonces el escaneo corre en segundos en vez de esperar el intervalo de arriba. Se
-                da de alta <strong>una sola vez</strong>, en la App Console de Dropbox → tu app → <strong>Settings → Webhooks</strong>, pegando esta URL:
+                Dropbox puede avisarle al servidor cada vez que se agrega o se saca un archivo de las carpetas, y entonces el escaneo corre en segundos en vez de esperar el intervalo de arriba. Se da
+                de alta <strong>una sola vez</strong>, pegando esta URL en la App Console:
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <code className="px-2 py-1.5 rounded-md bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[11.5px] font-mono text-gray-700 dark:text-gray-200 break-all">{urlWebhook}</code>
@@ -273,7 +375,7 @@ export function EscaneoDropboxConfigPage() {
                 </button>
               </div>
               <p className="text-[11px] text-gray-400 leading-relaxed">
-                Tiene que ser HTTPS y alcanzable desde internet: contra <span className="font-mono">localhost</span> Dropbox no llega. Si no lo das de alta no se rompe nada — el escaneo sigue
+                Pegala <strong>sin barra final</strong>: con la barra el aviso no llega al servidor y Dropbox lo da por entregado igual. Si no lo das de alta no se rompe nada — el escaneo sigue
                 corriendo por el intervalo de arriba.
               </p>
             </div>

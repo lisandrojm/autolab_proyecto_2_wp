@@ -37,13 +37,32 @@ import { escanearTenantAhora } from "./estadoDropboxCronService.js";
  */
 const DEBOUNCE_MS = 8_000;
 
-interface Pendiente {
-  timer: NodeJS.Timeout;
-  /** Llegó otra notificación mientras esperábamos: hay que volver a escanear después de éste. */
-  repetir: boolean;
-}
+/**
+ * ESPERANDO Y ESCANEANDO SON DOS ESTADOS DISTINTOS, y confundirlos rompe el agrupamiento.
+ *
+ * Un aviso que llega mientras se ESPERA ya está cubierto: el escaneo que está por salir todavía no
+ * leyó ninguna carpeta, así que va a ver ese archivo. No hay nada que anotar.
+ *
+ * Un aviso que llega mientras se ESCANEA no está cubierto: el archivo pudo entrar justo después de
+ * que el escaneo leyera esa carpeta, y esa pasada no lo va a ver nunca. Ese sí obliga a otra.
+ *
+ * Estaban en una sola estructura, y ahí los dos casos marcaban «repetir»: dos avisos dentro de la
+ * misma ventana terminaban en DOS escaneos, que es exactamente lo que el debounce venía a evitar.
+ */
+const esperando = new Map<string, NodeJS.Timeout>();
+const escaneando = new Map<string, { repetir: boolean }>();
 
-const pendientes = new Map<string, Pendiente>();
+/**
+ * Solo para los tests: correr el escaneo de mentira y con una ventana corta.
+ *
+ * En producción no se pasan nunca. Existen porque la regla que hay que probar —agrupar la ráfaga sin
+ * postergarla— es de TIEMPO, y sin poder achicar la ventana el test tendría que esperar ocho segundos
+ * reales por cada caso, que es como se termina no probándolo.
+ */
+export interface OpcionesEscaneo {
+  correr?: (tenantId: string) => Promise<unknown>;
+  esperaMs?: number;
+}
 
 /**
  * La firma del webhook, verificada contra el CUERPO EXACTO que mandó Dropbox.
@@ -64,19 +83,73 @@ export function firmaValida(rawBody: Buffer, firma: string, appSecret: string): 
   return crypto.timingSafeEqual(a, b);
 }
 
-/** Los tenants cuya cuenta de Dropbox es una de las que avisó el webhook. */
-export async function tenantsDeCuentas(accountIds: string[]): Promise<Array<{ _id: any; appSecret: string }>> {
+/**
+ * CUÁLES DE ESTOS TENANTS FIRMÓ REALMENTE ESTE AVISO.
+ *
+ * Está aparte y es pura porque es la regla de seguridad del endpoint, y es la que hay que poder
+ * probar sin base de datos: que un `account_id` compartido entre dos organizaciones NO deje que la
+ * firma de una dispare el escaneo de la otra.
+ *
+ * Se prueban TODOS, no se corta en el primero que valida: la misma cuenta puede estar conectada en
+ * dos organizaciones con la misma app, y ahí las dos tienen derecho a escanear.
+ */
+export function autorizadosDe<T extends { appSecret: string }>(tenants: T[], rawBody: Buffer, firma: string): T[] {
+  return tenants.filter((t) => firmaValida(rawBody, firma, t.appSecret));
+}
+
+export interface TenantsDeCuentas {
+  /** TODOS los tenants de TODAS las cuentas avisadas. Puede haber más de uno por cuenta. */
+  tenants: Array<{ _id: any; accountId: string; appSecret: string }>;
+  /** Cuentas que no son de nadie en este servidor. Ni error ni ataque: ruido, pero se dice. */
+  cuentasSinTenant: string[];
+  /** Tenants con Dropbox conectado y todavía sin `accountId`: están esperando su primer escaneo. */
+  tenantsSinAccountId: number;
+}
+
+/**
+ * Los tenants cuya cuenta de Dropbox es alguna de las que avisó el webhook.
+ *
+ * DEVUELVE TODOS, no el primero. Dos cosas obligan a eso:
+ *
+ *   - `list_folder.accounts` es un ARRAY: un aviso puede traer varias cuentas;
+ *   - la misma cuenta de Dropbox puede estar conectada en dos organizaciones.
+ *
+ * En los dos casos, quedarse con el primero deja a alguien sin escanear y sin ningún síntoma: los
+ * archivos llegan a Dropbox y sus contratos simplemente no avanzan hasta que pase el reloj.
+ *
+ * Y de yapa cuenta los que están conectados pero todavía sin `accountId`. Ese estado es transitorio
+ * —lo completa el primer escaneo— pero mientras dura, sus avisos son indistinguibles de una cuenta
+ * ajena. Contarlos es lo que permite saber, mirando un log, si falta configurar algo o si alguien
+ * está golpeando el endpoint.
+ */
+export async function tenantsDeCuentas(accountIds: string[]): Promise<TenantsDeCuentas> {
   const ids = [...new Set(accountIds.filter(Boolean).map(String))];
-  if (ids.length === 0) return [];
-  const tenants: any[] = await Tenant.find({ "integrations.dropbox.accountId": { $in: ids } })
+  if (ids.length === 0) return { tenants: [], cuentasSinTenant: [], tenantsSinAccountId: 0 };
+
+  const encontrados: any[] = await Tenant.find({ "integrations.dropbox.accountId": { $in: ids } })
     .select("_id integrations.dropbox")
     .lean();
-  return tenants
+
+  const tenants = encontrados
     .map((t) => {
       const cfg = getTenantDropboxConfig(t);
-      return cfg ? { _id: t._id, appSecret: cfg.appSecret } : null;
+      return cfg ? { _id: t._id, accountId: String(t?.integrations?.dropbox?.accountId || ""), appSecret: cfg.appSecret } : null;
     })
-    .filter(Boolean) as Array<{ _id: any; appSecret: string }>;
+    .filter(Boolean) as TenantsDeCuentas["tenants"];
+
+  const conTenant = new Set(tenants.map((t) => t.accountId));
+  const cuentasSinTenant = ids.filter((id) => !conTenant.has(id));
+
+  // Solo se cuenta si hay alguna cuenta sin dueño: si todas se resolvieron, no hay nada que explicar.
+  const tenantsSinAccountId =
+    cuentasSinTenant.length === 0
+      ? 0
+      : await Tenant.countDocuments({
+          "integrations.dropbox.refreshTokenEnc": { $exists: true },
+          $or: [{ "integrations.dropbox.accountId": { $exists: false } }, { "integrations.dropbox.accountId": null }, { "integrations.dropbox.accountId": "" }],
+        });
+
+  return { tenants, cuentasSinTenant, tenantsSinAccountId };
 }
 
 /**
@@ -86,36 +159,52 @@ export async function tenantsDeCuentas(accountIds: string[]): Promise<Array<{ _i
  * mandar notificaciones al que tarda, así que escanear DENTRO del request sería la forma de terminar
  * sin webhook — que es exactamente lo contrario de lo que se quiere.
  */
-export function programarEscaneo(tenantId: string): void {
-  const yaHabia = pendientes.get(tenantId);
-  if (yaHabia) {
-    // No se reinicia el reloj: una subida larga postergaría el escaneo indefinidamente. Se anota que
-    // hay que volver a mirar cuando éste termine.
-    yaHabia.repetir = true;
+export function programarEscaneo(tenantId: string, opts?: OpcionesEscaneo): void {
+  const correr = opts?.correr || ((id: string) => escanearTenantAhora(id));
+  const esperaMs = opts?.esperaMs ?? DEBOUNCE_MS;
+
+  // ESCANEANDO: este aviso puede ser de algo que la pasada en curso ya no va a ver. Se anota otra.
+  const enCurso = escaneando.get(tenantId);
+  if (enCurso) {
+    enCurso.repetir = true;
     return;
   }
 
-  const timer = setTimeout(() => {
-    const entrada = pendientes.get(tenantId);
-    pendientes.delete(tenantId);
-    const repetir = !!entrada?.repetir;
+  /*
+    ESPERANDO: no se hace nada, y NO se reinicia el reloj.
 
-    void escanearTenantAhora(tenantId)
-      .catch((e) => console.error(`[Dropbox webhook] falló el escaneo del tenant ${tenantId}:`, e?.message || e))
+    Ya hay un escaneo por salir y todavía no leyó ninguna carpeta, así que va a ver este archivo
+    también: anotar algo sería pedir una segunda pasada para lo que la primera ya cubre.
+
+    Y el plazo no se mueve. La forma habitual del debounce —cada evento reinicia la espera— acá sería
+    un bug: mientras siga entrando un archivo cada pocos segundos, la ventana se corre sola y el
+    escaneo no ocurre nunca, justo en la subida grande donde más se lo necesita. Se cuenta desde el
+    PRIMER aviso.
+  */
+  if (esperando.has(tenantId)) return;
+
+  const timer = setTimeout(() => {
+    esperando.delete(tenantId);
+    const estado = { repetir: false };
+    escaneando.set(tenantId, estado);
+
+    void Promise.resolve()
+      .then(() => correr(tenantId))
+      .catch((e: any) => console.error(`[Dropbox webhook] falló el escaneo del tenant ${tenantId}:`, e?.message || e))
       .finally(() => {
-        // Lo que llegó mientras escaneábamos merece su propia pasada: puede haber entrado un archivo
-        // justo después de que el escaneo leyera esa carpeta.
-        if (repetir) programarEscaneo(tenantId);
+        escaneando.delete(tenantId);
+        if (estado.repetir) programarEscaneo(tenantId, opts);
       });
-  }, DEBOUNCE_MS);
+  }, esperaMs);
 
   // `unref` para que un escaneo encolado no le impida al proceso terminar cuando se lo baja.
   timer.unref?.();
-  pendientes.set(tenantId, { timer, repetir: false });
+  esperando.set(tenantId, timer);
 }
 
 /** Solo para los tests y para poder apagar limpio: cancela lo encolado. */
 export function limpiarPendientes(): void {
-  for (const p of pendientes.values()) clearTimeout(p.timer);
-  pendientes.clear();
+  for (const t of esperando.values()) clearTimeout(t);
+  esperando.clear();
+  escaneando.clear();
 }

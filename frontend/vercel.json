@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/v1/:path*",
-      "destination": "https://autolab.fun:7001/api/v1/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://autolab.fun:7001/api/$1"
     },
     {
       "source": "/storage/:path*",

@@ -21,7 +21,8 @@
     "asistente": "node tools/asistente/servidor.mjs",
     "test:asistente": "node --test tools/asistente/seguridad.test.mjs",
     "chrome-arca": "node tools/chrome-arca.mjs",
-    "test:asistente-version": "tsx --test src/api/asistente.test.ts"
+    "test:asistente-version": "tsx --test src/api/asistente.test.ts",
+    "test:webhook-url": "tsx --test src/utils/urlWebhook.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

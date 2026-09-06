@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { firmaValida, tenantsDeCuentas, programarEscaneo } from "../services/dropboxWebhookService.js";
+import { autorizadosDe, tenantsDeCuentas, programarEscaneo } from "../services/dropboxWebhookService.js";
 /**
  * El webhook de Dropbox. VA SIN AUTENTICACIÓN, y por eso está en su propio router.
  *
@@ -60,22 +60,49 @@ dropboxWebhookRoutes.post("/webhook", async (req, res) => {
           contra el cual validar. Se resuelve primero de quién es la cuenta y recién ahí se comprueba la
           firma con SU secret — que es también lo que impide que el `account_id` de un tenant sirva para
           disparar el escaneo de otro.
+    
+          SE MIRAN TODAS LAS CUENTAS Y TODOS LOS TENANTS. `list_folder.accounts` es un array: una sola
+          notificación puede traer varias cuentas. Y la misma cuenta de Dropbox puede estar conectada en
+          dos organizaciones, así que resolverla devuelve varios candidatos. Quedarse con el primero de
+          cualquiera de las dos listas deja cambios sin escanear, y del lado del que los pierde no hay
+          ningún síntoma: los archivos están en Dropbox y los contratos no avanzan.
         */
-        const tenants = await tenantsDeCuentas(cuentas);
+        const { tenants, cuentasSinTenant, tenantsSinAccountId } = await tenantsDeCuentas(cuentas);
+        /*
+          LOS TRES MOTIVOS SE LOGUEAN DISTINTO, porque piden tres cosas distintas.
+    
+          Antes los tres terminaban en el mismo 200 mudo, así que diagnosticar en producción era adivinar
+          entre «alguien está pegándole al endpoint», «falta terminar de configurar» y «está todo bien,
+          esa cuenta no es nuestra». Son la misma respuesta HTTP a propósito —no hay motivo para ayudar a
+          quien manda una firma inválida— pero adentro tienen que poder distinguirse.
+        */
+        if (tenantsSinAccountId > 0) {
+            console.warn(`[Dropbox webhook] ${tenantsSinAccountId} tenant(s) con Dropbox conectado todavía sin accountId: sus avisos no se pueden atribuir hasta el primer escaneo, que lo completa solo.`);
+        }
+        if (cuentasSinTenant.length > 0) {
+            console.warn(`[Dropbox webhook] cuenta desconocida, no es de ninguna organización de este servidor: ${cuentasSinTenant.join(", ")}`);
+        }
         if (tenants.length === 0) {
-            // Cuenta desconocida: puede ser un tenant que todavía no tiene guardado su `accountId`, o una
-            // app apuntando a un servidor que no es el suyo. En los dos casos, no hay nada que escanear.
             res.status(200).end();
             return;
         }
-        const autorizados = tenants.filter((t) => firmaValida(raw, firma, t.appSecret));
+        const autorizados = autorizadosDe(tenants, raw, firma);
         if (autorizados.length === 0) {
+            console.warn(`[Dropbox webhook] FIRMA INVÁLIDA para ${tenants.length} tenant(s) de la(s) cuenta(s) ${cuentas.join(", ")}. No se escaneó nada.`);
             res.status(403).end();
             return;
         }
+        if (autorizados.length < tenants.length) {
+            // Una cuenta compartida entre organizaciones: la firma es de una sola. La otra no se toca.
+            console.warn(`[Dropbox webhook] la firma validó para ${autorizados.length} de ${tenants.length} tenant(s) de esa cuenta; al resto no se le disparó ningún escaneo.`);
+        }
         res.status(200).end();
-        for (const t of autorizados)
+        for (const t of autorizados) {
+            // El log de la ruta feliz también hace falta: es la única forma de distinguir «avanzó por el
+            // webhook, en segundos» de «avanzó recién cuando pasó el reloj».
+            console.log(`[Dropbox webhook] aviso válido para el tenant ${String(t._id)} — escaneo encolado.`);
             programarEscaneo(String(t._id));
+        }
     }
     catch (e) {
         console.error("[Dropbox webhook] error resolviendo la notificación:", e?.message || e);

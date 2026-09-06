@@ -177,6 +177,21 @@ app.use(rateLimit({
     max: env.NODE_ENV === "development" ? 500 : 200,
     standardHeaders: true,
     legacyHeaders: false,
+    /*
+      EL WEBHOOK DE DROPBOX NO PASA POR EL LIMITADOR.
+
+      El limitador cuenta por IP, y todas las notificaciones de Dropbox llegan de las suyas: una
+      ráfaga —veinte archivos subidos juntos— gasta cuota compartida con los usuarios reales, y al
+      pasarse devuelve 429. Para Dropbox un 429 es una entrega FALLIDA, y a fuerza de fallar espacia
+      y termina cortando las notificaciones a este endpoint. O sea: el mecanismo que existe para
+      cuidar el servidor es el que apagaría el webhook, y en silencio.
+
+      No queda desprotegido: lo que autoriza acá no es la IP sino la FIRMA. Un cuerpo sin HMAC válido
+      se descarta sin tocar la base ni disparar ningún escaneo, y el escaneo en sí ya está detrás de
+      su propio candado por tenant y del debounce — así que ni siquiera una ráfaga real de avisos
+      legítimos se traduce en más de un escaneo.
+    */
+    skip: (req) => req.path.startsWith("/api/v1/dropbox/webhook"),
 }));
 // ───────────────── Archivos estáticos ─────────────────
 const storagePath = path.join(process.cwd(), "storage");
