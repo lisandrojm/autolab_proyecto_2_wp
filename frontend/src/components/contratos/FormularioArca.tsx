@@ -521,6 +521,41 @@ export const FormularioArca: React.FC<{
                   origen={!cascada.categoria ? motivoDe('categoria') : valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato</> : <>elegí una del convenio {convenioElegido}</>}
                 />
               </div>
+
+              {/*
+                LA RETRIBUCIÓN VA ACÁ, DEBAJO DE LA CATEGORÍA. Es lo que la categoría decide.
+
+                Estaba sola en un grupo «Remuneración» al final del formulario, y ahí quedaba colgada:
+                un recuadro suelto diciendo «Falta» sin nada al lado que explicara de qué depende. Se
+                completa sola al elegir la categoría, dos bloques más arriba, y esa relación no se veía
+                por ningún lado. El chequeo ya lo sabía —su origen es `categoria_sat`, el mismo que el
+                de la categoría—: lo que faltaba era que la pantalla lo dijera.
+
+                APARECE RECIÉN CON LA CATEGORÍA ELEGIDA, por la misma razón que el resto de la cascada:
+                antes de eso no hay ningún importe que mostrar, y un campo vacío pidiendo atención por
+                algo que todavía no se puede resolver es exactamente lo que este modal viene evitando.
+
+                Y NO SE EDITA. Sale del grupo salarial del convenio y se actualiza por paritaria; el
+                valor correcto es el de la escala, no el que alguien tipee acá. Antes ya era de solo
+                lectura —nunca tuvo `onEditar`— pero se dibujaba con el mismo recuadro que los campos
+                que sí se eligen, así que parecía editable y roto. Como línea, se lee como lo que es:
+                un dato derivado.
+              */}
+              {valores.categoriaProf && (
+                <div className="mt-1 pt-2.5 border-t border-gray-200 dark:border-gray-700/60">
+                  <FilaArca
+                    rotulo="Retribución pactada"
+                    campo="retribucion"
+                    dependeDe="categoria"
+                    info="retribucion"
+                    etiqueta="58–72"
+                    valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}
+                    vacio="— el grupo salarial de esta categoría no tiene sueldo bruto cargado"
+                    faltaEsError
+                    origen={<>del grupo salarial del convenio · se actualiza por paritaria</>}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

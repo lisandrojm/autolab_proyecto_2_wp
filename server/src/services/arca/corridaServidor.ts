@@ -4,7 +4,7 @@ import { Company } from "../../models/Company.js";
 import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
 import { abrirSesionArca, credencialesDe } from "./navegador.js";
-import { confirmarNombresConElPadron, mismoNombre, Renombre } from "./nombreArca.js";
+import { aplicarNombreDeArca, confirmarNombresConElPadron, mismoNombre, Renombre } from "./nombreArca.js";
 import { User } from "../../models/User.js";
 
 /**
@@ -123,10 +123,22 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
   const porCuil = new Map(personas.map((u) => [String(u?.metadata?.cuit || "").replace(/\D/g, ""), u]));
   const nombresOk: string[] = [];
   const nombresQueDifieren = new Map<string, string>(); // userId → cuil
+  /**
+   * El nombre que la PANTALLA mostró para cada CUIL. Se guarda para todos, no solo para los que difieren.
+   *
+   * Es lo que permite validar sin el padrón: el organismo ya lo dijo en la misma consulta de la que
+   * salió la obra social. Ver el bloque que lo usa, después del padrón.
+   */
+  const nombreDePantalla = new Map<string, string>(); // cuil en dígitos → nombre
+  /** Los que el padrón resolvió: no se vuelven a tocar con el nombre de la pantalla. */
+  const resueltosPorPadron = new Set<string>();
 
   const emitir = (e: EventoCorrida) => {
     if (e.tipo === "resultado" && e.nombreArca) {
       const u = porCuil.get(String(e.cuil).replace(/\D/g, ""));
+      // Se guarda SIEMPRE, coincida o no: es el nombre que dio el organismo, y con él se valida
+      // después a los que el padrón no puede resolver (los de CUIT inactivo).
+      nombreDePantalla.set(String(e.cuil).replace(/\D/g, ""), e.nombreArca);
       if (u) {
         /*
           EL SELLO ES LA COMPUERTA: quien ya tiene el nombre validado no se vuelve a mirar.
@@ -207,7 +219,55 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
         renombrados = r2.renombrados;
         // Los que el padrón confirmó también quedan como confirmados en la pantalla.
         nombresOk.push(...r2.confirmados);
+        for (const c of r2.confirmados) resueltosPorPadron.add(String(c).replace(/\D/g, ""));
+        for (const x of r2.renombrados) if (x.cuil) resueltosPorPadron.add(String(x.cuil).replace(/\D/g, ""));
       }
+
+      /*
+        EL NOMBRE DE LA PANTALLA TAMBIÉN VALIDA. Es el mismo organismo diciendo la misma cosa.
+
+        Cierra dos huecos que dejaba apoyarse solo en el padrón:
+
+        1. EL QUE YA COINCIDÍA no recibía el sello. La pantalla de ARCA mostró su nombre, se comparó
+           y dio igual —una confirmación del organismo, no una suposición—, pero como no iba al padrón
+           nadie escribía `nombreValidadoArcaAt`. En Usuarios seguía diciendo «Validar» y la corrida
+           siguiente lo volvía a mirar, para llegar a la misma conclusión.
+
+        2. EL CUIT INACTIVO quedaba sin resolver. El padrón contesta esos con un fault y no devuelve
+           nada, así que su nombre no se podía confirmar por ningún lado — aunque la pantalla de altas
+           lo estaba mostrando, que es de donde salió el `nombreArca` que ya tenemos en memoria.
+
+        NO PARTE NADA. `aplicarNombreDeArca` con el nombre en UN solo campo solo escribe si las
+        palabras son exactamente las que ya están guardadas: ahí adopta la grafía de ARCA —«martina
+        moreno» queda «MARTINA MORENO»— sin decidir dónde termina el apellido. Si no coinciden no
+        toca nada y el caso queda para que alguien lo mire, que es lo correcto: «DEL VALLE ROJAS ANA»
+        no se puede separar sin equivocarse.
+
+        No cuesta ninguna consulta: el nombre ya vino en el evento, junto con la obra social.
+      */
+      for (const [cuilDigitos, nombreArca] of nombreDePantalla) {
+        const u = porCuil.get(cuilDigitos);
+        if (!u) continue;
+        /*
+          Se saltean solo dos: el que YA tenía el sello de antes —re-sellarlo movería una fecha que
+          significa «cuándo lo confirmó ARCA» sin que ARCA haya dicho nada nuevo— y el que el padrón
+          acaba de resolver, que además lo resolvió mejor (nombre y apellido por separado).
+
+          El que coincidía y NO estaba sellado no entra en ninguna de las dos: ese es el hueco.
+        */
+        if (u?.metadata?.nombreValidadoArcaAt) continue;
+        if (resueltosPorPadron.has(cuilDigitos)) continue;
+        const cambio = await aplicarNombreDeArca({
+          tenantObjectId,
+          userId: String(u._id),
+          cuil: cuilDigitos,
+          actual: { firstName: u.firstName, lastName: u.lastName },
+          // En UN campo, tal como lo muestra la pantalla. Ver el bloque de arriba.
+          arca: { apellido: nombreArca },
+        });
+        if (cambio) renombrados.push(cambio);
+      }
+
       corrida.eventos.push({ tipo: "nombres", renombrados, confirmados: nombresOk });
 
       if (r.items.length > 0) {

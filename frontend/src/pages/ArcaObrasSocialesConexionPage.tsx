@@ -31,7 +31,7 @@ const COMPARACION = (
           <tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
             <th className="py-2 pr-3 font-bold"> </th>
             <th className="py-2 pr-3 font-bold">Constancia de CUIT</th>
-            <th className="py-2 font-bold">Obras sociales</th>
+            <th className="py-2 font-bold">Obras sociales, nombres y documentos</th>
           </tr>
         </thead>
         <tbody className="align-top">
@@ -48,7 +48,17 @@ const COMPARACION = (
           <tr className="border-b border-gray-100 dark:border-gray-700/60">
             <td className="py-2 pr-3 font-semibold">Qué dato trae</td>
             <td className="py-2 pr-3">Datos del contribuyente: estado del CUIT, denominación</td>
-            <td className="py-2">La obra social que ARCA tiene registrada para un trabajador</td>
+            <td className="py-2">De un TRABAJADOR: su obra social y su nombre real, los dos de la misma pantalla de altas. El tipo y número de documento salen del propio CUIT.</td>
+          </tr>
+          <tr className="border-b border-gray-100 dark:border-gray-700/60">
+            <td className="py-2 pr-3 font-semibold">Para qué se usa</td>
+            <td className="py-2 pr-3">
+              La <strong>constancia de CUIT</strong> de los contratos de servicios, que son monotributistas. Es lo único para lo que hace falta.
+            </td>
+            <td className="py-2">
+              Validar <strong>obras sociales</strong>, y también el <strong>nombre real</strong> y el <strong>documento</strong> de cada persona. Son la misma consulta: la pantalla de altas muestra
+              las dos cosas al escribir un CUIL.
+            </td>
           </tr>
           <tr>
             <td className="py-2 pr-3 font-semibold">Por qué no una sola</td>
@@ -73,7 +83,7 @@ export const ArcaObrasSocialesConexionPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="ARCA | Conexión · Obras sociales"
+      title="ARCA | Conexión · Obras sociales, nombres y documentos"
       subtitle="El usuario de clave fiscal con el que el servidor valida las obras sociales solo"
       faIcon={{ icon: faShieldHeart }}
       infoModal={{

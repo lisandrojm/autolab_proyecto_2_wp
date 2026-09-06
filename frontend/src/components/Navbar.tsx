@@ -362,7 +362,11 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faPlug, label: 'Constancia de CUIT', scope: 'global' });
       // Misma familia, mismo ícono de conexión: lo que cambia es para qué sirve, y eso lo dice el
       // rótulo. Comparte permiso porque es la misma decisión de quién configura la integración.
-      if (hasPermission('config_afip:view')) base.push({ path: ARCA_CONEXION_OS_PATH, icon: faPlug, label: 'Obras sociales', scope: 'global' });
+      // El rótulo nombra las TRES cosas que salen de esta conexión, no solo la primera que resolvió:
+      // la obra social y el nombre real vienen del mismo renglón de la pantalla de altas, y el
+      // documento se calcula del CUIT. Decía «Obras sociales» y por eso los nombres se buscaban en la
+      // conexión de al lado, que es la del certificado y no los tiene.
+      if (hasPermission('config_afip:view')) base.push({ path: ARCA_CONEXION_OS_PATH, icon: faPlug, label: 'Obras sociales y nombres', scope: 'global' });
       // Comparte permiso con la Conexión: quien puede ver cómo se conecta el módulo puede leer cómo
       // funciona. No expone ningún dato — es la explicación del circuito.
       if (hasPermission('config_afip:view')) base.push({ path: ARCA_COMO_FUNCIONA_PATH, icon: faSitemap, label: 'Cómo funciona', scope: 'global' });

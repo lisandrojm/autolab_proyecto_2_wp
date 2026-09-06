@@ -188,13 +188,27 @@ export const UsuarioSimplificacion: React.FC<{
   );
 
   const modalInfo = (
-    <InfoModal isOpen onClose={() => setInfo(false)} title="Conexión de obras sociales" subtitle="Qué es, y por qué no alcanza con el certificado" size="md" zIndex={90}>
+    <InfoModal isOpen onClose={() => setInfo(false)} title="Obras sociales, nombres y documentos" subtitle="Qué es, para qué se usa, y por qué no alcanza con el certificado" size="md" zIndex={90}>
       <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
         <p>
           Es <strong>otra cosa</strong> que el certificado de «Conexión → Constancia de CUIT». Aquel consulta el padrón por webservice y trae datos del contribuyente; este es un login de clave fiscal,
           y hace falta porque <strong>la obra social de un trabajador no la devuelve ninguna API</strong>: solo aparece precompletada en la pantalla de altas de ARCA.
         </p>
-        <p>Con esto conectado, validar obras sociales lo hace el servidor solo y deja de necesitar que alguien instale el Asistente en su computadora.</p>
+        <p>Con esto conectado, la consulta la hace el servidor solo y deja de necesitar que alguien instale el Asistente en su computadora.</p>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-3 py-2.5 space-y-2">
+          <p className="text-[13px] font-semibold text-gray-700 dark:text-gray-200">Se usa para tres cosas, con una sola consulta</p>
+          <p className="text-[13px]">
+            Al escribir un CUIL en la pantalla de altas, ARCA muestra la <strong>obra social</strong> precompletada y el <strong>nombre</strong> de la persona. Son el mismo renglón, así que validar la
+            obra social y validar el nombre no cuestan dos consultas: cuestan una.
+          </p>
+          <p className="text-[13px]">
+            El <strong>tipo y número de documento</strong> no los devuelve ARCA en ninguna de las dos conexiones. En un CUIT de persona física —los que empiezan con 20, 23, 24, 25, 26 o 27— el
+            documento son los ocho dígitos del medio, así que se calcula del propio CUIT y se compara con lo que tiene la ficha. No hace falta preguntárselo a nadie.
+          </p>
+          <p className="text-[13px] text-gray-600 dark:text-gray-400">
+            El certificado de «Constancia de CUIT» queda para lo suyo: los contratos de <strong>servicios</strong>, que son monotributistas y necesitan la constancia.
+          </p>
+        </div>
         <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-3 py-2.5 flex items-start gap-2.5">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
           <span className="text-[13px]">
@@ -220,7 +234,7 @@ export const UsuarioSimplificacion: React.FC<{
           <FontAwesomeIcon icon={faUserLock} className="h-7 w-7 shrink-0 text-blue-600" />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Obras sociales conectado</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Obras sociales, nombres y documentos</h3>
               {botonInfo}
             </div>
             <p className="text-xs text-gray-500">Usuario de clave fiscal: {estado.cuitUsuario}</p>
@@ -232,9 +246,38 @@ export const UsuarioSimplificacion: React.FC<{
           </button>
         </div>
 
+        {/*
+          QUÉ SE HACE CON ESTA CONEXIÓN, dicho en la tarjeta y no solo en el ⓘ.
+
+          Se llama «obras sociales» por lo primero que resolvió, pero la pantalla de altas de ARCA
+          muestra las tres cosas al escribir un CUIL: la obra social precompletada y el nombre con el
+          que la persona figura ante el organismo. Quien viene a conectar esto tiene que poder saber
+          que también de acá sale la validación de nombres, sin abrir el ⓘ.
+        */}
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          El servidor valida las obras sociales <strong>solo</strong>: nadie tiene que instalar el Asistente ni dejar ninguna ventana abierta.
+          El servidor consulta <strong>solo</strong>: nadie tiene que instalar el Asistente ni dejar ninguna ventana abierta.
         </p>
+        <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+          <li className="flex items-start gap-2">
+            <FontAwesomeIcon icon={faCheck} className="h-3 w-3 mt-1 shrink-0 text-green-600 dark:text-green-400" />
+            <span>
+              La <strong>obra social</strong> que ARCA tiene registrada para cada trabajador.
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <FontAwesomeIcon icon={faCheck} className="h-3 w-3 mt-1 shrink-0 text-green-600 dark:text-green-400" />
+            <span>
+              El <strong>nombre real</strong>, tal como figura ante el organismo. Sale de la misma consulta: la pantalla lo muestra al lado de la obra social.
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <FontAwesomeIcon icon={faCheck} className="h-3 w-3 mt-1 shrink-0 text-green-600 dark:text-green-400" />
+            <span>
+              El <strong>tipo y número de documento</strong>. Este no lo devuelve ARCA por ningún lado: en un CUIT de persona física son los ocho dígitos del medio, así que se calcula y se verifica
+              contra la ficha.
+            </span>
+          </li>
+        </ul>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3">
           {estado.ultimoLoginAt && (
