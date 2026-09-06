@@ -147,14 +147,24 @@ export const ProjectsPage: React.FC = () => {
     if (!searchTerm) return projects;
     const lowerSearch = searchTerm.toLowerCase();
     return projects.filter((p) => {
-      const projectName = p.name.toLowerCase();
-      const projectDescription = (p.description || '').toLowerCase();
-      const clientName = (typeof p.clientId === 'object' ? p.clientId.name : clientMap.get(p.clientId)?.name)?.toLowerCase() || '';
-      const responsableName = p.metadataResolutions?.responsable?.name?.toLowerCase() || '';
 
-      return fuzzyMatch(p.name, lowerSearch) || fuzzyMatch(p.description || '', lowerSearch) || fuzzyMatch(typeof p.clientId === 'object' ? p.clientId.name : clientMap.get(p.clientId)?.name || '', lowerSearch) || fuzzyMatch(p.metadataResolutions?.responsable?.name || '', lowerSearch);
+      /*
+        El centro de costo también entra en la búsqueda.
+
+        Es un número («99», «701») y es lo que la gente tiene a mano cuando busca un proyecto. Acá el
+        filtro es del lado del cliente, así que se resuelve contra el catálogo ya cargado en vez de
+        pedirlo al server como en el listado por cliente — el resultado tiene que ser el mismo.
+      */
+      const centro = nombreCentroCosto(p, availableCostCenters);
+      return (
+        fuzzyMatch(p.name, lowerSearch) ||
+        fuzzyMatch(p.description || '', lowerSearch) ||
+        fuzzyMatch(typeof p.clientId === 'object' ? p.clientId.name : clientMap.get(p.clientId)?.name || '', lowerSearch) ||
+        fuzzyMatch(p.metadataResolutions?.responsable?.name || '', lowerSearch) ||
+        fuzzyMatch(centro, lowerSearch)
+      );
     });
-  }, [projects, searchTerm, clientMap]);
+  }, [projects, searchTerm, clientMap, availableCostCenters]);
 
   const handleProjectClick = (project: Project) => {
     const cId = typeof project.clientId === 'object' ? project.clientId._id : project.clientId;
@@ -318,7 +328,7 @@ export const ProjectsPage: React.FC = () => {
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
           <div className="flex-1 w-full">
-            <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o cliente..." />
+            <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, cliente o centro de costo..." />
           </div>
           {isXXL && (
             <div className="flex items-center gap-2 shrink-0">

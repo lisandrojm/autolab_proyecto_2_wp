@@ -726,6 +726,27 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   </div>
                 )}
 
+                {misEstados.length > 0 ? (
+                  <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estados</label>
+                    <div className="flex flex-wrap gap-1">
+                      {misEstados.map((e) => (
+                        <React.Fragment key={e._id}>
+                          <EstadoBadge name={e.name} className="text-[10px]" />
+                          {e.data?.esImpositivo && <EstadoSecundarioBadge estado={e} className="text-[10px]" />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/60 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                      <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0" />
+                      Sin estados asignados
+                    </div>
+                  </div>
+                )}
+
                 {/*
                   LOS CÓDIGOS ARCA, como badges y con el mismo peso visual que los estados.
 
@@ -756,26 +777,6 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   </div>
                 )}
 
-                {misEstados.length > 0 ? (
-                  <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estados</label>
-                    <div className="flex flex-wrap gap-1">
-                      {misEstados.map((e) => (
-                        <React.Fragment key={e._id}>
-                          <EstadoBadge name={e.name} className="text-[10px]" />
-                          {e.data?.esImpositivo && <EstadoSecundarioBadge estado={e} className="text-[10px]" />}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-2 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/60 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-                      <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0" />
-                      Sin estados asignados
-                    </div>
-                  </div>
-                )}
 
                 <div className="flex items-center justify-between gap-2 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60">
                   <span className="text-[11px] text-gray-500 dark:text-gray-400">

@@ -408,7 +408,7 @@ export const ClientProjectsPage: React.FC = () => {
         <SearchAndFilters
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar proyectos..."
+          searchPlaceholder="Buscar por nombre o centro de costo..."
           filters={[]}
           dateFilter={{
             startDate,
