@@ -23,7 +23,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
-import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
+import { resolveAfip, resolveAfipValues, esResuelto, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
@@ -2454,7 +2454,20 @@ export const ContractBulkAfipTab: React.FC<{
                * se habilite. Arriba se comía dos renglones y empujaba los campos fuera de la vista.
                */}
               <ProgresoArca result={detalle.result} />
-              <button onClick={() => generarTxt([detalle], `alta_${detalle.row.userName.replace(/\s+/g, '_')}`)} disabled={!detalle.result.completo} className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
+              {/*
+                POR QUÉ ESTÁ GRIS, AL ALCANCE DEL PUNTERO.
+
+                La razón ya está a la vista en el pie —el título dice qué pasa y el segundo renglón
+                nombra dónde falta—, pero un botón deshabilitado se mira ANTES que el texto de al lado.
+                El `title` contesta ahí mismo, con los campos concretos, y no reemplaza a lo escrito:
+                un tooltip solo no serviría para quien navega con teclado ni en una tablet.
+              */}
+              <button
+                onClick={() => generarTxt([detalle], `alta_${detalle.row.userName.replace(/\s+/g, '_')}`)}
+                disabled={!detalle.result.completo}
+                title={detalle.result.completo ? 'Genera el TXT de alta masiva de esta persona' : `Faltan datos para generar el TXT: ${detalle.result.checks.filter((c) => !esResuelto(c)).map((c) => c.label).join(', ')}.`}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+              >
                 <FontAwesomeIcon icon={faFileLines} />
                 Descargar TXT de esta persona
               </button>

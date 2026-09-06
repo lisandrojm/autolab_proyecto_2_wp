@@ -132,6 +132,17 @@ export interface AfipFieldCheck {
   dependeDe?: OrigenDato;
   /** Detalle del problema, para `falta` / `error` / `bloqueado`. */
   detalle?: string;
+  /**
+   * El campo NO CORRESPONDE para este contrato, y por eso no entra en la cuenta de avance.
+   *
+   * Hoy lo usa solo Fecha de Fin: con una modalidad por tiempo indeterminado el registro la exige en
+   * blanco, así que el chequeo da «ok» —está bien vacía— pero contarla como un campo resuelto infla
+   * el denominador con algo que nunca hubo que completar. «5 de 5» y «4 de 4» dicen cosas distintas
+   * y las dos son correctas según la modalidad; «5 de 5» cuando uno de los cinco no aplicaba, no.
+   *
+   * No es lo mismo que `bloqueado`: bloqueado es «todavía no», esto es «acá no va».
+   */
+  noAplica?: boolean;
   /** Compatibilidad con el consumo previo (`!ok` = hay algo que hacer). */
   ok: boolean;
 }
@@ -648,7 +659,12 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   } else if (prohibeFin && v.fechaFin) {
     checks.push(mk("fechaFin", "Fecha de fin", "contrato", v.fechaFin, "error", `La modalidad ${v.modalidadContrato} es por tiempo indeterminado: la fecha de fin tiene que ir en blanco.`));
   } else {
-    checks.push(mk("fechaFin", "Fecha de fin", "contrato", v.fechaFin || "(en blanco, correcto)", "ok"));
+    /*
+      Vacía y correcta. `noAplica` distingue las DOS formas de llegar acá: con una modalidad
+      indeterminada el campo no correspondía —y no tiene que contar como uno de los que había que
+      completar—, mientras que con una fecha efectivamente cargada sí es un campo resuelto.
+    */
+    checks.push({ ...mk("fechaFin", "Fecha de fin", "contrato", v.fechaFin || "(en blanco, correcto)", "ok"), noAplica: prohibeFin && !v.fechaFin });
   }
 
   // --- Categoría

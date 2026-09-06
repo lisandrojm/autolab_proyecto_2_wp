@@ -997,18 +997,32 @@ export const ClientProjectsPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Centro de costo, debajo de Sede: mismo par que en la tabla y en la ficha. */}
-                {(project.metadataResolutions?.centroCosto || project.metadata?.centroCostoId) && (
-                  <div className="flex flex-col mt-4">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faWallet} className="h-3 w-3 text-gray-400" />
-                      Centro de Costo
-                    </label>
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">
-                      {nombreCentroCosto(project, availableCostCenters)}
-                    </span>
-                  </div>
-                )}
+                {/*
+                  Centro de costo, debajo de Sede: mismo par que en la tabla y en la ficha.
+
+                  LA CONDICIÓN DE ANTES IMPRIMÍA UN «0» SUELTO EN LA TARJETA. Era
+                  "resuelto || centroCostoId" seguida de un &&, y con centroCostoId en 0 esa expresión
+                  vale 0 — el && no omite el cero, solo omite false, null y undefined—, así que React
+                  lo dibujaba como texto: un cero pelado debajo de Sede, sin etiqueta.
+
+                  Ahora el bloque va siempre, con su etiqueta y un «—» cuando no tiene. Que el proyecto
+                  no tenga centro cargado es un dato en sí, y esconder la fila hacía que las tarjetas
+                  no se leyeran en paralelo.
+                */}
+                <div className="flex flex-col mt-4">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faWallet} className="h-3 w-3 text-gray-400" />
+                    Centro de Costo
+                  </label>
+                  {(() => {
+                    const cc = nombreCentroCosto(project, availableCostCenters);
+                    return cc ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">{cc}</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    );
+                  })()}
+                </div>
 
                 {/* Áreas Configuradas dentro del cuerpo de la card */}
                 {project.areasConfig && project.areasConfig.length > 0 && (

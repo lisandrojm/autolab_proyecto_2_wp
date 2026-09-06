@@ -42,7 +42,19 @@ export const SelectorCodigoArca: React.FC<{
    * queda como área activa suya.
    */
   ayuda?: string;
-}> = ({ label, sufijoLabel, items, cargando, value, onChange, formatCodigo, placeholder, bloqueadoPor, vacioHint, ayuda }) => {
+  /**
+   * Un control que ACOTA esta lista, dentro del desplegable y arriba de las opciones.
+   *
+   * Existe para el grupo de tipo de servicio, que era un campo par de los demás: mismo recuadro,
+   * misma etiqueta, y un sufijo aclarando «(no va al TXT)» porque no era como los otros tres. Un
+   * control que solo sirve para recortar esta lista pertenece a esta lista — afuera se leía como un
+   * código más del alta, y el propio formulario terminaba exigiendolo como si se guardara.
+   *
+   * Va DEBAJO del buscador porque buscar es lo primero que se intenta; el filtro es para cuando no
+   * se sabe qué buscar.
+   */
+  filtro?: React.ReactNode;
+}> = ({ label, sufijoLabel, items, cargando, value, onChange, formatCodigo, placeholder, bloqueadoPor, vacioHint, ayuda, filtro }) => {
   const [abierto, setAbierto] = useState(false);
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -119,6 +131,8 @@ export const SelectorCodigoArca: React.FC<{
             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por código o nombre…" className="input-field w-full pl-9" />
           </div>
+
+          {filtro}
 
           {cargando ? (
             <p className="text-xs text-gray-500 dark:text-gray-400 px-1 py-2">

@@ -1,5 +1,5 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
@@ -130,6 +130,9 @@ const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: 
 export type ContractTypesTabHandle = { abrirCrear: () => void };
 
 export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref) => {
+  /** El tipo que la URL pide abrir. Lo manda el modal de Datos ARCA. Ver el efecto de mas abajo. */
+  const [searchParamsTipos] = useSearchParams();
+  const tipoPedido = searchParamsTipos.get('tipo');
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [plantillas, setPlantillas] = useState<ContratoFrameItem[]>([]);
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -242,16 +245,22 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const generaAlta = estadoGeneraAltaTemprana(estadoImpositivo);
   /** Hay algo cargado en los códigos: decide si vale la pena avisar que se conservan. */
   const hayCodigosCargados = !!(form.afipModalidadContrato || form.afipTipoServicio || form.afipModalidadLiquidacion);
-  /** Cuáles de los cuatro faltan. Vacío = se puede guardar. */
+  /**
+   * Cuáles de los TRES códigos faltan. Vacío = se puede guardar.
+   *
+   * Eran cuatro: el grupo de tipo de servicio se exigía como los demás. No correspondía —el grupo no
+   * se guarda en el contrato ni viaja al TXT, solo recorta la lista de tipos de servicio— así que
+   * bloquear el guardado por él era pedir que se llene un filtro. Ahora vive adentro del selector de
+   * Tipo de servicio, y el que importa es el tipo elegido: ese sí se guarda.
+   */
   const codigosFaltantes = useMemo(() => {
     if (!generaAlta) return [] as string[];
     const faltan: string[] = [];
     if (!form.afipModalidadContrato) faltan.push('afipModalidadContrato');
-    if (!grupoTipoServicio) faltan.push('grupoTipoServicio');
     if (!form.afipTipoServicio) faltan.push('afipTipoServicio');
     if (!form.afipModalidadLiquidacion) faltan.push('afipModalidadLiquidacion');
     return faltan;
-  }, [generaAlta, form.afipModalidadContrato, form.afipTipoServicio, form.afipModalidadLiquidacion, grupoTipoServicio]);
+  }, [generaAlta, form.afipModalidadContrato, form.afipTipoServicio, form.afipModalidadLiquidacion]);
   /**
    * Los errores recién se muestran después del primer intento de guardar.
    *
@@ -396,6 +405,47 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     preseleccionaría nunca al crear desde el [+] del encabezado.
   */
   useImperativeHandle(ref, () => ({ abrirCrear }), [estados]);
+
+  /*
+    ABRIR UN TIPO DIRECTO POR URL: /contratos?tab=types&tipo=<id>
+
+    Lo usa el bloque «Del tipo de contrato» del modal de Datos ARCA, que dejó de editar los códigos y
+    ahora manda a editarlos acá. Sin esto el link caía en el listado y había que buscar el tipo entre
+    todos — justo cuando el nombre que se busca quedó en la otra pestaña, ya cerrada.
+
+    Espera a que la lista esté cargada: al montar, `contratos` está vacío y el `find` no encontraría
+    nada. Y se abre UNA sola vez por id (`yaAbierto`): sin eso, cerrar el modal con el query param
+    todavía en la URL lo vuelve a abrir en el próximo render y no hay forma de salir.
+
+    Un id que no existe no hace nada. Es lo correcto: el tipo pudo haberse borrado entre que se copió
+    el link y se abrió, y un modal vacío o un error sería peor que caer en el listado.
+  */
+  const yaAbierto = useRef<string | null>(null);
+  /**
+   * Bajar hasta los codigos ARCA cuando se llego por el link de Datos ARCA.
+   *
+   * El modal es largo y los codigos estan al final: abrirlo arriba deja al que vino a cargarlos
+   * buscando la seccion. No se scrollea en una apertura normal — ahi el punto de partida correcto
+   * es el nombre.
+   */
+  const [bajarAArca, setBajarAArca] = useState(false);
+  useEffect(() => {
+    if (!bajarAArca || !showModal) return;
+    // Un frame de gracia: el bloque solo existe si el estado impositivo lo pide, y se monta con el modal.
+    const t = setTimeout(() => {
+      bloqueArcaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setBajarAArca(false);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [bajarAArca, showModal]);
+  useEffect(() => {
+    if (!tipoPedido || contratos.length === 0 || yaAbierto.current === tipoPedido) return;
+    const c = contratos.find((x) => x._id === tipoPedido);
+    if (!c) return;
+    yaAbierto.current = tipoPedido;
+    abrirEditar(c);
+    setBajarAArca(true);
+  }, [tipoPedido, contratos]);
 
   const abrirEditar = (contrato: ContratoItem) => {
     const seleccionActual = estadoIdsDe(contrato._id);
@@ -977,9 +1027,25 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     <div className="flex items-center gap-1.5">
                       <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-3.5 w-3.5 text-indigo-500" />
                       <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
-                      {/* La explicación del bloque, detrás del ⓘ de SU título. */}
+                      {/*
+                        La explicación del bloque, detrás del ⓘ de SU título.
+
+                        Decía «dejalos en blanco si no aplican», y eso dejó de ser cierto: si el estado
+                        impositivo es de alta temprana, los tres son obligatorios y sin ellos el TXT no
+                        se genera. Vacíos, el modal de Datos ARCA de cada persona los muestra en ámbar
+                        con «sin cargar en el tipo de contrato» y el botón de descargar queda gris.
+
+                        Se nombran las POSICIONES porque es lo que permite cruzarlas con la vista previa
+                        del registro, y porque un código en la posición equivocada lo rechaza ARCA sin
+                        decir cuál.
+                      */}
                       <span
-                        title={'Son los códigos de la interfaz de «Alta masiva» de ARCA, específicos del convenio y la modalidad de este tipo de contrato. Se usan para generar el TXT; dejalos en blanco si no aplican. La actividad del domicilio NO va acá: depende del domicilio de explotación y de la empleadora, y se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.'}
+                        title={
+                          'Los tres códigos que este tipo de contrato aporta al TXT de «Alta masiva» de ARCA: modalidad de contrato (posiciones 17-19), tipo de servicio (107-109) y modalidad de liquidación (73).\n\n' +
+                          'Son específicos del convenio y la modalidad de este tipo, y valen para TODOS los contratos que lo usan: cargarlos una vez acá evita tipearlos por persona. Por eso mismo, cambiarlos alcanza a todas.\n\n' +
+                          'Si el estado impositivo de este tipo es de alta temprana, los tres son obligatorios: sin ellos no se puede generar el TXT de ninguna de esas personas.\n\n' +
+                          'La actividad del domicilio NO va acá: depende del domicilio de explotación y de la empleadora, y se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.'
+                        }
                         className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 cursor-help">
                         <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                       </span>
@@ -1000,34 +1066,17 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                 {errorCodigo('afipModalidadContrato')}
 
                       {/*
-                       * El grupo va ARRIBA del tipo de servicio porque lo filtra, igual que Convenio →
-                       * Categoría y Domicilio → Actividad. No se guarda: solo recorta la lista.
-                       */}
-                      {/* El MISMO selector que los otros tres. Era el único <select> nativo del bloque, y esa
-                          diferencia de forma sugería que el grupo se guarda como los demás — no se guarda:
-                          solo recorta la lista de abajo. */}
-                      <SelectorCodigoArca
-                        label="Grupo de tipo de servicio"
-                        sufijoLabel="(no va al TXT)"
-                        items={gruposTipoServicio}
-                        cargando={cargandoArca}
-                        value={grupoTipoServicio}
-                        onChange={setGrupoTipoServicio}
-                        formatCodigo={(v) => v}
-                        placeholder="Todos los tipos de servicio"
-                        ayuda={`Hay 49 nombres repetidos entre los ${tiposServicio.length} tipos de servicio (el mismo texto con dos códigos). Elegir el grupo deja a la vista solo los de ese grupo. No viaja en el TXT y no se guarda: solo filtra.`}
-                        vacioHint="El catálogo de Grupos de Tipo de Servicio está vacío. Se siembra en Configuración → ARCA → Grupos de Tipo de Servicio."
-                      />
-                {errorCodigo('grupoTipoServicio')}
-                      {/* El aviso SÍ queda a la vista: no es una explicación, es algo que hay que ir a
-                          arreglar para que el filtro sirva. */}
-                      {!hayGruposCargados && (
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1 flex items-start gap-1.5">
-                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-1 shrink-0" />
-                          Todavía ningún tipo de servicio tiene grupo cargado, así que el filtro no se aplica. Clasificalos en Configuración → ARCA → Tipos de Servicio.
-                        </p>
-                      )}
+                        EL GRUPO ES EL FILTRO DE LA LISTA DE ABAJO, y por eso vive ADENTRO de ella.
 
+                        Era un campo par de los otros tres: mismo recuadro, misma etiqueta, y un sufijo
+                        «(no va al TXT)» aclarando que no era como ellos. Esa aclaración es la prueba de
+                        que estaba en el lugar equivocado — un control que solo recorta una lista
+                        pertenece a esa lista. Afuera se leía como un cuarto código del alta, y el
+                        formulario incluso lo exigía para guardar, como si se guardara.
+
+                        Sigue haciendo exactamente lo mismo: filtra por `t.grupo`, arranca en lo que
+                        hubiera, se puede volver a «todos», y no se persiste ni viaja al TXT.
+                      */}
                       <SelectorCodigoArca
                         label="Tipo de servicio"
                         sufijoLabel={grupoTipoServicio && hayGruposCargados ? `(3 díg. · ${tiposServicioFiltrados.length} del grupo)` : '(3 díg.)'}
@@ -1038,6 +1087,58 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                         formatCodigo={pad3}
                         placeholder="Sin elegir — ej. 000 servicios comunes continuos"
                         vacioHint="El catálogo de Tipos de Servicio está vacío. Se siembra en Configuración → ARCA → Tipos de Servicio."
+                        filtro={
+                          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-2.5 py-2 space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Filtrar por grupo</span>
+                              {/*
+                                El ⓘ del grupo, que se había quedado sin explicación al mudarse acá adentro.
+
+                                Contesta las dos cosas que se preguntan: para qué sirve —hay nombres
+                                repetidos entre grupos y el grupo es lo que los separa— y por qué no
+                                aparece entre los códigos que se guardan, que es lo que uno se pregunta
+                                al no encontrarlo donde estaba.
+                              */}
+                              <span
+                                title={
+                                  `Acota la lista de tipos de servicio a los de un grupo. Hoy hay ${tiposServicio.length} en total y 49 nombres se repiten entre grupos: el mismo texto con dos códigos distintos, y el grupo es lo único que los separa.\n\n` +
+                                  'NO se guarda ni viaja al TXT. Es solo una ayuda para encontrar el tipo de servicio de esta lista; lo que queda guardado en el contrato es el tipo que elijas, no el grupo.\n\n' +
+                                  'Antes era un campo aparte, arriba de los códigos, y el formulario lo exigía para guardar. Se movió acá porque es lo que hace: filtrar esta lista.'
+                                }
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help"
+                              >
+                                <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                              </span>
+                            </div>
+                            <label className="flex items-center gap-2 min-w-0">
+                              <span className="sr-only">Grupo de tipo de servicio</span>
+                              <select
+                                value={grupoTipoServicio}
+                                onChange={(e) => setGrupoTipoServicio(e.target.value)}
+                                className="min-w-0 flex-1 text-[12px] rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/30"
+                              >
+                                <option value="">Todos los tipos de servicio</option>
+                                {gruposTipoServicio.map((g) => {
+                                  const codigo = String(g.externalId || '').trim();
+                                  return (
+                                    <option key={codigo} value={codigo}>
+                                      {codigo} · {g.name}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              <span className="text-[10.5px] text-gray-400 dark:text-gray-500 shrink-0 hidden sm:inline">no va al TXT</span>
+                            </label>
+                            {/* El aviso SÍ queda a la vista: no es una explicación, es algo que hay que ir
+                                a arreglar para que el filtro sirva. */}
+                            {!hayGruposCargados && (
+                              <p className="text-[11px] text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
+                                <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-1 shrink-0" />
+                                Todavía ningún tipo de servicio tiene grupo cargado, así que el filtro no se aplica. Clasificalos en Configuración → ARCA → Tipos de Servicio.
+                              </p>
+                            )}
+                          </div>
+                        }
                       />
                 {errorCodigo('afipTipoServicio')}
 

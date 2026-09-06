@@ -39,6 +39,18 @@ export interface ContratoFrameInput {
  * seteada en el proyecto (Empresa del Contrato).
  */
 export const contratoVariables: GrupoVariables[] = [
+  /*
+    PRIMERA, no última.
+
+    Estaba al final con el argumento de que es lo último que se pega y lo último que va en el
+    documento. Pero el orden de esta lista no es el orden del documento: es el orden en que se
+    BUSCA, y el modal abre mostrando el principio. Al final quedaba debajo de nueve grupos y de un
+    scroll — la única variable cuya ausencia rompe el circuito, escondida detrás de las de relleno.
+
+    Destacada y con su explicación a la vista del que edita: eso antes era un comentario del código,
+    o sea invisible justo para quien tiene que usarla. Ver GRUPO_FIRMA.
+  */
+  GRUPO_FIRMA,
   {
     grupo: "Datos de la persona",
     vars: ["{{nombre}}", "{{apellido}}", "{{nombreCompleto}}", "{{dni}}", "{{cuit}}", "{{email}}", "{{fechaDeNacimiento}}", "{{estadoCivil}}", "{{telefono}}"],
@@ -90,10 +102,6 @@ export const contratoVariables: GrupoVariables[] = [
     vars: ["{{empresaRepresentanteLegalNombre}}", "{{empresaRepresentanteLegalEmail}}"],
   },
   { grupo: "Otros", vars: ["{{fecha}}"] },
-  // ÚLTIMO a propósito: es lo último que se pega y lo último que va en el documento. Destacada y con
-  // su explicación a la vista del que edita — acá era un comentario del código, o sea invisible justo
-  // para quien tiene que usarla. Ver `GRUPO_FIRMA`.
-  GRUPO_FIRMA,
 ];
 
 const downloadBlob = (data: BlobPart, fileName: string) => {

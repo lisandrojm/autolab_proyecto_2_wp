@@ -24,7 +24,16 @@ export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCost
   if (delServer) return String(delServer);
 
   const id = proyecto?.metadata?.centroCostoId;
-  if (id == null) return "";
+  /*
+    EL 0 ES «NO TIENE», NO UN ID QUE FALTA.
+
+    Es lo que deja un campo numérico vacío, y el resto de la app ya lo trata así: `cargarCentrosCosto`
+    descarta del select los centros con id 0, y la ficha muestra un guion cuando `centroCostoId` es 0.
+    Sin este chequeo cae en el fallback de abajo y devuelve «ID: 0», que dice «apunta a uno que no
+    está» cuando lo que pasa es que no apunta a ninguno. Son justo los dos casos que el fallback
+    existe para distinguir, así que confundirlos acá lo vuelve inútil.
+  */
+  if (id == null || Number(id) === 0) return "";
 
   const delCatalogo = catalogo.find((c) => Number(c?.data?.id) === Number(id));
   return String(delCatalogo?.name || delCatalogo?.data?.nombre || `ID: ${id}`);

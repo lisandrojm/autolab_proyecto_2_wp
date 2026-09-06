@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faChevronDown, faChevronRight, faRotate, faArrowUpRightFromSquare, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
 import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO, buscarTipoContrato } from './afipCompleteness';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
-import { contratosAPI, ContratoItem } from '../../api/contratos';
+import { ContratoItem } from '../../api/contratos';
 import { projectsAPI } from '../../api/projects';
 import { sweetAlert } from '../../utils/sweetAlert';
-import { CampoArca, DepGroup } from './CampoArca';
+import { CampoArca, FilaArca, DepGroup } from './CampoArca';
 import { useResaltadoDependencias } from './useResaltadoDependencias';
 import { CampoObraSocial } from './CampoObraSocial';
-import { PickerArca, OpcionPicker } from './PickerArca';
+import { PickerArca } from './PickerArca';
 
 /**
  * El formulario de Datos ARCA, con la forma de la pantalla del organismo: trece campos en tres
@@ -28,14 +28,173 @@ import { PickerArca, OpcionPicker } from './PickerArca';
  */
 
 const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
-const gruposTipoServicioApi = createSimpleCatalogApi('/arca/grupos-tipo-servicio');
 const modalidadesContratoApi = createSimpleCatalogApi('/arca/modalidades-contratacion');
 const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
 
 /** Qué campo tiene el picker abierto. */
-type CampoAbierto = null | 'sucursal' | 'actividad' | 'modalidadContrato' | 'tipoServicio' | 'modalidadLiq' | 'grupoTipoServicio' | 'convenio' | 'categoria';
+type CampoAbierto = null | 'sucursal' | 'actividad' | 'convenio' | 'categoria';
 
-const opcion = (c: SimpleCatalogItem, etiqueta?: string): OpcionPicker => ({ codigo: String(c.externalId || '').trim(), nombre: c.name, etiqueta });
+
+/**
+ * La fecha como se lee, `dd/mm/aaaa`. Solo para mostrar: al archivo va `fechaAfip`, que no pasa por acá.
+ *
+ * SIN CONSTRUIR UN `Date`, y no es un detalle de estilo. Estas son fechas de CALENDARIO —el día que
+ * empieza el contrato— guardadas como `2026-07-04T00:00:00.000Z`. Pasarlas por `new Date(...)` y
+ * leerlas con los getters locales las corre un día para todo el país: en UTC-3 esa medianoche UTC es
+ * el 3 de julio a las 21. El alta se vería declarando otro día.
+ *
+ * Se parten los dígitos del string. Lo que no se reconoce se devuelve tal cual: mostrar el dato crudo
+ * es feo, pero mostrar otra fecha es un error.
+ */
+const fechaLegible = (valor?: string): string => {
+  if (!valor) return '';
+  const iso = valor.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : valor;
+};
+
+/**
+ * ZONA 2 — LOS TRES CÓDIGOS QUE VIVEN EN EL TIPO DE CONTRATO. Solo lectura, con link a donde se editan.
+ *
+ * POR QUÉ DEJARON DE SER EDITABLES ACÁ
+ *
+ * Modalidad de contrato, tipo de servicio y modalidad de liquidación no son de esta persona: son del
+ * TIPO de contrato, y editarlos desde una ficha tocaba a los 143 contratos que comparten ese tipo. El
+ * picker lo avisaba en un pie ámbar, pero avisar de un efecto masivo no es lo mismo que no ofrecerlo:
+ * el control estaba ahí, con la misma forma que la sucursal —que sí es de esta persona—, y la
+ * diferencia entre los dos quedaba en un renglón que se lee después de hacer click.
+ *
+ * Así que se editan donde se entiende qué se está tocando: en el tipo de contrato.
+ *
+ * EL VACÍO ES UN PROBLEMA, Y SE DICE
+ *
+ * Un tipo puede no tener los códigos cargados —el propio modal de Editar Contrato lo advierte—, y sin
+ * ellos no hay TXT. Antes eso se veía como tres campos en ámbar entre otros diez; acá el bloque nombra
+ * cuáles faltan y ofrece el link. El botón de descargar ya estaba deshabilitado en ese caso: lo que
+ * faltaba era la razón a la vista.
+ */
+const CodigosDelTipo: React.FC<{
+  nombreTipo: string;
+  tipoId?: string;
+  modalidadContrato: string;
+  nombreModalidadContrato?: string;
+  tipoServicio: string;
+  nombreTipoServicio?: string;
+  modalidadLiq: string;
+  nombreModalidadLiq?: string;
+  /** Relee el tipo de contrato sin cerrar el modal. Es el mismo camino que usa guardar un código. */
+  onRefrescar?: () => void;
+}> = ({ nombreTipo, tipoId, modalidadContrato, nombreModalidadContrato, tipoServicio, nombreTipoServicio, modalidadLiq, nombreModalidadLiq, onRefrescar }) => {
+  const faltantes = [
+    !modalidadContrato && 'modalidad de contrato',
+    !tipoServicio && 'tipo de servicio',
+    !modalidadLiq && 'modalidad de liquidación',
+  ].filter(Boolean) as string[];
+
+  /*
+    SE REVALIDA AL VOLVER A LA PESTAÑA.
+
+    El link abre `/contratos` en otra pestaña justamente para no perder lo que se esté cargando acá.
+    El costo de eso es que al volver, estos tres valores son los de antes de la edición. Escuchar el
+    `focus` de la ventana cierra el círculo sin pedirle nada a nadie; el botón de recargar queda igual,
+    para quien no se fía o cambió algo desde otro lado.
+  */
+  useEffect(() => {
+    if (!onRefrescar) return;
+    const alVolver = () => onRefrescar();
+    window.addEventListener('focus', alVolver);
+    return () => window.removeEventListener('focus', alVolver);
+  }, [onRefrescar]);
+
+  /* `/contratos` no tenía forma de abrir UN tipo: lee `?tab=` y nada más. El `tipo` es nuevo. */
+  const href = tipoId ? `/contratos?tab=types&tipo=${encodeURIComponent(tipoId)}` : '/contratos?tab=types';
+
+  return (
+    <section className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-3 py-2.5" aria-label={`Códigos del tipo de contrato ${nombreTipo}`}>
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 min-w-0">
+          Del tipo de contrato <span className="normal-case tracking-normal text-gray-500 dark:text-gray-400">«{nombreTipo}»</span>
+        </h4>
+        <div className="flex items-center gap-2 shrink-0">
+          {onRefrescar && (
+            <button type="button" onClick={onRefrescar} title="Volver a leer los códigos del tipo de contrato" aria-label="Volver a leer los códigos del tipo de contrato" className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              <FontAwesomeIcon icon={faRotate} className="h-3 w-3" />
+            </button>
+          )}
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+            Editar en el contrato
+            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+            <span className="sr-only">(se abre en una pestaña nueva)</span>
+          </a>
+        </div>
+      </div>
+
+      {faltantes.length > 0 && (
+        <p className="mb-2 rounded-md border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-2.5 py-2 text-[11.5px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
+          <span>
+            Falta{faltantes.length === 1 ? '' : 'n'} <strong>{faltantes.join(', ')}</strong> en el tipo de contrato «{nombreTipo}». Sin {faltantes.length === 1 ? 'ese código' : 'esos códigos'} no se puede generar el TXT.
+          </span>
+        </p>
+      )}
+
+      {/* Tono más apagado que la Zona 1 —es informativo— pero legible: gris de texto, no gris de
+          deshabilitado. Lo que va al archivo tiene que poder leerse. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5">
+        <FilaArca rotulo="Modalidad Contrato" campo="modalidadContrato" info="modalidadContrato" etiqueta="17–19" valor={modalidadContrato} nombre={nombreModalidadContrato} vacio="— sin cargar en el tipo de contrato" faltaEsError origen={<>define si va la fecha de fin</>} />
+        <FilaArca rotulo="Tipo Servicio" campo="tipoServicio" info="tipoServicio" etiqueta="107–109" valor={tipoServicio} nombre={nombreTipoServicio} vacio="— sin cargar en el tipo de contrato" faltaEsError />
+        <FilaArca rotulo="Mod. Liquidación" campo="modalidadLiq" info="modalidadLiq" etiqueta="73" valor={modalidadLiq} nombre={nombreModalidadLiq} vacio="— sin cargar en el tipo de contrato" faltaEsError />
+      </div>
+    </section>
+  );
+};
+
+/**
+ * ZONA 3 — LOS CUATRO VALORES QUE VAN AL ARCHIVO Y NADIE CARGA. Plegado, y como texto.
+ *
+ * Estaban en la grilla como campos deshabilitados con «— en blanco» adentro, y ahí un input vacío
+ * dice «esto falta»: cuatro de trece casillas leyéndose como trabajo pendiente que no existe. Tampoco
+ * alcanzaba con el badge «constante», porque tenía el mismo peso visual que el badge de posición y
+ * significa lo contrario —uno marca lo que hay que completar, el otro lo que no—.
+ *
+ * No desaparecen: la pregunta «¿el agropecuario no hay que cargarlo?» se sigue contestando sola al
+ * abrir. Pero se contesta una vez, y no ocupa un tercio del formulario mientras tanto.
+ */
+const VALORES_FIJOS: Array<{ etiqueta: string; valor: string; nota: string }> = [
+  { etiqueta: 'Puesto desempeñado', valor: 'en blanco', nota: 'el registro de 130 lo deja vacío' },
+  { etiqueta: 'Situación de revista', valor: 'en blanco', nota: 'el registro de 130 lo deja vacío' },
+  { etiqueta: 'Trab. agropecuario', valor: 'N', nota: 'posición 16, siempre N' },
+  { etiqueta: 'Lic. COVID / CCG', valor: '0', nota: 'posición 130, siempre 0' },
+];
+
+const ValoresFijos: React.FC = () => {
+  const [abierto, setAbierto] = useState(false);
+  return (
+    <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+      >
+        <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-gray-400" />
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Valores fijos ({VALORES_FIJOS.length})</span>
+        <span className="text-[11px] text-gray-500 dark:text-gray-400">· van al TXT, no se editan</span>
+      </button>
+
+      {abierto && (
+        <dl className="border-t border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60 bg-gray-50/60 dark:bg-gray-900/30">
+          {VALORES_FIJOS.map((v) => (
+            <div key={v.etiqueta} className="px-3 py-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <dt className="text-[12px] text-gray-700 dark:text-gray-200">{v.etiqueta}</dt>
+              <dd className="font-mono text-[12px] text-gray-800 dark:text-gray-100">{v.valor}</dd>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">· {v.nota}</span>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+};
 
 export const FormularioArca: React.FC<{
   row: ContractOverviewRow;
@@ -65,26 +224,16 @@ export const FormularioArca: React.FC<{
   // abierto, y sumarlos a `AfipCatalogs` los pondría en el camino del generador del TXT, que no los
   // necesita.
   const [tiposServicio, setTiposServicio] = useState<SimpleCatalogItem[]>([]);
-  const [gruposTS, setGruposTS] = useState<SimpleCatalogItem[]>([]);
   const [modalidadesContrato, setModalidadesContrato] = useState<SimpleCatalogItem[]>([]);
   const [modalidadesLiq, setModalidadesLiq] = useState<SimpleCatalogItem[]>([]);
-  /**
-   * El filtro arranca en el grupo que la empleadora dejó como default (ARCA → Defaults).
-   *
-   * Es solo el punto de partida del combo, no un valor del alta: el grupo no viaja al TXT. Se puede
-   * cambiar o poner en «sin filtrar» acá mismo, y no toca lo que la empresa tenga guardado.
-   */
-  const [grupoTS, setGrupoTS] = useState<string>(() => {
-    const empresa = row.empresaContratoId ? cat.empresas?.find((e) => e._id === row.empresaContratoId) : undefined;
-    return (empresa as { defaultsArca?: { grupoTipoServicio?: string } } | undefined)?.defaultsArca?.grupoTipoServicio || '';
-  });
 
   /**
    * Filtro de convenio para el picker de categoría. NO ES UN DATO DEL ALTA.
    *
-   * Mismo par que Grupo Tipo Servicio → Tipo Servicio, que ya vive en este formulario: uno filtra y no
-   * se guarda, el otro es el que viaja al archivo. El convenio va en blanco en el TXT (pos. 91-100) —
-   * ARCA lo deduce de la categoría, que es lo único que se manda.
+   * Es el único filtro que queda en este formulario: el de Grupo → Tipo de Servicio se fue con los
+   * códigos del tipo de contrato. Uno filtra y no se guarda, el otro es el que viaja al archivo. El
+   * convenio va en blanco en el TXT (pos. 91-100) — ARCA lo deduce de la categoría, que es lo único
+   * que se manda.
    *
    * Arranca en el convenio de la categoría que el contrato ya tiene: empezar en «todas» ofrecería
    * categorías de los cinco convenios de la empleadora mezcladas, que es justo lo que este filtro
@@ -135,15 +284,13 @@ export const FormularioArca: React.FC<{
    */
   const empresaAnterior = useRef(row.empresaContratoId);
   useEffect(() => {
-    const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null; grupoTipoServicio?: string } } | undefined;
+    const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null } } | undefined;
     const id = emp?.defaultsArca?.convenioId;
     const convenioDefault = id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || '').trim() : '';
-    const grupoDefault = emp?.defaultsArca?.grupoTipoServicio || '';
 
     if (empresaAnterior.current !== row.empresaContratoId) {
       empresaAnterior.current = row.empresaContratoId;
       setConvenioFiltro(convenioDefault);
-      setGrupoTS(grupoDefault);
       /*
         LA CATEGORÍA TAMBIÉN SE BORRA. Es la parte que escribe, y por eso va acá y no en el render.
 
@@ -162,12 +309,10 @@ export const FormularioArca: React.FC<{
     }
     // Con categoría cargada manda ELLA: el convenio del alta es el de su categoría.
     if (!valores.convenioCategoria && convenioDefault) setConvenioFiltro((prev) => prev || convenioDefault);
-    if (grupoDefault) setGrupoTS((prev) => prev || grupoDefault);
   }, [row.empresaContratoId, cat.empresas, cat.convenios, valores.convenioCategoria]);
 
   useEffect(() => {
     tiposServicioApi.list().then(setTiposServicio).catch(() => setTiposServicio([]));
-    gruposTipoServicioApi.list().then(setGruposTS).catch(() => setGruposTS([]));
     modalidadesContratoApi.list().then(setModalidadesContrato).catch(() => setModalidadesContrato([]));
     modalidadesLiqApi.list().then(setModalidadesLiq).catch(() => setModalidadesLiq([]));
   }, []);
@@ -187,38 +332,12 @@ export const FormularioArca: React.FC<{
   const tipo: ContratoItem | undefined = useMemo(() => buscarTipoContrato(cat.tipos, row.nombre_contrato), [cat.tipos, row.nombre_contrato]);
   const nombreTipo = row.nombre_contrato || 'este tipo de contrato';
 
-  const alcanceTipo = (
-    <>
-      Este valor vive en el <strong>tipo de contrato «{nombreTipo}»</strong>. Al guardarlo se aplica a <strong>todos los contratos</strong> que lo usan, no solo a esta persona.
-    </>
-  );
 
-  /** Guarda uno de los tres códigos del tipo de contrato, preservando el resto de sus campos. */
-  const guardarEnTipo = async (campo: 'afipModalidadContrato' | 'afipTipoServicio' | 'afipModalidadLiquidacion', valor: string) => {
-    if (!tipo) return sweetAlert.error('Error', 'No se encontró el tipo de contrato de este contrato.');
-    setGuardando(campo);
-    try {
-      // Se manda el item completo: `update` reemplaza, así que mandar solo el código borraría el resto.
-      await contratosAPI.update(tipo._id, {
-        nombre: tipo.name,
-        cantidadJornadas: tipo.data?.cantidadJornadas,
-        multiplicadorDiario: tipo.data?.multiplicadorDiario,
-        esTiempoIndeterminado: tipo.data?.esTiempoIndeterminado,
-        requiereFirma: tipo.data?.requiereFirma,
-        isActive: tipo.isActive,
-        afipModalidadContrato: tipo.data?.afipModalidadContrato || '',
-        afipTipoServicio: tipo.data?.afipTipoServicio || '',
-        afipModalidadLiquidacion: tipo.data?.afipModalidadLiquidacion || '',
-        [campo]: valor,
-      } as never);
-      setAbierto(null);
-      onCambioNivel?.();
-    } catch (e: any) {
-      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar el código.');
-    } finally {
-      setGuardando(null);
-    }
-  };
+  /*
+    Acá estaba «guardarEnTipo», que escribía los tres códigos ARCA en el tipo de contrato desde este
+    modal. Se fue con los pickers: los códigos se editan en el tipo, no en la ficha de una persona,
+    donde una edición alcanzaba a los 143 contratos que comparten ese tipo sin que se viera.
+  */
 
   const guardarEnContrato = async (campo: 'sucursal' | 'actividad' | 'categoria', valor: string) => {
     // `valor` vacío en categoría = limpiarla (ver el picker de convenio).
@@ -309,21 +428,6 @@ export const FormularioArca: React.FC<{
   const prohibeFin = MODALIDADES_TIEMPO_INDETERMINADO.includes(valores.modalidadContrato);
 
   const nombreDe = (lista: SimpleCatalogItem[], codigo: string) => lista.find((x) => String(x.externalId || '').trim() === codigo)?.name || '';
-
-  /*
-   * El tipo de servicio se filtra por grupo: sin filtrar, 98 nombres se repiten y son
-   * indistinguibles.
-   *
-   * El grupo vive en la RAÍZ del documento (`t.grupo`), no adentro de `data`. Estaba leído como
-   * `t.data.grupo`, que es siempre `undefined`: elegir un grupo dejaba la lista vacía y la columna
-   * del grupo en blanco, o sea que el filtro no filtraba nada y encima parecía roto. Ver
-   * `server/src/models/ArcaTipoServicio.ts`, donde `grupo` es un campo del esquema.
-   */
-  const tiposServicioFiltrados = useMemo(() => {
-    const conGrupo = tiposServicio.map((t) => ({ item: t, grupo: String((t as { grupo?: unknown }).grupo ?? '') }));
-    const lista = grupoTS ? conGrupo.filter((x) => x.grupo === grupoTS) : conGrupo;
-    return lista.map((x) => opcion(x.item, x.grupo ? nombreDe(gruposTS, x.grupo) || x.grupo : undefined));
-  }, [tiposServicio, gruposTS, grupoTS]);
 
   return (
     <>
@@ -470,23 +574,36 @@ export const FormularioArca: React.FC<{
           </div>
         )}
 
-        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-5 transition-opacity ${cascada.resto ? '' : 'opacity-60'}`}>
-          {/* ── Columna 1: relación laboral ─────────────────────────────────────── */}
+        {/*
+          ZONA 1 — LO QUE SE COMPLETA ACÁ, en tres grupos con título y dos columnas.
+
+          Antes eran tres columnas de nombre genérico («Relación laboral», «Servicio y liquidación»,
+          «Vigencia») que mezclaban cuatro naturalezas con la misma apariencia de input: lo que se
+          edita acá, lo que se deriva de otro campo, lo que se edita en el tipo de contrato y lo que
+          es constante. Todo con forma de control, y un control promete una decisión.
+
+          Acá quedan SOLO los que se completan en esta pantalla. Los códigos del tipo bajaron a la
+          Zona 2 y los constantes a la Zona 3. Dos columnas y no tres: a tres, cada campo tenía menos
+          de un cuarto del ancho y los domicilios y descripciones de actividad se cortaban al medio.
+        */}
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-x-5 transition-opacity ${cascada.resto ? '' : 'opacity-60'}`}>
+          {/* ── Domicilio y actividad ───────────────────────────────────────────── */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Relación laboral</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Domicilio y actividad</h4>
 
             {/*
-              Sucursal y Actividad son un PAR, igual que Convenio→Categoría y Grupo→Tipo de Servicio:
-              la actividad solo puede ser una de las declaradas para ese domicilio.
+              Sucursal y Actividad son un PAR: la actividad solo puede ser una de las declaradas por
+              la empleadora para ese domicilio.
 
               Van agrupadas pero SIN badge de «filtra», y la diferencia no es cosmética. «Filtra»
-              marca a los campos que NO van al archivo: el Grupo de tipo de servicio y el Convenio
-              existen solo para acotar la lista de abajo. La Sucursal sí viaja al alta (pos. 74-78),
-              así que llamarla filtro diría que no se guarda, que es lo contrario de lo que pasa.
+              marca a los campos que NO van al archivo, como el Convenio, que existe solo para acotar
+              la lista de abajo. La Sucursal sí viaja al alta (pos. 74-78), así que llamarla filtro
+              diría que no se guarda, que es lo contrario de lo que pasa.
 
-              Lo que las dos comparten es la DEPENDENCIA, y eso es lo que dibuja el grupo.
+              Lo que las dos comparten es la DEPENDENCIA, y eso es lo que dibuja el rail. El título de
+              arriba es nuevo: el rail decía que estaban encadenadas, pero no de qué.
             */}
-            <DepGroup etiqueta="Sucursal y actividad">
+            <DepGroup etiqueta="Domicilio y actividad">
               <CampoArca
                 rotulo="Sucursal"
                 campo="sucursal"
@@ -514,96 +631,112 @@ export const FormularioArca: React.FC<{
                 }
               />
 
-              <CampoArca
-                rotulo="Actividad"
-                campo="actividad"
-                dependeDe="sucursal"
-                info="actividad"
-                rol="campo"
-                etiqueta="79–84"
-                valor={valores.actividad}
-                nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
-                falta={!!valores.sucursal && !valores.actividad}
-                enEspera={bloqueadoPorPrevios || !valores.sucursal}
-                guardando={guardando === 'actividad'}
-                onEditar={valores.actividadesDisponibles.length > 1 ? () => setAbierto('actividad') : undefined}
-                origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>declarada en <strong>{valores.nombreSucursal || 'la sucursal'}</strong>{valores.actividadesDisponibles.length === 1 ? ' · única, se hereda' : ''}</> : <>se habilita al elegir la sucursal</>}
-              />
-            </DepGroup>
+              {/*
+                UN SOLO INPUT POR DECISIÓN REAL.
 
-            {/* Va siempre vacío: es tan constante como el «N» de agropecuario o el «0» de Lic. COVID. La
-                línea de origen es la que aclara que la constante acá es el vacío. */}
-            <CampoArca rotulo="Puesto Desemp." rol="no_va" etiqueta="constante" origen={<>el registro de 130 lo deja vacío</>} />
+                La actividad es del domicilio: la empleadora declara ante ARCA qué actividades ejerce
+                en cada uno, y el alta tiene que traer una de ésas. Cuando declaró UNA SOLA no hay
+                nada que decidir —el valor queda determinado por la sucursal— y dibujar un segundo
+                selector al lado del primero inventaba una elección que no existe: dos controles para
+                un solo grado de libertad.
+
+                Con varias sí vuelve a ser selector, porque ahí sí hay que decidir cuál se declara.
+                ARCA rechaza el alta con una que ese CUIT no declaró en ese domicilio, así que la
+                diferencia entre heredar y elegir es la diferencia entre un dato correcto y un rechazo.
+
+                Lo que NO cambia es cómo se resuelve ni qué se guarda: la herencia ya vivía en
+                `afipCompleteness` (`actividadOrigen === 'unica'`), se deriva al leer y no se persiste.
+                Acá cambia únicamente cómo se muestra.
+              */}
+              {valores.actividadesDisponibles.length > 1 ? (
+                <CampoArca
+                  rotulo="Actividad"
+                  campo="actividad"
+                  dependeDe="sucursal"
+                  info="actividad"
+                  rol="campo"
+                  etiqueta="79–84"
+                  valor={valores.actividad}
+                  nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
+                  falta={!!valores.sucursal && !valores.actividad}
+                  enEspera={bloqueadoPorPrevios || !valores.sucursal}
+                  guardando={guardando === 'actividad'}
+                  onEditar={() => setAbierto('actividad')}
+                  origen={bloqueadoPorPrevios ? motivoBloqueo : <>{valores.actividadesDisponibles.length} declaradas en <strong>{valores.nombreSucursal || 'la sucursal'}</strong> · elegí cuál se declara</>}
+                />
+              ) : (
+                <FilaArca
+                  rotulo="Actividad"
+                  campo="actividad"
+                  dependeDe="sucursal"
+                  info="actividad"
+                  etiqueta="79–84"
+                  valor={valores.actividad}
+                  nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
+                  vacio={bloqueadoPorPrevios ? '— en espera' : valores.sucursal ? '— la sucursal no tiene actividades declaradas' : '— se hereda al elegir la sucursal'}
+                  faltaEsError={!!valores.sucursal}
+                  origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>única de <strong>{valores.nombreSucursal || 'esta sucursal'}</strong>, se hereda</> : <>se hereda al elegir la sucursal</>}
+                />
+              )}
+            </DepGroup>
           </div>
 
-          {/* ── Columna 2: servicio y liquidación ───────────────────────────────── */}
+          {/* ── Vigencia ────────────────────────────────────────────────────────── */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Servicio y liquidación</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Vigencia</h4>
 
-            <DepGroup etiqueta="Grupo tipo de servicio y tipo de servicio">
-              <CampoArca
-                rotulo="Grupo Tipo Servicio"
-                campo="grupoTipoServicio"
-                info="grupoTipoServicio"
-                rol="filtra"
-                valor={grupoTS}
-                nombre={grupoTS ? nombreDe(gruposTS, grupoTS) : 'sin filtrar'}
-                enEspera={bloqueadoPorPrevios}
-                onEditar={() => setAbierto('grupoTipoServicio')}
-                origen={bloqueadoPorPrevios ? motivoBloqueo : <>solo filtra la lista de abajo · <strong>no se guarda</strong></>}
+            <CampoArca rotulo="Fecha de Inicio" campo="fechaInicio" info="fechaInicio" rol="campo" etiqueta="20–29" valor={fechaLegible(valores.fechaInicio)} falta={!valores.fechaInicio} origen={<>del contrato del miembro</>} />
+
+            {/*
+              CON MODALIDAD INDETERMINADA, LA FECHA DE FIN NO CORRESPONDE — y eso no es un campo vacío.
+
+              El registro la exige en blanco, así que un recuadro vacío pidiendo atención estaba
+              pidiéndola por algo que no hay que hacer. Pasa a línea de solo lectura y sale del
+              contador (`noAplica` en el chequeo): con esta modalidad el formulario tiene cuatro
+              campos, no cinco con uno regalado.
+
+              Los otros tres casos siguen igual, porque en los tres hay algo que mirar: en espera
+              mientras no haya modalidad, ámbar si la modalidad la exige y falta, y rojo si está
+              cargada cuando tenía que ir vacía.
+            */}
+            {prohibeFin && !valores.fechaFin ? (
+              <FilaArca
+                rotulo="Fecha de Fin"
+                campo="fechaFin"
+                dependeDe="modalidadContrato"
+                info="fechaFin"
+                etiqueta="30–39"
+                vacio="— no corresponde para esta modalidad"
+                origen={
+                  <>
+                    la modalidad <strong>{valores.modalidadContrato}</strong> es por tiempo indeterminado: el registro la exige en blanco
+                  </>
+                }
               />
-
+            ) : (
               <CampoArca
-                rotulo="Tipo Servicio"
-                campo="tipoServicio"
-                dependeDe="grupoTipoServicio"
-                info="tipoServicio"
+                rotulo="Fecha de Fin"
+                campo="fechaFin"
+                dependeDe="modalidadContrato"
+                info="fechaFin"
                 rol="campo"
-                etiqueta="107–109"
-                valor={valores.tipoServicio}
-                nombre={nombreDe(tiposServicio, valores.tipoServicio)}
-                falta={!valores.tipoServicio}
-                guardando={guardando === 'afipTipoServicio'}
-                enEspera={bloqueadoPorPrevios}
-                onEditar={() => setAbierto('tipoServicio')}
-                origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
+                etiqueta="30–39"
+                valor={fechaLegible(valores.fechaFin)}
+                falta={exigeFin && !valores.fechaFin}
+                error={prohibeFin && !!valores.fechaFin}
+                enEspera={!valores.modalidadContrato}
+                origen={!valores.modalidadContrato ? <>se habilita al elegir la modalidad de contrato</> : exigeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es a plazo determinado: es obligatoria</> : prohibeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es indeterminada: va en blanco</> : <>del contrato del miembro</>}
               />
-            </DepGroup>
+            )}
+          </div>
 
-            <CampoArca
-              rotulo="Modalidad Contrato"
-              campo="modalidadContrato"
-              info="modalidadContrato"
-              rol="campo"
-              etiqueta="17–19"
-              valor={valores.modalidadContrato}
-              nombre={nombreDe(modalidadesContrato, valores.modalidadContrato)}
-              falta={!valores.modalidadContrato}
-              guardando={guardando === 'afipModalidadContrato'}
-              enEspera={bloqueadoPorPrevios}
-              onEditar={() => setAbierto('modalidadContrato')}
-              origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong> · define si va la fecha de fin</>}
-            />
-
-            <CampoArca rotulo="Situación Revista" rol="no_va" etiqueta="constante" origen={<>el registro de 130 lo deja vacío</>} />
-
-            <CampoArca
-              rotulo="Mod. Liquidación"
-              campo="modalidadLiq"
-              info="modalidadLiq"
-              rol="campo"
-              etiqueta="73"
-              valor={valores.modalidadLiq}
-              nombre={nombreDe(modalidadesLiq, valores.modalidadLiq)}
-              falta={!valores.modalidadLiq}
-              guardando={guardando === 'afipModalidadLiquidacion'}
-              enEspera={bloqueadoPorPrevios}
-              onEditar={() => setAbierto('modalidadLiq')}
-              origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
-            />
+          {/* ── Remuneración ────────────────────────────────────────────────────── */}
+          <div>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Remuneración</h4>
 
             <CampoArca
               rotulo="Retribución pactada"
+              campo="retribucion"
               info="retribucion"
               rol="campo"
               etiqueta="58–72"
@@ -612,33 +745,21 @@ export const FormularioArca: React.FC<{
               origen={<>del grupo salarial del convenio · se actualiza por paritaria</>}
             />
           </div>
-
-          {/* ── Columna 3: vigencia ─────────────────────────────────────────────── */}
-          <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Vigencia</h4>
-
-            <CampoArca rotulo="Trab. agropecuario" rol="constante" etiqueta="constante" valor="N" nombre="no aplica a una productora" origen={<>posición 16, siempre <strong>N</strong></>} />
-
-            <CampoArca rotulo="Fecha de Inicio" info="fechaInicio" rol="campo" etiqueta="20–29" valor={valores.fechaInicio} falta={!valores.fechaInicio} origen={<>del contrato del miembro</>} />
-
-            <CampoArca
-              rotulo="Fecha de Fin"
-              campo="fechaFin"
-              dependeDe="modalidadContrato"
-              info="fechaFin"
-              rol="campo"
-              etiqueta="30–39"
-              valor={valores.fechaFin}
-              nombre={!valores.fechaFin && prohibeFin ? 'en blanco, correcto' : undefined}
-              falta={exigeFin && !valores.fechaFin}
-              error={prohibeFin && !!valores.fechaFin}
-              enEspera={!valores.modalidadContrato}
-              origen={!valores.modalidadContrato ? <>se habilita al elegir la modalidad de contrato</> : exigeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es a plazo determinado: es obligatoria</> : prohibeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es indeterminada: va en blanco</> : <>del contrato del miembro</>}
-            />
-
-            <CampoArca rotulo="Lic. COVID / CCG" rol="constante" etiqueta="constante" valor="0" nombre="sin Lic. COVID / no asociado a CCG" origen={<>posición 130, siempre <strong>0</strong></>} />
-          </div>
         </div>
+
+        <CodigosDelTipo
+          nombreTipo={nombreTipo}
+          tipoId={tipo?._id}
+          modalidadContrato={valores.modalidadContrato}
+          nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)}
+          tipoServicio={valores.tipoServicio}
+          nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)}
+          modalidadLiq={valores.modalidadLiq}
+          nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)}
+          onRefrescar={onCambioNivel}
+        />
+
+        <ValoresFijos />
       </div>
 
       {/* ── Pickers ─────────────────────────────────────────────────────────── */}
@@ -768,54 +889,13 @@ export const FormularioArca: React.FC<{
         vacio={<>No hay categorías para ese convenio en el catálogo. Cargalas en Configuración → ARCA → Categorías.</>}
       />
 
-      <PickerArca
-        abierto={abierto === 'grupoTipoServicio'}
-        onCerrar={() => setAbierto(null)}
-        titulo="Grupo de tipo de servicio"
-        subtitulo="Solo filtra la lista de tipos de servicio. No se guarda ni va al archivo."
-        opciones={[{ codigo: '', nombre: 'Sin filtrar — ver todos' }, ...gruposTS.map((g) => opcion(g))]}
-        valor={grupoTS}
-        onElegir={(o) => {
-          setGrupoTS(o.codigo);
-          setAbierto(null);
-        }}
-      />
-
-      <PickerArca
-        abierto={abierto === 'tipoServicio'}
-        onCerrar={() => setAbierto(null)}
-        titulo="Tipo de servicio"
-        subtitulo={grupoTS ? `Los del grupo ${nombreDe(gruposTS, grupoTS) || grupoTS}.` : 'Todos los tipos de servicio. Hay nombres repetidos entre grupos: mirá el código y el grupo de la derecha.'}
-        opciones={tiposServicioFiltrados}
-        valor={valores.tipoServicio}
-        guardando={guardando === 'afipTipoServicio'}
-        onElegir={(o) => guardarEnTipo('afipTipoServicio', o.codigo)}
-        alcance={alcanceTipo}
-      />
-
-      <PickerArca
-        abierto={abierto === 'modalidadContrato'}
-        onCerrar={() => setAbierto(null)}
-        titulo="Modalidad de contrato"
-        subtitulo="Define si la fecha de fin corresponde: las de plazo determinado la exigen y las indeterminadas la prohíben."
-        opciones={modalidadesContrato.map((m) => opcion(m))}
-        valor={valores.modalidadContrato}
-        guardando={guardando === 'afipModalidadContrato'}
-        onElegir={(o) => guardarEnTipo('afipModalidadContrato', o.codigo)}
-        alcance={alcanceTipo}
-      />
-
-      <PickerArca
-        abierto={abierto === 'modalidadLiq'}
-        onCerrar={() => setAbierto(null)}
-        titulo="Modalidad de liquidación"
-        subtitulo="Cada cuánto se liquida la retribución."
-        opciones={modalidadesLiq.map((m) => opcion(m))}
-        valor={valores.modalidadLiq}
-        guardando={guardando === 'afipModalidadLiquidacion'}
-        onElegir={(o) => guardarEnTipo('afipModalidadLiquidacion', o.codigo)}
-        alcance={alcanceTipo}
-      />
+      {/*
+        Acá vivían los pickers de Grupo de tipo de servicio, Tipo de servicio, Modalidad de contrato
+        y Modalidad de liquidación. Los tres últimos ya no se editan desde Datos ARCA —son del TIPO
+        de contrato, y se editan allá, donde se ve a cuántos contratos alcanza el cambio—. El grupo
+        era solo el filtro de uno de ellos, así que se fue con ellos: ahora es el filtro que va
+        adentro del selector de Tipo de servicio, en el modal Editar Contrato.
+      */}
     </>
   );
 };

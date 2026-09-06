@@ -16,28 +16,30 @@ import { InfoCampo } from './DatosArcaDetalle';
  */
 
 /**
- * Rol del campo dentro del registro de 130.
+ * Rol del campo dentro del registro de 130. Solo quedan los DOS que se editan.
  *
- * Los `no_va` y `constante` se muestran igual, en gris y sin poder editarse. Ocupan lugar a
- * propósito: son los que hacen que la pantalla sea reconocible contra la de ARCA, y contestan solos
- * la pregunta que se repite ("¿el agropecuario no hay que cargarlo?"). Antes eso vivía en una nota
- * al pie que había que scrollear.
+ * Había otros dos, `no_va` y `constante`, para los cuatro valores fijos —puesto desempeñado,
+ * situación de revista, trabajador agropecuario y Lic. COVID—. Se dibujaban como campos apagados en
+ * la grilla, con el argumento de que así la pantalla era reconocible contra la de ARCA y contestaban
+ * solas la pregunta «¿el agropecuario no hay que cargarlo?».
+ *
+ * El costo era mayor: cuatro de trece casillas con forma de input vacío, y un input vacío se lee
+ * como trabajo pendiente. El badge «constante» tampoco ayudaba, porque tenía el mismo peso visual
+ * que el badge de posición y significa lo contrario — uno marca lo que hay que completar, el otro lo
+ * que no. La pregunta se sigue contestando, pero en el plegable «Valores fijos» de `FormularioArca`,
+ * que la responde una vez y no ocupa un tercio del formulario mientras tanto.
+ *
+ * Para lo que va al archivo y no se edita acá está `FilaArca`, más abajo.
  */
 export type RolCampo =
-  /** Va al archivo. `posicion` dice dónde. */
+  /** Va al archivo. La etiqueta dice en qué posición. */
   | 'campo'
   /** No se exporta, pero sin él no se puede elegir bien el de abajo. */
-  | 'filtra'
-  /** El registro lo deja en blanco. */
-  | 'no_va'
-  /** Siempre el mismo valor. */
-  | 'constante';
+  | 'filtra';
 
 const TAG: Record<RolCampo, string> = {
   campo: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/70',
   filtra: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/70',
-  no_va: 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
-  constante: 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
 };
 
 export const CampoArca: React.FC<{
@@ -97,9 +99,16 @@ export const CampoArca: React.FC<{
    * que existe para quien no ve el rail ni el resaltado.
    */
   const idAyuda = campo && origen ? `arca-ayuda-${campo}` : undefined;
+  /*
+   * La posición en el registro, para enganchar con su renglón de la vista previa (`useResaltadoTramo`).
+   *
+   * Solo en los campos que VAN al archivo: en los demás roles la etiqueta no es una posición sino la
+   * palabra «constante», y marcarla mandaría a buscar un tramo «constante» que no existe.
+   */
+  const posEnRegistro = rol === 'campo' && etiqueta ? etiqueta : undefined;
 
   return (
-    <div className="mb-3" data-campo={campo} data-depende-de={dependeDe}>
+    <div className="mb-3" data-campo={campo} data-depende-de={dependeDe} data-pos={posEnRegistro}>
       <div className="flex items-center justify-between gap-2 mb-1">
         <span className="text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5 min-w-0">
           <span className="truncate">{rotulo}</span>
@@ -138,6 +147,79 @@ export const CampoArca: React.FC<{
           {origen}
         </p>
       )}
+    </div>
+  );
+};
+
+/**
+ * UNA FILA DE SOLO LECTURA. Va al archivo, pero acá no se decide nada.
+ *
+ * Es el reemplazo de los campos que eran `<select>` deshabilitados o inputs vacíos. Un control con
+ * forma de control promete una decisión: si está apagado se lee como «esto falta» o «esto está roto»,
+ * y en los tres casos que usa esta fila no falta nada.
+ *
+ *   ACTIVIDAD HEREDADA      la sucursal declara una sola, así que no hay nada que elegir
+ *   CÓDIGOS DEL CONTRATO    modalidad, tipo de servicio y modalidad de liquidación: se editan en el
+ *                           tipo de contrato, que es donde una edición vale para los 143 que lo usan
+ *   FECHA DE FIN QUE NO VA  con modalidad indeterminada el registro la exige en blanco
+ *
+ * Conserva el BADGE DE POSICIÓN, que es lo que no se puede perder: que el dato no se edite acá no lo
+ * saca del registro de 130, y sin el badge se rompe la correspondencia con «Cómo queda en el archivo».
+ *
+ * Texto y no un input deshabilitado también por lectores de pantalla: un `disabled` no se tabula y su
+ * valor no se anuncia, así que la respuesta quedaba fuera del alcance de quien no ve la pantalla.
+ */
+export const FilaArca: React.FC<{
+  rotulo: string;
+  /** Key del diccionario de explicaciones, para el ⓘ. */
+  info?: string;
+  /** Posición en el registro de 130. Se muestra con el mismo badge verde que los campos editables. */
+  etiqueta?: string;
+  /** Código, monoespaciado. Vacío dispara el estado de falta. */
+  valor?: string;
+  /** Descripción al lado del código. */
+  nombre?: string;
+  /** Por qué el valor es ese y no se edita acá. */
+  origen?: React.ReactNode;
+  /** Qué decir cuando no hay valor. Sin esto se muestra «— sin cargar». */
+  vacio?: string;
+  /**
+   * El vacío es un PROBLEMA, no un «no corresponde».
+   *
+   * Los códigos del tipo de contrato sin cargar frenan el TXT y van en ámbar; la fecha de fin que no
+   * corresponde está bien vacía y va en gris. La misma fila con las dos lecturas necesita que quien
+   * la usa diga cuál es: adivinarlo por el rótulo sería adivinar.
+   */
+  faltaEsError?: boolean;
+  campo?: string;
+  dependeDe?: string;
+}> = ({ rotulo, info, etiqueta, valor, nombre, origen, vacio, faltaEsError, campo, dependeDe }) => {
+  const falta = !valor;
+  const posEnRegistro = etiqueta;
+  return (
+    <div className="mb-3" data-campo={campo} data-depende-de={dependeDe} data-pos={posEnRegistro}>
+      <div className="flex items-center justify-between gap-2 mb-0.5">
+        <span className="text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5 min-w-0">
+          <span className="truncate">{rotulo}</span>
+          {info && <InfoCampo campo={info} />}
+        </span>
+        {etiqueta && <span className={`shrink-0 text-[9.5px] px-1.5 py-px rounded border tracking-wide uppercase ${TAG.campo}`}>{etiqueta}</span>}
+      </div>
+
+      {/* Sin recuadro: el borde es lo que dice «esto se toca». La sangría y el monoespaciado alcanzan
+          para que se lea como un valor y no como prosa. */}
+      <div className="px-0.5 flex items-baseline gap-2 min-w-0">
+        {falta ? (
+          <span className={`text-[12.5px] ${faltaEsError ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>{vacio || '— sin cargar'}</span>
+        ) : (
+          <>
+            <span className="font-mono text-[12.5px] text-gray-900 dark:text-gray-100 shrink-0">{valor}</span>
+            {nombre && <span className="text-[12px] text-gray-500 dark:text-gray-400 truncate">{nombre}</span>}
+          </>
+        )}
+      </div>
+
+      {origen && <p className="text-[10.5px] text-gray-500 dark:text-gray-500 mt-0.5 px-0.5 leading-snug">{origen}</p>}
     </div>
   );
 };

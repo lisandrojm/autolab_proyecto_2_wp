@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faXmark, faTriangleExclamation, faLock, faCircleInfo, faChevronDown, faChevronRight, faPenToSquare, faLandmark } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
@@ -9,6 +9,7 @@ import { EXPLICACIONES, ExplicacionCampo } from "./explicacionesArca";
 import { BandaEmpleador } from "./BandaEmpleador";
 import { FormularioArca } from "./FormularioArca";
 import { Company } from "../../api/companies";
+import { useResaltadoTramo } from "./useResaltadoTramo";
 
 /**
  * Detalle de "Datos ARCA" de un contrato.
@@ -238,7 +239,7 @@ const VistaPrevia: React.FC<{ campos: CampoRegistro[] }> = ({ campos }) => {
                   const falta = c.contenido === null;
                   const noAplica = c.clase === "no_aplica";
                   return (
-                    <tr key={`${c.desde}-${c.hasta}`} className={falta ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}>
+                    <tr key={`${c.desde}-${c.hasta}`} data-tramo={c.hasta !== c.desde ? `${c.desde}-${c.hasta}` : String(c.desde)} className={falta ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}>
                       <td className="py-1 pr-3 font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {c.desde}
                         {c.hasta !== c.desde ? `-${c.hasta}` : ""}
@@ -280,14 +281,58 @@ const VistaPrevia: React.FC<{ campos: CampoRegistro[] }> = ({ campos }) => {
  * El desglose no es decorativo: sus renglones más los resueltos SIEMPRE suman el total, así el 14 se
  * puede reconstruir y se entiende por qué faltando "3 por cargar" el avance no está al 80%.
  */
+/**
+ * Los chequeos que se completan EN EL FORMULARIO de Datos ARCA. Son los que mide la barra.
+ *
+ * Los otros nueve de `result.checks` se resuelven en otro lado y por eso no entran acá:
+ *
+ *   modalidadContrato · tipoServicio · modalidadLiq     en el TIPO DE CONTRATO (Zona 2, solo lectura)
+ *   empresa · cuil · categoriaProf · convenioCategoria  en las bandas de arriba del modal
+ *   rnos · obraSocialRegistrada                         idem, con su propio trámite
+ *
+ * Escrito a mano y no derivado del JSX a propósito: así, agregar un campo al formulario obliga a
+ * decidir si entra en la cuenta, en vez de moverla sin que nadie lo note.
+ */
+const CLAVES_FORMULARIO = new Set(["sucursal", "actividad", "fechaInicio", "fechaFin", "retribucion"]);
+/** Los que viven en el tipo de contrato. Se nombran en el segundo renglón del pie. */
+const CLAVES_DEL_TIPO = new Set(["modalidadContrato", "tipoServicio", "modalidadLiq"]);
+
 export const ProgresoArca: React.FC<{ result: AfipRowResult }> = ({ result }) => {
   // Misma regla que el badge de la grilla: un aviso no es un faltante (ver `esResuelto`).
-  const resueltos = result.checks.filter(esResuelto).length;
   const [verDesglose, setVerDesglose] = useState(false);
   const { tono } = resumenArca(result);
   const t = TONO[tono];
-  const total = result.checks.length;
+
+  /*
+    LA BARRA MIDE LOS CINCO DEL FORMULARIO. Lo demás se dice, no se esconde.
+
+    El «13/13 campos» de antes contaba `result.checks`, que no son los campos de esta pantalla: son
+    catorce chequeos repartidos entre este formulario, el tipo de contrato y las bandas de arriba. Que
+    diera trece era casualidad — los cuatro valores fijos y el filtro de grupo nunca estuvieron en esa
+    cuenta—, y medir sobre catorce hacía que la barra no correspondiera con lo que uno completa.
+
+    EL DENOMINADOR ES DINÁMICO. Con una modalidad por tiempo indeterminado la fecha de fin no
+    corresponde y sale de la cuenta (`noAplica`): ahí el formulario tiene cuatro campos, no cinco con
+    uno regalado.
+
+    Pero medir SOLO estos cinco y callar el resto sería peor: entre los que quedan afuera están el
+    CUIL con dígito verificador inválido, la categoría de un convenio que la empleadora no registró y
+    los códigos sin cargar en el tipo — lo que el desglose llama «mal cargados», que hoy pasan
+    desapercibidos. Y como el botón de descargar sigue atado a los catorce, esconderlos daría la
+    combinación peor: barra al 100%, «Listo para la carga masiva», y el botón gris sin explicación.
+
+    Por eso el verde sigue saliendo de `result.completo` —que exige estos cinco, los tres del tipo y
+    todo lo demás— y el segundo renglón nombra lo que falta y dónde.
+  */
+  const resueltosTodos = result.checks.filter(esResuelto).length;
+  const delForm = result.checks.filter((c) => CLAVES_FORMULARIO.has(c.key) && !c.noAplica);
+  const resueltos = delForm.filter(esResuelto).length;
+  const total = delForm.length;
   const pct = total ? Math.round((resueltos / total) * 100) : 0;
+  /** Cuántos códigos del tipo de contrato faltan. Se arreglan en `/contratos`, no acá. */
+  const faltanDelTipo = result.checks.filter((c) => CLAVES_DEL_TIPO.has(c.key) && !esResuelto(c)).length;
+  /** Lo pendiente de las bandas de arriba: empleadora, convenio, categoría, obra social, CUIL. */
+  const faltanArriba = result.checks.filter((c) => !CLAVES_FORMULARIO.has(c.key) && !CLAVES_DEL_TIPO.has(c.key) && !esResuelto(c)).length;
 
   const titulo = result.completo ? "Listo para la carga masiva" : result.errores > 0 ? "Hay datos cargados mal" : result.configuracionesPendientes > 0 ? "Faltan datos para el alta" : "Solo falta elegirlo";
 
@@ -333,13 +378,23 @@ export const ProgresoArca: React.FC<{ result: AfipRowResult }> = ({ result }) =>
             <div className={`h-full rounded-full ${t.barra} transition-all`} style={{ width: `${pct}%` }} />
           </div>
           <span className="text-[11px] font-semibold tabular-nums shrink-0 text-gray-500 dark:text-gray-400">
-            {resueltos}/{total} campos
+            {resueltos} de {total} completos
           </span>
         </div>
+
+        {/* El segundo renglón: lo que la barra NO mide. Primero lo que falta y dónde se arregla,
+            después lo que no hay que tocar, que es la parte que tranquiliza. */}
+        <p className="mt-0.5 text-[10.5px] text-gray-500 dark:text-gray-400 truncate">
+          {faltanArriba > 0 && <span className="text-amber-600 dark:text-amber-400 font-semibold">{faltanArriba === 1 ? "1 dato sin resolver más arriba" : `${faltanArriba} datos sin resolver más arriba`} · </span>}
+          <span className={faltanDelTipo > 0 ? "text-amber-600 dark:text-amber-400 font-semibold" : undefined}>
+            {faltanDelTipo > 0 ? `${faltanDelTipo} de 3 sin cargar en el tipo de contrato` : "3 del tipo de contrato"}
+          </span>
+          {" · 4 valores fijos"}
+        </p>
       </div>
 
       {verDesglose && (
-        <InfoModal isOpen={verDesglose} onClose={() => setVerDesglose(false)} title={`${resueltos} de ${total} campos resueltos`} subtitle="En qué estado están los que faltan" size="md" zIndex={90}>
+        <InfoModal isOpen={verDesglose} onClose={() => setVerDesglose(false)} title={`${resueltosTodos} de ${result.checks.length} chequeos resueltos`} subtitle="En qué estado están los que faltan" size="md" zIndex={90}>
           <div className="space-y-3">
             <ul className="space-y-2.5">
               {desglose.map((d) => (
@@ -355,7 +410,7 @@ export const ProgresoArca: React.FC<{ result: AfipRowResult }> = ({ result }) =>
               ))}
             </ul>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2.5">
-              Estos {total - resueltos} más los {resueltos} resueltos son los {total} campos que mira el chequeo. El archivo se genera cuando no queda ninguno por cargar, mal cargado ni a elegir — los avisos no lo frenan.
+              Estos {result.checks.length - resueltosTodos} más los {resueltosTodos} resueltos son los {result.checks.length} chequeos del alta: los del formulario, los tres del tipo de contrato y los de las bandas de arriba. El archivo se genera cuando no queda ninguno por cargar, mal cargado ni a elegir — los avisos no lo frenan.
             </p>
           </div>
         </InfoModal>
@@ -385,11 +440,21 @@ export const DatosArcaDetalle: React.FC<{
   const { campos, valores } = useMemo(() => describirRegistro(row, cat), [row, cat]);
   const avisos = result.checks.filter((c) => c.estado === "aviso");
 
+  /*
+    Envuelve al FORMULARIO Y A LA VISTA PREVIA, que son hermanos.
+
+    El resaltado va de un campo (su badge «58–72») a su renglón en la tabla del archivo, así que el
+    contenedor que escucha tiene que contener a los dos. Puesto adentro del formulario no llegaría
+    a la tabla.
+  */
+  const detalleRef = useRef<HTMLDivElement>(null);
+  useResaltadoTramo(detalleRef);
+
 
   const empresaSel = cat.empresas?.find((e) => e._id === row.empresaContratoId);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={detalleRef}>
       {/* La empleadora es el CONTEXTO de todo lo de abajo, no un campo más: define qué sucursales,
           qué convenios y qué obras sociales son elegibles. Por eso va como banda, igual que en ARCA. */}
       {onGuardado && <BandaEmpleador row={row} empresas={empresas} convenios={(empresaSel?.convenioIds || []).length} domicilios={(empresaSel?.sucursalIds || []).length} onGuardado={onGuardado} />}
@@ -409,10 +474,9 @@ export const DatosArcaDetalle: React.FC<{
 
       <VistaPrevia campos={campos} />
 
-      <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-start gap-1.5">
-        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
-        <span>Puesto desempeñado, convenio colectivo y situación de revista no se chequean: van en blanco en el registro de 130 posiciones.</span>
-      </p>
+      {/* Acá había una nota al pie diciendo que puesto desempeñado y situación de revista van en
+          blanco. Se fue con el plegable «Valores fijos» del formulario, que lo dice donde se pregunta
+          —al lado de los campos— y no al final de todo lo que hay que scrollear. */}
     </div>
   );
 };
