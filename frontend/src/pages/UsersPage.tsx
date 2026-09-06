@@ -481,6 +481,33 @@ export const UsersPage: React.FC = () => {
         ("1 consultado · todos los nombres ya coincidían"), y no había forma de saber por qué la
         persona seguía sin el tilde después de apretar el botón.
       */
+      /*
+        CUIT DE BAJA: se informa distinto, porque pide otra cosa.
+
+        Antes caía en el cartel de al lado —«ARCA no reconoció ese CUIT · corregí el dato en la
+        ficha»— sobre un número que estaba perfecto. Los dos casos llegan del padrón como el mismo
+        tipo de error, pero significan lo opuesto: uno es un número mal tipeado, el otro es una
+        persona real con su CUIT dado de baja ante el organismo.
+
+        Lo que se puede decir de estas personas es lo del DOCUMENTO, y no porque lo diga ARCA: en un
+        CUIT de persona física los ocho dígitos del medio son el DNI. Se compara con el guardado y se
+        informa. No se escribe nada: el nombre no se puede confirmar sin el organismo, y el DNI que
+        no coincide es algo que alguien tiene que mirar, no que una corrida masiva decida.
+      */
+      const inactivos = r.inactivos || [];
+      if (inactivos.length > 0) {
+        const linea = (x: { cuit: string; documento: string; documentoGuardado: string; coincide: boolean }) => {
+          if (!x.documento) return `• ${formatCuit(x.cuit)} — CUIT inactivo`;
+          if (x.coincide) return `• ${formatCuit(x.cuit)} — CUIT inactivo · DNI ${x.documento} ✓ coincide con la ficha`;
+          if (!x.documentoGuardado) return `• ${formatCuit(x.cuit)} — CUIT inactivo · la ficha no tiene DNI; el del CUIT es ${x.documento}`;
+          return `• ${formatCuit(x.cuit)} — CUIT inactivo · la ficha dice ${x.documentoGuardado} y el CUIT da ${x.documento}`;
+        };
+        await sweetAlert.warningAlert(
+          inactivos.length === 1 ? 'Ese CUIT existe, pero está INACTIVO' : `${inactivos.length} CUIT existen, pero están INACTIVOS`,
+          `${inactivos.map(linea).join('\n')}\n\nEl número está bien: lo que pasa es que ese CUIT está dado de baja en ARCA. El organismo no devuelve nombre ni apellido de un CUIT inactivo, así que no hay nada que corregir y la ficha queda sin el sello de validada.\n\nEl DNI sí se puede verificar sin consultar nada: son los ocho dígitos del medio del propio CUIT.`,
+        );
+      }
+
       const rechazados = r.noEncontrados || [];
       if (rechazados.length > 0 && r.renombrados.length === 0) {
         await sweetAlert.warningAlert(
@@ -489,6 +516,8 @@ export const UsersPage: React.FC = () => {
         );
         return;
       }
+      // Solo inactivos: ya se informó arriba y no hay nada más que decir.
+      if (inactivos.length > 0 && r.renombrados.length === 0 && r.confirmados.length === 0) return;
 
       if (r.renombrados.length > 0) {
         // Los renombres se listan, no se cuentan: son datos de personas que cambiaron sin que nadie

@@ -58,6 +58,30 @@ export interface ResultadoNombres {
         cuit: string;
         motivo: string;
     }>;
+    /**
+     * CUIT que EXISTEN pero están dados de baja. No son un fracaso de la corrida.
+     *
+     * Van aparte de `noEncontrados` porque son otra cosa y piden otra acción. El padrón contesta los
+     * dos casos con un SOAP Fault —de ahí que estuvieran mezclados—, pero significan lo opuesto:
+     *
+     *   inexistente   ese CUIT no es de nadie: hay un número mal y hay que corregirlo
+     *   INACTIVA      la persona existe, su CUIT está de baja ante el organismo
+     *
+     * Mezclados, la pantalla le decía a alguien «ARCA no reconoció ese CUIT · corregí el dato», sobre
+     * un número que estaba perfecto. Es el mismo criterio con el que corre la validación de obras
+     * sociales: lo que no pasa se informa con su motivo real y no frena al resto.
+     *
+     * NO HAY NOMBRE QUE CORREGIR: el fault no trae nombre ni apellido, así que estas personas no se
+     * renombran ni reciben el sello. Lo único verificable es el DOCUMENTO, y no porque lo diga ARCA:
+     * en un CUIT de persona física los ocho dígitos del medio SON el DNI, una cuenta que se hace sin
+     * consultar nada. Se compara con el guardado y se informa; no se escribe.
+     */
+    inactivos: Array<{
+        cuit: string;
+        documento: string;
+        documentoGuardado: string;
+        coincide: boolean;
+    }>;
     motivoSinConsultar?: string;
 }
 /**

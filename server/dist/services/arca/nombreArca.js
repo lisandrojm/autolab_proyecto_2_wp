@@ -120,6 +120,10 @@ export function mismoNombre(a, b) {
     const pa = partes(a);
     return pa.length > 0 && pa === partes(b);
 }
+/** Prefijos de CUIT de persona física: solo en esos el tramo del medio es un DNI. */
+const PREFIJOS_PERSONA_FISICA = ["20", "23", "24", "25", "26", "27"];
+/** El DNI que se desprende del propio CUIT. Vacío si no es de persona física. */
+const dniDelCuit = (cuit) => (PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "");
 /**
  * Resuelve contra el Padrón el nombre de unas pocas personas.
  *
@@ -144,15 +148,16 @@ export async function confirmarNombresConElPadron(opts) {
     const renombrados = [];
     const confirmados = [];
     const noEncontrados = [];
+    const inactivos = [];
     if (userIds.length === 0)
-        return { renombrados, confirmados, consultados: 0, noEncontrados };
+        return { renombrados, confirmados, consultados: 0, noEncontrados, inactivos };
     const tenant = await Tenant.findById(tenantObjectId).lean();
     const cfg = getTenantAfipConfig(tenant);
     if (!cfg) {
-        return { renombrados, confirmados, consultados: 0, noEncontrados, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
+        return { renombrados, confirmados, consultados: 0, noEncontrados, inactivos, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
     }
     const users = await User.find({ _id: { $in: userIds }, tenantId: tenantObjectId })
-        .select("_id firstName lastName metadata.cuit")
+        .select("_id firstName lastName metadata.cuit metadata.documento")
         .lean();
     let consultados = 0;
     /*
@@ -171,6 +176,23 @@ export async function confirmarNombresConElPadron(opts) {
             try {
                 const r = await consultarPadron(tenantId, cfg, cuit);
                 consultados++;
+                /*
+                  INACTIVO NO ES «NO RECONOCIDO». Se informa aparte y la corrida sigue.
+      
+                  Los dos casos llegan como SOAP Fault y por eso caían juntos acá, con el cartel «ARCA no
+                  reconoció ese CUIT · corregí el dato en la ficha» sobre un número que estaba bien.
+      
+                  No hay nombre para corregir —el fault no trae ninguno— así que estas personas no se
+                  renombran ni reciben el sello, y eso es lo correcto: nadie confirmó ese nombre. Lo que sí
+                  se puede verificar es el DOCUMENTO, que sale del propio CUIT sin preguntarle nada a nadie.
+                  Se compara y se informa; escribirlo sería otra decisión y no la toma una corrida masiva.
+                */
+                if (r.estado === "inactivo") {
+                    const documento = dniDelCuit(cuit);
+                    const guardado = String(u?.metadata?.documento || "").replace(/\D/g, "");
+                    inactivos.push({ cuit, documento, documentoGuardado: guardado, coincide: !!documento && !!guardado && String(Number(guardado)) === documento });
+                    return;
+                }
                 if (!r.encontrado) {
                     noEncontrados.push({ cuit, motivo: String(r.faultString || "ARCA no devolvió datos para este CUIT.") });
                     return;
@@ -210,7 +232,7 @@ export async function confirmarNombresConElPadron(opts) {
             }
         }));
     }
-    return { renombrados, confirmados, consultados, noEncontrados };
+    return { renombrados, confirmados, consultados, noEncontrados, inactivos };
 }
 /**
  * Los usuarios de un conjunto de CUIL, indexados por CUIL en dígitos.

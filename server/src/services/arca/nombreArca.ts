@@ -178,8 +178,33 @@ export interface ResultadoNombres {
    * válido pero de nadie.
    */
   noEncontrados: Array<{ cuit: string; motivo: string }>;
+  /**
+   * CUIT que EXISTEN pero están dados de baja. No son un fracaso de la corrida.
+   *
+   * Van aparte de `noEncontrados` porque son otra cosa y piden otra acción. El padrón contesta los
+   * dos casos con un SOAP Fault —de ahí que estuvieran mezclados—, pero significan lo opuesto:
+   *
+   *   inexistente   ese CUIT no es de nadie: hay un número mal y hay que corregirlo
+   *   INACTIVA      la persona existe, su CUIT está de baja ante el organismo
+   *
+   * Mezclados, la pantalla le decía a alguien «ARCA no reconoció ese CUIT · corregí el dato», sobre
+   * un número que estaba perfecto. Es el mismo criterio con el que corre la validación de obras
+   * sociales: lo que no pasa se informa con su motivo real y no frena al resto.
+   *
+   * NO HAY NOMBRE QUE CORREGIR: el fault no trae nombre ni apellido, así que estas personas no se
+   * renombran ni reciben el sello. Lo único verificable es el DOCUMENTO, y no porque lo diga ARCA:
+   * en un CUIT de persona física los ocho dígitos del medio SON el DNI, una cuenta que se hace sin
+   * consultar nada. Se compara con el guardado y se informa; no se escribe.
+   */
+  inactivos: Array<{ cuit: string; documento: string; documentoGuardado: string; coincide: boolean }>;
   motivoSinConsultar?: string;
 }
+
+/** Prefijos de CUIT de persona física: solo en esos el tramo del medio es un DNI. */
+const PREFIJOS_PERSONA_FISICA = ["20", "23", "24", "25", "26", "27"];
+
+/** El DNI que se desprende del propio CUIT. Vacío si no es de persona física. */
+const dniDelCuit = (cuit: string): string => (PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "");
 
 /**
  * Resuelve contra el Padrón el nombre de unas pocas personas.
@@ -205,16 +230,17 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
   const renombrados: Renombre[] = [];
   const confirmados: string[] = [];
   const noEncontrados: Array<{ cuit: string; motivo: string }> = [];
-  if (userIds.length === 0) return { renombrados, confirmados, consultados: 0, noEncontrados };
+  const inactivos: ResultadoNombres["inactivos"] = [];
+  if (userIds.length === 0) return { renombrados, confirmados, consultados: 0, noEncontrados, inactivos };
 
   const tenant = await Tenant.findById(tenantObjectId).lean();
   const cfg = getTenantAfipConfig(tenant);
   if (!cfg) {
-    return { renombrados, confirmados, consultados: 0, noEncontrados, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
+    return { renombrados, confirmados, consultados: 0, noEncontrados, inactivos, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
   }
 
   const users: any[] = await User.find({ _id: { $in: userIds }, tenantId: tenantObjectId })
-    .select("_id firstName lastName metadata.cuit")
+    .select("_id firstName lastName metadata.cuit metadata.documento")
     .lean();
 
   let consultados = 0;
@@ -234,6 +260,23 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
         try {
           const r = await consultarPadron(tenantId, cfg, cuit);
           consultados++;
+          /*
+            INACTIVO NO ES «NO RECONOCIDO». Se informa aparte y la corrida sigue.
+
+            Los dos casos llegan como SOAP Fault y por eso caían juntos acá, con el cartel «ARCA no
+            reconoció ese CUIT · corregí el dato en la ficha» sobre un número que estaba bien.
+
+            No hay nombre para corregir —el fault no trae ninguno— así que estas personas no se
+            renombran ni reciben el sello, y eso es lo correcto: nadie confirmó ese nombre. Lo que sí
+            se puede verificar es el DOCUMENTO, que sale del propio CUIT sin preguntarle nada a nadie.
+            Se compara y se informa; escribirlo sería otra decisión y no la toma una corrida masiva.
+          */
+          if (r.estado === "inactivo") {
+            const documento = dniDelCuit(cuit);
+            const guardado = String(u?.metadata?.documento || "").replace(/\D/g, "");
+            inactivos.push({ cuit, documento, documentoGuardado: guardado, coincide: !!documento && !!guardado && String(Number(guardado)) === documento });
+            return;
+          }
           if (!r.encontrado) {
             noEncontrados.push({ cuit, motivo: String((r as any).faultString || "ARCA no devolvió datos para este CUIT.") });
             return;
@@ -272,7 +315,7 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
     );
   }
 
-  return { renombrados, confirmados, consultados, noEncontrados };
+  return { renombrados, confirmados, consultados, noEncontrados, inactivos };
 }
 
 /**
