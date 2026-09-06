@@ -529,14 +529,46 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             <FontAwesomeIcon icon={faSearch} className="text-blue-500 text-[10px]" />
             Persona <span className="text-red-500">*</span>
           </label>
-          <button
-            type="button"
-            onClick={() => setPersonaModalOpen(true)}
-            className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
-          >
-            <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
-            <span className={formData.fullName ? "text-slate-900 dark:text-white truncate" : "text-slate-400 truncate"}>{formData.fullName || "Buscar por nombre o apellidos…"}</span>
-          </button>
+          {/*
+            ELEGIDA = BADGE CON X. Sin nada elegido, el campo ancho que invita a buscar.
+
+            Es el mismo patrón que «Rol/es Empresa», con una diferencia: acá se elige UNA sola, así
+            que el badge reemplaza al campo en vez de acumularse arriba. Un campo de búsqueda debajo
+            de algo ya elegido vuelve a invitar a buscar lo que ya está, y se lleva el alto de una
+            fila entera para eso.
+
+            La X vacía la elección; tocar el badge vuelve a abrir la ventana para cambiarla.
+          */}
+          {formData.fullName ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                <button type="button" onClick={() => setPersonaModalOpen(true)} title="Cambiar la persona" className="truncate max-w-[16rem] text-left">
+                  {formData.fullName}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setUserSearchTerm("");
+                    setFormData((prev) => ({ ...prev, fullName: "" }));
+                  }}
+                  title="Quitar"
+                  className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-1"
+                >
+                  <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                </button>
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPersonaModalOpen(true)}
+              className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
+            >
+              <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
+              <span className="text-slate-400 truncate">Buscar por nombre o apellidos…</span>
+            </button>
+          )}
           {/* El nombre escrito a mano —alguien que todavía no es usuario de la plataforma— se marca,
               porque el resto del formulario se comporta distinto: no hereda rol ni categoría. */}
           {formData.fullName && !selectedUser && <p className="text-[11px] text-amber-600 dark:text-amber-400">Nombre escrito a mano: todavía no es usuario de la plataforma.</p>}
@@ -776,14 +808,28 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 <FontAwesomeIcon icon={faSearch} className="text-blue-500 text-[10px]" />
                 ¿A quién reemplaza? <span className="text-red-500">*</span>
               </label>
-              <button
-                type="button"
-                onClick={() => setReemplazoModalOpen(true)}
-                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
-              >
-                <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
-                <span className={nombreReemplazado ? "text-slate-900 dark:text-white truncate" : "text-slate-400 truncate"}>{nombreReemplazado || "Buscar en el equipo del proyecto…"}</span>
-              </button>
+              {/* Mismo tratamiento que «Persona»: también se elige a alguien, así que se ve igual. */}
+              {nombreReemplazado ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                    <button type="button" onClick={() => setReemplazoModalOpen(true)} title="Cambiar a quién reemplaza" className="truncate max-w-[16rem] text-left">
+                      {nombreReemplazado}
+                    </button>
+                    <button type="button" onClick={() => setFormData((prev) => ({ ...prev, empleado_id_reemplezado: "", replacedUserId: "" }))} title="Quitar" className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-1">
+                      <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                    </button>
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setReemplazoModalOpen(true)}
+                  className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
+                >
+                  <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
+                  <span className="text-slate-400 truncate">Buscar en el equipo del proyecto…</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -872,6 +918,33 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 Rol {selectedRoleFilters.length > 0 && `(${selectedRoleFilters.length})`}
               </button>
             </div>
+
+            {/*
+              QUÉ SE ESTÁ FILTRANDO, ESCRITO.
+
+              El botón decía «Rol (1)»: avisaba que había un filtro pero no cuál, así que para saber
+              por qué faltaba alguien en la lista había que abrir la otra ventana a mirar. Con los
+              roles a la vista se lee de un vistazo, y cada uno se saca por separado desde su X —sin
+              tener que entrar a destildarlo—.
+            */}
+            {selectedRoleFilters.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {selectedRoleFilters.map((rol) => (
+                  <span key={rol} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                    {rol}
+                    <button type="button" onClick={() => setSelectedRoleFilters((prev) => prev.filter((r) => r !== rol))} title={`Quitar el filtro ${rol}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                      <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))}
+                {/* Con más de uno, sacarlos de a uno son varios clicks para volver al estado normal. */}
+                {selectedRoleFilters.length > 1 && (
+                  <button type="button" onClick={() => setSelectedRoleFilters([])} className="text-[11px] font-semibold text-slate-500 hover:text-red-500 transition-colors px-1">
+                    Quitar todos
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="max-h-[45vh] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
               {personasFiltradas.length === 0 ? (

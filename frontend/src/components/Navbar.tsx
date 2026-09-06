@@ -4,7 +4,6 @@ import { ClientSelector } from './ClientSelector';
 import { ClientContextMenu } from './ClientContextMenu';
 import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
-import { FichasHeader } from './context/FichasHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
@@ -103,7 +102,7 @@ const ARCA_COMO_FUNCIONA_PATH = '/arca/como-funciona';
 const ARCA_GUIA_OS_PATH = '/arca/guia-obras-sociales';
 const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH];
 
-/** ABM de Empresas. La ficha de cada una vive aparte, en el bloque FICHAS. */
+/** ABM de Empresas. La ficha de cada una cuelga del mismo grupo: ver `empresasGroup`. */
 const EMPRESAS_PATH = '/empresas';
 
 /**
@@ -174,6 +173,8 @@ const CONFIG_GROUPS = [
   */
   { key: 'usuariosGeneral', storageKey: 'generalUsuariosOpen', paths: USUARIOS_PATHS_GENERAL },
   { key: 'usuariosConfig', storageKey: 'configUsuariosOpen', paths: ROLES_PATHS },
+  // «Empresas»: el ABM y la ficha de una empleadora. Ver `empresasGroup` para por qué van juntos.
+  { key: 'empresas', storageKey: 'configEmpresasOpen', paths: [EMPRESAS_PATH] },
   /*
     ANIDADO dentro de «ARCA». Es el único grupo de dos niveles del menú, y se gana el lugar: son dos
     conexiones al mismo organismo que hacen cosas distintas, y sueltas había que ponerles el prefijo
@@ -550,13 +551,36 @@ export const MobileNavbar: React.FC = () => {
     const usuariosConfigGroup = { path: '#usuarios-config', groupKey: 'usuariosConfig', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosConfigChildren };
 
     /**
-     * En Configuración queda solo el LISTADO de empresas.
+     * SUBGRUPO «EMPRESAS»: el listado y la ficha de una, juntos.
      *
-     * Abrir la ficha de una empleadora subió al bloque FICHAS: es la operación de todos los días, no
-     * configuración. Lo que queda acá es el ABM, y no necesita calificador: lo distingue estar en
-     * otro bloque del menú, y la ficha abierta muestra el nombre de la empresa.
+     * Estaban en las dos puntas del menú —el ABM abajo, en Configuración, y el selector de ficha
+     * arriba de todo bajo el rótulo «Fichas»— y son la misma entidad: la lista de empleadoras y la
+     * configuración de una de ellas. Para pasar de una a otra había que cruzar el sidebar entero, y
+     * el rótulo de arriba no decía que ahí adentro se configuraba nada.
+     *
+     * El selector no es un link, así que entra como ítem `custom`: el grupo dibuja el componente en
+     * el lugar donde iría un hijo. Con una empresa elegida, sus secciones (Información, ARCA,
+     * Contratos) cuelgan de ahí, que es donde se las va a buscar.
      */
     const empresasItem = adminItems.find((item) => item.path === EMPRESAS_PATH);
+    const fichaEmpresaItem = showEmpresaContext
+      ? {
+          path: '#ficha-empresa',
+          custom: (
+            <div key="ficha-empresa" className="pt-1">
+              <EmpresaSelector />
+              {selectedEmpresa && <EmpresaContextMenu />}
+            </div>
+          ),
+        }
+      : null;
+    // El rótulo del hijo: sin él, el selector aparecía suelto debajo de «Empresas» y no se leía
+    // como la segunda opción del grupo. Usa el tipo `section`, que el renderer ya dibuja.
+    const fichaEmpresaLabel = { path: "#ficha-empresa-label", section: "Ficha de empresa", hint: "Abrí la ficha de una empleadora para configurar sus obras sociales, convenios, domicilios y contratos." };
+    // LA FICHA VA PRIMERO: es lo que se abre todos los días —de ella cuelgan ARCA y los contratos—
+    // mientras que el listado se toca cuando se da de alta una empleadora nueva, que es cada tanto.
+    const empresasChildren = [...(fichaEmpresaItem ? [fichaEmpresaLabel, fichaEmpresaItem] : []), ...(empresasItem ? [empresasItem] : [])] as any[];
+    const empresasGroup = { path: '#empresas', groupKey: 'empresas', icon: faBuilding, label: 'Empresas', scope: 'global' as const, children: empresasChildren };
 
     const configItems = [
       ...adminItems.filter((item) => configPaths.includes(item.path)),
@@ -565,13 +589,21 @@ export const MobileNavbar: React.FC = () => {
       ...(arcaChildren.length > 0 ? [arcaGroup] : []),
       ...(documentosChildren.length > 0 ? [documentosGroup] : []),
       ...(usuariosConfigChildren.length > 0 ? [usuariosConfigGroup] : []),
-      ...(empresasItem ? [empresasItem] : []),
+      ...(empresasChildren.length > 0 ? [empresasGroup] : []),
     ].sort(byLabel) as any[];
     // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).
     const importItem = adminItems.find((item) => item.path === '/users/import-wp');
     if (importItem) configItems.push(importItem);
 
     const renderMenuItem = (item: any, isChild = false) => {
+      /*
+        Hijo que NO es un link: un componente propio (hoy, el selector de ficha de empresa).
+
+        Se dibuja tal cual, sin la fila de ícono + texto que arma el resto: ese componente ya trae su
+        propio chip y su submenú, y envolverlo en la plantilla de un ítem lo dejaría con dos marcos.
+      */
+      if (item.custom) return <React.Fragment key={item.path}>{item.custom}</React.Fragment>;
+
       // Raya divisoria dentro de un subgrupo. No es navegable ni tiene texto.
       if (item.separador) {
         return <div key={item.path} className="my-2 border-t border-gray-200 dark:border-gray-700" role="separator" />;
@@ -751,40 +783,24 @@ export const MobileNavbar: React.FC = () => {
   }, [user?.tenantSlug, hasPermission]);
 
   /**
-   * Bloque FICHAS: abrir la ficha de una empleadora o de un cliente.
+   * Arriba del menú queda SOLO el cliente, y sin rótulo.
    *
-   * Se llamaba "Contexto" y era una promesa incumplida: NINGUNO de los dos filtra nada fuera de sus
-   * propias subpáginas, que además resuelven a quién muestran desde la URL y no desde el store.
-   * Admin GENERAL y Configuración muestran todo igual. Ver `FichasHeader` para el detalle.
+   * Decía «FICHAS» y agrupaba dos cosas que no son lo mismo. La palabra no aclaraba: nombraba una
+   * categoría inventada para el menú, que no aparece en ninguna otra parte de la app ni en cómo se
+   * habla del trabajo. Quien buscaba la configuración de una empresa no la buscaba bajo «Fichas».
    *
-   * Empresa va PRIMERO: de ella cuelga la operación de ARCA, que es el trabajo de todos los días.
+   * La ficha de empresa se mudó a Configuración → Empresas, junto al ABM: son la misma entidad
+   * —el listado y la ficha de una— y estaban en dos puntas opuestas del menú.
    *
    * Es un VALOR JSX, no un componente definido acá adentro. Un `const X: React.FC` dentro del cuerpo
    * es un tipo de componente nuevo en cada render del padre, así que React desmonta y vuelve a montar
-   * el subárbol y los selectores perderían su estado (el desplegable se cerraría solo). Es el mismo
+   * el subárbol y el selector perdería su estado (el desplegable se cerraría solo). Es el mismo
    * motivo por el que el estado de los subgrupos de `NavMenu` vive en el padre.
    */
-  const contextBlocks = (showClientContext || showEmpresaContext) && (
+  const contextBlocks = showClientContext && (
     <div>
-      <FichasHeader />
-      {/* Los dos ejes se separan con AIRE, no con una línea: con la ficha de empresa abierta, sus
-          secciones (Información, ARCA, Contratos) quedaban pegadas al chip de CLIENTE y se leían como
-          si CLIENTE colgara de la empresa. La línea alcanzaba para eso pero cortaba el sidebar en dos
-          con los dos chips cerrados, que es el estado más frecuente. */}
-      <div className="space-y-3">
-        {showEmpresaContext && (
-          <div>
-            <EmpresaSelector />
-            {selectedEmpresa && <EmpresaContextMenu />}
-          </div>
-        )}
-        {showClientContext && (
-          <div>
-            <ClientSelector />
-            {selectedClient && <ClientContextMenu />}
-          </div>
-        )}
-      </div>
+      <ClientSelector />
+      {selectedClient && <ClientContextMenu />}
     </div>
   );
 
