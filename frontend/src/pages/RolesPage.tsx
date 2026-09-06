@@ -50,8 +50,30 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   admin_general: {
     label: "Admin GENERAL",
     icon: faUsersGear,
-    description: "Lo que se opera todos los días",
-    permissions: ["admin_contracts:view", "admin_hr_documents:view", "admin_activity_logs:view", "admin_orders:view", "admin_projects:view", "admin_vacations:view"],
+    description: "Lo que se opera todos los días. Incluye el subgrupo Usuarios.",
+    /*
+      ESTA LISTA TIENE QUE ESPEJAR AL MENÚ, o los permisos se buscan donde no están.
+
+      Usuarios, Áreas, Turnos y Roles Empresa se mudaron al subgrupo «Usuarios» de Admin GENERAL (ver
+      `USUARIOS_PATHS_GENERAL` en Navbar.tsx) y acá seguían listados bajo Configuración. La consecuencia
+      no es cosmética: quien arma un rol busca el permiso en el bloque donde ve la pantalla, no lo
+      encuentra, y termina dando de más o de menos.
+
+      Van al final y en el orden del menú —la entidad primero, Turnos pegado a Áreas— para que las dos
+      listas se lean igual.
+    */
+    permissions: [
+      "admin_contracts:view",
+      "admin_hr_documents:view",
+      "admin_activity_logs:view",
+      "admin_orders:view",
+      "admin_projects:view",
+      "admin_vacations:view",
+      "admin_users:view",
+      "admin_areas:view",
+      "config_shifts:view",
+      "admin_roles_empresa:view",
+    ],
   },
   config: {
     label: "Configuración",
@@ -85,12 +107,8 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
       "config_pdf_templates:view",
       "config_releases:view",
       "admin_sedes:view",
-      // Usuarios (subgrupo): la entidad primero y sus catálogos detrás. Turnos va pegado a Áreas, igual
-      // que en el menú (ver USUARIOS_PATHS en Navbar.tsx).
-      "admin_users:view",
-      "admin_areas:view",
-      "config_shifts:view",
-      "admin_roles_empresa:view",
+      // Usuarios (subgrupo): acá quedó SOLO Roles. Los otros cuatro se mudaron a Admin GENERAL — ver
+      // el comentario de ese bloque y `ROLES_PATHS` en Navbar.tsx.
       "admin_roles:view",
       "config_vacations:view",
       // Import WP va último en el menú por ser temporal
