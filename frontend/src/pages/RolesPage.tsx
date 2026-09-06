@@ -78,7 +78,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   config: {
     label: "Configuración",
     icon: faCog,
-    description: "Catálogos y ajustes. Incluye los subgrupos ARCA, Plantillas y Usuarios.",
+    description: "Catálogos y ajustes. Incluye los subgrupos ARCA, Plantillas, Documentos y Usuarios.",
     permissions: [
       // ARCA (subgrupo), en el orden en que el menú los muestra
       "config_obras_sociales:view",
