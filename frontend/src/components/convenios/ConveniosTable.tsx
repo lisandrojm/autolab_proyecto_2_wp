@@ -55,6 +55,15 @@ interface Props {
    * habitual de una y no de otra.
    */
   renderPorDefecto?: (c: ConvenioFila) => React.ReactNode;
+  /**
+   * Qué explica el circulito de la columna "Por defecto".
+   *
+   * La tabla la usan DOS pantallas con la misma columna y distinto alcance: la ficha de una
+   * empleadora marca SU convenio habitual, y el nomenclador global marca el de toda la instalacion.
+   * El texto estaba escrito para la primera, asi que en la segunda decia "de esta empleadora"
+   * estando fuera de cualquier empleadora.
+   */
+  ayudaPorDefecto?: string;
   /** Acciones de la fila. Es lo único que cambia entre el nomenclador y la ficha. */
   renderAcciones?: (c: ConvenioFila) => React.ReactNode;
   /**
@@ -72,7 +81,7 @@ interface Props {
   renderSindicato?: (c: ConvenioFila) => React.ReactNode;
 }
 
-export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato }) => (
+export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, ayudaPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato }) => (
   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -99,7 +108,7 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
                     fuerza nada, solo ordena el combo. Decirlo evita que nadie la use por las dudas. */}
                 <FontAwesomeIcon
                   icon={faCircleInfo}
-                  title="El convenio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros registrados."
+                  title={ayudaPorDefecto || "El convenio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con la estrella. No obliga a usarlo — se puede elegir cualquiera de los otros registrados."}
                   className="h-3 w-3 text-gray-400 normal-case"
                 />
               </span>

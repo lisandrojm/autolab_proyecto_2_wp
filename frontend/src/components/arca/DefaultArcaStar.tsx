@@ -41,12 +41,25 @@ export const useArcaDefaults = (): { defaults: ArcaDefaults; marcar: (campo: Cam
 
   useEffect(() => {
     suscriptores.add(setDefaults);
-    if (cache) setDefaults(cache);
-    else {
-      cargando =
-        cargando ||
-        arcaDefaultsAPI.get().catch(() => ({}) as ArcaDefaults);
-      cargando.then(publicar);
+    if (cache) {
+      setDefaults(cache);
+    } else {
+      /*
+        UN FALLO NO SE CACHEA.
+
+        Antes el `.catch` devolvía `{}` y eso se publicaba como si fuera la respuesta: `cache` pasaba
+        a ser `{}` —que es truthy— y ya nunca se volvía a pedir. Con el backend recién levantado, o
+        con un corte de red de un segundo, la ★ quedaba muerta para toda la sesión sin decir nada, y
+        marcarla parecía no hacer efecto porque el estado local nunca llegaba a existir.
+
+        Ahora un error deja el cache vacío y libera `cargando`, así que el próximo montaje reintenta.
+      */
+      cargando = cargando || arcaDefaultsAPI.get();
+      cargando
+        .then(publicar)
+        .catch(() => {
+          cargando = null;
+        });
     }
     return () => {
       suscriptores.delete(setDefaults);

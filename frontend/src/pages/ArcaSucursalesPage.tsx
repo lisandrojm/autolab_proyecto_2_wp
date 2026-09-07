@@ -166,8 +166,11 @@ export const ArcaSucursalesPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  {/* La ★ va PRIMERO y angosta: es una marca, no un dato del domicilio. */}
-                  <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-px" title="Domicilio por defecto de la instalación"></th>
+                  {/* La columna lleva rótulo, igual que en los otros nomencladores: una estrella sin
+                      nombre no dice qué marca, y en esta pantalla no hay ninguna otra pista. */}
+                  <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El domicilio que rige cuando el contrato y la empleadora no eligieron uno">
+                    Por defecto
+                  </th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>

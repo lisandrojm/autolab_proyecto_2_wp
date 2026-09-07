@@ -224,12 +224,6 @@ export const ConveniosPage: React.FC = () => {
   return (
     <>
       <SimpleCatalogManager
-    columnasCalculadas={[
-      {
-        label: "Por defecto",
-        render: (item) => <DefaultArcaStar campo="convenioId" valor={String(item._id)} queEs="el convenio" />,
-      },
-    ]}
         title="Convenios"
         subtitle="Convenios de Trabajo (CCT). Cada uno define la obra social de quien trabaja bajo él."
         icon={faFileContract}
@@ -274,6 +268,8 @@ export const ConveniosPage: React.FC = () => {
         tablaPropia={({ items, renderAcciones }) => (
           <ConveniosTable
             convenios={items as ConvenioFila[]}
+            ayudaPorDefecto="El convenio que rige cuando ni el contrato ni la empleadora eligieron uno. Es el escalón de más abajo: cualquier empleadora puede marcar otro en su ficha."
+            renderPorDefecto={(c) => <DefaultArcaStar campo="convenioId" valor={String(c._id)} queEs="el convenio" />}
             obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
             renderSindicato={renderSindicato}
             renderEmpresas={(c) => {
