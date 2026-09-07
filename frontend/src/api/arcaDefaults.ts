@@ -21,6 +21,8 @@ export interface ArcaDefaults {
   obraSocial?: string;
   /** Código de actividad que se ofrece primero al cargarlas en un domicilio. Tampoco decide el alta. */
   actividad?: string;
+  /** `codigoArca` de la categoría que se ofrece primero. Preselección: no decide el alta. */
+  categoria?: string;
   /** `_id` de la fuente de paritarias que se ofrece primero. No cambia qué escala rige. */
   fuenteParitariaId?: string | null;
 }

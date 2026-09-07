@@ -61,6 +61,8 @@ const companySchema = z.object({
         obraSocial: z.string().optional().default(""),
         /** Código de actividad que se ofrece primero al cargar actividades en un domicilio. */
         actividad: z.string().optional().default(""),
+        /** `codigoArca` de la categoría que se ofrece primero. Preselección: no decide el alta. */
+        categoria: z.string().optional().default(""),
     })
         .optional(),
 });

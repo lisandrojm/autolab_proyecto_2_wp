@@ -86,6 +86,8 @@ export interface Company {
     obraSocial?: string;
     /** Código de actividad que se ofrece primero al cargarlas en un domicilio. */
     actividad?: string;
+    /** `codigoArca` de la categoría que se ofrece primero. Tiene que ser de uno de sus convenios. */
+    categoria?: string;
   };
   createdAt?: string;
   updatedAt?: string;

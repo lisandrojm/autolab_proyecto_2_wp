@@ -146,6 +146,13 @@ export interface ICompany extends Document {
         obraSocial?: string;
         /** Código de actividad que esta empleadora ofrece primero, pisando el de la instalación. */
         actividad?: string;
+        /**
+         * `codigoArca` de la categoría que esta empleadora ofrece primero, pisando la de la instalación.
+         *
+         * Tiene que ser de uno de sus `convenioIds`: ARCA solo acepta las categorías de los CCT que ESTE
+         * CUIT registró. Es la misma regla que ya rige para el domicilio por defecto.
+         */
+        categoria?: string;
     };
     createdAt: Date;
     updatedAt: Date;

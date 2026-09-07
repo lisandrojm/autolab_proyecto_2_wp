@@ -60,9 +60,14 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * convenios registrados, domicilios de explotación— porque son un SUBCONJUNTO por empleadora y
  * mezclarlos con el universo hacía creer que "la" lista era una sola.
  *
- * Lo que queda acá se importa una vez y casi no se toca. El encabezado "Nomencladores de ARCA"
- * separa eso de Convenios, que además de nomenclador tiene sus grupos y escalas salariales (las
- * escalas SON del convenio: la misma para todas las empleadoras que lo tengan registrado).
+ * Lo que queda acá se importa una vez y casi no se toca.
+ *
+ * CONVENIOS Y CATEGORÍAS TAMBIÉN SON NOMENCLADORES y van arriba de la raya, con el resto. Estaban
+ * abajo porque además de la tabla del organismo tienen grupos y escalas salariales —que son del
+ * convenio, iguales para todas las empleadoras que lo registren—; pero eso los hace nomencladores
+ * *con más cosas*, no otra categoría de pantalla, y abajo quedaban mezclados con lo que no se edita.
+ *
+ * Debajo de la raya queda solo lo que NO es un catálogo: las dos conexiones y las dos guías.
  *
  * Sigue sin haber ABM de Puesto Desempeñado ni Situación de Revista: no son campos del registro de
  * 130.
@@ -72,7 +77,7 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * autocompletar el código y normalizar la descripción al cargarlas ahí. Por eso va pegado a
  * Domicilios de Explotación y comparte su permiso.
  */
-const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/fuentes-paritaria'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/fuentes-paritaria', '/convenios', '/arca/categorias'];
 /**
  * La Conexión va DEBAJO DE LA RAYA, con lo que no es nomenclador, y ahí entra por su nombre.
  *
@@ -103,7 +108,7 @@ const ARCA_CONEXION_PATHS = [ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH];
 const ARCA_COMO_FUNCIONA_PATH = '/arca/como-funciona';
 /** Guía del único trámite del módulo que sale de la app: la validación de obras sociales. */
 const ARCA_GUIA_OS_PATH = '/arca/guia-obras-sociales';
-const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH];
+const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH];
 
 /** ABM de Empresas. La ficha de cada una cuelga del mismo grupo: ver `empresasGroup`. */
 const EMPRESAS_PATH = '/empresas';

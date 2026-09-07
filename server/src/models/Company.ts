@@ -150,6 +150,13 @@ export interface ICompany extends Document {
     obraSocial?: string;
     /** Código de actividad que esta empleadora ofrece primero, pisando el de la instalación. */
     actividad?: string;
+    /**
+     * `codigoArca` de la categoría que esta empleadora ofrece primero, pisando la de la instalación.
+     *
+     * Tiene que ser de uno de sus `convenioIds`: ARCA solo acepta las categorías de los CCT que ESTE
+     * CUIT registró. Es la misma regla que ya rige para el domicilio por defecto.
+     */
+    categoria?: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -191,6 +198,7 @@ const companySchema = new Schema<ICompany>(
       modalidadLiquidacion: { type: String, default: '' },
       obraSocial: { type: String, default: '' },
       actividad: { type: String, default: '' },
+      categoria: { type: String, default: '' },
       sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', default: null },
       convenioId: { type: Schema.Types.ObjectId, ref: 'Convenio', default: null },
     },

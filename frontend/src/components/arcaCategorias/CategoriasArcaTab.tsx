@@ -12,6 +12,7 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../utils/fechas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFileExcel, faPlus, faEdit, faTrash, faTriangleExclamation, faLayerGroup, faArrowLeft, faEye, faEyeSlash, faArrowRightArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { DefaultArcaStar, LimpiarDefaultArca } from '../arca/DefaultArcaStar';
 import { useAuthStore } from '../../stores/authStore';
 
 /**
@@ -963,6 +964,13 @@ export const CategoriasArcaTab: React.FC = () => {
                                         <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
                                         <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Descripción de ARCA</th>
                                         <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contratos</th>
+                                        {/* Última antes de Acciones, como en todos los nomencladores. */}
+                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                                          <span className="inline-flex items-center gap-2">
+                                            Por defecto
+                                            <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
+                                          </span>
+                                        </th>
                                         {canManage && <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>}
                                       </tr>
                                     </thead>
@@ -983,6 +991,9 @@ export const CategoriasArcaTab: React.FC = () => {
                                           </td>
                                           <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{c.descripcionArca || '—'}</td>
                                           <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
+                                          <td className="px-4 py-2">
+                                            <DefaultArcaStar campo="categoria" valor={c.codigoArca} nombre={`${c.codigoArca} — ${c.nombre}`} queEs="la categoría que se ofrece primero" />
+                                          </td>
                                           {canManage && (
                                             <td className="px-4 py-2 text-right whitespace-nowrap">
                                               <div className="flex items-center justify-end gap-1.5">
@@ -1050,6 +1061,12 @@ export const CategoriasArcaTab: React.FC = () => {
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Neto</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contratos</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                        <span className="inline-flex items-center gap-2">
+                          Por defecto
+                          <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
+                        </span>
+                      </th>
                       {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
                     </tr>
                   </thead>
@@ -1092,6 +1109,9 @@ export const CategoriasArcaTab: React.FC = () => {
                         <td className="px-4 py-2.5 text-sm text-blue-700 dark:text-blue-400 font-bold hidden xl:table-cell">{c.escalaOrigen === null ? '—' : formatCurrency(c.neto)}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(c.fechaActualizacion)}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <DefaultArcaStar campo="categoria" valor={c.codigoArca} nombre={`${c.codigoArca} — ${c.nombre}`} queEs="la categoría que se ofrece primero" />
+                        </td>
                         {canManage && (
                           <td className="px-4 py-2.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">

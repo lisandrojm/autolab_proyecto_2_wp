@@ -769,14 +769,16 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
  */
 export const EmpresaCategoriasPage: React.FC = () => (
   <EmpresaContextLayout titulo="Categorías" icono={faListCheck} ayuda="empresaCategorias">
-    {(empresa) => <CategoriasBody empresa={empresa} />}
+    {(empresa, recargar) => <CategoriasBody empresa={empresa} recargar={recargar} />}
   </EmpresaContextLayout>
 );
 
-const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
+const CategoriasBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }> = ({ empresa, recargar }) => {
+  const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   /** El convenio cuyo detalle se está mirando. `null` = modal cerrado. */
   const [viendoConvenio, setViendoConvenio] = useState<ConvenioDetalle | null>(null);
+  const { defaults: arcaDefaultsDeLaInstalacion } = useArcaDefaults();
   const [detalles, setDetalles] = useState<ConvenioDetalle[]>([]);
   const [cargando, setCargando] = useState(true);
 
@@ -797,6 +799,27 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
     })();
   }, [empresa]);
 
+  /** Todas las categorías que esta empleadora puede dar de alta, indexadas por su código de ARCA. */
+  const categoriasPorCodigo = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of detalles) for (const g of d.grupos) for (const c of g.categorias) m.set(String(c.codigoArca), `${c.codigoArca} — ${c.nombre}`);
+    return m;
+  }, [detalles]);
+
+  const categoriaMarcada = String(empresa.defaultsArca?.categoria || '');
+
+  /**
+   * Marca o desmarca la categoría habitual de esta empleadora. Se guarda con el click, como el resto
+   * de las ★; volver a clickear la marcada la saca y vuelve a regir la de la instalación.
+   */
+  const marcarCategoria = (codigoArca: string) => {
+    const nuevo = categoriaMarcada === codigoArca ? '' : codigoArca;
+    guardar(
+      { defaultsArca: { categoria: nuevo } } as Partial<Company>,
+      nuevo ? `${categoriasPorCodigo.get(nuevo) || nuevo} es ahora la categoría que se ofrece primero en ${empresa.razonSocial}.` : `${empresa.razonSocial} vuelve a heredar la categoría de la instalación.`,
+    );
+  };
+
   if (cargando) return <LoadingSpinner message="Resolviendo las categorías de sus convenios..." />;
 
   return (
@@ -807,6 +830,24 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
         </div>
       ) : (
         <>
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400">La categoría que se ofrece primero al cargar un contrato. Se marca con ★ adentro de cada convenio.</p>
+              <LimpiarDefaultEmpresa hayValor={!!categoriaMarcada} onLimpiar={() => marcarCategoria(categoriaMarcada)} queEs="la categoría" disabled={guardando} />
+            </div>
+            <HerenciaGlobal
+              campo="categoria"
+              valorEmpresa={categoriaMarcada}
+              nombreDe={(cod) => categoriasPorCodigo.get(cod) || ''}
+              /* ARCA solo acepta las categorías de los CCT que ESTE CUIT registró: una global de otro
+                 convenio no rige acá, igual que pasa con el domicilio. */
+              noAplica={(() => {
+                const g = String(arcaDefaultsDeLaInstalacion.categoria || '');
+                return g && !categoriasPorCodigo.has(g) ? 'no es de ninguno de los convenios que esta empleadora registró.' : undefined;
+              })()}
+            />
+          </div>
+
           <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/60">
             {/*
             UNA FILA POR CONVENIO, Y EL DETALLE EN UN MODAL.
@@ -873,12 +914,28 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
                   <span className="text-xs text-gray-400">· {g.categorias.length} categoría(s)</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {g.categorias.map((c) => (
-                    <span key={c._id} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300">
-                      <span className="font-mono">{c.codigoArca}</span>
-                      {c.nombre}
-                    </span>
-                  ))}
+                  {/*
+                    EL CHIP ES EL BOTÓN. Poner una ★ aparte al lado de cada uno duplicaba el blanco de
+                    click en una grilla de más de cien chips y no dejaba claro cuál marcaba a cuál.
+                    El marcado se distingue por color y por la estrella llena, no solo por el ícono.
+                  */}
+                  {g.categorias.map((c) => {
+                    const esDefecto = categoriaMarcada === String(c.codigoArca);
+                    return (
+                      <button
+                        key={c._id}
+                        type="button"
+                        onClick={() => marcarCategoria(String(c.codigoArca))}
+                        disabled={guardando}
+                        title={esDefecto ? 'Es la categoría que se ofrece primero. Click para quitarla.' : `Marcar ${c.nombre} como la categoría que se ofrece primero en esta empleadora`}
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] transition-colors disabled:opacity-50 ${esDefecto ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 border border-transparent hover:border-amber-300 dark:hover:border-amber-700'}`}
+                      >
+                        <FontAwesomeIcon icon={faStar} className={`h-2.5 w-2.5 ${esDefecto ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'}`} />
+                        <span className="font-mono">{c.codigoArca}</span>
+                        {c.nombre}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}

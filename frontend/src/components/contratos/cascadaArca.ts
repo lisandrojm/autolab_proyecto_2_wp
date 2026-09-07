@@ -57,6 +57,17 @@ export interface DefaultsArca {
   modalidadLiquidacion?: string;
   sucursalId?: string | null;
   convenioId?: string | null;
+  /*
+    Los cuatro de abajo son PRESELECCIÓN: ordenan los selectores, no deciden lo que se declara.
+
+    Entran en esta interfaz —y no en una aparte— porque la cascada es la misma: lo de la empleadora
+    pisa lo de la instalación, y un escalón vacío no decide, pasa al siguiente. Lo que cambia es
+    quién los lee: `resolveAfipValues` resuelve con ellos lo que va al TXT, y a estos no los toca.
+  */
+  obraSocial?: string;
+  actividad?: string;
+  categoria?: string;
+  fuenteParitariaId?: string | null;
 }
 
 /**

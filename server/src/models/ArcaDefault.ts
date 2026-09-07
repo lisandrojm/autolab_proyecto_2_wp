@@ -62,6 +62,15 @@ export interface IArcaDefault extends Document {
    */
   actividad?: string;
   /**
+   * `codigoArca` (6 díg.) de la categoría profesional que se OFRECE PRIMERO al cargar un contrato.
+   *
+   * Preselección, como las dos de arriba: no reemplaza a la categoría del contrato ni decide sola
+   * qué se declara. Y no puede: la categoría tiene que pertenecer a un convenio que la empleadora
+   * haya registrado —ARCA solo acepta las de esos CCT—, así que una global que no aplique se
+   * descarta al resolver, igual que ya pasa con el domicilio.
+   */
+  categoria?: string;
+  /**
    * `_id` de la `FuenteParitaria` que se ofrece primero al asociarle una fuente a un convenio.
    *
    * Como los otros dos de arriba, es preselección: no cambia qué escala rige ni qué se publica. Una
@@ -82,6 +91,7 @@ const arcaDefaultSchema = new Schema<IArcaDefault>(
     modalidadLiquidacion: { type: String, default: "" },
     obraSocial: { type: String, default: "" },
     actividad: { type: String, default: "" },
+    categoria: { type: String, default: "" },
     fuenteParitariaId: { type: Schema.Types.ObjectId, ref: "FuenteParitaria", default: null },
   },
   { timestamps: true },

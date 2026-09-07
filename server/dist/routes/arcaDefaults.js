@@ -23,6 +23,7 @@ const patchSchema = z.object({
     modalidadLiquidacion: z.string().optional(),
     obraSocial: z.string().optional(),
     actividad: z.string().optional(),
+    categoria: z.string().optional(),
     fuenteParitariaId: z.union([z.string(), z.null()]).optional(),
 });
 router.get("/", requireTenant, authenticateToken, async (_req, res) => {
