@@ -20,6 +20,10 @@ const companySchema = new Schema({
     obraSocialDefaultId: { type: Number },
     convenioIds: [{ type: Schema.Types.ObjectId, ref: 'Convenio' }],
     sucursalIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaSucursal' }],
+    tipoServicioIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaTipoServicio' }],
+    grupoTipoServicioIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaGrupoTipoServicio' }],
+    modalidadContratacionIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaModalidadContratacion' }],
+    modalidadLiquidacionIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaModalidadLiquidacion' }],
     sucursalActividades: [
         {
             _id: false,

@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faXmark } from '@fortawesome/free-solid-svg-icons';
-import { companiesAPI, Company, TipoVinculoArca } from '../../api/companies';
+import { companiesAPI, Company, TipoVinculoArca, CAMPO_IDS_DE_VINCULO } from '../../api/companies';
+import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
 
 /**
@@ -129,5 +130,69 @@ export const EmpresasDelItemArca: React.FC<Props> = ({ tipo, itemId, itemLabel, 
         )}
       </div>
     </div>
+  );
+};
+
+/**
+ * LAS EMPRESAS DE UN CATÁLOGO, PARA TODA UNA PANTALLA.
+ *
+ * Cada nomenclador necesita lo mismo: la lista de empresas, saber cuáles tienen ESTE ítem, y poder
+ * recargar después de un cambio. Repetirlo en cada página dejaba seis copias del mismo `useEffect`
+ * y seis formas distintas de olvidarse de recargar el conteo después de guardar.
+ */
+export const useVinculoArca = (tipo: TipoVinculoArca) => {
+  const [empresas, setEmpresas] = useState<Company[]>([]);
+  const recargar = useCallback(async () => {
+    setEmpresas(await companiesAPI.list().catch(() => []));
+  }, []);
+  useEffect(() => {
+    void recargar();
+  }, [recargar]);
+
+  const campo = CAMPO_IDS_DE_VINCULO[tipo];
+  /** Las empresas que tienen ese ítem, por `_id`. */
+  const asignadasDe = useCallback((itemId: string) => empresas.filter((e) => ((e[campo] as string[] | undefined) || []).map(String).includes(itemId)).map((e) => e._id), [empresas, campo]);
+
+  return { empresas, recargar, asignadasDe };
+};
+
+/**
+ * La celda de la columna «Empresas»: el conteo, y detrás los switches para cambiarlo.
+ *
+ * En Convenios el número abría un modal de SOLO LECTURA y para editar había que ir al formulario del
+ * ítem: dos caminos para lo mismo, y el que estaba a mano no servía. Acá el número es el editor —se
+ * ve cuántas son y se cambia en el mismo gesto—, que es lo que se viene a hacer mirando esa columna.
+ */
+export const ColumnaEmpresasArca: React.FC<{
+  tipo: TipoVinculoArca;
+  itemId: string;
+  itemLabel: string;
+  empresas: Company[];
+  asignadas: string[];
+  onGuardado: () => void | Promise<void>;
+}> = ({ tipo, itemId, itemLabel, empresas, asignadas, onGuardado }) => {
+  const [abierto, setAbierto] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setAbierto(true);
+        }}
+        title={`${asignadas.length} de ${empresas.length} empresa(s) lo usan. Click para cambiarlo.`}
+        className="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+      >
+        <span className="text-sm font-bold tabular-nums">{asignadas.length || '—'}</span>
+      </button>
+
+      {abierto && (
+        <Modal isOpen onClose={() => setAbierto(false)} title="Empresas que lo usan" subtitle={itemLabel} size="md" footer={<div className="flex justify-end w-full"><button onClick={() => setAbierto(false)} className="btn-primary">Cerrar</button></div>}>
+          {/* Cada switch guarda solo, así que no hay «Guardar»: el botón del pie solo cierra. */}
+          <EmpresasDelItemArca tipo={tipo} itemId={itemId} itemLabel={itemLabel} empresas={empresas} asignadas={asignadas} onGuardado={onGuardado} />
+        </Modal>
+      )}
+    </>
   );
 };

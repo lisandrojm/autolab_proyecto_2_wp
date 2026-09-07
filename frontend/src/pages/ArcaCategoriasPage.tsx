@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { faListCheck } from '@fortawesome/free-solid-svg-icons';
@@ -18,7 +19,7 @@ export const ArcaCategoriasPage: React.FC = () => {
   return (
     <PageLayout
       title="Categorías"
-      subtitle="Categorías profesionales por Convenio Colectivo. La escala salarial vive en el grupo."
+      {...encabezadoDeAmbito("categorias")}
       faIcon={{ icon: faListCheck }}
       shouldShowInfo={hasHelp(helpKey)}
       infoModal={{

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { faListCheck } from "@fortawesome/free-solid-svg-icons";
+import { encabezadoDeAmbito, nomencladorPorId, rotuloColumnaEmpresas } from "../config/nomencladoresArca";
 import { SimpleCatalogManager, CatalogExtraField } from "../components/catalog/SimpleCatalogManager";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
+import { ColumnaEmpresasArca, useVinculoArca } from "../components/arca/EmpresasDelItemArca";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/tipos-servicio");
@@ -19,6 +21,7 @@ export const ArcaTiposServicioPage: React.FC = () => {
    * renombra un grupo en su ABM, este selector tiene que seguirlo. Son 2 registros, así que el
    * request es intrascendente.
    */
+  const { empresas, recargar, asignadasDe } = useVinculoArca('tipoServicio');
   const [grupos, setGrupos] = useState<SimpleCatalogItem[]>([]);
   useEffect(() => {
     gruposApi
@@ -47,6 +50,13 @@ export const ArcaTiposServicioPage: React.FC = () => {
     <SimpleCatalogManager
     columnasCalculadas={[
       {
+        // «Habilitadas para», no «Empresas»: acá la lista NO es un registro ante ARCA sino un
+        // recorte nuestro. El rótulo sale de `rotuloColumnaEmpresas` para que las dos clases de
+        // columna no puedan volver a llamarse igual por descuido.
+        label: rotuloColumnaEmpresas(nomencladorPorId("tipos-servicio")!),
+        render: (item) => <ColumnaEmpresasArca tipo="tipoServicio" itemId={item._id} itemLabel={`${item.externalId || ""} ${item.name}`.trim()} empresas={empresas} asignadas={asignadasDe(item._id)} onGuardado={recargar} />,
+      },
+      {
         label: "Por defecto",
         encabezado: (
           <span className="inline-flex items-center gap-2">
@@ -58,7 +68,7 @@ export const ArcaTiposServicioPage: React.FC = () => {
       },
     ]}
       title="Tipos de Servicio"
-      subtitle="Tabla oficial de ARCA. Clasifica el servicio prestado (comunes continuos, insalubres, etc.). Hay 49 nombres repetidos: el Grupo es lo que los separa."
+      {...encabezadoDeAmbito("tipos-servicio")}
       icon={faListCheck}
       entityLabel="tipo de servicio"
       api={api}

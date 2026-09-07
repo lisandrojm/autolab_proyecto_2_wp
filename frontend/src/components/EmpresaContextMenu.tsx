@@ -37,20 +37,33 @@ export const EmpresaContextMenu: React.FC = () => {
   // Alfabético, como todo el menú. El orden seguía la CADENA DE DECISIÓN —Convenios primero, porque
   // de él cuelgan las categorías y la obra social—, que es cierto y sigue explicado en cada pantalla;
   // pero para ENCONTRAR una hay que buscarla por su nombre, y esa cadena no se adivina desde el menú.
+  /*
+    DOS BLOQUES, Y LA DIFERENCIA IMPORTA.
+
+    Arriba, lo que esta empleadora DECLARA ante ARCA por su CUIT —convenios, domicilios, obras
+    sociales— más las categorías, que no se declaran pero se heredan de esos convenios. El organismo
+    rechaza un alta fuera de esas listas.
+
+    Abajo, bajo su propio rótulo, las PREFERENCIAS: un recorte nuestro sobre tablas generales, para
+    que el combo de un alta no ofrezca 293 tipos de servicio cuando la productora usa cuatro. Cambiar
+    algo ahí no cambia nada ante ARCA.
+
+    Estaban los ocho mezclados en una sola lista alfabética, así que las cuatro de abajo se leían como
+    un registro ante el organismo — que es exactamente lo que no son.
+  */
   const arcaChildren = [
     { path: `${base}/arca/convenios`, icon: faFileContract, label: 'Convenios' },
     { path: `${base}/arca/categorias`, icon: faListCheck, label: 'Categorías' },
     { path: `${base}/arca/domicilios`, icon: faLocationDot, label: 'Domicilios de Explotación' },
     { path: `${base}/arca/obras-sociales`, icon: faBriefcaseMedical, label: 'Obras Sociales' },
-    // Grupos de Tipo de Servicio va PEGADO a Tipos de Servicio, y antes: es la ★ que decide con qué
-    // queda filtrado el tipo que se elige ahí. Al revés, se elige el tipo sin saber por qué el combo
-    // ofrece 293 opciones o 140.
+  ].sort(porNombre);
+
+  /** Tablas generales de ARCA y ANSeS. Lo que se elige acá es un recorte, no un registro. */
+  const preferencias = [
     { path: `${base}/arca/grupos-tipo-servicio`, icon: faLayerGroup, label: 'Grupos de Tipo de Servicio' },
-    // Los tres códigos que viajan al TXT. Reemplazan a «Defaults», que los juntaba en un formulario
-    // de combos: ahora cada uno se marca con ★ sobre su nomenclador, como el convenio y el domicilio.
-    { path: `${base}/arca/tipos-servicio`, icon: faListCheck, label: 'Tipos de Servicio' },
     { path: `${base}/arca/modalidades-contratacion`, icon: faFileContract, label: 'Modalidad de Contratación' },
     { path: `${base}/arca/modalidades-liquidacion`, icon: faSliders, label: 'Modalidad de Liquidación' },
+    { path: `${base}/arca/tipos-servicio`, icon: faListCheck, label: 'Tipos de Servicio' },
   ].sort(porNombre);
 
   // El alta masiva NO va acá: es la misma pantalla que Admin GENERAL → Contratos → Gestión de
@@ -101,7 +114,16 @@ export const EmpresaContextMenu: React.FC = () => {
         </div>
         <FontAwesomeIcon icon={arcaOpen ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
       </button>
-      {arcaOpen && <nav className="space-y-1 mt-1 ml-4 pl-2 border-l-2 border-gray-100 dark:border-gray-700">{arcaChildren.map((c) => renderItem(c, false))}</nav>}
+      {arcaOpen && (
+        <nav className="space-y-1 mt-1 ml-4 pl-2 border-l-2 border-gray-100 dark:border-gray-700">
+          {arcaChildren.map((c) => renderItem(c, false))}
+          {/* El rótulo es la separación: sin él, las cuatro de abajo se leen como cuatro registros más. */}
+          <div className="px-2 pt-3 pb-1 select-none" title="Tablas generales de ARCA y ANSeS. Elegir acá acorta los combos del alta; no cambia nada ante el organismo.">
+            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Preferencias de la empresa</span>
+          </div>
+          {preferencias.map((c) => renderItem(c, false))}
+        </nav>
+      )}
     </div>
   );
 

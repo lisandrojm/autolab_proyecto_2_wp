@@ -69,6 +69,23 @@ export interface ICompany extends Document {
      */
     sucursalIds?: mongoose.Types.ObjectId[];
     /**
+     * LOS NOMENCLADORES UNIVERSALES QUE ESTA EMPLEADORA USA.
+     *
+     * Distintos de `convenioIds`, `sucursalIds` y `obrasSocialesIds`: aquellos reflejan lo que ARCA
+     * tiene declarado para ese CUIT, y el organismo rechaza un alta fuera de esa lista. Estos cuatro
+     * son tablas universales —los mismos códigos para todos los CUIT—, así que la vinculación es un
+     * FILTRO PROPIO de la plataforma: sirve para que el combo de un alta no ofrezca los 293 tipos de
+     * servicio cuando esta productora usa cuatro. No cambia qué acepta ARCA.
+     *
+     * VACÍO SIGNIFICA «TODOS», no «ninguno». Es lo que hace que agregar el campo no rompa nada: las
+     * empresas que ya existen no tienen ninguno cargado, y si se leyera como «ninguno» se quedarían sin
+     * opciones de un día para el otro. Además es el default sano — recortar es la excepción.
+     */
+    tipoServicioIds?: mongoose.Types.ObjectId[];
+    grupoTipoServicioIds?: mongoose.Types.ObjectId[];
+    modalidadContratacionIds?: mongoose.Types.ObjectId[];
+    modalidadLiquidacionIds?: mongoose.Types.ObjectId[];
+    /**
      * LAS ACTIVIDADES QUE ESTA EMPLEADORA DECLARÓ EN CADA DOMICILIO. Acá viven, y en ningún otro lado.
      *
      * ARCA declara las actividades POR CUIT, no por dirección: dos empleadoras en el mismo domicilio

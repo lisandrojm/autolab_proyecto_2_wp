@@ -60,6 +60,8 @@ interface PageLayoutProps {
   badge?: {
     text: string;
     variant?: BadgeVariant;
+    /** Tooltip propio. Sin esto el `title` repite el texto visible y no agrega nada. */
+    tooltip?: string;
   };
   badgeSecondary?: {
     text: string;
@@ -195,7 +197,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                 {renderClientMiniAvatar()}
 
                 {badge && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badge.variant ?? 'default']} min-w-0`} title={badge.text}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badge.variant ?? 'default']} min-w-0`} title={badge.tooltip ?? badge.text}>
                     <span className="truncate max-w-[30vw] sm:max-w-[40vw] md:max-w-[50vw]">{badge.text}</span>
                   </span>
                 )}

@@ -43,6 +43,17 @@ export interface Company {
    */
   sucursalIds?: string[];
   /**
+   * Los nomencladores UNIVERSALES que esta empleadora usa. VACÍO SIGNIFICA «TODOS», no «ninguno».
+   *
+   * A diferencia de convenios, domicilios y obras sociales —que reflejan lo que ARCA declaró para ese
+   * CUIT—, éstos son tablas iguales para todos: la lista es un filtro de la plataforma para que el
+   * combo de un alta no ofrezca 293 tipos de servicio cuando la productora usa cuatro.
+   */
+  tipoServicioIds?: string[];
+  grupoTipoServicioIds?: string[];
+  modalidadContratacionIds?: string[];
+  modalidadLiquidacionIds?: string[];
+  /**
    * Qué actividades declaró ESTA empleadora en cada domicilio.
    *
    * El domicilio es compartido pero las actividades ARCA las declara por CUIT: dos empresas en el
@@ -96,7 +107,18 @@ export interface Company {
 export type CompanyInput = Omit<Company, '_id' | 'createdAt' | 'updatedAt'>;
 
 /** Los ítems de ARCA que se declaran POR CUIT y por eso se vinculan a una empresa. */
-export type TipoVinculoArca = 'convenio' | 'sucursal' | 'obraSocial';
+export type TipoVinculoArca = 'convenio' | 'sucursal' | 'obraSocial' | 'tipoServicio' | 'grupoTipoServicio' | 'modalidadContratacion' | 'modalidadLiquidacion';
+
+/** El campo de `Company` donde vive cada vínculo. Uno solo, para que las dos puntas no se separen. */
+export const CAMPO_IDS_DE_VINCULO: Record<TipoVinculoArca, keyof Company> = {
+  convenio: 'convenioIds',
+  sucursal: 'sucursalIds',
+  obraSocial: 'obrasSocialesIds',
+  tipoServicio: 'tipoServicioIds',
+  grupoTipoServicio: 'grupoTipoServicioIds',
+  modalidadContratacion: 'modalidadContratacionIds',
+  modalidadLiquidacion: 'modalidadLiquidacionIds',
+};
 
 class CompaniesAPI {
   async list(): Promise<Company[]> {

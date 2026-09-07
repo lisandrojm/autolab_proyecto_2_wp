@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { faBriefcaseMedical } from "@fortawesome/free-solid-svg-icons";
+import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 // El "ID Externo" de Obras Sociales siempre fue el código RNOS. El formato oficial vive en un solo
 // lugar porque lo comparten este catálogo, la ficha de la empresa y el ABM de Empresas.
 import { formatRnos } from "../utils/rnos";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
-import { EmpresasDelItemArca } from "../components/arca/EmpresasDelItemArca";
+import { EmpresasDelItemArca, ColumnaEmpresasArca } from "../components/arca/EmpresasDelItemArca";
 import { companiesAPI, Company } from "../api/companies";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -91,6 +92,10 @@ export const ObrasSocialesPage: React.FC = () => {
     )}
     columnasCalculadas={[
       {
+        label: "Empresas",
+        render: (item) => <ColumnaEmpresasArca tipo="obraSocial" itemId={item._id} itemLabel={`${item.externalId || ''} ${item.name}`.trim()} empresas={empresas} asignadas={empresas.filter((e) => (e.obrasSocialesIds || []).map(String).includes(item._id)).map((e) => e._id)} onGuardado={recargarEmpresas} />,
+      },
+      {
         label: "Por defecto",
         encabezado: (
           <span className="inline-flex items-center gap-2">
@@ -102,7 +107,7 @@ export const ObrasSocialesPage: React.FC = () => {
       },
     ]}
     title="Obras Sociales"
-    subtitle="Catálogo de obras sociales de ARCA. Cargá registros manualmente o importá un Excel cuando se actualicen en ARCA."
+    {...encabezadoDeAmbito("obras-sociales")}
     icon={faBriefcaseMedical}
     entityLabel="obra social"
     api={obrasSocialesApi}

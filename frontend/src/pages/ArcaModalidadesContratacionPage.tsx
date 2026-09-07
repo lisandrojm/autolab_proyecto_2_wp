@@ -1,7 +1,9 @@
 import React from "react";
 import { faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { encabezadoDeAmbito, nomencladorPorId, rotuloColumnaEmpresas } from "../config/nomencladoresArca";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
+import { ColumnaEmpresasArca, useVinculoArca } from "../components/arca/EmpresasDelItemArca";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/modalidades-contratacion");
@@ -12,9 +14,20 @@ const formatCodigo = (raw: string): string => {
   return digits ? digits.padStart(3, "0").slice(-3) : "";
 };
 
-export const ArcaModalidadesContratacionPage: React.FC = () => (
+export const ArcaModalidadesContratacionPage: React.FC = () => {
+  // Las empresas que usan cada código. Ver `useVinculoArca`.
+  const { empresas, recargar, asignadasDe } = useVinculoArca('modalidadContratacion');
+
+  return (
   <SimpleCatalogManager
     columnasCalculadas={[
+      {
+        // «Habilitadas para», no «Empresas»: acá la lista NO es un registro ante ARCA sino un
+        // recorte nuestro. El rótulo sale de `rotuloColumnaEmpresas` para que las dos clases de
+        // columna no puedan volver a llamarse igual por descuido.
+        label: rotuloColumnaEmpresas(nomencladorPorId("modalidades-contratacion")!),
+        render: (item) => <ColumnaEmpresasArca tipo="modalidadContratacion" itemId={item._id} itemLabel={`${item.externalId || ""} ${item.name}`.trim()} empresas={empresas} asignadas={asignadasDe(item._id)} onGuardado={recargar} />,
+      },
       {
         label: "Por defecto",
         encabezado: (
@@ -27,7 +40,7 @@ export const ArcaModalidadesContratacionPage: React.FC = () => (
       },
     ]}
     title="Modalidades de Contrato"
-    subtitle="Tabla oficial de ARCA. Define la modalidad con la que se declara cada Tipo de Contrato en el alta."
+    {...encabezadoDeAmbito("modalidades-contratacion")}
     icon={faFileContract}
     entityLabel="modalidad de contrato"
     api={api}
@@ -38,4 +51,5 @@ export const ArcaModalidadesContratacionPage: React.FC = () => (
     sanitizeExternalId={(v) => v.replace(/\D/g, "")}
     helpKey="arcaModalidadContratacion"
   />
-);
+  );
+};

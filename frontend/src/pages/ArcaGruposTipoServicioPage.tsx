@@ -1,7 +1,9 @@
 import React from "react";
 import { faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { encabezadoDeAmbito, nomencladorPorId, rotuloColumnaEmpresas } from "../config/nomencladoresArca";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
+import { ColumnaEmpresasArca, useVinculoArca } from "../components/arca/EmpresasDelItemArca";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/grupos-tipo-servicio");
@@ -13,9 +15,20 @@ const api = createSimpleCatalogApi("/arca/grupos-tipo-servicio");
  * Es la misma relación que Convenio → Categoría y Domicilio → Actividad: el grupo se elige primero y
  * recorta la lista de abajo.
  */
-export const ArcaGruposTipoServicioPage: React.FC = () => (
+export const ArcaGruposTipoServicioPage: React.FC = () => {
+  // Las empresas que usan cada código. Ver `useVinculoArca`.
+  const { empresas, recargar, asignadasDe } = useVinculoArca('grupoTipoServicio');
+
+  return (
   <SimpleCatalogManager
     columnasCalculadas={[
+      {
+        // «Habilitadas para», no «Empresas»: acá la lista NO es un registro ante ARCA sino un
+        // recorte nuestro. El rótulo sale de `rotuloColumnaEmpresas` para que las dos clases de
+        // columna no puedan volver a llamarse igual por descuido.
+        label: rotuloColumnaEmpresas(nomencladorPorId("grupos-tipo-servicio")!),
+        render: (item) => <ColumnaEmpresasArca tipo="grupoTipoServicio" itemId={item._id} itemLabel={`${item.externalId || ""} ${item.name}`.trim()} empresas={empresas} asignadas={asignadasDe(item._id)} onGuardado={recargar} />,
+      },
       {
         label: "Por defecto",
         encabezado: (
@@ -28,7 +41,7 @@ export const ArcaGruposTipoServicioPage: React.FC = () => (
       },
     ]}
     title="Grupos de Tipo de Servicio"
-    subtitle="Tabla oficial de ARCA. Son dos —continuos y discontinuos— y filtran el selector de Tipo de Servicio."
+    {...encabezadoDeAmbito("grupos-tipo-servicio")}
     icon={faLayerGroup}
     entityLabel="grupo de tipo de servicio"
     api={api}
@@ -38,4 +51,5 @@ export const ArcaGruposTipoServicioPage: React.FC = () => (
     sanitizeExternalId={(v) => v.replace(/\D/g, "")}
     helpKey="arcaGrupoTipoServicio"
   />
-);
+  );
+};

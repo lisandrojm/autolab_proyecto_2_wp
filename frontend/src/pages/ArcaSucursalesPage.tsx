@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot, faPlus, faEdit, faTrash, faDownload, faFileImport, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -11,7 +12,7 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { arcaSucursalesAPI, ArcaSucursal, ArcaSucursalInput } from "../api/arcaSucursales";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
-import { EmpresasDelItemArca } from "../components/arca/EmpresasDelItemArca";
+import { EmpresasDelItemArca, ColumnaEmpresasArca } from "../components/arca/EmpresasDelItemArca";
 import { companiesAPI, Company } from "../api/companies";
 
 const HELP_KEY = "arcaSucursales" as const;
@@ -153,7 +154,7 @@ export const ArcaSucursalesPage: React.FC = () => {
   return (
     <PageLayout
       title="Domicilios de Explotación"
-      subtitle="Domicilios de desempeño del padrón de ARCA, con su código y su dirección. Las actividades se declaran por empleadora, en la ficha de cada empresa."
+      {...encabezadoDeAmbito("domicilios")}
       itemCount={loading ? undefined : filtrados.length}
       faIcon={{ icon: faLocationDot }}
       shouldShowInfo={hasHelp(HELP_KEY)}
@@ -188,6 +189,7 @@ export const ArcaSucursalesPage: React.FC = () => {
                   {/* Última antes de Acciones, como en todos los nomencladores: la ★ se busca
                       recorriendo siempre el mismo borde de la tabla. Lleva rótulo porque una estrella
                       sin nombre no dice qué marca, y acá no hay ninguna otra pista. */}
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="Cuántas empleadoras lo tienen declarado en su padrón de ARCA">Empresas</th>
                   <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El domicilio que rige cuando el contrato y la empleadora no eligieron uno">
                     <span className="inline-flex items-center gap-2">
                       Por defecto
@@ -206,6 +208,9 @@ export const ArcaSucursalesPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.domicilio}</p>
                       {(s.localidad || s.codigoPostal) && <p className="text-xs text-gray-500 dark:text-gray-400">{[s.codigoPostal && `CP ${s.codigoPostal}`, s.localidad].filter(Boolean).join(" · ")}</p>}
+                    </td>
+                    <td className="px-6 py-4 w-px">
+                      <ColumnaEmpresasArca tipo="sucursal" itemId={s._id} itemLabel={`${s.codigo} — ${s.domicilio}`} empresas={empresas} asignadas={empresas.filter((e) => (e.sucursalIds || []).map(String).includes(s._id)).map((e) => e._id)} onGuardado={recargarEmpresas} />
                     </td>
                     <td className="px-2 py-4 w-px">
                       <DefaultArcaStar campo="sucursalId" valor={String(s._id)} nombre={`${s.codigo} — ${s.domicilio}`} queEs="el domicilio de explotación" />

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { Link, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
@@ -238,7 +239,7 @@ export const ConveniosPage: React.FC = () => {
     <>
       <SimpleCatalogManager
         title="Convenios"
-        subtitle="Convenios de Trabajo (CCT). Cada uno define la obra social de quien trabaja bajo él."
+        {...encabezadoDeAmbito("convenios")}
         icon={faFileContract}
         entityLabel="convenio"
         api={conveniosApi}

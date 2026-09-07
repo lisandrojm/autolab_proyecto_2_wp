@@ -5,6 +5,10 @@ import { Types } from "mongoose";
 import UserProject from "../models/UserProject.js";
 import { Convenio } from "../models/Convenio.js";
 import { ObraSocial } from "../models/ObraSocial.js";
+import { ArcaTipoServicio } from "../models/ArcaTipoServicio.js";
+import { ArcaGrupoTipoServicio } from "../models/ArcaGrupoTipoServicio.js";
+import { ArcaModalidadContratacion } from "../models/ArcaModalidadContratacion.js";
+import { ArcaModalidadLiquidacion } from "../models/ArcaModalidadLiquidacion.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { grupoDeTipoServicio, GRUPO_CONTINUOS, GRUPO_DISCONTINUOS } from "../utils/grupoTipoServicio.js";
 
@@ -49,6 +53,11 @@ const companySchema = z.object({
    * entera y no se hace merge: el merge no puede expresar «lo dejé vacío a propósito».
    */
   sucursalActividades: z.array(z.object({ sucursalId: z.string(), actividades: z.array(z.object({ codigo: z.string(), descripcion: z.string().optional() })) })).optional(),
+  /* Los universales que esta empleadora usa. Vacío = todos: ver `models/Company.ts`. */
+  tipoServicioIds: z.array(z.string()).optional(),
+  grupoTipoServicioIds: z.array(z.string()).optional(),
+  modalidadContratacionIds: z.array(z.string()).optional(),
+  modalidadLiquidacionIds: z.array(z.string()).optional(),
   /** Elección habitual de esta empleadora dentro del nomenclador, para no repetirla en cada alta. */
   defaultsArca: z
     .object({
@@ -194,12 +203,31 @@ const CAMPO_DE_TIPO = {
   convenio: "convenioIds",
   sucursal: "sucursalIds",
   obraSocial: "obrasSocialesIds",
+  tipoServicio: "tipoServicioIds",
+  grupoTipoServicio: "grupoTipoServicioIds",
+  modalidadContratacion: "modalidadContratacionIds",
+  modalidadLiquidacion: "modalidadLiquidacionIds",
+} as const;
+
+/**
+ * Los cuatro universales: qué modelo los guarda y con qué clave de `defaultsArca` se corresponden.
+ *
+ * La traducción es necesaria porque los dos lados usan identificadores distintos: el vínculo se
+ * guarda por `_id` y el default por CÓDIGO —es el que viaja al TXT—. Sin resolver el código del ítem
+ * que se desvincula, la limpieza no encontraría nunca nada y fallaría en silencio, dejando a la
+ * empleadora con un default que su propio filtro ya no ofrece.
+ */
+const UNIVERSALES = {
+  tipoServicio: { modelo: ArcaTipoServicio, claveDefault: "tipoServicio" },
+  grupoTipoServicio: { modelo: ArcaGrupoTipoServicio, claveDefault: "grupoTipoServicio" },
+  modalidadContratacion: { modelo: ArcaModalidadContratacion, claveDefault: "modalidadContratacion" },
+  modalidadLiquidacion: { modelo: ArcaModalidadLiquidacion, claveDefault: "modalidadLiquidacion" },
 } as const;
 
 type TipoVinculo = keyof typeof CAMPO_DE_TIPO;
 
 const vinculosSchema = z.object({
-  tipo: z.enum(["convenio", "sucursal", "obraSocial"]),
+  tipo: z.enum(["convenio", "sucursal", "obraSocial", "tipoServicio", "grupoTipoServicio", "modalidadContratacion", "modalidadLiquidacion"]),
   itemId: z.string(),
   empresaIds: z.array(z.string()),
 });
@@ -243,6 +271,14 @@ router.put("/vinculos", authenticateToken, async (req: AuthenticatedRequest, res
       limpiezas += r.modifiedCount || 0;
       // Las actividades se declaran POR DOMICILIO: sin el domicilio, esa fila no describe nada.
       await Company.updateMany({ _id: { $in: seQuitan.map((e: any) => e._id) } }, { $pull: { sucursalActividades: { sucursalId: itemId } } as any });
+    } else if (tipo in UNIVERSALES) {
+      const { modelo, claveDefault } = UNIVERSALES[tipo as keyof typeof UNIVERSALES];
+      const item = await (modelo as any).findById(itemId).select("externalId").lean();
+      const codigo = String((item as any)?.externalId || "").trim();
+      if (codigo) {
+        const r = await Company.updateMany({ _id: { $in: seQuitan.map((e: any) => e._id) }, [`defaultsArca.${claveDefault}`]: codigo }, { $set: { [`defaultsArca.${claveDefault}`]: "" } });
+        limpiezas += r.modifiedCount || 0;
+      }
     } else if (tipo === "obraSocial") {
       /*
         `obraSocialDefaultId` guarda el `data.id` numérico del catálogo, no el `_id` del documento —

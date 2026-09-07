@@ -39,7 +39,9 @@ export interface CatalogExtraField {
 
 interface SimpleCatalogManagerProps {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
+  /** Badge del encabezado, junto al título y al contador. Lo usa el ámbito de los nomencladores. */
+  badge?: { text: string; variant?: 'default' | 'success' | 'warning' | 'blue' | 'info'; tooltip?: string };
   icon: IconDefinition;
   /** Etiqueta singular, ej. "banco", "obra social". */
   entityLabel: string;
@@ -265,7 +267,7 @@ const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v
   );
 };
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [filtroServidorValor, setFiltroServidorValor] = useState(filtroServidor?.valorInicial || '');
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
@@ -582,6 +584,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     <PageLayout
       title={title}
       subtitle={subtitle}
+      badge={badge}
       faIcon={{ icon }}
       // Contador al lado del título. En el catálogo acompaña a la búsqueda (cuántos quedaron
       // filtrados); en las otras pestañas no hay buscador, así que muestra el total cargado.

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRss, faPlus, faTrash, faEdit, faSpinner, faRotate, faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
@@ -416,7 +417,7 @@ export const FuentesParitariaPage: React.FC = () => {
   return (
     <PageLayout
       title="Fuentes de paritarias"
-      subtitle="Las páginas que se vigilan para saber cuándo sale un acuerdo nuevo"
+      {...encabezadoDeAmbito("fuentes-paritaria")}
       faIcon={{ icon: faRss }}
       /*
         El ⓘ explica el mecanismo entero, que no se deduce mirando la pantalla: qué hace la primera

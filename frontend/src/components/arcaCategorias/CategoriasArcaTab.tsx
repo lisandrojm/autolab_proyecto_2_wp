@@ -11,8 +11,9 @@ import { BannerEscalasVencidas } from './BannerEscalasVencidas';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../utils/fechas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFileExcel, faPlus, faEdit, faTrash, faTriangleExclamation, faLayerGroup, faArrowLeft, faEye, faEyeSlash, faArrowRightArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFileExcel, faPlus, faEdit, faTrash, faTriangleExclamation, faLayerGroup, faArrowLeft, faEye, faEyeSlash, faArrowRightArrowLeft, faCircleInfo, faGrip, faTable } from '@fortawesome/free-solid-svg-icons';
 import { DefaultArcaStar, LimpiarDefaultArca } from '../arca/DefaultArcaStar';
+import { TablaCategorias, FilaCategoria } from './TablaCategorias';
 import { useAuthStore } from '../../stores/authStore';
 
 /**
@@ -129,6 +130,18 @@ export const CategoriasArcaTab: React.FC = () => {
     requestAnimationFrame(() => window.scrollTo({ top: destino, behavior: 'auto' }));
   };
   const [convenioSel, setConvenioSel] = useState<string>(() => localStorage.getItem(CONVENIO_ELEGIDO_KEY) || '');
+  /*
+    VISTA DE TABLA PARA «TODOS»: todas las categorías juntas, de todos los convenios.
+
+    Las tarjetas contestan «qué convenios hay y cuál está flojo», que es la pregunta con la que se
+    entra. No contestan «dónde está la categoría 210053»: para eso había que adivinar de qué convenio
+    era y abrirlo. Son dos preguntas distintas sobre los mismos datos, así que son dos vistas y no un
+    reemplazo — la de tarjetas sigue siendo la que abre.
+  */
+  const [vistaTabla, setVistaTabla] = useState<boolean>(() => localStorage.getItem('arcaCategoriasVistaTabla') === 'true');
+  const [todasLasCategorias, setTodasLasCategorias] = useState<FilaCategoria[]>([]);
+  const [cargandoTodas, setCargandoTodas] = useState(false);
+  const [buscaTabla, setBuscaTabla] = useState('');
   const [detalle, setDetalle] = useState<ConvenioDetalle | null>(null);
   const [cargandoNivel1, setCargandoNivel1] = useState(true);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
@@ -206,6 +219,35 @@ export const CategoriasArcaTab: React.FC = () => {
       setCargandoDetalle(false);
     }
   }, []);
+
+  /**
+   * Aplana TODAS las categorías, resolviendo el detalle de cada convenio en paralelo.
+   *
+   * No hay endpoint que las traiga juntas: `detalle` es por convenio. Son pocos —los que tienen
+   * categorías cargadas—, así que N requests en paralelo es aceptable; se hace UNA vez, al entrar a
+   * la vista de tabla, y no al abrir la pantalla, para no pagarlo cuando nadie la usa.
+   */
+  const cargarTodasLasCategorias = useCallback(async () => {
+    setCargandoTodas(true);
+    try {
+      const detalles = await Promise.all(convenios.map((c) => arcaCategoriasAPI.detalle(c.convenio).catch(() => null)));
+      const filas: FilaCategoria[] = [];
+      for (const d of detalles) {
+        if (!d) continue;
+        for (const g of d.grupos) for (const cat of g.categorias) filas.push({ cat, convenio: d.convenio, nombreConvenio: d.nombre || '', grupo: `G${g.numero}` });
+        // Las que no cuelgan de ningún grupo: en varios convenios ARCA publica la escala en la
+        // categoría, y dejarlas afuera de esta tabla las volvería invisibles desde acá.
+        for (const cat of d.sinGrupo || []) filas.push({ cat, convenio: d.convenio, nombreConvenio: d.nombre || '', grupo: '—' });
+      }
+      setTodasLasCategorias(filas);
+    } finally {
+      setCargandoTodas(false);
+    }
+  }, [convenios]);
+
+  useEffect(() => {
+    if (vistaTabla && !convenioSel && convenios.length > 0 && todasLasCategorias.length === 0) void cargarTodasLasCategorias();
+  }, [vistaTabla, convenioSel, convenios.length, todasLasCategorias.length, cargarTodasLasCategorias]);
 
   useEffect(() => {
     cargarNivel1().then((convs) => {
@@ -708,9 +750,36 @@ export const CategoriasArcaTab: React.FC = () => {
       <BannerContratosHuerfanos />
       <BannerEscalasVencidas />
         {modalHuerfanas}
-        <div>
-          <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Elegí un convenio</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Las categorías profesionales cuelgan de un Convenio Colectivo. La escala salarial vive en sus grupos —o en la categoría, en los convenios que ARCA publica sin grupos.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">{vistaTabla ? 'Todas las categorías' : 'Elegí un convenio'}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Las categorías profesionales cuelgan de un Convenio Colectivo. La escala salarial vive en sus grupos —o en la categoría, en los convenios que ARCA publica sin grupos.</p>
+          </div>
+          {/* Mismo par de botones que el resto de los catálogos, para que la vista se cambie igual. */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setVistaTabla(false);
+                localStorage.setItem('arcaCategoriasVistaTabla', 'false');
+              }}
+              title="Vista de tarjetas, por convenio"
+              className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${!vistaTabla ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+            >
+              <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setVistaTabla(true);
+                localStorage.setItem('arcaCategoriasVistaTabla', 'true');
+              }}
+              title="Vista de tabla, con todas las categorías juntas"
+              className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${vistaTabla ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+            >
+              <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {tabsConvenios}
@@ -740,7 +809,22 @@ export const CategoriasArcaTab: React.FC = () => {
         )}
 
         {convenios.length === 0 ? (
-          <EmptyState icon={faListCheck} title="No hay convenios registrados" description="Ninguna empleadora tiene convenios registrados ante ARCA. Registralos en la ficha de la empresa, en ARCA → Convenios." />
+          <EmptyState icon={faListCheck} title="No hay convenios registrados" description="Ninguna empleadora tiene convenios registrados ante ARCA. Registralos desde Configuración → ARCA → Convenios, marcando las empresas que lo tienen." />
+        ) : vistaTabla ? (
+          <TablaCategorias
+            filas={todasLasCategorias}
+            cargando={cargandoTodas}
+            busqueda={buscaTabla}
+            onBuscar={setBuscaTabla}
+            encabezadoPorDefecto={
+              <span className="inline-flex items-center gap-2">
+                Por defecto
+                <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
+              </span>
+            }
+            renderPorDefecto={(f) => <DefaultArcaStar campo="categoria" valor={f.cat.codigoArca} nombre={`${f.cat.codigoArca} — ${f.cat.nombre}`} queEs="la categoría que se ofrece primero" />}
+            onAbrirConvenio={(convenio) => elegirConvenio(convenio)}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {convenios.map((c) => {

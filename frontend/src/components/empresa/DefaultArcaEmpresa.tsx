@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { HerenciaGlobal } from '../arca/HerenciaGlobal';
 import { useGuardarEmpresa } from './useGuardarEmpresa';
 import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
+import { CAMPO_IDS_DE_VINCULO } from '../../api/companies';
 import { Company } from '../../api/companies';
 
 /**
@@ -44,6 +45,8 @@ interface Props {
    * Sin filtrar son 293 opciones con 49 nombres repetidos.
    */
   filtrarPorGrupoDeLaEmpresa?: boolean;
+  /** La frase del mapa de ámbitos: por qué esta tabla no se declara por empresa. */
+  ambito: string;
 }
 
 /**
@@ -76,7 +79,7 @@ export const LimpiarDefaultEmpresa: React.FC<{ hayValor: boolean; onLimpiar: () 
 /** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
 const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
 
-export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa }) => {
+export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa, ambito }) => {
   const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -95,14 +98,25 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
   const grupoEmpresa = String(empresa.defaultsArca?.grupoTipoServicio || '');
   const acotaPorGrupo = !!filtrarPorGrupoDeLaEmpresa && !!grupoEmpresa;
 
+  /**
+   * Los que ESTA empleadora usa. Lista vacía = TODOS, no ninguno.
+   *
+   * Esa asimetría es lo que hace que la vinculación se pueda agregar sin romper nada: ninguna empresa
+   * existente tiene códigos asignados, y leer el vacío como «ninguno» las dejaría a todas sin
+   * opciones de un día para el otro. Además es el default sano: recortar es la excepción, y una
+   * empleadora que nunca tocó el filtro quiere ver el nomenclador entero.
+   */
+  const asignados = ((empresa[CAMPO_IDS_DE_VINCULO[campo]] as string[] | undefined) || []).map(String);
+  const delaEmpresa = useMemo(() => (asignados.length === 0 ? items : items.filter((i) => asignados.includes(i._id))), [items, asignados.join(',')]);
+
   const visibles = useMemo(() => {
     const texto = q.trim().toLowerCase();
-    return items.filter((i) => {
+    return delaEmpresa.filter((i) => {
       if (acotaPorGrupo && soloDelGrupo && grupoDelItem(i) !== grupoEmpresa) return false;
       if (!texto) return true;
       return `${i.externalId || ''} ${i.name || ''}`.toLowerCase().includes(texto);
     });
-  }, [items, q, acotaPorGrupo, soloDelGrupo, grupoEmpresa]);
+  }, [delaEmpresa, q, acotaPorGrupo, soloDelGrupo, grupoEmpresa]);
 
   const nombreDe = (codigo: string): string => {
     const i = items.find((x) => String(x.externalId || '') === codigo);
@@ -125,12 +139,36 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
 
   return (
     <SeccionEmpleador>
+      {/*
+        DECIR QUE ESTO NO SE DECLARA ANTE ARCA, en la pantalla donde nace la duda.
+
+        Está en la ficha de una empleadora, al lado de convenios y domicilios que SÍ son un registro
+        ante el organismo. Sin esta línea, recortar la lista se lee como declarar un padrón — y no
+        recortarla, como un trámite pendiente.
+
+        Mismo tratamiento que la nota gris de /convenios: no es un banner ni un modal.
+      */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2.5">
+        <p className="text-xs text-gray-600 dark:text-gray-300">
+          <strong className="text-gray-900 dark:text-gray-100">Preferencia de la empresa</strong>, no un registro ante ARCA.
+        </p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{ambito}</p>
+      </div>
+
       <div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-gray-500 dark:text-gray-400">{nota}</p>
-          <LimpiarDefaultEmpresa hayValor={!!marcado} onLimpiar={() => marcar(marcado)} queEs={queEs} disabled={guardando} />
-        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{nota}</p>
         <HerenciaGlobal campo={campo} valorEmpresa={marcado} nombreDe={nombreDe} />
+        {/*
+          Decir que la lista está RECORTADA, y dónde se cambia.
+
+          Sin esto, una lista de cuatro códigos sobre un nomenclador de 293 se lee como un catálogo a
+          medio importar, y el próximo paso es ir a cargarlos de nuevo.
+        */}
+        {asignados.length > 0 && (
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            Mostrando los {delaEmpresa.length} que esta empleadora usa, de {items.length} del nomenclador. Se eligen desde Configuración → ARCA, en la columna «Empresas».
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -147,30 +185,61 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
             respuesta útil, y acá además explicaría mal por qué la lista está entera. */}
         {acotaPorGrupo && (
           <button type="button" onClick={() => setSoloDelGrupo((v) => !v)} className={`shrink-0 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${soloDelGrupo ? 'bg-blue-50 dark:bg-blue-900/25 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
-            {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${items.length}`}
+            {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${delaEmpresa.length}`}
           </button>
         )}
       </div>
 
-      {visibles.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">No hay ninguno que coincida.</p>
-      ) : (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60 max-h-[520px] overflow-y-auto">
-          {visibles.map((i) => {
-            const codigo = String(i.externalId || '');
-            const esDefecto = !!codigo && codigo === marcado;
-            return (
-              <div key={i._id} className="flex items-center gap-3 px-3 py-2">
-                <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo} title={esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
-                  <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
-                </button>
-                <span className="shrink-0 font-mono text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{codigo || '—'}</span>
-                <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{i.name}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/*
+        TABLA CON ENCABEZADOS, y «Por defecto» como última columna a la derecha.
+
+        Era una lista sin títulos con la ★ pegada al principio de cada fila: no decía qué era cada
+        cosa —el número suelto podía leerse como un orden y no como el código que viaja al TXT— y
+        dejaba el control en el borde opuesto al de todas las demás pantallas.
+      */}
+      <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900/50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Código</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
+                <span className="inline-flex items-center gap-2">
+                  Por defecto
+                  <LimpiarDefaultEmpresa hayValor={!!marcado} onLimpiar={() => marcar(marcado)} queEs={queEs} disabled={guardando} />
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+            {visibles.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  No hay ninguno que coincida.
+                </td>
+              </tr>
+            ) : (
+              visibles.map((i) => {
+                const codigo = String(i.externalId || '');
+                const esDefecto = !!codigo && codigo === marcado;
+                return (
+                  <tr key={i._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200">{i.name}</td>
+                    <td className="px-4 py-2.5">
+                      <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo} title={esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
+                        <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </SeccionEmpleador>
   );
 };

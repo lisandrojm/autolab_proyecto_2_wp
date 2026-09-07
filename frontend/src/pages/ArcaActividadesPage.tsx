@@ -1,5 +1,6 @@
 import React from "react";
 import { faIndustry } from "@fortawesome/free-solid-svg-icons";
+import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
@@ -40,7 +41,7 @@ export const ArcaActividadesPage: React.FC = () => (
       },
     ]}
     title="Actividades"
-    subtitle="Diccionario de actividades económicas de ARCA. Se usa al cargar una actividad en un domicilio, para que el código y la descripción salgan siempre iguales."
+    {...encabezadoDeAmbito("actividades")}
     icon={faIndustry}
     entityLabel="actividad"
     api={api}
