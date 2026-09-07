@@ -267,6 +267,20 @@ export interface User {
     schedule?: string;
     dailyRate?: number;
     isReplacement?: boolean;
+    /*
+      Lo que declara la solicitud de contratación de mobile, además de lo de arriba.
+
+      `empleado_id_reemplezado` es el id numérico que usa el contrato y solo lo tienen las fichas
+      sincronizadas de FRAME; `replacedUserId` es el `_id`, que existe siempre. Se guardan los dos.
+    */
+    /** Trámite declarado: alta temprana ante ARCA o locación de servicios. */
+    tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+    empleado_id_reemplezado?: string | number;
+    replacedUserId?: string;
+    /** Por qué falta quien se reemplaza. Es un tipo de novedad (`request-config`), no texto libre. */
+    motivoReemplazoId?: string;
+    /** Texto libre de quien pidió el alta. Opcional. */
+    comentarios?: string;
     projectIds?: string[];
     rolesFrameIds?: (string | { _id: string; name: string })[];
     // Domicilio & Personal

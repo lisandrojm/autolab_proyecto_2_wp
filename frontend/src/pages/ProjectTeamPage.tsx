@@ -28,6 +28,7 @@ import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
+import { TipoContratoSelect } from "../components/contratos/TipoContratoSelect";
 import { contratosAPI, ContratoItem } from "../api/contratos";
 import { releasesAPI, Release } from "../api/release";
 import { companiesAPI, Company } from "../api/companies";
@@ -840,9 +841,6 @@ export const ProjectTeamPage: React.FC = () => {
   }, [contratos, contratoFrames, allEstados]);
 
   const impositivosDelAbm = useMemo(() => estadosImpositivos(allEstados), [allEstados]);
-
-  /** Nombre corto del trámite, para el texto del <option> (que no puede llevar un badge adentro). */
-  const etiquetaTramite = (tipo: TipoImpositivo): string => estadoImpositivoPorTipo(allEstados, tipo)?.name || tipo;
 
   /*
     La lista de tipos que se ofrece.
@@ -3541,13 +3539,15 @@ export const ProjectTeamPage: React.FC = () => {
                       {/*
                         Lista propia y no un <select> nativo: un <option> solo admite texto, y acá
                         cada tipo tiene que mostrar SU badge de trámite al lado del nombre. Es el
-                        mismo badge de Contratos, para que se lea como lo mismo.
+                        mismo badge de Contratos, para que se lea como lo mismo. Ver
+                        `components/contratos/TipoContratoSelect.tsx`.
                       */}
-                      <select
-                        className="input-field w-full"
+                      <TipoContratoSelect
+                        options={contratosFiltradosPorTramite}
                         value={wizardData.contrato_id}
-                        onChange={(e) => {
-                          const contratoId = e.target.value;
+                        estados={allEstados}
+                        tramitePorContrato={tramitePorContrato}
+                        onChange={(contratoId) => {
                           const contrato = contratos.find((c) => c._id === contratoId);
                           // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
                           // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
@@ -3562,17 +3562,7 @@ export const ProjectTeamPage: React.FC = () => {
                             fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? "" : prev.fecha_baja_contrato,
                           }));
                         }}
-                        required
-                      >
-                        <option value="">Selecciona tipo...</option>
-                        {contratosFiltradosPorTramite.map((c) => (
-                          <option key={c._id} value={c._id}>
-                            {c.name}
-                            {c.isActive === false ? " (inactivo)" : ""}
-                            {tramitePorContrato.get(c._id) ? ` · ${etiquetaTramite(tramitePorContrato.get(c._id)!)}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                      />
 
 
                       {filtroTramite && contratosFiltradosPorTramite.length === 0 && (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faUserPlus, faClock, faSearch, faRotateLeft, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faUserPlus, faClock, faSearch, faRotateLeft, faTrash, faCommentDots } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../api/users";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
@@ -216,6 +216,22 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                           <div className="min-w-0">
                             <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{displayName}</p>
                             <p className="text-xs text-gray-500 truncate">{formatDate(user.createdAt)}</p>
+                            {/*
+                              EL COMENTARIO DE QUIEN PIDIÓ EL ALTA.
+
+                              Va acá y no en una columna propia: es texto libre de largo impredecible
+                              y una columna lo cortaría en dos palabras, que es no mostrarlo. Debajo
+                              del nombre entra completo y solo aparece cuando hay algo escrito.
+
+                              Si no se mostrara en ningún lado, el campo del formulario sería un lugar
+                              donde escribir para nadie.
+                            */}
+                            {meta?.comentarios && (
+                              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
+                                <FontAwesomeIcon icon={faCommentDots} className="h-3 w-3 mt-0.5 shrink-0" />
+                                <span className="whitespace-pre-wrap break-words">{meta.comentarios}</span>
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>

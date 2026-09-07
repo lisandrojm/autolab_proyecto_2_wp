@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faFileInvoiceDollar } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faFileInvoiceDollar, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo, faltaDefinirDias } from "../../../../components/contratos/DiasDeTrabajo";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
@@ -12,7 +12,9 @@ import { projectsAPI, Project } from "../../../../api/projects";
 import { useProfile } from "../hooks/useProfile";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { infoAPI, InfoItem } from "../../../../api/info";
+import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
 import { estadoLabel } from "../../../../components/EstadoSelect";
+import { fuzzyMatch } from "../../../../utils/searchHelpers";
 import { estadosImpositivos, esTipoImpositivo, TipoImpositivo } from "../../../../utils/tramiteImpositivo";
 import { TRAMITE_ALTA_TEMPRANA } from "../../../../components/contratos/altaTemprana";
 
@@ -43,13 +45,25 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   /** Las dos ventanas de selección de personas. Reemplazan a los desplegables flotantes. */
   const [personaModalOpen, setPersonaModalOpen] = useState(false);
   const [reemplazoModalOpen, setReemplazoModalOpen] = useState(false);
+  /*
+    Los motivos son LOS MISMOS que los de Novedades (`request-config`), no una lista propia.
+
+    Un reemplazo existe porque alguien falta, y por qué falta ya está tipificado ahí: Franco,
+    Vacaciones, Enfermedad, Cambios de Turno… Escribir otra lista acá haría que el mismo hecho se
+    llame distinto según por qué pantalla se cargó, y después no se pueden cruzar.
+  */
+  const [motivos, setMotivos] = useState<RequestConfig[]>([]);
+  const [motivoModalOpen, setMotivoModalOpen] = useState(false);
+  /** Ventana de rol empresa, con su propio buscador. Mismo patrón que la de Usuarios. */
+  const [rolModalOpen, setRolModalOpen] = useState(false);
+  const [rolSearchTerm, setRolSearchTerm] = useState("");
   /** Texto del buscador dentro de la ventana de "a quién reemplaza". */
   const [replacedSearchTerm, setReplacedSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     fullName: "",
     projectIds: [] as string[],
-    roleFrameId: "",
+    roleFrameIds: [] as string[],
     categoriaSatId: "",
     startDate: "",
     dueDate: "",
@@ -66,6 +80,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     /** A quién reemplaza: el id numérico que usa el contrato (puede faltar) y el `_id`, que no. */
     empleado_id_reemplezado: "",
     replacedUserId: "",
+    /** Por qué falta la persona reemplazada. Es un tipo de novedad, no un texto libre. */
+    motivoReemplazoId: "",
+    /** Lo que no entra en ningún otro campo. Opcional. */
+    comentarios: "",
   });
 
   const TIME_OPTIONS = (() => {
@@ -88,8 +106,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       const loadData = async () => {
         setLoadingData(true);
         try {
-          const [frames, cats, projs, usersRes, estados] = await Promise.all([roleFrameAPI.list(), categoriaSatAPI.list(), projectsAPI.listAll(), usersAPI.list({ limit: 1000, metadataActivo: "true" }), infoAPI.listByType("estado-empleado").catch(() => [] as InfoItem[])]);
+          const [frames, cats, projs, usersRes, estados, tiposNovedad] = await Promise.all([roleFrameAPI.list(), categoriaSatAPI.list(), projectsAPI.listAll(), usersAPI.list({ limit: 1000, metadataActivo: "true" }), infoAPI.listByType("estado-empleado").catch(() => [] as InfoItem[]), activityLogTypesAPI.getAll().catch(() => [] as RequestConfig[])]);
           setImpositivos(estadosImpositivos(estados));
+          // Mismo filtro que Novedades: solo los activos y sin "horas extra", que no es una ausencia.
+          setMotivos(tiposNovedad.filter((t) => t.isActive && !t.name.toLowerCase().includes("horas extra")));
           setRoleFrames(frames);
           setCategoriasSat(cats);
           setPlatformUsers(usersRes.users || []);
@@ -118,7 +138,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       setFormData({
         fullName: meta.fullName || `${editingUser.firstName} ${editingUser.lastName}`,
         projectIds: meta.projectIds || [],
-        roleFrameId: meta.rolesFrameIds?.[0] || meta.roleFrameId || "",
+        // Las tres formas en que quedó guardado el rol según quién creó la solicitud.
+        roleFrameIds: (meta.rolesFrameIds?.length ? meta.rolesFrameIds : meta.roles_frame?.length ? meta.roles_frame : meta.roleFrameId ? [meta.roleFrameId] : []).map((rf: any) => String(typeof rf === "string" ? rf : rf?._id)).filter(Boolean),
         categoriaSatId: meta.categoriaSatId || "",
         startDate: meta.startDate || editingUser.hireDate?.split("T")[0] || "",
         dueDate: meta.dueDate || "",
@@ -137,12 +158,14 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         tipoImpositivo: esTipoImpositivo(meta.tipoImpositivo) ? meta.tipoImpositivo : "",
         empleado_id_reemplezado: meta.empleado_id_reemplezado != null ? String(meta.empleado_id_reemplezado) : "",
         replacedUserId: meta.replacedUserId ? String(meta.replacedUserId) : "",
+        motivoReemplazoId: meta.motivoReemplazoId ? String(meta.motivoReemplazoId) : "",
+        comentarios: meta.comentarios || "",
       });
     } else if (isOpen && !editingUser) {
       setFormData({
         fullName: "",
         projectIds: [],
-        roleFrameId: "",
+        roleFrameIds: [],
         categoriaSatId: "",
         startDate: "",
         dueDate: "",
@@ -157,6 +180,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         tipoImpositivo: "",
         empleado_id_reemplezado: "",
         replacedUserId: "",
+        motivoReemplazoId: "",
+        comentarios: "",
       });
       setReplacedSearchTerm("");
       setUserSearchTerm("");
@@ -231,18 +256,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const val = type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
-    /*
-      Cambiar el rol LIMPIA la categoría.
-
-      Las categorías que se ofrecen son las que habilita el rol elegido. Si se cambia el rol, la que
-      estaba puesta puede no pertenecer al nuevo: el desplegable la dejaba de listar pero el valor
-      seguía cargado, así que la pantalla mostraba «Selecciona categoría» y por debajo se enviaba la
-      vieja.
-    */
-    if (name === "roleFrameId") {
-      setFormData((prev) => ({ ...prev, roleFrameId: String(val), categoriaSatId: "" }));
-      return;
-    }
     setFormData((prev) => ({ ...prev, [name]: val }));
   };
 
@@ -296,7 +309,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       ...prev,
       fullName: userFullName,
       // Pre-select the first one if available
-      roleFrameId: roleFrameIds[0] || prev.roleFrameId,
+      // UNO SOLO, no todos los que tenga la persona: la solicitud declara con qué rol la van a
+      // contratar, y alguien con cinco oficios cargados no entra por los cinco a la vez. Los demás
+      // se agregan a mano con el «+» si de verdad corresponden.
+      roleFrameIds: roleFrameIds.length > 0 ? [roleFrameIds[0]] : prev.roleFrameIds,
       categoriaSatId: categoriaSatIds[0] || prev.categoriaSatId,
     }));
     setUserSearchTerm(userFullName);
@@ -311,6 +327,59 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     setPersonaModalOpen(false);
   };
 
+  /** Los roles elegidos, resueltos a su ficha para poder mostrar el nombre. */
+  const rolesElegidos = formData.roleFrameIds.map((id) => roleFrames.find((rf) => rf._id === id)).filter(Boolean) as RoleFrameItem[];
+
+  /** Agrega o saca un rol. Un rol ya elegido se destilda, como en Usuarios. */
+  const alternarRol = (id: string) => setFormData((prev) => ({ ...prev, roleFrameIds: prev.roleFrameIds.includes(id) ? prev.roleFrameIds.filter((x) => x !== id) : [...prev.roleFrameIds, id] }));
+
+  /**
+   * Los roles que se ofrecen: los de la persona elegida (o todos, si el nombre se escribió a mano),
+   * filtrados por el buscador de la ventana.
+   */
+  const rolesDisponibles = useMemo(() => {
+    const base = roleFrames.filter((rf) => rolesDelUsuario.length === 0 || rolesDelUsuario.includes(rf._id));
+    return rolSearchTerm.trim() ? base.filter((rf) => fuzzyMatch(rf.name, rolSearchTerm)) : base;
+  }, [roleFrames, rolesDelUsuario, rolSearchTerm]);
+
+  /*
+    LAS CATEGORÍAS QUE SE OFRECEN: la UNIÓN de las que habilita cada rol elegido.
+
+    Con un rol solo era su lista. Con varios no se puede intersecar —un Animador 2D que además es
+    Asistente de Cámara puede entrar por una categoría de cualquiera de los dos oficios— así que se
+    suman. Y se sigue respetando lo que la persona ya tiene asignado, que es el otro filtro.
+  */
+  const categoriasDisponibles = useMemo(() => {
+    if (formData.roleFrameIds.length === 0) return [];
+    const habilitadas = new Set<string>();
+    for (const id of formData.roleFrameIds) {
+      const rf = roleFrames.find((x) => x._id === id);
+      for (const c of (rf?.data?.categoriasSat || []) as any[]) habilitadas.add(String(c?.id ?? c));
+    }
+    return categoriasSat.filter((cat) => {
+      const porRol = habilitadas.has(String(cat.externalId)) || habilitadas.has(String(cat.data?.id));
+      const porUsuario = !selectedUser?.metadata?.categoriaSatIds?.length || selectedUser.metadata.categoriaSatIds.includes(cat._id);
+      return porRol && porUsuario;
+    });
+  }, [categoriasSat, roleFrames, formData.roleFrameIds, selectedUser]);
+
+  /*
+    Si la categoría cargada dejó de estar habilitada, se limpia.
+
+    Antes se limpiaba SIEMPRE al tocar el rol, y con varios roles eso era peor: agregar un segundo
+    oficio borraba una categoría que seguía siendo válida. Ahora solo se borra la que de verdad ya no
+    corresponde — que es el caso que importa, porque el desplegable la dejaba de listar pero el valor
+    seguía viajando en el submit.
+  */
+  useEffect(() => {
+    if (!formData.categoriaSatId) return;
+    if (categoriasDisponibles.some((c) => c._id === formData.categoriaSatId)) return;
+    setFormData((prev) => ({ ...prev, categoriaSatId: "" }));
+  }, [categoriasDisponibles, formData.categoriaSatId]);
+
+  /** El motivo elegido, para mostrar su nombre sin repetir el `find` en cada lugar donde se usa. */
+  const motivoElegido = motivos.find((m) => String(m._id) === String(formData.motivoReemplazoId)) || null;
+
   /** Cómo se llama la persona reemplazada, para mostrarla en el campo sin volver a buscarla. */
   const nombreReemplazado = (() => {
     if (!formData.replacedUserId) return "";
@@ -319,7 +388,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   })();
 
   const handleSubmit = async () => {
-    if (!formData.fullName || !formData.projectIds.length || !formData.roleFrameId || !formData.categoriaSatId) {
+    if (!formData.fullName || !formData.projectIds.length || formData.roleFrameIds.length === 0 || !formData.categoriaSatId) {
       sweetAlert.warning("Campos incompletos", "Por favor completa los campos obligatorios.");
       return;
     }
@@ -353,6 +422,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       sweetAlert.warning("Falta a quién reemplaza", "Marcaste que es un reemplazo: elegí a quién reemplaza, o apagá el switch.");
       return;
     }
+    /*
+      Y POR QUÉ FALTA. Un reemplazo sin motivo no se puede liquidar igual: no es lo mismo cubrir
+      vacaciones que una enfermedad o un cambio de turno, y el que carga el alta es el único que lo
+      sabe en ese momento.
+    */
+    if (formData.isReplacement && !formData.motivoReemplazoId && motivos.length > 0) {
+      sweetAlert.warning("Falta el motivo", "Indicá por qué falta la persona que se reemplaza.");
+      return;
+    }
     const faltaDias = faltaDefinirDias(Number(formData.diasPorSemana) || 0, formData.diasRotativos, formData.diasSemana);
     if (faltaDias) {
       sweetAlert.warning("Faltan los días que trabaja", `${faltaDias.charAt(0).toUpperCase()}${faltaDias.slice(1)}.`);
@@ -379,7 +457,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           // solicitud se muestra dentro de su ficha en vez de crear una tarjeta duplicada. Si el
           // nombre se escribió a mano (persona que todavía no existe), queda vacío.
           solicitudUserId: selectedUser?._id || undefined,
-          roles_frame: [formData.roleFrameId],
+          roles_frame: formData.roleFrameIds,
           categoriaSatId: formData.categoriaSatId,
           startDate: formData.startDate,
           dueDate: formData.dueDate,
@@ -394,6 +472,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           // faltar en fichas no sincronizadas) y el `_id`, que siempre está.
           empleado_id_reemplezado: formData.isReplacement ? formData.empleado_id_reemplezado || undefined : undefined,
           replacedUserId: formData.isReplacement ? formData.replacedUserId || undefined : undefined,
+          // El motivo viaja como id del tipo de novedad, no como texto: el nombre lo pone quien lo
+          // muestre, leyéndolo del mismo catálogo que Novedades.
+          motivoReemplazoId: formData.isReplacement ? formData.motivoReemplazoId || undefined : undefined,
+          // Se manda solo si tiene algo: un string vacío guardado se lee después como "hay un
+          // comentario" en cualquier chequeo por presencia.
+          comentarios: formData.comentarios.trim() || undefined,
           // El trámite declarado viaja con la solicitud: es lo que después precarga el wizard.
           tipoImpositivo: formData.tipoImpositivo || undefined,
           isSolicitud: true,
@@ -412,7 +496,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       setFormData({
         fullName: "",
         projectIds: [],
-        roleFrameId: "",
+        roleFrameIds: [],
         categoriaSatId: "",
         startDate: "",
         dueDate: "",
@@ -427,6 +511,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         tipoImpositivo: "",
         empleado_id_reemplezado: "",
         replacedUserId: "",
+        motivoReemplazoId: "",
+        comentarios: "",
       });
       setReplacedSearchTerm("");
     } catch (error: any) {
@@ -576,23 +662,58 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-              Rol/es Empresa*
-            </label>
-            {/* El rol sale del que ya tiene la persona: si tiene uno solo se completa y se bloquea
-                (no hay nada que elegir), y solo se habilita cuando tiene dos o más. Si el nombre se
-                escribió a mano —persona que todavía no es usuario— se ofrecen todos. */}
-            <select name="roleFrameId" value={formData.roleFrameId} onChange={handleChange} disabled={rolesDelUsuario.length === 1} title={rolesDelUsuario.length === 1 ? "La persona tiene un solo rol frame asignado" : undefined} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white disabled:opacity-70 disabled:cursor-not-allowed">
-              <option value="">Selecciona rol</option>
-              {roleFrames
-                .filter((rf) => rolesDelUsuario.length === 0 || rolesDelUsuario.includes(rf._id))
-                .map((rf) => (
-                  <option key={rf._id} value={rf._id}>
-                    {rf.name}
-                  </option>
+            {/*
+              VENTANA, NO DESPLEGABLE. Es el mismo patrón que «Rol/es Empresa» en Usuarios.
+
+              El catálogo tiene cientos de especialidades: en un <select> nativo son cientos de
+              renglones sin buscador, que se recorren con la rueda hasta encontrar el correcto — y en
+              mobile ese desplegable ocupa media pantalla. En la ventana hay lugar para buscar y ver
+              la lista completa, y lo elegido queda como badges con su X.
+
+              SON VARIOS. Alguien puede entrar a una producción con más de un oficio, y la solicitud
+              tiene que poder decirlo. Con algo ya elegido, el campo ancho se reemplaza por un «+» al
+              lado del rótulo: repetir la invitación a elegir debajo de lo ya elegido se lleva el alto
+              de una fila entera para eso.
+
+              Los roles salen de los que ya tiene la persona; si el nombre se escribió a mano —alguien
+              que todavía no es usuario— se ofrecen todos.
+            */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
+                Rol/es Empresa*
+              </label>
+              {rolesElegidos.length > 0 && rolesDelUsuario.length !== 1 && (
+                <button type="button" onClick={() => setRolModalOpen(true)} title="Agregar otro rol" className="h-4 w-4 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shrink-0 ml-0.5">
+                  <FontAwesomeIcon icon={faPlus} className="h-2 w-2" />
+                </button>
+              )}
+            </div>
+            {rolesElegidos.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {/* Del mismo tamaño que en Usuarios (text-[11px]): más grandes se comían el aire con
+                    el «+» del rótulo y con la fila de abajo. */}
+                {rolesElegidos.map((rf) => (
+                  <span key={rf._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                    <span className="truncate max-w-[12rem]">{rf.name}</span>
+                    {rolesDelUsuario.length !== 1 && (
+                      <button type="button" onClick={() => alternarRol(rf._id)} title={`Quitar ${rf.name}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                  </span>
                 ))}
-            </select>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRolModalOpen(true)}
+                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
+              >
+                <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
+                <span className="text-slate-400 truncate">Elegí uno o más roles…</span>
+              </button>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
@@ -612,32 +733,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               name="categoriaSatId"
               value={formData.categoriaSatId}
               onChange={handleChange}
-              disabled={!formData.roleFrameId}
-              title={!formData.roleFrameId ? "Elegí primero el rol empresa" : undefined}
+              disabled={formData.roleFrameIds.length === 0}
+              title={formData.roleFrameIds.length === 0 ? "Elegí primero el rol empresa" : undefined}
               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <option value="">{formData.roleFrameId ? "Selecciona categoría" : "Elegí primero el rol empresa"}</option>
-              {(() => {
-                const selectedRF = roleFrames.find((rf) => rf._id === formData.roleFrameId);
-                const allowedExternalIds = (selectedRF?.data?.categoriasSat || []).map((c: any) => String(c.id || c));
-
-                return categoriasSat
-                  .filter((cat) => {
-                    // 1. Must be allowed by the selected Role Frame (if one is selected)
-                    const isAllowedByRole = !formData.roleFrameId || allowedExternalIds.includes(cat.externalId) || allowedExternalIds.includes(String(cat.data?.id));
-
-                    // 2. Must be assigned to the user (if a platform user is selected)
-                    const isAssignedToUser = !selectedUser?.metadata?.categoriaSatIds?.length || selectedUser.metadata.categoriaSatIds.includes(cat._id);
-
-                    return isAllowedByRole && isAssignedToUser;
-                  })
-                  .map((cat) => (
-                    <option key={cat._id} value={cat._id}>
-                      {cat.data?.numeroCategoria ? `(${cat.data.numeroCategoria}) ` : ""}
-                      {cat.name}
-                    </option>
-                  ));
-              })()}
+              <option value="">{formData.roleFrameIds.length === 0 ? "Elegí primero el rol empresa" : "Selecciona categoría"}</option>
+              {/* La lista sale de `categoriasDisponibles`: la unión de lo que habilita cada rol elegido. */}
+              {categoriasDisponibles.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.data?.numeroCategoria ? `(${cat.data.numeroCategoria}) ` : ""}
+                  {cat.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -781,7 +888,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 checked={formData.isReplacement}
                 onChange={(e) => {
                   const v = e.target.checked;
-                  setFormData((prev) => ({ ...prev, isReplacement: v, empleado_id_reemplezado: v ? prev.empleado_id_reemplezado : "", replacedUserId: v ? prev.replacedUserId : "" }));
+                  setFormData((prev) => ({ ...prev, isReplacement: v, empleado_id_reemplezado: v ? prev.empleado_id_reemplezado : "", replacedUserId: v ? prev.replacedUserId : "", motivoReemplazoId: v ? prev.motivoReemplazoId : "" }));
                   if (!v) setReplacedSearchTerm("");
                 }}
                 className="sr-only peer"
@@ -792,46 +899,112 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           </div>
 
           {/*
-            A QUIÉN REEMPLAZA. Mismo buscador que el de arriba, pero sobre el equipo del proyecto.
+            LOS DOS DATOS DEL REEMPLAZO: por qué falta, y quién.
 
-            Decir que alguien entra por reemplazo sin decir a quién no sirve para nada del otro lado:
-            el reemplazo hereda el área y el turno de la persona que reemplaza, y sin ese dato hay
-            que ir a preguntarlo.
+            EL MOTIVO VA PRIMERO. Es el orden en que se piensa —«falta por vacaciones… ah, sí, falta
+            Fulano»— y además es el que puede cambiar la respuesta al segundo: quién cubre no se elige
+            igual para un franco de un día que para una licencia larga.
 
-            Solo la gente del proyecto elegido —reemplazar a alguien que no está en el proyecto no es
-            un reemplazo— y sin la persona que se está dando de alta, que no puede reemplazarse a sí
-            misma.
+            A QUIÉN REEMPLAZA usa el mismo buscador que el de arriba, pero sobre el equipo del
+            proyecto: reemplazar a alguien que no está en el proyecto no es un reemplazo, y sin la
+            persona del alta, que no puede reemplazarse a sí misma. Sin ese dato tampoco se puede
+            heredar el área y el turno de quien falta, que es lo que hace después el escritorio.
           */}
           {formData.isReplacement && (
             <div className="space-y-1 relative">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                <FontAwesomeIcon icon={faSearch} className="text-blue-500 text-[10px]" />
-                ¿A quién reemplaza? <span className="text-red-500">*</span>
-              </label>
-              {/* Mismo tratamiento que «Persona»: también se elige a alguien, así que se ve igual. */}
-              {nombreReemplazado ? (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                    <button type="button" onClick={() => setReemplazoModalOpen(true)} title="Cambiar a quién reemplaza" className="truncate max-w-[16rem] text-left">
-                      {nombreReemplazado}
-                    </button>
-                    <button type="button" onClick={() => setFormData((prev) => ({ ...prev, empleado_id_reemplezado: "", replacedUserId: "" }))} title="Quitar" className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-1">
-                      <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                    </button>
-                  </span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setReemplazoModalOpen(true)}
-                  className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
-                >
-                  <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
-                  <span className="text-slate-400 truncate">Buscar en el equipo del proyecto…</span>
-                </button>
-              )}
+              {/*
+                Y POR QUÉ FALTA. Mismo motivo que se carga en Novedades, con el mismo catálogo.
+
+                Un reemplazo sin motivo no alcanza para liquidarlo: no es lo mismo cubrir vacaciones
+                que una enfermedad o un cambio de turno. Y quien pide el alta es el único que lo sabe
+                en ese momento; después hay que ir a preguntarlo.
+
+                Se abre en ventana igual que «Configurar Ausencia» de Novedades —de donde salen estos
+                motivos— para que se reconozca como lo mismo; solo cambia el título, porque acá no se
+                está cargando una ausencia sino el motivo de un reemplazo.
+              */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
+                  Motivo <span className="text-red-500">*</span>
+                </label>
+                {motivoElegido ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                      <button type="button" onClick={() => setMotivoModalOpen(true)} title="Cambiar el motivo" className="truncate max-w-[16rem] text-left">
+                        {motivoElegido.name}
+                      </button>
+                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, motivoReemplazoId: "" }))} title="Quitar" className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-1">
+                        <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                      </button>
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setMotivoModalOpen(true)}
+                    className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
+                  >
+                    <FontAwesomeIcon icon={faClock} className="text-sm text-slate-400 shrink-0" />
+                    <span className="text-slate-400 truncate">Configurar Motivo…</span>
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1 pt-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <FontAwesomeIcon icon={faSearch} className="text-blue-500 text-[10px]" />
+                  ¿A quién reemplaza? <span className="text-red-500">*</span>
+                </label>
+                {/* Mismo tratamiento que «Persona»: también se elige a alguien, así que se ve igual. */}
+                {nombreReemplazado ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                      <button type="button" onClick={() => setReemplazoModalOpen(true)} title="Cambiar a quién reemplaza" className="truncate max-w-[16rem] text-left">
+                        {nombreReemplazado}
+                      </button>
+                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, empleado_id_reemplezado: "", replacedUserId: "" }))} title="Quitar" className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-1">
+                        <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                      </button>
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setReemplazoModalOpen(true)}
+                    className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
+                  >
+                    <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
+                    <span className="text-slate-400 truncate">Buscar en el equipo del proyecto…</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
+        </div>
+
+        {/*
+          UN COMENTARIO, POR SI HACE FALTA. Opcional, y el único campo de texto libre del formulario.
+
+          Todo lo demás está tipificado —el trámite, el motivo, los días— porque se procesa del otro
+          lado. Pero siempre hay algo que no entra en ningún campo («entra recién el 15», «lo pidió
+          producción por WhatsApp»), y sin lugar para escribirlo eso viajaba por mensaje aparte y se
+          perdía. Mismo control que los «Comentarios Generales» de Confirmar Reporte, en Novedades.
+
+          Vacío está bien: es opcional de verdad, no un obligatorio disfrazado.
+        */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
+            Comentarios
+          </label>
+          <textarea
+            rows={3}
+            name="comentarios"
+            value={formData.comentarios}
+            onChange={handleChange}
+            className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white text-sm resize-none"
+            placeholder="Algo que haga falta aclarar sobre esta contratación (opcional)…"
+          />
         </div>
 
         {/*
@@ -1048,6 +1221,120 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 })
               )}
             </div>
+          </div>
+        </Modal>
+
+        {/* Rol empresa: misma ventana que en Usuarios —buscador arriba, grilla con lugar para leer—
+            porque el catálogo tiene cientos de especialidades. */}
+        <Modal
+          isOpen={rolModalOpen}
+          onClose={() => setRolModalOpen(false)}
+          title="Rol/es Empresa"
+          subtitle={`${formData.roleFrameIds.length} seleccionado(s) · el oficio con el que la persona trabaja en una producción`}
+          size="lg"
+          zIndex={80}
+          footer={
+            <div className="flex w-full justify-between items-center gap-3">
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, roleFrameIds: [] }))} className="text-red-500 hover:text-red-600 font-bold text-sm py-2 px-4 transition-colors">
+                Limpiar
+              </button>
+              <button type="button" onClick={() => setRolModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                Listo
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            {rolesElegidos.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {rolesElegidos.map((rf) => (
+                  <span key={rf._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                    {rf.name}
+                    <button type="button" onClick={() => alternarRol(rf._id)} title={`Quitar ${rf.name}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                      <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+                <FontAwesomeIcon icon={faSearch} className="text-sm" />
+              </div>
+              <input
+                type="text"
+                autoFocus
+                value={rolSearchTerm}
+                onChange={(e) => setRolSearchTerm(e.target.value)}
+                autoComplete="off"
+                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white"
+                placeholder="Buscar especialidad..."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[45vh] overflow-y-auto pr-1">
+              {rolesDisponibles.length === 0 ? (
+                <p className="col-span-full py-8 text-center text-xs text-slate-400 italic">{rolSearchTerm ? `No se encontraron especialidades que coincidan con "${rolSearchTerm}"` : "No hay roles para ofrecer."}</p>
+              ) : (
+                rolesDisponibles.map((rf) => {
+                  const elegido = formData.roleFrameIds.includes(rf._id);
+                  return (
+                    // La ventana NO se cierra al elegir: son varios, y cerrarla obligaría a reabrirla
+                    // por cada rol. Se cierra con «Listo».
+                    <button
+                      key={rf._id}
+                      type="button"
+                      onClick={() => alternarRol(rf._id)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all ${elegido ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"}`}
+                    >
+                      <span className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ${elegido ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="text-[9px]" />}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{rf.name}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </Modal>
+
+        {/* Motivo del reemplazo: es «Configurar Ausencia» de Novedades con otro título, porque acá lo
+            que se declara es por qué falta el que se reemplaza. Misma lista, mismo control. */}
+        <Modal
+          isOpen={motivoModalOpen}
+          onClose={() => setMotivoModalOpen(false)}
+          title="Configurar Motivo"
+          size="md"
+          zIndex={80}
+          footer={
+            <div className="flex w-full justify-end items-center gap-3">
+              <button type="button" onClick={() => setMotivoModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                Listo
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4 pt-2 pb-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo</label>
+              <select
+                className="w-full p-3 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                value={formData.motivoReemplazoId}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, motivoReemplazoId: e.target.value }));
+                  if (e.target.value) setMotivoModalOpen(false);
+                }}
+              >
+                <option value="">Seleccionar motivo...</option>
+                {motivos.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {motivos.length === 0 && <p className="text-xs text-amber-600 dark:text-amber-400">No hay motivos configurados. Se cargan en Configuración → Novedades.</p>}
+            <p className="text-[11px] text-slate-400">Es el motivo por el que falta la persona que se reemplaza. Son los mismos motivos que se usan en Novedades.</p>
           </div>
         </Modal>
 
