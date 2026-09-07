@@ -23,6 +23,8 @@ const patchSchema = z.object({
   tipoServicio: z.string().optional(),
   modalidadContratacion: z.string().optional(),
   modalidadLiquidacion: z.string().optional(),
+  obraSocial: z.string().optional(),
+  actividad: z.string().optional(),
 });
 
 router.get("/", requireTenant, authenticateToken, async (_req: AuthenticatedRequest & TenantRequest, res) => {

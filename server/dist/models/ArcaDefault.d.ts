@@ -40,6 +40,26 @@ export interface IArcaDefault extends Document {
     modalidadContratacion?: string;
     /** Código de Modalidad de Liquidación. Pos. 73 del TXT. */
     modalidadLiquidacion?: string;
+    /**
+     * RNOS de la obra social que se OFRECE PRIMERO. No es un escalón de la cascada del TXT.
+     *
+     * La distinción es la razón de ser del campo. Hubo una obra social global que SÍ decidía, y se
+     * eliminó: solo entraba cuando faltaba configurar algo aguas arriba —casi siempre un convenio sin
+     * obra social—, así que rellenaba el campo con un valor sin fundamento. ARCA acepta el alta igual,
+     * y el error aparece cuando ya está presentado. Ver `frontend/src/pages/ObrasSocialesPage.tsx`.
+     *
+     * Esto es otra cosa: preselección. Si la cascada real (la propia de la persona → la del convenio →
+     * la de excluidos) no resuelve, el checklist sigue marcando FALTANTE y no se genera el TXT.
+     */
+    obraSocial?: string;
+    /**
+     * Código de actividad que se OFRECE PRIMERO al cargar actividades en un domicilio.
+     *
+     * Tampoco decide nada del alta: lo que un contrato puede declarar lo define, y solo, lo que ARCA
+     * tiene declarado para ese domicilio de explotación. Un código válido en otro domicilio es
+     * rechazado por el organismo. Ver `frontend/src/pages/ArcaActividadesPage.tsx`.
+     */
+    actividad?: string;
     createdAt: Date;
     updatedAt: Date;
 }

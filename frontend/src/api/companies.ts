@@ -75,6 +75,17 @@ export interface Company {
     sucursalId?: string | null;
     /** El convenio habitual. Se ofrece primero en el alta; no impide elegir otro. */
     convenioId?: string | null;
+    /** Código de Modalidad de Contratación (pos. 17-19 del TXT). */
+    modalidadContratacion?: string;
+    /**
+     * RNOS de la obra social que se ofrece primero. PRESELECCIÓN.
+     *
+     * No confundir con `obraSocialDefaultId`, que sí decide: es la de los excluidos de convenio
+     * (9999/99) y viaja al TXT. Este solo ordena el combo.
+     */
+    obraSocial?: string;
+    /** Código de actividad que se ofrece primero al cargarlas en un domicilio. */
+    actividad?: string;
   };
   createdAt?: string;
   updatedAt?: string;

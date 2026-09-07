@@ -32,6 +32,8 @@ const companySchema = new Schema({
         tipoServicio: { type: String, default: '' },
         modalidadContratacion: { type: String, default: '' },
         modalidadLiquidacion: { type: String, default: '' },
+        obraSocial: { type: String, default: '' },
+        actividad: { type: String, default: '' },
         sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', default: null },
         convenioId: { type: Schema.Types.ObjectId, ref: 'Convenio', default: null },
     },

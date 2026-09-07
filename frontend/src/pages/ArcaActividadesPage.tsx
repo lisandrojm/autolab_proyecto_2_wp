@@ -2,6 +2,7 @@ import React from "react";
 import { faIndustry } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
+import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
 
 const api = createSimpleCatalogApi("/arca/actividades");
 
@@ -24,6 +25,14 @@ const formatCodigo = (raw: string): string => {
  */
 export const ArcaActividadesPage: React.FC = () => (
   <SimpleCatalogManager
+    columnasCalculadas={[
+      {
+        label: "Por defecto",
+        // Ordena el selector al cargar actividades en un domicilio. NO es la actividad del alta: esa
+        // la define lo que ARCA tenga declarado para ese domicilio, y nada más.
+        render: (item) => <DefaultArcaStar campo="actividad" valor={String(item.externalId || "")} queEs="la actividad que se ofrece primero" />,
+      },
+    ]}
     title="Actividades"
     subtitle="Diccionario de actividades económicas de ARCA. Se usa al cargar una actividad en un domicilio, para que el código y la descripción salgan siempre iguales."
     icon={faIndustry}

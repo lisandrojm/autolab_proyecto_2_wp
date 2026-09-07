@@ -14,6 +14,13 @@ export interface ArcaDefaults {
   tipoServicio?: string;
   modalidadContratacion?: string;
   modalidadLiquidacion?: string;
+  /**
+   * RNOS de la obra social que se ofrece primero. PRESELECCIÓN, no un escalón de la cascada: si la
+   * cascada real no resuelve, el checklist sigue marcando FALTANTE y no se genera el TXT.
+   */
+  obraSocial?: string;
+  /** Código de actividad que se ofrece primero al cargarlas en un domicilio. Tampoco decide el alta. */
+  actividad?: string;
 }
 
 /** Las claves que puede marcar una pantalla de nomenclador con su ★. */

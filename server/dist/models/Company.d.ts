@@ -133,6 +133,19 @@ export interface ICompany extends Document {
         modalidadContratacion?: string;
         /** Código de Modalidad de Liquidación (pos. 73 del TXT). */
         modalidadLiquidacion?: string;
+        /**
+         * RNOS de la obra social que esta empleadora OFRECE PRIMERO, pisando la de la instalación.
+         *
+         * NO ES `obraSocialDefaultId`, que está más arriba y es otra cosa: aquel decide de verdad —es la
+         * obra social de los excluidos de convenio (9999/99), que no tienen sindicato del que heredarla—
+         * y viaja al TXT. Este solo ordena el combo.
+         *
+         * Se guardan separados justamente para que no se confundan: si el mismo campo hiciera las dos
+         * cosas, cambiar el orden de un selector cambiaría lo que se declara ante el organismo.
+         */
+        obraSocial?: string;
+        /** Código de actividad que esta empleadora ofrece primero, pisando el de la instalación. */
+        actividad?: string;
     };
     createdAt: Date;
     updatedAt: Date;

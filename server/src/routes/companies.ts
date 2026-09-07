@@ -59,6 +59,10 @@ const companySchema = z.object({
       sucursalId: z.string().nullable().optional(),
       /** `_id` del convenio habitual. `null` lo quita. */
       convenioId: z.string().nullable().optional(),
+      /** RNOS de la obra social que se ofrece primero. Preselección: no es la de los excluidos. */
+      obraSocial: z.string().optional().default(""),
+      /** Código de actividad que se ofrece primero al cargar actividades en un domicilio. */
+      actividad: z.string().optional().default(""),
     })
     .optional(),
 });
@@ -170,9 +174,38 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     const data = normalizar(companySchema.partial().parse(req.body));
     const problema = revisarDefaultsArca(data);
     if (problema) return res.status(422).json({ error: problema });
+
+    /*
+      `defaultsArca` SE PARCHEA CAMPO POR CAMPO, no se reemplaza.
+
+      `$set: { defaultsArca: {...} }` pisa el subdocumento COMPLETO, y el objeto que llega nunca está
+      completo: cada pantalla del entorno empresa manda lo suyo —la ★ de Tipos de Servicio manda su
+      código, la de Domicilios manda `sucursalId`— y el schema rellena con `""` / `null` todo lo que
+      no vino. Es decir que guardar en una pantalla borraba en silencio lo marcado en las otras.
+
+      Se mira `req.body` y no `data` porque zod ya completó los ausentes con su `.default("")`: en
+      `data` no se distingue «lo mandé vacío para borrarlo» de «no lo mandé». Es el mismo criterio
+      que usa `routes/arcaDefaults.ts` para el documento global.
+    */
+    const { defaultsArca, ...resto } = data as Record<string, any>;
+    const set: Record<string, unknown> = { ...resto };
+    const enviados = (req.body ?? {}).defaultsArca;
+    if (defaultsArca && enviados && typeof enviados === "object") {
+      for (const clave of Object.keys(defaultsArca)) {
+        if (Object.prototype.hasOwnProperty.call(enviados, clave)) set[`defaultsArca.${clave}`] = defaultsArca[clave];
+      }
+      /*
+        El GRUPO es la excepción: no lo manda el cliente, lo DERIVA `revisarDefaultsArca` del código
+        del tipo. Es una clave que cambió sin haber venido en el body, así que el recorrido de arriba
+        la dejaría afuera, y el grupo guardado terminaría contradiciendo al tipo guardado — que es
+        exactamente lo que esa función existe para impedir.
+      */
+      if (Object.prototype.hasOwnProperty.call(enviados, "tipoServicio")) set["defaultsArca.grupoTipoServicio"] = defaultsArca.grupoTipoServicio;
+    }
+
     // `$unset` del nombre viejo en cada guardado: así el documento queda con una sola forma en cuanto
     // se lo toca, sin depender de que la migración haya corrido.
-    const updated = await Company.findByIdAndUpdate(req.params.id, { $set: data, $unset: { obraSocialId: "" } }, { new: true });
+    const updated = await Company.findByIdAndUpdate(req.params.id, { $set: set, $unset: { obraSocialId: "" } }, { new: true });
     if (!updated) return res.status(404).json({ error: "Empresa no encontrada" });
     res.json(updated);
   } catch (error: any) {

@@ -15,9 +15,12 @@ import { companiesAPI, Company } from '../../api/companies';
 import { paritariasAPI, EstadoParitarias } from '../../api/paritarias';
 import { CeldaFuenteParitarias } from '../../components/convenios/CeldaFuenteParitarias';
 import { CeldaSindicato } from '../../components/convenios/CeldaSindicato';
-import { useEmpresaContextStore } from '../../stores/empresaContextStore';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatRnos } from '../../utils/rnos';
+import { useGuardarEmpresa } from '../../components/empresa/useGuardarEmpresa';
+import { DefaultArcaEmpresa } from '../../components/empresa/DefaultArcaEmpresa';
+import { HerenciaGlobal } from '../../components/arca/HerenciaGlobal';
+import { useArcaDefaults } from '../../components/arca/DefaultArcaStar';
 import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
 import { ConveniosTable } from '../../components/convenios/ConveniosTable';
 import { BannerParitarias } from '../../components/paritarias/BannerParitarias';
@@ -42,6 +45,23 @@ const conveniosApi = createSimpleCatalogApi('/convenios');
 const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
 const gruposTipoServicioApi = createSimpleCatalogApi('/arca/grupos-tipo-servicio');
 const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
+const modalidadesContratacionApi = createSimpleCatalogApi('/arca/modalidades-contratacion');
+
+/**
+ * De qué grupo es un tipo de servicio, según su código: por debajo de 500 CONTINUOS, de ahí para
+ * arriba DISCONTINUOS. Es la regla de ARCA, verificada sobre los 293 tipos sin excepciones, y la
+ * misma que aplica el server al guardar (`server/src/utils/grupoTipoServicio.ts`).
+ *
+ * Solo AUTOCOMPLETA el grupo cuando se elige primero el tipo. Para FILTRAR se usa `grupoDelItem`,
+ * que lee el campo que el nomenclador ya trae cargado.
+ */
+const grupoDelCodigo = (codigo: string): string => {
+  const d = String(codigo || '').replace(/\D/g, '');
+  return d === '' ? '' : Number(d) < 500 ? '1' : '2';
+};
+
+/** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
+const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
 
 /** Botón de guardar compartido: todas estas pantallas guardan un campo de `Company`. */
 const BotonGuardar: React.FC<{ onClick: () => void; guardando: boolean; sucio: boolean }> = ({ onClick, guardando, sucio }) => (
@@ -52,29 +72,6 @@ const BotonGuardar: React.FC<{ onClick: () => void; guardando: boolean; sucio: b
     {guardando ? 'Guardando...' : 'Guardar cambios'}
   </button>
 );
-
-/** Guarda un parche en la empresa y refresca el contexto (el nav muestra sus datos). */
-const useGuardarEmpresa = (empresa: Company, recargar: () => Promise<void>) => {
-  const { refreshSelectedEmpresa } = useEmpresaContextStore();
-  const [guardando, setGuardando] = useState(false);
-  const guardar = async (patch: Partial<Company>, mensaje: string) => {
-    setGuardando(true);
-    try {
-      await companiesAPI.update(empresa._id, patch as any);
-      await recargar();
-      await refreshSelectedEmpresa();
-      window.dispatchEvent(new Event('empresasChanged'));
-      sweetAlert.success('Guardado', mensaje);
-      return true;
-    } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo guardar');
-      return false;
-    } finally {
-      setGuardando(false);
-    }
-  };
-  return { guardar, guardando };
-};
 
 // ───────────────────────────────────────────────────────────── Obras Sociales
 
@@ -422,6 +419,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
 
   const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.convenioIds || [])].sort());
   const convenioPorDefectoId = empresa.defaultsArca?.convenioId || '';
+  const { defaults: arcaDefaultsDeLaInstalacion } = useArcaDefaults();
 
   /** Marca o desmarca el convenio habitual. Se guarda con el click. */
   const marcarConvenioPorDefecto = async (convenioId: string) => {
@@ -461,6 +459,23 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
         </button>
         <BotonGuardar guardando={guardando} sucio={sucio} onClick={guardarTodo} />
       </div>
+
+      {/* El convenio por defecto tiene un escalón debajo, y hasta acá no se veía: ver `HerenciaGlobal`. */}
+      <HerenciaGlobal
+        campo="convenioId"
+        valorEmpresa={convenioPorDefectoId}
+        nombreDe={(id) => {
+          const cv = convenios.find((c) => c._id === id);
+          return cv ? `${cv.externalId || ''} ${cv.name}`.trim() : '';
+        }}
+        /* ARCA solo acepta categorías de los convenios que ESTE CUIT registró, así que un global que
+           esta empleadora no tiene no rige: decir que se hereda mandaría a buscar un efecto que no
+           existe. Es el mismo descarte que hace la cascada del TXT. */
+        noAplica={(() => {
+          const g = String(arcaDefaultsDeLaInstalacion.convenioId || '');
+          return g && !ids.includes(g) ? 'esta empleadora no lo tiene registrado.' : undefined;
+        })()}
+      />
 
       {agregando && <ConvenioSelector convenios={convenios} cargando={cargando} value={ids} onChange={setIds} />}
 
@@ -574,6 +589,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort()) || normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa));
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
   const porDefectoId = empresa.defaultsArca?.sucursalId || '';
+  const { defaults: arcaDefaultsDeLaInstalacion } = useArcaDefaults();
 
   /** Marca o desmarca el domicilio habitual. Se guarda solo: es un click, no un formulario. */
   const marcarPorDefecto = async (sucursalId: string) => {
@@ -612,6 +628,21 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
           }}
         />
       </div>
+
+      <HerenciaGlobal
+        campo="sucursalId"
+        valorEmpresa={porDefectoId}
+        nombreDe={(id) => {
+          const s = sucursales.find((x) => x._id === id);
+          return s ? `${s.codigo} — ${s.domicilio}` : '';
+        }}
+        /* El código de domicilio es POR CUIT: uno global puede no existir para este CUIT, y ARCA
+           rechazaría el alta. La cascada del TXT lo descarta por lo mismo. */
+        noAplica={(() => {
+          const g = String(arcaDefaultsDeLaInstalacion.sucursalId || '');
+          return g && !ids.includes(g) ? 'no está entre los domicilios declarados por este CUIT.' : undefined;
+        })()}
+      />
 
       {cargando ? <LoadingSpinner message="Cargando el padrón de domicilios..." /> : <SucursalSelector sucursales={sucursales} cargando={cargando} value={ids} onChange={setIds} />}
 
@@ -901,6 +932,10 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
   }, []);
 
   const porDefecto = empresa.defaultsArca?.grupoTipoServicio || '';
+  const nombreDeGrupo = (codigo: string): string => {
+    const g = grupos.find((x) => String(x.externalId || '') === codigo);
+    return g ? `${g.externalId} — ${g.name}` : '';
+  };
 
   /**
    * Marca o desmarca el grupo habitual. Se guarda con el click, como las otras ★.
@@ -920,6 +955,8 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
 
   return (
     <SeccionEmpleador>
+      {/* El grupo también tiene el escalón de la instalación debajo. */}
+      <HerenciaGlobal campo="grupoTipoServicio" valorEmpresa={porDefecto} nombreDe={nombreDeGrupo} />
       {cargando ? (
         <LoadingSpinner message="Cargando grupos..." />
       ) : (
@@ -970,146 +1007,42 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
   );
 };
 
-export const EmpresaDefaultsPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Defaults de ARCA" icono={faSliders} ayuda="empresaDefaults">
-    {(empresa, recargar) => <DefaultsBody empresa={empresa} recargar={recargar} />}
+// ──────────────────────────────────── Defaults por ítem: los códigos del TXT
+
+/**
+ * TIPO DE SERVICIO, MODALIDAD DE CONTRATACIÓN Y MODALIDAD DE LIQUIDACIÓN DE ESTA EMPLEADORA.
+ *
+ * Antes eran tres combos de una sola pantalla, «Defaults de ARCA». Ahora se marcan con ★ sobre el
+ * nomenclador, que es donde está el dato y donde ya se marcan el convenio, el domicilio y el grupo.
+ * El motivo está en `components/empresa/DefaultArcaEmpresa.tsx`.
+ *
+ * Los tres viajan al archivo de altas y los tres tienen un escalón debajo —el default de la
+ * instalación—, así que cada pantalla dice qué hay ahí y si esta empleadora lo está pisando.
+ */
+export const EmpresaTiposServicioPage: React.FC = () => (
+  <EmpresaContextLayout titulo="Tipos de Servicio" icono={faListCheck} ayuda="empresaDefaults">
+    {(empresa, recargar) => (
+      <DefaultArcaEmpresa
+        empresa={empresa}
+        recargar={recargar}
+        campo="tipoServicio"
+        api={tiposServicioApi}
+        queEs="el tipo de servicio"
+        nota="Posiciones 107-109 del TXT de alta."
+        filtrarPorGrupoDeLaEmpresa
+      />
+    )}
   </EmpresaContextLayout>
 );
 
-/**
- * De qué grupo es un tipo de servicio, según su código: por debajo de 500 CONTINUOS, de ahí para
- * arriba DISCONTINUOS. Es la regla de ARCA, verificada sobre los 293 tipos sin excepciones, y la
- * misma que aplica el server al guardar (`server/src/utils/grupoTipoServicio.ts`).
- *
- * Acá se usa solo para AUTOCOMPLETAR el grupo cuando alguien elige primero el tipo. Para FILTRAR se
- * usa el campo `grupo` del catálogo, que es el dato que el nomenclador ya trae cargado.
- */
-const grupoDelCodigo = (codigo: string): string => {
-  const d = String(codigo || '').replace(/\D/g, '');
-  return d === '' ? '' : Number(d) < 500 ? '1' : '2';
-};
+export const EmpresaModalidadContratacionPage: React.FC = () => (
+  <EmpresaContextLayout titulo="Modalidad de Contratación" icono={faFileContract} ayuda="empresaDefaults">
+    {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="modalidadContratacion" api={modalidadesContratacionApi} queEs="la modalidad de contratación" nota="Posiciones 17-19 del TXT de alta." />}
+  </EmpresaContextLayout>
+);
 
-/** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
-const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
-
-const defaultsDe = (empresa: Company) => ({
-  grupoTipoServicio: empresa.defaultsArca?.grupoTipoServicio || '',
-  tipoServicio: empresa.defaultsArca?.tipoServicio || '',
-  modalidadLiquidacion: empresa.defaultsArca?.modalidadLiquidacion || '',
-});
-
-const DefaultsBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }> = ({ empresa, recargar }) => {
-  const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
-  const [tipos, setTipos] = useState<SimpleCatalogItem[]>([]);
-  const [grupos, setGrupos] = useState<SimpleCatalogItem[]>([]);
-  const [modalidades, setModalidades] = useState<SimpleCatalogItem[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [form, setForm] = useState(defaultsDe(empresa));
-
-  useEffect(() => {
-    Promise.all([tiposServicioApi.list().catch(() => []), gruposTipoServicioApi.list().catch(() => []), modalidadesLiqApi.list().catch(() => [])])
-      .then(([t, g, m]) => {
-        setTipos(t);
-        setGrupos(g);
-        setModalidades(m);
-      })
-      .finally(() => setCargando(false));
-  }, []);
-  useEffect(() => setForm(defaultsDe(empresa)), [empresa]);
-
-  /**
-   * El combo de tipo cascadea del grupo, igual que en Simplificación Registral: primero el grupo y
-   * recién ahí el tipo. Sin filtrar son 293 opciones con 49 nombres repetidos entre los dos grupos —
-   * dos filas idénticas de las que una escribe otro número en las posiciones 107-109.
-   */
-  const tiposDelGrupo = useMemo(() => (form.grupoTipoServicio ? tipos.filter((t) => grupoDelItem(t) === form.grupoTipoServicio) : tipos), [tipos, form.grupoTipoServicio]);
-
-  /** Elegir el tipo primero también vale: el grupo se completa solo, derivado del código. */
-  const elegirTipo = (tipoServicio: string) => setForm((p) => ({ ...p, tipoServicio, grupoTipoServicio: tipoServicio ? grupoDelCodigo(tipoServicio) : p.grupoTipoServicio }));
-
-  const original = defaultsDe(empresa);
-  /* El grupo ya no se edita acá —se marca con ★ en su pantalla—, así que no cuenta para «sucio»:
-     seguiría diciendo «hay cambios sin guardar» por un campo que este formulario no toca. */
-  const sucio = form.tipoServicio !== original.tipoServicio || form.modalidadLiquidacion !== original.modalidadLiquidacion;
-
-  const selectClass = 'w-full px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200';
-
-  if (cargando) return <LoadingSpinner message="Cargando los nomencladores..." />;
-
-  return (
-    <SeccionEmpleador>
-      <div className="flex justify-end">
-        <BotonGuardar guardando={guardando} sucio={sucio} onClick={() => guardar({ defaultsArca: form }, `Defaults de ARCA guardados para ${empresa.razonSocial}.`)} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* El grupo va ARRIBA del tipo, y no al lado, porque el orden es la explicación: primero se
-            elige el grupo y recién ahí se habilita el tipo, igual que en Simplificación Registral. */}
-        {/*
-          EL GRUPO SE MARCA CON ★ EN SU PANTALLA, NO ACÁ.
-
-          Era un `<select>` que escribía el MISMO campo que la ★ de «Grupos de Tipo de Servicio»: dos
-          editores del mismo dato, en dos pantallas de la misma sección, con dos gestos distintos. El
-          que llegaba segundo pisaba al primero sin decir nada.
-
-          Sigue mostrándose porque es el filtro del combo de abajo y esconderlo dejaría sin explicar
-          por qué ofrece 140 tipos y no 293 — pero acá se LEE, y se cambia donde se decide.
-        */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Grupo Tipo Servicio</label>
-          <div className="flex items-center gap-2 flex-wrap rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
-            {form.grupoTipoServicio ? (
-              <>
-                <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                <span className="text-sm text-gray-800 dark:text-gray-200">
-                  <span className="font-mono">{form.grupoTipoServicio}</span> — {grupos.find((g) => String(g.externalId || '') === form.grupoTipoServicio)?.name || 'sin nombre'}
-                </span>
-              </>
-            ) : (
-              <span className="text-sm text-gray-500 dark:text-gray-400">Sin grupo por defecto: el combo de abajo ofrece los {tipos.length} tipos.</span>
-            )}
-            <Link to={`/empresas/${empresa._id}/arca/grupos-tipo-servicio`} className="ml-auto shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-              {form.grupoTipoServicio ? 'Cambiarlo' : 'Elegir uno'}
-            </Link>
-          </div>
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">No viaja al TXT: filtra el Tipo de Servicio de acá abajo. Se marca con ★ en Grupos de Tipo de Servicio.</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Servicio</label>
-          <select value={form.tipoServicio} onChange={(e) => elegirTipo(e.target.value)} disabled={tiposDelGrupo.length === 0} className={`${selectClass} disabled:opacity-60`}>
-            <option value="">— Sin valor por defecto —</option>
-            {tiposDelGrupo.map((t) => (
-              <option key={t._id} value={String(t.externalId || '')}>
-                {t.externalId} — {t.name}
-              </option>
-            ))}
-          </select>
-          {/* El mismo mensaje que da ARCA cuando el filtro no devuelve nada. Pasa si el nomenclador
-              todavía no tiene clasificado ese grupo (correr `npm run tipos-servicio:grupo`). */}
-          {tiposDelGrupo.length === 0 ? (
-            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No hay tipo de servicio para el grupo seleccionado</p>
-          ) : (
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-              Posiciones 107-109 del TXT de alta.
-              {form.grupoTipoServicio ? ` ${tiposDelGrupo.length} de ${tipos.length}, filtrados por el grupo.` : ''}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modalidad de Liquidación</label>
-          <select value={form.modalidadLiquidacion} onChange={(e) => setForm((p) => ({ ...p, modalidadLiquidacion: e.target.value }))} className={selectClass}>
-            <option value="">— Sin valor por defecto —</option>
-            {modalidades.map((m) => (
-              <option key={m._id} value={String(m.externalId || '')}>
-                {m.externalId} — {m.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Posición 73 del TXT de alta.</p>
-        </div>
-      </div>
-    </SeccionEmpleador>
-  );
-};
+export const EmpresaModalidadLiquidacionPage: React.FC = () => (
+  <EmpresaContextLayout titulo="Modalidad de Liquidación" icono={faSliders} ayuda="empresaDefaults">
+    {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="modalidadLiquidacion" api={modalidadesLiqApi} queEs="la modalidad de liquidación" nota="Posición 73 del TXT de alta." />}
+  </EmpresaContextLayout>
+);

@@ -39,11 +39,15 @@ export const EmpresaContextMenu: React.FC = () => {
     { path: `${base}/arca/categorias`, icon: faListCheck, label: 'Categorías' },
     { path: `${base}/arca/domicilios`, icon: faLocationDot, label: 'Domicilios de Explotación' },
     { path: `${base}/arca/obras-sociales`, icon: faBriefcaseMedical, label: 'Obras Sociales' },
-    // Grupos de Tipo de Servicio va PEGADO a Defaults, y antes: es la ★ que decide con qué queda
-    // filtrado el Tipo de Servicio que se elige ahí. Al revés, se elige el tipo sin saber por qué el
-    // combo ofrece 293 opciones o 140.
+    // Grupos de Tipo de Servicio va PEGADO a Tipos de Servicio, y antes: es la ★ que decide con qué
+    // queda filtrado el tipo que se elige ahí. Al revés, se elige el tipo sin saber por qué el combo
+    // ofrece 293 opciones o 140.
     { path: `${base}/arca/grupos-tipo-servicio`, icon: faLayerGroup, label: 'Grupos de Tipo de Servicio' },
-    { path: `${base}/arca/defaults`, icon: faSliders, label: 'Defaults' },
+    // Los tres códigos que viajan al TXT. Reemplazan a «Defaults», que los juntaba en un formulario
+    // de combos: ahora cada uno se marca con ★ sobre su nomenclador, como el convenio y el domicilio.
+    { path: `${base}/arca/tipos-servicio`, icon: faListCheck, label: 'Tipos de Servicio' },
+    { path: `${base}/arca/modalidades-contratacion`, icon: faFileContract, label: 'Modalidad de Contratación' },
+    { path: `${base}/arca/modalidades-liquidacion`, icon: faSliders, label: 'Modalidad de Liquidación' },
   ];
 
   // El alta masiva NO va acá: es la misma pantalla que Admin GENERAL → Contratos → Gestión de
