@@ -30,6 +30,7 @@ import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfip
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
+import { arcaDefaultsAPI, ArcaDefaults } from "../../api/arcaDefaults";
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
@@ -1218,6 +1219,21 @@ export const ContractBulkAfipTab: React.FC<{
   const [companies, setCompanies] = useState<Company[]>([]);
   // Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades del alta.
   const [arcaSucursales, setArcaSucursales] = useState<ArcaSucursal[]>([]);
+  /*
+    Los defaults de la INSTALACIÓN: el último escalón de la cascada de ARCA.
+
+    Se traen una vez y viajan en el catálogo, igual que los nomencladores: la resolución de cada fila
+    es una función pura y no puede ir a buscarlos por su cuenta. Si la request falla se sigue con {},
+    que es exactamente el comportamiento anterior (contrato → empresa) — un default global que no
+    llegó no puede bloquear la pantalla.
+  */
+  const [defaultsArcaGlobales, setDefaultsArcaGlobales] = useState<ArcaDefaults>({});
+  useEffect(() => {
+    arcaDefaultsAPI
+      .get()
+      .then(setDefaultsArcaGlobales)
+      .catch(() => setDefaultsArcaGlobales({}));
+  }, []);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   // Detalle de completitud de una fila (modal).
   /**
@@ -1278,7 +1294,7 @@ export const ContractBulkAfipTab: React.FC<{
   // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
   // `estados` entra al catálogo para que el TXT derive el alta temprana del estado del contrato y no
   // del switch que se eliminó. `allEstados` ya estaba en scope: es la misma lista que arma las bandejas.
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados]);
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 

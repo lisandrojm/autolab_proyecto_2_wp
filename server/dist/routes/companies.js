@@ -51,6 +51,7 @@ const companySchema = z.object({
         .object({
         grupoTipoServicio: z.string().optional().default(""),
         tipoServicio: z.string().optional().default(""),
+        modalidadContratacion: z.string().optional().default(""),
         modalidadLiquidacion: z.string().optional().default(""),
         /** `_id` del domicilio habitual. `null` lo quita. */
         sucursalId: z.string().nullable().optional(),

@@ -1,6 +1,7 @@
 import React from "react";
 import { faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
+import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/grupos-tipo-servicio");
@@ -14,6 +15,12 @@ const api = createSimpleCatalogApi("/arca/grupos-tipo-servicio");
  */
 export const ArcaGruposTipoServicioPage: React.FC = () => (
   <SimpleCatalogManager
+    columnasCalculadas={[
+      {
+        label: "Por defecto",
+        render: (item) => <DefaultArcaStar campo="grupoTipoServicio" valor={String(item.externalId || "")} queEs="el grupo de tipo de servicio" />,
+      },
+    ]}
     title="Grupos de Tipo de Servicio"
     subtitle="Tabla oficial de ARCA. Son dos —continuos y discontinuos— y filtran el selector de Tipo de Servicio."
     icon={faLayerGroup}

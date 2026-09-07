@@ -55,6 +55,7 @@ import { arcaTipoServicioRoutes } from "./routes/arcaTiposServicio.js";
 import { arcaGrupoTipoServicioRoutes } from "./routes/arcaGruposTipoServicio.js";
 import { arcaActividadRoutes } from "./routes/arcaActividades.js";
 import { arcaModalidadLiquidacionRoutes } from "./routes/arcaModalidadesLiquidacion.js";
+import { arcaDefaultsRoutes } from "./routes/arcaDefaults.js";
 import { convenioRoutes } from "./routes/convenios.js";
 import { centroCostoRoutes } from "./routes/centrosCosto.js";
 import { companyRoutes } from "./routes/companies.js";
@@ -231,6 +232,8 @@ app.use("/api/v1/arca/sucursales", arcaSucursalRoutes);
 app.use("/api/v1/arca/modalidades-contratacion", arcaModalidadContratacionRoutes);
 app.use("/api/v1/arca/tipos-servicio", arcaTipoServicioRoutes);
 app.use("/api/v1/arca/grupos-tipo-servicio", arcaGrupoTipoServicioRoutes);
+// Los valores por defecto de la instalación. Ver models/ArcaDefault.ts para la cascada.
+app.use("/api/v1/arca/defaults", arcaDefaultsRoutes);
 app.use("/api/v1/arca/actividades", arcaActividadRoutes);
 app.use("/api/v1/arca/modalidades-liquidacion", arcaModalidadLiquidacionRoutes);
 app.use("/api/v1/convenios", convenioRoutes);

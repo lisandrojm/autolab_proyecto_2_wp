@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { faListCheck } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager, CatalogExtraField } from "../components/catalog/SimpleCatalogManager";
+import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/tipos-servicio");
@@ -44,6 +45,12 @@ export const ArcaTiposServicioPage: React.FC = () => {
 
   return (
     <SimpleCatalogManager
+    columnasCalculadas={[
+      {
+        label: "Por defecto",
+        render: (item) => <DefaultArcaStar campo="tipoServicio" valor={String(item.externalId || "")} queEs="el tipo de servicio" />,
+      },
+    ]}
       title="Tipos de Servicio"
       subtitle="Tabla oficial de ARCA. Clasifica el servicio prestado (comunes continuos, insalubres, etc.). Hay 49 nombres repetidos: el Grupo es lo que los separa."
       icon={faListCheck}

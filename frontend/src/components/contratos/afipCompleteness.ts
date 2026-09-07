@@ -3,6 +3,7 @@ import { CategoriaSatItem } from "../../api/categoriasSat";
 import { ContratoItem } from "../../api/contratos";
 import { SimpleCatalogItem } from "../../api/simpleCatalog";
 import { InfoItem } from "../../api/info";
+import { conCascada, DefaultsArca, OrigenValorArca } from "./cascadaArca";
 import { ArcaSucursal } from "../../api/arcaSucursales";
 import { cuitEsValido } from "../../utils/cuit";
 import { fechaAfip } from "./afipTxt";
@@ -69,8 +70,16 @@ export interface AfipCatalogs {
      * del contrato. Solo entra cuando el tipo de contrato no lo tiene cargado, que hoy deja el campo
      * vacío y bloquea el TXT.
      */
-    defaultsArca?: { grupoTipoServicio?: string; tipoServicio?: string; modalidadLiquidacion?: string; sucursalId?: string | null; convenioId?: string | null };
+    defaultsArca?: DefaultsArca;
   }>;
+  /**
+   * Los valores por defecto de la INSTALACIÓN (Configuración → ARCA, la ★ de cada nomenclador).
+   *
+   * Es el último escalón de la cascada: rige cuando ni el contrato ni la empleadora dijeron nada.
+   * Opcional a propósito — sin él la resolución es la de antes, contrato → empresa, así que ninguna
+   * pantalla que todavía no lo pase cambia de comportamiento.
+   */
+  defaultsArcaGlobales?: DefaultsArca;
   /** Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades. */
   sucursales?: ArcaSucursal[];
   /**
@@ -264,11 +273,21 @@ export interface AfipValues {
   /** `false` = el tipo de contrato no genera alta temprana. */
   generaAlta: boolean;
   modalidadContrato: string;
+  /** De dónde salió la modalidad de contrato. Ver `cascadaArca.ts`. */
+  modalidadContratoOrigen: OrigenValorArca;
   tipoServicio: string;
-  /** De dónde salió el tipo de servicio: del tipo de contrato, del default de la empleadora, o de ningún lado. */
-  tipoServicioOrigen: "tipo_contrato" | "empresa" | "ninguno";
+  /**
+   * De dónde salió el tipo de servicio: del tipo de contrato, del default de la empleadora, del de la
+   * instalación, o de ningún lado.
+   *
+   * NO es cosmético: el checklist manda a corregir a un lugar distinto según el origen, y culpar al
+   * tipo de contrato por un valor que puso un default manda a editar lo que no está mal.
+   */
+  tipoServicioOrigen: OrigenValorArca;
   actividad: string;
   modalidadLiq: string;
+  /** De dónde salió la modalidad de liquidación. Ver `cascadaArca.ts`. */
+  modalidadLiqOrigen: OrigenValorArca;
   rnos: string;
   /** El RNOS no es de la persona: se heredó del convenio o de la empleadora. */
   rnosPorDefecto: boolean;
@@ -452,8 +471,17 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     Elegir otro en el picker escribe y pisa el default, que es lo esperado: la preselección acelera el
     caso normal sin cerrar ninguno.
   */
-  const sucursalDefault = (empresa as { defaultsArca?: { sucursalId?: string | null } } | undefined)?.defaultsArca?.sucursalId;
-  const sucursalId = row.sucursalArcaId || sucursalDefault || "";
+  /*
+    El default se busca en DOS escalones: la ★ de la empleadora y, si no tiene, la de la instalación.
+
+    El global se descarta si esta empleadora no tiene ese domicilio declarado: el código de domicilio
+    es POR CUIT, así que uno global puede no existir para este CUIT y ARCA rechazaría el alta. Mejor
+    sin domicilio —que el checklist marca como faltante— que con uno que el organismo no reconoce.
+  */
+  const globalSucursal = cat.defaultsArcaGlobales?.sucursalId;
+  const globalSucursalAplica = !!globalSucursal && sucursalesEmpresa.some((s) => s._id === String(globalSucursal));
+  const sucursalResuelta = conCascada(row.sucursalArcaId, "contrato", "sucursalId", empresa?.defaultsArca, globalSucursalAplica ? cat.defaultsArcaGlobales : undefined);
+  const sucursalId = sucursalResuelta.valor;
   const sucursal = sucursalId ? sucursalesEmpresa.find((s) => s._id === String(sucursalId)) : undefined;
   /*
     LAS ACTIVIDADES SON DE LA EMPLEADORA, NO DEL DOMICILIO.
@@ -537,6 +565,22 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const validada = constatacion !== "sin_constatar";
   const rnosCascada = soloDigitos(obraSocial?.externalId);
 
+  /*
+    LOS TRES CAMPOS QUE HEREDAN, resueltos con la misma cascada: contrato → empresa → instalación.
+
+    `modalidadLiquidacion` y `modalidadContratacion` no heredaban nada hasta acá: miraban solo el
+    tipo de contrato. El default de la empleadora existía —la ficha lo dejaba cargar— y no lo leía
+    nadie, así que era un campo que aparentaba hacer algo. Ahora los tres se resuelven igual.
+
+    El tipo de contrato entra como `tipo_contrato` y no como `contrato` porque no lo eligió nadie en
+    esta alta: viene de la plantilla. La pantalla ya hacía esa distinción para el tipo de servicio.
+  */
+  const defaultsEmpresa = empresa?.defaultsArca as DefaultsArca | undefined;
+  const defaultsGlobales = cat.defaultsArcaGlobales;
+  const tipoServicioResuelto = conCascada(tipo?.data?.afipTipoServicio, "tipo_contrato", "tipoServicio", defaultsEmpresa, defaultsGlobales);
+  const modalidadContratoResuelta = conCascada(tipo?.data?.afipModalidadContrato, "tipo_contrato", "modalidadContratacion", defaultsEmpresa, defaultsGlobales);
+  const modalidadLiqResuelta = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", defaultsEmpresa, defaultsGlobales);
+
   return {
     cuil,
     cuilValido: cuitEsValido(cuil),
@@ -552,11 +596,12 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
      * Sin tipo resuelto NO se asume `false`: no saber si declara es distinto de saber que no.
      */
     generaAlta: generaAltaDeLaFila(row, cat, tipo),
-    modalidadContrato: tipo?.data?.afipModalidadContrato || "",
+    modalidadContrato: modalidadContratoResuelta.valor,
+    modalidadContratoOrigen: modalidadContratoResuelta.origen,
     // El default de la empleadora entra DESPUÉS del tipo de contrato, nunca antes: es lo que dice
     // la pantalla de Defaults y es la regla que hace que el default sea seguro de poner.
-    tipoServicio: tipo?.data?.afipTipoServicio || empresa?.defaultsArca?.tipoServicio || "",
-    tipoServicioOrigen: tipo?.data?.afipTipoServicio ? "tipo_contrato" : empresa?.defaultsArca?.tipoServicio ? "empresa" : "ninguno",
+    tipoServicio: tipoServicioResuelto.valor,
+    tipoServicioOrigen: tipoServicioResuelto.origen,
     actividad,
     actividadOrigen,
     actividadesDisponibles: actividades,
@@ -565,7 +610,8 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     convenioCategoria,
     conveniosEmpresa,
     obraSocialRegistrada,
-    modalidadLiq: tipo?.data?.afipModalidadLiquidacion || "",
+    modalidadLiq: modalidadLiqResuelta.valor,
+    modalidadLiqOrigen: modalidadLiqResuelta.origen,
     // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
     // Vacío mientras no esté validada: ver el comentario de `rnosSugerido`.
     rnos: validada ? rnosCascada : "",
@@ -695,16 +741,21 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     }
   }
 
-  // --- Tipo de Contrato: los tres códigos salen del mismo lugar, por eso comparten origen.
-  checks.push(presencia("modalidadContrato", "Modalidad de contrato", "tipo_contrato", v.modalidadContrato, "El tipo de contrato no tiene cargado su código de modalidad."));
-  // El origen del tipo de servicio depende de quién lo puso: culpar al tipo de contrato cuando el
-  // valor salió del default de la empleadora manda a corregir al lugar equivocado.
-  checks.push(
-    v.tipoServicioOrigen === "empresa"
-      ? mk("tipoServicio", "Tipo de servicio", "empresa", v.tipoServicio, "ok", "Del default de la empleadora: el tipo de contrato no trae el suyo.")
-      : presencia("tipoServicio", "Tipo de servicio", "tipo_contrato", v.tipoServicio, "El tipo de contrato no tiene cargado su tipo de servicio, y la empleadora no tiene uno por defecto (ARCA → Defaults)."),
-  );
-  checks.push(presencia("modalidadLiq", "Modalidad de liquidación", "tipo_contrato", v.modalidadLiq, "El tipo de contrato no tiene cargada su modalidad de liquidación."));
+  /*
+    --- Tipo de Contrato: los tres códigos cascadean igual, así que se explican igual.
+
+    Decir DE DÓNDE salió cada uno no es un adorno: manda a corregir a un lugar distinto. Culpar al
+    tipo de contrato por un valor que puso el default de la empleadora hace editar una plantilla que
+    no está mal, y el valor volvería a aparecer igual en el alta siguiente.
+  */
+  const heredado = (campo: string, etiqueta: string, valor: string, origen: OrigenValorArca, faltaMsg: string) => {
+    if (origen === "empresa") return mk(campo, etiqueta, "empresa", valor, "ok", "Del default de la empleadora: el tipo de contrato no trae el suyo.");
+    if (origen === "global") return mk(campo, etiqueta, "empresa", valor, "ok", "Del default de la instalación (Configuración → ARCA): ni el tipo de contrato ni la empleadora traen el suyo.");
+    return presencia(campo, etiqueta, "tipo_contrato", valor, faltaMsg);
+  };
+  checks.push(heredado("modalidadContrato", "Modalidad de contrato", v.modalidadContrato, v.modalidadContratoOrigen, "El tipo de contrato no tiene cargado su código de modalidad, y no hay ninguno marcado con estrella: se marca en la ficha de la empleadora o en Configuración → ARCA."));
+  checks.push(heredado("tipoServicio", "Tipo de servicio", v.tipoServicio, v.tipoServicioOrigen, "El tipo de contrato no tiene cargado su tipo de servicio, y no hay ninguno marcado con estrella: se marca en la ficha de la empleadora o en Configuración → ARCA."));
+  checks.push(heredado("modalidadLiq", "Modalidad de liquidación", v.modalidadLiq, v.modalidadLiqOrigen, "El tipo de contrato no tiene cargada su modalidad de liquidación, y no hay ninguna marcada con estrella: se marca en la ficha de la empleadora o en Configuración → ARCA."));
 
   // --- Obra social. Decir de DÓNDE salió no es un detalle: si salió del convenio, corregirla es
   // cambiar el convenio y alcanza a todos sus contratos; si salió de la persona, es solo de ella.

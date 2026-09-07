@@ -10,6 +10,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { arcaSucursalesAPI, ArcaSucursal, ArcaSucursalInput } from "../api/arcaSucursales";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
 
 const HELP_KEY = "arcaSucursales" as const;
 
@@ -165,6 +166,8 @@ export const ArcaSucursalesPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                  {/* La ★ va PRIMERO y angosta: es una marca, no un dato del domicilio. */}
+                  <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-px" title="Domicilio por defecto de la instalación"></th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
@@ -173,6 +176,9 @@ export const ArcaSucursalesPage: React.FC = () => {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                 {filtrados.map((s) => (
                   <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td className="px-2 py-4 w-px">
+                      <DefaultArcaStar campo="sucursalId" valor={String(s._id)} queEs="el domicilio de explotación" />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-mono font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50">{s.codigo}</span>
                     </td>

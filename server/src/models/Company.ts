@@ -133,6 +133,8 @@ export interface ICompany extends Document {
      * Tiene que ser uno de los `convenioIds` de esta empresa.
      */
     convenioId?: any;
+    /** Código de Modalidad de Contratación (pos. 17-19 del TXT). */
+    modalidadContratacion?: string;
     /** Código de Modalidad de Liquidación (pos. 73 del TXT). */
     modalidadLiquidacion?: string;
   };
@@ -172,6 +174,7 @@ const companySchema = new Schema<ICompany>(
     defaultsArca: {
       grupoTipoServicio: { type: String, default: '' },
       tipoServicio: { type: String, default: '' },
+      modalidadContratacion: { type: String, default: '' },
       modalidadLiquidacion: { type: String, default: '' },
       sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', default: null },
       convenioId: { type: Schema.Types.ObjectId, ref: 'Convenio', default: null },

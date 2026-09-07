@@ -129,6 +129,8 @@ export interface ICompany extends Document {
          * Tiene que ser uno de los `convenioIds` de esta empresa.
          */
         convenioId?: any;
+        /** Código de Modalidad de Contratación (pos. 17-19 del TXT). */
+        modalidadContratacion?: string;
         /** Código de Modalidad de Liquidación (pos. 73 del TXT). */
         modalidadLiquidacion?: string;
     };

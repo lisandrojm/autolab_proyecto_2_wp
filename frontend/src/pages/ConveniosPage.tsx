@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogManager } from '../components/catalog/SimpleCatalogManager';
+import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { companiesAPI, Company } from '../api/companies';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -223,6 +224,12 @@ export const ConveniosPage: React.FC = () => {
   return (
     <>
       <SimpleCatalogManager
+    columnasCalculadas={[
+      {
+        label: "Por defecto",
+        render: (item) => <DefaultArcaStar campo="convenioId" valor={String(item._id)} queEs="el convenio" />,
+      },
+    ]}
         title="Convenios"
         subtitle="Convenios de Trabajo (CCT). Cada uno define la obra social de quien trabaja bajo él."
         icon={faFileContract}

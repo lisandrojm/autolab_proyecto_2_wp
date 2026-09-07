@@ -1,6 +1,7 @@
 import React from "react";
 import { faClock } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
+import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/modalidades-liquidacion");
@@ -13,6 +14,12 @@ const formatCodigo = (raw: string): string => {
 
 export const ArcaModalidadesLiquidacionPage: React.FC = () => (
   <SimpleCatalogManager
+    columnasCalculadas={[
+      {
+        label: "Por defecto",
+        render: (item) => <DefaultArcaStar campo="modalidadLiquidacion" valor={String(item.externalId || "")} queEs="la modalidad de liquidación" />,
+      },
+    ]}
     title="Modalidades de Liquidación"
     subtitle="Tabla oficial de ARCA. Define cada cuánto se liquida la retribución (mes, quincena, jornal, etc.)."
     icon={faClock}

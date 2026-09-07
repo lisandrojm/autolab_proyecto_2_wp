@@ -25,6 +25,7 @@ import { confirmarNombresConElPadron, usuariosDeCuils, mismoNombre, Renombre } f
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
+import { getArcaDefaults } from "../models/ArcaDefault.js";
 import { ObraSocial } from "../models/ObraSocial.js";
 import { ArcaSucursal } from "../models/ArcaSucursal.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
@@ -2279,8 +2280,19 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
         resolución tiene que ser la misma de los dos lados o el formulario ofrece algo que la ruta
         niega.
       */
-      const empresaDelContrato = contrato.empresaContratoId ? await Company.findById(contrato.empresaContratoId).select("defaultsArca.sucursalId").lean() : null;
-      const sucursalId = contrato.sucursalArcaId || (empresaDelContrato as any)?.defaultsArca?.sucursalId || null;
+      /*
+        Los TRES escalones, en el mismo orden que el front: contrato → empleadora → instalación.
+
+        El global se toma solo si esta empleadora tiene ese domicilio declarado: el código de
+        domicilio es POR CUIT, así que uno global puede no existir para este CUIT y ARCA rechazaría el
+        alta. Mejor pedir que se elija a mandar un código que el organismo no reconoce.
+      */
+      const empresaDelContrato = contrato.empresaContratoId ? await Company.findById(contrato.empresaContratoId).select("defaultsArca.sucursalId sucursalIds").lean() : null;
+      const globalDefaults = await getArcaDefaults();
+      const sucursalGlobal = globalDefaults.sucursalId ? String(globalDefaults.sucursalId) : "";
+      const sucursalesDeLaEmpresa = ((empresaDelContrato as any)?.sucursalIds || []).map(String);
+      const globalAplica = sucursalGlobal && sucursalesDeLaEmpresa.includes(sucursalGlobal);
+      const sucursalId = contrato.sucursalArcaId || (empresaDelContrato as any)?.defaultsArca?.sucursalId || (globalAplica ? sucursalGlobal : null);
       if (!sucursalId) {
         res.status(400).json({ error: "Primero hay que elegir la Sucursal: las actividades son del domicilio de desempeño" });
         return;

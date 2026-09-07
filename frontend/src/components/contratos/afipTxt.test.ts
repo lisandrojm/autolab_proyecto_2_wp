@@ -631,7 +631,14 @@ describe("tipo de servicio — el default de la empleadora es el valor de arranq
     const check = checks.find((c) => c.key === "tipoServicio");
     assert.equal(check?.estado, "falta");
     assert.match(check?.detalle || "", /tipo de contrato/i);
-    assert.match(check?.detalle || "", /Defaults/);
+    /*
+      Antes decía «ARCA → Defaults», que era la única pantalla donde se cargaba. Ahora el default se
+      marca con la ★ en dos escalones —la ficha de la empleadora y Configuración → ARCA—, así que el
+      mensaje nombra los dos. Lo que se sigue probando es lo mismo: que diga DÓNDE se arregla, porque
+      «falta el tipo de servicio» sin decir dónde manda a buscarlo por toda la app.
+    */
+    assert.match(check?.detalle || "", /empleadora/i);
+    assert.match(check?.detalle || "", /Configuraci/i);
   });
 
   /** El código completo llega al TXT: es lo que se escribe en 107-109. */
@@ -639,5 +646,101 @@ describe("tipo de servicio — el default de la empleadora es el valor de arranq
     const record = buildAltaRecord(fila(), conDefault({ tipoServicio: "514" }, [sinTipoServicio]));
     assert.ok(record, "el registro tendría que armarse: con el default ya no falta el tipo de servicio");
     assert.equal(tramo(record as string, 107, 109), "514");
+  });
+});
+
+/*
+  LA CASCADA COMPLETA: contrato → empleadora → instalación.
+
+  Estas pruebas cubren lo que ANTES NO HEREDABA NADA y ahora sí, que es el cambio con más
+  consecuencias de esta tanda: la modalidad de liquidación tenía default en la ficha de la empresa y
+  no lo leía nadie, y la modalidad de contrato no tenía default de ningún tipo. Las dos escriben
+  posiciones del TXT (73 y 69-71), así que lo que se prueba es exactamente eso: qué queda escrito.
+*/
+describe("cascada de defaults de ARCA — contrato, empleadora, instalación", () => {
+  /** Un tipo de contrato que no trae NINGUNO de los tres códigos: obliga a que hereden. */
+  const tipoPelado = { _id: "t1", name: "Plazo fijo 6x6 2030 SRL", data: { afipModalidadContrato: "", afipTipoServicio: "", afipModalidadLiquidacion: "" } };
+
+  const cat = (empresaDefaults: Record<string, unknown>, globales?: Record<string, unknown>) =>
+    catalogos({
+      tipos: [tipoPelado],
+      empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], defaultsArca: empresaDefaults }],
+      ...(globales ? { defaultsArcaGlobales: globales } : {}),
+    } as any);
+
+  it("modalidad de liquidación: el default de la empleadora llega a la posición 73", () => {
+    // Antes esto NO pasaba: el valor se guardaba en la ficha y la resolución miraba solo el tipo.
+    const record = buildAltaRecord(fila(), cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021" }));
+    assert.ok(record, "con los códigos heredados el registro tiene que armarse");
+    assert.equal(tramo(record as string, 73, 73), "2");
+  });
+
+  it("modalidad de contrato: el default de la instalación llega a las posiciones 17-19", () => {
+    const record = buildAltaRecord(fila(), cat({ tipoServicio: "008", modalidadLiquidacion: "2" }, { modalidadContratacion: "021" }));
+    assert.ok(record, "con los códigos heredados el registro tiene que armarse");
+    assert.equal(tramo(record as string, 17, 19), "021");
+  });
+
+  it("la empleadora le gana a la instalación", () => {
+    const record = buildAltaRecord(fila(), cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021" }, { modalidadContratacion: "999", modalidadLiquidacion: "9" }));
+    assert.ok(record);
+    assert.equal(tramo(record as string, 17, 19), "021");
+    assert.equal(tramo(record as string, 73, 73), "2");
+  });
+
+  it("un default VACÍO en la empleadora no tapa al de la instalación", () => {
+    // El error que dejaría al escalón global sin servir nunca: una empresa con el campo en "" no
+    // está diciendo "sin valor", está diciendo "no configuré nada".
+    const record = buildAltaRecord(fila(), cat({ tipoServicio: "", modalidadLiquidacion: "" }, { tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021" }));
+    assert.ok(record, "el registro tiene que armarse con lo heredado de la instalación");
+    assert.equal(tramo(record as string, 107, 109), "008");
+    assert.equal(tramo(record as string, 73, 73), "2");
+  });
+
+  it("el tipo de contrato le gana a los dos defaults", () => {
+    const conCodigos = { _id: "t1", name: "Plazo fijo", data: { afipModalidadContrato: "100", afipTipoServicio: "500", afipModalidadLiquidacion: "3" } };
+    const c = catalogos({
+      tipos: [conCodigos],
+      empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], defaultsArca: { modalidadContratacion: "021", tipoServicio: "008", modalidadLiquidacion: "1" } }],
+      defaultsArcaGlobales: { modalidadContratacion: "999", tipoServicio: "999", modalidadLiquidacion: "9" },
+    } as any);
+    const record = buildAltaRecord(fila(), c);
+    assert.ok(record);
+    assert.equal(tramo(record as string, 17, 19), "100");
+    assert.equal(tramo(record as string, 107, 109), "500");
+    assert.equal(tramo(record as string, 73, 73), "3");
+  });
+
+  it("sin ningún escalón cargado, el checklist marca la falta y dice dónde se arregla", () => {
+    const { checks } = resolveAfip(fila(), cat({}));
+    const liq = checks.find((c) => c.key === "modalidadLiq");
+    assert.equal(liq?.estado, "falta");
+    assert.match(liq?.detalle || "", /Configuraci/i, "el motivo tiene que decir dónde se marca el default");
+  });
+
+  it("el checklist distingue si el valor vino de la empleadora o de la instalación", () => {
+    const deLaEmpresa = resolveAfip(fila(), cat({ modalidadLiquidacion: "2" })).checks.find((c) => c.key === "modalidadLiq");
+    assert.equal(deLaEmpresa?.estado, "ok");
+    assert.match(deLaEmpresa?.detalle || "", /empleadora/i);
+
+    const deLaInstalacion = resolveAfip(fila(), cat({}, { modalidadLiquidacion: "2" })).checks.find((c) => c.key === "modalidadLiq");
+    assert.equal(deLaInstalacion?.estado, "ok");
+    assert.match(deLaInstalacion?.detalle || "", /instalaci/i);
+  });
+
+  it("el domicilio global se DESCARTA si esta empleadora no lo tiene declarado", () => {
+    /*
+      El código de domicilio es por CUIT: uno global puede no existir para este CUIT y ARCA
+      rechazaría el alta. Es preferible que el checklist lo marque como faltante a mandar un código
+      que el organismo no reconoce para esa empleadora.
+    */
+    // Sin domicilio en el contrato: es el único caso donde el default llega a tener chance de entrar.
+    const sinDomicilio = fila({ sucursalArcaId: null } as never);
+    const ajeno = cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021" }, { sucursalId: "sucursal-de-otra-empresa" });
+    assert.equal(resolveAfipValues(sinDomicilio, ajeno).nombreSucursal, "", "no tendría que tomar un domicilio ajeno a la empleadora");
+
+    // Y el que SÍ es de la empleadora entra: lo que se descarta es el ajeno, no el mecanismo.
+    const propio = cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021", sucursalId: SUCURSAL_ID }, { sucursalId: "sucursal-de-otra-empresa" });
+    assert.match(resolveAfipValues(sinDomicilio, propio).nombreSucursal, /ZAPIOLA/);
   });
 });
