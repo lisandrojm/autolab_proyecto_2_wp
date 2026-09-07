@@ -18,7 +18,7 @@ import { CeldaSindicato } from '../../components/convenios/CeldaSindicato';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatRnos } from '../../utils/rnos';
 import { useGuardarEmpresa } from '../../components/empresa/useGuardarEmpresa';
-import { DefaultArcaEmpresa } from '../../components/empresa/DefaultArcaEmpresa';
+import { DefaultArcaEmpresa, LimpiarDefaultEmpresa } from '../../components/empresa/DefaultArcaEmpresa';
 import { HerenciaGlobal } from '../../components/arca/HerenciaGlobal';
 import { useArcaDefaults } from '../../components/arca/DefaultArcaStar';
 import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
@@ -518,6 +518,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
             Mismo gesto que la ★ de Domicilios: se guarda con el click, no espera al «Guardar cambios»
             de arriba — es una decisión sola, no parte del formulario de registro.
           */
+          accionPorDefecto={<LimpiarDefaultEmpresa hayValor={!!convenioPorDefectoId} onLimpiar={() => marcarConvenioPorDefecto(convenioPorDefectoId)} queEs="el convenio" disabled={guardando} />}
           renderPorDefecto={(cv) => (
             <button onClick={() => marcarConvenioPorDefecto(cv._id)} disabled={guardando} title={convenioPorDefectoId === cv._id ? 'Es el convenio por defecto. Click para quitarlo.' : 'Marcar como convenio por defecto de esta empleadora'} className={`transition-colors disabled:opacity-50 ${convenioPorDefectoId === cv._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
               <FontAwesomeIcon icon={faStar} />
@@ -657,6 +658,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
               <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
               Por defecto
               <FontAwesomeIcon icon={faCircleInfo} title="El domicilio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros declarados." className="h-3 w-3 normal-case" />
+              <LimpiarDefaultEmpresa hayValor={!!porDefectoId} onLimpiar={() => marcarPorDefecto(porDefectoId)} queEs="el domicilio de explotación" disabled={guardando} />
             </span>
           </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700/60">
@@ -973,6 +975,7 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
                     <button type="button" title="El grupo marcado aparece primero al cargar un contrato y deja preseleccionado el filtro de Tipo de Servicio. Se puede elegir el otro igual: es una sugerencia, no un candado." className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                     </button>
+                    <LimpiarDefaultEmpresa hayValor={!!porDefecto} onLimpiar={() => marcarPorDefecto(porDefecto)} queEs="el grupo de tipo de servicio" disabled={guardando} />
                   </span>
                 </th>
               </tr>

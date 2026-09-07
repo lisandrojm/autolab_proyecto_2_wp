@@ -1,7 +1,7 @@
 import React from "react";
 import { faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/grupos-tipo-servicio");
@@ -18,6 +18,12 @@ export const ArcaGruposTipoServicioPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
+        encabezado: (
+          <span className="inline-flex items-center gap-2">
+            Por defecto
+            <LimpiarDefaultArca campo="grupoTipoServicio" queEs="el grupo de tipo de servicio" />
+          </span>
+        ),
         render: (item) => <DefaultArcaStar campo="grupoTipoServicio" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="el grupo de tipo de servicio" />,
       },
     ]}

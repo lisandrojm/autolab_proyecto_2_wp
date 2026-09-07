@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { faListCheck } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager, CatalogExtraField } from "../components/catalog/SimpleCatalogManager";
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/tipos-servicio");
@@ -48,6 +48,12 @@ export const ArcaTiposServicioPage: React.FC = () => {
     columnasCalculadas={[
       {
         label: "Por defecto",
+        encabezado: (
+          <span className="inline-flex items-center gap-2">
+            Por defecto
+            <LimpiarDefaultArca campo="tipoServicio" queEs="el tipo de servicio" />
+          </span>
+        ),
         render: (item) => <DefaultArcaStar campo="tipoServicio" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="el tipo de servicio" />,
       },
     ]}

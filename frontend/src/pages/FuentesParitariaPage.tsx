@@ -9,7 +9,7 @@ import { formatearInstante } from '../utils/fechas';
 import { PublicacionesDeFuente } from '../components/paritarias/PublicacionesDeFuente';
 import { Modal } from '../components/ui/Modal';
 import { sweetAlert } from '../utils/sweetAlert';
-import { DefaultArcaStar } from '../components/arca/DefaultArcaStar';
+import { DefaultArcaStar, LimpiarDefaultArca } from '../components/arca/DefaultArcaStar';
 import { paritariasAPI, FuenteParitaria, ResultadoDeRevision } from '../api/paritarias';
 import { getHelp } from '../data/help/helpContent';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
@@ -482,7 +482,10 @@ export const FuentesParitariaPage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                 {/* Última antes de Acciones, como en el resto de los nomencladores. */}
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="La fuente que se ofrece primero al asociarle una a un convenio. No cambia qué escala rige.">
-                  Por defecto
+                  <span className="inline-flex items-center gap-2">
+                    Por defecto
+                    <LimpiarDefaultArca campo="fuenteParitariaId" queEs="la fuente de paritarias" />
+                  </span>
                 </th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>

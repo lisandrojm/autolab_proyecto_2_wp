@@ -90,7 +90,12 @@ interface SimpleCatalogManagerProps {
    * Columnas de solo lectura CALCULADAS, que no son campos del registro (ej. Convenios → "en cuántas
    * empresas está registrado"). Se distinguen de `extraFields` porque no se editan ni se guardan.
    */
-  columnasCalculadas?: Array<{ label: string; render: (item: SimpleCatalogItem) => React.ReactNode }>;
+  columnasCalculadas?: Array<{
+    label: string;
+    /** Qué dibujar en el encabezado, si hace falta más que el texto de `label` (ej.: un «Limpiar»). */
+    encabezado?: React.ReactNode;
+    render: (item: SimpleCatalogItem) => React.ReactNode;
+  }>;
   /**
    * Filtro destacado de dos estados, para catálogos donde el universo no es lo que se trabaja.
    *
@@ -759,7 +764,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 */}
                 {columnasCalculadas.map((c) => (
                   <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                    {c.label}
+                    {c.encabezado ?? c.label}
                   </th>
                 ))}
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faStar as faStarSolid } from "@fortawesome/free-solid-svg-icons";
+import { faStar as faStarSolid, faEraser } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import { arcaDefaultsAPI, ArcaDefaults, CampoDefaultArca } from "../../api/arcaDefaults";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -127,6 +127,37 @@ export const DefaultArcaStar: React.FC<Props> = ({ campo, valor, queEs, nombre }
       className={`transition-colors ${esElDefault ? "text-amber-500 hover:text-amber-600" : "text-gray-300 dark:text-gray-600 hover:text-amber-400"}`}
     >
       <FontAwesomeIcon icon={esElDefault ? faStarSolid : faStarRegular} className="h-3.5 w-3.5" />
+    </button>
+  );
+};
+
+/**
+ * QUITAR EL VALOR POR DEFECTO, SIN TENER QUE ENCONTRAR LA FILA QUE LO TIENE.
+ *
+ * Desmarcar ya se podía —volver a clickear la ★ encendida la apaga—, pero eso exige *dar con ella*:
+ * en Actividades son 2.350 filas y la marcada puede estar en cualquiera. Buscarla para apagarla es
+ * un paseo por una tabla, y sin saber de antemano que el segundo click desmarca, ni siquiera se
+ * intenta. Este botón hace lo mismo desde el encabezado de la columna.
+ *
+ * SOLO APARECE SI HAY ALGO MARCADO: un botón de limpiar sobre algo ya vacío no tiene efecto que
+ * mostrar, y estando siempre visible haría dudar de si quedó algo puesto.
+ */
+export const LimpiarDefaultArca: React.FC<{ campo: CampoDefaultArca; queEs: string }> = ({ campo, queEs }) => {
+  const { defaults, marcar } = useArcaDefaults();
+  if (!String(defaults[campo] ?? "").trim()) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        marcar(campo, null, `Ya no hay ${queEs} por defecto de la instalación.`);
+      }}
+      title={`Quitar ${queEs} por defecto`}
+      className="inline-flex items-center gap-1 text-[10px] font-semibold normal-case tracking-normal text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+    >
+      <FontAwesomeIcon icon={faEraser} className="h-2.5 w-2.5" />
+      Limpiar
     </button>
   );
 };

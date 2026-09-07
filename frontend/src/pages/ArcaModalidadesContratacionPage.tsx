@@ -1,7 +1,7 @@
 import React from "react";
 import { faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/modalidades-contratacion");
@@ -17,6 +17,12 @@ export const ArcaModalidadesContratacionPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
+        encabezado: (
+          <span className="inline-flex items-center gap-2">
+            Por defecto
+            <LimpiarDefaultArca campo="modalidadContratacion" queEs="la modalidad de contratación" />
+          </span>
+        ),
         render: (item) => <DefaultArcaStar campo="modalidadContratacion" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="la modalidad de contrato" />,
       },
     ]}

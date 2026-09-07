@@ -1,7 +1,7 @@
 import React from "react";
 import { faClock } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const api = createSimpleCatalogApi("/arca/modalidades-liquidacion");
@@ -17,6 +17,12 @@ export const ArcaModalidadesLiquidacionPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
+        encabezado: (
+          <span className="inline-flex items-center gap-2">
+            Por defecto
+            <LimpiarDefaultArca campo="modalidadLiquidacion" queEs="la modalidad de liquidación" />
+          </span>
+        ),
         render: (item) => <DefaultArcaStar campo="modalidadLiquidacion" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="la modalidad de liquidación" />,
       },
     ]}

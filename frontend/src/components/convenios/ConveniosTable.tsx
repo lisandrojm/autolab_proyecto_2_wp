@@ -64,6 +64,13 @@ interface Props {
    * estando fuera de cualquier empleadora.
    */
   ayudaPorDefecto?: string;
+  /**
+   * Acción del encabezado de «Por defecto»: el botón que quita la marca sin ir a buscar la fila.
+   *
+   * Lo pone el consumidor y no esta tabla porque el default vive en dos lados —la instalación en el
+   * nomenclador, la empleadora en su ficha— y cada uno se limpia contra su propio almacenamiento.
+   */
+  accionPorDefecto?: React.ReactNode;
   /** Acciones de la fila. Es lo único que cambia entre el nomenclador y la ficha. */
   renderAcciones?: (c: ConvenioFila) => React.ReactNode;
   /**
@@ -81,7 +88,7 @@ interface Props {
   renderSindicato?: (c: ConvenioFila) => React.ReactNode;
 }
 
-export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, ayudaPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato }) => (
+export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, ayudaPorDefecto, accionPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato }) => (
   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -111,6 +118,7 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
                   title={ayudaPorDefecto || "El convenio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con la estrella. No obliga a usarlo — se puede elegir cualquiera de los otros registrados."}
                   className="h-3 w-3 text-gray-400 normal-case"
                 />
+                {accionPorDefecto}
               </span>
             </th>
           )}

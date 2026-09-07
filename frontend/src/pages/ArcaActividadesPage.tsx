@@ -2,7 +2,7 @@ import React from "react";
 import { faIndustry } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 
 const api = createSimpleCatalogApi("/arca/actividades");
 
@@ -28,6 +28,12 @@ export const ArcaActividadesPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
+        encabezado: (
+          <span className="inline-flex items-center gap-2">
+            Por defecto
+            <LimpiarDefaultArca campo="actividad" queEs="la actividad que se ofrece primero" />
+          </span>
+        ),
         // Ordena el selector al cargar actividades en un domicilio. NO es la actividad del alta: esa
         // la define lo que ARCA tenga declarado para ese domicilio, y nada más.
         render: (item) => <DefaultArcaStar campo="actividad" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="la actividad que se ofrece primero" />,

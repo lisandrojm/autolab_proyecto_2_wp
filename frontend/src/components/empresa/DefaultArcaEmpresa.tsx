@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStar, faSearch, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faSearch, faXmark, faEraser } from '@fortawesome/free-solid-svg-icons';
 import { SeccionEmpleador } from './EmpresaContextLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { HerenciaGlobal } from '../arca/HerenciaGlobal';
@@ -45,6 +45,33 @@ interface Props {
    */
   filtrarPorGrupoDeLaEmpresa?: boolean;
 }
+
+/**
+ * QUITAR EL DEFAULT DE ESTA EMPLEADORA, sin ir a buscar la fila que lo tiene.
+ *
+ * El gemelo de `LimpiarDefaultArca`, para el escalón de empresa: el gesto es el mismo, pero cada uno
+ * escribe en su propio lado —aquel en el documento de la instalación, éste en la ficha—, así que la
+ * acción la pasa la pantalla. Sin valor marcado no se dibuja: limpiar lo vacío no tiene efecto que
+ * mostrar, y estando siempre visible haría dudar de si quedó algo puesto.
+ */
+export const LimpiarDefaultEmpresa: React.FC<{ hayValor: boolean; onLimpiar: () => void; queEs: string; disabled?: boolean }> = ({ hayValor, onLimpiar, queEs, disabled }) => {
+  if (!hayValor) return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onLimpiar();
+      }}
+      disabled={disabled}
+      title={`Quitar ${queEs} por defecto de esta empleadora. Vuelve a regir el de la instalación.`}
+      className="inline-flex items-center gap-1 text-[10px] font-semibold normal-case tracking-normal text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+    >
+      <FontAwesomeIcon icon={faEraser} className="h-2.5 w-2.5" />
+      Limpiar
+    </button>
+  );
+};
 
 /** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
 const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
@@ -99,7 +126,10 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
   return (
     <SeccionEmpleador>
       <div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{nota}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400">{nota}</p>
+          <LimpiarDefaultEmpresa hayValor={!!marcado} onLimpiar={() => marcar(marcado)} queEs={queEs} disabled={guardando} />
+        </div>
         <HerenciaGlobal campo={campo} valorEmpresa={marcado} nombreDe={nombreDe} />
       </div>
 

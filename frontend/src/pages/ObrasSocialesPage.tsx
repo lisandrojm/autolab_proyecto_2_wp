@@ -5,7 +5,7 @@ import { createSimpleCatalogApi } from "../api/simpleCatalog";
 // El "ID Externo" de Obras Sociales siempre fue el código RNOS. El formato oficial vive en un solo
 // lugar porque lo comparten este catálogo, la ficha de la empresa y el ABM de Empresas.
 import { formatRnos } from "../utils/rnos";
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
 
@@ -33,6 +33,12 @@ export const ObrasSocialesPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
+        encabezado: (
+          <span className="inline-flex items-center gap-2">
+            Por defecto
+            <LimpiarDefaultArca campo="obraSocial" queEs="la obra social que se ofrece primero" />
+          </span>
+        ),
         render: (item) => <DefaultArcaStar campo="obraSocial" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="la obra social que se ofrece primero" />,
       },
     ]}

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogManager } from '../components/catalog/SimpleCatalogManager';
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { companiesAPI, Company } from '../api/companies';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -270,6 +270,7 @@ export const ConveniosPage: React.FC = () => {
             convenios={items as ConvenioFila[]}
             ayudaPorDefecto="El convenio que rige cuando ni el contrato ni la empleadora eligieron uno. Es el escalón de más abajo: cualquier empleadora puede marcar otro en su ficha."
             renderPorDefecto={(c) => <DefaultArcaStar campo="convenioId" valor={String(c._id)} nombre={`${c.externalId || ""} ${c.name}`.trim()} queEs="el convenio" />}
+            accionPorDefecto={<LimpiarDefaultArca campo="convenioId" queEs="el convenio" />}
             obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
             renderSindicato={renderSindicato}
             renderEmpresas={(c) => {

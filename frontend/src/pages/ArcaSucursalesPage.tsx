@@ -10,7 +10,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { arcaSucursalesAPI, ArcaSucursal, ArcaSucursalInput } from "../api/arcaSucursales";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { DefaultArcaStar } from "../components/arca/DefaultArcaStar";
+import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 
 const HELP_KEY = "arcaSucursales" as const;
 
@@ -172,7 +172,10 @@ export const ArcaSucursalesPage: React.FC = () => {
                       recorriendo siempre el mismo borde de la tabla. Lleva rótulo porque una estrella
                       sin nombre no dice qué marca, y acá no hay ninguna otra pista. */}
                   <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El domicilio que rige cuando el contrato y la empleadora no eligieron uno">
-                    Por defecto
+                    <span className="inline-flex items-center gap-2">
+                      Por defecto
+                      <LimpiarDefaultArca campo="sucursalId" queEs="el domicilio de explotación" />
+                    </span>
                   </th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
