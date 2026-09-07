@@ -13,18 +13,29 @@ import { tipoPerteneceAlGrupo } from "../utils/grupoTipoServicio.js";
  * borrara lo que marcó la otra.
  */
 const router = Router();
-/** `null` y `""` son "sin default", y hay que poder mandarlos: es cómo se DESmarca la ★. */
+/**
+ * `null` y `""` son "sin default", y hay que poder mandarlos: es cómo se DESmarca la ★.
+ *
+ * TODOS los campos aceptan `null`, también los que se guardan como código.
+ *
+ * Los de código estaban declarados `z.string()` y el cliente manda `null` para desmarcar —la ★ no
+ * distingue si el campo guarda una referencia o un código, ni tiene por qué—, así que la validación
+ * los rechazaba con 400 «Datos inválidos» y no había forma de sacar un default una vez puesto: ni
+ * volviendo a clickear la estrella encendida, ni con el botón de limpiar. El handler ya normalizaba
+ * bien (`valor || ""`); lo único que faltaba era dejarlos pasar.
+ */
+const nullable = z.union([z.string(), z.null()]).optional();
 const patchSchema = z.object({
-    sucursalId: z.union([z.string(), z.null()]).optional(),
-    convenioId: z.union([z.string(), z.null()]).optional(),
-    grupoTipoServicio: z.string().optional(),
-    tipoServicio: z.string().optional(),
-    modalidadContratacion: z.string().optional(),
-    modalidadLiquidacion: z.string().optional(),
-    obraSocial: z.string().optional(),
-    actividad: z.string().optional(),
-    categoria: z.string().optional(),
-    fuenteParitariaId: z.union([z.string(), z.null()]).optional(),
+    sucursalId: nullable,
+    convenioId: nullable,
+    grupoTipoServicio: nullable,
+    tipoServicio: nullable,
+    modalidadContratacion: nullable,
+    modalidadLiquidacion: nullable,
+    obraSocial: nullable,
+    actividad: nullable,
+    categoria: nullable,
+    fuenteParitariaId: nullable,
 });
 router.get("/", requireTenant, authenticateToken, async (_req, res) => {
     try {
@@ -40,7 +51,13 @@ router.patch("/", requireTenant, authenticateToken, async (req, res) => {
     try {
         const parsed = patchSchema.safeParse(req.body ?? {});
         if (!parsed.success) {
-            res.status(400).json({ error: "Datos inválidos", detalle: parsed.error.flatten() });
+            /*
+              El mensaje NOMBRA los campos. «Datos inválidos» a secas fue exactamente lo que hizo que este
+              400 se viera en pantalla como un fallo genérico durante semanas: el detalle viajaba en otra
+              clave que el cliente no muestra.
+            */
+            const campos = Object.keys(parsed.error.flatten().fieldErrors).join(", ");
+            res.status(400).json({ error: campos ? `Datos inválidos en: ${campos}` : "Datos inválidos", detalle: parsed.error.flatten() });
             return;
         }
         const actual = await getArcaDefaults();
