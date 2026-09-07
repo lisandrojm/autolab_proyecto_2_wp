@@ -40,6 +40,18 @@ export interface IProject extends Document {
   tenantId: Types.ObjectId;
   clientId?: Types.ObjectId;
   contratoEmpresas?: Types.ObjectId[];
+  /**
+   * LOS CONVENIOS BAJO LOS QUE ESTE PROYECTO CONTRATA.
+   *
+   * Cuelgan de `contratoEmpresas`: solo pueden ser convenios que alguna de esas empleadoras tenga
+   * registrados ante ARCA, porque el organismo únicamente acepta categorías de los CCT que ese CUIT
+   * registró. Sacarle una empresa al proyecto se lleva sus convenios.
+   *
+   * Sirven para acotar el alta: una productora puede tener seis CCT registrados y este proyecto
+   * contratar bajo uno. Con la lista cargada, el alta ofrece esa; vacía, ofrece todas las de la
+   * empresa — vacío es «todavía no se acotó», no «ninguno».
+   */
+  convenioIds?: Types.ObjectId[];
   releaseEmpresas?: Types.ObjectId[];
   name: string;
   description?: string;
@@ -102,6 +114,7 @@ const projectSchema = new Schema<IProject>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", index: true },
     contratoEmpresas: [{ type: Schema.Types.ObjectId, ref: "Company" }],
+    convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
     releaseEmpresas: [{ type: Schema.Types.ObjectId, ref: "Company" }],
 
     name: { type: String, required: true, trim: true },

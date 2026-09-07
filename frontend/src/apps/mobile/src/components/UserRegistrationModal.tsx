@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faFileInvoiceDollar, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faFileInvoiceDollar, faPlus, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo, faltaDefinirDias } from "../../../../components/contratos/DiasDeTrabajo";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
@@ -9,6 +9,8 @@ import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
 import { projectsAPI, Project } from "../../../../api/projects";
+import { companiesAPI, Company } from "../../../../api/companies";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../../../../api/simpleCatalog";
 import { useProfile } from "../hooks/useProfile";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { infoAPI, InfoItem } from "../../../../api/info";
@@ -32,6 +34,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  /** Catálogo de empresas y de convenios, para resolver nombres y la cadena proyecto → empresa → CCT. */
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   const [platformUsers, setPlatformUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   /** Roles empresa de la persona elegida (vacío si el nombre se escribió a mano). Ver ese select. */
@@ -60,6 +65,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   /** Texto del buscador dentro de la ventana de "a quién reemplaza". */
   const [replacedSearchTerm, setReplacedSearchTerm] = useState("");
 
+  useEffect(() => {
+    // Aparte de la carga grande y con su propio catch: si esto falla, el alta tiene que poder
+    // enviarse igual — sin empresa elegida, no rota.
+    void Promise.all([companiesAPI.list().catch(() => [] as Company[]), conveniosApi.list().catch(() => [] as SimpleCatalogItem[])]).then(([cs, cv]) => {
+      setCompanies(cs);
+      setConvenios(cv);
+    });
+  }, []);
+
   const [formData, setFormData] = useState({
     fullName: "",
     projectIds: [] as string[],
@@ -73,6 +87,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     diasRotativos: false,
     inTime: "",
     outTime: "",
+    /** La empleadora que contrata y el convenio bajo el que lo hace. Salen del proyecto elegido. */
+    empresaContratoId: "",
+    convenioId: "",
     dailyRate: "",
     isReplacement: false,
     /** Por qué vía se contrata: alta temprana ante ARCA o locación de servicios. */
@@ -86,7 +103,72 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     comentarios: "",
   });
 
-  const TIME_OPTIONS = (() => {
+  /**
+   * LA CADENA: proyecto → empresa del contrato → convenio.
+   *
+   * Las empresas ofrecidas son las de los proyectos elegidos, no todas: contratar por un CUIT que
+   * este proyecto no usa es un alta que después nadie sabe explicar.
+   */
+  const empresasDelProyecto = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of projects) {
+      if (!formData.projectIds.includes(p._id)) continue;
+      for (const id of p.contratoEmpresas || []) ids.add(String(id));
+    }
+    return companies.filter((c) => ids.has(c._id));
+  }, [projects, companies, formData.projectIds]);
+
+  /**
+   * Los convenios que se pueden elegir para la empresa marcada.
+   *
+   * Si el proyecto acotó sus convenios, se ofrecen ESOS —cruzados con los que la empleadora tiene
+   * registrados, porque ARCA solo acepta categorías de los CCT de ese CUIT—. Si no acotó nada, se
+   * ofrecen todos los de la empleadora: vacío en el proyecto significa «todavía no se acotó», no
+   * «ninguno», y leerlo al revés dejaría el alta sin convenios que elegir.
+   */
+  const conveniosDisponibles = useMemo(() => {
+    const empresa = companies.find((c) => c._id === formData.empresaContratoId);
+    if (!empresa) return [];
+    const deLaEmpresa = new Set((empresa.convenioIds || []).map(String));
+    const delProyecto = new Set<string>();
+    for (const p of projects) {
+      if (!formData.projectIds.includes(p._id)) continue;
+      for (const id of p.convenioIds || []) delProyecto.add(String(id));
+    }
+    const permitidos = delProyecto.size > 0 ? [...delProyecto].filter((id) => deLaEmpresa.has(id)) : [...deLaEmpresa];
+    return convenios.filter((c) => permitidos.includes(c._id));
+  }, [companies, convenios, projects, formData.projectIds, formData.empresaContratoId]);
+
+  /*
+    CUANDO HAY UNA SOLA OPCIÓN, SE ELIGE SOLA.
+
+    Es el caso normal —un proyecto, una empleadora, un CCT— y obligar a abrir un combo de un ítem
+    para confirmar lo único posible es trabajo sin decisión. Con dos o más, no se presume nada: elegir
+    mal la empleadora manda el alta con el CUIT equivocado.
+
+    También limpia lo que dejó de ser válido: si se cambia de proyecto, la empresa que ya no
+    pertenece no puede quedar seleccionada de arrastre.
+  */
+  useEffect(() => {
+    const valida = empresasDelProyecto.some((c) => c._id === formData.empresaContratoId);
+    if (!valida) {
+      const unica = empresasDelProyecto.length === 1 ? empresasDelProyecto[0]._id : "";
+      if (formData.empresaContratoId !== unica) setFormData((p) => ({ ...p, empresaContratoId: unica, convenioId: "" }));
+    }
+  }, [empresasDelProyecto, formData.empresaContratoId]);
+
+  useEffect(() => {
+    const valido = conveniosDisponibles.some((c) => c._id === formData.convenioId);
+    if (!valido) {
+      const unico = conveniosDisponibles.length === 1 ? conveniosDisponibles[0]._id : "";
+      if (formData.convenioId !== unico) setFormData((p) => ({ ...p, convenioId: unico }));
+    }
+  }, [conveniosDisponibles, formData.convenioId]);
+
+
+  const conveniosApi = createSimpleCatalogApi("/convenios");
+
+const TIME_OPTIONS = (() => {
     const options = [];
     for (let h = 0; h < 24; h++) {
       for (let m = 0; m < 60; m += 15) {
@@ -150,6 +232,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         diasSemana: Array.isArray((meta as any).diasSemana) ? ((meta as any).diasSemana as number[]) : [],
         diasRotativos: !!(meta as any).diasRotativos,
         inTime: inTime || "",
+        empresaContratoId: meta.empresaContratoId || "",
+        convenioId: meta.convenioId || "",
         outTime: outTime || "",
         dailyRate: meta.dailyRate?.toString() || "",
         isReplacement: meta.isReplacement || false,
@@ -174,6 +258,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         diasSemana: [],
         diasRotativos: false,
         inTime: "",
+        empresaContratoId: "",
+        convenioId: "",
         outTime: "",
         dailyRate: "",
         isReplacement: false,
@@ -466,6 +552,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           diasSemana: formData.diasSemana,
           diasRotativos: formData.diasRotativos,
           schedule: `${formData.inTime} - ${formData.outTime}`,
+          // Con qué CUIT se contrata y bajo qué CCT. Sin esto el alta llega sin empleadora y hay que
+          // deducirla del proyecto más tarde, cuando ya nadie recuerda cuál de las tres era.
+          empresaContratoId: formData.empresaContratoId || undefined,
+          convenioId: formData.convenioId || undefined,
           dailyRate: Number(formData.dailyRate),
           isReplacement: formData.isReplacement,
           // A quién reemplaza. Los dos identificadores: el numérico que usa el contrato (puede
@@ -505,6 +595,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         diasSemana: [],
         diasRotativos: false,
         inTime: "",
+        empresaContratoId: "",
+        convenioId: "",
         outTime: "",
         dailyRate: "",
         isReplacement: false,
@@ -799,6 +891,65 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               </div>
             </div>
           </div>
+
+          {/*
+            CON QUÉ EMPLEADORA Y BAJO QUÉ CONVENIO. Debajo del horario, que es donde termina lo que
+            se pacta con la persona y empieza lo que define el alta.
+
+            Sale del proyecto: sus empresas del contrato, y de cada una sus convenios registrados. Con
+            una sola opción se elige sola y el campo queda de lectura — un combo de un ítem no es una
+            decisión. Con dos o más hay que elegir: equivocar la empleadora manda el alta con el CUIT
+            que no es, y eso se descubre cuando ARCA devuelve el archivo.
+          */}
+          <div className="space-y-1 md:col-span-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-[10px]" />
+              Empresa que contrata
+            </label>
+            {formData.projectIds.length === 0 ? (
+              <p className="text-xs text-slate-400 py-2">Elegí primero el proyecto: la empleadora sale de las que ese proyecto tiene asignadas.</p>
+            ) : empresasDelProyecto.length === 0 ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400 py-2">Ese proyecto no tiene empresa del contrato asignada. Sin eso, el alta no sabe con qué CUIT se contrata.</p>
+            ) : empresasDelProyecto.length === 1 ? (
+              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">{empresasDelProyecto[0].razonSocial}</p>
+            ) : (
+              <select name="empresaContratoId" value={formData.empresaContratoId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
+                <option value="">Elegí la empresa</option>
+                {empresasDelProyecto.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.razonSocial}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div className="space-y-1 md:col-span-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
+              Convenio
+            </label>
+            {!formData.empresaContratoId ? (
+              <p className="text-xs text-slate-400 py-2">Elegí primero la empresa.</p>
+            ) : conveniosDisponibles.length === 0 ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400 py-2">Esa empleadora no tiene convenios registrados ante ARCA, así que no hay categorías que se le puedan dar de alta.</p>
+            ) : conveniosDisponibles.length === 1 ? (
+              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">
+                <span className="font-mono text-xs text-blue-600 dark:text-blue-400 mr-2">{conveniosDisponibles[0].externalId}</span>
+                {conveniosDisponibles[0].name}
+              </p>
+            ) : (
+              <select name="convenioId" value={formData.convenioId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
+                <option value="">Elegí el convenio</option>
+                {conveniosDisponibles.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.externalId} — {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           <div className="space-y-1">
             {/* Mismo rótulo con ícono que «Horario»: sin él, las dos etiquetas tenían alturas
                 distintas y los campos de la fila arrancaban desparejos. La altura de los controles

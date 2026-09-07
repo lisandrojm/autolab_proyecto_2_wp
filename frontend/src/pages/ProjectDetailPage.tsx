@@ -12,6 +12,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { InfoModal } from "../components/ui/InfoModal";
+import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from "../components/CompanyMultiSelect";
 import { EmptyState } from "../components/ui/EmptyState";
 
@@ -75,6 +76,7 @@ export const ProjectDetailPage: React.FC = () => {
     startDate: "",
     endDate: "",
     contratoEmpresas: [] as string[],
+    convenioIds: [] as string[],
     releaseEmpresas: [] as string[],
     objectives: [""],
     targetAudience: "",
@@ -117,6 +119,7 @@ export const ProjectDetailPage: React.FC = () => {
         startDate: data.startDate ? data.startDate.split("T")[0] : "",
         endDate: data.endDate ? data.endDate.split("T")[0] : "",
         contratoEmpresas: data.contratoEmpresas || [],
+        convenioIds: data.convenioIds || [],
         releaseEmpresas: data.releaseEmpresas || [],
         objectives: data.objectives?.length ? data.objectives : [""],
         targetAudience: data.targetAudience || "",
@@ -514,6 +517,12 @@ export const ProjectDetailPage: React.FC = () => {
                       value={projectForm.releaseEmpresas}
                       onChange={(ids) => setProjectForm((p) => ({ ...p, releaseEmpresas: ids }))}
                     />
+                  </div>
+
+                  {/* Los convenios del proyecto cuelgan de la Empresa del Contrato: ver el componente. */}
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">Convenios del proyecto</label>
+                    <ConveniosDelProyecto companies={companies as any} empresasContrato={projectForm.contratoEmpresas} value={projectForm.convenioIds} onChange={(ids) => setProjectForm((p) => ({ ...p, convenioIds: ids }))} />
                   </div>
                 </div>
 

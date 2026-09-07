@@ -228,6 +228,12 @@ const createProjectSchema = z.object({
         .optional()
         .nullable()
         .transform((v) => v ?? undefined),
+    /* Los convenios bajo los que contrata este proyecto. Ver `models/Project.ts`. */
+    convenioIds: z
+        .array(z.string())
+        .optional()
+        .nullable()
+        .transform((v) => v ?? undefined),
 });
 const updateTeamConfigSchema = z.object({
     config: z.array(z.object({

@@ -17,6 +17,7 @@ import { getHelp, hasHelp } from '../data/help/helpContent';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { InfoModal } from '../components/ui/InfoModal';
+import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { getImageUrl } from '../utils/imageHelpers';
 
@@ -77,6 +78,7 @@ export const ClientProjectsPage: React.FC = () => {
     startDate: '',
     endDate: '',
     contratoEmpresas: [] as string[],
+    convenioIds: [] as string[],
     releaseEmpresas: [] as string[],
     objectives: [] as string[],
     targetAudience: '',
@@ -209,6 +211,7 @@ export const ClientProjectsPage: React.FC = () => {
       startDate: '',
       endDate: '',
       contratoEmpresas: [] as string[],
+      convenioIds: [] as string[],
       releaseEmpresas: [] as string[],
       objectives: [],
       targetAudience: '',
@@ -252,6 +255,7 @@ export const ClientProjectsPage: React.FC = () => {
       startDate: project.startDate ? project.startDate.split('T')[0] : '',
       endDate: project.endDate ? project.endDate.split('T')[0] : '',
       contratoEmpresas: project.contratoEmpresas || [],
+      convenioIds: project.convenioIds || [],
       releaseEmpresas: project.releaseEmpresas || [],
       objectives: project.objectives || [],
       targetAudience: project.targetAudience || '',
@@ -532,6 +536,18 @@ export const ClientProjectsPage: React.FC = () => {
                         </label>
                         <CompanyMultiSelect companies={companies} value={formData.contratoEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids }))} />
                       </div>
+
+              {/*
+                LOS CONVENIOS DEL PROYECTO, debajo de la empresa que los aporta.
+
+                Van en su propia fila y no al lado del Release: el Release es otra empleadora y otra
+                cosa. Estos cuelgan de la Empresa del Contrato, y ponerlos en cualquier otro lado
+                rompe la única relación que los explica.
+              */}
+              <div className="md:col-span-2">
+                <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">Convenios del proyecto</label>
+                <ConveniosDelProyecto companies={companies as any} empresasContrato={formData.contratoEmpresas} value={formData.convenioIds} onChange={(ids) => setFormData((p) => ({ ...p, convenioIds: ids }))} />
+              </div>
 
                       <div>
                         <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">

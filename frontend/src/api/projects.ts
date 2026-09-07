@@ -30,6 +30,12 @@ export interface Project {
 
   /** ObjectIds de las empresas (colección companies) para el contrato / release */
   contratoEmpresas?: string[];
+  /**
+   * Los convenios bajo los que contrata este proyecto. Cuelgan de `contratoEmpresas`.
+   *
+   * Vacío = «todavía no se acotó», no «ninguno»: el alta ofrece entonces todos los de la empresa.
+   */
+  convenioIds?: string[];
   releaseEmpresas?: string[];
 
   name: string;
@@ -286,6 +292,7 @@ class ProjectsAPI {
       objectives?: string[];
       targetAudience?: string;
       contratoEmpresas?: string[];
+      convenioIds?: string[];
       releaseEmpresas?: string[];
       turnos?: string[];
       areasConfig?: {
@@ -345,6 +352,7 @@ class ProjectsAPI {
       objectives?: string[];
       targetAudience?: string;
       contratoEmpresas?: string[];
+      convenioIds?: string[];
       releaseEmpresas?: string[];
       assignedUsers?: string[];
       vacationConfig?: {

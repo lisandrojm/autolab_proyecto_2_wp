@@ -3,6 +3,7 @@ const projectSchema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", index: true },
     contratoEmpresas: [{ type: Schema.Types.ObjectId, ref: "Company" }],
+    convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
     releaseEmpresas: [{ type: Schema.Types.ObjectId, ref: "Company" }],
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },

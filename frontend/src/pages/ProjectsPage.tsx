@@ -15,6 +15,7 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
+import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
@@ -66,6 +67,7 @@ export const ProjectsPage: React.FC = () => {
     startDate: '',
     endDate: '',
     contratoEmpresas: [] as string[],
+    convenioIds: [] as string[],
     releaseEmpresas: [] as string[],
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     metadata: {
@@ -191,6 +193,7 @@ export const ProjectsPage: React.FC = () => {
       startDate: '',
       endDate: '',
       contratoEmpresas: [] as string[],
+      convenioIds: [] as string[],
       releaseEmpresas: [] as string[],
       areasConfig: [],
       metadata: {
@@ -216,6 +219,7 @@ export const ProjectsPage: React.FC = () => {
       startDate: project.startDate ? project.startDate.split('T')[0] : '',
       endDate: project.endDate ? project.endDate.split('T')[0] : '',
       contratoEmpresas: project.contratoEmpresas || [],
+      convenioIds: project.convenioIds || [],
       releaseEmpresas: project.releaseEmpresas || [],
       areasConfig: (project.areasConfig || []).map((ac: any) => ({
         areaId: typeof ac.areaId === 'string' ? ac.areaId : ac.areaId._id,
@@ -704,6 +708,18 @@ export const ProjectsPage: React.FC = () => {
                   </button>
                 </label>
                 <CompanyMultiSelect companies={companies} value={formData.contratoEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids }))} />
+              </div>
+
+              {/*
+                LOS CONVENIOS DEL PROYECTO, debajo de la empresa que los aporta.
+
+                Van en su propia fila y no al lado del Release: el Release es otra empleadora y otra
+                cosa. Estos cuelgan de la Empresa del Contrato, y ponerlos en cualquier otro lado
+                rompe la única relación que los explica.
+              */}
+              <div className="md:col-span-2">
+                <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">Convenios del proyecto</label>
+                <ConveniosDelProyecto companies={companies as any} empresasContrato={formData.contratoEmpresas} value={formData.convenioIds} onChange={(ids) => setFormData((p) => ({ ...p, convenioIds: ids }))} />
               </div>
 
               <div>
