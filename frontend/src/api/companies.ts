@@ -95,10 +95,27 @@ export interface Company {
 
 export type CompanyInput = Omit<Company, '_id' | 'createdAt' | 'updatedAt'>;
 
+/** Los ítems de ARCA que se declaran POR CUIT y por eso se vinculan a una empresa. */
+export type TipoVinculoArca = 'convenio' | 'sucursal' | 'obraSocial';
+
 class CompaniesAPI {
   async list(): Promise<Company[]> {
     const { data } = await axios.get('/companies');
     return Array.isArray(data) ? data : [];
+  }
+
+  /**
+   * Qué empresas tienen registrado un ítem del nomenclador. La MISMA relación que edita la ficha
+   * (`convenioIds`, `sucursalIds`, `obrasSocialesIds`), vista desde el ítem.
+   *
+   * Manda la lista COMPLETA de empresas que quedan vinculadas, no un alta o una baja: así el server
+   * puede deducir a cuáles se les quitó y limpiarles lo que colgaba de ese vínculo —el default, y las
+   * actividades del domicilio—, que es justamente lo que no se puede hacer desde el cliente cuando se
+   * tocan varias empresas de una vez.
+   */
+  async setVinculos(tipo: TipoVinculoArca, itemId: string, empresaIds: string[]): Promise<{ vinculadas: number; desvinculadas: number; limpiezas: number }> {
+    const { data } = await axios.put('/companies/vinculos', { tipo, itemId, empresaIds });
+    return data;
   }
 
   /**

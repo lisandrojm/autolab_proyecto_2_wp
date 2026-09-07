@@ -4,6 +4,7 @@ import { Company } from "../models/Company.js";
 import { Types } from "mongoose";
 import UserProject from "../models/UserProject.js";
 import { Convenio } from "../models/Convenio.js";
+import { ObraSocial } from "../models/ObraSocial.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { grupoDeTipoServicio, GRUPO_CONTINUOS, GRUPO_DISCONTINUOS } from "../utils/grupoTipoServicio.js";
 
@@ -171,6 +172,98 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 });
 
 // PUT /companies/:id
+/**
+ * QUÉ EMPRESAS TIENEN REGISTRADO UN ÍTEM DEL NOMENCLADOR — la relación, editada del otro lado.
+ *
+ * La misma relación que ya editaba la ficha de cada empleadora (`convenioIds`, `sucursalIds`,
+ * `obrasSocialesIds`), pero desde el ítem: «este convenio lo tienen estas cinco empresas». No hay
+ * modelo nuevo ni datos duplicados; cambia por dónde se entra.
+ *
+ * SOLO PARA LO QUE ARCA DECLARA POR CUIT. Convenios, domicilios y obras sociales son «Datos del
+ * Empleador»: el organismo acepta un alta únicamente si ESE CUIT los tiene registrados. Los tipos de
+ * servicio, los grupos y las modalidades son tablas universales, iguales para todos, y vincularlas a
+ * una empresa no significaría nada ante el organismo.
+ *
+ * LA LIMPIEZA AL DESVINCULAR ES LA RAZÓN DE QUE ESTO VIVA EN EL SERVER. Quitarle un convenio a una
+ * empleadora que lo tenía marcado por defecto deja ese default apuntando a algo que ya no está
+ * registrado, y el alta se precarga con un dato que ARCA rechaza. La ficha ya lo resolvía, pero en su
+ * propio frontend y solo para la empresa abierta; desde acá se tocan N empresas de una vez y ninguna
+ * está cargada del lado del cliente.
+ */
+const CAMPO_DE_TIPO = {
+  convenio: "convenioIds",
+  sucursal: "sucursalIds",
+  obraSocial: "obrasSocialesIds",
+} as const;
+
+type TipoVinculo = keyof typeof CAMPO_DE_TIPO;
+
+const vinculosSchema = z.object({
+  tipo: z.enum(["convenio", "sucursal", "obraSocial"]),
+  itemId: z.string(),
+  empresaIds: z.array(z.string()),
+});
+
+router.put("/vinculos", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const parsed = vinculosSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: "Datos inválidos", detalle: parsed.error.flatten() });
+      return;
+    }
+    const { tipo, itemId, empresaIds } = parsed.data;
+    if (!Types.ObjectId.isValid(itemId)) {
+      res.status(400).json({ error: "El ítem no es un id válido." });
+      return;
+    }
+    const campo = CAMPO_DE_TIPO[tipo as TipoVinculo];
+    const quedan = empresaIds.filter((id) => Types.ObjectId.isValid(id));
+
+    // Las que lo tienen HOY: sirve para saber a cuáles hay que limpiarles el default, que es lo
+    // único que no se puede deducir del cuerpo del request.
+    const teniannAntes = await Company.find({ [campo]: itemId }).select("_id defaultsArca obraSocialDefaultId").lean();
+    const seQuitan = teniannAntes.filter((e: any) => !quedan.includes(String(e._id)));
+
+    const vinculadas = quedan.length > 0 ? await Company.updateMany({ _id: { $in: quedan } }, { $addToSet: { [campo]: itemId } }) : { modifiedCount: 0 };
+    const desvinculadas = seQuitan.length > 0 ? await Company.updateMany({ _id: { $in: seQuitan.map((e: any) => e._id) } }, { $pull: { [campo]: itemId } as any }) : { modifiedCount: 0 };
+
+    /*
+      LO QUE COLGABA DEL VÍNCULO SE VA CON ÉL.
+
+      Un default o unas actividades que apuntan a algo que esta empleadora ya no tiene registrado no
+      son un dato viejo inocuo: precargan el alta con un valor que ARCA rechaza, y el error aparece
+      lejos de acá, cuando el organismo devuelve el archivo.
+    */
+    let limpiezas = 0;
+    if (tipo === "convenio") {
+      const r = await Company.updateMany({ _id: { $in: seQuitan.map((e: any) => e._id) }, "defaultsArca.convenioId": itemId }, { $set: { "defaultsArca.convenioId": null } });
+      limpiezas += r.modifiedCount || 0;
+    } else if (tipo === "sucursal") {
+      const r = await Company.updateMany({ _id: { $in: seQuitan.map((e: any) => e._id) }, "defaultsArca.sucursalId": itemId }, { $set: { "defaultsArca.sucursalId": null } });
+      limpiezas += r.modifiedCount || 0;
+      // Las actividades se declaran POR DOMICILIO: sin el domicilio, esa fila no describe nada.
+      await Company.updateMany({ _id: { $in: seQuitan.map((e: any) => e._id) } }, { $pull: { sucursalActividades: { sucursalId: itemId } } as any });
+    } else if (tipo === "obraSocial") {
+      /*
+        `obraSocialDefaultId` guarda el `data.id` numérico del catálogo, no el `_id` del documento —
+        es el mismo RNOS que viaja al TXT—, así que hay que traducir antes de comparar. Sin esta
+        traducción la limpieza no encontraría nunca nada y fallaría en silencio.
+      */
+      const os = await ObraSocial.findById(itemId).select("data.id").lean();
+      const dataId = (os as any)?.data?.id;
+      if (dataId != null) {
+        const r = await Company.updateMany({ _id: { $in: seQuitan.map((e: any) => e._id) }, obraSocialDefaultId: dataId }, { $unset: { obraSocialDefaultId: "" } });
+        limpiezas += r.modifiedCount || 0;
+      }
+    }
+
+    res.json({ ok: true, vinculadas: vinculadas.modifiedCount || 0, desvinculadas: desvinculadas.modifiedCount || 0, limpiezas });
+  } catch (error) {
+    console.error("Put company vinculos error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const data = normalizar(companySchema.partial().parse(req.body));

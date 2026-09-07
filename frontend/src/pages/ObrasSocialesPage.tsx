@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { faBriefcaseMedical } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
@@ -6,6 +6,8 @@ import { createSimpleCatalogApi } from "../api/simpleCatalog";
 // lugar porque lo comparten este catálogo, la ficha de la empresa y el ABM de Empresas.
 import { formatRnos } from "../utils/rnos";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
+import { EmpresasDelItemArca } from "../components/arca/EmpresasDelItemArca";
+import { companiesAPI, Company } from "../api/companies";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
 
@@ -28,8 +30,45 @@ const sanitizeRnos = (v: string): string => v.replace(/\D/g, "");
  * Lo que sí se decide vive donde corresponde: la obra social del convenio, en Convenios; la de los
  * excluidos de convenio y las excepciones por CCT, en la ficha de cada empleadora.
  */
-export const ObrasSocialesPage: React.FC = () => (
+export const ObrasSocialesPage: React.FC = () => {
+  /*
+    Las empresas, para poder registrar la obra social en varias desde acá.
+
+    La relación vive en `Company.obrasSocialesIds`, no en la obra social: para prenderla y apagarla
+    hace falta la lista entera de empresas, no solo las que ya la tienen.
+  */
+  const [empresas, setEmpresas] = useState<Company[]>([]);
+  const recargarEmpresas = useCallback(async () => {
+    setEmpresas(await companiesAPI.list().catch(() => []));
+  }, []);
+  useEffect(() => {
+    recargarEmpresas();
+  }, [recargarEmpresas]);
+
+  return (
   <SimpleCatalogManager
+    /*
+      Mismo bloque que Convenios: la vinculación por CUIT se decide sobre el ítem, no entrando a la
+      ficha de cada empleadora. No entra por `extraFields` porque el dato no es de la obra social y no
+      sale en el mismo `update`; cada switch guarda solo, apenas se toca.
+    */
+    extraSeccion={(item) => (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresas que la tienen registrada</label>
+        {empresas.length === 0 ? (
+          <p className="text-xs text-gray-400">No hay empresas cargadas.</p>
+        ) : (
+          <EmpresasDelItemArca
+            tipo="obraSocial"
+            itemId={item._id}
+            itemLabel={`${item.externalId || ''} ${item.name}`.trim()}
+            empresas={empresas}
+            asignadas={empresas.filter((e) => (e.obrasSocialesIds || []).map(String).includes(item._id)).map((e) => e._id)}
+            onGuardado={recargarEmpresas}
+          />
+        )}
+      </div>
+    )}
     columnasCalculadas={[
       {
         label: "Por defecto",
@@ -54,4 +93,5 @@ export const ObrasSocialesPage: React.FC = () => (
     sanitizeExternalId={sanitizeRnos}
     helpKey="obrasSociales"
   />
-);
+  );
+};

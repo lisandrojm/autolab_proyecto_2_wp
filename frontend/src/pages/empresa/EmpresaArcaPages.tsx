@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash, faLayerGroup, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash, faLayerGroup, faEye } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout, SeccionEmpleador } from '../../components/empresa/EmpresaContextLayout';
 import { ActividadesDelDomicilio, ActividadDomicilio } from '../../components/arca/ActividadesDelDomicilio';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Modal } from '../../components/ui/Modal';
-import { ConvenioSelector } from '../../components/empresas/ConvenioSelector';
-import { SucursalSelector } from '../../components/empresas/SucursalSelector';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
 import { arcaCategoriasAPI, ConvenioDetalle } from '../../api/arcaCategorias';
@@ -15,7 +13,6 @@ import { companiesAPI, Company } from '../../api/companies';
 import { paritariasAPI, EstadoParitarias } from '../../api/paritarias';
 import { CeldaFuenteParitarias } from '../../components/convenios/CeldaFuenteParitarias';
 import { CeldaSindicato } from '../../components/convenios/CeldaSindicato';
-import { sweetAlert } from '../../utils/sweetAlert';
 import { formatRnos } from '../../utils/rnos';
 import { useGuardarEmpresa } from '../../components/empresa/useGuardarEmpresa';
 import { DefaultArcaEmpresa, LimpiarDefaultEmpresa } from '../../components/empresa/DefaultArcaEmpresa';
@@ -92,7 +89,6 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
   const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
   const [catalogo, setCatalogo] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [busqueda, setBusqueda] = useState('');
   const [ids, setIds] = useState<string[]>(empresa.obrasSocialesIds || []);
   const [defaultId, setDefaultId] = useState<number | null>(empresa.obraSocialDefaultId ?? empresa.obraSocialId ?? null);
 
@@ -122,58 +118,8 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
   const registradas = useMemo(() => catalogo.filter((o) => ids.includes(o._id)), [catalogo, ids]);
   const dataId = (o: SimpleCatalogItem) => Number((o.data as { id?: number } | undefined)?.id);
 
-  const resultados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    if (!q) return [];
-    return catalogo.filter((o) => !ids.includes(o._id) && (o.name.toLowerCase().includes(q) || String(o.externalId || '').includes(q.replace(/\D/g, '') || ' ')));
-  }, [catalogo, busqueda, ids]);
 
   const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.obrasSocialesIds || [])].sort()) || defaultId !== (empresa.obraSocialDefaultId ?? empresa.obraSocialId ?? null);
-
-  /**
-   * Quitar una obra social del padrón de la empleadora, avisando a quién alcanza.
-   *
-   * Sacarla no rompe nada en el momento: rompe DESPUÉS, cuando esos contratos generen el TXT y ARCA
-   * los rechace por declarar una obra social que el CUIT no tiene registrada. Por eso el número va
-   * antes de la confirmación y no en un error posterior.
-   */
-  const quitar = async (id: string) => {
-    const os = catalogo.find((o) => o._id === id);
-    const osId = os ? dataId(os) : NaN;
-
-    if (os && Number.isFinite(osId)) {
-      const contratos = enUso.contratos[String(osId)] || 0;
-      const convenios = enUso.convenios[String(osId)] || [];
-      if (contratos > 0 || convenios.length > 0) {
-        const partes = [contratos > 0 ? `${contratos} contrato(s) la tienen cargada` : '', convenios.length > 0 ? `${convenios.length === 1 ? 'el convenio' : 'los convenios'} ${convenios.join(', ')} la usa${convenios.length === 1 ? '' : 'n'}` : ''].filter(Boolean);
-        const r = await sweetAlert.confirm(`¿Quitar ${os.name}?`, `${partes.join(' y ')}. Al quitarla, esas altas van a ser rechazadas por ARCA.`, 'Sí, quitar');
-        if (!r.isConfirmed) return;
-      }
-    }
-
-    setIds((prev) => prev.filter((x) => x !== id));
-    // Sacar la de excluidos del conjunto la dejaría apuntando a algo que ARCA no acepta: se limpia.
-    if (os && osId === defaultId) setDefaultId(null);
-  };
-
-  /**
-   * Registrar de una vez todas las del catálogo.
-   *
-   * Es una acción de carga, no un atajo de configuración, y por eso pregunta antes: la sección existe
-   * porque cada CUIT declara ante ARCA un SUBCONJUNTO, y con las 496 puestas el chequeo de
-   * consistencia deja de decir nada —cualquier obra social pasa—. El rechazo entonces no lo da la
-   * plataforma sino ARCA, al subir el TXT, que es exactamente lo que este control viene a evitar.
-   *
-   * Solo AGREGA: no toca lo ya registrado ni la default de excluidos. Y como todo en esta pantalla,
-   * no se escribe nada hasta Guardar, así que se puede deshacer saliendo sin guardar.
-   */
-  const registrarTodas = async () => {
-    const faltan = catalogo.filter((o) => !ids.includes(o._id));
-    if (faltan.length === 0) return;
-    const r = await sweetAlert.confirm(`¿Registrar las ${faltan.length} que faltan?`, `Van a quedar registradas las ${catalogo.length} del catálogo. Tené en cuenta que ARCA solo acepta las que este CUIT tenga declaradas en su padrón: con todas puestas, el chequeo de consistencia deja pasar cualquiera y el rechazo aparece recién al subir el TXT. Todavía no se guarda nada.`, 'Sí, registrar todas');
-    if (!r.isConfirmed) return;
-    setIds((prev) => [...prev, ...faltan.map((o) => o._id)]);
-  };
 
   if (cargando) return <LoadingSpinner message="Cargando el catálogo de obras sociales..." />;
 
@@ -233,40 +179,23 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
         <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-700/60 pt-3">
           {/* Buscar de a una y traer todas son las dos formas de poblar esto, así que van juntas. El
               botón queda a la derecha y en secundario: registrar de a una es lo correcto casi siempre. */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 min-w-0">
-              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-              <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar en el catálogo para registrar otra…" className="w-full pl-9 pr-9 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/30" />
-              {busqueda && (
-                <button type="button" onClick={() => setBusqueda('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                  <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-            <button type="button" onClick={registrarTodas} disabled={registradas.length === catalogo.length} title={registradas.length === catalogo.length ? 'Ya están registradas las del catálogo' : `Registrar las ${catalogo.length - registradas.length} que faltan`} className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
-              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-              Registrar todas
-            </button>
-          </div>
+          {/*
+            QUÉ OBRAS SOCIALES TIENE REGISTRADAS ESTE CUIT SE EDITA EN EL NOMENCLADOR.
 
-          {busqueda.trim() && (
-            <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Resultados ({resultados.length})</p>
-              {resultados.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Sin resultados para “{busqueda}”.</p>
-              ) : (
-                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                  {resultados.slice(0, 40).map((o) => (
-                    <button key={o._id} type="button" onClick={() => setIds((prev) => [...prev, o._id])} className="w-full text-left px-3 py-2 rounded-lg border flex items-center gap-3 bg-white border-gray-200 hover:bg-gray-50 dark:bg-gray-900/40 dark:border-gray-700 dark:hover:bg-gray-800 transition-colors">
-                      <FontAwesomeIcon icon={faPlus} className="h-3 w-3 text-gray-400 shrink-0" />
-                      <span className="font-mono text-xs text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap">{formatRnos(o.externalId)}</span>
-                      <span className="text-sm text-gray-900 dark:text-gray-100 truncate">{o.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            Acá había un buscador para agregar y un «Registrar todas»; en Configuración → ARCA → Obras
+            Sociales no se podía tocar nada. Eran dos editores de la misma lista con dos gestos
+            distintos, y el caso real —registrar UNA obra social en las empresas que la declararon—
+            obligaba a entrar empresa por empresa.
+
+            Lo que sí se decide acá sigue arriba: cuál rige para los excluidos de convenio.
+          */}
+          <div className="flex justify-end">
+            <Link to="/obras-sociales" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+              Registrar o quitar obras sociales
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+            </Link>
+          </div>
 
           {registradas.length === 0 ? (
             <p className="text-xs text-gray-400 italic">Todavía no hay ninguna registrada para esta empleadora.</p>
@@ -282,9 +211,25 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
                       Excluidos
                     </span>
                   )}
-                  <button type="button" onClick={() => quitar(o._id)} title="Quitar de las registradas" className="shrink-0 text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1">
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
+                  {/*
+                    A CUÁNTOS ALCANZA. El dato alimentaba la confirmación de «quitar», que ahora se
+                    hace desde el nomenclador; se muestra acá para que no se pierda: quitarla no rompe
+                    nada en el momento, rompe después, cuando esos contratos generen el TXT y ARCA los
+                    rechace por declarar una obra social que este CUIT ya no tiene registrada.
+                  */}
+                  {(() => {
+                    const osId = String(dataId(o));
+                    const contratos = enUso.contratos[osId] || 0;
+                    const convenios = (enUso.convenios[osId] || []).length;
+                    if (!contratos && !convenios) return null;
+                    return (
+                      <span title={`${contratos} contrato(s) la tienen fijada · ${convenios} convenio(s) registrados la heredan`} className="shrink-0 text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                        {contratos > 0 && `${contratos} contrato${contratos === 1 ? '' : 's'}`}
+                        {contratos > 0 && convenios > 0 && ' · '}
+                        {convenios > 0 && `${convenios} CCT`}
+                      </span>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -380,7 +325,6 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
   const [ids, setIds] = useState<string[]>(empresa.convenioIds || []);
-  const [agregando, setAgregando] = useState(false);
   /*
     Estado de paritarias, para la columna «Fuente de paritarias».
 
@@ -417,7 +361,6 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   const porDataId = (id?: number | null) => (id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
   const registradasIds = (empresa.obrasSocialesIds || []).map(String);
 
-  const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.convenioIds || [])].sort());
   const convenioPorDefectoId = empresa.defaultsArca?.convenioId || '';
   const { defaults: arcaDefaultsDeLaInstalacion } = useArcaDefaults();
 
@@ -427,18 +370,11 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
     await guardar({ defaultsArca: { ...(empresa.defaultsArca || {}), convenioId: nuevo } } as any, nuevo ? `${convenios.find((c) => c._id === nuevo)?.externalId || 'El convenio'} queda por defecto para ${empresa.razonSocial}.` : 'Se quitó el convenio por defecto.');
   };
 
-  const guardarTodo = () => {
-    // Si se le saca el convenio que era el habitual, el default se va con él: sugerir uno que la
-    // empleadora ya no tiene registrado es sugerir un alta que ARCA rechaza.
-    const pierdeElDefault = !!convenioPorDefectoId && !ids.includes(convenioPorDefectoId);
-    guardar(
-      {
-        convenioIds: ids,
-        ...(pierdeElDefault ? { defaultsArca: { ...(empresa.defaultsArca || {}), convenioId: null } } : {}),
-      } as any,
-      `${ids.length} convenio(s) registrado(s) para ${empresa.razonSocial}.${pierdeElDefault ? ' Se quitó el convenio por defecto: ya no está registrado.' : ''}`,
-    );
-  };
+  /*
+    La regla de «si se le saca el convenio que era el habitual, el default se va con él» no se
+    perdió: se mudó al server, a `PUT /companies/vinculos`. Tiene que estar ahí porque desde el
+    nomenclador se tocan varias empresas de una vez y ninguna está cargada del lado del cliente.
+  */
 
   return (
     <SeccionEmpleador>
@@ -452,12 +388,23 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
       */}
       <BannerParitarias empresaId={empresa._id} />
 
-      <div className="flex justify-end gap-2">
-        <button onClick={() => setAgregando((v) => !v)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      {/*
+        QUÉ CONVENIOS TIENE ESTA EMPLEADORA SE DECIDE EN EL NOMENCLADOR, NO ACÁ.
+
+        Se editaba en los dos lados —acá con un buscador, y en Configuración → ARCA → Convenios con
+        los switches de cada convenio—: dos editores de la misma lista, con dos gestos distintos, y el
+        último en guardar pisaba al otro sin decir nada. Se dejó el del ítem porque es donde se
+        resuelve el caso real: registrar UN convenio en las cinco empresas que lo usan, sin entrar
+        cinco veces.
+
+        Acá queda lo que sí es de esta empleadora: cuál de los registrados es su convenio habitual.
+      */}
+      <div className="flex justify-end">
+        <Link to="/convenios" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
-          {agregando ? 'Cerrar buscador' : 'Agregar convenio'}
-        </button>
-        <BotonGuardar guardando={guardando} sucio={sucio} onClick={guardarTodo} />
+          Registrar o quitar convenios
+          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+        </Link>
       </div>
 
       {/* El convenio por defecto tiene un escalón debajo, y hasta acá no se veía: ver `HerenciaGlobal`. */}
@@ -477,7 +424,6 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
         })()}
       />
 
-      {agregando && <ConvenioSelector convenios={convenios} cargando={cargando} value={ids} onChange={setIds} />}
 
       {cargando ? (
         <LoadingSpinner message="Cargando convenios..." />
@@ -587,7 +533,9 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   }, [empresa]);
 
   const normalizar = (m: Record<string, ActividadDomicilio[]>) => JSON.stringify(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].map((a) => a.codigo).sort()])));
-  const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort()) || normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa));
+  /* Solo las ACTIVIDADES: qué domicilios tiene la empleadora se registra en el nomenclador, y el
+     botón de guardar no debe encenderse por algo que esta pantalla ya no cambia. */
+  const sucio = normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa));
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
   const porDefectoId = empresa.defaultsArca?.sucursalId || '';
   const { defaults: arcaDefaultsDeLaInstalacion } = useArcaDefaults();
@@ -602,31 +550,42 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
 
   return (
     <SeccionEmpleador>
-      <div className="flex justify-end">
+      {/*
+        QUÉ DOMICILIOS TIENE ESTA EMPLEADORA SE REGISTRA EN EL NOMENCLADOR, como los convenios.
+
+        Acá se editaba con un selector y allá no se podía: para asignar un domicilio a las cinco
+        empresas que lo usan había que entrar a cinco fichas. Ahora se hace desde el domicilio, y la
+        limpieza del default se mudó a `PUT /companies/vinculos` — tiene que estar en el server
+        porque desde el nomenclador se tocan varias empresas de una vez.
+
+        LO QUE SÍ SE SIGUE EDITANDO ACÁ SON LAS ACTIVIDADES. ARCA las declara POR CUIT: dos
+        empleadoras en el mismo domicilio pueden tener declaradas distintas, y el organismo rechaza un
+        alta con una que ESE CUIT no declaró ahí. Son de la empleadora, no del domicilio.
+      */}
+      <div className="flex justify-end gap-2">
+        <Link to="/arca/sucursales" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
+          Asignar o quitar domicilios
+          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+        </Link>
         <BotonGuardar
           guardando={guardando}
           sucio={sucio}
-          onClick={() => {
-            // Si se le saca el domicilio que era el habitual, el default se va con él: dejarlo
-            // apuntando a uno que la empleadora ya no tiene declarado precarga un alta que ARCA
-            // rechaza, y el error aparecería lejos de esta pantalla.
-            const pierdeElDefault = !!porDefectoId && !ids.includes(porDefectoId);
-            return guardar(
+          onClick={() =>
+            guardar(
               {
-                sucursalIds: ids,
                 /*
-                  El recorte por empleadora se manda ENTERO y solo de los domicilios que siguen
-                  asignados: una fila para un domicilio que se acaba de quitar quedaría huérfana y
-                  volvería a aplicar si alguien lo reasigna, con un recorte que nadie recuerda.
+                  El recorte se manda ENTERO y solo de los domicilios que la empleadora sigue
+                  teniendo: una fila para uno que ya no tiene quedaría huérfana y volvería a aplicar
+                  si alguien se lo reasigna, con un recorte que nadie recuerda.
                 */
                 sucursalActividades: Object.entries(actividadesPorSucursal)
                   .filter(([sucursalId]) => ids.includes(sucursalId))
                   .map(([sucursalId, actividades]) => ({ sucursalId, actividades })),
-                ...(pierdeElDefault ? { defaultsArca: { ...(empresa.defaultsArca || {}), sucursalId: null } } : {}),
               } as any,
-              `${ids.length} domicilio(s) asignado(s) a ${empresa.razonSocial}.${pierdeElDefault ? ' Se quitó el domicilio por defecto: ya no está entre los declarados.' : ''}`,
-            );
-          }}
+              `Actividades guardadas para ${empresa.razonSocial}.`,
+            )
+          }
         />
       </div>
 
@@ -645,7 +604,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
         })()}
       />
 
-      {cargando ? <LoadingSpinner message="Cargando el padrón de domicilios..." /> : <SucursalSelector sucursales={sucursales} cargando={cargando} value={ids} onChange={setIds} />}
+      {cargando && <LoadingSpinner message="Cargando el padrón de domicilios..." />}
 
       {/* Nivel 2b: lo que queda disponible para los contratos de esta empleadora. */}
       {elegidas.length > 0 && (

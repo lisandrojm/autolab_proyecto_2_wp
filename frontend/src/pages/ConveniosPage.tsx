@@ -4,9 +4,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogManager } from '../components/catalog/SimpleCatalogManager';
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
+import { EmpresasDelItemArca } from "../components/arca/EmpresasDelItemArca";
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { companiesAPI, Company } from '../api/companies';
-import { sweetAlert } from '../utils/sweetAlert';
 import { formatRnos } from '../utils/rnos';
 import { InfoModal } from '../components/ui/InfoModal';
 import { Modal } from '../components/ui/Modal';
@@ -111,7 +111,20 @@ export const ConveniosPage: React.FC = () => {
    * desde acá hace falta la lista entera, no solo las que ya lo tienen.
    */
   const [todasLasEmpresas, setTodasLasEmpresas] = useState<Company[]>([]);
-  const [guardandoEmpresa, setGuardandoEmpresa] = useState('');
+  /**
+   * Relee las empresas y rearma el índice por convenio.
+   *
+   * Se llama después de cambiar un vínculo: la columna «Empresas» y el filtro «Registrados por alguna
+   * empresa» salen de este índice, así que sin recargar el conteo queda mintiendo hasta un F5.
+   */
+  const recargarEmpresas = async () => {
+    const empresas = await companiesAPI.list();
+    setTodasLasEmpresas(empresas);
+    const porConvenio = new Map<string, Company[]>();
+    for (const emp of empresas) for (const id of emp.convenioIds || []) porConvenio.set(String(id), [...(porConvenio.get(String(id)) || []), emp]);
+    for (const [, lista] of porConvenio) lista.sort((a, b) => a.razonSocial.localeCompare(b.razonSocial, 'es', { sensitivity: 'base' }));
+    setEmpresasPorConvenio(porConvenio);
+  };
   /** Qué fuente alimenta cada convenio, por código. Sale del server ya resuelto. */
   const [vigilancia, setVigilancia] = useState<EstadoParitarias['porConvenio']>({});
   /**
@@ -327,50 +340,14 @@ export const ConveniosPage: React.FC = () => {
               {todasLasEmpresas.length === 0 ? (
                 <p className="text-xs text-gray-400">No hay empresas cargadas.</p>
               ) : (
-                <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
-                  {todasLasEmpresas.map((e) => {
-                    const tiene = (e.convenioIds || []).map(String).includes(convenio._id);
-                    return (
-                      <div key={e._id} className="flex items-center justify-between gap-3 px-3 py-2">
-                        <span className="min-w-0">
-                          <span className="block text-sm text-gray-800 dark:text-gray-200 truncate">{e.razonSocial}</span>
-                          <span className="block text-[11px] font-mono text-gray-400">{e.cuit || '—'}</span>
-                        </span>
-                        {/* Mismo switch que el resto de la app (ver `ContractStatesTab`): un check se
-                          lee como «seleccionar de una lista» y esto es prender o apagar una relación. */}
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={tiene}
-                          aria-label={`${tiene ? 'Quitar' : 'Registrar'} ${convenio.externalId || convenio.name} en ${e.razonSocial}`}
-                          disabled={guardandoEmpresa === e._id}
-                          onClick={async () => {
-                            setGuardandoEmpresa(e._id);
-                            try {
-                              const ids = (e.convenioIds || []).map(String);
-                              // Se manda la lista COMPLETA: el server la reemplaza, no la fusiona.
-                              const nuevos = tiene ? ids.filter((x) => x !== convenio._id) : [...ids, convenio._id];
-                              await companiesAPI.update(e._id, { convenioIds: nuevos } as any);
-                              const empresas = await companiesAPI.list();
-                              setTodasLasEmpresas(empresas);
-                              const porConvenio = new Map<string, Company[]>();
-                              for (const emp of empresas) for (const id of emp.convenioIds || []) porConvenio.set(String(id), [...(porConvenio.get(String(id)) || []), emp]);
-                              for (const [, lista] of porConvenio) lista.sort((a, b) => a.razonSocial.localeCompare(b.razonSocial, 'es', { sensitivity: 'base' }));
-                              setEmpresasPorConvenio(porConvenio);
-                            } catch (err: any) {
-                              sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo cambiar el convenio de esa empresa.');
-                            } finally {
-                              setGuardandoEmpresa('');
-                            }
-                          }}
-                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${tiene ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                        >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${tiene ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                <EmpresasDelItemArca
+                  tipo="convenio"
+                  itemId={convenio._id}
+                  itemLabel={`${convenio.externalId || ''} ${convenio.name}`.trim()}
+                  empresas={todasLasEmpresas}
+                  asignadas={todasLasEmpresas.filter((e) => (e.convenioIds || []).map(String).includes(convenio._id)).map((e) => e._id)}
+                  onGuardado={recargarEmpresas}
+                />
               )}
             </div>
 

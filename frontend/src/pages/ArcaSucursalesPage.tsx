@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot, faPlus, faEdit, faTrash, faDownload, faFileImport, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -11,6 +11,8 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { arcaSucursalesAPI, ArcaSucursal, ArcaSucursalInput } from "../api/arcaSucursales";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
+import { EmpresasDelItemArca } from "../components/arca/EmpresasDelItemArca";
+import { companiesAPI, Company } from "../api/companies";
 
 const HELP_KEY = "arcaSucursales" as const;
 
@@ -33,6 +35,21 @@ export const ArcaSucursalesPage: React.FC = () => {
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  /*
+    Las empresas, para registrar el domicilio en varias desde acá.
+
+    La relación vive en `Company.sucursalIds`, no en el domicilio, así que para prenderla y apagarla
+    hace falta la lista entera. Antes solo se editaba entrando a la ficha de cada empleadora: el
+    convenio se resolvía en su nomenclador y el domicilio en otro lado, con dos gestos distintos para
+    la misma clase de decisión.
+  */
+  const [empresas, setEmpresas] = useState<Company[]>([]);
+  const recargarEmpresas = useCallback(async () => {
+    setEmpresas(await companiesAPI.list().catch(() => []));
+  }, []);
+  useEffect(() => {
+    recargarEmpresas();
+  }, [recargarEmpresas]);
   const helpEntry = getHelp(HELP_KEY);
 
 
@@ -250,6 +267,25 @@ export const ArcaSucursalesPage: React.FC = () => {
               <input className="input-field w-full" value={form.localidad || ""} onChange={(e) => setForm((p) => ({ ...p, localidad: e.target.value }))} placeholder="CIUDAD AUTONOMA BUENOS AIRES" />
             </div>
           </div>
+
+          {/* Solo al EDITAR: un domicilio que todavía no existe no tiene id contra el cual vincular. */}
+          {editando && (
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 mb-1">Empresas que lo tienen registrado</label>
+              {empresas.length === 0 ? (
+                <p className="text-xs text-gray-400">No hay empresas cargadas.</p>
+              ) : (
+                <EmpresasDelItemArca
+                  tipo="sucursal"
+                  itemId={editando._id}
+                  itemLabel={`${editando.codigo} — ${editando.domicilio}`}
+                  empresas={empresas}
+                  asignadas={empresas.filter((e) => (e.sucursalIds || []).map(String).includes(editando._id)).map((e) => e._id)}
+                  onGuardado={recargarEmpresas}
+                />
+              )}
+            </div>
+          )}
 
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
             {/*
