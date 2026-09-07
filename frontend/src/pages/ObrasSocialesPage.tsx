@@ -65,6 +65,26 @@ export const ObrasSocialesPage: React.FC = () => {
             empresas={empresas}
             asignadas={empresas.filter((e) => (e.obrasSocialesIds || []).map(String).includes(item._id)).map((e) => e._id)}
             onGuardado={recargarEmpresas}
+            /*
+              El aviso que antes daba la ficha antes de quitar una obra social. Se consulta por
+              empresa y en el momento —no al cargar la pantalla— porque son N empresas y el dato solo
+              hace falta cuando alguien está por sacarle una.
+            */
+            confirmarQuitar={async (empresa) => {
+              const osId = String((item.data as { id?: number } | undefined)?.id ?? '');
+              if (!osId) return null;
+              try {
+                const uso = await companiesAPI.obrasSocialesEnUso(empresa._id);
+                const contratos = uso.contratos[osId] || 0;
+                const convenios = uso.convenios[osId] || [];
+                if (!contratos && convenios.length === 0) return null;
+                const partes = [contratos > 0 ? `${contratos} contrato(s) la tienen fijada` : '', convenios.length > 0 ? `${convenios.length} convenio(s) registrados la heredan (${convenios.join(', ')})` : ''].filter(Boolean);
+                return `${partes.join(' y ')}. Si se la quitás, ARCA va a rechazar esas altas por declarar una obra social que este CUIT no tiene registrada.`;
+              } catch {
+                // Si el chequeo no responde no se bloquea la baja: se pierde el aviso, no la operación.
+                return null;
+              }
+            }}
           />
         )}
       </div>

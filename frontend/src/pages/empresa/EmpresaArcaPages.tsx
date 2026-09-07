@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash, faLayerGroup, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faLayerGroup, faEye } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout, SeccionEmpleador } from '../../components/empresa/EmpresaContextLayout';
 import { ActividadesDelDomicilio, ActividadDomicilio } from '../../components/arca/ActividadesDelDomicilio';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -119,14 +119,24 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
   const dataId = (o: SimpleCatalogItem) => Number((o.data as { id?: number } | undefined)?.id);
 
 
-  const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.obrasSocialesIds || [])].sort()) || defaultId !== (empresa.obraSocialDefaultId ?? empresa.obraSocialId ?? null);
+  /* Solo la default de excluidos: la LISTA de registradas se edita en el nomenclador, y el botón no
+     debe encenderse por algo que esta pantalla ya no cambia. */
+  const sucio = defaultId !== (empresa.obraSocialDefaultId ?? empresa.obraSocialId ?? null);
 
   if (cargando) return <LoadingSpinner message="Cargando el catálogo de obras sociales..." />;
 
   return (
     <SeccionEmpleador>
       <div className="flex justify-end">
-        <BotonGuardar guardando={guardando} sucio={sucio} onClick={() => guardar({ obrasSocialesIds: ids, obraSocialDefaultId: defaultId }, `${ids.length} obra(s) social(es) registrada(s) para ${empresa.razonSocial}.`)} />
+        {/*
+          NO SE MANDA `obrasSocialesIds`.
+
+          Este formulario ya no edita la lista, pero seguía mandándola: `ids` es una copia hecha al
+          abrir la pantalla, así que guardar la default habría PISADO con esa copia vieja cualquier
+          alta o baja hecha entretanto desde el nomenclador —la única forma de perder datos que este
+          cambio venía justamente a cerrar—.
+        */}
+        <BotonGuardar guardando={guardando} sucio={sucio} onClick={() => guardar({ obraSocialDefaultId: defaultId }, `Obra social de los excluidos de convenio guardada para ${empresa.razonSocial}.`)} />
       </div>
 
       {ids.length === 0 && (
@@ -468,19 +478,6 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
           renderPorDefecto={(cv) => (
             <button onClick={() => marcarConvenioPorDefecto(cv._id)} disabled={guardando} title={convenioPorDefectoId === cv._id ? 'Es el convenio por defecto. Click para quitarlo.' : 'Marcar como convenio por defecto de esta empleadora'} className={`transition-colors disabled:opacity-50 ${convenioPorDefectoId === cv._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
               <FontAwesomeIcon icon={faStar} />
-            </button>
-          )}
-          /*
-            Solo QUITAR el convenio de esta empleadora. Acá no se toca el registro maestro.
-
-            Había también un ✎ para poner una «excepción de obra social» por empresa. Se quitó: la
-            obra social la define el SINDICATO del convenio y vale para todas las empleadoras que lo
-            tengan registrado, así que una excepción por empresa no es un caso real — era una forma
-            de declarar mal la obra social sin que nada lo frenara. No había ninguna cargada.
-          */
-          renderAcciones={(cv) => (
-            <button onClick={() => setIds((prev) => prev.filter((x) => x !== cv._id))} title="Quitar el convenio de esta empleadora" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
-              <FontAwesomeIcon icon={faTrash} />
             </button>
           )}
         />

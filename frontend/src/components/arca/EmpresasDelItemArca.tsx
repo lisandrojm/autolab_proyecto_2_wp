@@ -35,12 +35,20 @@ interface Props {
   asignadas: string[];
   /** Se llama después de guardar, para que la pantalla recargue empresas y conteos. */
   onGuardado: () => void | Promise<void>;
+  /**
+   * A quién alcanza QUITARLE este ítem a esa empresa. Devolver texto pide confirmación; `null` sigue.
+   *
+   * Existe porque desvincular no rompe nada en el momento: rompe DESPUÉS, cuando los contratos de esa
+   * empleadora generen el TXT y ARCA los rechace por declarar algo que ese CUIT ya no tiene
+   * registrado. El número tiene que aparecer ANTES de la baja, no como un error posterior.
+   */
+  confirmarQuitar?: (empresa: Company) => Promise<string | null>;
 }
 
 /** A partir de cuántas empresas aparece el buscador. Con pocas, filtrar es más trabajo que mirar. */
 const DESDE_CUANTAS_SE_BUSCA = 8;
 
-export const EmpresasDelItemArca: React.FC<Props> = ({ tipo, itemId, itemLabel, empresas, asignadas, onGuardado }) => {
+export const EmpresasDelItemArca: React.FC<Props> = ({ tipo, itemId, itemLabel, empresas, asignadas, onGuardado, confirmarQuitar }) => {
   const [guardando, setGuardando] = useState('');
   const [q, setQ] = useState('');
 
@@ -51,6 +59,13 @@ export const EmpresasDelItemArca: React.FC<Props> = ({ tipo, itemId, itemLabel, 
   }, [empresas, q]);
 
   const alternar = async (empresa: Company, tiene: boolean) => {
+    if (tiene && confirmarQuitar) {
+      const aviso = await confirmarQuitar(empresa);
+      if (aviso) {
+        const r = await sweetAlert.confirm(`¿Quitárselo a ${empresa.razonSocial}?`, aviso, 'Sí, quitarlo');
+        if (!r.isConfirmed) return;
+      }
+    }
     setGuardando(empresa._id);
     try {
       // Se manda la lista COMPLETA de las que quedan: así el server sabe a cuáles se les quitó y
