@@ -36,7 +36,7 @@ const publicar = (d: ArcaDefaults) => {
  * El cache no es una optimización cosmética: sin él, una tabla de 293 tipos de servicio dispararía
  * 293 GET del mismo documento, y cada ★ mostraría su propia copia del estado.
  */
-export const useArcaDefaults = (): { defaults: ArcaDefaults; marcar: (campo: CampoDefaultArca, valor: string | null) => Promise<void> } => {
+export const useArcaDefaults = (): { defaults: ArcaDefaults; marcar: (campo: CampoDefaultArca, valor: string | null, aviso?: string) => Promise<void> } => {
   const [defaults, setDefaults] = useState<ArcaDefaults>(cache || {});
 
   useEffect(() => {
@@ -66,10 +66,18 @@ export const useArcaDefaults = (): { defaults: ArcaDefaults; marcar: (campo: Cam
     };
   }, []);
 
-  const marcar = useCallback(async (campo: CampoDefaultArca, valor: string | null) => {
+  /**
+   * `aviso` lo arma la ★, que es la que sabe qué fila se tocó; el hook solo guarda y publica.
+   *
+   * El guardado es un click suelto, sin formulario ni botón de guardar: sin una confirmación no hay
+   * ninguna señal de que salió bien más allá de la estrella cambiando de color, que es exactamente
+   * lo que se ve también cuando el request falla y el estado local ya se pintó.
+   */
+  const marcar = useCallback(async (campo: CampoDefaultArca, valor: string | null, aviso?: string) => {
     try {
       const actualizado = await arcaDefaultsAPI.set(campo, valor);
       publicar(actualizado);
+      if (aviso) sweetAlert.success("Guardado", aviso);
     } catch (e: any) {
       sweetAlert.error("No se pudo guardar", e?.response?.data?.error || "No se pudo cambiar el valor por defecto.");
     }
@@ -85,9 +93,17 @@ interface Props {
   valor: string;
   /** Cómo se nombra lo que se marca, para el tooltip ("el domicilio habitual", "el convenio…"). */
   queEs: string;
+  /**
+   * Cómo se llama ESTA fila, para el aviso de guardado.
+   *
+   * Sin esto el aviso tendría que mostrar `valor`, y en la mitad de las pantallas —domicilios,
+   * convenios, fuentes— ese valor es un `_id`: un aviso que dice «Ahora el domicilio es
+   * 6a5fd12244faed2e72669b42» no confirma nada, solo obliga a mirar la tabla para saber qué pasó.
+   */
+  nombre?: string;
 }
 
-export const DefaultArcaStar: React.FC<Props> = ({ campo, valor, queEs }) => {
+export const DefaultArcaStar: React.FC<Props> = ({ campo, valor, queEs, nombre }) => {
   const { defaults, marcar } = useArcaDefaults();
   const actual = defaults[campo];
   const esElDefault = !!valor && String(actual ?? "") === String(valor);
@@ -99,7 +115,12 @@ export const DefaultArcaStar: React.FC<Props> = ({ campo, valor, queEs }) => {
         e.stopPropagation();
         // Volver a clickear la ★ marcada la SACA: es la única forma de dejar la instalación sin
         // default, y sin eso habría que elegir uno cualquiera para poder quitar el anterior.
-        marcar(campo, esElDefault ? null : valor);
+        /*
+          Al desmarcar el aviso NO dice «se quitó el convenio»: en un ABM con un botón de eliminar en
+          la misma fila, eso se lee como que se borró el registro. Dice que se quitó la MARCA, y el
+          nombre va aparte, como dato.
+        */
+        marcar(campo, esElDefault ? null : valor, esElDefault ? `Ya no hay ${queEs} por defecto de la instalación.` : `Ahora ${queEs} es ${nombre || valor}.`);
       }}
       title={esElDefault ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de la instalación`}
       aria-pressed={esElDefault}

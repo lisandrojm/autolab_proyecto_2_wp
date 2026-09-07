@@ -48,7 +48,7 @@ export const ArcaTiposServicioPage: React.FC = () => {
     columnasCalculadas={[
       {
         label: "Por defecto",
-        render: (item) => <DefaultArcaStar campo="tipoServicio" valor={String(item.externalId || "")} queEs="el tipo de servicio" />,
+        render: (item) => <DefaultArcaStar campo="tipoServicio" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="el tipo de servicio" />,
       },
     ]}
       title="Tipos de Servicio"

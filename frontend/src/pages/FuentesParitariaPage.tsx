@@ -523,7 +523,7 @@ export const FuentesParitariaPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-5 py-3 w-px">
-                    <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} queEs="la fuente de paritarias" />
+                    <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} nombre={f.nombre} queEs="la fuente de paritarias" />
                   </td>
                   <td className="px-5 py-3 text-right">{acciones(f)}</td>
                 </tr>
@@ -547,7 +547,7 @@ export const FuentesParitariaPage: React.FC = () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400">{f.entidad}</p>
                 </div>
                 {/* Pegada a las acciones, en el mismo orden que la tabla. */}
-                <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} queEs="la fuente de paritarias" />
+                <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} nombre={f.nombre} queEs="la fuente de paritarias" />
                 {acciones(f)}
               </div>
               <div className="mt-2 text-xs">

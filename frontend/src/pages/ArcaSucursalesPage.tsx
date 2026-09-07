@@ -188,7 +188,7 @@ export const ArcaSucursalesPage: React.FC = () => {
                       {(s.localidad || s.codigoPostal) && <p className="text-xs text-gray-500 dark:text-gray-400">{[s.codigoPostal && `CP ${s.codigoPostal}`, s.localidad].filter(Boolean).join(" · ")}</p>}
                     </td>
                     <td className="px-2 py-4 w-px">
-                      <DefaultArcaStar campo="sucursalId" valor={String(s._id)} queEs="el domicilio de explotación" />
+                      <DefaultArcaStar campo="sucursalId" valor={String(s._id)} nombre={`${s.codigo} — ${s.domicilio}`} queEs="el domicilio de explotación" />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">

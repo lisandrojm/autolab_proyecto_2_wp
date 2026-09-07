@@ -269,7 +269,7 @@ export const ConveniosPage: React.FC = () => {
           <ConveniosTable
             convenios={items as ConvenioFila[]}
             ayudaPorDefecto="El convenio que rige cuando ni el contrato ni la empleadora eligieron uno. Es el escalón de más abajo: cualquier empleadora puede marcar otro en su ficha."
-            renderPorDefecto={(c) => <DefaultArcaStar campo="convenioId" valor={String(c._id)} queEs="el convenio" />}
+            renderPorDefecto={(c) => <DefaultArcaStar campo="convenioId" valor={String(c._id)} nombre={`${c.externalId || ""} ${c.name}`.trim()} queEs="el convenio" />}
             obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
             renderSindicato={renderSindicato}
             renderEmpresas={(c) => {

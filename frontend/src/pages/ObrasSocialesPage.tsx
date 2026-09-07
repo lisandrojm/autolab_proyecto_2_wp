@@ -33,7 +33,7 @@ export const ObrasSocialesPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
-        render: (item) => <DefaultArcaStar campo="obraSocial" valor={String(item.externalId || "")} queEs="la obra social que se ofrece primero" />,
+        render: (item) => <DefaultArcaStar campo="obraSocial" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="la obra social que se ofrece primero" />,
       },
     ]}
     title="Obras Sociales"

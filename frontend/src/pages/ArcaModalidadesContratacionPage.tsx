@@ -17,7 +17,7 @@ export const ArcaModalidadesContratacionPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
-        render: (item) => <DefaultArcaStar campo="modalidadContratacion" valor={String(item.externalId || "")} queEs="la modalidad de contrato" />,
+        render: (item) => <DefaultArcaStar campo="modalidadContratacion" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="la modalidad de contrato" />,
       },
     ]}
     title="Modalidades de Contrato"

@@ -17,7 +17,7 @@ export const ArcaModalidadesLiquidacionPage: React.FC = () => (
     columnasCalculadas={[
       {
         label: "Por defecto",
-        render: (item) => <DefaultArcaStar campo="modalidadLiquidacion" valor={String(item.externalId || "")} queEs="la modalidad de liquidación" />,
+        render: (item) => <DefaultArcaStar campo="modalidadLiquidacion" valor={String(item.externalId || "")} nombre={`${item.externalId} — ${item.name}`} queEs="la modalidad de liquidación" />,
       },
     ]}
     title="Modalidades de Liquidación"
