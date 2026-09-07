@@ -23,6 +23,7 @@ const patchSchema = z.object({
     modalidadLiquidacion: z.string().optional(),
     obraSocial: z.string().optional(),
     actividad: z.string().optional(),
+    fuenteParitariaId: z.union([z.string(), z.null()]).optional(),
 });
 router.get("/", requireTenant, authenticateToken, async (_req, res) => {
     try {
@@ -52,7 +53,7 @@ router.patch("/", requireTenant, authenticateToken, async (req, res) => {
             if (!Object.prototype.hasOwnProperty.call(req.body ?? {}, clave))
                 continue;
             // Las referencias vacías se guardan como `null`; los códigos, como "".
-            const esReferencia = clave === "sucursalId" || clave === "convenioId";
+            const esReferencia = clave === "sucursalId" || clave === "convenioId" || clave === "fuenteParitariaId";
             set[clave] = esReferencia ? valor || null : valor || "";
         }
         /*

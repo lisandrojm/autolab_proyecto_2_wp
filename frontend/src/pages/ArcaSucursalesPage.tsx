@@ -166,28 +166,29 @@ export const ArcaSucursalesPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  {/* La columna lleva rótulo, igual que en los otros nomencladores: una estrella sin
-                      nombre no dice qué marca, y en esta pantalla no hay ninguna otra pista. */}
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
+                  {/* Última antes de Acciones, como en todos los nomencladores: la ★ se busca
+                      recorriendo siempre el mismo borde de la tabla. Lleva rótulo porque una estrella
+                      sin nombre no dice qué marca, y acá no hay ninguna otra pista. */}
                   <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El domicilio que rige cuando el contrato y la empleadora no eligieron uno">
                     Por defecto
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                 {filtrados.map((s) => (
                   <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="px-2 py-4 w-px">
-                      <DefaultArcaStar campo="sucursalId" valor={String(s._id)} queEs="el domicilio de explotación" />
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-mono font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50">{s.codigo}</span>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.domicilio}</p>
                       {(s.localidad || s.codigoPostal) && <p className="text-xs text-gray-500 dark:text-gray-400">{[s.codigoPostal && `CP ${s.codigoPostal}`, s.localidad].filter(Boolean).join(" · ")}</p>}
+                    </td>
+                    <td className="px-2 py-4 w-px">
+                      <DefaultArcaStar campo="sucursalId" valor={String(s._id)} queEs="el domicilio de explotación" />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">

@@ -9,6 +9,7 @@ import { formatearInstante } from '../utils/fechas';
 import { PublicacionesDeFuente } from '../components/paritarias/PublicacionesDeFuente';
 import { Modal } from '../components/ui/Modal';
 import { sweetAlert } from '../utils/sweetAlert';
+import { DefaultArcaStar } from '../components/arca/DefaultArcaStar';
 import { paritariasAPI, FuenteParitaria, ResultadoDeRevision } from '../api/paritarias';
 import { getHelp } from '../data/help/helpContent';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
@@ -479,6 +480,10 @@ export const FuentesParitariaPage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patrones</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Publicaciones</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                {/* Última antes de Acciones, como en el resto de los nomencladores. */}
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="La fuente que se ofrece primero al asociarle una a un convenio. No cambia qué escala rige.">
+                  Por defecto
+                </th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -517,6 +522,9 @@ export const FuentesParitariaPage: React.FC = () => {
                       </span>
                     </span>
                   </td>
+                  <td className="px-5 py-3 w-px">
+                    <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} queEs="la fuente de paritarias" />
+                  </td>
                   <td className="px-5 py-3 text-right">{acciones(f)}</td>
                 </tr>
               ))}
@@ -538,6 +546,8 @@ export const FuentesParitariaPage: React.FC = () => {
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{f.entidad}</p>
                 </div>
+                {/* Pegada a las acciones, en el mismo orden que la tabla. */}
+                <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} queEs="la fuente de paritarias" />
                 {acciones(f)}
               </div>
               <div className="mt-2 text-xs">

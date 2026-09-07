@@ -8,6 +8,7 @@ const arcaDefaultSchema = new Schema({
     modalidadLiquidacion: { type: String, default: "" },
     obraSocial: { type: String, default: "" },
     actividad: { type: String, default: "" },
+    fuenteParitariaId: { type: Schema.Types.ObjectId, ref: "FuenteParitaria", default: null },
 }, { timestamps: true });
 export const ArcaDefault = mongoose.model("ArcaDefault", arcaDefaultSchema);
 /**

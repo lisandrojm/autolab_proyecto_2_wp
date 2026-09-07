@@ -61,6 +61,13 @@ export interface IArcaDefault extends Document {
    * rechazado por el organismo. Ver `frontend/src/pages/ArcaActividadesPage.tsx`.
    */
   actividad?: string;
+  /**
+   * `_id` de la `FuenteParitaria` que se ofrece primero al asociarle una fuente a un convenio.
+   *
+   * Como los otros dos de arriba, es preselección: no cambia qué escala rige ni qué se publica. Una
+   * fuente vale para todos los CUIT —es el sitio del sindicato—, así que no tiene escalón de empresa.
+   */
+  fuenteParitariaId?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +82,7 @@ const arcaDefaultSchema = new Schema<IArcaDefault>(
     modalidadLiquidacion: { type: String, default: "" },
     obraSocial: { type: String, default: "" },
     actividad: { type: String, default: "" },
+    fuenteParitariaId: { type: Schema.Types.ObjectId, ref: "FuenteParitaria", default: null },
   },
   { timestamps: true },
 );

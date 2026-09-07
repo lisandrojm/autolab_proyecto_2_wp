@@ -21,6 +21,8 @@ export interface ArcaDefaults {
   obraSocial?: string;
   /** Código de actividad que se ofrece primero al cargarlas en un domicilio. Tampoco decide el alta. */
   actividad?: string;
+  /** `_id` de la fuente de paritarias que se ofrece primero. No cambia qué escala rige. */
+  fuenteParitariaId?: string | null;
 }
 
 /** Las claves que puede marcar una pantalla de nomenclador con su ★. */

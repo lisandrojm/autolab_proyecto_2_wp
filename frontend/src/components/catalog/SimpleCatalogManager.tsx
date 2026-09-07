@@ -745,15 +745,23 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       {f.columnLabel || f.label}
                     </th>
                   ))}
+                {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
+                    lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
+                    un código y no se puede cotejar de un vistazo contra un padrón de ARCA. */}
+                {showExternalId && <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{externalIdLabel}</th>}
+                {/*
+                  ÚLTIMAS ANTES DE ACCIONES, en todas las pantallas.
+
+                  Estaban antes del código, así que la ★ caía en un lugar distinto según qué columnas
+                  tuviera cada catálogo: segunda en Actividades, primera en otros. Es un control que
+                  se busca con el ojo recorriendo siempre el mismo borde de la tabla, y para eso tiene
+                  que estar en la misma posición en todas.
+                */}
                 {columnasCalculadas.map((c) => (
                   <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                     {c.label}
                   </th>
                 ))}
-                {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
-                    lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
-                    un código y no se puede cotejar de un vistazo contra un padrón de ARCA. */}
-                {showExternalId && <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{externalIdLabel}</th>}
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -775,12 +783,12 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                         {extraDisplay(f, item[f.key])}
                       </td>
                     ))}
+                  {showExternalId && <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>}
                   {columnasCalculadas.map((c) => (
                     <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {c.render(item)}
                     </td>
                   ))}
-                  {showExternalId && <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>}
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />
