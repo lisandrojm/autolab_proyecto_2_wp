@@ -24,23 +24,26 @@ interface AdminCounts {
 }
 
 /**
- * Subgrupo "Plantillas" (dentro de Configuración): agrupa las tres plantillas de documentos.
- * El orden del array es el que se muestra en el menú.
+ * Subgrupo "Plantillas" (dentro de Configuración): agrupa las plantillas de documentos.
+ *
+ * EL ORDEN DE ESTE ARRAY NO ES EL DEL MENÚ: todo el menú se ordena alfabéticamente al armarse. Acá
+ * el array solo dice QUÉ rutas caen en el subgrupo.
  */
-// El membrete va PRIMERO (es prerrequisito de las plantillas); el resto se ordena alfabéticamente.
+// Prerrequisito de las demás plantillas. Eso lo explica su propia pantalla; en el menú entra por su
+// nombre, como el resto: quien recorre una lista busca una palabra, no una dependencia.
 const MEMBRETE_PATH = '/empresas-membretes';
 /**
  * Cómo se llaman los archivos que salen de esas plantillas. Va en el mismo subgrupo porque es
- * transversal a todas —contratos, releases, pedidos y vacaciones— y entra en su orden alfabético,
- * como el resto (el membrete es la única excepción: va primero por ser prerrequisito).
+ * transversal a todas: contratos, releases, pedidos y vacaciones.
  */
 const NOMENCLATURA_PATH = '/nomenclatura-archivos';
 const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contratos-frame', '/releases', NOMENCLATURA_PATH];
 
 /**
  * Subgrupo "ARCA" (dentro de Configuración): todo lo que depende del organismo (ex AFIP).
- * El orden del array es el que se muestra en el menú (NO se reordena alfabéticamente):
- * la Conexión va primera porque es el prerrequisito de lo demás.
+ *
+ * El orden de este array NO es el del menú —los ítems se ordenan alfabéticamente dentro de cada uno
+ * de sus dos bloques—; el array dice qué rutas pertenecen al subgrupo y cuáles son nomencladores.
  *
  * Empresas NO va acá, aunque tenga datos de ARCA adentro (sucursales y obra social por defecto):
  * es una entidad transversal —de sus ~18 campos solo 3 son del organismo, y además alimenta
@@ -71,12 +74,12 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  */
 const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/fuentes-paritaria'];
 /**
- * La Conexión va ÚLTIMA y separada por una raya.
+ * La Conexión va DEBAJO DE LA RAYA, con lo que no es nomenclador, y ahí entra por su nombre.
  *
- * Estaba primera "porque es el prerrequisito de todo lo demás", y en el orden de lectura eso es
- * cierto pero irrelevante: se configura una vez y no se vuelve a tocar. Los nomencladores son lo
- * que se trabaja, así que van arriba, y la Conexión queda abajo del todo — separada, porque no es
- * un nomenclador y no debería leerse como uno más de la lista.
+ * Estuvo primera "porque es el prerrequisito de todo lo demás": cierto en el orden de lectura, pero
+ * irrelevante en un menú — se configura una vez y no se vuelve a tocar. Lo que importa es que no es
+ * un nomenclador y no tiene que leerse como uno más de esa lista; de eso se ocupa la raya, no la
+ * posición.
  */
 const ARCA_CONEXION_PATH = '/afip';
 /**
@@ -91,7 +94,7 @@ const ARCA_CONEXION_OS_PATH = '/arca/conexion-obras-sociales';
 /** Las dos juntas, para el subgrupo «Conexión» que las agrupa adentro de ARCA. */
 const ARCA_CONEXION_PATHS = [ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH];
 /**
- * "Cómo funciona" va DESPUÉS de la Conexión, al final de todo.
+ * "Cómo funciona" va debajo de la raya, con lo que no es nomenclador.
  *
  * No es un nomenclador ni una configuración: no se toca nada ahí. Es la explicación de la cadena
  * —qué depende de qué y en qué orden hay que cargarlo—, que no se deduce de ninguna de las pantallas
@@ -125,10 +128,9 @@ const USUARIOS_PATH = '/users';
 /**
  * Subgrupo «Usuarios» de Admin GENERAL. `/roles` NO está: ése tiene el suyo en Configuración.
  *
- * `/users` va PRIMERO porque es la entidad; Áreas, Turnos y Roles Empresa son los atributos con los
- * que se la describe. Turnos rompe el alfabético a propósito y va pegado a Áreas: son el mismo tipo
- * de dato —el par área/turno con el que se ubica a una persona en un proyecto— y separarlos obliga a
- * buscar en dos lugares lo que siempre se toca junto.
+ * Se muestra alfabético, como el resto del menú. Áreas y Turnos son el mismo tipo de dato —el par
+ * con el que se ubica a una persona en un proyecto— y antes iban pegados por eso; el orden por
+ * nombre los separa, y a cambio los cuatro se encuentran sin recordar cuál era «la entidad».
  */
 const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empresa'];
 /**
@@ -153,8 +155,8 @@ const ROLES_PATHS = ['/roles'];
  * mismo que hace "ARCA" con sus nomencladores. El ícono de la marca queda igual, que es lo que dice
  * de un vistazo con qué servicio se hace.
  *
- * El orden es el del circuito, no alfabético: primero la cuenta y el escaneo de carpetas, después la
- * firma, que depende de que lo anterior esté conectado.
+ * Alfabético, como todo el menú. Da igual que el circuito real vaya de la cuenta a la firma: son
+ * dos ítems, y el que entra ya sabe a cuál va.
  */
 const DOCUMENTOS_PATHS = ["/escaneo-dropbox", "/dropbox-sign"];
 
@@ -481,8 +483,8 @@ export const MobileNavbar: React.FC = () => {
       están en `configPaths` y ya no hay grupo que los recoja, así que habrían desaparecido del menú
       sin que nada avisara. Se suman acá para que la mudanza no le saque pantallas a nadie.
     */
-    // Subgrupo «Usuarios» de Admin GENERAL: la entidad primero y sus catálogos detrás (ver USUARIOS_PATHS_GENERAL).
-    const usuariosGeneralChildren = USUARIOS_PATHS_GENERAL.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    // Subgrupo «Usuarios» de Admin GENERAL, alfabético como todo el resto del menú.
+    const usuariosGeneralChildren = (USUARIOS_PATHS_GENERAL.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
     const usuariosGeneralGroup = { path: '#usuarios-general', groupKey: 'usuariosGeneral', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosGeneralChildren };
 
     // Los sueltos de la sección. El grupo entra aparte y ordena por su propio rótulo, «Usuarios».
@@ -499,51 +501,46 @@ export const MobileNavbar: React.FC = () => {
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 
-    // Subgrupo "Plantillas": el membrete va primero (prerrequisito) y el resto alfabético.
-    const plantillasBuilt = PLANTILLAS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
-    const plantillasChildren = [
-      ...plantillasBuilt.filter((i) => i.path === MEMBRETE_PATH),
-      ...plantillasBuilt.filter((i) => i.path !== MEMBRETE_PATH).sort(byLabel),
-    ];
+    // Subgrupo "Plantillas", alfabético. El membrete iba primero por ser prerrequisito de las demás;
+    // esa relación la explica la propia pantalla, y en el menú lo que se busca es un nombre.
+    const plantillasChildren = (PLANTILLAS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
     const plantillasGroup = { path: '#plantillas', groupKey: 'plantillas', icon: faFilePdf, label: 'Plantillas', scope: 'global' as const, children: plantillasChildren };
 
-    // Subgrupo "ARCA": respeta el orden de ARCA_PATHS (ver el comentario de esa constante). A
-    // diferencia de los demás, NO se ordena alfabéticamente. El encabezado se inserta antes del
-    // primer nomenclador presente, para que no quede colgado si el usuario no tiene ese permiso.
-    const arcaChildren: any[] = [];
-    for (const p of ARCA_PATHS) {
-      const item = adminItems.find((i) => i.path === p);
-      if (!item) continue;
-      if (ARCA_NOMENCLADOR_PATHS.includes(p) && !arcaChildren.some((c) => c.sectionKey === 'nomencladores')) {
-        arcaChildren.push({ path: '#arca-nomencladores', sectionKey: 'nomencladores', section: 'Nomencladores de ARCA', hint: 'Universales: se importan una vez y valen para todos los CUIT.' });
-      }
-      // Raya antes de la Conexión: no es un nomenclador y no tiene que leerse como uno más. Solo se
-      // dibuja si arriba quedó algo — si no, sería una raya colgada al principio del grupo.
-      if (p === ARCA_CONEXION_PATH && arcaChildren.length > 0) arcaChildren.push({ path: '#arca-separador', separador: true });
+    /*
+      Subgrupo "ARCA": alfabético DENTRO de cada bloque.
 
-      /*
-        Las dos conexiones entran en un subgrupo propio, no sueltas.
-
-        Se arma cuando aparece la primera y la segunda se le agrega adentro. Así el orden de
-        `ARCA_PATHS` sigue mandando —la Conexión queda donde estaba— y no hace falta una lista aparte
-        que se pueda desincronizar de aquella.
-      */
-      if (ARCA_CONEXION_PATHS.includes(p)) {
-        let grupo = arcaChildren.find((c) => c.groupKey === 'arcaConexion');
-        if (!grupo) {
-          grupo = { path: '#arca-conexion', groupKey: 'arcaConexion', icon: faPlug, label: 'Conexión', scope: 'global' as const, children: [] as any[] };
-          arcaChildren.push(grupo);
-        }
-        grupo.children.push(item);
-        continue;
-      }
-
-      arcaChildren.push(item);
-    }
+      Los dos bloques se conservan —los nomencladores universales bajo su encabezado, y debajo de la
+      raya lo que no lo es— porque esa separación es la distinción que el menú venía escondiendo: qué
+      se importa una vez y vale para todos los CUIT, y qué no. Ordenar los trece ítems en una sola
+      lista dejaría «Cómo funciona» entre dos nomencladores y borraría el encabezado que lo explica.
+    */
+    const itemArca = (ruta: string) => adminItems.find((i) => i.path === ruta);
+    const arcaNomencladores = (ARCA_NOMENCLADOR_PATHS.map(itemArca).filter(Boolean) as any[]).sort(byLabel);
+    const conexionChildren = (ARCA_CONEXION_PATHS.map(itemArca).filter(Boolean) as any[]).sort(byLabel);
+    /*
+      Lo que no es ni nomenclador ni conexión, DERIVADO de `ARCA_PATHS` en vez de escrito de nuevo:
+      una cuarta lista a mano se desincroniza en cuanto alguien agregue una pantalla al módulo, y el
+      síntoma sería un ítem que desaparece del menú sin que nada avise.
+    */
+    const arcaOtros = ARCA_PATHS.filter((ruta) => !ARCA_NOMENCLADOR_PATHS.includes(ruta) && !ARCA_CONEXION_PATHS.includes(ruta))
+      .map(itemArca)
+      .filter(Boolean) as any[];
+    // El subgrupo «Conexión» entra en el orden por su propio rótulo, como un hermano más.
+    const arcaResto = [
+      ...arcaOtros,
+      ...(conexionChildren.length > 0 ? [{ path: '#arca-conexion', groupKey: 'arcaConexion', icon: faPlug, label: 'Conexión', scope: 'global' as const, children: conexionChildren }] : []),
+    ].sort(byLabel);
+    const arcaChildren: any[] = [
+      ...(arcaNomencladores.length > 0 ? [{ path: '#arca-nomencladores', sectionKey: 'nomencladores', section: 'Nomencladores de ARCA', hint: 'Universales: se importan una vez y valen para todos los CUIT.' }] : []),
+      ...arcaNomencladores,
+      // La raya, solo si hay algo de los dos lados: al principio o al final no separaría nada.
+      ...(arcaNomencladores.length > 0 && arcaResto.length > 0 ? [{ path: '#arca-separador', separador: true }] : []),
+      ...arcaResto,
+    ];
     const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
 
-    // Subgrupo "Documentos": en el orden del circuito (ver DOCUMENTOS_PATHS), no alfabético.
-    const documentosChildren = DOCUMENTOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    // Subgrupo "Documentos", alfabético.
+    const documentosChildren = (DOCUMENTOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
     const documentosGroup = { path: '#documentos', groupKey: 'documentos', icon: faDropbox, label: 'Documentos', scope: 'global' as const, children: documentosChildren };
 
     // Subgrupo «Usuarios» de Configuración: solo Roles (ver ROLES_PATHS para por qué el grupo existe).
@@ -590,10 +587,10 @@ export const MobileNavbar: React.FC = () => {
       ...(documentosChildren.length > 0 ? [documentosGroup] : []),
       ...(usuariosConfigChildren.length > 0 ? [usuariosConfigGroup] : []),
       ...(empresasChildren.length > 0 ? [empresasGroup] : []),
+      // «Import WP» es un módulo temporal, y aun así entra por su nombre: colgado al final era el
+      // único ítem del menú que no se podía encontrar leyendo en orden.
+      ...(adminItems.filter((item) => item.path === '/users/import-wp')),
     ].sort(byLabel) as any[];
-    // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).
-    const importItem = adminItems.find((item) => item.path === '/users/import-wp');
-    if (importItem) configItems.push(importItem);
 
     const renderMenuItem = (item: any, isChild = false) => {
       /*

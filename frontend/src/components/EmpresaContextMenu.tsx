@@ -31,9 +31,12 @@ export const EmpresaContextMenu: React.FC = () => {
 
   const base = `/empresas/${selectedEmpresa._id}`;
 
-  // El orden sigue la CADENA DE DECISIÓN, no el alfabeto: Convenios va primero porque de él cuelgan
-  // las categorías posibles Y la obra social. Obras Sociales va después porque su rol principal pasó
-  // a ser VALIDAR lo que el convenio ya resolvió, más el caso de los excluidos de convenio.
+  /** Orden alfabético respetando el español: ignora acentos y mayúsculas. */
+  const porNombre = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' });
+
+  // Alfabético, como todo el menú. El orden seguía la CADENA DE DECISIÓN —Convenios primero, porque
+  // de él cuelgan las categorías y la obra social—, que es cierto y sigue explicado en cada pantalla;
+  // pero para ENCONTRAR una hay que buscarla por su nombre, y esa cadena no se adivina desde el menú.
   const arcaChildren = [
     { path: `${base}/arca/convenios`, icon: faFileContract, label: 'Convenios' },
     { path: `${base}/arca/categorias`, icon: faListCheck, label: 'Categorías' },
@@ -48,7 +51,7 @@ export const EmpresaContextMenu: React.FC = () => {
     { path: `${base}/arca/tipos-servicio`, icon: faListCheck, label: 'Tipos de Servicio' },
     { path: `${base}/arca/modalidades-contratacion`, icon: faFileContract, label: 'Modalidad de Contratación' },
     { path: `${base}/arca/modalidades-liquidacion`, icon: faSliders, label: 'Modalidad de Liquidación' },
-  ];
+  ].sort(porNombre);
 
   // El alta masiva NO va acá: es la misma pantalla que Admin GENERAL → Contratos → Gestión de
   // Contratos → Alta temprana de ARCA, que además ya tiene su filtro por Empresa Contrato. Tenerla
@@ -79,33 +82,36 @@ export const EmpresaContextMenu: React.FC = () => {
     );
   };
 
+  /* Subgrupo ARCA: son los "Datos del Empleador" del organismo, todos por CUIT. Se arma acá para
+     poder entrar en el mismo orden alfabético que sus hermanos, por su rótulo. */
+  const bloqueArca = (
+    <div key="#arca">
+      <button
+        type="button"
+        onClick={() => {
+          const next = !arcaOpen;
+          setArcaOpen(next);
+          localStorage.setItem('empresaArcaOpen', String(next));
+        }}
+        className="group w-full flex items-center justify-between px-2 py-2 rounded text-left text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-blue-900/30 transition-all"
+      >
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <FontAwesomeIcon icon={faLandmark} className="h-4 w-4 flex-shrink-0 text-gray-400" />
+          <span className="text-sm font-medium truncate">ARCA</span>
+        </div>
+        <FontAwesomeIcon icon={arcaOpen ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
+      </button>
+      {arcaOpen && <nav className="space-y-1 mt-1 ml-4 pl-2 border-l-2 border-gray-100 dark:border-gray-700">{arcaChildren.map((c) => renderItem(c, false))}</nav>}
+    </div>
+  );
+
+  // «Información» era fija arriba por ser la raíz de la ficha. Entra en el orden como el resto: es
+  // una pantalla más, y saber cuál es «la principal» no ayuda a encontrar ninguna de las otras.
+  const entradas = [...items.map((i) => ({ label: i.label, nodo: renderItem(i) })), { label: 'ARCA', nodo: bloqueArca }].sort(porNombre);
+
   return (
     <div>
-      <nav className="space-y-1 mt-2 pl-2 border-l-2 border-gray-100 dark:border-gray-700 ml-1">
-        {renderItem(items[0])}
-
-        {/* Subgrupo ARCA: son los "Datos del Empleador" del organismo, todos por CUIT. */}
-        <div>
-          <button
-            type="button"
-            onClick={() => {
-              const next = !arcaOpen;
-              setArcaOpen(next);
-              localStorage.setItem('empresaArcaOpen', String(next));
-            }}
-            className="group w-full flex items-center justify-between px-2 py-2 rounded text-left text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-blue-900/30 transition-all"
-          >
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
-              <FontAwesomeIcon icon={faLandmark} className="h-4 w-4 flex-shrink-0 text-gray-400" />
-              <span className="text-sm font-medium truncate">ARCA</span>
-            </div>
-            <FontAwesomeIcon icon={arcaOpen ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
-          </button>
-          {arcaOpen && <nav className="space-y-1 mt-1 ml-4 pl-2 border-l-2 border-gray-100 dark:border-gray-700">{arcaChildren.map((c) => renderItem(c, false))}</nav>}
-        </div>
-
-        {items.slice(1).map((i) => renderItem(i))}
-      </nav>
+      <nav className="space-y-1 mt-2 pl-2 border-l-2 border-gray-100 dark:border-gray-700 ml-1">{entradas.map((e) => e.nodo)}</nav>
     </div>
   );
 };
