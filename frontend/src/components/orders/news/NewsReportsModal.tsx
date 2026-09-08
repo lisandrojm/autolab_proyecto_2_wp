@@ -2,9 +2,13 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines, faChevronLeft, faChevronRight, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../../ui/Modal";
 import { User, UserProjectMetadata } from "../../../api/users";
+import { infoAPI, InfoItem } from "../../../api/info";
+import { categoriaSatAPI } from "../../../api/categoriasSat";
+import { roleFrameAPI } from "../../../api/roleFrames";
+import { isContractVigente } from "../../team/ContractCard";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
 import * as XLSX from "xlsx";
 
@@ -187,15 +191,16 @@ const ContractDetailModal: React.FC<{
   zIndex?: number;
   periodStart?: Date;
   periodEnd?: Date;
-}> = ({ isOpen, onClose, employeeName, userProjectsData, filterProjectId, zIndex, periodStart, periodEnd }) => {
-  const [showActiveOnly, setShowActiveOnly] = useState(true);
-
-  useEffect(() => {
-    if (isOpen) {
-      setShowActiveOnly(true);
-    }
-  }, [isOpen]);
-
+  /**
+   * Diccionarios id → nombre para los campos que el contrato guarda SOLO como id.
+   *
+   * Los contratos que vienen del importador traen `categoria_sat_id`, `rol_frame_id`, `sede_id` y
+   * `tipo_contrato_id`, pero los `nombre_*` correspondientes vacíos. Este detalle los leía directo,
+   * así que mostraba «-» en media ficha mientras el wizard de Gestionar Equipo —que resuelve por id
+   * contra los catálogos— mostraba los valores completos del MISMO contrato.
+   */
+  nombresPorId?: { categoria: Map<string, string>; rol: Map<string, string>; sede: Map<string, string>; tipo: Map<string, string> };
+}> = ({ isOpen, onClose, employeeName, userProjectsData, filterProjectId, zIndex, periodStart, periodEnd, nombresPorId }) => {
   if (!isOpen) return null;
 
   // If a project filter is active, try to find the matching UserProject
@@ -222,14 +227,6 @@ const ContractDetailModal: React.FC<{
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{employeeName}</p>
           </div>
           <div className="flex items-center gap-6">
-            <label className="flex items-center cursor-pointer gap-2">
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Mostrar activos</span>
-              <div className="relative">
-                <input type="checkbox" className="sr-only" checked={showActiveOnly} onChange={(e) => setShowActiveOnly(e.target.checked)} />
-                <div className={`block w-10 h-6 rounded-full transition-colors ${showActiveOnly ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}></div>
-                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${showActiveOnly ? "transform translate-x-4" : ""}`}></div>
-              </div>
-            </label>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               <FontAwesomeIcon icon={faTimes} className="text-lg" />
             </button>
@@ -253,18 +250,37 @@ const ContractDetailModal: React.FC<{
                 {/* Contracts within the project */}
                 {up.contracts && up.contracts.length > 0 ? (
                   (() => {
-                    const filteredContracts = showActiveOnly ? up.contracts.filter((c) => isActiveContract(c, periodStart, periodEnd) || isActiveContract(c)) : up.contracts;
+                    /*
+                      SIEMPRE EL ÚLTIMO CONTRATO, sin opción de ver los otros.
 
-                    if (filteredContracts.length === 0) {
+                      Listaba los tres o cuatro del proyecto, uno debajo del otro y con los mismos
+                      campos vacíos repetidos. Es el mismo dato que resume la columna —de ahí salen su
+                      badge y sus fechas—, así que encontrar acá una lista distinta obligaba a adivinar
+                      cuál de todos era el que la fila estaba mostrando.
+
+                      Se toma el último de los activos del período, igual que hace `statsByEmployee`:
+                      las dos vistas resuelven «el contrato» de la misma forma y no pueden discrepar.
+                    */
+                    const activos = up.contracts.filter((c) => isActiveContract(c, periodStart, periodEnd) || isActiveContract(c));
+
+                    if (activos.length === 0) {
                       return <div className="text-sm text-gray-400 italic py-2">Sin contratos activos para este proyecto.</div>;
                     }
+
+                    const filteredContracts = activos.slice(-1);
 
                     return filteredContracts.map((contract, cIdx) => (
                       <div key={cIdx} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-100 dark:border-gray-700 space-y-3">
                         {/* Contract title */}
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                            Contrato #{cIdx + 1} {contract.nombre_contrato ? `— ${contract.nombre_contrato}` : ""}
+                            {/* Sin numerar: es el único que se muestra, y un «Contrato #1» haría
+                                buscar el #2. */}
+                            Último contrato
+                            {(() => {
+                              const tipo = contract.nombre_contrato || nombresPorId?.tipo.get(String(contract.tipo_contrato_id ?? "")) || "";
+                              return tipo ? ` — ${tipo}` : "";
+                            })()}
                           </span>
                           {contract.nombre_estado_empleado && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${contract.nombre_estado_empleado?.toLowerCase().includes("activ") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300"}`}>{contract.nombre_estado_empleado}</span>}
                         </div>
@@ -276,9 +292,11 @@ const ContractDetailModal: React.FC<{
                           <ContractField icon={faDollarSign} label="Sueldo Jornada" value={contract.sueldo_jornada != null ? `$${Number(contract.sueldo_jornada).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
                           <ContractField icon={faDollarSign} label="Sueldo Mano" value={contract.sueldo_mano != null ? `$${Number(contract.sueldo_mano).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
                           <ContractField icon={faHourglassHalf} label="Jornadas Lab." value={contract.cantidad_jornadas_laborales?.toString() || "-"} />
-                          <ContractField icon={faLocationDot} label="Sede" value={contract.nombre_sede || "-"} />
-                          <ContractField icon={faIdBadge} label="Rol" value={contract.nombre_rol_frame || "-"} />
-                          <ContractField icon={faStar} label="Categoría" value={contract.nombre_categoria_sat || "-"} />
+                          {/* El nombre guardado manda; si vino vacío, se resuelve por id. El rol tiene
+                              además el del proyecto (`up.nombre_rol_frame`), que sí suele estar. */}
+                          <ContractField icon={faLocationDot} label="Sede" value={contract.nombre_sede || nombresPorId?.sede.get(String(contract.sede_id ?? "")) || "-"} />
+                          <ContractField icon={faIdBadge} label="Rol" value={contract.nombre_rol_frame || nombresPorId?.rol.get(String(contract.rol_frame_id ?? "")) || up.nombre_rol_frame || "-"} />
+                          <ContractField icon={faStar} label="Categoría" value={contract.nombre_categoria_sat || nombresPorId?.categoria.get(String(contract.categoria_sat_id ?? "")) || "-"} />
                           <ContractField icon={faClock} label="Hora Inicio" value={contract.hora_inicio || "-"} />
                           <ContractField icon={faClock} label="Hora Fin" value={contract.hora_fin || "-"} />
                         </div>
@@ -559,6 +577,61 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [showStats, setShowStats] = useState(false);
   const [showActiveTableOnly, setShowActiveTableOnly] = useState(true);
   const [contractTypeFilter, setContractTypeFilter] = useState("all");
+  /*
+    FILTROS AVANZADOS, EN UNA VENTANA APARTE.
+
+    La barra tenía cinco controles en dos filas y seguía sin alcanzar: no se podía aislar a quien
+    tuvo ausencias, ni a quien hizo horas extra, que son las dos preguntas con las que se abre este
+    reporte. Sumarlos a la barra la hubiera vuelto ilegible.
+
+    Arriba quedan los tres que se tocan siempre —el período y el nombre—; el resto vive en el modal y
+    la cantidad aplicada se ve en el badge del botón, así que nunca hay un filtro activo escondido.
+  */
+  const [filtrosOpen, setFiltrosOpen] = useState(false);
+  /*
+    EL CATÁLOGO DE TIPOS DE CONTRATO, PARA CUANDO EL CONTRATO NO TRAE EL NOMBRE.
+
+    La columna «Tipo» sale de `nombre_contrato`, un texto copiado dentro de cada contrato. En los
+    contratos que vienen del importador ese campo llega vacío —lo que sí llega es `tipo_contrato_id`—
+    así que la columna mostraba «-» aunque el tipo estuviera cargado.
+
+    Con el catálogo a mano se resuelve por id. El nombre propio sigue teniendo prioridad: si alguien
+    lo escribió distinto en el contrato, eso es lo que se firmó.
+  */
+  const [tiposContratoCatalogo, setTiposContratoCatalogo] = useState<InfoItem[]>([]);
+  const [sedesCatalogo, setSedesCatalogo] = useState<InfoItem[]>([]);
+  const [categoriasCatalogo, setCategoriasCatalogo] = useState<{ _id: string; name: string; data?: { id?: number } }[]>([]);
+  const [rolesCatalogo, setRolesCatalogo] = useState<{ _id: string; name: string; data?: { id?: number } }[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    /*
+      Los cuatro catálogos que hacen falta para leer un contrato completo, cada uno con su catch: si
+      alguno falla se pierde ESE nombre y no la pantalla. Se piden al abrir y no al montar, porque
+      este modal vive dentro de Novedades y la mayoría de las veces no se abre.
+    */
+    void infoAPI.listByType("contrato").then(setTiposContratoCatalogo).catch(() => setTiposContratoCatalogo([]));
+    void infoAPI.listByType("sede").then(setSedesCatalogo).catch(() => setSedesCatalogo([]));
+    void categoriaSatAPI.list().then((c: any) => setCategoriasCatalogo(c)).catch(() => setCategoriasCatalogo([]));
+    void roleFrameAPI.list().then((r: any) => setRolesCatalogo(r)).catch(() => setRolesCatalogo([]));
+  }, [isOpen]);
+
+  /** id → nombre, para los campos que el contrato guarda solo como id. */
+  const porId = (items: { name: string; data?: { id?: number } }[]) => {
+    const m = new Map<string, string>();
+    for (const i of items) if (i.data?.id != null) m.set(String(i.data.id), i.name);
+    return m;
+  };
+  const nombreTipoPorId = useMemo(() => porId(tiposContratoCatalogo), [tiposContratoCatalogo]);
+  const nombresPorId = useMemo(
+    () => ({ categoria: porId(categoriasCatalogo), rol: porId(rolesCatalogo), sede: porId(sedesCatalogo), tipo: nombreTipoPorId }),
+    [categoriasCatalogo, rolesCatalogo, sedesCatalogo, nombreTipoPorId],
+  );
+  const [rolFrameFilter, setRolFrameFilter] = useState("all");
+  /** «Solo los que tienen»: cada uno recorta a las filas con al menos un caso. */
+  const [soloConAusencias, setSoloConAusencias] = useState(false);
+  const [soloConExtras, setSoloConExtras] = useState(false);
+  const [soloConTarde, setSoloConTarde] = useState(false);
 
   // Paginación client-side de la tabla de empleados (alivia el render de tablas grandes).
   const REPORT_PAGE_SIZE = 25;
@@ -574,18 +647,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     }
   }, [isOpen]);
 
-  const allContractTypes = useMemo(() => {
-    const typesSet = new Set<string>();
-    allUsers.forEach((u) => {
-      u.metadata?.projects?.forEach((up) => {
-        up.contracts?.forEach((c) => {
-          const type = c.nombre_contrato;
-          if (type && type.trim()) typesSet.add(type.trim());
-        });
-      });
-    });
-    return Array.from(typesSet).sort((a, b) => a.localeCompare(b));
-  }, [allUsers]);
 
   // Helper to check if a time is within a range (format "HH:mm")
   const isTimeInRange = (time: string, start: string, end: string) => {
@@ -716,7 +777,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         // Contract Type Filter check
         if (contractTypeFilter !== "all") {
           const targetsForFilter = showActiveTableOnly ? activeContracts : allContracts;
-          const hasType = targetsForFilter.some((c) => c.nombre_contrato === contractTypeFilter);
+          // Mismo fallback que la columna: comparar solo contra `nombre_contrato` no encontraba nada en
+          // los contratos importados, que traen el tipo en `tipo_contrato_id` y el nombre vacío.
+          const hasType = targetsForFilter.some((c) => (c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || "") === contractTypeFilter);
           if (!hasType) return;
         }
 
@@ -749,7 +812,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           if (last.hora_inicio && last.hora_fin) {
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
           }
-          contractType = last.nombre_contrato || "";
+          // El nombre propio manda; si no vino, se resuelve por `tipo_contrato_id`.
+          contractType = last.nombre_contrato || nombreTipoPorId.get(String(last.tipo_contrato_id ?? "")) || "";
           contractAlta = last.fecha_alta_contrato || "";
           contractBaja = last.fecha_baja_contrato || "";
 
@@ -838,7 +902,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           // Contract Type Filter check
           if (contractTypeFilter !== "all") {
             const targetsForFilter = showActiveTableOnly ? activeContracts : matchContracts;
-            const hasType = targetsForFilter.some((c) => c.nombre_contrato === contractTypeFilter);
+            // Mismo fallback que la columna: comparar solo contra `nombre_contrato` no encontraba nada en
+          // los contratos importados, que traen el tipo en `tipo_contrato_id` y el nombre vacío.
+          const hasType = targetsForFilter.some((c) => (c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || "") === contractTypeFilter);
             if (!hasType) return;
           }
 
@@ -860,7 +926,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             sueldoJornada = last.sueldo_jornada || 0;
             sueldoMano = last.sueldo_mano || 0;
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
-            contractType = last.nombre_contrato || "";
+            // El nombre propio manda; si no vino, se resuelve por `tipo_contrato_id`.
+          contractType = last.nombre_contrato || nombreTipoPorId.get(String(last.tipo_contrato_id ?? "")) || "";
             contractAlta = last.fecha_alta_contrato || "";
             contractBaja = last.fecha_baja_contrato || "";
 
@@ -997,8 +1064,124 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       results = results.filter((s) => s.employeeName.toLowerCase().includes(lowerSearch));
     }
 
+    /*
+      Los filtros del modal, todos sobre el resultado ya armado.
+
+      Van acá y no adentro del armado porque son recortes sobre lo calculado —«quién tuvo ausencias»
+      solo se sabe después de contarlas—, y porque así el pie de la tabla sigue sumando exactamente
+      lo que se ve.
+    */
+    if (rolFrameFilter !== "all") {
+      results = results.filter((s) => (s.userProjectsData || []).some((up) => up.nombre_rol_frame === rolFrameFilter));
+    }
+    if (soloConAusencias) results = results.filter((s) => s.absences > 0);
+    if (soloConExtras) results = results.filter((s) => s.overtimeHours > 0);
+    if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
+
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter]);
+  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde]);
+
+  /**
+   * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
+   *
+   * Antes los tres selectores se armaban con TODO lo cargado: proyectos que no tuvieron una sola
+   * novedad en el mes, roles que no aparecen, tipos de contrato de gente que no figura. Elegir
+   * cualquiera de esos dejaba la tabla vacía sin explicar por qué, y con 133 empleados la lista de
+   * opciones era más larga que el resultado.
+   *
+   * Se recorren las novedades del rango, se junta a quiénes aparecen y de ahí salen los tres
+   * conjuntos. NO depende de los filtros aplicados —solo del período— porque si dependiera, elegir un
+   * proyecto borraría del selector a los demás y no habría forma de cambiar de opinión.
+   */
+  const universoDelPeriodo = useMemo(() => {
+    const proyectos = new Map<string, string>();
+    const roles = new Set<string>();
+    const tipos = new Set<string>();
+    const empleados = new Set<string>();
+
+    let start: Date;
+    let end: Date;
+    try {
+      start = parseISO(dateFrom + "T00:00:00");
+      end = parseISO(dateTo + "T23:59:59");
+    } catch {
+      return { proyectos: [], roles: [], tipos: [] };
+    }
+
+    for (const report of reports || []) {
+      try {
+        if (!isWithinInterval(parseISO(report.date + "T00:00:00"), { start, end })) continue;
+      } catch {
+        continue;
+      }
+      if (report.projectIdRaw) proyectos.set(report.projectIdRaw, report.projectName);
+      for (const rec of report.attendance || []) {
+        const raw = typeof rec.employeeId === "object" ? rec.employeeId?._id : rec.employeeId;
+        if (raw) empleados.add(String(raw));
+      }
+    }
+
+    // Roles y tipos de contrato salen de la gente que aparece en esas novedades.
+    for (const u of allUsers || []) {
+      if (!empleados.has(String(u._id))) continue;
+      for (const up of ((u.metadata?.projects || []) as UserProjectMetadata[])) {
+        if (up.nombre_rol_frame) roles.add(up.nombre_rol_frame);
+        for (const c of up.contracts || []) {
+          // El mismo fallback que la columna «Tipo»: el nombre propio, y si no vino, el catálogo.
+          const nombre = c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || "";
+          if (nombre.trim()) tipos.add(nombre.trim());
+        }
+      }
+    }
+
+    const ordenar = (a: string, b: string) => a.localeCompare(b, "es", { sensitivity: "base" });
+    return {
+      proyectos: Array.from(proyectos, ([id, name]) => ({ id, name })).sort((a, b) => ordenar(a.name, b.name)),
+      roles: Array.from(roles).sort(ordenar),
+      tipos: Array.from(tipos).sort(ordenar),
+    };
+  }, [reports, dateFrom, dateTo, allUsers, nombreTipoPorId]);
+
+  const rolesFrameDisponibles = universoDelPeriodo.roles;
+
+  /** Cuántos filtros del modal están puestos. Es lo que se muestra en el badge del botón. */
+  const filtrosActivos = useMemo(
+    () => [projectFilter !== "all", contractTypeFilter !== "all", rolFrameFilter !== "all", !showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde].filter(Boolean).length,
+    [projectFilter, contractTypeFilter, rolFrameFilter, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde],
+  );
+
+  /**
+   * LOS FILTROS PUESTOS, UNO POR CHIP.
+   *
+   * El badge del botón dice CUÁNTOS hay; esto dice CUÁLES. Con solo el número hay que abrir la
+   * ventana para saber por qué el reporte muestra cuatro filas y no ciento treinta y tres — y esa es
+   * exactamente la duda que aparece al mirar un total que no cierra.
+   *
+   * Cada chip trae su propia forma de sacarlo: quitar un filtro no debería obligar a abrir el modal.
+   */
+  const chipsDeFiltros = useMemo(() => {
+    const chips: { key: string; label: string; valor: string; quitar: () => void }[] = [];
+    if (projectFilter !== "all") chips.push({ key: "proyecto", label: "Proyecto", valor: allProjects.find((p) => p.id === projectFilter)?.name || projectFilter, quitar: () => setProjectFilter("all") });
+    if (contractTypeFilter !== "all") chips.push({ key: "tipo", label: "Tipo", valor: contractTypeFilter, quitar: () => setContractTypeFilter("all") });
+    if (rolFrameFilter !== "all") chips.push({ key: "rol", label: "Rol", valor: rolFrameFilter, quitar: () => setRolFrameFilter("all") });
+    if (soloConAusencias) chips.push({ key: "ausencias", label: "Solo", valor: "Con ausencias", quitar: () => setSoloConAusencias(false) });
+    if (soloConExtras) chips.push({ key: "extras", label: "Solo", valor: "Con horas extra", quitar: () => setSoloConExtras(false) });
+    if (soloConTarde) chips.push({ key: "tarde", label: "Solo", valor: "Con llegadas tarde", quitar: () => setSoloConTarde(false) });
+    // Este entra al revés que el resto: lo que se anota es haberlo APAGADO, porque el default es ON.
+    if (!showActiveTableOnly) chips.push({ key: "activos", label: "Incluye", valor: "Contratos no vigentes", quitar: () => setShowActiveTableOnly(true) });
+    return chips;
+  }, [projectFilter, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects]);
+
+  const limpiarFiltros = () => {
+    setProjectFilter("all");
+    setContractTypeFilter("all");
+    setRolFrameFilter("all");
+    // «Contratos activos» vuelve a ON: es el default y lo que evita filas de gente sin contrato.
+    setShowActiveTableOnly(true);
+    setSoloConAusencias(false);
+    setSoloConExtras(false);
+    setSoloConTarde(false);
+  };
 
   // Paginación de la tabla (los totales del pie siguen calculándose sobre TODO statsByEmployee).
   const reportTotalPages = Math.max(1, Math.ceil(statsByEmployee.length / REPORT_PAGE_SIZE));
@@ -1250,6 +1433,20 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           <div className="flex items-center gap-2">
             <span>Reportes de Novedades</span>
             <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({statsByEmployee.length})</span>
+            {/*
+              GLOSARIO Y ESTADÍSTICAS, como iconos al lado del título.
+
+              Eran dos links de texto perdidos entre los filtros, así que se leían como parte de lo
+              que recorta el reporte —que es lo único que hay en esa barra— cuando en realidad no
+              filtran nada: uno explica cómo se calculan las horas extra y el otro abre un resumen.
+              Arriba, y con la misma forma que el resto de las pantallas, se leen como lo que son.
+            */}
+            <button type="button" onClick={() => setShowGlossary(true)} title="Ver el glosario de horas extras" aria-label="Ver el glosario de horas extras" className="text-gray-400 hover:text-blue-500 transition-colors">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => setShowStats(true)} title="Ver el resumen estadístico del período" aria-label="Ver el resumen estadístico del período" className="text-gray-400 hover:text-blue-500 transition-colors">
+              <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+            </button>
           </div>
         }
         size="full"
@@ -1272,8 +1469,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       >
         <div className="flex flex-col h-full space-y-5 p-6">
           <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-            {/* Primera fila */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {/*
+              Primera fila: EL PERÍODO, que es lo que define qué se está mirando.
+
+              Las dos fechas juntas ocupan la MITAD del ancho, no el total: un campo de fecha muestra
+              diez caracteres, así que estirado a 900px es casi todo espacio vacío con un dato en la
+              punta. A la mitad siguen siendo cómodos de apuntar y la fila deja de parecer un formulario
+              a medio llenar.
+            */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:w-1/2">
               <div className="space-y-1">
                 <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Desde</label>
                 <div className="relative">
@@ -1290,66 +1494,46 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</label>
-                <div className="relative">
-                  <FontAwesomeIcon icon={faBriefcase} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                  <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="w-full pl-8 pr-6 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-                    <option value="all">Todos</option>
-                    {allProjects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1 lg:col-span-2">
-                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Buscar Empleado</label>
-                <div className="relative">
-                  <FontAwesomeIcon icon={faSearch} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                  <input type="text" placeholder="Nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
-                </div>
-              </div>
             </div>
-            {/* Segunda fila: Filtros de estado, glosario y etiquetas de contexto */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center">
-                  <label className="flex items-center cursor-pointer gap-2 py-0.5">
-                    <div className="relative">
-                      <input type="checkbox" className="sr-only" checked={showActiveTableOnly} onChange={(e) => setShowActiveTableOnly(e.target.checked)} />
-                      <div className={`block w-8 h-4 rounded-full transition-colors ${showActiveTableOnly ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}></div>
-                      <div className={`dot absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform ${showActiveTableOnly ? "transform translate-x-4" : ""}`}></div>
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Contratos Activos</span>
-                  </label>
-                </div>
+            {/*
+              SEGUNDA FILA: BUSCAR, FILTRAR Y VER QUÉ QUEDÓ FILTRADO — todo junto.
 
+              El buscador y el botón de filtros están pegados a los chips que muestran el resultado de
+              usarlos: se filtra y se ve aparecer el chip en la misma línea. Antes el buscador vivía
+              arriba, con las fechas, y los chips abajo, así que la acción y su efecto quedaban en dos
+              renglones distintos.
+
+              Arriba queda solo el período, que no es un recorte sino la definición de qué se mira.
+
+              En pantalla angosta el bloque de la derecha baja solo (`flex-wrap`) y el buscador se
+              queda con el ancho completo, que es el que más se usa.
+            */}
+            <div className="flex flex-wrap items-end justify-between gap-4 pt-1">
+              {/* El buscador no necesita todo el ancho: es un nombre, no una frase. Acotado, deja
+                  lugar al contexto de la derecha en vez de empujarlo a otro renglón. */}
+              <div className="space-y-1 w-full sm:w-auto">
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Buscar Empleado</label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Tipo:</span>
-                  <select value={contractTypeFilter} onChange={(e) => setContractTypeFilter(e.target.value)} className="text-[10px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 text-gray-700 dark:text-gray-200 outline-none min-w-[120px]">
-                    <option value="all">Todos los tipos</option>
-                    {allContractTypes.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative w-full sm:w-64">
+                    <FontAwesomeIcon icon={faSearch} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                    <input type="text" placeholder="Nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFiltrosOpen(true)}
+                    title="Filtros avanzados"
+                    className={`relative shrink-0 px-3 py-1.5 rounded border text-sm font-semibold flex items-center gap-2 transition-colors ${
+                      filtrosActivos > 0
+                        ? "border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={faFilter} />
+                    {/* Con rótulo: un embudo solo obliga a adivinar, y este botón esconde siete filtros. */}
+                    <span>Filtros</span>
+                    {filtrosActivos > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">{filtrosActivos}</span>}
+                  </button>
                 </div>
-
-                <button onClick={() => setShowGlossary(true)} className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-semibold py-0.5" title="Ver configuración actual de horas extras">
-                  <FontAwesomeIcon icon={faCircleInfo} />
-                  Ver Glosario
-                </button>
-
-                <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-600 mx-2"></div>
-
-                <button onClick={() => setShowStats(true)} className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-semibold py-0.5" title="Ver resumen estadístico del período">
-                  <FontAwesomeIcon icon={faChartSimple} />
-                  Estadísticas
-                </button>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -1357,10 +1541,32 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Período</span>
                   <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{formattedMonthLabel}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800/50 px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Proyecto</span>
-                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{activeProjectName}</span>
-                </div>
+                {/*
+                  LOS FILTROS PUESTOS, AL LADO DEL PERÍODO Y CON LA MISMA FORMA.
+
+                  El chip de «Proyecto» ya existía y era de solo lectura; ahora es uno más de la lista
+                  y se puede sacar desde acá. Van en azul, distintos del gris del período: el período
+                  siempre está —no es un recorte— y estos aparecen solo cuando alguien filtró.
+
+                  Es la contracara del badge con el número: aquel dice cuántos hay, éstos dicen cuáles,
+                  que es lo que hace falta cuando el total no cierra y hay que entender por qué.
+                */}
+                {chipsDeFiltros.map((c) => (
+                  <div key={c.key} className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/25 px-2.5 py-1 rounded border border-blue-200 dark:border-blue-800 shadow-sm">
+                    <span className="text-[9px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest">{c.label}</span>
+                    <span className="text-xs font-bold text-blue-700 dark:text-blue-300 max-w-[180px] truncate" title={c.valor}>
+                      {c.valor}
+                    </span>
+                    <button type="button" onClick={c.quitar} title={`Quitar el filtro de ${c.label.toLowerCase()}`} className="text-blue-400 hover:text-red-500 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+                {chipsDeFiltros.length > 1 && (
+                  <button type="button" onClick={limpiarFiltros} className="text-[10px] font-semibold text-gray-400 hover:text-red-500 transition-colors underline underline-offset-2">
+                    Limpiar todo
+                  </button>
+                )}
                 {totalOvertime50 + totalOvertime100 > 0 && (
                   <div className="text-[10px] font-medium text-gray-500 italic ml-2">
                     Total hs: <span className="font-bold text-amber-600">{(totalOvertime50 + totalOvertime100).toFixed(1)}h</span>
@@ -1371,6 +1577,111 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           </div>
 
           {/* Read-Only Glossary Modal */}
+          {/*
+            FILTROS AVANZADOS. Mismo patrón que el resto de la app: los que se tocan siempre quedan a
+            la vista y el resto entra acá, con el conteo en el badge del botón que lo abre.
+          */}
+          <Modal
+            isOpen={filtrosOpen}
+            onClose={() => setFiltrosOpen(false)}
+            title="Filtros avanzados"
+            subtitle="Recortá el reporte sin perder de vista cuántos filtros hay puestos"
+            size="md"
+            zIndex={100}
+            footer={
+              <div className="flex items-center justify-end gap-3 w-full">
+                <button type="button" onClick={limpiarFiltros} className="btn-secondary" disabled={filtrosActivos === 0}>
+                  Limpiar todo
+                </button>
+                <button type="button" onClick={() => setFiltrosOpen(false)} className="btn-primary">
+                  Cerrar
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Proyecto</label>
+                <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="input-field w-full">
+                  <option value="all">Todos los proyectos</option>
+                  {universoDelPeriodo.proyectos.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Solo los que tuvieron novedades en el período.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato</label>
+                <select value={contractTypeFilter} onChange={(e) => setContractTypeFilter(e.target.value)} className="input-field w-full">
+                  <option value="all">Todos los tipos</option>
+                  {universoDelPeriodo.tipos.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                {universoDelPeriodo.tipos.length === 0 && <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún contrato del período tiene tipo cargado.</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Rol Frame</label>
+                <select value={rolFrameFilter} onChange={(e) => setRolFrameFilter(e.target.value)} className="input-field w-full">
+                  <option value="all">Todos los roles</option>
+                  {rolesFrameDisponibles.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Mostrar solo</p>
+                {/*
+                  Los tres recortes que contestan las preguntas con las que se abre el reporte: quién
+                  faltó, quién hizo horas extra y quién llegó tarde. Se combinan entre sí —«faltó Y
+                  además hizo extras» es una pregunta legítima— así que son switches y no opciones
+                  excluyentes.
+                */}
+                {[
+                  { on: soloConAusencias, set: setSoloConAusencias, label: "Con ausencias", hint: "Solo quienes tuvieron al menos una falta en el período." },
+                  { on: soloConExtras, set: setSoloConExtras, label: "Con horas extra", hint: "Solo quienes registraron horas extra." },
+                  { on: soloConTarde, set: setSoloConTarde, label: "Con llegadas tarde", hint: "Solo quienes llegaron tarde al menos una vez." },
+                ].map((f) => (
+                  <label key={f.label} className="flex items-center justify-between gap-3 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
+                    <span className="min-w-0">
+                      <span className="block text-sm text-gray-700 dark:text-gray-300">{f.label}</span>
+                      <span className="block text-[11px] text-gray-500 dark:text-gray-400">{f.hint}</span>
+                    </span>
+                    <span className={`w-10 h-6 flex items-center rounded-full p-1 shrink-0 duration-300 ease-in-out ${f.on ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
+                      <span className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${f.on ? "translate-x-4" : ""}`} />
+                    </span>
+                    <input type="checkbox" className="hidden" checked={f.on} onChange={(e) => f.set(e.target.checked)} />
+                  </label>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <label className="flex items-center justify-between gap-3 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
+                  <span className="min-w-0">
+                    <span className="block text-sm text-gray-700 dark:text-gray-300">Solo contratos activos</span>
+                    {/* Apagarlo trae filas de gente sin contrato vigente, que es lo que se quiere al
+                        auditar un período cerrado y lo que estorba el resto del tiempo. Por eso el
+                        default es encendido y cuenta como filtro cuando se apaga. */}
+                    <span className="block text-[11px] text-gray-500 dark:text-gray-400">Apagalo para ver también a quienes no tienen contrato vigente en el período.</span>
+                  </span>
+                  <span className={`w-10 h-6 flex items-center rounded-full p-1 shrink-0 duration-300 ease-in-out ${showActiveTableOnly ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
+                    <span className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${showActiveTableOnly ? "translate-x-4" : ""}`} />
+                  </span>
+                  <input type="checkbox" className="hidden" checked={showActiveTableOnly} onChange={(e) => setShowActiveTableOnly(e.target.checked)} />
+                </label>
+              </div>
+            </div>
+          </Modal>
+
           <Modal isOpen={showGlossary} onClose={() => setShowGlossary(false)} title="Glosario de Horas Extras" size="md" zIndex={100}>
             <div className="space-y-6">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
@@ -1558,9 +1869,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <br />
                     Base
                   </th>
-                  <th className="py-2.5 px-3 text-center whitespace-nowrap">Contrato: Cant | Fecha | Tipo</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">Contrato</th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Asistencias: Pres | Aus</th>
-                  <th className="py-2.5 px-2 text-left text-[10px] leading-tight text-nowrap">Horario Extra</th>
+                  {/* «Detalle» porque la columna no trae un total —eso está en Hs. 50% y Hs. 100%—
+                      sino día por día: la fecha, el tramo horario y el recargo de cada uno. */}
+                  <th className="py-2.5 px-2 text-left text-[10px] leading-tight text-nowrap">Horario Extra detalle</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 50%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 100%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight whitespace-nowrap">Extras Total</th>
@@ -1638,30 +1951,43 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                             )}
                           </div>
                         </td>
-                        {/* Contrato */}
-                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                        {/*
+                          EL ÚLTIMO CONTRATO Y SI ESTÁ VIGENTE — igual que en Contratos.
+
+                          Mostraba «3 | A: 01/06/2023 B: - | Tipo»: la cantidad de contratos del
+                          período, en un badge verde o rojo según si había alguno activo. Ese verde no
+                          significaba «vigente» sino «tiene al menos uno», y las fechas de al lado eran
+                          las del último — o sea, tres datos de tres cosas distintas leyéndose como uno.
+                          Con dos contratos y el último vencido, decía «2» en verde.
+
+                          Ahora dice lo mismo que la tabla de Contratos: el estado del ÚLTIMO contrato,
+                          con sus fechas debajo. Un dato, calculado igual que allá (`isContractVigente`,
+                          no un conteo), así que las dos pantallas no pueden discrepar.
+
+                          El ícono de detalle se queda: ahí siguen estando todos los contratos, que es
+                          donde corresponde ver los anteriores.
+                        */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           {s.userProjectsData.length > 0 ? (
-                            <div className="flex items-center justify-center gap-2">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.activeContractsCount > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`} title="Cantidad de contratos">
-                                {s.activeContractsCount}
-                              </span>
-                              <span className="text-gray-300 dark:text-gray-600">|</span>
-
-                              {/* Información adicional: Fechas */}
-                              <div className="flex flex-col text-[7px] leading-tight text-gray-400 dark:text-gray-500 font-medium uppercase tracking-tighter text-left">
-                                {s.contractAlta && <span>A: {s.contractAlta.substring(0, 10).split("-").reverse().join("/")}</span>}
-                                <span>B: {s.contractBaja ? s.contractBaja.substring(0, 10).split("-").reverse().join("/") : "-"}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-col gap-0.5">
+                                {(() => {
+                                  const vigente = isContractVigente(s.contractAlta, s.contractBaja);
+                                  return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>;
+                                })()}
+                                <span className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">
+                                  <span className="text-gray-400 dark:text-gray-500">Alta:</span> {s.contractAlta ? s.contractAlta.substring(0, 10).split("-").reverse().join("/") : "—"}
+                                </span>
+                                <span className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">
+                                  <span className="text-gray-400 dark:text-gray-500">Baja:</span> {s.contractBaja ? s.contractBaja.substring(0, 10).split("-").reverse().join("/") : "—"}
+                                </span>
+                                {s.contractType && (
+                                  <span className="text-[10px] leading-tight text-gray-600 dark:text-gray-300 max-w-[120px] truncate" title={s.contractType}>
+                                    {s.contractType}
+                                  </span>
+                                )}
                               </div>
-
-                              <span className="text-gray-300 dark:text-gray-600">|</span>
-
-                              {/* Información adicional: Tipo */}
-                              <span className="text-[7px] font-bold text-gray-500 dark:text-gray-400 leading-none uppercase tracking-tighter max-w-[80px] truncate" title={s.contractType}>
-                                {s.contractType || "-"}
-                              </span>
-
-                              <span className="text-gray-300 dark:text-gray-600">|</span>
-                              <button onClick={() => handleOpenContract(s)} className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="Ver detalle de contrato">
+                              <button onClick={() => handleOpenContract(s)} className="text-gray-400 hover:text-blue-500 transition-colors p-1 shrink-0" title={`Ver los ${s.userProjectsData.length} contrato(s) de esta persona`}>
                                 <FontAwesomeIcon icon={faFileContract} className="text-xs" />
                               </button>
                             </div>
@@ -1839,7 +2165,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       </Modal>
 
       {/* Contract Detail Sub-Modal */}
-      <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ ...contractModal, open: false })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} filterProjectId={projectFilter !== "all" ? projectFilter : undefined} zIndex={100} periodStart={parseISO(dateFrom + "T00:00:00")} periodEnd={parseISO(dateTo + "T23:59:59")} />
+      <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ ...contractModal, open: false })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} filterProjectId={projectFilter !== "all" ? projectFilter : undefined} zIndex={100} periodStart={parseISO(dateFrom + "T00:00:00")} periodEnd={parseISO(dateTo + "T23:59:59")} nombresPorId={nombresPorId} />
       <TotalDetailModal isOpen={totalDetail.open} onClose={() => setTotalDetail({ open: false, stats: null })} stats={totalDetail.stats} glossary={glossary} zIndex={110} />
       <DailyDetailModal isOpen={dailyDetailModal.open} onClose={() => setDailyDetailModal({ open: false, stats: null })} stats={dailyDetailModal.stats} dateFrom={dateFrom} dateTo={dateTo} zIndex={120} />
     </>

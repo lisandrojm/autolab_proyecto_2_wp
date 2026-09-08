@@ -22,7 +22,7 @@ import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
-import { DiasDeTrabajo, faltaDefinirDias } from "../components/contratos/DiasDeTrabajo";
+import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from "../components/contratos/DiasDeTrabajo";
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
@@ -2351,18 +2351,39 @@ export const ProjectTeamPage: React.FC = () => {
           )}
         </td>
         {/*
-          Solo la cantidad: qué días concretos son se ve al abrir el contrato, y en la tabla ocupaba
-          tres renglones por fila para un dato que no se compara entre filas.
+          CUÁNTOS DÍAS Y CUÁLES.
 
-          Con la unidad pegada («5d»), porque el número solo, en una tabla que al lado tiene jornadas
-          y horas, no dice de qué es. La `d` va en gris y más chica: acompaña al número, no compite.
+          La cantidad con la unidad pegada («5 d»), porque el número solo, en una fila que al lado
+          tiene jornadas y horas, no dice de qué es. Y debajo los días concretos: «5» no alcanza para
+          saber si son de lunes a viernes o rotativos, que es la diferencia que importa al armar un
+          turno o al cruzar con las novedades.
+
+          ROTATIVOS NO ES UNA LISTA VACÍA: trabaja esa cantidad de días pero no siempre los mismos.
+          Mostrarlo como «—» lo haría indistinguible de un contrato al que le falta cargar los días,
+          que es un dato incompleto y no una modalidad.
         */}
         <td className="px-4 py-3 text-right whitespace-nowrap">
           {activeContract?.dias_por_semana ? (
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-              {activeContract.dias_por_semana}
-              <span className="ml-0.5 text-xs font-normal text-gray-400">d</span>
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                {activeContract.dias_por_semana}
+                <span className="ml-0.5 text-xs font-normal text-gray-400">d</span>
+              </span>
+              {activeContract?.dias_rotativos ? (
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 italic">Rotativos</span>
+              ) : Array.isArray(activeContract?.dias_semana) && activeContract.dias_semana.length > 0 ? (
+                <span className="flex flex-wrap justify-end gap-1">
+                  {DIAS_SEMANA.filter((d) => (activeContract.dias_semana as number[]).includes(d.indice)).map((d) => (
+                    <span key={d.indice} title={d.largo} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                      {d.corto}
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                // Ámbar y no gris: no es «no aplica», es un dato que falta y que el alta necesita.
+                <span className="text-[11px] text-amber-600 dark:text-amber-400">Sin definir</span>
+              )}
+            </div>
           ) : (
             <span className="text-xs text-gray-400">—</span>
           )}

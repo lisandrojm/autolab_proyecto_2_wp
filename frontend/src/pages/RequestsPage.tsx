@@ -638,9 +638,21 @@ export const RequestsPage: React.FC = () => {
     }
 
     return (
-      <div className="flex flex-col gap-1">
+      /*
+        LOS BADGES NO SE PARTEN, y por eso la columna no se encoge.
+
+        El nombre de un turno es una unidad —«Mañana 6 a 12 - Lun a Dom (06:00 - 12:00)»— y al
+        envolverse quedaba en cuatro renglones dentro del recuadro: la fila crecía hasta cinco veces
+        su alto y la tabla dejaba de poder recorrerse. El `w-fit` de cada badge, contra un texto ya
+        partido, además los dejaba de anchos distintos.
+
+        `whitespace-nowrap` en el badge y `w-max` en el contenedor: el ancho lo pide el contenido y la
+        columna se estira. La tabla ya scrollea en horizontal, que es la dirección donde sobra lugar;
+        hacia abajo no.
+      */
+      <div className="flex flex-col gap-1 w-max">
         {Array.from(distinctAreas).map((areaName) => (
-          <span key={areaName} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 ${textClass} w-fit`}>
+          <span key={areaName} className={`inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 ${textClass} w-fit`}>
             <FontAwesomeIcon icon={faLayerGroup} className={`${iconClass}`} />
             {areaName}
           </span>
@@ -648,7 +660,7 @@ export const RequestsPage: React.FC = () => {
         {Array.from(distinctShifts.values()).map((shift) => {
           const scheduleText = shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : "";
           return (
-            <span key={shift.name} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass} w-fit`}>
+            <span key={shift.name} className={`inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass} w-fit`}>
               <FontAwesomeIcon icon={faClock} className={`${iconClass}`} />
               {shift.name}
               {scheduleText}
@@ -1066,8 +1078,17 @@ export const RequestsPage: React.FC = () => {
           <button onClick={() => setShowCompliance((v) => !v)} className={`p-2 rounded transition-colors flex items-center gap-2 text-sm ${showCompliance ? "bg-blue-700 text-white ring-2 ring-blue-300 dark:ring-blue-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} aria-label="Cumplimiento de coordinadores" title="Cumplimiento de coordinadores">
             <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
           </button>
-          <button onClick={() => setShowReportsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Reportes" title="Reportes">
+          {/*
+            REPORTES LLEVA TEXTO; los otros dos, solo ícono.
+
+            Es la acción más usada de la pantalla y con tres botones azules idénticos había que
+            acertarle por el dibujo. El rótulo lo saca de la fila de íconos anónimos sin necesidad de
+            otro color: la jerarquía la da el ancho, no un segundo tono de azul que competiría con los
+            botones que ya son primarios.
+          */}
+          <button onClick={() => setShowReportsModal(true)} className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-semibold" aria-label="Reportes" title="Reportes de novedades">
             <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
+            <span className="hidden sm:block">Reportes</span>
           </button>
         </div>
       }
@@ -1246,7 +1267,9 @@ export const RequestsPage: React.FC = () => {
                         {report.projectName}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    {/* `whitespace-nowrap` en la celda: sin esto la columna se sigue encogiendo hasta
+                        el ancho del texto más corto y los badges, que ya no se parten, se desbordan. */}
+                    <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">{renderAreaShiftBadges(report, false)}</div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
