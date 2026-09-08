@@ -9,6 +9,7 @@ import { infoAPI, InfoItem } from "../../../api/info";
 import { categoriaSatAPI } from "../../../api/categoriasSat";
 import { roleFrameAPI } from "../../../api/roleFrames";
 import { isContractVigente } from "../../team/ContractCard";
+import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
 import * as XLSX from "xlsx";
 
@@ -267,7 +268,20 @@ const ContractDetailModal: React.FC<{
                       return <div className="text-sm text-gray-400 italic py-2">Sin contratos activos para este proyecto.</div>;
                     }
 
-                    const filteredContracts = activos.slice(-1);
+                    /*
+                      CUÁL ES «EL ÚLTIMO» LO DECIDE `getContratoActivo`, NO EL ORDEN DEL ARRAY.
+
+                      Tomaba el último elemento de la lista, que es el último CARGADO y no el que rige:
+                      con dos contratos cargados el mismo día —uno del 31/05 y el vigente del 01/06—
+                      mostraba el equivocado, y con él sus campos vacíos, mientras la ficha del miembro
+                      mostraba el bueno con todos los sueldos.
+
+                      Esa función es la que ya usa la ficha: entre los vigentes prioriza el TIEMPO
+                      INDETERMINADO —un contrato sin fecha de fin sigue abierto aunque después figuren
+                      cargados otros a plazo— y recién después el más reciente por fecha de alta.
+                    */
+                    const queRige = getContratoActivo(activos as any[]) as (typeof activos)[number] | null;
+                    const filteredContracts = queRige ? [queRige] : activos.slice(-1);
 
                     return filteredContracts.map((contract, cIdx) => (
                       <div key={cIdx} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-100 dark:border-gray-700 space-y-3">
@@ -806,7 +820,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         let contractBaja = "";
 
         if (targetList.length > 0) {
-          const last = targetList[targetList.length - 1]; // Latest contract
+          // El que RIGE, no el último cargado: entre los vigentes gana el tiempo indeterminado, y
+          // recién después el más reciente. La columna y el detalle tienen que resolverlo igual, o la
+          // fila resume un contrato y el modal muestra otro.
+          const last = (getContratoActivo(targetList as any[]) as any) || targetList[targetList.length - 1];
           sueldoJornada = last.sueldo_jornada || 0;
           sueldoMano = last.sueldo_mano || 0;
           if (last.hora_inicio && last.hora_fin) {
@@ -922,7 +939,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           let contractBaja = "";
 
           if (targets.length > 0) {
-            const last = targets[targets.length - 1];
+            // Ídem: el que rige, no el último del array (ver arriba).
+            const last = (getContratoActivo(targets as any[]) as any) || targets[targets.length - 1];
             sueldoJornada = last.sueldo_jornada || 0;
             sueldoMano = last.sueldo_mano || 0;
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);

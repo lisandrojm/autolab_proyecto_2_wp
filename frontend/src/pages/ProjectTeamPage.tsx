@@ -2372,7 +2372,10 @@ export const ProjectTeamPage: React.FC = () => {
               {activeContract?.dias_rotativos ? (
                 <span className="text-[11px] text-gray-500 dark:text-gray-400 italic">Rotativos</span>
               ) : Array.isArray(activeContract?.dias_semana) && activeContract.dias_semana.length > 0 ? (
-                <span className="flex flex-wrap justify-end gap-1">
+                // Sin `flex-wrap`: los días son una unidad y partirlos en dos renglones —«Lu Ma Mi Ju»
+                // arriba y «Vi» abajo— hace crecer la fila y que la semana deje de leerse de un
+                // vistazo. La columna se ensancha, que es hacia donde la tabla ya scrollea.
+                <span className="flex justify-end gap-1 whitespace-nowrap">
                   {DIAS_SEMANA.filter((d) => (activeContract.dias_semana as number[]).includes(d.indice)).map((d) => (
                     <span key={d.indice} title={d.largo} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                       {d.corto}
