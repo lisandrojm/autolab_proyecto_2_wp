@@ -126,6 +126,36 @@ const BADGE_CLASSES: Record<BadgeVariant, string> = {
 
 export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, sinVolver = false, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, stickySearchAndFilters = false, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
   const shouldShowInfoButton = shouldShowInfo ?? (!!infoModal || showInfoIcon || !!subtitle);
+
+  /**
+   * DÓNDE TERMINA LA PARTE FIJA DE LA PANTALLA, publicado como `--wp-sticky-top`.
+   *
+   * Lo necesitan las tablas largas para pegar su `<thead>` justo debajo del encabezado en vez de
+   * debajo del viewport, donde queda tapado. Antes lo resolvían con un scroll propio —un
+   * `max-h` con `overflow`— y eso daba DOS barras de scroll en la misma pantalla: se llegaba al
+   * final de la tabla y la página seguía teniendo recorrido, o al revés.
+   *
+   * Se mide en vez de escribirse a mano porque el alto del encabezado cambia con lo que trae cada
+   * página —badges, subtítulo, avatar, la barra de búsqueda cuando es `stickySearchAndFilters`—, así
+   * que cualquier número fijo queda mal en la mitad de las pantallas. Es la misma razón por la que
+   * `stickySearchAndFilters` mueve el bloque en el DOM en lugar de darle un `top` propio.
+   *
+   * `top-16` (64px) es lo que ocupa la barra de navegación de arriba, que es fija.
+   */
+  const headerRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const publicar = () => document.documentElement.style.setProperty('--wp-sticky-top', `${64 + el.getBoundingClientRect().height}px`);
+    publicar();
+    const observer = new ResizeObserver(publicar);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      // Se limpia al desmontar: una pantalla sin PageLayout no tiene por qué heredar este alto.
+      document.documentElement.style.removeProperty('--wp-sticky-top');
+    };
+  }, []);
   const navigate = useNavigate();
 
   /**
@@ -190,8 +220,8 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
     <div className="bg-gray-100 dark:bg-gray-900">
       <div className="lg:pl-sidebar">
         <div className="px-4 sm:px-6 lg:px-8 pb-6">
-          {/* Header sticky */}
-          <div className="sticky top-16 z-20 mb-4 bg-gray-100 dark:bg-gray-900 border-b dark:border-slate-700">
+          {/* Header sticky. Su alto se publica en `--wp-sticky-top`: ver `headerRef`. */}
+          <div ref={headerRef} className="sticky top-16 z-20 mb-4 bg-gray-100 dark:bg-gray-900 border-b dark:border-slate-700">
             <div className="py-4">
               <div className="flex gap-3 flex-wrap min-w-0">
                 {renderClientMiniAvatar()}

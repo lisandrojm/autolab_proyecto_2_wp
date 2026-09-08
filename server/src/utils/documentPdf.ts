@@ -27,11 +27,19 @@ export function htmlHasText(html?: string | null): boolean {
   return !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
 }
 
+/** La clase que pinta los valores que salieron de una variable. Solo se usa en las previsualizaciones. */
+export const CLASE_VARIABLE_SIMULADA = "wp-var-sim";
+
 /**
  * Reemplaza `{{variable}}` (y también `{variable}`) por su valor dentro del HTML.
  * Reemplaza todas las claves presentes en `data` (aunque estén vacías); el resto queda intacto.
+ *
+ * `resaltar` envuelve cada valor reemplazado para poder pintarlo. Es SOLO para las previsualizaciones
+ * con datos de ejemplo: sirve para ver de un vistazo qué parte del texto sale de una variable y qué
+ * está escrito a mano, que es justo lo que un contrato ya armado no deja distinguir. En los
+ * documentos reales va apagado — un contrato que se firma no puede salir con medias frases en color.
  */
-export function replaceDocVariables(html: string, data: Record<string, any>): string {
+export function replaceDocVariables(html: string, data: Record<string, any>, opciones?: { resaltar?: boolean }): string {
   let result = html || "";
   for (const [key, rawValue] of Object.entries(data || {})) {
     // Una variable conocida pero SIN valor (ej. una persona sin piso/depto) se reemplaza por vacío.
@@ -40,9 +48,15 @@ export function replaceDocVariables(html: string, data: Record<string, any>): st
     // Escapamos la clave por si tuviera caracteres especiales de regex.
     const safeKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const escaped = escapeHtml(value);
+    /*
+      El envoltorio se arma con el valor YA escapado, y el nombre de la variable va en un `title`
+      —también escapado— para poder saber cuál era sin ensuciar el texto. Un valor vacío igual se
+      envuelve: así una variable que resolvió a nada se distingue de una que nadie escribió.
+    */
+    const reemplazo = opciones?.resaltar ? `<span class="${CLASE_VARIABLE_SIMULADA}" title="{{${escapeHtml(key)}}}">${escaped}</span>` : escaped;
     // Primero la llave doble (sintaxis oficial) y después la simple (compatibilidad con los Word).
-    result = result.replace(new RegExp(`\\{\\{${safeKey}\\}\\}`, "g"), escaped);
-    result = result.replace(new RegExp(`\\{${safeKey}\\}`, "g"), escaped);
+    result = result.replace(new RegExp(`\\{\\{${safeKey}\\}\\}`, "g"), reemplazo);
+    result = result.replace(new RegExp(`\\{${safeKey}\\}`, "g"), reemplazo);
   }
   return result;
 }
@@ -167,7 +181,7 @@ const MEMBRETE_STYLES = `
 `;
 
 /** Envuelve el HTML del editor en un documento completo con estilos base para el PDF. */
-function wrapHtml(bodyHtml: string, membrete?: MembreteInput): string {
+function wrapHtml(bodyHtml: string, membrete?: MembreteInput, resaltarVariables?: boolean): string {
   const header = membrete ? buildMembreteHeader(membrete) : "";
   const footer = membrete ? buildFirmaFooter(membrete) : "";
   const extraStyles = membrete ? MEMBRETE_STYLES : "";
@@ -187,6 +201,16 @@ function wrapHtml(bodyHtml: string, membrete?: MembreteInput): string {
     td, th { border: 1px solid #999; padding: 5pt; vertical-align: top; }
     hr { border: none; border-top: 1px solid #ccc; margin: 10pt 0; }
     ${extraStyles}
+    ${
+      resaltarVariables
+        ? /*
+            NARANJA ROJIZO, y no un fondo ni un subrayado: el PDF de preview se lee como un contrato,
+            así que la marca tiene que distinguirse sin romper el párrafo. El color aguanta la
+            impresión en escala de grises como un gris más oscuro, que sigue leyéndose.
+          */
+          `.${CLASE_VARIABLE_SIMULADA} { color: #c2410c; font-weight: 600; }`
+        : ""
+    }
   </style></head><body>${header}${bodyHtml || ""}${footer}</body></html>`;
 }
 
@@ -194,8 +218,8 @@ function wrapHtml(bodyHtml: string, membrete?: MembreteInput): string {
  * Construye el PDF final: reemplaza las variables en el contenido y lo renderiza.
  * Devuelve el Buffer listo para enviar en la respuesta.
  */
-export async function buildDocPdf(content: string, data: Record<string, any>, membrete?: MembreteInput): Promise<Buffer> {
-  const html = wrapHtml(neutralizeHandlebars(replaceDocVariables(content, data)), membrete);
+export async function buildDocPdf(content: string, data: Record<string, any>, membrete?: MembreteInput, opciones?: { resaltarVariables?: boolean }): Promise<Buffer> {
+  const html = wrapHtml(neutralizeHandlebars(replaceDocVariables(content, data, { resaltar: opciones?.resaltarVariables })), membrete, opciones?.resaltarVariables);
   const options = {
     format: "A4",
     margin: { top: "20mm", right: "20mm", bottom: "20mm", left: "20mm" },

@@ -55,7 +55,15 @@ export const TipoContratoSelect: React.FC<Props> = ({ options, value, onChange, 
   /** El estado impositivo de un tipo, o `null` si todavía no tiene ninguno vinculado. */
   const estadoDe = (id: string) => estadoImpositivoPorTipo(estados, tramitePorContrato.get(id));
 
-  const fila = (o: TipoContratoOption) => {
+  /**
+   * `conBadge` distingue la LISTA del CONTROL CERRADO.
+   *
+   * En la lista el badge sirve: es lo que diferencia dos tipos que se llaman parecido y aclara qué
+   * trámite dispara cada uno. Cerrado no aporta —ya se eligió— y además compite con el badge de
+   * «Estado», que está justo al lado en la misma fila de la grilla: dos recuadros de colores
+   * pegados, uno que es un dato y otro que es una etiqueta del valor elegido.
+   */
+  const fila = (o: TipoContratoOption, conBadge = true) => {
     const estado = estadoDe(o._id);
     return (
       <>
@@ -63,7 +71,7 @@ export const TipoContratoSelect: React.FC<Props> = ({ options, value, onChange, 
           {o.name}
           {o.isActive === false ? " (inactivo)" : ""}
         </span>
-        {estado && <EstadoBadge name={estado.name} className="text-[10px] whitespace-nowrap shrink-0" />}
+        {conBadge && estado && <EstadoBadge name={estado.name} className="text-[10px] whitespace-nowrap shrink-0" />}
       </>
     );
   };
@@ -71,7 +79,7 @@ export const TipoContratoSelect: React.FC<Props> = ({ options, value, onChange, 
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)} className="input-field w-full flex items-center justify-between gap-2 text-left">
-        <span className="flex items-center gap-2 min-w-0 flex-1">{selected ? fila(selected) : <span className="text-gray-400 dark:text-gray-500">{placeholder}</span>}</span>
+        <span className="flex items-center gap-2 min-w-0 flex-1">{selected ? fila(selected, false) : <span className="text-gray-400 dark:text-gray-500">{placeholder}</span>}</span>
         <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 text-gray-400 transition-transform shrink-0 ${open ? "rotate-180" : ""}`} />
       </button>
 

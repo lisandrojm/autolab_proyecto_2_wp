@@ -82,7 +82,7 @@ router.post("/preview", authenticateToken, requireTenant, async (req, res) => {
             .object({ content: z.string().max(200000), usaMembrete: z.union([z.boolean(), z.string()]).optional() })
             .parse(req.body);
         const membrete = await getExampleMembrete(usaMembrete === true || usaMembrete === "true");
-        const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete);
+        const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete, { resaltarVariables: true });
         sendPdf(res, buffer, "Preview_Release");
     }
     catch (error) {
@@ -124,7 +124,7 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
             return;
         }
         const membrete = await getExampleMembrete(!!release.usaMembrete);
-        const buffer = await buildDocPdf(release.content, getDummyDocVariables(), membrete);
+        const buffer = await buildDocPdf(release.content, getDummyDocVariables(), membrete, { resaltarVariables: true });
         sendPdf(res, buffer, `${release.name || "Release"}`);
     }
     catch (error) {

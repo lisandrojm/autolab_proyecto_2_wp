@@ -74,7 +74,7 @@ router.post("/preview", authenticateToken, async (req: AuthenticatedRequest, res
       return;
     }
     const membrete = await getExampleMembrete(req.body?.usaMembrete === true || req.body?.usaMembrete === "true");
-    const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete);
+    const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete, { resaltarVariables: true });
     sendPdf(res, buffer, "Preview_Contrato");
   } catch (error) {
     console.error("Preview contrato error:", error);
@@ -95,7 +95,7 @@ router.get("/:id/download", authenticateToken, async (req: AuthenticatedRequest,
       return;
     }
     const membrete = await getExampleMembrete(!!item.usaMembrete);
-    const buffer = await buildDocPdf(item.content, getDummyDocVariables(), membrete);
+    const buffer = await buildDocPdf(item.content, getDummyDocVariables(), membrete, { resaltarVariables: true });
     sendPdf(res, buffer, `${item.name || "Contrato"}`);
   } catch (error) {
     console.error("Download ContratoFrame error:", error);

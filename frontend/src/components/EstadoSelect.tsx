@@ -132,7 +132,7 @@ export const colorTextoBadge = (hex: string, isDark: boolean): string => {
  * Badge de estado del contrato. Si el estado está configurado en el ABM (Configuración → Estados)
  * usa su color y su nombre dentro del contrato; si no, cae en los estilos por defecto.
  */
-export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ name, className = "" }) => {
+export const EstadoBadge: React.FC<{ name: string; className?: string; children?: React.ReactNode }> = ({ name, className = "", children }) => {
   const estados = useEstadoCatalogStore((s) => s.estados);
   const ensureLoaded = useEstadoCatalogStore((s) => s.ensureLoaded);
   const theme = useThemeStore((s) => s.theme);
@@ -168,6 +168,9 @@ export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ na
       <span className={clases} style={{ color: textoColor, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
         {iconoImpositivo}
         {texto}
+        {/* Lo que venga de afuera va ADENTRO del recuadro: una X pegada por fuera se lee como otro
+            control y no como parte del badge que quita. */}
+        {children}
       </span>
     );
   }
@@ -176,6 +179,7 @@ export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ na
     <span className={`${clases} ${styleFor(name).cls}`}>
       {iconoImpositivo}
       {texto}
+      {children}
     </span>
   );
 };

@@ -23,7 +23,7 @@ import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
 import { DiasDeTrabajo, faltaDefinirDias } from "../components/contratos/DiasDeTrabajo";
-import { EstadoSelect, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
+import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
@@ -785,19 +785,9 @@ export const ProjectTeamPage: React.FC = () => {
    * ninguno (disponibles siempre). Si el estado ya guardado en el contrato quedó fuera del filtro,
    * se agrega igual para no perder el valor actual.
    */
-  const estadosDisponibles = useMemo(() => {
-    const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : "";
-    const filtrados = allEstados.filter((e) => {
-      const vinculados = (e.data as any)?.contratoFrameIds || [];
-      if (vinculados.length === 0) return true;
-      return tipoElegido ? vinculados.some((id: string) => String(id) === tipoElegido) : false;
-    });
 
-    const actual = allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id));
-    if (actual && !filtrados.some((e) => e._id === actual._id)) filtrados.push(actual);
-
-    return filtrados;
-  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id]);
+  /** El estado que va a quedar guardado. Se muestra; ya no se elige a mano. */
+  const estadoElegido = useMemo(() => allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id)), [allEstados, wizardData.estado_id]);
 
   // Recuerda el último contrato_frame_id "visto" para distinguir, en "Configurar Miembro", entre
   // abrir el wizard (no debe tocar el estado ya guardado) y que el usuario CAMBIE el Tipo de
@@ -1994,6 +1984,28 @@ export const ProjectTeamPage: React.FC = () => {
   };
 
   // Render function for Table Row
+  /**
+   * CUÁNTAS HORAS SALEN DE UN HORARIO. Se calcula, no se guarda.
+   *
+   * Guardarlo sería un tercer dato que puede contradecir a los otros dos: alguien corrige la hora de
+   * salida y el total queda diciendo otra cosa. Derivado, no se puede desincronizar.
+   *
+   * EL TURNO QUE CRUZA MEDIANOCHE es el caso que hay que contemplar: «18:00 - 00:00» son seis horas,
+   * no menos veinticuatro. Cuando la salida no es posterior a la entrada, se le suma un día.
+   */
+  const horasPorDia = (inicio?: string, fin?: string): number | null => {
+    const minutos = (h?: string) => {
+      const m = /^(\d{1,2}):(\d{2})$/.exec(String(h || "").trim());
+      return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+    };
+    const desde = minutos(inicio);
+    const hasta = minutos(fin);
+    if (desde == null || hasta == null) return null;
+    const total = (hasta > desde ? hasta - desde : hasta + 24 * 60 - desde) / 60;
+    // Un decimal: los horarios parten en medias horas, y «7,5» se lee mejor que «7,50».
+    return Math.round(total * 10) / 10;
+  };
+
   const renderUserRow = (user: User) => {
     const userConfig = teamConfig.find((c) => c.userId === user._id);
     const projectMeta = user.metadata?.projects?.find((p: any) => {
@@ -2321,7 +2333,55 @@ export const ProjectTeamPage: React.FC = () => {
             <span className="text-xs text-gray-400">—</span>
           )}
         </td>
+        {/*
+          LAS JORNADAS, EN SU PROPIA COLUMNA.
+
+          Ya estaban, pero como renglón chico debajo del monto: ahí se leen como una aclaración de la
+          cifra —«$44.282,11 de 1 jornada»— y no como un dato que se pueda recorrer y comparar entre
+          filas, que es para lo que se mira. En su columna se pueden barrer con el ojo.
+
+          Sigue apareciendo también bajo el monto: ahí es el denominador que explica esa cifra, y
+          sacarlo dejaría el importe sin decir de cuántas jornadas sale.
+        */}
+        <td className="px-4 py-3 text-right whitespace-nowrap">
+          {activeContract?.cantidad_jornadas_laborales ? (
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{activeContract.cantidad_jornadas_laborales}</span>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
+        {/*
+          Solo la cantidad: qué días concretos son se ve al abrir el contrato, y en la tabla ocupaba
+          tres renglones por fila para un dato que no se compara entre filas.
+
+          Con la unidad pegada («5d»), porque el número solo, en una tabla que al lado tiene jornadas
+          y horas, no dice de qué es. La `d` va en gris y más chica: acompaña al número, no compite.
+        */}
+        <td className="px-4 py-3 text-right whitespace-nowrap">
+          {activeContract?.dias_por_semana ? (
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+              {activeContract.dias_por_semana}
+              <span className="ml-0.5 text-xs font-normal text-gray-400">d</span>
+            </span>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}</td>
+        {/* Las horas que sale de ese horario. Se calcula y no se guarda: ver `horasPorDia`. */}
+        <td className="px-4 py-3 text-right whitespace-nowrap">
+          {(() => {
+            const horas = horasPorDia(activeContract?.hora_inicio, activeContract?.hora_fin);
+            return horas == null ? (
+              <span className="text-xs text-gray-400">—</span>
+            ) : (
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                {horas.toLocaleString("es-AR")}
+                <span className="ml-0.5 text-xs font-normal text-gray-400">h</span>
+              </span>
+            );
+          })()}
+        </td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
             <button
@@ -2629,7 +2689,10 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold">Reemplazo</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Alta / Baja</th>
                               <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Monto / Jorn.</th>
+                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Jornadas</th>
+                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Días por semana</th>
                               <th className="px-4 py-3 font-semibold">Horario</th>
+                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Horas / día</th>
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                             </tr>
                           </thead>
@@ -3308,7 +3371,21 @@ export const ProjectTeamPage: React.FC = () => {
                       }
                       setWizardStep((wizardStep + 1) as any);
                     }}
-                    className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider"
+                    /*
+                      UNA SOLA ACCIÓN PRIMARIA EN EL PIE.
+
+                      Guardar es azul, como en toda la plataforma. Pero en EDICIÓN los dos botones
+                      conviven —se puede guardar sin recorrer los tres pasos—, y dos azules idénticos
+                      obligan a leerlos para saber cuál cierra el trámite. Ahí «Siguiente» pasa a
+                      secundario: sigue disponible, pero deja de competir.
+
+                      En un alta nueva es el único botón hasta el paso 3, así que ahí es el primario.
+                    */
+                    className={`flex-1 py-3 rounded-xl font-bold transition-all active:scale-95 uppercase tracking-wider ${
+                      esEdicionMiembro
+                        ? "border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20"
+                    }`}
                   >
                     SIGUIENTE
                   </button>
@@ -3316,7 +3393,7 @@ export const ProjectTeamPage: React.FC = () => {
                 {/* En edición se puede guardar sin recorrer los tres pasos: los datos ya vienen
                     cargados del contrato, así que lo que no se tocó queda como estaba. */}
                 {(wizardStep === 3 || esEdicionMiembro) && (
-                  <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95 uppercase tracking-wider">
+                  <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
                     GUARDAR
                   </button>
                 )}
@@ -3364,7 +3441,21 @@ export const ProjectTeamPage: React.FC = () => {
                 {/* Step 1: Contrato */}
                 {wizardStep === 1 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 space-y-1.5">
+                    {/*
+                      EMPLEADO OCUPA MEDIA FILA, no la entera.
+
+                      Es un campo de solo lectura —el nombre de quien se está configurando— así que no
+                      gana nada con el ancho completo, y lo que costaba era el desfasaje: al ocupar dos
+                      columnas, todo lo de abajo quedaba corrido medio lugar y los pares se partían.
+                      «Empresa del Contrato» terminaba al lado de «Role Frame», y «Empresa del Release»
+                      al lado de «Convenio», que son justamente los que hay que leer juntos.
+
+                      Con esto las filas quedan: Empleado | Role Frame · Empresa del Contrato | Empresa
+                      del Release · Convenio | Categoría · Tipo de Contrato | Estado. Los pares que
+                      comparten fila son los que se deciden juntos, y el orden sigue la cadena:
+                      empresa → convenios de ese CUIT → categorías de esos convenios.
+                    */}
+                    <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
                         Empleado <span className="text-red-500">*</span>
                       </label>
@@ -3527,12 +3618,20 @@ export const ProjectTeamPage: React.FC = () => {
                           </button>
                         )}
                         {estadoImpositivoPorTipo(allEstados, filtroTramite) && (
-                          <span className="inline-flex items-center gap-1">
-                            <EstadoBadge name={estadoImpositivoPorTipo(allEstados, filtroTramite)!.name} className="text-[10px] whitespace-nowrap" />
-                            <button type="button" onClick={() => setFiltroTramite("")} title="Quitar el filtro" className="text-gray-400 hover:text-red-500 transition-colors">
-                              <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                          /*
+                            EL FILTRO APLICADO, MÁS CHICO QUE EL BADGE DE ESTADO Y CON LA X ADENTRO.
+
+                            Son dos badges de color a pocos centímetros —éste dice «por qué la lista
+                            está recortada» y el de Estado dice «qué estado va a quedar»— y del mismo
+                            tamaño se leen como lo mismo. Acá va en 9px y con la X dentro del recuadro:
+                            pegada por fuera parecía otro control suelto, no la forma de sacar ESTE
+                            filtro.
+                          */
+                          <EstadoBadge name={estadoImpositivoPorTipo(allEstados, filtroTramite)!.name} className="text-[9px] px-1.5 py-0 whitespace-nowrap">
+                            <button type="button" onClick={() => setFiltroTramite("")} title="Quitar el filtro" className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" aria-label="Quitar el filtro de trámite">
+                              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
                             </button>
-                          </span>
+                          </EstadoBadge>
                         )}
                       </div>
 
@@ -3624,7 +3723,12 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-1.5">
                       {esAltaNueva ? (
                         <>
-                          <div className="flex items-center gap-1.5 ml-1">
+                          {/* `h-6`, el mismo alto fijo que el rótulo de «Tipo de contrato» que está a
+                              la izquierda en esta fila: es lo que hace que los dos campos arranquen a
+                              la misma altura. Sin esto el rótulo mide lo que mida su contenido —acá,
+                              un botón de info; allá, un badge que aparece o no— y la desalineación
+                              cambia sola según el caso. */}
+                          <div className="h-6 flex items-center gap-1.5 ml-1">
                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
                               Estado <span className="text-red-500">*</span>
                             </label>
@@ -3636,10 +3740,22 @@ export const ProjectTeamPage: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                            Estado <span className="text-red-500">*</span>
-                          </label>
-                          <EstadoSelect options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))} value={wizardData.estado_id} onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))} />
+                          <div className="h-6 flex items-center ml-1">
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                              Estado <span className="text-red-500">*</span>
+                            </label>
+                          </div>
+                          {/*
+                            SE MUESTRA, NO SE ELIGE — igual que en el alta.
+
+                            El estado sale del Tipo de Contrato: al cambiarlo, este valor se recalcula
+                            solo. Mientras fue un selector, elegir a mano acá dejaba un estado que el
+                            siguiente cambio de tipo pisaba sin avisar, y no había forma de saber si el
+                            que se veía era el elegido o el derivado.
+                          */}
+                          <div className="input-field w-full flex items-center">
+                            {estadoElegido ? <EstadoBadge name={estadoElegido.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_id ? "Este tipo de contrato no tiene un estado configurado" : "Elegí primero el Tipo de contrato"}</span>}
+                          </div>
                         </>
                       )}
                     </div>

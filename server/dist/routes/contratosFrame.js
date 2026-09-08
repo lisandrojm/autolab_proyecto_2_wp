@@ -70,7 +70,7 @@ router.post("/preview", authenticateToken, async (req, res) => {
             return;
         }
         const membrete = await getExampleMembrete(req.body?.usaMembrete === true || req.body?.usaMembrete === "true");
-        const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete);
+        const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete, { resaltarVariables: true });
         sendPdf(res, buffer, "Preview_Contrato");
     }
     catch (error) {
@@ -91,7 +91,7 @@ router.get("/:id/download", authenticateToken, async (req, res) => {
             return;
         }
         const membrete = await getExampleMembrete(!!item.usaMembrete);
-        const buffer = await buildDocPdf(item.content, getDummyDocVariables(), membrete);
+        const buffer = await buildDocPdf(item.content, getDummyDocVariables(), membrete, { resaltarVariables: true });
         sendPdf(res, buffer, `${item.name || "Contrato"}`);
     }
     catch (error) {

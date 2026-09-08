@@ -632,8 +632,23 @@ export const FILTROS_OBRA_SOCIAL: Array<{ value: EstadoObraSocial; label: string
   una flecha que dice la dirección. Sin la flecha, el borde agrupa pero no dice cuál manda.
 */
 const GRUPO_ENCUADRE = 'bg-blue-500/[0.04] dark:bg-blue-400/[0.05]';
+/**
+ * EL MISMO ENCUADRE, PERO OPACO, para el encabezado.
+ *
+ * En el cuerpo el azul va translúcido a propósito: deja pasar el rayado de filas alternas y el
+ * resaltado de la fila activa. En el `<thead>` sticky eso es un agujero — las filas se ven pasando
+ * por debajo del encabezado mientras se scrollea, y el título queda ilegible sobre el texto de los
+ * datos.
+ *
+ * No se resuelve apilando `bg-gray-50` con el azul: dos `bg-*` en el mismo elemento no se superponen,
+ * gana el que el CSS declare último. Hay que pintar un color opaco que YA tenga el matiz, y por eso
+ * son colores distintos y no el mismo con opacidad.
+ */
+const GRUPO_ENCUADRE_TH = 'bg-blue-50 dark:bg-slate-900';
 const GRUPO_ENCUADRE_INICIO = `${GRUPO_ENCUADRE} border-l-2 border-l-blue-500/40 dark:border-l-blue-400/40`;
+const GRUPO_ENCUADRE_TH_INICIO = `${GRUPO_ENCUADRE_TH} border-l-2 border-l-blue-500/40 dark:border-l-blue-400/40`;
 const GRUPO_ENCUADRE_FIN = `${GRUPO_ENCUADRE} border-r-2 border-r-blue-500/40 dark:border-r-blue-400/40`;
+const GRUPO_ENCUADRE_TH_FIN = `${GRUPO_ENCUADRE_TH} border-r-2 border-r-blue-500/40 dark:border-r-blue-400/40`;
 /** La flecha que va al final de cada cabecera del grupo menos la última. */
 /**
  * Cuántas columnas hay antes de que empiece la banda, en la pestaña de Alta temprana.
@@ -2331,7 +2346,33 @@ export const ContractBulkAfipTab: React.FC<{
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
+          {/*
+            UNA SOLA BARRA DE SCROLL, sin perder el encabezado fijo.
+
+            El alto era `max-h-[640px]`: un número sin relación con la pantalla, así que abajo del
+            contenedor siempre sobraba página. Quedaban DOS barras verticales —la de la tabla y la del
+            documento— y llegar al final de la tabla no era llegar al final de la página. Alcanza con
+            que haya un alto máximo para que aparezca la segunda: `overflow-x: auto` obliga al eje Y a
+            computar `auto`.
+
+            Ahora el alto es EL QUE QUEDA de pantalla: `100svh` menos lo fijo de arriba, que
+            `PageLayout` publica en `--wp-sticky-top` —se mide y no se escribe a mano porque cambia
+            con lo que trae cada página: badges, subtítulo, filtros—. La tabla termina donde termina la
+            ventana, el documento no tiene sobrante que scrollear, y queda una sola barra.
+
+            `min-h` porque ese cálculo puede dar muy poco —pantalla baja, o encabezado alto— y una
+            tabla de tres filas no se puede usar. Cuando el mínimo y el máximo se cruzan, CSS le da la
+            razón al mínimo.
+
+            SE PROBÓ `overflow-y: clip` para mover el scroll vertical a la página: ROMPE el `<thead>`,
+            que queda flotando en medio de la tabla. El sticky se resuelve contra el scrollport más
+            cercano y, con `overflow-x: auto`, este div lo sigue siendo — el thead tiene que anclarse
+            acá, no al documento.
+
+            El eje X también es de este contenedor: son catorce columnas, y las dos primeras se quedan
+            fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
+          */}
+          <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 {/*
@@ -2352,7 +2393,7 @@ export const ContractBulkAfipTab: React.FC<{
                 {hayEncuadre && (
                   <tr>
                     <th colSpan={COLUMNAS_ANTES_DEL_GRUPO} className="p-0 bg-gray-50 dark:bg-gray-900" />
-                    <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-center ${GRUPO_ENCUADRE}`}>
+                    <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-center ${GRUPO_ENCUADRE_TH}`}>
                       Datos que declara la empleadora ante ARCA
                     </th>
                   </tr>
@@ -2388,13 +2429,13 @@ export const ContractBulkAfipTab: React.FC<{
                       Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
                       mismo a mano solo hacía dudar de cuál era el que valía. La columna sobrevive solo
                       para «Sin CUIT», donde el contenido es otro. */}
-                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Validación</th>}
-                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Documentación</th>}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
+                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Validación</th>}
+                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Documentación</th>}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Alta / Baja</th>
                   {layoutConstancia && (
                     <>
                       {filterTipo !== 'sin_cuit' && (
-                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                           <span className="inline-flex items-center gap-1.5">
                             Datos CUIT/CUIL
                             <button type="button" onClick={() => setDatosCuitInfoOpen(true)} title="Por qué a veces no se puede validar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
@@ -2404,21 +2445,21 @@ export const ContractBulkAfipTab: React.FC<{
                         </th>
                       )}
                       {filterTipo !== 'sin_cuit' && (
-                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de ARCA">
+                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Estado en el Padrón de ARCA">
                           ARCA
                         </th>
                       )}
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Si la constancia quedó archivada en Dropbox">
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Si la constancia quedó archivada en Dropbox">
                         DROPBOX
                       </th>
                     </>
                   )}
                   {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">CUIT</th>
                   {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
                       columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
-                  <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`}>
+                  <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_TH_INICIO : ''}`}>
                     <span className="inline-flex items-center gap-1.5">
                       Empresa Contrato
                       {filterTipo === 'alta_temprana_afip' && (
@@ -2436,11 +2477,11 @@ export const ContractBulkAfipTab: React.FC<{
                       obra social por defecto sale del convenio, y el convenio de la categoría. */}
                   {hayEncuadre && (
                     <>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE}`}>
+                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
                         Convenio
                         <FlechaEncuadre />
                       </th>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE}`}>
+                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
                         Categoría
                         <FlechaEncuadre />
                       </th>
@@ -2450,7 +2491,7 @@ export const ContractBulkAfipTab: React.FC<{
                       empleadora, así que las dos columnas se leen juntas —sin empresa, esta no se
                       puede resolver—. */}
                   {hayEncuadre && (
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
+                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
                       <button type="button" onClick={() => setOrdenObraSocial((v) => !v)} className={`uppercase tracking-wider font-bold inline-flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-300 ${ordenObraSocial ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                         Obra Social
                         <FontAwesomeIcon icon={faSort} className="h-2.5 w-2.5" />
@@ -2468,21 +2509,21 @@ export const ContractBulkAfipTab: React.FC<{
                   */}
                   {hayEncuadre && (
                     <>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE}`} title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
+                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
                         Sucursal
                         <FlechaEncuadre />
                       </th>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_FIN}`} title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
+                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH_FIN}`} title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
                         Actividad
                       </th>
                     </>
                   )}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Empresa Release</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Cliente</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Proyecto</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
                   <ContractActionsHeader />
                 </tr>
               </thead>
@@ -3568,7 +3609,33 @@ export const ContractBulkFirmaTab: React.FC<{
         <EmptyState icon={faFileSignature} title="Sin contratos para firmar" description={rowsEnEnvio.length === 0 ? 'Ningún contrato está hoy en el estado de "Envío de documentación" (se llega ahí automáticamente al archivar el Alta temprana de ARCA o la Constancia de CUIT).' : 'No hay resultados con los filtros aplicados.'} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
+          {/*
+            UNA SOLA BARRA DE SCROLL, sin perder el encabezado fijo.
+
+            El alto era `max-h-[640px]`: un número sin relación con la pantalla, así que abajo del
+            contenedor siempre sobraba página. Quedaban DOS barras verticales —la de la tabla y la del
+            documento— y llegar al final de la tabla no era llegar al final de la página. Alcanza con
+            que haya un alto máximo para que aparezca la segunda: `overflow-x: auto` obliga al eje Y a
+            computar `auto`.
+
+            Ahora el alto es EL QUE QUEDA de pantalla: `100svh` menos lo fijo de arriba, que
+            `PageLayout` publica en `--wp-sticky-top` —se mide y no se escribe a mano porque cambia
+            con lo que trae cada página: badges, subtítulo, filtros—. La tabla termina donde termina la
+            ventana, el documento no tiene sobrante que scrollear, y queda una sola barra.
+
+            `min-h` porque ese cálculo puede dar muy poco —pantalla baja, o encabezado alto— y una
+            tabla de tres filas no se puede usar. Cuando el mínimo y el máximo se cruzan, CSS le da la
+            razón al mínimo.
+
+            SE PROBÓ `overflow-y: clip` para mover el scroll vertical a la página: ROMPE el `<thead>`,
+            que queda flotando en medio de la tabla. El sticky se resuelve contra el scrollport más
+            cercano y, con `overflow-x: auto`, este div lo sigue siendo — el thead tiene que anclarse
+            acá, no al documento.
+
+            El eje X también es de este contenedor: son catorce columnas, y las dos primeras se quedan
+            fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
+          */}
+          <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -3576,17 +3643,17 @@ export const ContractBulkFirmaTab: React.FC<{
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Release</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo de Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Alta / Baja</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Trámite</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">CUIT</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Cliente</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Proyecto</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Tipo de Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
                   <ContractActionsHeader />
                 </tr>
               </thead>
