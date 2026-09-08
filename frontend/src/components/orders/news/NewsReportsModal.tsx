@@ -213,7 +213,33 @@ const ContractDetailModal: React.FC<{
     : userProjectsData;
 
   // If filter produced no results, show all
-  const projectsToShow = relevantProjects.length > 0 ? relevantProjects : userProjectsData;
+  const sinAgrupar = relevantProjects.length > 0 ? relevantProjects : userProjectsData;
+
+  /*
+    UN BLOQUE POR PROYECTO, JUNTANDO LOS CONTRATOS DE TODOS SUS `UserProject`.
+
+    Una misma persona puede tener VARIOS `UserProject` para el mismo proyecto, y cada uno con parte de
+    sus contratos: el viejo del 31/05 en uno y el vigente del 01/06 en otro. Iterando de a uno, cada
+    bloque elegía «su» último y el modal terminaba mostrando un contrato que la fila de la tabla ya
+    había descartado — la fila agrupa por proyecto (ver `statsByEmployee`) y el detalle no lo hacía.
+
+    Agrupados, las dos vistas eligen sobre el MISMO conjunto y no pueden discrepar. El nombre del rol
+    se toma del primero que lo tenga: es el mismo proyecto, así que no compiten.
+  */
+  const projectsToShow = (() => {
+    const porProyecto = new Map<string, UserProjectMetadata>();
+    for (const up of sinAgrupar) {
+      const clave = (up.nombre_proyecto || "").trim().toUpperCase().replace(/[\s\-_]/g, "") || String(typeof up.projectId === "object" ? up.projectId?._id : up.projectId || "");
+      const previo = porProyecto.get(clave);
+      if (!previo) {
+        porProyecto.set(clave, { ...up, contracts: [...(up.contracts || [])] });
+        continue;
+      }
+      previo.contracts = [...(previo.contracts || []), ...(up.contracts || [])];
+      if (!previo.nombre_rol_frame && up.nombre_rol_frame) previo.nombre_rol_frame = up.nombre_rol_frame;
+    }
+    return Array.from(porProyecto.values());
+  })();
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 animate-fade-in" style={{ zIndex: zIndex || 60 }} onClick={onClose}>
