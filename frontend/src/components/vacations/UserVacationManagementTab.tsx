@@ -6,9 +6,21 @@ import { vacationsAPI } from "../../api/vacations";
 import { usersAPI } from "../../api/users";
 import { InfoModal } from "../ui/InfoModal";
 import { Paginador, POR_PAGINA } from "../ui/Paginador";
+import { getContratoActivo, esContratoVigente, fechaISO } from "../../utils/contratoVigencia";
 import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
+
+/**
+ * Fecha de un contrato en DD/MM/YYYY. Pasa por `fechaISO` y no por el `formatDate` de más abajo porque
+ * las fechas de contrato llegan en varias formas —"2026-09-01", "2026-09-01T00:00:00.000Z",
+ * "01/09/2026" y hasta el string "null"—, y partirlas por "-" a mano devuelve cosas como
+ * "01T00:00:00.000Z/09/2026". Sin fecha de baja no es un dato faltante: es tiempo indeterminado.
+ */
+const fechaContrato = (valor?: string | null): string => {
+  const iso = fechaISO(valor);
+  return iso ? iso.split("-").reverse().join("/") : "—";
+};
 
 interface UserVacationBalance {
   userId: string;
@@ -163,24 +175,30 @@ export const UserVacationManagementTab: React.FC = () => {
     }
   };
 
-  const getActiveContractType = (balance: UserVacationBalance): string | null => {
-    let contractType: string | null = null;
-    if (balance.metadata?.projects) {
-      balance.metadata.projects.forEach((p: any) => {
-        if (p.contracts) {
-          p.contracts.forEach((c: any) => {
-            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-            if (endDate) endDate.setHours(23, 59, 59, 999);
-            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
-            const type = c.nombre_contrato || c.tipo_contrato;
-            if (isActive && type) {
-              contractType = type;
-            }
-          });
-        }
-      });
+  /**
+   * EL CONTRATO QUE RIGE HOY, con el mismo criterio que el resto de la plataforma.
+   *
+   * Antes esto recorría todos los contratos de todos los proyectos y se quedaba con el ÚLTIMO que
+   * encontraba sin fecha de baja vencida — o sea, con el último del recorrido, que depende del orden en
+   * que estén guardados y no de cuál manda. `getContratoActivo` es la regla única: entre los vigentes
+   * gana el de tiempo indeterminado, después el más reciente, y si no hay ninguno vigente, el más
+   * reciente de todos (para poder mostrarlo como NO VIGENTE en vez de esconderlo).
+   *
+   * Se juntan los contratos de TODOS los proyectos antes de elegir: una persona puede tener varias
+   * filas de `UserProject` con parte de sus contratos en cada una, y elegir dentro de cada una por
+   * separado devuelve un contrato que la vista de al lado ya descartó.
+   */
+  const contratoQueRige = (balance: UserVacationBalance): any | null => {
+    const todos: any[] = [];
+    for (const p of balance.metadata?.projects || []) {
+      for (const c of (p as any)?.contracts || []) todos.push(c);
     }
-    return contractType;
+    return getContratoActivo(todos);
+  };
+
+  const getActiveContractType = (balance: UserVacationBalance): string | null => {
+    const c = contratoQueRige(balance);
+    return c ? c.nombre_contrato || c.tipo_contrato || null : null;
   };
 
   const getActiveRoleFrame = (balance: UserVacationBalance): string => {
@@ -570,8 +588,28 @@ export const UserVacationManagementTab: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
                       {getActiveRoleFrame(balance)}
                     </td>
+                    {/* Contrato: el tipo, si está vigente y sus fechas — igual que en Contratos. */}
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
-                      {getActiveContractType(balance) || "Sin contrato"}
+                      {(() => {
+                        const contrato = contratoQueRige(balance);
+                        if (!contrato) return <span className="text-gray-400 dark:text-gray-500">Sin contrato</span>;
+                        const vigente = esContratoVigente(contrato);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span>{contrato.nombre_contrato || contrato.tipo_contrato || "Sin tipo"}</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                            <div className="flex flex-col gap-0.5">
+                              <span>
+                                <span className="text-gray-400 dark:text-gray-500">Alta:</span> {fechaContrato(contrato.fecha_alta_contrato)}
+                              </span>
+                              <span>
+                                {/* Sin baja = tiempo indeterminado, no un dato que falte. */}
+                                <span className="text-gray-400 dark:text-gray-500">Baja:</span> {fechaContrato(contrato.fecha_baja_contrato)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     {/* Total Annual */}
                     <td className="px-4 py-4 text-center">
