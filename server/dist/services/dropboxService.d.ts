@@ -68,6 +68,17 @@ export declare function getTemporaryLink(tenantId: string, cfg: TenantDropboxCon
 /** Descarga el contenido de un archivo como Buffer (para armar ZIPs, etc.). */
 export declare function downloadFileContent(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<Buffer>;
 export declare function uploadFile(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer): Promise<DropboxEntry>;
+/**
+ * Subida por SESIÓN, para archivos que no entran en `uploadFile`.
+ *
+ * El endpoint simple de Dropbox (`/files/upload`) corta en 150 MB y contesta un error que no dice eso.
+ * Un backup de la base crece con el tiempo, así que el día que cruce el límite el job fallaría en
+ * silencio cada doce horas. Con sesión se manda en pedazos de 8 MB y no hay techo práctico.
+ *
+ * Se usa SOLO cuando hace falta (ver `subirArchivoGrande` en backupService): abrir una sesión para un
+ * PDF de 200 KB son tres viajes de red en vez de uno.
+ */
+export declare function uploadFileSession(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer): Promise<DropboxEntry>;
 export declare function deleteEntry(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<void>;
 export declare function moveEntry(tenantId: string, cfg: TenantDropboxConfig, fromPath: string, toPath: string): Promise<DropboxEntry>;
 export declare function createFolder(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<DropboxEntry>;

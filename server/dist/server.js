@@ -19,6 +19,7 @@ import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js"
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
+import { initBackupScheduler } from "./services/backupService.js";
 import { initEstadoDropboxScheduler } from "./services/estadoDropboxCronService.js";
 import { initParitariasScheduler } from "./services/paritariasCronService.js";
 import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
@@ -81,6 +82,7 @@ import { shiftRoutes } from "./routes/shifts.js";
 import { holidayRoutes } from "./routes/holidays.js";
 import { userProjectRoutes } from "./routes/userProjects.js";
 import { dropboxRoutes } from "./routes/dropbox.js";
+import { backupRoutes } from "./routes/backups.js";
 import { dropboxWebhookRoutes } from "./routes/dropboxWebhook.js";
 import { afipRoutes } from "./routes/afip.js";
 import { firmaDigitalRoutes } from "./routes/firmaDigital.js";
@@ -264,6 +266,7 @@ app.use("/api/v1/user-projects", userProjectRoutes);
 // tenant. Adentro de «dropboxRoutes» quedaría detrás de `requireTenant, authenticateToken` y
 // devolvería 401 a cada notificación. Solo define /webhook; el resto cae al router de abajo.
 app.use("/api/v1/dropbox", dropboxWebhookRoutes);
+app.use("/api/v1/backups", backupRoutes);
 app.use("/api/v1/dropbox", dropboxRoutes);
 app.use("/api/v1/afip", afipRoutes);
 app.use("/api/v1/firma-digital", firmaDigitalRoutes);
@@ -305,6 +308,13 @@ connectDB()
     }
     catch (error) {
         console.error("❌ Failed to initialize background scheduler:", error);
+    }
+    // Backup de la base a Dropbox, cada 12 horas (tab «DDBB» de Documentos).
+    try {
+        initBackupScheduler();
+    }
+    catch (error) {
+        console.error("❌ Failed to initialize backup scheduler:", error);
     }
     // Initialize the Estado auto-transition Dropbox folder scanner
     try {

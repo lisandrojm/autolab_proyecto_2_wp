@@ -116,7 +116,9 @@
     "roles-empresa:permiso": "dotenv -e .env.production -- tsx src/scripts/otorgarPermisoRolesEmpresa.ts",
     "test:cuit-inactivo": "tsx --test src/services/arca/cuitInactivo.test.ts",
     "test:domicilio-padron": "tsx --test src/services/arca/domicilioPadron.test.ts",
-    "test:dropbox-webhook": "tsx --test src/services/dropboxWebhookService.test.ts"
+    "test:dropbox-webhook": "tsx --test src/services/dropboxWebhookService.test.ts",
+    "restaurar:backup": "tsx src/scripts/restaurarBackup.ts",
+    "test:backup": "tsx --test src/services/backupService.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

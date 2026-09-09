@@ -183,6 +183,42 @@ export async function uploadFile(tenantId, cfg, path, buffer) {
     });
     return mapEntry(data);
 }
+/**
+ * Subida por SESIÓN, para archivos que no entran en `uploadFile`.
+ *
+ * El endpoint simple de Dropbox (`/files/upload`) corta en 150 MB y contesta un error que no dice eso.
+ * Un backup de la base crece con el tiempo, así que el día que cruce el límite el job fallaría en
+ * silencio cada doce horas. Con sesión se manda en pedazos de 8 MB y no hay techo práctico.
+ *
+ * Se usa SOLO cuando hace falta (ver `subirArchivoGrande` en backupService): abrir una sesión para un
+ * PDF de 200 KB son tres viajes de red en vez de uno.
+ */
+export async function uploadFileSession(tenantId, cfg, path, buffer) {
+    const token = await getAccessToken(tenantId, cfg);
+    const TROZO = 8 * 1024 * 1024;
+    const headers = (arg) => ({
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/octet-stream",
+        "Dropbox-API-Arg": argHeader(arg),
+    });
+    const comun = { maxBodyLength: Infinity, maxContentLength: Infinity, timeout: CONTENT_TIMEOUT_MS };
+    const primero = buffer.subarray(0, Math.min(TROZO, buffer.length));
+    const { data: inicio } = await axios.post(`${CONTENT}/files/upload_session/start`, primero, { headers: headers({ close: false }), ...comun });
+    const sessionId = inicio?.session_id;
+    if (!sessionId)
+        throw new Error("Dropbox no devolvió session_id al abrir la subida por sesión");
+    let offset = primero.length;
+    while (offset < buffer.length) {
+        const trozo = buffer.subarray(offset, Math.min(offset + TROZO, buffer.length));
+        await axios.post(`${CONTENT}/files/upload_session/append_v2`, trozo, { headers: headers({ cursor: { session_id: sessionId, offset }, close: false }), ...comun });
+        offset += trozo.length;
+    }
+    const { data } = await axios.post(`${CONTENT}/files/upload_session/finish`, Buffer.alloc(0), {
+        headers: headers({ cursor: { session_id: sessionId, offset }, commit: { path, mode: "add", autorename: true, mute: false } }),
+        ...comun,
+    });
+    return mapEntry(data);
+}
 export async function deleteEntry(tenantId, cfg, path) {
     await rpc(tenantId, cfg, "/files/delete_v2", { path });
 }
