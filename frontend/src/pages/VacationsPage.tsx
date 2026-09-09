@@ -8,6 +8,7 @@ import { clientsAPI, Client } from "../api/clients";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { companiesAPI, Company } from "../api/companies";
 import { PageLayout } from "../components/ui/PageLayout";
+import { UserVacationManagementTab } from "../components/vacations/UserVacationManagementTab";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
@@ -54,6 +55,13 @@ export const VacationsPage: React.FC = () => {
   const helpEntry = getHelp(HELP_KEY);
 
   const [openInfo, setOpenInfo] = useState(false);
+  /**
+   * Las dos vistas de la misma cosa: las SOLICITUDES (lo que la gente pidió) y la GESTIÓN por persona
+   * (cuántos días tiene cada una y cómo van sus saldos). Estaban en módulos distintos —solicitudes en
+   * Vacaciones, saldos adentro de Configuración— y para responder "¿le quedan días?" había que saltar
+   * de un lado al otro. Acá conviven.
+   */
+  const [activeTab, setActiveTab] = useState<"solicitudes" | "gestion">("solicitudes");
   const [mockVacations, setMockVacations] = useState<VacationRequestMock[]>([]);
   const [selectedVacation, setSelectedVacation] = useState<VacationRequestMock | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -809,7 +817,10 @@ export const VacationsPage: React.FC = () => {
   return (
     <PageLayout
       title="Vacaciones"
-      itemCount={filteredVacations.length}
+      // El contador y los botones del encabezado son de las SOLICITUDES: en la Gestión contarían otra
+      // cosa (personas, no pedidos) y el resumen de estados no aplica. La Gestión trae su propio título
+      // con su propio contador.
+      itemCount={activeTab === "solicitudes" ? filteredVacations.length : undefined}
       subtitle="Gestión de solicitudes de vacaciones del personal"
       faIcon={{ icon: faCalendar }}
       infoModal={{
@@ -822,16 +833,30 @@ export const VacationsPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de vacaciones" title="Ver resumen de vacaciones">
-            <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
-          </button>
-          <button onClick={() => navigate("/vacations/calendar")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Ver calendario de vacaciones" aria-label="Ver calendario de vacaciones">
-            <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
-          </button>
-        </div>
+        activeTab === "solicitudes" ? (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de vacaciones" title="Ver resumen de vacaciones">
+              <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+            </button>
+            <button onClick={() => navigate("/vacations/calendar")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Ver calendario de vacaciones" aria-label="Ver calendario de vacaciones">
+              <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
+            </button>
+          </div>
+        ) : undefined
       }
       searchAndFilters={
+        <div className="space-y-4">
+          {/* Pestañas. La Gestión trae sus propios filtros, así que los de acá solo salen con las solicitudes. */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === "solicitudes" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("solicitudes")}>
+              Solicitudes
+            </button>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === "gestion" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("gestion")}>
+              Gestión por Usuario
+            </button>
+          </div>
+
+          {activeTab === "solicitudes" && (
         <div className="flex gap-4 items-center justify-between flex-wrap">
           <div className="flex-1 relative min-w-[200px]">
             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -871,8 +896,13 @@ export const VacationsPage: React.FC = () => {
             </div>
           )}
         </div>
+          )}
+        </div>
       }
     >
+      {activeTab === "gestion" ? (
+        <UserVacationManagementTab />
+      ) : (
       <div className="space-y-6">
         <div>
           {loading ? (
@@ -1031,6 +1061,7 @@ export const VacationsPage: React.FC = () => {
           )}
         </div>
       </div>
+      )}
 
       <Modal
         isOpen={showDetailModal && !!selectedVacation}

@@ -9,7 +9,6 @@ import { VacationOverlapRules } from '../components/vacations/VacationOverlapRul
 
 import { ProjectVacationConfigTab } from '../components/vacations/ProjectVacationConfigTab';
 import { ConsecutiveDaysConfigTab } from '../components/vacations/ConsecutiveDaysConfigTab';
-import { UserVacationManagementTab } from '../components/vacations/UserVacationManagementTab';
 
 import { ContractConfigTab } from '../components/vacations/ContractConfigTab';
 
@@ -19,7 +18,7 @@ export function VacationsRulesPage() {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
   const [openInfo, setOpenInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'global' | 'overlap' | 'projects' | 'consecutive_days' | 'users_management' | 'contracts'>('global');
+  const [activeTab, setActiveTab] = useState<'global' | 'overlap' | 'projects' | 'consecutive_days' | 'contracts'>('global');
 
   return (
     <PageLayout
@@ -51,9 +50,6 @@ export function VacationsRulesPage() {
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overlap' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('overlap')}>
               Solapamiento
             </button>
-            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'users_management' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('users_management')}>
-              Gestión por Usuario
-            </button>
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'contracts' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('contracts')}>
               Visibilidad por tipo de Contrato
             </button>
@@ -65,7 +61,8 @@ export function VacationsRulesPage() {
             {activeTab === 'projects' && <ProjectVacationConfigTab />}
             {activeTab === 'consecutive_days' && <ConsecutiveDaysConfigTab />}
             {activeTab === 'overlap' && <VacationOverlapRules />}
-            {activeTab === 'users_management' && <UserVacationManagementTab />}
+            {/* «Gestión por Usuario» se mudó a Vacaciones (Admin General): los saldos se miran junto a
+                las solicitudes, no acá, que es donde se configuran las reglas. */}
             {activeTab === 'contracts' && <ContractConfigTab />}
           </div>
         </div>

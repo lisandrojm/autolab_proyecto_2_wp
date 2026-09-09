@@ -471,6 +471,10 @@ export const UserVacationManagementTab: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Ingreso / Antigüedad</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol Empresa</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400">Total Anual</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400">Tomados (Gozados)</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400">Pendientes</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400">Disponibles</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">
                 <span className="inline-flex items-center gap-1.5">
                   Días Extra
@@ -484,10 +488,6 @@ export const UserVacationManagementTab: React.FC = () => {
                   </button>
                 </span>
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400">Total Anual</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400">Tomados (Gozados)</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400">Pendientes</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400">Disponibles</th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -529,17 +529,6 @@ export const UserVacationManagementTab: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
                       {getActiveContractType(balance) || "Sin contrato"}
                     </td>
-                    {/* Días Extra (beneficio de la compañía): se guarda en el usuario, no en el balance del año */}
-                    <td className="px-4 py-4 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={extraValue}
-                        onChange={(e) => handleExtraChange(balance.userId, e.target.value)}
-                        title="Beneficio de la compañía: días de vacaciones que la empresa suma a los que fija la ley."
-                        className={claseCampo("extra", hasExtraChange(balance))}
-                      />
-                    </td>
                     {/* Total Annual */}
                     <td className="px-4 py-4 text-center">
                       <input
@@ -578,6 +567,17 @@ export const UserVacationManagementTab: React.FC = () => {
                         value={availableValue}
                         onChange={(e) => handleFieldChange(balance.userId, "available", e.target.value)}
                         className={claseCampo("disponibles", edits.available !== undefined && edits.available !== balance.display.available)}
+                      />
+                    </td>
+                    {/* Días Extra (beneficio de la compañía): se guarda en el usuario, no en el balance del año */}
+                    <td className="px-4 py-4 text-center">
+                      <input
+                        type="number"
+                        min="0"
+                        value={extraValue}
+                        onChange={(e) => handleExtraChange(balance.userId, e.target.value)}
+                        title="Beneficio de la compañía: días de vacaciones que la empresa suma a los que fija la ley."
+                        className={claseCampo("extra", hasExtraChange(balance))}
                       />
                     </td>
                   </tr>
@@ -619,10 +619,8 @@ export const UserVacationManagementTab: React.FC = () => {
           <p>Configura y edita los días correspondientes, gozados, pendientes y disponibles para cada año.</p>
           <div>
             <p className="font-semibold mb-2">Las columnas</p>
+            {/* En el mismo orden en que están en la tabla, para poder leerlas de corrido. */}
             <ul className="space-y-1">
-              <li>
-                <span className="font-semibold text-blue-600 dark:text-blue-400">Días Extra</span>: el beneficio de la compañía. Se guarda en la persona, no en el año.
-              </li>
               <li>
                 <span className="font-semibold text-violet-600 dark:text-violet-400">Total Anual</span>: los días que le corresponden, ya con los Días Extra sumados.
               </li>
@@ -634,6 +632,9 @@ export const UserVacationManagementTab: React.FC = () => {
               </li>
               <li>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">Disponibles</span>: lo que queda por tomar.
+              </li>
+              <li>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">Días Extra</span>: el beneficio de la compañía. Se guarda en la persona, no en el año.
               </li>
             </ul>
           </div>
