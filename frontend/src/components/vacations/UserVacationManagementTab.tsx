@@ -5,6 +5,7 @@ import { faSearch, faFilter, faSpinner, faSave, faCalendarAlt, faCircleInfo } fr
 import { vacationsAPI } from "../../api/vacations";
 import { usersAPI } from "../../api/users";
 import { InfoModal } from "../ui/InfoModal";
+import { Paginador, POR_PAGINA } from "../ui/Paginador";
 import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -102,6 +103,15 @@ export const UserVacationManagementTab: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
   const [openInfoExtra, setOpenInfoExtra] = useState(false);
+  /**
+   * Página que se está viendo. Son 1573 personas: dibujarlas todas son 1573 filas con cinco inputs
+   * cada una —casi ocho mil campos— y el navegador se arrastra al tipear en cualquiera de ellos.
+   *
+   * Los cambios sin guardar NO se pierden al cambiar de página: `editedValues` y `editedExtras` están
+   * indexados por `userId` y `handleSaveAll` recorre esos mapas, no lo que está dibujado. Se puede
+   * editar en la página 1, saltar a la 7, editar ahí y guardar las dos cosas de una.
+   */
+  const [pagina, setPagina] = useState(1);
 
   useEffect(() => {
     loadFilters();
@@ -113,6 +123,9 @@ export const UserVacationManagementTab: React.FC = () => {
 
   useEffect(() => {
     filterBalances();
+    // Volver a la 1 al cambiar un filtro: quedarse en la página 7 de un resultado de 3 páginas es una
+    // tabla vacía que parece "no hay nadie".
+    setPagina(1);
   }, [balances, searchTerm, selectedProject, selectedRoleFrame, selectedContract, selectedStatus]);
 
   const loadFilters = async () => {
@@ -359,6 +372,17 @@ export const UserVacationManagementTab: React.FC = () => {
     yearsOptions.push(y);
   }
 
+  /*
+    Los filtros y el buscador trabajan SIEMPRE sobre el total y recién después se corta la página. Al
+    revés —filtrar dentro de la página— el buscador contestaría "no hay nadie" sobre gente que sí está.
+
+    La página se acota acá y no en el `setPagina`: si un filtro deja menos páginas que la que se estaba
+    mirando, esto la trae a la última que existe en vez de dibujar una tabla vacía.
+  */
+  const totalPaginas = Math.max(1, Math.ceil(filteredBalances.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const balancesDeLaPagina = filteredBalances.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -462,8 +486,28 @@ export const UserVacationManagementTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
+      {/*
+        UNA SOLA BARRA VERTICAL.
+
+        El alto de la tabla es EL QUE QUEDA de pantalla: `100svh` menos lo fijo de arriba, que
+        `PageLayout` publica medido en `--wp-sticky-top`, menos lo que hay DEBAJO de la tabla dentro de
+        esta tarjeta. Ese segundo descuento es el que faltaba: el `mb-6` propio, el paginador y la barra
+        de Guardar sumaban casi diez rem de página sobrante, así que aparecía una segunda barra y llegar
+        al final de la tabla no era llegar al final de la página.
+
+        Los 10.5rem son alto de chrome fijo (1.5 del `mb-6` + 1.5 del `p-6` de la tarjeta + ~2.75 del
+        paginador + ~4.75 de la barra de Guardar), no un número atado a la pantalla. Cuando el paginador
+        no se dibuja —una sola página— sobra ese pedacito abajo: preferible a que falte, porque faltar
+        es justamente la segunda barra.
+
+        NO cambiar `overflow-x` por `clip` para empujar el scroll vertical a la página: rompe el
+        `<thead>` sticky, que se resuelve contra el scrollport más cercano y este div lo sigue siendo.
+        El eje X hace falta igual: la tabla es más ancha que la ventana.
+
+        `min-h` porque el cálculo puede dar muy poco en una pantalla baja, y una tabla de tres filas no
+        se puede usar. Cuando el mínimo y el máximo se cruzan, gana el mínimo.
+      */}
+      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-10.5rem)]">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
             <tr>
@@ -492,7 +536,7 @@ export const UserVacationManagementTab: React.FC = () => {
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredBalances.length > 0 ? (
-              filteredBalances.map((balance) => {
+              balancesDeLaPagina.map((balance) => {
                 const edits = editedValues[balance.userId] || {};
                 const isModified = hasRowChanges(balance) || hasExtraChange(balance);
 
@@ -593,6 +637,8 @@ export const UserVacationManagementTab: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      <Paginador total={filteredBalances.length} pagina={paginaActual} onCambiar={setPagina} entidadPlural="personas" />
 
       <div className="flex justify-end gap-3 py-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
         <button
