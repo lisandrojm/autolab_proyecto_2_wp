@@ -49,6 +49,14 @@ export async function consultarCuitEnArca(tenantId, cuitCrudo) {
     }
     if (!r.encontrado)
         throw new ErrorConsultaCuit(404, r.faultString || "ARCA no devolvió datos para este CUIT.");
+    /*
+      EL DOCUMENTO DEL ORGANISMO LE GANA A LA CUENTA.
+  
+      Los 8 dígitos del medio del CUIT siguen sirviendo de respaldo —y son lo único que hay en el caso
+      inactivo, que ni siquiera llega hasta acá—, pero cuando ARCA manda `numeroDocumento` ese es el
+      bueno: la cuenta solo vale para los prefijos de persona física y no la confirmó nadie.
+    */
+    const delCuit = PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "";
     return {
         cuit,
         nombre: r.nombre || "",
@@ -56,7 +64,11 @@ export async function consultarCuitEnArca(tenantId, cuitCrudo) {
         denominacion: r.denominacion || "",
         estado: r.estado,
         tipoPersona: r.tipoPersona,
-        documento: PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "",
+        documento: r.numeroDocumento || delCuit,
+        fechaNacimiento: r.fechaNacimiento,
+        tipoDocumento: r.tipoDocumento,
+        domicilio: r.domicilio,
+        fechaFallecimiento: r.fechaFallecimiento,
     };
 }
 /**

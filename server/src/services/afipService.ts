@@ -258,6 +258,63 @@ async function obtenerTicket(tenantId: string, cfg: TenantAfipConfig, service: s
   return ticket;
 }
 
+/** Domicilio del padrón, ya aplanado a los campos que la ficha de una persona sabe guardar.
+ *  `provincia` viaja para poder mostrarla, aunque hoy `User` no tenga dónde escribirla. */
+export interface DomicilioPadron {
+  calle?: string;
+  numero?: string;
+  localidad?: string;
+  codigoPostal?: string;
+  provincia?: string;
+  /** "FISCAL" | "LEGAL/REAL" — de cuál de los dos salió, para poder decirlo en pantalla. */
+  tipo?: string;
+}
+
+/**
+ * CUÁL DE LOS DOS DOMICILIOS, Y POR QUÉ ESTA FUNCIÓN EXISTE SEPARADA.
+ *
+ * ARCA devuelve `<domicilio>` con multiplicidad 0..* (§4.2 del manual): el FISCAL, que es el declarado
+ * ante el organismo, y el LEGAL/REAL. Para una persona física el LEGAL/REAL es el que más se parece a
+ * dónde vive, así que ese manda y el FISCAL queda de respaldo.
+ *
+ * LA TRAMPA ESTÁ EN EL PARSER, NO EN ARCA. `XMLParser` se construye sin `isArray`, así que una etiqueta
+ * repetida llega como array y una sola llega como OBJETO. Un `.find()` directo sobre el objeto no tira
+ * error: devuelve `undefined` en silencio, y el domicilio simplemente no aparecería para toda persona
+ * que tenga uno solo declarado — el peor tipo de bug, porque parece "ARCA no lo mandó".
+ *
+ * Está exportada para poder probar justamente eso con los dos XML de ejemplo, sin llamar al organismo.
+ */
+export function elegirDomicilio(persona: any): DomicilioPadron | undefined {
+  const crudo = buscar(persona, "domicilio");
+  const lista: any[] = (Array.isArray(crudo) ? crudo : crudo ? [crudo] : []).filter((d) => d && typeof d === "object");
+  if (lista.length === 0) return undefined;
+
+  const tipoDe = (d: any) => String(buscar(d, "tipoDomicilio") ?? "").toUpperCase();
+  const elegido = lista.find((d) => tipoDe(d).includes("LEGAL")) ?? lista.find((d) => tipoDe(d).includes("FISCAL")) ?? lista[0];
+
+  const texto = (nombre: string) => {
+    const v = buscar(elegido, nombre);
+    return v === undefined || v === null || v === "" ? undefined : String(v).trim();
+  };
+  return {
+    calle: texto("calle"),
+    numero: texto("numero"),
+    localidad: texto("localidad"),
+    codigoPostal: texto("codigoPostal"),
+    provincia: texto("descripcionProvincia"),
+    tipo: tipoDe(elegido) || undefined,
+  };
+}
+
+/** "1936-02-11T12:00:00-03:00" → "1936-02-11". Se corta el string en vez de pasar por `Date` a propósito:
+ *  `new Date(...).toISOString()` lo lleva a UTC y una fecha con hora 00:00 y offset negativo se va al día
+ *  anterior. Acá la fecha ya viene en la zona del organismo y lo que importa es el día que dice. */
+const soloFecha = (valor: any): string | undefined => {
+  const texto = String(valor ?? "").trim();
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(texto);
+  return m ? m[1] : undefined;
+};
+
 export interface ResultadoPadron {
   cuit: string;
   encontrado: boolean;
@@ -270,6 +327,20 @@ export interface ResultadoPadron {
    *  Vacíos en personas jurídicas, que traen `razonSocial` y no se pueden partir sin adivinar. */
   nombre?: string;
   apellido?: string;
+  /** "YYYY-MM-DD". ARCA la manda como DateTime con offset ("1936-02-11T12:00:00-03:00"). */
+  fechaNacimiento?: string;
+  /** Sigla del tipo de documento SEGÚN ARCA: DNI, LC, LE, CI, PAS, DNI M, TRAM… (anexo 5.1 del manual).
+   *  No es el `tipoDocumentoId` de la plataforma: la traducción vive en el frontend, que es donde está
+   *  cargado el catálogo de FRAME. */
+  tipoDocumento?: string;
+  /** Documento TAL COMO LO DECLARA EL ORGANISMO. Es mejor dato que los ocho dígitos del medio del CUIT
+   *  (la cuenta que hacen `consultaCuit` y `nombreArca`): esa cuenta solo vale para personas físicas y
+   *  no lleva sello de nadie. */
+  numeroDocumento?: string;
+  /** Domicilio de la persona, ya elegido entre los que devuelve ARCA (ver `elegirDomicilio`). */
+  domicilio?: DomicilioPadron;
+  /** Si viene, la persona figura fallecida en el padrón. Nunca frena nada acá: quien consume decide. */
+  fechaFallecimiento?: string;
   /** Presentes solo si AFIP devolvió un SOAP Fault (encontrado=false por fault, no por respuesta vacía). */
   faultCode?: string;
   faultString?: string;
@@ -408,6 +479,10 @@ export async function consultarPadron(tenantId: string, cfg: TenantAfipConfig, c
         const nombre = buscar(persona, "nombre");
         const apellido = buscar(persona, "apellido");
         const denominacion = razonSocial ?? [nombre, apellido].filter(Boolean).join(" ");
+        // El resto de `persona` ya venía en la respuesta y se descartaba: la ficha de la persona los
+        // vuelve a pedir tipeados a mano en el formulario siguiente. Son consultas que ya se pagaron.
+        const numeroDocumento = buscar(persona, "numeroDocumento");
+        const tipoDocumento = buscar(persona, "tipoDocumento");
         resultado = {
           cuit,
           encontrado: true,
@@ -416,6 +491,11 @@ export async function consultarPadron(tenantId: string, cfg: TenantAfipConfig, c
           denominacion: denominacion ? String(denominacion) : undefined,
           nombre: nombre ? String(nombre) : undefined,
           apellido: apellido ? String(apellido) : undefined,
+          fechaNacimiento: soloFecha(buscar(persona, "fechaNacimiento")),
+          tipoDocumento: tipoDocumento ? String(tipoDocumento).trim() : undefined,
+          numeroDocumento: numeroDocumento != null && numeroDocumento !== "" ? String(numeroDocumento).trim() : undefined,
+          domicilio: elegirDomicilio(persona),
+          fechaFallecimiento: soloFecha(buscar(persona, "fechaFallecimiento")),
           raw: personaReturn,
         };
       }

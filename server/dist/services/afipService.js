@@ -222,6 +222,48 @@ async function obtenerTicket(tenantId, cfg, service) {
     return ticket;
 }
 /**
+ * CUÁL DE LOS DOS DOMICILIOS, Y POR QUÉ ESTA FUNCIÓN EXISTE SEPARADA.
+ *
+ * ARCA devuelve `<domicilio>` con multiplicidad 0..* (§4.2 del manual): el FISCAL, que es el declarado
+ * ante el organismo, y el LEGAL/REAL. Para una persona física el LEGAL/REAL es el que más se parece a
+ * dónde vive, así que ese manda y el FISCAL queda de respaldo.
+ *
+ * LA TRAMPA ESTÁ EN EL PARSER, NO EN ARCA. `XMLParser` se construye sin `isArray`, así que una etiqueta
+ * repetida llega como array y una sola llega como OBJETO. Un `.find()` directo sobre el objeto no tira
+ * error: devuelve `undefined` en silencio, y el domicilio simplemente no aparecería para toda persona
+ * que tenga uno solo declarado — el peor tipo de bug, porque parece "ARCA no lo mandó".
+ *
+ * Está exportada para poder probar justamente eso con los dos XML de ejemplo, sin llamar al organismo.
+ */
+export function elegirDomicilio(persona) {
+    const crudo = buscar(persona, "domicilio");
+    const lista = (Array.isArray(crudo) ? crudo : crudo ? [crudo] : []).filter((d) => d && typeof d === "object");
+    if (lista.length === 0)
+        return undefined;
+    const tipoDe = (d) => String(buscar(d, "tipoDomicilio") ?? "").toUpperCase();
+    const elegido = lista.find((d) => tipoDe(d).includes("LEGAL")) ?? lista.find((d) => tipoDe(d).includes("FISCAL")) ?? lista[0];
+    const texto = (nombre) => {
+        const v = buscar(elegido, nombre);
+        return v === undefined || v === null || v === "" ? undefined : String(v).trim();
+    };
+    return {
+        calle: texto("calle"),
+        numero: texto("numero"),
+        localidad: texto("localidad"),
+        codigoPostal: texto("codigoPostal"),
+        provincia: texto("descripcionProvincia"),
+        tipo: tipoDe(elegido) || undefined,
+    };
+}
+/** "1936-02-11T12:00:00-03:00" → "1936-02-11". Se corta el string en vez de pasar por `Date` a propósito:
+ *  `new Date(...).toISOString()` lo lleva a UTC y una fecha con hora 00:00 y offset negativo se va al día
+ *  anterior. Acá la fecha ya viene en la zona del organismo y lo que importa es el día que dice. */
+const soloFecha = (valor) => {
+    const texto = String(valor ?? "").trim();
+    const m = /^(\d{4}-\d{2}-\d{2})/.exec(texto);
+    return m ? m[1] : undefined;
+};
+/**
  * ¿ESTE FAULT DICE «INACTIVO» O DICE «NO EXISTE»? La diferencia decide si se puede dar un alta.
  *
  * El A13 no devuelve `persona` con `estadoClave: INACTIVO`: cuando el CUIT está dado de baja contesta
@@ -338,6 +380,10 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
                 const nombre = buscar(persona, "nombre");
                 const apellido = buscar(persona, "apellido");
                 const denominacion = razonSocial ?? [nombre, apellido].filter(Boolean).join(" ");
+                // El resto de `persona` ya venía en la respuesta y se descartaba: la ficha de la persona los
+                // vuelve a pedir tipeados a mano en el formulario siguiente. Son consultas que ya se pagaron.
+                const numeroDocumento = buscar(persona, "numeroDocumento");
+                const tipoDocumento = buscar(persona, "tipoDocumento");
                 resultado = {
                     cuit,
                     encontrado: true,
@@ -346,6 +392,11 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
                     denominacion: denominacion ? String(denominacion) : undefined,
                     nombre: nombre ? String(nombre) : undefined,
                     apellido: apellido ? String(apellido) : undefined,
+                    fechaNacimiento: soloFecha(buscar(persona, "fechaNacimiento")),
+                    tipoDocumento: tipoDocumento ? String(tipoDocumento).trim() : undefined,
+                    numeroDocumento: numeroDocumento != null && numeroDocumento !== "" ? String(numeroDocumento).trim() : undefined,
+                    domicilio: elegirDomicilio(persona),
+                    fechaFallecimiento: soloFecha(buscar(persona, "fechaFallecimiento")),
                     raw: personaReturn,
                 };
             }

@@ -670,6 +670,9 @@ router.get("/users-balance", async (req: any, res) => {
         email: user.email,
         hireDate: user.hireDate ? user.hireDate.toISOString().split("T")[0] : null,
         seniority: seniorityText,
+        // Días extra: beneficio de la compañía por encima de los que fija la LCT. Ya está sumado en
+        // `calculated.totalAnnual`, pero se devuelve aparte para poder verlo y editarlo en la grilla.
+        extraVacationDays: extraDays,
         calculated: {
           totalAnnual: calculatedTotalAnnual,
           taken: calculatedTaken,

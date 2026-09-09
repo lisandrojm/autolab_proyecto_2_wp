@@ -19,8 +19,32 @@ export interface DatosDeArca {
     denominacion: string;
     estado: string;
     tipoPersona?: string;
-    /** Los 8 dígitos del medio, sin ceros a la izquierda. Vacío en personas jurídicas. */
+    /** Número de documento. Sale del padrón cuando ARCA lo manda; si no, son los 8 dígitos del medio del
+     *  CUIT, sin ceros a la izquierda. Vacío en personas jurídicas. */
     documento: string;
+    /**
+     * DATOS PARA PRELLENAR LA FICHA, no para sellarla.
+     *
+     * Vienen en la misma respuesta que ya se pedía para confirmar el nombre, así que no cuestan una
+     * consulta más. El sello (`nombreValidadoArcaAt`) sigue siendo solo del nombre y el apellido: estos
+     * campos se ofrecen completados y quien carga el alta los puede corregir, empezando por el domicilio
+     * —que es el declarado ante el organismo y puede no ser dónde vive la persona—.
+     *
+     * `tipoDocumento` es la sigla de ARCA (anexo 5.1: DNI, LC, LE, CI, PAS…), no el `tipoDocumentoId` de
+     * la plataforma: traducirla necesita el catálogo de FRAME, que está cargado en el frontend.
+     */
+    fechaNacimiento?: string;
+    tipoDocumento?: string;
+    domicilio?: {
+        calle?: string;
+        numero?: string;
+        localidad?: string;
+        codigoPostal?: string;
+        provincia?: string;
+        tipo?: string;
+    };
+    /** Si viene, la persona figura fallecida en el padrón. Se informa; no frena el alta. */
+    fechaFallecimiento?: string;
 }
 /** Error con el status HTTP que le corresponde, para que cada ruta lo traduzca igual. */
 export declare class ErrorConsultaCuit extends Error {

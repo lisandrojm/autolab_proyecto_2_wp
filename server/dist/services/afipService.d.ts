@@ -16,6 +16,32 @@ export interface CertificadoInfo {
  *  para mostrar en el status, no para autenticar. Nunca tira: si el PEM guardado está corrupto,
  *  devuelve todo null en vez de romper el endpoint de status. */
 export declare function getCertificadoInfo(certificadoPemRaw: string): CertificadoInfo;
+/** Domicilio del padrón, ya aplanado a los campos que la ficha de una persona sabe guardar.
+ *  `provincia` viaja para poder mostrarla, aunque hoy `User` no tenga dónde escribirla. */
+export interface DomicilioPadron {
+    calle?: string;
+    numero?: string;
+    localidad?: string;
+    codigoPostal?: string;
+    provincia?: string;
+    /** "FISCAL" | "LEGAL/REAL" — de cuál de los dos salió, para poder decirlo en pantalla. */
+    tipo?: string;
+}
+/**
+ * CUÁL DE LOS DOS DOMICILIOS, Y POR QUÉ ESTA FUNCIÓN EXISTE SEPARADA.
+ *
+ * ARCA devuelve `<domicilio>` con multiplicidad 0..* (§4.2 del manual): el FISCAL, que es el declarado
+ * ante el organismo, y el LEGAL/REAL. Para una persona física el LEGAL/REAL es el que más se parece a
+ * dónde vive, así que ese manda y el FISCAL queda de respaldo.
+ *
+ * LA TRAMPA ESTÁ EN EL PARSER, NO EN ARCA. `XMLParser` se construye sin `isArray`, así que una etiqueta
+ * repetida llega como array y una sola llega como OBJETO. Un `.find()` directo sobre el objeto no tira
+ * error: devuelve `undefined` en silencio, y el domicilio simplemente no aparecería para toda persona
+ * que tenga uno solo declarado — el peor tipo de bug, porque parece "ARCA no lo mandó".
+ *
+ * Está exportada para poder probar justamente eso con los dos XML de ejemplo, sin llamar al organismo.
+ */
+export declare function elegirDomicilio(persona: any): DomicilioPadron | undefined;
 export interface ResultadoPadron {
     cuit: string;
     encontrado: boolean;
@@ -28,6 +54,20 @@ export interface ResultadoPadron {
      *  Vacíos en personas jurídicas, que traen `razonSocial` y no se pueden partir sin adivinar. */
     nombre?: string;
     apellido?: string;
+    /** "YYYY-MM-DD". ARCA la manda como DateTime con offset ("1936-02-11T12:00:00-03:00"). */
+    fechaNacimiento?: string;
+    /** Sigla del tipo de documento SEGÚN ARCA: DNI, LC, LE, CI, PAS, DNI M, TRAM… (anexo 5.1 del manual).
+     *  No es el `tipoDocumentoId` de la plataforma: la traducción vive en el frontend, que es donde está
+     *  cargado el catálogo de FRAME. */
+    tipoDocumento?: string;
+    /** Documento TAL COMO LO DECLARA EL ORGANISMO. Es mejor dato que los ocho dígitos del medio del CUIT
+     *  (la cuenta que hacen `consultaCuit` y `nombreArca`): esa cuenta solo vale para personas físicas y
+     *  no lleva sello de nadie. */
+    numeroDocumento?: string;
+    /** Domicilio de la persona, ya elegido entre los que devuelve ARCA (ver `elegirDomicilio`). */
+    domicilio?: DomicilioPadron;
+    /** Si viene, la persona figura fallecida en el padrón. Nunca frena nada acá: quien consume decide. */
+    fechaFallecimiento?: string;
     /** Presentes solo si AFIP devolvió un SOAP Fault (encontrado=false por fault, no por respuesta vacía). */
     faultCode?: string;
     faultString?: string;

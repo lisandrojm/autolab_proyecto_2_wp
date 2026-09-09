@@ -6,7 +6,7 @@ import { User, Contract } from "../../api/users";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { getContratoActivo } from "../../utils/contratoVigencia";
+import { getContratoActivo, ordenarContratosDesc } from "../../utils/contratoVigencia";
 import { ContractCard, EmpresaOption, findTemplate, templateHasContent } from "./ContractCard";
 import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 
@@ -46,25 +46,35 @@ interface EmployeeContractsModalProps {
 export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, contratoEmpresas = [], releaseEmpresas = [], onEdit, onDelete, onUploadAltaDocumento }) => {
   const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
 
-  const contracts = useMemo(() => {
-    if (!user) return [];
+  /** Los contratos tal como están guardados en el UserProject: de acá salen los índices que se editan. */
+  const contratosEnBD = useMemo(() => {
+    if (!user) return [] as Contract[];
     const projectMeta = user.metadata?.projects?.find((p) => {
       const pId = p.projectId;
       const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
       return String(idToCheck) === String(projectId);
     });
-    // más reciente primero
-    return [...(projectMeta?.contracts || [])].reverse();
+    return (projectMeta?.contracts || []) as Contract[];
   }, [user, projectId]);
+
+  // Del más reciente al más viejo: el último contrato arriba de todo.
+  const contracts = useMemo(() => ordenarContratosDesc(contratosEnBD as any[]) as Contract[], [contratosEnBD]);
 
   /**
    * El contrato resaltado es el que RIGE hoy (el vigente más reciente), no el último cargado:
    * un tiempo indeterminado abierto puede tener detrás un contrato viejo ya vencido.
+   *
+   * Se elige sobre el orden de la BD y no sobre el de la pantalla: cuando varios contratos comparten
+   * la fecha de alta, `getContratoActivo` se queda con el último que recorre, y ese tiene que ser el
+   * último cargado (el que la lista muestra primero), no el primero.
    */
   const idxQueRige = useMemo(() => {
-    const queRige = getContratoActivo(contracts as any[]);
+    const queRige = getContratoActivo(contratosEnBD as any[]);
     return queRige ? contracts.indexOf(queRige as any) : -1;
-  }, [contracts]);
+  }, [contratosEnBD, contracts]);
+
+  /** Índice del contrato en el array del UserProject, que es el que esperan editar/descargar/subir. */
+  const indiceEnBD = (contract: Contract) => contratosEnBD.indexOf(contract);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
@@ -83,15 +93,14 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     [contracts, filters, idxQueRige],
   );
 
-  const handleDownloadContract = async (contract: Contract, displayIndex: number, empresaId?: string) => {
+  const handleDownloadContract = async (contract: Contract, empresaId?: string) => {
     const template = findTemplate(contract, contratoFrames);
     if (!templateHasContent(template)) {
       sweetAlert.error("Sin contenido", "La plantilla de este tipo de contrato todavía no tiene contenido redactado.");
       return;
     }
     if (!user) return;
-    // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
-    const originalIndex = contracts.length - 1 - displayIndex;
+    const originalIndex = indiceEnBD(contract);
     try {
       await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: user._id, projectId, contractIndex: originalIndex, empresaId });
     } catch {
@@ -99,10 +108,9 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     }
   };
 
-  const handleDownloadRelease = async (release: Release, displayIndex: number, empresaId?: string) => {
+  const handleDownloadRelease = async (release: Release, contract: Contract, empresaId?: string) => {
     if (!user) return;
-    // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
-    const originalIndex = contracts.length - 1 - displayIndex;
+    const originalIndex = indiceEnBD(contract);
     try {
       await releasesAPI.downloadFilled(release, { userId: user._id, projectId, contractIndex: originalIndex, empresaId });
     } catch {
@@ -142,12 +150,12 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                 contratoEmpresas={contratoEmpresas}
                 releaseEmpresas={releaseEmpresas}
                 isLatest={idx === idxQueRige}
-                onEdit={user ? () => onEdit(user, contract, contracts.length - 1 - idx) : undefined}
+                onEdit={user ? () => onEdit(user, contract, indiceEnBD(contract)) : undefined}
                 onDelete={user ? () => onDelete(user._id) : undefined}
                 deleteTitle="Eliminar del proyecto"
-                onDownloadContract={(empresaId) => handleDownloadContract(contract, idx, empresaId)}
-                onDownloadRelease={(release, empresaId) => handleDownloadRelease(release, idx, empresaId)}
-                onUploadAltaDocumento={user && onUploadAltaDocumento ? (file) => onUploadAltaDocumento(user, contracts.length - 1 - idx, file) : undefined}
+                onDownloadContract={(empresaId) => handleDownloadContract(contract, empresaId)}
+                onDownloadRelease={(release, empresaId) => handleDownloadRelease(release, contract, empresaId)}
+                onUploadAltaDocumento={user && onUploadAltaDocumento ? (file) => onUploadAltaDocumento(user, indiceEnBD(contract), file) : undefined}
               />
             ))}
           </div>

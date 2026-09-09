@@ -12,7 +12,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { generarPassword } from "../utils/password";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { mensajeErrorArca } from "../utils/errorArca";
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from "../utils/nacionalidadDocumento";
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida, tipoDocumentoDeArca } from "../utils/nacionalidadDocumento";
 
 type Tab = "general" | "domicilio" | "bancarios";
 
@@ -457,16 +457,35 @@ export const RegistroPage: React.FC = () => {
         sweetAlert.warningAlert("Es una persona jurídica", `ARCA devolvió «${data.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
+      /*
+        SE PRELLENA LO QUE ARCA YA MANDÓ EN ESTA MISMA RESPUESTA.
+
+        Acá pesa más que en el alta interna: del otro lado del link hay una persona sola, muchas veces
+        desde el teléfono, y `REQUIRED_BY_STEP` le pide localidad, calle, altura y código postal antes
+        de dejarla seguir. Cuatro de esos cinco campos ya vinieron en la consulta que acaba de hacer.
+
+        Solo campos vacíos, y ninguno queda bloqueado: el domicilio del padrón es el declarado ante el
+        organismo y puede no ser donde vive. Se ofrece completado para que lo confirme o lo corrija,
+        que es bastante más rápido que tipearlo de cero.
+      */
+      const dom = data.domicilio as { calle?: string; numero?: string; localidad?: string; codigoPostal?: string } | undefined;
+      const tipoDeArca = tipoDocumentoDeArca(tiposDocumentoDisponibles as any[], data.tipoDocumento);
       setForm((prev) => ({
         ...prev,
         firstName: data.nombre,
         lastName: data.apellido,
         documento: data.documento || prev.documento,
-        tipoDocumentoId: tipoDni ? String(tipoDni.id) : prev.tipoDocumentoId,
+        // El tipo que dice ARCA; si su sigla no está en el catálogo (TRAM, ACTA, CERT…), lo que ya estaba.
+        tipoDocumentoId: tipoDeArca ? String((tipoDeArca as any).id) : prev.tipoDocumentoId || (tipoDni ? String(tipoDni.id) : prev.tipoDocumentoId),
+        fechaNac: prev.fechaNac || data.fechaNacimiento || "",
+        calle: prev.calle || dom?.calle || "",
+        altura: prev.altura || dom?.numero || "",
+        localidad: prev.localidad || dom?.localidad || "",
+        codigoPostal: prev.codigoPostal || dom?.codigoPostal || "",
       }));
       setFieldErrors((prev) => ({ ...prev, firstName: false, lastName: false, documento: false, cuit: false }));
       setValidadoEnArca(true);
-      sweetAlert.success("Datos traídos de ARCA", `${data.nombre} ${data.apellido}${data.documento ? ` · DNI ${data.documento}` : ""}`);
+      sweetAlert.success("Datos traídos de ARCA", `${data.nombre} ${data.apellido}${data.documento ? ` · ${data.tipoDocumento || "DNI"} ${data.documento}` : ""}`);
     } catch {
       const m = mensajeErrorArca(undefined, null);
       sweetAlert.error(m.titulo, m.detalle);

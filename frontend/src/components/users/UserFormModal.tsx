@@ -16,7 +16,7 @@ import { cuitEsValido } from "../../utils/cuit";
 import { generarPassword } from "../../utils/password";
 import { mensajeErrorArca } from "../../utils/errorArca";
 import { fuzzyMatch } from "../../utils/searchHelpers";
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from "../../utils/nacionalidadDocumento";
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida, tipoDocumentoDeArca } from "../../utils/nacionalidadDocumento";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from "@fortawesome/free-solid-svg-icons";
 
@@ -252,15 +252,39 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         sweetAlert.warningAlert("Es una persona jurídica", `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
+      /*
+        LO QUE SE SELLA Y LO QUE SE PRELLENA SON DOS COSAS DISTINTAS.
+
+        Nombre y apellido llevan el sello y se pisan siempre: son lo que ARCA tiene registrado y por
+        eso el formulario los bloquea después. El resto —fecha de nacimiento, domicilio, tipo de
+        documento— viene en la MISMA respuesta y hasta acá se tiraba, así que la persona lo volvía a
+        tipear. Ahora se ofrece completado, pero SOLO sobre campos vacíos y sin bloquear nada:
+
+         - Editando una ficha, pisar lo cargado sería borrar el trabajo de alguien por apretar un botón.
+         - El domicilio del padrón es el que la persona declaró ante el organismo, y puede no ser donde
+           vive. Se ofrece; se corrige.
+      */
+      const dom = r.domicilio;
+      const tipoDeArca = tipoDocumentoDeArca(tiposDocumentoDisponibles as any[], r.tipoDocumento);
       setFormData((prev) => ({
         ...prev,
         firstName: r.nombre,
         lastName: r.apellido,
         documento: r.documento || prev.documento,
-        tipoDocumentoId: tipoDni ? tipoDni.data.id : prev.tipoDocumentoId,
+        // El tipo que dice ARCA; si su sigla no existe en el catálogo (TRAM, ACTA, CERT…), lo que ya estaba.
+        tipoDocumentoId: tipoDeArca ? (tipoDeArca as any).data.id : (prev.tipoDocumentoId ?? tipoDni?.data.id),
+        fechaNac: prev.fechaNac || r.fechaNacimiento || "",
+        calle: prev.calle || dom?.calle || "",
+        altura: prev.altura || dom?.numero || "",
+        localidad: prev.localidad || dom?.localidad || "",
+        codigoPostal: prev.codigoPostal || dom?.codigoPostal || "",
       }));
       setValidadoEnArca(true);
-      sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · DNI ${r.documento}` : ""}`);
+      sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · ${r.tipoDocumento || "DNI"} ${r.documento}` : ""}`);
+      // Figura fallecida en el padrón: se avisa y la decisión queda de este lado. No frena el alta.
+      if (r.fechaFallecimiento) {
+        sweetAlert.warningAlert("ARCA la registra como fallecida", `El padrón devuelve fecha de fallecimiento ${r.fechaFallecimiento} para este CUIT.\n\nRevisá que sea la persona que estás dando de alta antes de seguir.`);
+      }
     } catch (e: any) {
       const m = mensajeErrorArca(e?.response?.status, e?.response?.data);
       sweetAlert.error(m.titulo, m.detalle);

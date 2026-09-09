@@ -102,3 +102,25 @@ export const getContratoActivo = <T extends ContratoVigenciaLike>(contratos?: T[
 
   return masReciente(contratos);
 };
+
+/**
+ * Copia ordenada del más reciente al más viejo, con la MISMA clave de antigüedad que usa
+ * `getContratoActivo` (fecha de alta y, para desempatar, la de carga).
+ *
+ * Cuando dos contratos empatan en esa clave —muy común: varios contratos con la misma alta, o
+ * importados sin `fecha_carga`— gana el que está más adelante en el array de la BD, o sea el
+ * último cargado. Sin ese desempate el orden quedaba a merced del `sort` y el contrato que rige
+ * podía caer al final de la lista.
+ */
+export const ordenarContratosDesc = <T extends ContratoVigenciaLike>(contratos?: T[] | null): T[] => {
+  if (!Array.isArray(contratos)) return [];
+  return contratos
+    .map((contrato, posicion) => ({ contrato, posicion }))
+    .sort((a, b) => {
+      const claveA = claveAntiguedad(a.contrato);
+      const claveB = claveAntiguedad(b.contrato);
+      if (claveA !== claveB) return claveA < claveB ? 1 : -1;
+      return b.posicion - a.posicion;
+    })
+    .map(({ contrato }) => contrato);
+};

@@ -181,7 +181,26 @@ export const afipAPI = {
    * miles de veces lo que ya se sabía.
    */
   /** Quién es un CUIT según ARCA. No guarda nada: es para completar el alta de un usuario nuevo. */
-  async consultarPadron(cuit: string): Promise<{ cuit: string; nombre: string; apellido: string; denominacion: string; estado: string; tipoPersona?: string; documento: string; yaExiste?: { _id: string; nombre: string; email?: string } | null }> {
+  /**
+   * Consulta el Padrón A13. Además del nombre —lo único que lleva sello— devuelve los datos con los
+   * que se puede PRELLENAR la ficha: fecha de nacimiento, tipo de documento según ARCA y el domicilio
+   * (el LEGAL/REAL si está, si no el FISCAL). Vienen en la misma respuesta, no cuestan una consulta más.
+   */
+  async consultarPadron(cuit: string): Promise<{
+    cuit: string;
+    nombre: string;
+    apellido: string;
+    denominacion: string;
+    estado: string;
+    tipoPersona?: string;
+    documento: string;
+    fechaNacimiento?: string;
+    /** Sigla de ARCA (DNI, LC, LE, CI, PAS…), no el `tipoDocumentoId` del catálogo. */
+    tipoDocumento?: string;
+    domicilio?: { calle?: string; numero?: string; localidad?: string; codigoPostal?: string; provincia?: string; tipo?: string };
+    fechaFallecimiento?: string;
+    yaExiste?: { _id: string; nombre: string; email?: string } | null;
+  }> {
     const { data } = await axios.post("/afip/padron/consultar", { cuit });
     return data;
   },

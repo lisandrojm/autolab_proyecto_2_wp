@@ -23,8 +23,25 @@ export interface DatosDeArca {
   denominacion: string;
   estado: string;
   tipoPersona?: string;
-  /** Los 8 dígitos del medio, sin ceros a la izquierda. Vacío en personas jurídicas. */
+  /** Número de documento. Sale del padrón cuando ARCA lo manda; si no, son los 8 dígitos del medio del
+   *  CUIT, sin ceros a la izquierda. Vacío en personas jurídicas. */
   documento: string;
+  /**
+   * DATOS PARA PRELLENAR LA FICHA, no para sellarla.
+   *
+   * Vienen en la misma respuesta que ya se pedía para confirmar el nombre, así que no cuestan una
+   * consulta más. El sello (`nombreValidadoArcaAt`) sigue siendo solo del nombre y el apellido: estos
+   * campos se ofrecen completados y quien carga el alta los puede corregir, empezando por el domicilio
+   * —que es el declarado ante el organismo y puede no ser dónde vive la persona—.
+   *
+   * `tipoDocumento` es la sigla de ARCA (anexo 5.1: DNI, LC, LE, CI, PAS…), no el `tipoDocumentoId` de
+   * la plataforma: traducirla necesita el catálogo de FRAME, que está cargado en el frontend.
+   */
+  fechaNacimiento?: string;
+  tipoDocumento?: string;
+  domicilio?: { calle?: string; numero?: string; localidad?: string; codigoPostal?: string; provincia?: string; tipo?: string };
+  /** Si viene, la persona figura fallecida en el padrón. Se informa; no frena el alta. */
+  fechaFallecimiento?: string;
 }
 
 /** Prefijos de CUIT de persona física: solo en esos el tramo del medio es un DNI. */
@@ -80,6 +97,14 @@ export async function consultarCuitEnArca(tenantId: any, cuitCrudo: string): Pro
 
   if (!r.encontrado) throw new ErrorConsultaCuit(404, r.faultString || "ARCA no devolvió datos para este CUIT.");
 
+  /*
+    EL DOCUMENTO DEL ORGANISMO LE GANA A LA CUENTA.
+
+    Los 8 dígitos del medio del CUIT siguen sirviendo de respaldo —y son lo único que hay en el caso
+    inactivo, que ni siquiera llega hasta acá—, pero cuando ARCA manda `numeroDocumento` ese es el
+    bueno: la cuenta solo vale para los prefijos de persona física y no la confirmó nadie.
+  */
+  const delCuit = PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "";
   return {
     cuit,
     nombre: r.nombre || "",
@@ -87,7 +112,11 @@ export async function consultarCuitEnArca(tenantId: any, cuitCrudo: string): Pro
     denominacion: r.denominacion || "",
     estado: r.estado,
     tipoPersona: r.tipoPersona,
-    documento: PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "",
+    documento: r.numeroDocumento || delCuit,
+    fechaNacimiento: r.fechaNacimiento,
+    tipoDocumento: r.tipoDocumento,
+    domicilio: r.domicilio,
+    fechaFallecimiento: r.fechaFallecimiento,
   };
 }
 

@@ -83,6 +83,43 @@ export function tipoDocumentoSigueValido(tiposDisponibles: OpcionCatalogo[], tip
 }
 
 /**
+ * LA SIGLA QUE DEVUELVE ARCA → EL TIPO DE DOCUMENTO DEL CATÁLOGO.
+ *
+ * El padrón manda el tipo como texto (anexo 5.1 del manual del A13: DNI, LC, LE, CI, PAS, TRAM, ACTA,
+ * INDET, CERT, DIEXT, "DNI M", INDOC). El catálogo de la plataforma viene de FRAME y tiene cinco de
+ * esos, así que el resto NO tiene dónde caer.
+ *
+ * Se matchea POR NOMBRE y no por id: los ids del catálogo cambian entre entornos, y ese es justamente
+ * el motivo por el que el resto de este archivo detecta Argentina y Pasaporte por nombre.
+ *
+ * Devuelve `undefined` cuando la sigla no mapea, y quien llama tiene que dejar lo que ya estaba. Eso
+ * importa: antes los dos formularios clavaban DNI a mano después de consultar el padrón, así que una
+ * persona con Libreta Cívica —el propio ejemplo del manual— quedaba guardada como DNI.
+ */
+const PATRON_DE_SIGLA: Array<{ sigla: string; patron: RegExp }> = [
+  // Cada patrón acepta las dos formas en que puede estar cargado el catálogo de FRAME: la sigla suelta
+  // ("LC") o el nombre largo ("Libreta Cívica"). `libreta` sola no alcanza: no distingue cívica de
+  // enrolamiento, que son dos entradas distintas.
+  { sigla: "LC", patron: /^lc$|libreta\s+civica/ },
+  { sigla: "LE", patron: /^le$|libreta\s+(de\s+)?enrolamiento/ },
+  { sigla: "CI", patron: /^ci$|cedula/ },
+  { sigla: "PAS", patron: /^pas$|pasaporte/ },
+  { sigla: "DNI", patron: /^d\.?n\.?i\.?$|documento\s+nacional/ },
+];
+
+export function tipoDocumentoDeArca<T extends { name: string }>(tipos: T[], siglaArca?: string | null): T | undefined {
+  const sigla = String(siglaArca || "")
+    .trim()
+    .toUpperCase();
+  if (!sigla) return undefined;
+  // "DNI M" (D.N.I. de número múltiple) es un DNI a los efectos del catálogo, que no tiene esa variante.
+  const buscada = sigla === "DNI M" ? "DNI" : sigla;
+  const entrada = PATRON_DE_SIGLA.find((p) => p.sigla === buscada);
+  if (!entrada) return undefined; // TRAM, ACTA, INDET, CERT, DIEXT, INDOC: sin equivalente.
+  return tipos.find((t) => entrada.patron.test(normalizar(t.name)));
+}
+
+/**
  * La opción "Argentina" del catálogo, para preseleccionarla.
  *
  * Se ofrece como default porque es la nacionalidad de casi todas las altas: arrancar en "Seleccionar…"
