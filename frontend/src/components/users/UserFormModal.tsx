@@ -295,6 +295,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
   const coordinaEn = proyectosQueCoordina(user);
   const coordinacionBloqueada = coordinaEn.length > 0;
+  const [infoMobile, setInfoMobile] = useState(false);
+  /** Los roles Mobile que la persona TIENE. Solo se muestran: quién los asigna es otra pantalla. */
+  const rolesMobileAsignados = () => roles.filter((r) => r.name.toLowerCase().includes("mobile") && formData.roles.includes(r._id));
 
   // Catálogos propios del modal
   const [roles, setRoles] = useState<Role[]>([]);
@@ -1697,69 +1700,50 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     </div>
                     {roles.some((r) => r.name.toLowerCase().includes("mobile")) && (
                       <div>
+                        {/*
+                          EL ROL MOBILE NO SE ELIGE: SE DEDUCE. Por eso se muestra y no se edita.
+
+                          Sale de un solo dato, que ya está cargado en otra pantalla: quien tiene áreas o
+                          turnos a cargo en un proyecto es Coordinador, y el resto es Colaborador. Elegirlo
+                          a mano acá abría dos formas de contestar la misma pregunta, y la de esta pantalla
+                          no era la que mandaba: al asignarle turnos a alguien desde el equipo del proyecto,
+                          el rol cambia igual y lo tildado acá quedaba pisado sin aviso.
+
+                          Al revés también rompía: destildar Coordinador dejaba a una persona con turnos a
+                          cargo sin poder entrar a la app, y esas novedades no las cargaba nadie —aparecían
+                          vencidas en Cumplimiento sin ninguna señal de por qué—. Ese caso ya estaba
+                          bloqueado; lo que faltaba era que el resto tampoco fuera editable.
+                        */}
                         <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
                           <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
                           Mobile (App)
+                          <button type="button" onClick={() => setInfoMobile(true)} title="Cómo se asigna el rol Mobile" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                          </button>
                         </h4>
-                        {coordinacionBloqueada && (
-                          <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-                            Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
-                          </p>
-                        )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {roles
-                            .filter((r) => r.name.toLowerCase().includes("mobile"))
-                            .map((r) => (
-                              <label key={r._id} title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(", ")}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${formData.roles.includes(r._id) ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
-                                <input
-                                  type="checkbox"
-                                  checked={formData.roles.includes(r._id)}
-                                  disabled={coordinacionBloqueada}
-                                  onChange={(e) => {
-                                    if (coordinacionBloqueada) {
-                                      sweetAlert.warningAlert("No se puede cambiar el rol Mobile", `${user?.firstName || "Esta persona"} coordina turnos en ${coordinaEn.join(", ")}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
-                                      return;
-                                    }
-                                    let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
-                                    const name = r.name.toLowerCase();
-                                    if (e.target.checked) {
-                                      if (name.includes("coordinador"))
-                                        newRoles = newRoles.filter(
-                                          (id) =>
-                                            !roles
-                                              .find((ro) => ro._id === id)
-                                              ?.name.toLowerCase()
-                                              .includes("colaborador"),
-                                        );
-                                      else if (name.includes("colaborador"))
-                                        newRoles = newRoles.filter(
-                                          (id) =>
-                                            !roles
-                                              .find((ro) => ro._id === id)
-                                              ?.name.toLowerCase()
-                                              .includes("coordinador"),
-                                        );
-                                    } else {
-                                      if (
-                                        !newRoles.some((id) =>
-                                          roles
-                                            .find((ro) => ro._id === id)
-                                            ?.name.toLowerCase()
-                                            .includes("mobile"),
-                                        )
-                                      ) {
-                                        sweetAlert.warningAlert("Atención", "Debe tener al menos un rol Mobile.");
-                                        return;
-                                      }
-                                    }
-                                    setFormData((prev) => ({ ...prev, roles: newRoles }));
-                                  }}
-                                  className="mt-0.5 rounded text-indigo-500 focus:ring-indigo-500"
-                                />
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
-                              </label>
-                            ))}
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {rolesMobileAsignados().length > 0 ? (
+                            rolesMobileAsignados().map((r) => (
+                              <span key={r._id} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800">
+                                <FontAwesomeIcon icon={faMobileAlt} className="h-3 w-3" />
+                                {r.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-500 dark:text-gray-400 italic">Sin rol Mobile asignado</span>
+                          )}
                         </div>
+
+                        <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                          {coordinacionBloqueada ? (
+                            <>
+                              Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que le corresponde <strong>Mobile-Coordinador</strong>. Para cambiarlo, liberalo desde el equipo del proyecto.
+                            </>
+                          ) : (
+                            <>Se asigna solo: <strong>Mobile-Coordinador</strong> a quien tenga áreas o turnos a cargo, <strong>Mobile-Colaborador</strong> al resto.</>
+                          )}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1961,6 +1945,29 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           </div>
         </Modal>
       )}
+      <InfoModal isOpen={infoMobile} onClose={() => setInfoMobile(false)} title="Rol Mobile" subtitle="Por qué no se elige acá" size="sm" zIndex={(zIndex || 50) + 10}>
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+          <p>
+            El rol de la app <strong>no se elige a mano</strong>: sale de si la persona tiene áreas o turnos a cargo en algún proyecto.
+          </p>
+          <ul className="space-y-1 list-disc pl-5">
+            <li>
+              <strong>Mobile-Coordinador</strong>: coordina áreas o turnos. Es quien carga las novedades del equipo.
+            </li>
+            <li>
+              <strong>Mobile-Colaborador</strong>: el resto. Es el que traen todas las altas por defecto.
+            </li>
+          </ul>
+          <p>
+            Se cambia asignando o quitando la coordinación desde <strong>el equipo del proyecto</strong>, no desde acá. Elegirlo en esta pantalla abría dos formas de contestar la misma
+            pregunta, y esta no era la que mandaba: al darle turnos a alguien, el rol cambiaba igual y lo tildado acá quedaba pisado sin aviso.
+          </p>
+          <p className="text-xs text-gray-500">
+            Sacarle Coordinador a quien tiene turnos a cargo lo dejaría sin poder entrar a la app, y esas novedades no las cargaría nadie: aparecerían vencidas en Cumplimiento sin
+            ninguna señal de por qué.
+          </p>
+        </div>
+      </InfoModal>
     </InfoModal>
   );
 };

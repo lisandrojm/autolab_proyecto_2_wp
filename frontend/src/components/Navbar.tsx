@@ -510,14 +510,28 @@ export const MobileNavbar: React.FC = () => {
 
     // Los sueltos de la sección. El grupo entra aparte y ordena por su propio rótulo, «Usuarios».
     const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'];
+    /*
+      «Centros de Costos» y «Clientes» van AL FINAL, después de Vacaciones, y no en el orden alfabético
+      del resto de la sección.
+
+      Es la única excepción al alfabético del menú y es deliberada: son dos catálogos que se mudaron
+      desde Configuración porque se consultan a diario, pero no son operación como Proyectos o Pedidos.
+      Puestos por nombre caerían primeros —antes que Contratos— y encabezarían la sección con lo que
+      menos se abre de ella.
+    */
+    const generalAlFinal = isSuperAdminTenant ? [] : ['/centros-costo', '/clients'];
     const generalAdminItems = [
-      ...adminItems.filter((item) => generalSueltos.includes(item.path)),
-      ...(usuariosGeneralChildren.length > 0 ? [usuariosGeneralGroup] : []),
-    ].sort(byLabel) as any[];
+      ...[
+        ...adminItems.filter((item) => generalSueltos.includes(item.path)),
+        ...(usuariosGeneralChildren.length > 0 ? [usuariosGeneralGroup] : []),
+      ].sort(byLabel),
+      ...generalAlFinal.map((ruta) => adminItems.find((item) => item.path === ruta)).filter(Boolean),
+    ] as any[];
 
     // Ojo: los paths de los grupos (Plantillas, ARCA, Documentos, Usuarios) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
-    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/sindicatos', '/contratos', '/releases-tipos', '/admin/sedes'];
+    // «/clients» y «/centros-costo» ya NO están acá: se mudaron a Admin GENERAL (ver `generalAlFinal`).
+    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/bancos', '/sindicatos', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
