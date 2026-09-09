@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -166,6 +166,18 @@ const ROLES_PATHS = ['/roles'];
 const DOCUMENTOS_PATHS = ["/escaneo-dropbox", "/dropbox-sign"];
 
 /**
+ * Subgrupo "DDBB" (dentro de Configuración): la base de datos.
+ *
+ * Hoy tiene un solo hijo, «MongoDB», y aun así es un grupo: lo que se configura es LA BASE, y el motor
+ * es un detalle de implementación que puede no ser el único para siempre. Un ítem suelto llamado
+ * «MongoDB» en el menú obligaría a saber qué motor usa la plataforma para encontrar los backups.
+ *
+ * Las copias en sí NO están acá: viven en Documentos → DDBB, que es donde está la carpeta de Dropbox.
+ * Esto es la configuración; aquello es el archivo.
+ */
+const DDBB_PATHS = ["/ddbb/mongodb"];
+
+/**
  * Subgrupos colapsables de Configuración. `storageKey` persiste el abierto/cerrado y
  * `paths` decide qué items se sacan del listado plano para meterlos adentro del grupo.
  */
@@ -173,6 +185,7 @@ const CONFIG_GROUPS = [
   { key: 'plantillas', storageKey: 'configPlantillasOpen', paths: PLANTILLAS_PATHS },
   { key: 'arca', storageKey: 'configArcaOpen', paths: ARCA_PATHS },
   { key: 'documentos', storageKey: 'configDocumentosOpen', paths: DOCUMENTOS_PATHS },
+  { key: 'ddbb', storageKey: 'configDdbbOpen', paths: DDBB_PATHS },
   /*
     Los dos «Usuarios». El primero NO está en Configuración sino en Admin GENERAL — esta lista dejó de
     ser solo de esa sección y pasó a ser el registro de todos los grupos plegables del menú, que es lo
@@ -384,6 +397,9 @@ export const MobileNavbar: React.FC = () => {
       // que dice de qué se trata. Cada una se sigue nombrando por el SERVICIO, a secas: qué configura
       // —la cuenta y el escaneo de carpetas acá, la casilla de avisos de firma en la de abajo— lo
       // dice el subtítulo de su pantalla, que es donde hay lugar para explicarlo.
+      // «MongoDB», dentro del subgrupo DDBB. Comparte permiso con la configuración de Dropbox porque el
+      // backup se guarda justamente ahí; además, la API de backups exige rol admin por su cuenta.
+      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/ddbb/mongodb', icon: faDatabase, label: 'MongoDB', scope: 'global' });
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faDropbox, label: 'Dropbox', scope: 'global' });
       // Comparte permiso con el escaneo de Dropbox: las dos configuran la misma integración.
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faDropbox, label: 'DropboxSign', scope: 'global' });
@@ -544,6 +560,10 @@ export const MobileNavbar: React.FC = () => {
     ];
     const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
 
+    // Subgrupo «DDBB»: la configuración de la base (ver DDBB_PATHS).
+    const ddbbChildren = (DDBB_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
+    const ddbbGroup = { path: '#ddbb', groupKey: 'ddbb', icon: faDatabase, label: 'DDBB', scope: 'global' as const, children: ddbbChildren };
+
     // Subgrupo "Documentos", alfabético.
     const documentosChildren = (DOCUMENTOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
     const documentosGroup = { path: '#documentos', groupKey: 'documentos', icon: faDropbox, label: 'Documentos', scope: 'global' as const, children: documentosChildren };
@@ -589,6 +609,7 @@ export const MobileNavbar: React.FC = () => {
       ...(hasPermission('config_profile:view') ? [profileItem] : []),
       ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
       ...(arcaChildren.length > 0 ? [arcaGroup] : []),
+      ...(ddbbChildren.length > 0 ? [ddbbGroup] : []),
       ...(documentosChildren.length > 0 ? [documentosGroup] : []),
       ...(usuariosConfigChildren.length > 0 ? [usuariosConfigGroup] : []),
       ...(empresasChildren.length > 0 ? [empresasGroup] : []),

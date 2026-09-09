@@ -90,13 +90,29 @@ export function DocumentsPage() {
                 {generandoBackup ? "Generando…" : "Backup ahora"}
               </button>
             )}
-            <a
-              href="/escaneo-dropbox"
-              title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
-              className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Configurar transición automática
-            </a>
+            {/*
+              El botón de la derecha cambia con la pestaña. «Configurar transición automática» es del
+              escaneo de HelloSign/ARCA —qué carpetas se vigilan para mover un contrato de estado— y no
+              tiene nada que ver con los backups; en DDBB, en su lugar, va la configuración de MongoDB.
+            */}
+            {activeTab === "ddbb" ? (
+              <a
+                href="/ddbb/mongodb"
+                title="Frecuencia de la copia automática y cómo importarla"
+                className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <FontAwesomeIcon icon={faDatabase} className="text-[10px]" />
+                MongoDB
+              </a>
+            ) : (
+              <a
+                href="/escaneo-dropbox"
+                title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
+                className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Configurar transición automática
+              </a>
+            )}
           </div>
 
           {/* Tab Content */}
@@ -122,7 +138,7 @@ export function DocumentsPage() {
               14. Acá no hay nada que dispare un backup: esta pestaña solo mira la carpeta, con las
               mismas acciones que las otras dos —descargar, subir, borrar—.
             */}
-            {activeTab === "ddbb" && <DropboxTab key={`ddbb-${recargaDdbb}`} fixedRoot="/WEPRODU/DDBB" rootLabel="DDBB" onCountChange={handleCountChange} />}
+            {activeTab === "ddbb" && <DropboxTab key={`ddbb-${recargaDdbb}`} fixedRoot="/WEPRODU/DDBB" rootLabel="DDBB" ocultarActualizar onCountChange={handleCountChange} />}
           </div>
         </div>
       }

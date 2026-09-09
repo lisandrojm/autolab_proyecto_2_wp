@@ -71,6 +71,22 @@ export interface ITenant extends Document {
       servicioPadronVerificadoAt?: Date;
     };
     /**
+     * Backup automático de la base a Dropbox (ver `services/backupService.ts`).
+     *
+     * Vive en el tenant y no en una variable de entorno para que se pueda cambiar desde la pantalla
+     * —Documentos → DDBB → MongoDB— sin tocar el VPS ni reiniciar el proceso: el scheduler lee esto en
+     * cada vuelta.
+     */
+    backup?: {
+      /** Cada cuántas horas se genera una copia. */
+      intervaloHoras?: number;
+      /** Cuántas copias se conservan; las más viejas se borran al subir una nueva. */
+      retener?: number;
+      /** Cuándo terminó la última copia. Es lo que decide si toca una nueva, así que sobrevive a un reinicio. */
+      ultimoBackupAt?: Date;
+      ultimoError?: string;
+    };
+    /**
      * Usuario de clave fiscal con el que el SERVIDOR opera Simplificación Registral por su cuenta.
      *
      * ES OTRA COSA QUE `afip` DE ARRIBA. Aquel es un certificado X.509 para webservices (Consulta
@@ -253,6 +269,13 @@ const tenantSchema = new Schema<ITenant>(
         servicioPadronFaultCode: { type: String },
         servicioPadronFaultString: { type: String },
         servicioPadronVerificadoAt: { type: Date },
+      },
+      // Backup automático de la base a Dropbox. Ver el comentario en la interfaz, arriba.
+      backup: {
+        intervaloHoras: { type: Number, default: 12 },
+        retener: { type: Number, default: 14 },
+        ultimoBackupAt: { type: Date },
+        ultimoError: { type: String },
       },
       // Usuario DELEGADO de clave fiscal para operar Simplificación Registral. Ver el comentario
       // largo en la interfaz, arriba: no puede ser el del apoderado.

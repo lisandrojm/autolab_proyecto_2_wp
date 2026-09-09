@@ -60,6 +60,13 @@ const tenantSchema = new Schema({
             servicioPadronFaultString: { type: String },
             servicioPadronVerificadoAt: { type: Date },
         },
+        // Backup automático de la base a Dropbox. Ver el comentario en la interfaz, arriba.
+        backup: {
+            intervaloHoras: { type: Number, default: 12 },
+            retener: { type: Number, default: 14 },
+            ultimoBackupAt: { type: Date },
+            ultimoError: { type: String },
+        },
         // Usuario DELEGADO de clave fiscal para operar Simplificación Registral. Ver el comentario
         // largo en la interfaz, arriba: no puede ser el del apoderado.
         arcaSimplificacion: {

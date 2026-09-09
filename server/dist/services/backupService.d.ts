@@ -29,6 +29,11 @@
  */
 /** Carpeta en Dropbox. Es la que muestra el tab «DDBB» de Documentos. */
 export declare const CARPETA_BACKUPS = "/WEPRODU/DDBB";
+/** Valores por defecto, para un tenant que nunca tocó la pantalla de configuración. */
+export declare const INTERVALO_HORAS_DEFAULT = 12;
+export declare const RETENER_DEFAULT = 14;
+/** Opciones que ofrece la pantalla. Se validan también en el server: el front no es la única puerta. */
+export declare const INTERVALOS_VALIDOS: readonly [6, 12, 24, 48];
 /** ¿Hay un backup en curso? Lo usa el endpoint para no arrancar uno encima. */
 export declare const backupEnCurso: () => boolean;
 export declare function nombreDeCarpeta(baseDatos: string, fecha?: Date): string;

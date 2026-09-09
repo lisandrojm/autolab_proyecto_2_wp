@@ -38,6 +38,7 @@ import { OrdersPage } from "./pages/OrdersPage";
 import { OrderTypesPage } from "./pages/OrderTypesPage";
 import { VacationsPage } from "./pages/VacationsPage";
 import { VacationsRulesPage } from "./pages/VacationsRulesPage";
+import { MongoDbPage } from "./pages/MongoDbPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { EscaneoDropboxConfigPage } from "./pages/EscaneoDropboxConfigPage";
 import { DropboxSignConfigPage } from "./pages/DropboxSignConfigPage";
@@ -440,6 +441,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <VacationsRulesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ddbb/mongodb"
+                element={
+                  <ProtectedRoute>
+                    <MongoDbPage />
                   </ProtectedRoute>
                 }
               />

@@ -43,9 +43,15 @@ interface DropboxTabProps {
   fixedRoot?: string;
   /** Nombre a mostrar para `fixedRoot` en el primer breadcrumb (si no, se deriva del path). */
   rootLabel?: string;
+  /**
+   * Oculta el botón de actualizar. Lo usa DDBB: ahí el contenido no lo escribe nadie de afuera —lo
+   * genera el propio sistema— y el listado ya se recarga solo cuando termina un backup, así que un
+   * botón de refrescar al lado del de generar invita a confundir uno con el otro.
+   */
+  ocultarActualizar?: boolean;
 }
 
-export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot, rootLabel }) => {
+export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot, rootLabel, ocultarActualizar }) => {
   const full = !!fixedRoot;
   const [status, setStatus] = useState<DropboxStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -456,7 +462,9 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
           ))}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => loadFolder(currentPath)} title="Actualizar" className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"><FontAwesomeIcon icon={faRotate} className={busy ? "animate-spin" : ""} /></button>
+          {!ocultarActualizar && (
+            <button onClick={() => loadFolder(currentPath)} title="Actualizar" className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"><FontAwesomeIcon icon={faRotate} className={busy ? "animate-spin" : ""} /></button>
+          )}
           <button onClick={handleCreateFolder} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faFolderPlus} /> Carpeta</button>
           <button onClick={handleUploadClick} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faUpload} /> Subir</button>
           {/*

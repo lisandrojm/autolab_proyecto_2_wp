@@ -8,6 +8,17 @@ export interface ResultadoBackup {
   borrados: number;
 }
 
+export interface ConfigBackup {
+  enCurso: boolean;
+  carpeta: string;
+  intervaloHoras: number;
+  retener: number;
+  ultimoBackupAt: string | null;
+  ultimoError: string | null;
+  intervalosValidos: number[];
+  dropboxConectado: boolean;
+}
+
 export const backupsAPI = {
   /**
    * Fuerza un backup y espera a que termine.
@@ -18,6 +29,16 @@ export const backupsAPI = {
    */
   async ejecutar(): Promise<ResultadoBackup> {
     const { data } = await axios.post("/backups/ejecutar", {}, { timeout: 15 * 60 * 1000 });
+    return data;
+  },
+
+  async config(): Promise<ConfigBackup> {
+    const { data } = await axios.get("/backups/config");
+    return data;
+  },
+
+  async guardarConfig(intervaloHoras: number, retener: number): Promise<{ intervaloHoras: number; retener: number }> {
+    const { data } = await axios.put("/backups/config", { intervaloHoras, retener });
     return data;
   },
 };

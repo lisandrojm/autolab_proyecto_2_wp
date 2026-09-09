@@ -34,10 +34,14 @@ import { getTenantDropboxConfig, listFolder, uploadFile, uploadFileSession, crea
  */
 /** Carpeta en Dropbox. Es la que muestra el tab «DDBB» de Documentos. */
 export const CARPETA_BACKUPS = "/WEPRODU/DDBB";
-/** Cada cuánto corre solo. */
-const INTERVALO_MS = 12 * 60 * 60 * 1000;
-/** Cuántos backups se conservan: 14 son una semana a dos por día. */
-const RETENER = 14;
+/** Cada cuánto se PREGUNTA si toca un backup. No es la frecuencia de la copia: esa la define el
+ *  tenant y se lee en cada vuelta, así que cambiarla desde la pantalla no necesita reiniciar el server. */
+const TICK_MS = 15 * 60 * 1000;
+/** Valores por defecto, para un tenant que nunca tocó la pantalla de configuración. */
+export const INTERVALO_HORAS_DEFAULT = 12;
+export const RETENER_DEFAULT = 14;
+/** Opciones que ofrece la pantalla. Se validan también en el server: el front no es la única puerta. */
+export const INTERVALOS_VALIDOS = [6, 12, 24, 48];
 /** Arriba de esto, Dropbox rechaza el endpoint simple (su tope real es 150 MB). */
 const TOPE_SUBIDA_SIMPLE = 140 * 1024 * 1024;
 /** Colecciones que NO se respaldan: son caché reconstruible y de las que más pesan. */
@@ -129,16 +133,16 @@ async function subir(tenantId, cfg, ruta, contenido) {
  * Solo mira CARPETAS que empiezan con el nombre de la base: si alguien deja otra cosa acá, la retención
  * no se la lleva puesta.
  */
-export function elegirParaBorrar(entries, baseDatos, retener = RETENER) {
+export function elegirParaBorrar(entries, baseDatos, retener = RETENER_DEFAULT) {
     const backups = entries
         .filter((e) => e.tag === "folder" && e.name.startsWith(`${baseDatos}_`))
         .sort((a, b) => b.name.localeCompare(a.name));
     return backups.slice(retener);
 }
-async function limpiarViejos(tenantId, cfg, baseDatos) {
+async function limpiarViejos(tenantId, cfg, baseDatos, retener) {
     const { entries } = await listFolder(tenantId, cfg, CARPETA_BACKUPS, true);
     let borrados = 0;
-    for (const viejo of elegirParaBorrar(entries, baseDatos)) {
+    for (const viejo of elegirParaBorrar(entries, baseDatos, retener)) {
         try {
             await deleteEntry(tenantId, cfg, viejo.path);
             borrados++;
@@ -189,7 +193,11 @@ export async function correrBackup(disparador = "cron") {
         await asegurarCarpeta(tenantId, cfg, ruta);
         for (const archivo of archivos)
             await subir(tenantId, cfg, `${ruta}/${archivo.nombre}`, archivo.contenido);
-        const borrados = await limpiarViejos(tenantId, cfg, baseDatos);
+        const retener = Math.max(1, Number(tenant?.integrations?.backup?.retener) || RETENER_DEFAULT);
+        const borrados = await limpiarViejos(tenantId, cfg, baseDatos, retener);
+        // Se guarda CUÁNDO terminó, no cuándo arrancó: es lo que decide si toca la próxima, y sobrevive a
+        // un reinicio del server (con un `setInterval` a secas, cada reinicio corría un backup de más).
+        await Tenant.updateOne({ _id: tenant._id }, { $set: { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": "" } });
         const bytes = archivos.reduce((a, f) => a + f.contenido.length, 0);
         console.log(`[BACKUP:${disparador}] ${carpeta} · ${archivos.length - 1} colecciones · ${documentos} documentos · ${(bytes / 1024 / 1024).toFixed(1)} MB · ${borrados} viejos borrados`);
         return { carpeta, colecciones: archivos.length - 1, documentos, bytes, borrados };
@@ -205,21 +213,35 @@ export async function correrBackup(disparador = "cron") {
  * un recorrido completo de la base compite justo ahí.
  */
 export const initBackupScheduler = () => {
-    console.log(`[BACKUP] Scheduler iniciado: cada 12 h → ${CARPETA_BACKUPS} (se conservan ${RETENER}).`);
+    console.log(`[BACKUP] Scheduler iniciado (revisa cada ${TICK_MS / 60000} min) → ${CARPETA_BACKUPS}`);
     const tick = async () => {
         try {
             // Una base grande puede tardar más que el intervalo, o puede haber uno forzado a mano en curso.
             // Sin esta guarda, dos corridas se pisarían y dejarían dos carpetas del mismo momento.
-            if (corriendo) {
-                console.warn("[BACKUP] Ya hay una corrida en curso: se saltea esta.");
+            if (corriendo)
                 return;
-            }
+            const tenant = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 }).lean();
+            if (!tenant)
+                return;
+            const horas = Math.max(1, Number(tenant?.integrations?.backup?.intervaloHoras) || INTERVALO_HORAS_DEFAULT);
+            const ultimo = tenant?.integrations?.backup?.ultimoBackupAt ? new Date(tenant.integrations.backup.ultimoBackupAt).getTime() : 0;
+            if (ultimo && Date.now() - ultimo < horas * 60 * 60 * 1000)
+                return;
             await correrBackup("cron");
         }
         catch (e) {
-            console.error("[BACKUP] Falló la corrida:", e?.message || e);
+            const mensaje = String(e?.message || e);
+            console.error("[BACKUP] Falló la corrida:", mensaje);
+            // Queda registrado en el tenant para poder mostrarlo en la pantalla: un backup que falla de
+            // madrugada, si solo va al log del VPS, no se entera nadie.
+            try {
+                await Tenant.updateOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }, { $set: { "integrations.backup.ultimoError": mensaje } });
+            }
+            catch {
+                // Si ni siquiera se puede escribir el error, ya quedó en el log de arriba.
+            }
         }
     };
     setTimeout(() => void tick(), 5 * 60 * 1000);
-    setInterval(() => void tick(), INTERVALO_MS);
+    setInterval(() => void tick(), TICK_MS);
 };
