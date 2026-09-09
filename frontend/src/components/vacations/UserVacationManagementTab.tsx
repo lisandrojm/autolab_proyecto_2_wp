@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faFilter, faSpinner, faSave, faCalendarAlt, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSave, faCalendarAlt, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../../api/vacations";
 import { usersAPI } from "../../api/users";
 import { InfoModal } from "../ui/InfoModal";
 import { Paginador, POR_PAGINA } from "../ui/Paginador";
+import { SearchAndFilters } from "../ui/SearchAndFilters";
 import { getContratoActivo, esContratoVigente, fechaISO } from "../../utils/contratoVigencia";
 import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
@@ -429,79 +430,50 @@ export const UserVacationManagementTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="relative">
-          <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar usuario..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-
-        <div className="relative">
-          <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select
-            value={selectedProject}
-            onChange={(e) => setSelectedProject(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
-          >
-            <option value="">Todos los Proyectos</option>
-            {projects.map((p) => (
-              <option key={p._id} value={p._id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="relative">
-          <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select
-            value={selectedRoleFrame}
-            onChange={(e) => setSelectedRoleFrame(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
-          >
-            <option value="">Todos los Roles Empresa</option>
-            {roleFrames.map((rf) => (
-              <option key={rf._id} value={rf._id}>
-                {rf.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="relative">
-          <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select
-            value={selectedContract}
-            onChange={(e) => setSelectedContract(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
-          >
-            <option value="">Todos los Contratos</option>
-            {contractTypes.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="relative">
-          <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
-          >
-            <option value="active">Solo Activos</option>
-            <option value="inactive">Solo Inactivos</option>
-            <option value="all">Todos (Activos e Inactivos)</option>
-          </select>
-        </div>
+      {/* Los filtros van en el modal de «Filtros», el mismo control que en Usuarios y Pedidos: eran
+          cinco selects ocupando una fila entera, y lo aplicado no se veía al scrollear la tabla.
+          Ahora queda como badges con su X. */}
+      <div className="mb-6">
+        <SearchAndFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Buscar usuario..."
+          selectFilters={[
+            {
+              label: "Proyecto",
+              value: selectedProject,
+              onChange: setSelectedProject,
+              placeholder: "Todos los Proyectos",
+              options: projects.map((p) => ({ value: p._id, label: p.name })),
+            },
+            {
+              label: "Rol Empresa",
+              value: selectedRoleFrame,
+              onChange: setSelectedRoleFrame,
+              placeholder: "Todos los Roles Empresa",
+              options: roleFrames.map((rf) => ({ value: rf._id, label: rf.name })),
+            },
+            {
+              label: "Contrato",
+              value: selectedContract,
+              onChange: setSelectedContract,
+              placeholder: "Todos los Contratos",
+              options: contractTypes.map((c) => ({ value: c, label: c })),
+            },
+          ]}
+          radioFilters={[
+            {
+              label: "Estado de usuarios",
+              value: selectedStatus,
+              onChange: setSelectedStatus,
+              options: [
+                { value: "active", label: "Solo Activos" },
+                { value: "inactive", label: "Solo Inactivos" },
+                { value: "all", label: "Todos (Activos e Inactivos)" },
+              ],
+            },
+          ]}
+        />
       </div>
 
       {/*

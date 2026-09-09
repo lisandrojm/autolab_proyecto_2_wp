@@ -381,14 +381,19 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
               searchPlaceholder="Buscar por nombre o contenido..."
-              filters={[
+              /* Al modal de «Filtros», como en Usuarios y Pedidos. Va como radio y no como select porque
+                 son tres estados excluyentes de la misma cosa, y así se ven los tres sin desplegar nada.
+                 El sentinela "all" vive adentro de la página (lo leen las dos comparaciones del filtro)
+                 y se traduce a "" acá, que es lo que el componente entiende por "sin filtro". */
+              radioFilters={[
                 {
-                  value: filterActive,
-                  onChange: (v) => setFilterActive(v as any),
+                  label: 'Estado',
+                  value: filterActive === 'all' ? '' : filterActive,
+                  onChange: (v) => setFilterActive((v || 'all') as any),
                   options: [
-                    { value: 'all', label: 'Todas' },
                     { value: 'active', label: 'Activas' },
                     { value: 'inactive', label: 'Inactivas' },
+                    { value: 'all', label: 'Todas' },
                   ],
                 },
               ]}

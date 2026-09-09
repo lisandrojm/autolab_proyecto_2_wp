@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
-import { faUserShield } from '@fortawesome/free-solid-svg-icons';
-import { RolesEmpresaAbm } from '../components/rolesEmpresa/RolesEmpresaAbm';
+import { faUserShield, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { RolesEmpresaAbm, RolesEmpresaAbmHandle } from '../components/rolesEmpresa/RolesEmpresaAbm';
 
 /**
  * Usuarios → Roles Empresa.
@@ -26,6 +27,8 @@ import { RolesEmpresaAbm } from '../components/rolesEmpresa/RolesEmpresaAbm';
 export const RolesEmpresaPage: React.FC = () => {
   const [showInfo, setShowInfo] = useState(false);
   const helpEntry = getHelp('funcionesFrame');
+  /** El alta la abre el ABM, que es donde vive el formulario; el botón vive en el encabezado. */
+  const abm = useRef<RolesEmpresaAbmHandle>(null);
 
   return (
     <PageLayout
@@ -41,9 +44,14 @@ export const RolesEmpresaPage: React.FC = () => {
         size: helpEntry.size,
         content: helpEntry.content,
       }}
+      headerActions={
+        <button onClick={() => abm.current?.abrirNuevo()} aria-label="Nuevo rol empresa" title="Nuevo rol empresa" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+          <FontAwesomeIcon icon={faPlus} />
+        </button>
+      }
       searchAndFilters={
         <div className="mx-auto w-full">
-          <RolesEmpresaAbm />
+          <RolesEmpresaAbm ref={abm} />
         </div>
       }
       children={null}

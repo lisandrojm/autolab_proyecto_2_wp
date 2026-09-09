@@ -9,6 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { MembreteToggle } from '../components/MembreteToggle';
 import { InfoModal } from '../components/ui/InfoModal';
 import { Card } from '../components/ui/Card';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { fuzzyMatch } from '../utils/searchHelpers';
@@ -278,16 +279,28 @@ export const ContratosFramePage: React.FC = () => {
 
   return (
     <PageLayout title="Plantillas | Contratos" subtitle="Catálogo de contratos de FRAME. Cargá registros manualmente o importá un Excel." faIcon={{ icon: faFileContract }} headerActions={headerActions} shouldShowInfo={hasHelp(HELP_KEY)} infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}>
-      <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar contrato..." className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
-        <div className="flex items-center gap-3 shrink-0">
-          <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as 'all' | 'active' | 'inactive')} className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
-            <option value="all">Todos</option>
-            <option value="active">Activos</option>
-            <option value="inactive">Inactivos</option>
-          </select>
-          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
-        </div>
+      {/* Búsqueda y filtros con el control compartido: botón de «Filtros», modal y badges de lo aplicado,
+          igual que en Usuarios y Pedidos. El sentinela "all" queda adentro de la página —lo lee
+          `filtered`— y se traduce a "" acá, que es lo que el componente entiende por "sin filtro". */}
+      <div className="mb-4">
+        <SearchAndFilters
+          searchTerm={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Buscar contrato..."
+          radioFilters={[
+            {
+              label: 'Estado',
+              value: filterActive === 'all' ? '' : filterActive,
+              onChange: (v) => setFilterActive((v || 'all') as 'all' | 'active' | 'inactive'),
+              options: [
+                { value: 'active', label: 'Activos' },
+                { value: 'inactive', label: 'Inactivos' },
+                { value: 'all', label: 'Todos' },
+              ],
+            },
+          ]}
+          extraActions={isLarge ? <ViewToggle value={viewMode} onChange={setViewMode} /> : undefined}
+        />
       </div>
 
       {loading ? (

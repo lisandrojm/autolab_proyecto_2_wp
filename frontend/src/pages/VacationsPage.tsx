@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase, faExclamationTriangle, faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase, faExclamationTriangle, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { companiesAPI, Company } from "../api/companies";
 import { PageLayout } from "../components/ui/PageLayout";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { UserVacationManagementTab } from "../components/vacations/UserVacationManagementTab";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -856,46 +857,49 @@ export const VacationsPage: React.FC = () => {
             </button>
           </div>
 
+          {/* Los filtros van en el modal de «Filtros», igual que en Usuarios y Pedidos. El sentinela
+              "all" se conserva adentro de la página —lo leen `matchesStatus`, `matchesProject` y el
+              texto del vacío— y se traduce a "" acá, que es lo que `SearchAndFilters` entiende por
+              "sin filtro" para el badge y el contador. */}
           {activeTab === "solicitudes" && (
-        <div className="flex gap-4 items-center justify-between flex-wrap">
-          <div className="flex-1 relative min-w-[200px]">
-            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
-          </div>
-
-          <div className="relative">
-            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-              <option value="all">Todos los Proyectos</option>
-              {uniqueProjects.map((pName) => (
-                <option key={pName} value={pName}>
-                  {pName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="relative">
-            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendientes</option>
-              <option value="approved">Aprobadas</option>
-              <option value="rejected">Rechazadas</option>
-              <option value="cancelled">Canceladas</option>
-            </select>
-          </div>
-          {isXXL && (
-            <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-              </button>
-              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
-                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar solicitudes..."
+              selectFilters={[
+                {
+                  label: "Proyecto",
+                  value: projectFilter === "all" ? "" : projectFilter,
+                  onChange: (v) => setProjectFilter(v || "all"),
+                  placeholder: "Todos los Proyectos",
+                  options: uniqueProjects.map((pName) => ({ value: pName, label: pName })),
+                },
+                {
+                  label: "Estado",
+                  value: statusFilter === "all" ? "" : statusFilter,
+                  onChange: (v) => setStatusFilter(v || "all"),
+                  placeholder: "Todos los estados",
+                  options: [
+                    { value: "pending", label: "Pendientes" },
+                    { value: "approved", label: "Aprobadas" },
+                    { value: "rejected", label: "Rechazadas" },
+                    { value: "cancelled", label: "Canceladas" },
+                  ],
+                },
+              ]}
+              extraActions={
+                isXXL ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                      <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                      <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : undefined
+              }
+            />
           )}
         </div>
       }

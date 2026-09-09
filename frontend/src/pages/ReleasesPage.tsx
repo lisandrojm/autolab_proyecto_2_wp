@@ -307,14 +307,17 @@ export function ReleasesPage() {
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
               searchPlaceholder="Buscar por nombre, versión o descripción..."
-              filters={[
+              /* Al modal de «Filtros», como en el resto. El sentinela "all" queda adentro de la página y
+                 se traduce a "" acá: el componente usa el vacío para decidir el badge y el contador. */
+              radioFilters={[
                 {
-                  value: filterActive,
-                  onChange: (v) => setFilterActive(v as any),
+                  label: "Estado",
+                  value: filterActive === "all" ? "" : filterActive,
+                  onChange: (v) => setFilterActive((v || "all") as any),
                   options: [
-                    { value: "all", label: "Todos" },
                     { value: "active", label: "Activos" },
                     { value: "inactive", label: "Inactivos" },
+                    { value: "all", label: "Todos" },
                   ],
                 },
               ]}

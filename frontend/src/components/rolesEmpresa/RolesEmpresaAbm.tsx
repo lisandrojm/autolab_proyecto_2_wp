@@ -4,7 +4,7 @@ import { categoriaSatAPI, CategoriaSatItem, esElegible } from '../../api/categor
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
-import { faUserShield, faLayerGroup, faTable, faGrip, faPlus, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -43,7 +43,18 @@ const AvisoConveniosMezclados: React.FC<{ convenios: string[] }> = ({ convenios 
   </span>
 );
 
-export const RolesEmpresaAbm: React.FC = () => {
+/**
+ * Lo único que el ABM expone hacia afuera: abrir el formulario de alta.
+ *
+ * El botón `+` vive en el encabezado de la página, al lado del ícono de info —como en el resto de las
+ * pantallas—, pero el estado del formulario vive acá adentro. En vez de subir media docena de `useState`
+ * a la página solo para dibujar un botón, la página toma una ref y dispara esta acción.
+ */
+export interface RolesEmpresaAbmHandle {
+  abrirNuevo: () => void;
+}
+
+export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, ref) => {
   const [roles, setRoles] = useState<RoleFrameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -147,6 +158,8 @@ export const RolesEmpresaAbm: React.FC = () => {
     setCatSearch('');
     setShowModal(true);
   };
+
+  React.useImperativeHandle(ref, () => ({ abrirNuevo: openCreate }));
 
   const openEdit = (role: RoleFrameItem) => {
     setEditingRole(role);
@@ -284,10 +297,8 @@ export const RolesEmpresaAbm: React.FC = () => {
         <div className="flex-1 w-full">
           <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o ID externo..." />
         </div>
+        {/* El `+` se mudó al encabezado de la página, al lado del info del título. */}
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={openCreate} aria-label="Nueva función" title="Nueva función" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-            <FontAwesomeIcon icon={faPlus} />
-          </button>
           {isLarge && (
             <div className="flex items-center gap-2">
               <button onClick={() => setViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
@@ -604,6 +615,8 @@ export const RolesEmpresaAbm: React.FC = () => {
       )}
     </div>
   );
-};
+});
+
+RolesEmpresaAbm.displayName = 'RolesEmpresaAbm';
 
 export default RolesEmpresaAbm;
