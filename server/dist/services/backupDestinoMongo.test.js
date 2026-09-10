@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { uriDeBackup, nombreDeBaseDestino } from "./backupDestinoMongo.js";
+import { uriDeBackup, prefijoDeBase, nombreDeBaseCopia, esClusterAparte } from "./backupDestinoMongo.js";
 /**
  * La configuración del segundo destino, que es lo único testeable sin una base de verdad.
  *
@@ -18,34 +18,57 @@ beforeEach(() => {
 });
 process.on("exit", () => Object.assign(process.env, guardado));
 describe("uriDeBackup", () => {
-    it("sin la variable devuelve null: no está configurado, y eso no es un error", () => {
-        // El backup tiene que seguir andando contra Dropbox aunque este destino no exista.
+    it("sin nada configurado no hay destino", () => {
         assert.equal(uriDeBackup(), null);
-        process.env.MONGO_URI_BACKUP = "   ";
-        assert.equal(uriDeBackup(), null, "solo espacios cuenta como vacío");
     });
-    it("devuelve la URI cuando apunta a otro lado", () => {
+    it("por defecto clona en el MISMO cluster de la aplicación: no hace falta pagar otro", () => {
+        process.env.MONGO_URI = "mongodb+srv://user:pass@prod.mongodb.net/";
+        assert.equal(uriDeBackup(), "mongodb+srv://user:pass@prod.mongodb.net/");
+        assert.equal(esClusterAparte(), false);
+    });
+    it("con MONGO_URI_BACKUP apunta a otro cluster, que es el escenario fuerte", () => {
         process.env.MONGO_URI = "mongodb+srv://user:pass@prod.mongodb.net/";
         process.env.MONGO_URI_BACKUP = "mongodb+srv://user:pass@backup.mongodb.net/";
         assert.equal(uriDeBackup(), "mongodb+srv://user:pass@backup.mongodb.net/");
+        assert.equal(esClusterAparte(), true);
     });
-    it("SE NIEGA si el destino es la misma base que la aplicación", () => {
-        const misma = "mongodb+srv://user:pass@prod.mongodb.net/weprodu";
+    it("apuntarla al mismo cluster a mano no la hace «aparte»", () => {
+        const misma = "mongodb+srv://user:pass@prod.mongodb.net/";
         process.env.MONGO_URI = misma;
         process.env.MONGO_URI_BACKUP = misma;
-        assert.throws(() => uriDeBackup(), /MISMA base/, "guardar el backup adentro de lo que respalda no es un backup");
+        assert.equal(esClusterAparte(), false, "la pantalla no puede prometer una protección que no hay");
     });
 });
-describe("nombreDeBaseDestino", () => {
-    it("saca el nombre de la base de la URI, para poder mostrarlo sin exponer credenciales", () => {
-        assert.equal(nombreDeBaseDestino("mongodb+srv://user:pass@backup.mongodb.net/weprodu_backup"), "weprodu_backup");
-        assert.equal(nombreDeBaseDestino("mongodb://localhost:27017/copia?retryWrites=true"), "copia");
+describe("la copia nunca cae sobre la base de origen", () => {
+    it("el nombre SIEMPRE difiere del de la base respaldada", () => {
+        /*
+          Es la garantía que reemplaza a la vieja guarda de «otro cluster». Si la copia cayera en la misma
+          base, el próximo dump se respaldaría a sí mismo y cada copia sería más grande que la anterior.
+        */
+        const origen = "weprodu_production_integration";
+        for (const sello of ["2026-09-10_1010", "2026-01-01_0000"]) {
+            assert.notEqual(nombreDeBaseCopia(origen, `${origen}_${sello}`), origen);
+        }
+        process.env.MONGO_DB_NAME_BACKUP = origen;
+        assert.notEqual(nombreDeBaseCopia(origen, `${origen}_2026-09-10_1010`), origen, "aunque el prefijo sea el mismo nombre, el sello lo separa");
     });
-    it("MONGO_DB_NAME_BACKUP le gana a lo que diga la URI", () => {
-        process.env.MONGO_DB_NAME_BACKUP = "elegida_a_mano";
-        assert.equal(nombreDeBaseDestino("mongodb+srv://user:pass@backup.mongodb.net/otra"), "elegida_a_mano");
+});
+describe("nombreDeBaseCopia", () => {
+    it("la base lleva la FECHA en el nombre: es lo que permite reconocerla desde Atlas", () => {
+        // Sin la fecha, dos backups distintos se ven igual en el Data Explorer.
+        assert.equal(nombreDeBaseCopia("weprodu_production_integration", "weprodu_production_integration_2026-09-10_1010"), "weprodu_production_integration_2026-09-10_1010");
     });
-    it("sin base en la URI no inventa un nombre", () => {
-        assert.equal(nombreDeBaseDestino("mongodb+srv://user:pass@backup.mongodb.net/"), "(la de la URI)");
+    it("no repite el nombre de la base cuando el prefijo ya es ese", () => {
+        // Sin esto quedaría `weprodu_production_integration_weprodu_production_integration_2026-…`.
+        const r = nombreDeBaseCopia("weprodu_production_integration", "weprodu_production_integration_2026-09-10_1010");
+        assert.equal((r.match(/weprodu_production_integration/g) || []).length, 1);
+    });
+    it("MONGO_DB_NAME_BACKUP es un PREFIJO, no el nombre final", () => {
+        process.env.MONGO_DB_NAME_BACKUP = "copias";
+        assert.equal(prefijoDeBase("weprodu_production_integration"), "copias");
+        assert.equal(nombreDeBaseCopia("weprodu_production_integration", "weprodu_production_integration_2026-09-10_1010"), "copias_2026-09-10_1010");
+    });
+    it("sin la variable, el prefijo es el nombre de la base de origen", () => {
+        assert.equal(prefijoDeBase("weprodu_production_integration"), "weprodu_production_integration");
     });
 });

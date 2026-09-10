@@ -81,8 +81,9 @@ export interface ResultadoBackup {
     mongo: {
         ok: boolean;
         configurado: boolean;
+        base?: string;
+        documentos?: number;
         borrados?: number;
-        destino?: string;
         error?: string;
     };
 }

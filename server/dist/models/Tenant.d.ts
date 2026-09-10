@@ -89,6 +89,15 @@ export interface ITenant extends Document {
             /** Cuándo terminó la última copia. Es lo que decide si toca una nueva, así que sobrevive a un reinicio. */
             ultimoBackupAt?: Date;
             ultimoError?: string;
+            /**
+             * La base donde quedó el clon de la última copia (`<prefijo>_<fecha>_<hora>`).
+             *
+             * Se guarda para poder BORRARLA cuando entre la siguiente. La alternativa era enumerar las bases
+             * del cluster, y `listDatabases` pide permisos de admin que el usuario de la aplicación no tiene
+             * en los tiers compartidos de Atlas: la limpieza fallaría y las copias se acumularían hasta
+             * llenar la cuota.
+             */
+            ultimaBaseCopia?: string;
         };
         /**
          * Usuario de clave fiscal con el que el SERVIDOR opera Simplificación Registral por su cuenta.

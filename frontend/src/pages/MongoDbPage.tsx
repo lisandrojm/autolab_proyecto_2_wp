@@ -1,11 +1,12 @@
-import React, { useCallback, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDatabase, faGear, faFolderOpen, faSpinner, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
+import { InfoModal } from "../components/ui/InfoModal";
 import { MongoDbConfig } from "../components/documents/MongoDbConfig";
-import { DropboxTab } from "../components/documents/DropboxTab";
-import { backupsAPI } from "../api/backups";
+import { ListaCopiasBackup } from "../components/documents/ListaCopiasBackup";
+import { backupsAPI, ConfigBackup } from "../api/backups";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /**
@@ -23,8 +24,12 @@ type Tab = "config" | "backups";
 export const MongoDbPage: React.FC = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("config");
-  const [itemCount, setItemCount] = useState<number | undefined>(undefined);
-  const handleCountChange = useCallback((count: number | undefined) => setItemCount(count), []);
+  const [showInfo, setShowInfo] = useState(false);
+  /** La configuración se lee acá también, para poder mostrar la frecuencia junto a las copias. */
+  const [config, setConfig] = useState<ConfigBackup | null>(null);
+  useEffect(() => {
+    backupsAPI.config().then(setConfig).catch(() => setConfig(null));
+  }, []);
 
   const [generandoBackup, setGenerandoBackup] = useState(false);
   /**
@@ -63,10 +68,8 @@ export const MongoDbPage: React.FC = () => {
       subtitle="Copia automática de la base de datos y cómo restaurarla"
       faIcon={{ icon: faDatabase }}
       onBack={() => navigate("/documents")}
-      // El contador es de los archivos de la copia: en la pestaña de configuración no cuenta nada.
-      itemCount={tab === "backups" ? itemCount : undefined}
-      shouldShowInfo={false}
-      infoModal={{ isOpen: false, onOpen: () => {}, onClose: () => {}, title: "MongoDB", content: null }}
+      shouldShowInfo
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: "MongoDB", content: null }}
       headerActions={
         <button
           onClick={forzarBackup}
@@ -93,10 +96,62 @@ export const MongoDbPage: React.FC = () => {
     >
       <div className="animate-in fade-in duration-300">
         {tab === "config" && <MongoDbConfig />}
-        {/* La carpeta de Dropbox donde las deja el scheduler. Sin botón de actualizar: el contenido lo
-            genera el propio sistema y el listado se recarga solo al terminar un backup. */}
-        {tab === "backups" && <DropboxTab key={`ddbb-${recarga}`} fixedRoot="/WEPRODU/DDBB" rootLabel="DDBB" ocultarActualizar onCountChange={handleCountChange} />}
+        {tab === "backups" && <ListaCopiasBackup recarga={recarga} frecuenciaHoras={config?.intervaloHoras} retener={config?.retener} />}
       </div>
+
+      <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} title="Cómo funciona el backup" size="lg" zIndex={60} actions={[{ label: "Entendido", onClick: () => setShowInfo(false), variant: "primary" }]}>
+        <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
+          <p>
+            Cada cierta cantidad de horas —lo elegís en <strong>Configuración</strong>— el servidor recorre la base entera y arma una copia. La corrida también se puede disparar a mano
+            con <strong>Backup ahora</strong>.
+          </p>
+
+          <div>
+            <p className="font-semibold mb-1">Qué se guarda</p>
+            <p>
+              Un archivo <code>.json</code> por colección, en JSON extendido y <strong>sin comprimir</strong>: se abre y se lee tal cual. Va en formato canónico, o sea que cada valor
+              lleva su tipo — un <code>ObjectId</code> vuelve <code>ObjectId</code> y una fecha vuelve fecha. Con el formato "relajado", un número largo vuelve con un dígito cambiado
+              y la copia deja de ser fiel.
+            </p>
+            <p className="mt-1">
+              Se suma un <code>_backup.json</code> con de qué base salió, cuándo, y cuántos documentos tiene cada colección. Va <strong>último</strong>: si está, la copia quedó
+              completa; si falta, la subida se cortó a la mitad.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold mb-1">Dónde queda: dos destinos</p>
+            <ul className="space-y-1 list-disc pl-5">
+              <li>
+                <strong>Dropbox</strong> — en <code>/WEPRODU/DDBB</code>, una carpeta por copia. Se conservan las últimas que digas en Configuración.
+              </li>
+              <li>
+                <strong>Dentro de Mongo</strong> — la base se <strong>clona</strong> en una base nueva llamada <code>&lt;base&gt;_&lt;fecha&gt;_&lt;hora&gt;</code>. Se abre desde
+                Atlas y se consulta como cualquier base: no hay que importar nada. Se conserva solo la última.
+                <br />
+                Por defecto va en el <strong>mismo cluster</strong>, que resuelve el caso común —alguien borró una colección, un script escribió mal— pero <strong>no</strong>{" "}
+                protege si el cluster se cae o se pierde. Para eso está la copia en Dropbox.
+              </li>
+            </ul>
+            <p className="mt-1 text-xs text-gray-500">
+              Si un destino falla, el otro igual guarda la copia, y ninguno borra lo viejo si lo suyo falló. El error queda registrado y se muestra en Configuración.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold mb-1">Cómo se recupera</p>
+            <p>
+              Desde el clon en Atlas, mirando la base directamente. O desde Dropbox, bajando la carpeta e importándola con <code>mongoimport</code> — los comandos exactos están en la
+              pestaña Configuración. Siempre sobre una base vacía.
+            </p>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            La copia tiene <strong>todos</strong> los datos de la base, incluidos CUITs, CBUs, domicilios y teléfonos, en texto plano. Quien pueda entrar a esa carpeta de Dropbox o a
+            ese cluster se lleva la base entera.
+          </p>
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };

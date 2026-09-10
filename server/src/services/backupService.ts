@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { EJSON } from "bson";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, listFolder, uploadFile, uploadFileSession, createFolder, deleteEntry } from "./dropboxService.js";
-import { guardarEnMongo } from "./backupDestinoMongo.js";
+import { clonarEnMongo } from "./backupDestinoMongo.js";
 
 /**
  * BACKUP DE LA BASE, CADA 12 HORAS, A DROPBOX.
@@ -159,6 +159,9 @@ export async function generarArchivos(): Promise<{ archivos: ArchivoBackup[]; do
   return { archivos, documentos };
 }
 
+/** Los nombres de colección de una tanda de archivos, sin el manifiesto. */
+const nombresDeColecciones = (archivos: ArchivoBackup[]): string[] => archivos.filter((f) => f.nombre !== "_backup.json").map((f) => f.nombre.replace(/\.json$/, ""));
+
 /** Usa la subida simple, o la de sesión si el archivo pasa el tope del endpoint simple. */
 async function subir(tenantId: string, cfg: any, ruta: string, contenido: Buffer) {
   if (contenido.length <= TOPE_SUBIDA_SIMPLE) return uploadFile(tenantId, cfg, ruta, contenido);
@@ -214,7 +217,7 @@ export interface ResultadoBackup {
   borrados: number;
   /** Cómo le fue a cada destino. Uno puede fallar sin llevarse al otro puesto. */
   dropbox: { ok: boolean; error?: string };
-  mongo: { ok: boolean; configurado: boolean; borrados?: number; destino?: string; error?: string };
+  mongo: { ok: boolean; configurado: boolean; base?: string; documentos?: number; borrados?: number; error?: string };
 }
 
 /**
@@ -272,11 +275,14 @@ export async function correrBackup(disparador: "cron" | "manual" = "cron"): Prom
 
     const mongo: ResultadoBackup["mongo"] = { ok: false, configurado: false };
     try {
-      const r = await guardarEnMongo(carpeta, archivos);
+      // Se clona desde la base, no desde los `.json` ya generados: escribir los documentos tal cual
+      // deja una base normal, navegable desde Atlas, en vez de archivos que habría que importar.
+      const r = await clonarEnMongo(baseDatos, carpeta, nombresDeColecciones(archivos), (tenant as any)?.integrations?.backup?.ultimaBaseCopia);
       mongo.ok = true;
       mongo.configurado = r.configurado;
+      mongo.base = r.base;
+      mongo.documentos = r.documentos;
       mongo.borrados = r.borrados;
-      mongo.destino = r.destino;
     } catch (e: any) {
       mongo.error = String(e?.message || e);
       console.error(`[BACKUP:${disparador}] Mongo de backup falló:`, mongo.error);
@@ -291,11 +297,15 @@ export async function correrBackup(disparador: "cron" | "manual" = "cron"): Prom
       Que algo falló se dice en `ultimoError`, que la pantalla muestra en rojo.
     */
     const fallos = [dropbox.ok ? "" : `Dropbox: ${dropbox.error}`, mongo.ok ? "" : `Mongo de backup: ${mongo.error}`].filter(Boolean).join(" · ");
-    await Tenant.updateOne({ _id: tenant._id }, { $set: { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": fallos } });
+    const cambios: Record<string, unknown> = { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": fallos };
+    // El nombre del clon solo se pisa si el clon salió bien: si falló, la copia anterior sigue viva y es
+    // la que hay que borrar la próxima vez. Pisarlo acá la dejaría huérfana ocupando lugar para siempre.
+    if (mongo.ok && mongo.base) cambios["integrations.backup.ultimaBaseCopia"] = mongo.base;
+    await Tenant.updateOne({ _id: tenant._id }, { $set: cambios });
 
     console.log(
       `[BACKUP:${disparador}] ${carpeta} · ${archivos.length - 1} colecciones · ${documentos} documentos · ${(bytes / 1024 / 1024).toFixed(1)} MB · ` +
-        `dropbox=${dropbox.ok ? `ok (${borrados} viejos borrados)` : "FALLÓ"} · mongo=${mongo.ok ? (mongo.configurado ? `ok (${mongo.borrados} viejos borrados)` : "sin configurar") : "FALLÓ"}`,
+        `dropbox=${dropbox.ok ? `ok (${borrados} viejos borrados)` : "FALLÓ"} · mongo=${mongo.ok ? (mongo.configurado ? `ok → ${mongo.base} (${mongo.documentos} docs, ${mongo.borrados} bases viejas borradas)` : "sin configurar") : "FALLÓ"}`,
     );
     return { carpeta, colecciones: archivos.length - 1, documentos, bytes, borrados, dropbox, mongo };
   } finally {

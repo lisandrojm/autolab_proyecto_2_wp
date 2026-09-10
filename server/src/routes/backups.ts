@@ -2,8 +2,9 @@ import { Router } from "express";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { correrBackup, backupEnCurso, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
+import { getTenantDropboxConfig, listFolder, downloadFileContent, getTemporaryLink } from "../services/dropboxService.js";
 import { Tenant } from "../models/Tenant.js";
-import { uriDeBackup, nombreDeBaseDestino } from "../services/backupDestinoMongo.js";
+import { uriDeBackup, prefijoDeBase, esClusterAparte } from "../services/backupDestinoMongo.js";
 
 /**
  * Forzar un backup a mano, sin esperar a la corrida de las 12 horas.
@@ -37,10 +38,18 @@ router.get("/config", async (req: AuthenticatedRequest, res) => {
     una instalación que todavía no lo activó, y «mal configurado» es una URI que apunta a la base de la
     aplicación —que no sería un backup—. Nunca se devuelve la URI: solo el nombre de la base.
   */
-  let mongoDestino: { estado: "ok" | "sin_configurar" | "error"; base?: string; error?: string };
+  let mongoDestino: { estado: "ok" | "sin_configurar" | "error"; prefijo?: string; clusterAparte?: boolean; ultimaBase?: string; error?: string };
   try {
     const uri = uriDeBackup();
-    mongoDestino = uri ? { estado: "ok", base: nombreDeBaseDestino(uri) } : { estado: "sin_configurar" };
+    mongoDestino = uri
+      ? {
+          estado: "ok",
+          // El prefijo, no la base final: la base lleva la fecha y cambia con cada copia.
+          prefijo: prefijoDeBase(String(process.env.MONGO_DB_NAME || "weprodu")),
+          clusterAparte: esClusterAparte(),
+          ultimaBase: b.ultimaBaseCopia || undefined,
+        }
+      : { estado: "sin_configurar" };
   } catch (e: any) {
     mongoDestino = { estado: "error", error: String(e?.message || e) };
   }
@@ -122,6 +131,90 @@ router.post("/ejecutar", async (req: AuthenticatedRequest, res) => {
   } catch (error: any) {
     console.error("Backup manual falló:", error);
     res.status(500).json({ error: String(error?.message || "No se pudo generar el backup.") });
+  }
+});
+
+/**
+ * GET /backups/copias — el listado de la pestaña «DDBB Backup», con fecha y tamaño de cada copia.
+ *
+ * Dropbox NO devuelve el tamaño de una carpeta —solo el de los archivos—, así que la lista de carpetas
+ * sola muestra un guion en esa columna. Los datos reales están adentro, en el `_backup.json` de cada
+ * copia: la fecha en que se generó, cuántas colecciones tiene y cuántos bytes ocupa cada una.
+ *
+ * Por eso se lee un manifiesto por copia. Son archivos de pocos KB, y con 14 copias son 14 lecturas:
+ * aceptable para una pantalla que se abre de a ratos. Una copia sin manifiesto se informa igual, marcada
+ * como incompleta: es exactamente la señal de que la subida se cortó a la mitad.
+ */
+router.get("/copias", async (req: AuthenticatedRequest, res) => {
+  if (!isAdmin(req)) {
+    res.status(403).json({ error: "Solo un administrador puede ver las copias." });
+    return;
+  }
+  try {
+    const tenant: any = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
+    const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+    if (!tenant || !cfg) {
+      res.json({ copias: [], dropboxConectado: false });
+      return;
+    }
+    const tenantId = String(tenant._id);
+    const { entries } = await listFolder(tenantId, cfg, CARPETA_BACKUPS, true);
+    const carpetas = entries.filter((e) => e.tag === "folder").sort((a, b) => b.name.localeCompare(a.name));
+
+    const copias = await Promise.all(
+      carpetas.map(async (c) => {
+        try {
+          const crudo = await downloadFileContent(tenantId, cfg, `${c.path}/_backup.json`);
+          const m = JSON.parse(crudo.toString("utf8"));
+          return {
+            nombre: c.name,
+            path: c.path,
+            fecha: m.fecha || null,
+            colecciones: Array.isArray(m.colecciones) ? m.colecciones.length : 0,
+            documentos: Number(m.documentos) || 0,
+            bytes: Array.isArray(m.colecciones) ? m.colecciones.reduce((a: number, x: any) => a + (Number(x.bytes) || 0), 0) : 0,
+            completa: true,
+          };
+        } catch {
+          // Sin manifiesto la copia está a medias: se muestra igual, para poder borrarla a conciencia.
+          return { nombre: c.name, path: c.path, fecha: null, colecciones: 0, documentos: 0, bytes: 0, completa: false };
+        }
+      }),
+    );
+
+    res.json({ copias, dropboxConectado: true });
+  } catch (error: any) {
+    console.error("Listar copias falló:", error);
+    res.status(500).json({ error: String(error?.message || "No se pudieron listar las copias.") });
+  }
+});
+
+/**
+ * GET /backups/copias/descargar?path=… — link temporal de Dropbox para bajar un archivo de una copia.
+ *
+ * El token NUNCA sale del servidor: se pide el link acá y al browser le llega solo la URL, que caduca.
+ */
+router.get("/copias/descargar", async (req: AuthenticatedRequest, res) => {
+  if (!isAdmin(req)) {
+    res.status(403).json({ error: "Solo un administrador puede descargar una copia." });
+    return;
+  }
+  const path = String(req.query.path || "");
+  if (!path.startsWith(CARPETA_BACKUPS + "/")) {
+    // Sin esta comprobación, este endpoint sería un lector de toda la Dropbox del tenant.
+    res.status(400).json({ error: "Ruta fuera de la carpeta de backups." });
+    return;
+  }
+  try {
+    const tenant: any = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
+    const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+    if (!cfg) {
+      res.status(400).json({ error: "Dropbox no está conectado." });
+      return;
+    }
+    res.json({ url: await getTemporaryLink(String(tenant._id), cfg, path) });
+  } catch (error: any) {
+    res.status(500).json({ error: String(error?.message || "No se pudo generar el link.") });
   }
 });
 

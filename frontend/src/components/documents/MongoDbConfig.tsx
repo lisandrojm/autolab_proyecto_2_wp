@@ -107,19 +107,36 @@ export const MongoDbConfig: React.FC = () => {
               configurado» son cosas distintas: la primera es una instalación que todavía no lo activó,
               la segunda es una URI que apunta a la base que se está respaldando —que no sería un backup—.
             */}
-            <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs">
-              <span className="font-semibold text-gray-700 dark:text-gray-300">Segundo destino (otra base de Mongo): </span>
+            {/*
+              El clon en Mongo. Se dice DÓNDE queda y qué protege: en el mismo cluster resuelve un
+              borrado accidental, pero no una caída del cluster —y prometerlo sería peor que no tenerlo—.
+            */}
+            <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs space-y-1">
+              <div>
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Copia dentro de Mongo: </span>
+                {config?.mongoDestino?.estado === "ok" && (
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    cada copia clona la base en <code>{config.mongoDestino.prefijo}_&lt;fecha&gt;_&lt;hora&gt;</code>, y se conserva solo la última.
+                  </span>
+                )}
+                {config?.mongoDestino?.estado === "sin_configurar" && <span className="text-gray-500">no hay conexión a Mongo configurada.</span>}
+                {config?.mongoDestino?.estado === "error" && <span className="text-red-600 dark:text-red-400">{config.mongoDestino.error}</span>}
+              </div>
+
               {config?.mongoDestino?.estado === "ok" && (
-                <span className="text-emerald-600 dark:text-emerald-400">
-                  conectado a <code>{config.mongoDestino.base}</code> · se conserva solo la última copia
-                </span>
+                <>
+                  {config.mongoDestino.ultimaBase && (
+                    <div className="text-gray-500">
+                      Última: <code>{config.mongoDestino.ultimaBase}</code> — se abre desde Atlas y se consulta como cualquier base, sin importar nada.
+                    </div>
+                  )}
+                  <div className={config.mongoDestino.clusterAparte ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
+                    {config.mongoDestino.clusterAparte
+                      ? "En otro cluster: sobrevive a la caída del de producción."
+                      : "En el MISMO cluster que producción: sirve para recuperar un borrado accidental, pero si el cluster se cae o se pierde, la copia se va con él. El respaldo fuera del cluster es Dropbox."}
+                  </div>
+                </>
               )}
-              {config?.mongoDestino?.estado === "sin_configurar" && (
-                <span className="text-gray-500">
-                  sin configurar. Las copias van solo a Dropbox. Se activa con <code>MONGO_URI_BACKUP</code> en el servidor.
-                </span>
-              )}
-              {config?.mongoDestino?.estado === "error" && <span className="text-red-600 dark:text-red-400">{config.mongoDestino.error}</span>}
             </div>
           </section>
 

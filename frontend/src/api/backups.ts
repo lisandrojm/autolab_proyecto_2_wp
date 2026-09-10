@@ -10,7 +10,7 @@ export interface ResultadoBackup {
 
 export interface ConfigBackup {
   /** Estado del segundo destino (otro Mongo). `sin_configurar` no es un error: falta la variable. */
-  mongoDestino?: { estado: "ok" | "sin_configurar" | "error"; base?: string; error?: string };
+  mongoDestino?: { estado: "ok" | "sin_configurar" | "error"; prefijo?: string; clusterAparte?: boolean; ultimaBase?: string; error?: string };
   enCurso: boolean;
   carpeta: string;
   intervaloHoras: number;
@@ -19,6 +19,18 @@ export interface ConfigBackup {
   ultimoError: string | null;
   intervalosValidos: number[];
   dropboxConectado: boolean;
+}
+
+export interface CopiaBackup {
+  nombre: string;
+  path: string;
+  /** ISO. `null` cuando la copia no tiene manifiesto: quedó a medias. */
+  fecha: string | null;
+  colecciones: number;
+  documentos: number;
+  /** Suma de los `.json` de la copia. */
+  bytes: number;
+  completa: boolean;
 }
 
 export const backupsAPI = {
@@ -37,6 +49,17 @@ export const backupsAPI = {
   async config(): Promise<ConfigBackup> {
     const { data } = await axios.get("/backups/config");
     return data;
+  },
+
+  async copias(): Promise<{ copias: CopiaBackup[]; dropboxConectado: boolean }> {
+    const { data } = await axios.get("/backups/copias");
+    return data;
+  },
+
+  /** Link temporal de Dropbox. El token nunca llega al browser. */
+  async linkDescarga(path: string): Promise<string> {
+    const { data } = await axios.get("/backups/copias/descargar", { params: { path } });
+    return data.url;
   },
 
   async guardarConfig(intervaloHoras: number, retener: number): Promise<{ intervaloHoras: number; retener: number }> {
