@@ -32,6 +32,29 @@ export const MongoDbPage: React.FC = () => {
   }, []);
 
   const [generandoBackup, setGenerandoBackup] = useState(false);
+  /** Segundos que lleva la corrida. Un overlay sin nada que se mueva se lee como «se colgó». */
+  const [segundos, setSegundos] = useState(0);
+
+  useEffect(() => {
+    if (!generandoBackup) return;
+    setSegundos(0);
+    const t = setInterval(() => setSegundos((s) => s + 1), 1000);
+
+    /*
+      Aviso del navegador si intentan cerrar la pestaña. El overlay tapa los clicks de la app, pero no
+      la cruz del browser ni un Cmd+W: si se corta a la mitad, la copia queda incompleta en Dropbox —una
+      carpeta sin `_backup.json`— y hay que borrarla a mano.
+    */
+    const avisar = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", avisar);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("beforeunload", avisar);
+    };
+  }, [generandoBackup]);
   /**
    * Cambia después de un backup manual para remontar el listado: el tab lee la carpeta al montarse, y
    * sin esto la copia recién hecha no aparece hasta recargar la página.
@@ -98,6 +121,30 @@ export const MongoDbPage: React.FC = () => {
         {tab === "config" && <MongoDbConfig />}
         {tab === "backups" && <ListaCopiasBackup recarga={recarga} frecuenciaHoras={config?.intervaloHoras} retener={config?.retener} />}
       </div>
+
+      {/*
+        MIENTRAS CORRE, LA PANTALLA SE BLOQUEA.
+
+        La corrida recorre la base entera y sube 58 archivos: puede tardar minutos. Con la pantalla
+        libre se puede navegar a otra sección, y ahí el componente se desmonta: la petición sigue viva en
+        el servidor —el backup igual termina— pero nadie ve si salió bien ni el error si falló, y el
+        siguiente click en «Backup ahora» choca con un 409 sin explicación.
+
+        `z-[100]` para quedar por encima del navbar, que es `z-20`/`z-30`.
+      */}
+      {generandoBackup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm" role="alertdialog" aria-busy="true" aria-live="polite">
+          <div className="mx-4 max-w-sm rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl px-6 py-5 text-center">
+            <FontAwesomeIcon icon={faSpinner} spin className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            <p className="mt-3 font-semibold text-gray-900 dark:text-gray-100">Generando el backup…</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Se está recorriendo la base entera y subiendo una copia. Puede tardar varios minutos.</p>
+            <p className="mt-3 text-xs text-gray-500 tabular-nums">
+              {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")} transcurridos
+            </p>
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">No cierres esta pestaña: si se corta, la copia queda incompleta.</p>
+          </div>
+        </div>
+      )}
 
       <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} title="Cómo funciona el backup" size="lg" zIndex={60} actions={[{ label: "Entendido", onClick: () => setShowInfo(false), variant: "primary" }]}>
         <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
