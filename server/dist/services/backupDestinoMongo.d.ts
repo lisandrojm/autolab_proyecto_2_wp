@@ -72,8 +72,8 @@ export declare const esClusterAparte: () => boolean;
  * meter un hash, y el nombre deja de ser legible.
  */
 export declare function prefijoDeBase(baseOrigen: string): string;
-/** El nombre de la base de copia para un slot. */
-export declare function nombreDeBaseCopia(baseOrigen: string, slot: Slot): string;
+/** El nombre de la base de copia, según la estrategia configurada. */
+export declare function nombreDeBaseCopia(baseOrigen: string, slot: Slot, fecha?: Date): string;
 /** Cuál se va a escribir la próxima vez. Lo muestra la pantalla, con su tamaño. */
 export declare function proximaBaseCopia(baseOrigen: string, ultimoSlotOk?: Slot | null): {
     base: string;
@@ -86,4 +86,4 @@ export declare function proximaBaseCopia(baseOrigen: string, ultimoSlotOk?: Slot
  * Lee de la conexión de la aplicación (la que ya está abierta) y escribe en una conexión efímera al
  * destino: esto corre dos veces por día y no justifica sostener un segundo pool abierto todo el tiempo.
  */
-export declare function clonarEnMongo(baseOrigen: string, colecciones: string[], ultimoSlotOk?: Slot | null): Promise<ResultadoDestinoMongo>;
+export declare function clonarEnMongo(baseOrigen: string, colecciones: string[], ultimoSlotOk?: Slot | null, baseAnterior?: string | null): Promise<ResultadoDestinoMongo>;

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { backupDbName, siguienteSlot, preflight, backupMeta, esBaseDeCopia, MAX_DB_BYTES, MAX_NS_BYTES, MAX_COLECCIONES } from "../utils/nombreBackup.js";
+import { backupDbName, backupDbNameConFecha, selloFecha, esBaseDeCopiaConFecha, siguienteSlot, preflight, backupMeta, esBaseDeCopia, MAX_DB_BYTES, MAX_NS_BYTES, MAX_COLECCIONES } from "../utils/nombreBackup.js";
 /*
   LOS LÍMITES SE LEEN DE `process.env` Y NO DE `config/env.ts`.
 
@@ -12,6 +12,17 @@ const numeroDeEnv = (clave, porDefecto) => {
     const v = Number(process.env[clave]);
     return Number.isFinite(v) && v > 0 ? v : porDefecto;
 };
+/**
+ * Cómo se nombra la copia.
+ *
+ * `fecha` (por defecto) la pone EN el nombre —`weprodu_2026_09_10_1612`— que es lo que permite ver de
+ * cuándo es cada una desde el listado de Atlas, sin abrirla. Entra en los 38 bytes siempre que el
+ * prefijo sea corto; con `weprodu` son 23.
+ *
+ * `slots` alterna `_bkpA`/`_bkpB` y guarda la fecha adentro. Queda para un prefijo tan largo que la
+ * fecha no entre.
+ */
+const estrategia = () => (String(process.env.MONGO_BACKUP_ESTRATEGIA || "fecha").trim() === "slots" ? "slots" : "fecha");
 const limites = () => ({
     maxDbBytes: numeroDeEnv("MONGO_BACKUP_MAX_DB_BYTES", MAX_DB_BYTES),
     maxNsBytes: numeroDeEnv("MONGO_BACKUP_MAX_NS_BYTES", MAX_NS_BYTES),
@@ -91,12 +102,15 @@ export const esClusterAparte = () => {
 export function prefijoDeBase(baseOrigen) {
     return String(process.env.MONGO_DB_NAME_BACKUP || "").trim() || baseOrigen;
 }
-/** El nombre de la base de copia para un slot. */
-export function nombreDeBaseCopia(baseOrigen, slot) {
-    return backupDbName(prefijoDeBase(baseOrigen), slot, limites().maxDbBytes);
+/** El nombre de la base de copia, según la estrategia configurada. */
+export function nombreDeBaseCopia(baseOrigen, slot, fecha = new Date()) {
+    const max = limites().maxDbBytes;
+    const prefijo = prefijoDeBase(baseOrigen);
+    return estrategia() === "slots" ? backupDbName(prefijo, slot, max) : backupDbNameConFecha(prefijo, selloFecha(fecha), max);
 }
 /** Cuál se va a escribir la próxima vez. Lo muestra la pantalla, con su tamaño. */
 export function proximaBaseCopia(baseOrigen, ultimoSlotOk) {
+    // Con fecha, el nombre exacto depende de CUÁNDO corra; se muestra con la hora de ahora.
     const base = nombreDeBaseCopia(baseOrigen, siguienteSlot(ultimoSlotOk));
     return { base, bytes: Buffer.byteLength(base, "utf8"), maximo: limites().maxDbBytes };
 }
@@ -106,7 +120,7 @@ export function proximaBaseCopia(baseOrigen, ultimoSlotOk) {
  * Lee de la conexión de la aplicación (la que ya está abierta) y escribe en una conexión efímera al
  * destino: esto corre dos veces por día y no justifica sostener un segundo pool abierto todo el tiempo.
  */
-export async function clonarEnMongo(baseOrigen, colecciones, ultimoSlotOk) {
+export async function clonarEnMongo(baseOrigen, colecciones, ultimoSlotOk, baseAnterior) {
     const uri = uriDeBackup();
     if (!uri)
         return { configurado: false, colecciones: 0, documentos: 0, borrados: 0 };
@@ -118,11 +132,13 @@ export async function clonarEnMongo(baseOrigen, colecciones, ultimoSlotOk) {
       completa: en ningún momento el cluster se queda sin ninguna.
     */
     const slot = siguienteSlot(ultimoSlotOk);
+    const fecha = new Date();
     /*
       PREFLIGHT ANTES DE COPIAR NADA. El límite de 38 bytes aparecía a mitad de la copia, como un error
       del driver que nadie puede accionar. Acá se chequea antes, y el mensaje dice qué hacer.
     */
-    const { dbName: base, problemas } = preflight({ baseOrigen: prefijoDeBase(baseOrigen), slot, colecciones }, limites());
+    const base = nombreDeBaseCopia(baseOrigen, slot, fecha);
+    const { problemas } = preflight({ baseOrigen: prefijoDeBase(baseOrigen), slot, colecciones, nombreForzado: base }, limites());
     if (problemas.length > 0)
         throw new Error(problemas.join(" "));
     const conexion = await mongoose.createConnection(uri, { dbName: base }).asPromise();
@@ -152,35 +168,40 @@ export async function clonarEnMongo(baseOrigen, colecciones, ultimoSlotOk) {
         await destino.collection(COLECCION_MANIFIESTO).deleteMany({});
         await destino.collection(COLECCION_MANIFIESTO).insertOne(backupMeta({ baseOrigen, slot, colecciones, documentos }));
         /*
-          CON DOS SLOTS NO HAY NADA QUE BORRAR: la copia anterior es el otro slot y tiene que quedar viva.
+          SE BORRA LA COPIA ANTERIOR, RECIÉN AHORA.
     
-          Lo único que se limpia son las bases del esquema VIEJO —las que llevaban la fecha en el nombre—
-          que hayan quedado dando vueltas. Y antes de cualquier `dropDatabase` se verifica que el nombre
-          sea realmente una copia de ESTA base: en este cluster conviven veinte bases de otros proyectos y
-          borrar la equivocada no se deshace.
+          Si algo de arriba falló, esta línea no se alcanza y la copia vieja sigue intacta: nunca hay un
+          momento sin ninguna copia completa.
+    
+          Antes de cualquier `dropDatabase` se verifica que el nombre sea realmente una copia de ESTA base
+          —con fecha o con slot—. En este cluster conviven veinte bases de otros proyectos, y borrar la
+          equivocada no se deshace.
         */
-        let borrados = 0;
+        const prefijo = prefijoDeBase(baseOrigen);
+        const max = limites().maxDbBytes;
+        const esCopiaNuestra = (n) => n !== baseOrigen && n !== base && (esBaseDeCopiaConFecha(n, prefijo, max) || esBaseDeCopia(n, prefijo, max));
+        const aBorrar = new Set();
+        if (baseAnterior && esCopiaNuestra(baseAnterior))
+            aBorrar.add(baseAnterior);
         try {
             const { databases } = await conexion.getClient().db().admin().listDatabases();
-            const prefijo = prefijoDeBase(baseOrigen);
-            for (const d of databases) {
-                const n = String(d.name);
-                const esViejaConFecha = n.startsWith(`${prefijo}_`) && /_\d{4}-\d{2}-\d{2}_\d{4}$/.test(n);
-                // Doble barrera: ni la base de origen, ni un slot vivo, ni nada que no matchee el patrón viejo.
-                if (!esViejaConFecha || n === baseOrigen || esBaseDeCopia(n, prefijo, limites().maxDbBytes))
-                    continue;
-                try {
-                    await conexion.getClient().db(n).dropDatabase();
-                    borrados++;
-                }
-                catch (e) {
-                    console.error(`[BACKUP] No se pudo borrar la copia vieja ${n}:`, e?.message || e);
-                }
-            }
+            for (const d of databases)
+                if (esCopiaNuestra(String(d.name)))
+                    aBorrar.add(String(d.name));
         }
         catch {
-            // `listDatabases` pide permisos de admin que en Free/Flex no tenemos. No es un problema: con los
-            // dos slots no hace falta enumerar nada para funcionar.
+            // `listDatabases` pide permisos de admin que en Free/Flex no tenemos: alcanza con `baseAnterior`,
+            // que se guarda en el tenant justamente para no depender de esto.
+        }
+        let borrados = 0;
+        for (const vieja of aBorrar) {
+            try {
+                await conexion.getClient().db(vieja).dropDatabase();
+                borrados++;
+            }
+            catch (e) {
+                console.error(`[BACKUP] No se pudo borrar la copia vieja ${vieja}:`, e?.message || e);
+            }
         }
         return { configurado: true, base, slot, colecciones: colecciones.length, documentos, borrados };
     }

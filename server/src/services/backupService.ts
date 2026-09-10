@@ -277,7 +277,7 @@ export async function correrBackup(disparador: "cron" | "manual" = "cron"): Prom
     try {
       // Se clona desde la base, no desde los `.json` ya generados: escribir los documentos tal cual
       // deja una base normal, navegable desde Atlas, en vez de archivos que habría que importar.
-      const r = await clonarEnMongo(baseDatos, nombresDeColecciones(archivos), (tenant as any)?.integrations?.backup?.ultimoSlotOk);
+      const r = await clonarEnMongo(baseDatos, nombresDeColecciones(archivos), (tenant as any)?.integrations?.backup?.ultimoSlotOk, (tenant as any)?.integrations?.backup?.ultimaBaseCopia);
       mongo.ok = true;
       mongo.configurado = r.configurado;
       mongo.base = r.base;

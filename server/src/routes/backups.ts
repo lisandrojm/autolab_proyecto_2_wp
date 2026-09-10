@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { correrBackup, backupEnCurso, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
-import { getTenantDropboxConfig, listFolder, downloadFileContent, deleteEntry, downloadFolderZip } from "../services/dropboxService.js";
+import { getTenantDropboxConfig, listFolder, downloadFileContent, deleteEntry, downloadFolderZip, getTemporaryLink } from "../services/dropboxService.js";
 import { Tenant } from "../models/Tenant.js";
 import { uriDeBackup, prefijoDeBase, esClusterAparte, proximaBaseCopia } from "../services/backupDestinoMongo.js";
 
@@ -231,6 +231,98 @@ router.get("/copias/descargar", async (req: AuthenticatedRequest, res) => {
   } catch (error: any) {
     console.error("Descargar copia falló:", error);
     res.status(500).json({ error: String(error?.message || "No se pudo descargar la copia.") });
+  }
+});
+
+/**
+ * GET /backups/copias/archivos?path=… — qué hay ADENTRO de una copia.
+ *
+ * Es lo que permite abrir una copia y ver sus colecciones sin bajar los 31 MB del zip. Devuelve nombre
+ * y tamaño de cada `.json`, ordenados como se ven en la carpeta.
+ */
+router.get("/copias/archivos", async (req: AuthenticatedRequest, res) => {
+  if (!isAdmin(req)) {
+    res.status(403).json({ error: "Solo un administrador puede ver el contenido de una copia." });
+    return;
+  }
+  const path = String(req.query.path || "");
+  if (!path.startsWith(CARPETA_BACKUPS + "/")) {
+    res.status(400).json({ error: "Ruta fuera de la carpeta de backups." });
+    return;
+  }
+  try {
+    const tenant: any = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
+    const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+    if (!cfg) {
+      res.status(400).json({ error: "Dropbox no está conectado." });
+      return;
+    }
+    const { entries } = await listFolder(String(tenant._id), cfg, path, true);
+    const archivos = entries
+      .filter((e) => e.tag === "file")
+      .map((e) => ({ nombre: e.name, path: e.path, bytes: Number((e as any).size) || 0 }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    res.json({ archivos });
+  } catch (error: any) {
+    console.error("Listar archivos de la copia falló:", error);
+    res.status(500).json({ error: String(error?.message || "No se pudo leer la copia.") });
+  }
+});
+
+/**
+ * GET /backups/copias/ver?path=… — el contenido de UN archivo de la copia, para mirarlo en pantalla.
+ *
+ * Se recorta a `MAX_VISTA` bytes: son NDJSON de hasta varios MB y meter eso entero en el navegador lo
+ * cuelga. Para el archivo completo está la descarga, que no pasa por acá.
+ */
+const MAX_VISTA = 200 * 1024;
+
+router.get("/copias/ver", async (req: AuthenticatedRequest, res) => {
+  if (!isAdmin(req)) {
+    res.status(403).json({ error: "Solo un administrador puede ver el contenido de una copia." });
+    return;
+  }
+  const path = String(req.query.path || "");
+  if (!path.startsWith(CARPETA_BACKUPS + "/")) {
+    res.status(400).json({ error: "Ruta fuera de la carpeta de backups." });
+    return;
+  }
+  try {
+    const tenant: any = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
+    const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+    if (!cfg) {
+      res.status(400).json({ error: "Dropbox no está conectado." });
+      return;
+    }
+    const buf = await downloadFileContent(String(tenant._id), cfg, path);
+    const recortado = buf.length > MAX_VISTA;
+    res.json({ contenido: buf.subarray(0, MAX_VISTA).toString("utf8"), bytes: buf.length, recortado, limite: MAX_VISTA });
+  } catch (error: any) {
+    res.status(500).json({ error: String(error?.message || "No se pudo leer el archivo.") });
+  }
+});
+
+/** GET /backups/copias/link?path=… — link temporal para bajar UN archivo suelto de una copia. */
+router.get("/copias/link", async (req: AuthenticatedRequest, res) => {
+  if (!isAdmin(req)) {
+    res.status(403).json({ error: "Solo un administrador puede descargar una copia." });
+    return;
+  }
+  const path = String(req.query.path || "");
+  if (!path.startsWith(CARPETA_BACKUPS + "/")) {
+    res.status(400).json({ error: "Ruta fuera de la carpeta de backups." });
+    return;
+  }
+  try {
+    const tenant: any = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
+    const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+    if (!cfg) {
+      res.status(400).json({ error: "Dropbox no está conectado." });
+      return;
+    }
+    res.json({ url: await getTemporaryLink(String(tenant._id), cfg, path) });
+  } catch (error: any) {
+    res.status(500).json({ error: String(error?.message || "No se pudo generar el link.") });
   }
 });
 

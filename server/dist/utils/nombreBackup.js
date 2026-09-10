@@ -52,6 +52,48 @@ export function backupDbName(baseOrigen, slot, maxDbBytes = MAX_DB_BYTES) {
     const hash = crypto.createHash("sha1").update(baseOrigen).digest("hex").slice(0, 4);
     return `${truncarBytes(baseOrigen, lugar - 5)}_${hash}${sufijo}`;
 }
+/**
+ * `2026_09_10_04:34` — el sello de fecha y hora que va EN el nombre de la base.
+ *
+ * Los dos puntos separan la hora de los minutos porque es como se lee una hora, y el driver y el
+ * servidor los aceptan (probado: `client.db("weprodu_2026_09_10_04:34")` no tira). MongoDB solo prohíbe
+ * `/\. "$` en Linux; el `:` figura en la lista de WINDOWS.
+ *
+ * La consecuencia, para tenerla anotada: si alguna vez hay que restaurar esta copia desde una máquina
+ * Windows, `mongorestore` no va a poder con ese nombre. Desde Linux, macOS o Atlas no cambia nada.
+ */
+export function selloFecha(d = new Date()) {
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}_${p(d.getMonth() + 1)}_${p(d.getDate())}_${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+/**
+ * El nombre de la base de copia CON la fecha adentro.
+ *
+ * Es lo que permite ver de cuándo es cada copia desde el listado de Atlas, sin abrirla. Lo que no entra
+ * en 38 bytes es el nombre completo de la base de origen MÁS la fecha (46), así que el prefijo se
+ * recorta hasta donde haga falta:
+ *
+ *   weprodu                 →  weprodu_2026_09_10_04:34                  24 bytes
+ *   weprodu_production_...  →  weprodu_production_in_2026_09_10_04:34    38 bytes
+ *
+ * Con `MONGO_DB_NAME_BACKUP` se elige un prefijo corto y el nombre queda legible.
+ */
+export function backupDbNameConFecha(prefijo, sello, maxDbBytes = MAX_DB_BYTES) {
+    const lugar = maxDbBytes - B(`_${sello}`);
+    return `${truncarBytes(prefijo, lugar)}_${sello}`;
+}
+/**
+ * ¿Este nombre es una copia con fecha de este prefijo? Se usa antes de cualquier `dropDatabase`.
+ *
+ * El patrón acepta las TRES formas que existieron —`2026-09-10_1612`, `2026_09_10_1612` y
+ * `2026_09_10_04:34`— para que las copias creadas con versiones anteriores también se limpien. Si solo
+ * reconociera la actual, las viejas quedarían ocupando lugar en el cluster para siempre.
+ */
+export function esBaseDeCopiaConFecha(nombre, prefijo, maxDbBytes = MAX_DB_BYTES) {
+    const lugarMinimo = maxDbBytes - B("_2026_09_10_04:34");
+    const raiz = truncarBytes(prefijo, lugarMinimo);
+    return nombre.startsWith(`${raiz}`) && /_\d{4}[-_]\d{2}[-_]\d{2}[-_]\d{2}:?\d{2}$/.test(nombre);
+}
 /** El slot que toca escribir: el que NO es la copia buena de ahora. */
 export const siguienteSlot = (ultimoSlotOk) => (ultimoSlotOk === "A" ? "B" : "A");
 /**
@@ -65,7 +107,8 @@ export function preflight(opts, limites = {}) {
     const maxDb = limites.maxDbBytes ?? MAX_DB_BYTES;
     const maxNs = limites.maxNsBytes ?? MAX_NS_BYTES;
     const maxCol = limites.maxColecciones ?? MAX_COLECCIONES;
-    const dbName = backupDbName(opts.baseOrigen, opts.slot, maxDb);
+    // `nombreForzado` para chequear el nombre que de verdad se va a usar (el de la estrategia elegida).
+    const dbName = opts.nombreForzado ?? backupDbName(opts.baseOrigen, opts.slot, maxDb);
     const problemas = [];
     if (B(dbName) > maxDb) {
         problemas.push(`El nombre "${dbName}" ocupa ${B(dbName)} bytes y el máximo es ${maxDb}.`);

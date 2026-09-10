@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faFolder, faDownload, faTriangleExclamation, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { backupsAPI, CopiaBackup } from "../../api/backups";
+import { faSpinner, faFolder, faFolderOpen, faDownload, faTriangleExclamation, faTrash, faChevronRight, faChevronDown, faEye, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { backupsAPI, CopiaBackup, ArchivoCopia } from "../../api/backups";
+import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 /**
@@ -56,6 +57,59 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
   useEffect(cargar, [recarga]);
 
   const [bajando, setBajando] = useState<string | null>(null);
+
+  /*
+    ABRIR UNA COPIA PARA VER SUS COLECCIONES.
+
+    La tabla mostraba «58 colecciones» y ahí se terminaba: para saber cuáles, o mirar una, había que
+    bajar los 31 MB del zip. Ahora la fila se despliega y lista los `.json` con su tamaño.
+  */
+  const [abierta, setAbierta] = useState<string | null>(null);
+  const [archivos, setArchivos] = useState<Record<string, ArchivoCopia[]>>({});
+  const [cargandoArchivos, setCargandoArchivos] = useState(false);
+  const [viendo, setViendo] = useState<{ nombre: string; contenido: string; bytes: number; recortado: boolean; limite: number } | null>(null);
+  const [cargandoVista, setCargandoVista] = useState(false);
+
+  const abrir = async (copia: CopiaBackup) => {
+    if (abierta === copia.path) {
+      setAbierta(null);
+      return;
+    }
+    setAbierta(copia.path);
+    // Se pide una sola vez por copia: el contenido de una copia no cambia.
+    if (archivos[copia.path]) return;
+    setCargandoArchivos(true);
+    try {
+      // El `await` va afuera del updater: la función que recibe `setArchivos` no puede ser async.
+      const lista = await backupsAPI.archivosDeCopia(copia.path);
+      setArchivos((prev) => ({ ...prev, [copia.path]: lista }));
+    } catch (e: any) {
+      sweetAlert.error("No se pudo abrir la copia", String(e?.response?.data?.error || e?.message || ""));
+      setAbierta(null);
+    } finally {
+      setCargandoArchivos(false);
+    }
+  };
+
+  const ver = async (archivo: ArchivoCopia) => {
+    setCargandoVista(true);
+    try {
+      const r = await backupsAPI.verArchivo(archivo.path);
+      setViendo({ nombre: archivo.nombre, ...r });
+    } catch (e: any) {
+      sweetAlert.error("No se pudo leer el archivo", String(e?.response?.data?.error || e?.message || ""));
+    } finally {
+      setCargandoVista(false);
+    }
+  };
+
+  const bajarArchivo = async (archivo: ArchivoCopia) => {
+    try {
+      window.open(await backupsAPI.linkArchivo(archivo.path), "_blank", "noopener");
+    } catch (e: any) {
+      sweetAlert.error("No se pudo generar el link", String(e?.response?.data?.error || e?.message || ""));
+    }
+  };
 
   /**
    * Baja la copia ENTERA, en un zip.
@@ -229,10 +283,11 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
                     <input type="checkbox" checked={tildadas.has(c.path)} onChange={() => alternar(c.path)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <span className="inline-flex items-center gap-2 text-gray-800 dark:text-gray-200">
-                      <FontAwesomeIcon icon={faFolder} className="text-amber-500" />
+                    <button onClick={() => abrir(c)} className="inline-flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400" title="Ver las colecciones de esta copia">
+                      <FontAwesomeIcon icon={abierta === c.path ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
+                      <FontAwesomeIcon icon={abierta === c.path ? faFolderOpen : faFolder} className="text-amber-500" />
                       {c.nombre}
-                    </span>
+                    </button>
                     {!c.completa && (
                       <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-red-600 dark:text-red-400" title="No tiene _backup.json: la subida quedó a medias">
                         <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
@@ -260,10 +315,63 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
                   </td>
                 </tr>
               ))}
+              {/* La fila desplegada va aparte para no romper el colspan de la tabla. */}
+              {copias.map((c) =>
+                abierta === c.path ? (
+                  <tr key={`${c.path}-abierta`} className="bg-gray-50 dark:bg-gray-800/40">
+                    <td colSpan={7} className="px-4 py-3">
+                      {cargandoArchivos && !archivos[c.path] ? (
+                        <p className="text-xs text-gray-500">
+                          <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                          Leyendo la copia…
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+                          {(archivos[c.path] || []).map((a) => (
+                            <div key={a.path} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-white dark:hover:bg-gray-800">
+                              <FontAwesomeIcon icon={faFileLines} className="h-3 w-3 text-gray-400 shrink-0" />
+                              <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={a.nombre}>
+                                {a.nombre}
+                              </span>
+                              <span className="text-gray-400 tabular-nums shrink-0">{formatearTamano(a.bytes)}</span>
+                              <button onClick={() => ver(a)} title="Ver el contenido" className="p-1 rounded text-gray-500 hover:text-blue-600 shrink-0">
+                                <FontAwesomeIcon icon={faEye} className="h-3 w-3" />
+                              </button>
+                              <button onClick={() => bajarArchivo(a)} title="Descargar este archivo" className="p-1 rounded text-gray-500 hover:text-blue-600 shrink-0">
+                                <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ) : null,
+              )}
             </tbody>
           </table>
         </div>
       )}
+
+      {cargandoVista && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-gray-900/40">
+          <FontAwesomeIcon icon={faSpinner} spin className="h-6 w-6 text-white" />
+        </div>
+      )}
+
+      {/*
+        El contenido llega RECORTADO por el servidor: son NDJSON de hasta varios MB y volcarlos enteros
+        en el DOM cuelga la pestaña. Para el archivo completo está la descarga.
+      */}
+      <Modal isOpen={!!viendo} onClose={() => setViendo(null)} title={viendo?.nombre || ""} subtitle="Un documento por línea, en JSON extendido" size="xl">
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">
+            {formatearTamano(viendo?.bytes || 0)} en total
+            {viendo?.recortado && <> · se muestran los primeros {formatearTamano(viendo.limite)}; para verlo entero, descargalo</>}
+          </p>
+          <pre className="max-h-[60vh] overflow-auto rounded bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-3 text-[11px] leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre">{viendo?.contenido}</pre>
+        </div>
+      </Modal>
     </div>
   );
 };

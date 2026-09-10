@@ -38,6 +38,38 @@ export declare function truncarBytes(texto: string, max: number): string;
  * segunda pisaría a la primera sin que nada avisara.
  */
 export declare function backupDbName(baseOrigen: string, slot: Slot, maxDbBytes?: number): string;
+/**
+ * `2026_09_10_04:34` — el sello de fecha y hora que va EN el nombre de la base.
+ *
+ * Los dos puntos separan la hora de los minutos porque es como se lee una hora, y el driver y el
+ * servidor los aceptan (probado: `client.db("weprodu_2026_09_10_04:34")` no tira). MongoDB solo prohíbe
+ * `/\. "$` en Linux; el `:` figura en la lista de WINDOWS.
+ *
+ * La consecuencia, para tenerla anotada: si alguna vez hay que restaurar esta copia desde una máquina
+ * Windows, `mongorestore` no va a poder con ese nombre. Desde Linux, macOS o Atlas no cambia nada.
+ */
+export declare function selloFecha(d?: Date): string;
+/**
+ * El nombre de la base de copia CON la fecha adentro.
+ *
+ * Es lo que permite ver de cuándo es cada copia desde el listado de Atlas, sin abrirla. Lo que no entra
+ * en 38 bytes es el nombre completo de la base de origen MÁS la fecha (46), así que el prefijo se
+ * recorta hasta donde haga falta:
+ *
+ *   weprodu                 →  weprodu_2026_09_10_04:34                  24 bytes
+ *   weprodu_production_...  →  weprodu_production_in_2026_09_10_04:34    38 bytes
+ *
+ * Con `MONGO_DB_NAME_BACKUP` se elige un prefijo corto y el nombre queda legible.
+ */
+export declare function backupDbNameConFecha(prefijo: string, sello: string, maxDbBytes?: number): string;
+/**
+ * ¿Este nombre es una copia con fecha de este prefijo? Se usa antes de cualquier `dropDatabase`.
+ *
+ * El patrón acepta las TRES formas que existieron —`2026-09-10_1612`, `2026_09_10_1612` y
+ * `2026_09_10_04:34`— para que las copias creadas con versiones anteriores también se limpien. Si solo
+ * reconociera la actual, las viejas quedarían ocupando lugar en el cluster para siempre.
+ */
+export declare function esBaseDeCopiaConFecha(nombre: string, prefijo: string, maxDbBytes?: number): boolean;
 /** El slot que toca escribir: el que NO es la copia buena de ahora. */
 export declare const siguienteSlot: (ultimoSlotOk?: Slot | null) => Slot;
 export interface Limites {
@@ -61,6 +93,7 @@ export declare function preflight(opts: {
     slot: Slot;
     colecciones: string[];
     coleccionesEnCluster?: number;
+    nombreForzado?: string;
 }, limites?: Limites): ResultadoPreflight;
 /** El documento con el timestamp real, que ya no entra en el nombre de la base. */
 export declare function backupMeta(opts: {

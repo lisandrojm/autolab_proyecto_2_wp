@@ -11,12 +11,18 @@ import { uriDeBackup, prefijoDeBase, esClusterAparte, proximaBaseCopia } from ".
  * Run with:  npx tsx --test src/services/backupDestinoMongo.test.ts  —o—  npm run test:backup-mongo
  */
 
-const guardado = { MONGO_URI: process.env.MONGO_URI, MONGO_URI_BACKUP: process.env.MONGO_URI_BACKUP, MONGO_DB_NAME_BACKUP: process.env.MONGO_DB_NAME_BACKUP };
+const guardado = {
+  MONGO_URI: process.env.MONGO_URI,
+  MONGO_URI_BACKUP: process.env.MONGO_URI_BACKUP,
+  MONGO_DB_NAME_BACKUP: process.env.MONGO_DB_NAME_BACKUP,
+  MONGO_BACKUP_ESTRATEGIA: process.env.MONGO_BACKUP_ESTRATEGIA,
+};
 
 beforeEach(() => {
   delete process.env.MONGO_URI;
   delete process.env.MONGO_URI_BACKUP;
   delete process.env.MONGO_DB_NAME_BACKUP;
+  delete process.env.MONGO_BACKUP_ESTRATEGIA;
 });
 
 process.on("exit", () => Object.assign(process.env, guardado));
@@ -59,14 +65,23 @@ describe("prefijoDeBase", () => {
 });
 
 describe("proximaBaseCopia", () => {
-  it("dice qué base se va a usar y cuánto ocupa: el problema se ve ANTES de que falle", () => {
+  it("por defecto la FECHA va en el nombre: es lo que se lee desde el listado de Atlas", () => {
     const r = proximaBaseCopia("weprodu_production_integration", null);
-    assert.equal(r.base, "weprodu_production_integration_bkpA");
-    assert.equal(r.bytes, 35);
-    assert.ok(r.bytes <= r.maximo);
+    assert.match(r.base, /_\d{4}_\d{2}_\d{2}_\d{2}:\d{2}$/, `${r.base} debería terminar en fecha y hora`);
+    assert.ok(r.bytes <= r.maximo, `${r.base} ocupa ${r.bytes} y el máximo es ${r.maximo}`);
   });
 
-  it("alterna con el último slot que salió bien", () => {
+  it("con un prefijo corto el nombre queda legible y sobra lugar", () => {
+    // Es lo que se consigue poniendo `MONGO_DB_NAME_BACKUP=weprodu`.
+    process.env.MONGO_DB_NAME_BACKUP = "weprodu";
+    const r = proximaBaseCopia("weprodu_production_integration", null);
+    assert.match(r.base, /^weprodu_\d{4}_\d{2}_\d{2}_\d{2}:\d{2}$/, "weprodu_2026_09_10_04:34");
+    assert.equal(r.bytes, 24);
+  });
+
+  it("con `slots` vuelve a los dos nombres fijos y alterna", () => {
+    process.env.MONGO_BACKUP_ESTRATEGIA = "slots";
+    assert.equal(proximaBaseCopia("weprodu_production_integration", null).base, "weprodu_production_integration_bkpA");
     assert.equal(proximaBaseCopia("weprodu_production_integration", "A").base, "weprodu_production_integration_bkpB");
     assert.equal(proximaBaseCopia("weprodu_production_integration", "B").base, "weprodu_production_integration_bkpA");
   });

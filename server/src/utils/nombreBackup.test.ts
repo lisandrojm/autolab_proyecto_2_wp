@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { backupDbName, siguienteSlot, preflight, backupMeta, esBaseDeCopia, truncarBytes, MAX_DB_BYTES } from "./nombreBackup.js";
+import { backupDbName, backupDbNameConFecha, selloFecha, esBaseDeCopiaConFecha, siguienteSlot, preflight, backupMeta, esBaseDeCopia, truncarBytes, MAX_DB_BYTES } from "./nombreBackup.js";
 
 /**
  * Los nombres de las bases de copia contra el límite de 38 bytes de Atlas Free/Flex.
@@ -123,5 +123,34 @@ describe("truncarBytes", () => {
     assert.equal(truncarBytes("café", 4), "caf");
     assert.equal(truncarBytes("café", 3), "caf", "cortar justo antes de la é");
     assert.equal(truncarBytes("café", 5), "café", "si entra entero, no toca nada");
+  });
+});
+
+describe("selloFecha y el nombre con fecha", () => {
+  it("el nombre lleva día y hora legibles, que es lo único que hace falta ver desde Atlas", () => {
+    const sello = selloFecha(new Date(2026, 8, 10, 4, 34));
+    assert.equal(sello, "2026_09_10_04:34");
+    assert.equal(backupDbNameConFecha("weprodu", sello), "weprodu_2026_09_10_04:34");
+    assert.equal(B("weprodu_2026_09_10_04:34"), 24, "entra con margen en los 38 de Atlas Free/Flex");
+  });
+
+  it("un prefijo largo se recorta hasta que la fecha entre", () => {
+    const sello = selloFecha(new Date(2026, 8, 10, 4, 34));
+    const n = backupDbNameConFecha(ORIGEN, sello);
+    assert.equal(B(n), MAX_DB_BYTES, `${n} debería ocupar exactamente el máximo`);
+    assert.ok(n.endsWith(sello), "la fecha nunca se recorta: se recorta el prefijo");
+  });
+
+  it("reconoce como copia los TRES formatos de fecha que existieron", () => {
+    // Si solo reconociera el actual, las copias viejas quedarían ocupando lugar para siempre.
+    for (const n of ["weprodu_2026_09_10_04:34", "weprodu_2026_09_10_0434", "weprodu_2026-09-10_0434"]) {
+      assert.equal(esBaseDeCopiaConFecha(n, "weprodu"), true, `${n} es una copia`);
+    }
+  });
+
+  it("NO reconoce nada que no tenga forma de copia con fecha", () => {
+    for (const ajena of ["weprodu_production_integration", "weprodu_mvp_new", "raal_prod", "weprodu_backup_bkpA"]) {
+      assert.equal(esBaseDeCopiaConFecha(ajena, "weprodu"), false, `${ajena} no se puede borrar`);
+    }
   });
 });

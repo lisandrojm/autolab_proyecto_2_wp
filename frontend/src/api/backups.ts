@@ -43,6 +43,12 @@ export interface CopiaBackup {
   completa: boolean;
 }
 
+export interface ArchivoCopia {
+  nombre: string;
+  path: string;
+  bytes: number;
+}
+
 export const backupsAPI = {
   /**
    * Fuerza un backup y espera a que termine.
@@ -75,6 +81,23 @@ export const backupsAPI = {
   async descargarCopia(path: string): Promise<Blob> {
     const { data } = await axios.get("/backups/copias/descargar", { params: { path }, responseType: "blob", timeout: 10 * 60 * 1000 });
     return data;
+  },
+
+  /** Qué colecciones hay adentro de una copia, sin bajar el zip entero. */
+  async archivosDeCopia(path: string): Promise<ArchivoCopia[]> {
+    const { data } = await axios.get("/backups/copias/archivos", { params: { path } });
+    return data.archivos;
+  },
+
+  /** El contenido de un `.json`, recortado por el servidor para no colgar el navegador. */
+  async verArchivo(path: string): Promise<{ contenido: string; bytes: number; recortado: boolean; limite: number }> {
+    const { data } = await axios.get("/backups/copias/ver", { params: { path }, timeout: 2 * 60 * 1000 });
+    return data;
+  },
+
+  async linkArchivo(path: string): Promise<string> {
+    const { data } = await axios.get("/backups/copias/link", { params: { path } });
+    return data.url;
   },
 
   async borrarCopia(path: string): Promise<void> {
