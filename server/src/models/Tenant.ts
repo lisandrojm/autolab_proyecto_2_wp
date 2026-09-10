@@ -94,6 +94,13 @@ export interface ITenant extends Document {
        * llenar la cuota.
        */
       ultimaBaseCopia?: string;
+      /**
+       * Cuál de los dos slots (`A`/`B`) tiene la copia buena.
+       *
+       * La próxima corrida escribe en el OTRO: mientras se llena, este sigue siendo una copia completa.
+       * Reemplaza a la lógica vieja de borrar la anterior, que dejaba una ventana sin ninguna copia.
+       */
+      ultimoSlotOk?: "A" | "B";
     };
     /**
      * Usuario de clave fiscal con el que el SERVIDOR opera Simplificación Registral por su cuenta.
@@ -286,6 +293,7 @@ const tenantSchema = new Schema<ITenant>(
         ultimoBackupAt: { type: Date },
         ultimoError: { type: String },
         ultimaBaseCopia: { type: String },
+        ultimoSlotOk: { type: String, enum: ["A", "B"] },
       },
       // Usuario DELEGADO de clave fiscal para operar Simplificación Registral. Ver el comentario
       // largo en la interfaz, arriba: no puede ser el del apoderado.

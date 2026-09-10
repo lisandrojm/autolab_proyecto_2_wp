@@ -217,7 +217,7 @@ export interface ResultadoBackup {
   borrados: number;
   /** Cómo le fue a cada destino. Uno puede fallar sin llevarse al otro puesto. */
   dropbox: { ok: boolean; error?: string };
-  mongo: { ok: boolean; configurado: boolean; base?: string; documentos?: number; borrados?: number; error?: string };
+  mongo: { ok: boolean; configurado: boolean; base?: string; slot?: "A" | "B"; documentos?: number; borrados?: number; error?: string };
 }
 
 /**
@@ -277,10 +277,11 @@ export async function correrBackup(disparador: "cron" | "manual" = "cron"): Prom
     try {
       // Se clona desde la base, no desde los `.json` ya generados: escribir los documentos tal cual
       // deja una base normal, navegable desde Atlas, en vez de archivos que habría que importar.
-      const r = await clonarEnMongo(baseDatos, carpeta, nombresDeColecciones(archivos), (tenant as any)?.integrations?.backup?.ultimaBaseCopia);
+      const r = await clonarEnMongo(baseDatos, nombresDeColecciones(archivos), (tenant as any)?.integrations?.backup?.ultimoSlotOk);
       mongo.ok = true;
       mongo.configurado = r.configurado;
       mongo.base = r.base;
+      mongo.slot = r.slot;
       mongo.documentos = r.documentos;
       mongo.borrados = r.borrados;
     } catch (e: any) {
@@ -298,9 +299,15 @@ export async function correrBackup(disparador: "cron" | "manual" = "cron"): Prom
     */
     const fallos = [dropbox.ok ? "" : `Dropbox: ${dropbox.error}`, mongo.ok ? "" : `Mongo de backup: ${mongo.error}`].filter(Boolean).join(" · ");
     const cambios: Record<string, unknown> = { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": fallos };
-    // El nombre del clon solo se pisa si el clon salió bien: si falló, la copia anterior sigue viva y es
-    // la que hay que borrar la próxima vez. Pisarlo acá la dejaría huérfana ocupando lugar para siempre.
-    if (mongo.ok && mongo.base) cambios["integrations.backup.ultimaBaseCopia"] = mongo.base;
+    /*
+      El slot bueno solo se mueve si el clon TERMINÓ bien. Si falló a mitad, el slot que sigue siendo la
+      copia completa es el anterior — marcar el nuevo dejaría a la próxima corrida escribiendo encima de
+      la única copia sana.
+    */
+    if (mongo.ok && mongo.slot) {
+      cambios["integrations.backup.ultimoSlotOk"] = mongo.slot;
+      cambios["integrations.backup.ultimaBaseCopia"] = mongo.base;
+    }
     await Tenant.updateOne({ _id: tenant._id }, { $set: cambios });
 
     console.log(

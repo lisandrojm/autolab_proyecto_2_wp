@@ -10,7 +10,17 @@ export interface ResultadoBackup {
 
 export interface ConfigBackup {
   /** Estado del segundo destino (otro Mongo). `sin_configurar` no es un error: falta la variable. */
-  mongoDestino?: { estado: "ok" | "sin_configurar" | "error"; prefijo?: string; clusterAparte?: boolean; ultimaBase?: string; error?: string };
+  mongoDestino?: {
+    estado: "ok" | "sin_configurar" | "error";
+    prefijo?: string;
+    clusterAparte?: boolean;
+    ultimaBase?: string;
+    /** La base que va a usar la próxima copia, y cuánto ocupa contra el límite de Atlas. */
+    proximaBase?: string;
+    proximaBytes?: number;
+    maximoBytes?: number;
+    error?: string;
+  };
   enCurso: boolean;
   carpeta: string;
   intervaloHoras: number;
@@ -56,10 +66,15 @@ export const backupsAPI = {
     return data;
   },
 
-  /** Link temporal de Dropbox. El token nunca llega al browser. */
-  async linkDescarga(path: string): Promise<string> {
-    const { data } = await axios.get("/backups/copias/descargar", { params: { path } });
-    return data.url;
+  /**
+   * Baja la copia ENTERA como ZIP. El servidor reenvía lo que arma Dropbox: el token nunca llega acá.
+   *
+   * `responseType: "blob"` es obligatorio — sin eso axios interpreta el zip como texto y el archivo
+   * queda corrupto al guardarlo.
+   */
+  async descargarCopia(path: string): Promise<Blob> {
+    const { data } = await axios.get("/backups/copias/descargar", { params: { path }, responseType: "blob", timeout: 10 * 60 * 1000 });
+    return data;
   },
 
   async borrarCopia(path: string): Promise<void> {

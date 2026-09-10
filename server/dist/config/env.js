@@ -27,6 +27,26 @@ const envSchema = z.object({
     SSL_CERT_PATH: z.string().optional(),
     MONGO_URI: z.string().min(1),
     MONGO_DB_NAME: z.string().min(1),
+    /*
+      Copia de la base DENTRO de Mongo (ver `services/backupDestinoMongo.ts`).
+  
+      Los límites van acá y no hardcodeados porque son de los clusters Atlas Free y Flex: en un M10 dejan
+      de aplicar y tiene que poder cambiarse sin tocar código.
+    */
+    MONGO_BACKUP_ESTRATEGIA: z.enum(["slots", "legacy"]).default("slots"),
+    MONGO_BACKUP_MAX_DB_BYTES: z.string().default("38").transform((v) => Number(v)),
+    MONGO_BACKUP_MAX_NS_BYTES: z.string().default("95").transform((v) => Number(v)),
+    MONGO_BACKUP_MAX_COLECCIONES: z.string().default("500").transform((v) => Number(v)),
+    /*
+      OJO CON EL `preprocess`: si convierte `undefined` a texto, queda el string "undefined", el enum lo
+      rechaza y el `.default()` NUNCA llega a aplicarse — el server no arranca por una variable opcional
+      que nadie definió. Por eso el undefined se deja pasar tal cual.
+  
+      (`USE_HTTPS`, más arriba, tiene la misma forma y sobrevive solo porque está en todos los `.env`.)
+    */
+    MONGO_BACKUP_REEMPLAZAR_SLOT: z
+        .preprocess((v) => (v === undefined ? undefined : String(v).toLowerCase().trim()), z.enum(["true", "false"]).default("true"))
+        .transform((v) => v === "true"),
     JWT_SECRET: z.string().min(1),
     JWT_EXPIRES_IN: z.string().default("7d"),
     // Llave del server para cifrar secretos de integraciones por tenant (Dropbox, etc.).

@@ -238,10 +238,11 @@ export async function correrBackup(disparador = "cron") {
         try {
             // Se clona desde la base, no desde los `.json` ya generados: escribir los documentos tal cual
             // deja una base normal, navegable desde Atlas, en vez de archivos que habría que importar.
-            const r = await clonarEnMongo(baseDatos, carpeta, nombresDeColecciones(archivos), tenant?.integrations?.backup?.ultimaBaseCopia);
+            const r = await clonarEnMongo(baseDatos, nombresDeColecciones(archivos), tenant?.integrations?.backup?.ultimoSlotOk);
             mongo.ok = true;
             mongo.configurado = r.configurado;
             mongo.base = r.base;
+            mongo.slot = r.slot;
             mongo.documentos = r.documentos;
             mongo.borrados = r.borrados;
         }
@@ -259,10 +260,15 @@ export async function correrBackup(disparador = "cron") {
         */
         const fallos = [dropbox.ok ? "" : `Dropbox: ${dropbox.error}`, mongo.ok ? "" : `Mongo de backup: ${mongo.error}`].filter(Boolean).join(" · ");
         const cambios = { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": fallos };
-        // El nombre del clon solo se pisa si el clon salió bien: si falló, la copia anterior sigue viva y es
-        // la que hay que borrar la próxima vez. Pisarlo acá la dejaría huérfana ocupando lugar para siempre.
-        if (mongo.ok && mongo.base)
+        /*
+          El slot bueno solo se mueve si el clon TERMINÓ bien. Si falló a mitad, el slot que sigue siendo la
+          copia completa es el anterior — marcar el nuevo dejaría a la próxima corrida escribiendo encima de
+          la única copia sana.
+        */
+        if (mongo.ok && mongo.slot) {
+            cambios["integrations.backup.ultimoSlotOk"] = mongo.slot;
             cambios["integrations.backup.ultimaBaseCopia"] = mongo.base;
+        }
         await Tenant.updateOne({ _id: tenant._id }, { $set: cambios });
         console.log(`[BACKUP:${disparador}] ${carpeta} · ${archivos.length - 1} colecciones · ${documentos} documentos · ${(bytes / 1024 / 1024).toFixed(1)} MB · ` +
             `dropbox=${dropbox.ok ? `ok (${borrados} viejos borrados)` : "FALLÓ"} · mongo=${mongo.ok ? (mongo.configurado ? `ok → ${mongo.base} (${mongo.documentos} docs, ${mongo.borrados} bases viejas borradas)` : "sin configurar") : "FALLÓ"}`);

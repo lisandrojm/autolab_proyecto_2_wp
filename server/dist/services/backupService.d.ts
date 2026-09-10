@@ -82,6 +82,7 @@ export interface ResultadoBackup {
         ok: boolean;
         configurado: boolean;
         base?: string;
+        slot?: "A" | "B";
         documentos?: number;
         borrados?: number;
         error?: string;

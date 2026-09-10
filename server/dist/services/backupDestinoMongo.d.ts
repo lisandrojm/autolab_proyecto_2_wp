@@ -1,3 +1,4 @@
+import { Slot } from "../utils/nombreBackup.js";
 /**
  * SEGUNDO DESTINO DE LOS BACKUPS: OTRA BASE DEL MISMO CLUSTER, UNA POR COPIA.
  *
@@ -14,12 +15,20 @@
  * base de la aplicación, y una copia adentro entraría en la siguiente, y esa en la próxima, en potencia.
  * El sello de fecha en el nombre lo hace imposible por construcción.
  *
- * LA BASE LLEVA LA FECHA EN EL NOMBRE:
+ * LA BASE NO LLEVA LA FECHA: LLEVA UN SLOT QUE ROTA.
  *
- *   weprodu_production_integration_2026-09-10_1010
+ *   weprodu_production_integration_bkpA    35 bytes
+ *   weprodu_production_integration_bkpB    35 bytes
  *
- * Es lo que hace que la copia se pueda reconocer desde el Data Explorer de Atlas sin abrir nada. Con un
- * nombre fijo, dos backups distintos se veían igual y no había forma de saber cuál se estaba mirando.
+ * La fecha en el nombre era lo natural, y no entra: los clusters Atlas **Free y Flex** cortan los
+ * nombres de base en **38 bytes** —MongoDB permite 64, esto es un límite del tier— y
+ * `weprodu_production_integration_backup_2026-09-10_1048` da 53. Con una base de 30 bytes quedan 8 para
+ * el sufijo: no entra ninguna fecha, ni recortada. Así que el timestamp vive en un documento adentro de
+ * la copia (`_backup_meta`), donde además se puede leer sin mirar el nombre.
+ *
+ * Dos slots y no uno solo: con un nombre fijo habría que borrar la copia buena antes de escribir la
+ * nueva, y en esa ventana no existiría ninguna copia válida. Rotando, mientras se escribe un slot el
+ * otro sigue completo. Ver `utils/nombreBackup.ts`.
  *
  * Y NO SE GUARDAN ARCHIVOS: SE ESCRIBEN LAS COLECCIONES.
  *
@@ -31,13 +40,15 @@
  * RETENCIÓN: se conserva SOLO LA ÚLTIMA. Las bases anteriores se borran DESPUÉS de que la nueva quedó
  * completa, nunca antes. El histórico largo vive en Dropbox, que guarda las que diga la pantalla.
  */
-/** Lo que se escribe en `_backup` de la base copiada: de dónde salió y cuándo. */
-export declare const COLECCION_MANIFIESTO = "_backup";
+/** Dónde queda el timestamp, ahora que no entra en el nombre de la base. */
+export declare const COLECCION_MANIFIESTO = "_backup_meta";
 export interface ResultadoDestinoMongo {
     /** `false` cuando no hay `MONGO_URI_BACKUP`: no es un error, es que no está configurado. */
     configurado: boolean;
-    /** La base donde quedó, con su fecha. Es lo que se muestra en la pantalla. */
+    /** La base donde quedó. Es lo que se muestra en la pantalla. */
     base?: string;
+    /** El slot escrito. Se persiste para saber cuál escribir la próxima vez. */
+    slot?: Slot;
     colecciones: number;
     documentos: number;
     /** Bases viejas borradas. */
@@ -56,16 +67,23 @@ export declare const esClusterAparte: () => boolean;
 /**
  * El prefijo de las bases de copia.
  *
- * `MONGO_DB_NAME_BACKUP` es un PREFIJO, no el nombre final: a cada copia se le pega su fecha. Si no se
- * declara, se usa el nombre de la base de origen, que es lo que uno espera ver en Atlas.
+ * `MONGO_DB_NAME_BACKUP` sigue existiendo para poder cambiarlo, pero con el límite de 38 bytes casi
+ * nunca conviene tocarlo: cualquier prefijo más largo que el nombre de la base obliga a recortar y a
+ * meter un hash, y el nombre deja de ser legible.
  */
 export declare function prefijoDeBase(baseOrigen: string): string;
-/** `weprodu_production_integration_2026-09-10_1010` — el mismo sello que la carpeta de Dropbox. */
-export declare function nombreDeBaseCopia(baseOrigen: string, carpeta: string): string;
+/** El nombre de la base de copia para un slot. */
+export declare function nombreDeBaseCopia(baseOrigen: string, slot: Slot): string;
+/** Cuál se va a escribir la próxima vez. Lo muestra la pantalla, con su tamaño. */
+export declare function proximaBaseCopia(baseOrigen: string, ultimoSlotOk?: Slot | null): {
+    base: string;
+    bytes: number;
+    maximo: number;
+};
 /**
  * Clona la base en una base nueva del cluster de backup y borra las copias anteriores.
  *
  * Lee de la conexión de la aplicación (la que ya está abierta) y escribe en una conexión efímera al
  * destino: esto corre dos veces por día y no justifica sostener un segundo pool abierto todo el tiempo.
  */
-export declare function clonarEnMongo(baseOrigen: string, carpeta: string, colecciones: string[], baseAnterior?: string | null): Promise<ResultadoDestinoMongo>;
+export declare function clonarEnMongo(baseOrigen: string, colecciones: string[], ultimoSlotOk?: Slot | null): Promise<ResultadoDestinoMongo>;

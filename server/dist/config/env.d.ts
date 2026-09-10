@@ -7,6 +7,11 @@ export declare const env: {
     SSL_CERT_PATH?: string;
     MONGO_URI?: string;
     MONGO_DB_NAME?: string;
+    MONGO_BACKUP_ESTRATEGIA?: "slots" | "legacy";
+    MONGO_BACKUP_MAX_DB_BYTES?: number;
+    MONGO_BACKUP_MAX_NS_BYTES?: number;
+    MONGO_BACKUP_MAX_COLECCIONES?: number;
+    MONGO_BACKUP_REEMPLAZAR_SLOT?: boolean;
     JWT_SECRET?: string;
     JWT_EXPIRES_IN?: string;
     ENCRYPTION_KEY?: string;

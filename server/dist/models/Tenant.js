@@ -67,6 +67,7 @@ const tenantSchema = new Schema({
             ultimoBackupAt: { type: Date },
             ultimoError: { type: String },
             ultimaBaseCopia: { type: String },
+            ultimoSlotOk: { type: String, enum: ["A", "B"] },
         },
         // Usuario DELEGADO de clave fiscal para operar Simplificación Registral. Ver el comentario
         // largo en la interfaz, arriba: no puede ser el del apoderado.

@@ -116,7 +116,7 @@ export const MongoDbConfig: React.FC = () => {
                 <span className="font-semibold text-gray-700 dark:text-gray-300">Copia dentro de Mongo: </span>
                 {config?.mongoDestino?.estado === "ok" && (
                   <span className="text-emerald-600 dark:text-emerald-400">
-                    cada copia clona la base en <code>{config.mongoDestino.prefijo}_&lt;fecha&gt;_&lt;hora&gt;</code>, y se conserva solo la última.
+                    la base se clona alternando entre dos slots, <code>_bkpA</code> y <code>_bkpB</code>. Mientras se llena uno, el otro sigue siendo una copia completa.
                   </span>
                 )}
                 {config?.mongoDestino?.estado === "sin_configurar" && <span className="text-gray-500">no hay conexión a Mongo configurada.</span>}
@@ -127,7 +127,14 @@ export const MongoDbConfig: React.FC = () => {
                 <>
                   {config.mongoDestino.ultimaBase && (
                     <div className="text-gray-500">
-                      Última: <code>{config.mongoDestino.ultimaBase}</code> — se abre desde Atlas y se consulta como cualquier base, sin importar nada.
+                      Última: <code>{config.mongoDestino.ultimaBase}</code> — se abre desde Atlas y se consulta como cualquier base, sin importar nada. La fecha está adentro, en{" "}
+                      <code>_backup_meta</code>: no entra en el nombre porque Atlas Free/Flex corta en {config.mongoDestino.maximoBytes ?? 38} bytes.
+                    </div>
+                  )}
+                  {/* El nombre que va a usar la próxima, con su tamaño: el problema se ve ANTES de fallar. */}
+                  {config.mongoDestino.proximaBase && (
+                    <div className={config.mongoDestino.proximaBytes && config.mongoDestino.maximoBytes && config.mongoDestino.proximaBytes > config.mongoDestino.maximoBytes ? "text-red-600 dark:text-red-400" : "text-gray-500"}>
+                      Próxima copia: <code>{config.mongoDestino.proximaBase}</code> ({config.mongoDestino.proximaBytes}/{config.mongoDestino.maximoBytes} bytes)
                     </div>
                   )}
                   <div className={config.mongoDestino.clusterAparte ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>

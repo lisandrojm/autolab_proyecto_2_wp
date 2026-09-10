@@ -1,13 +1,12 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { uriDeBackup, prefijoDeBase, nombreDeBaseCopia, esClusterAparte } from "./backupDestinoMongo.js";
+import { uriDeBackup, prefijoDeBase, esClusterAparte, proximaBaseCopia } from "./backupDestinoMongo.js";
 
 /**
- * La configuración del segundo destino, que es lo único testeable sin una base de verdad.
+ * La configuración del destino Mongo: dónde se clona y con qué nombre.
  *
- * Lo que se prueba acá es la GUARDA: que el destino no pueda ser la misma base que se respalda. Si eso
- * falla, la copia queda adentro del original —no sería un backup— y encima el dump siguiente se
- * respaldaría a sí mismo, creciendo en potencia.
+ * El armado del nombre en sí vive en `utils/nombreBackup.ts` y tiene sus propios tests; acá se prueba
+ * lo que decide este módulo — qué cluster, qué prefijo, y qué base toca la próxima vez.
  *
  * Run with:  npx tsx --test src/services/backupDestinoMongo.test.ts  —o—  npm run test:backup-mongo
  */
@@ -48,40 +47,35 @@ describe("uriDeBackup", () => {
   });
 });
 
-describe("la copia nunca cae sobre la base de origen", () => {
-  it("el nombre SIEMPRE difiere del de la base respaldada", () => {
-    /*
-      Es la garantía que reemplaza a la vieja guarda de «otro cluster». Si la copia cayera en la misma
-      base, el próximo dump se respaldaría a sí mismo y cada copia sería más grande que la anterior.
-    */
-    const origen = "weprodu_production_integration";
-    for (const sello of ["2026-09-10_1010", "2026-01-01_0000"]) {
-      assert.notEqual(nombreDeBaseCopia(origen, `${origen}_${sello}`), origen);
-    }
-    process.env.MONGO_DB_NAME_BACKUP = origen;
-    assert.notEqual(nombreDeBaseCopia(origen, `${origen}_2026-09-10_1010`), origen, "aunque el prefijo sea el mismo nombre, el sello lo separa");
+describe("prefijoDeBase", () => {
+  it("sin la variable, el prefijo es el nombre de la base de origen", () => {
+    assert.equal(prefijoDeBase("weprodu_production_integration"), "weprodu_production_integration");
+  });
+
+  it("MONGO_DB_NAME_BACKUP lo pisa", () => {
+    process.env.MONGO_DB_NAME_BACKUP = "copias";
+    assert.equal(prefijoDeBase("weprodu_production_integration"), "copias");
   });
 });
 
-describe("nombreDeBaseCopia", () => {
-  it("la base lleva la FECHA en el nombre: es lo que permite reconocerla desde Atlas", () => {
-    // Sin la fecha, dos backups distintos se ven igual en el Data Explorer.
-    assert.equal(nombreDeBaseCopia("weprodu_production_integration", "weprodu_production_integration_2026-09-10_1010"), "weprodu_production_integration_2026-09-10_1010");
+describe("proximaBaseCopia", () => {
+  it("dice qué base se va a usar y cuánto ocupa: el problema se ve ANTES de que falle", () => {
+    const r = proximaBaseCopia("weprodu_production_integration", null);
+    assert.equal(r.base, "weprodu_production_integration_bkpA");
+    assert.equal(r.bytes, 35);
+    assert.ok(r.bytes <= r.maximo);
   });
 
-  it("no repite el nombre de la base cuando el prefijo ya es ese", () => {
-    // Sin esto quedaría `weprodu_production_integration_weprodu_production_integration_2026-…`.
-    const r = nombreDeBaseCopia("weprodu_production_integration", "weprodu_production_integration_2026-09-10_1010");
-    assert.equal((r.match(/weprodu_production_integration/g) || []).length, 1);
+  it("alterna con el último slot que salió bien", () => {
+    assert.equal(proximaBaseCopia("weprodu_production_integration", "A").base, "weprodu_production_integration_bkpB");
+    assert.equal(proximaBaseCopia("weprodu_production_integration", "B").base, "weprodu_production_integration_bkpA");
   });
 
-  it("MONGO_DB_NAME_BACKUP es un PREFIJO, no el nombre final", () => {
-    process.env.MONGO_DB_NAME_BACKUP = "copias";
-    assert.equal(prefijoDeBase("weprodu_production_integration"), "copias");
-    assert.equal(nombreDeBaseCopia("weprodu_production_integration", "weprodu_production_integration_2026-09-10_1010"), "copias_2026-09-10_1010");
-  });
-
-  it("sin la variable, el prefijo es el nombre de la base de origen", () => {
-    assert.equal(prefijoDeBase("weprodu_production_integration"), "weprodu_production_integration");
+  it("con el prefijo largo configurado hoy, el nombre se recorta y NO pasa el límite", () => {
+    // `MONGO_DB_NAME_BACKUP=weprodu_production_integration_backup` son 37 bytes: +_bkpA daría 42, que es
+    // justo el error que rompía el backup. El recorte con hash lo deja adentro.
+    process.env.MONGO_DB_NAME_BACKUP = "weprodu_production_integration_backup";
+    const r = proximaBaseCopia("weprodu_production_integration", null);
+    assert.ok(r.bytes <= r.maximo, `${r.base} ocupa ${r.bytes} y el máximo es ${r.maximo}`);
   });
 });

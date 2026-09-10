@@ -55,14 +55,30 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
 
   useEffect(cargar, [recarga]);
 
+  const [bajando, setBajando] = useState<string | null>(null);
+
+  /**
+   * Baja la copia ENTERA, en un zip.
+   *
+   * Antes bajaba `_backup.json`, que es el MANIFIESTO: un archivo de pocos KB que dice qué hay en la
+   * copia. Servía para verificar, no para restaurar — para importar a Atlas hacen falta los `.json` de
+   * las colecciones, que son los que ahora vienen adentro del zip.
+   */
   const descargar = async (copia: CopiaBackup) => {
+    setBajando(copia.path);
     try {
-      // Se baja el manifiesto, que es lo que dice qué tiene la copia. Los `.json` de cada colección se
-      // bajan desde Dropbox: son varios archivos y no tiene sentido zipearlos del lado del server.
-      const url = await backupsAPI.linkDescarga(`${copia.path}/_backup.json`);
-      window.open(url, "_blank", "noopener");
+      const blob = await backupsAPI.descargarCopia(copia.path);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${copia.nombre}.zip`;
+      a.click();
+      // Sin esto el blob queda retenido en memoria hasta que se recargue la página; con 31 MB se nota.
+      URL.revokeObjectURL(url);
     } catch (e: any) {
-      sweetAlert.error("No se pudo generar el link", String(e?.response?.data?.error || e?.message || ""));
+      sweetAlert.error("No se pudo descargar la copia", String(e?.response?.data?.error || e?.message || ""));
+    } finally {
+      setBajando(null);
     }
   };
 
@@ -229,8 +245,13 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{c.colecciones || "—"}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{c.documentos ? c.documentos.toLocaleString("es-AR") : "—"}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <button onClick={() => descargar(c)} disabled={!c.completa} title={c.completa ? "Ver el manifiesto de esta copia" : "Sin manifiesto: la copia está incompleta"} className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-40 disabled:cursor-not-allowed">
-                      <FontAwesomeIcon icon={faDownload} />
+                    <button
+                      onClick={() => descargar(c)}
+                      disabled={!c.completa || bajando === c.path}
+                      title={c.completa ? "Descargar la copia entera (.zip) para importar a Atlas" : "Sin manifiesto: la copia está incompleta"}
+                      className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <FontAwesomeIcon icon={bajando === c.path ? faSpinner : faDownload} spin={bajando === c.path} />
                     </button>
                     {/* Una copia incompleta SÍ se puede borrar: es justamente la que hay que sacar. */}
                     <button onClick={() => borrar(c)} title="Eliminar esta copia de Dropbox" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">

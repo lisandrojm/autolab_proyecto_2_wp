@@ -219,6 +219,27 @@ export async function uploadFileSession(tenantId, cfg, path, buffer) {
     });
     return mapEntry(data);
 }
+/**
+ * Descarga una CARPETA entera como ZIP.
+ *
+ * `getTemporaryLink` sirve solo para archivos sueltos; para una carpeta Dropbox tiene su propio
+ * endpoint (`/files/download_zip`), que arma el zip del lado de ellos. Es lo que hace falta para bajar
+ * una copia de backup completa —58 archivos— sin pedirle al usuario 58 clicks.
+ *
+ * Límites de Dropbox para este endpoint: 20 GB y 10.000 archivos por carpeta. Una copia de esta base
+ * son ~31 MB y 59 archivos: sobra.
+ */
+export async function downloadFolderZip(tenantId, cfg, path) {
+    const token = await getAccessToken(tenantId, cfg);
+    const { data } = await axios.post(`${CONTENT}/files/download_zip`, undefined, {
+        headers: { Authorization: `Bearer ${token}`, "Dropbox-API-Arg": argHeader({ path }) },
+        responseType: "arraybuffer",
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        timeout: CONTENT_TIMEOUT_MS,
+    });
+    return Buffer.from(data);
+}
 export async function deleteEntry(tenantId, cfg, path) {
     await rpc(tenantId, cfg, "/files/delete_v2", { path });
 }

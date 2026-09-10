@@ -2,9 +2,9 @@ import { Router } from "express";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { correrBackup, backupEnCurso, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
-import { getTenantDropboxConfig, listFolder, downloadFileContent, getTemporaryLink, deleteEntry } from "../services/dropboxService.js";
+import { getTenantDropboxConfig, listFolder, downloadFileContent, deleteEntry, downloadFolderZip } from "../services/dropboxService.js";
 import { Tenant } from "../models/Tenant.js";
-import { uriDeBackup, prefijoDeBase, esClusterAparte } from "../services/backupDestinoMongo.js";
+import { uriDeBackup, prefijoDeBase, esClusterAparte, proximaBaseCopia } from "../services/backupDestinoMongo.js";
 /**
  * Forzar un backup a mano, sin esperar a la corrida de las 12 horas.
  *
@@ -43,6 +43,11 @@ router.get("/config", async (req, res) => {
                 prefijo: prefijoDeBase(String(process.env.MONGO_DB_NAME || "weprodu")),
                 clusterAparte: esClusterAparte(),
                 ultimaBase: b.ultimaBaseCopia || undefined,
+                // Qué base va a usar la próxima corrida, para poder ver el límite antes de que falle.
+                ...(() => {
+                    const p = proximaBaseCopia(String(process.env.MONGO_DB_NAME || "weprodu"), b.ultimoSlotOk || null);
+                    return { proximaBase: p.base, proximaBytes: p.bytes, maximoBytes: p.maximo };
+                })(),
             }
             : { estado: "sin_configurar" };
     }
@@ -178,9 +183,15 @@ router.get("/copias", async (req, res) => {
     }
 });
 /**
- * GET /backups/copias/descargar?path=… — link temporal de Dropbox para bajar un archivo de una copia.
+ * GET /backups/copias/descargar?path=… — baja la copia ENTERA como ZIP.
  *
- * El token NUNCA sale del servidor: se pide el link acá y al browser le llega solo la URL, que caduca.
+ * Antes esto devolvía un link temporal al `_backup.json`, que es el manifiesto: la persona bajaba un
+ * archivo de 5 KB que dice qué hay en la copia, no la copia. Para importar a Atlas hacen falta los 58
+ * `.json` de las colecciones.
+ *
+ * El ZIP lo arma Dropbox y el servidor lo reenvía. Se reenvía —en vez de dar un link directo— porque
+ * `/files/download_zip` no tiene equivalente en link temporal: hay que autenticarse con el token, y ese
+ * token no puede llegar al browser.
  */
 router.get("/copias/descargar", async (req, res) => {
     if (!isAdmin(req)) {
@@ -189,7 +200,7 @@ router.get("/copias/descargar", async (req, res) => {
     }
     const path = String(req.query.path || "");
     if (!path.startsWith(CARPETA_BACKUPS + "/")) {
-        // Sin esta comprobación, este endpoint sería un lector de toda la Dropbox del tenant.
+        // Sin esto, este endpoint sería un lector de toda la Dropbox del tenant.
         res.status(400).json({ error: "Ruta fuera de la carpeta de backups." });
         return;
     }
@@ -200,10 +211,15 @@ router.get("/copias/descargar", async (req, res) => {
             res.status(400).json({ error: "Dropbox no está conectado." });
             return;
         }
-        res.json({ url: await getTemporaryLink(String(tenant._id), cfg, path) });
+        const zip = await downloadFolderZip(String(tenant._id), cfg, path);
+        const nombre = path.split("/").pop() || "backup";
+        res.setHeader("Content-Type", "application/zip");
+        res.setHeader("Content-Disposition", `attachment; filename="${nombre}.zip"`);
+        res.send(zip);
     }
     catch (error) {
-        res.status(500).json({ error: String(error?.message || "No se pudo generar el link.") });
+        console.error("Descargar copia falló:", error);
+        res.status(500).json({ error: String(error?.message || "No se pudo descargar la copia.") });
     }
 });
 /**
