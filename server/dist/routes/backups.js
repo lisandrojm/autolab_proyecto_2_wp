@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { correrBackup, backupEnCurso, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
-import { getTenantDropboxConfig, listFolder, downloadFileContent, getTemporaryLink } from "../services/dropboxService.js";
+import { getTenantDropboxConfig, listFolder, downloadFileContent, getTemporaryLink, deleteEntry } from "../services/dropboxService.js";
 import { Tenant } from "../models/Tenant.js";
 import { uriDeBackup, prefijoDeBase, esClusterAparte } from "../services/backupDestinoMongo.js";
 /**
@@ -204,6 +204,39 @@ router.get("/copias/descargar", async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ error: String(error?.message || "No se pudo generar el link.") });
+    }
+});
+/**
+ * DELETE /backups/copias?path=… — borra una copia de Dropbox.
+ *
+ * Borra SOLO la carpeta de Dropbox. El clon dentro de Mongo no se toca acá: es siempre uno solo —el de
+ * la última corrida— y lo reemplaza la corrida siguiente. Mezclar las dos cosas en este botón haría que
+ * borrar una copia vieja del histórico se llevara puesta la copia viva.
+ */
+router.delete("/copias", async (req, res) => {
+    if (!isAdmin(req)) {
+        res.status(403).json({ error: "Solo un administrador puede borrar una copia." });
+        return;
+    }
+    const path = String(req.query.path || "");
+    // Sin esta comprobación, este endpoint sería un borrador de toda la Dropbox del tenant.
+    if (!path.startsWith(CARPETA_BACKUPS + "/")) {
+        res.status(400).json({ error: "Ruta fuera de la carpeta de backups." });
+        return;
+    }
+    try {
+        const tenant = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
+        const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+        if (!cfg) {
+            res.status(400).json({ error: "Dropbox no está conectado." });
+            return;
+        }
+        await deleteEntry(String(tenant._id), cfg, path);
+        res.json({ ok: true });
+    }
+    catch (error) {
+        console.error("Borrar copia falló:", error);
+        res.status(500).json({ error: String(error?.message || "No se pudo borrar la copia.") });
     }
 });
 export const backupRoutes = router;

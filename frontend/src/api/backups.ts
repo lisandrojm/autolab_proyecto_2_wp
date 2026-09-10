@@ -62,6 +62,10 @@ export const backupsAPI = {
     return data.url;
   },
 
+  async borrarCopia(path: string): Promise<void> {
+    await axios.delete("/backups/copias", { params: { path } });
+  },
+
   async guardarConfig(intervaloHoras: number, retener: number): Promise<{ intervaloHoras: number; retener: number }> {
     const { data } = await axios.put("/backups/config", { intervaloHoras, retener });
     return data;

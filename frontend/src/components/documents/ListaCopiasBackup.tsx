@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faFolder, faDownload, faTriangleExclamation, faRotate } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faFolder, faDownload, faTriangleExclamation, faRotate, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { backupsAPI, CopiaBackup } from "../../api/backups";
 import { sweetAlert } from "../../utils/sweetAlert";
 
@@ -59,6 +59,28 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
       window.open(url, "_blank", "noopener");
     } catch (e: any) {
       sweetAlert.error("No se pudo generar el link", String(e?.response?.data?.error || e?.message || ""));
+    }
+  };
+
+  /*
+    Borrar una copia es destructivo y no se deshace, así que el cartel dice EXACTAMENTE cuál se va a
+    borrar —fecha y tamaño, no solo el nombre— y avisa que el histórico se acorta en una.
+  */
+  const borrar = async (copia: CopiaBackup) => {
+    const res = await sweetAlert.confirm(
+      "¿Eliminar esta copia?",
+      `Se va a borrar de Dropbox la copia del ${formatearFecha(copia.fecha, copia.nombre)}${copia.bytes ? ` (${formatearTamano(copia.bytes)})` : ""}.\n\nEl clon dentro de Mongo no se toca: ese es siempre el de la última corrida. Esta acción no se puede deshacer.`,
+      "Sí, eliminar",
+    );
+    if (!res.isConfirmed) return;
+    try {
+      await backupsAPI.borrarCopia(copia.path);
+      // Se recarga desde el servidor y no se saca de la lista a mano: así el total y el contador quedan
+      // con lo que hay de verdad en Dropbox, no con lo que suponemos.
+      cargar();
+      sweetAlert.success("Copia eliminada", `Se borró ${copia.nombre}.`);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo eliminar", String(e?.response?.data?.error || e?.message || ""));
     }
   };
 
@@ -138,6 +160,10 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
                   <td className="px-4 py-3 whitespace-nowrap text-center">
                     <button onClick={() => descargar(c)} disabled={!c.completa} title={c.completa ? "Ver el manifiesto de esta copia" : "Sin manifiesto: la copia está incompleta"} className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-40 disabled:cursor-not-allowed">
                       <FontAwesomeIcon icon={faDownload} />
+                    </button>
+                    {/* Una copia incompleta SÍ se puede borrar: es justamente la que hay que sacar. */}
+                    <button onClick={() => borrar(c)} title="Eliminar esta copia de Dropbox" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                      <FontAwesomeIcon icon={faTrash} />
                     </button>
                   </td>
                 </tr>
