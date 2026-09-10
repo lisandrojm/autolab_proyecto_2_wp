@@ -53,18 +53,21 @@ export function backupDbName(baseOrigen, slot, maxDbBytes = MAX_DB_BYTES) {
     return `${truncarBytes(baseOrigen, lugar - 5)}_${hash}${sufijo}`;
 }
 /**
- * `2026_09_10_04:34` — el sello de fecha y hora que va EN el nombre de la base.
+ * `2026_09_10_04-34` — el sello de fecha y hora. UN solo formato para los dos destinos.
  *
- * Los dos puntos separan la hora de los minutos porque es como se lee una hora, y el driver y el
- * servidor los aceptan (probado: `client.db("weprodu_2026_09_10_04:34")` no tira). MongoDB solo prohíbe
- * `/\. "$` en Linux; el `:` figura en la lista de WINDOWS.
+ * La hora va con guion y no con dos puntos, y no es un capricho: el MISMO nombre se usa para la base de
+ * Mongo y para la carpeta de Dropbox, y cada uno prohíbe cosas distintas.
  *
- * La consecuencia, para tenerla anotada: si alguna vez hay que restaurar esta copia desde una máquina
- * Windows, `mongorestore` no va a poder con ese nombre. Desde Linux, macOS o Atlas no cambia nada.
+ *   `:`  Mongo lo acepta en Linux (probado con el driver), pero DROPBOX no lo admite en un path.
+ *   `.`  Dropbox lo acepta, pero Mongo prohíbe el punto en un nombre de base.
+ *   `-`  lo aceptan los dos.
+ *
+ * Con dos puntos habría que usar nombres distintos en cada lado, y entonces una copia no se podría
+ * reconocer como la misma en Dropbox y en Atlas — que es justamente para lo que sirve el sello.
  */
 export function selloFecha(d = new Date()) {
     const p = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}_${p(d.getMonth() + 1)}_${p(d.getDate())}_${p(d.getHours())}:${p(d.getMinutes())}`;
+    return `${d.getFullYear()}_${p(d.getMonth() + 1)}_${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}`;
 }
 /**
  * El nombre de la base de copia CON la fecha adentro.
@@ -73,8 +76,8 @@ export function selloFecha(d = new Date()) {
  * en 38 bytes es el nombre completo de la base de origen MÁS la fecha (46), así que el prefijo se
  * recorta hasta donde haga falta:
  *
- *   weprodu                 →  weprodu_2026_09_10_04:34                  24 bytes
- *   weprodu_production_...  →  weprodu_production_in_2026_09_10_04:34    38 bytes
+ *   weprodu                 →  weprodu_2026_09_10_04-34                  24 bytes
+ *   weprodu_production_...  →  weprodu_production_in_2026_09_10_04-34    38 bytes
  *
  * Con `MONGO_DB_NAME_BACKUP` se elige un prefijo corto y el nombre queda legible.
  */
@@ -90,9 +93,9 @@ export function backupDbNameConFecha(prefijo, sello, maxDbBytes = MAX_DB_BYTES) 
  * reconociera la actual, las viejas quedarían ocupando lugar en el cluster para siempre.
  */
 export function esBaseDeCopiaConFecha(nombre, prefijo, maxDbBytes = MAX_DB_BYTES) {
-    const lugarMinimo = maxDbBytes - B("_2026_09_10_04:34");
+    const lugarMinimo = maxDbBytes - B("_2026_09_10_04-34");
     const raiz = truncarBytes(prefijo, lugarMinimo);
-    return nombre.startsWith(`${raiz}`) && /_\d{4}[-_]\d{2}[-_]\d{2}[-_]\d{2}:?\d{2}$/.test(nombre);
+    return nombre.startsWith(`${raiz}`) && /_\d{4}[-_]\d{2}[-_]\d{2}[-_]\d{2}[-:]?\d{2}$/.test(nombre);
 }
 /** El slot que toca escribir: el que NO es la copia buena de ahora. */
 export const siguienteSlot = (ultimoSlotOk) => (ultimoSlotOk === "A" ? "B" : "A");

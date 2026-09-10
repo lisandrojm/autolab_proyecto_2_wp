@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDatabase, faGear, faFolderOpen, faSpinner, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faDatabase, faGear, faFolderOpen, faSpinner, faCloudArrowUp, faScaleBalanced } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { InfoModal } from "../components/ui/InfoModal";
 import { MongoDbConfig } from "../components/documents/MongoDbConfig";
 import { ListaCopiasBackup } from "../components/documents/ListaCopiasBackup";
-import { backupsAPI, ConfigBackup } from "../api/backups";
+import { BaseActualVsCopia } from "../components/documents/BaseActualVsCopia";
+import { backupsAPI, ConfigBackup, CopiaBackup } from "../api/backups";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /**
@@ -19,7 +20,12 @@ import { sweetAlert } from "../utils/sweetAlert";
  * gente abre para leer, y esto es una copia técnica de la base. Compartían pantalla solo porque las
  * dos cosas se guardan en Dropbox, que es un detalle de dónde, no de qué.
  */
-type Tab = "config" | "backups";
+type Tab = "config" | "backups" | "base";
+
+/** Bloque de comando, para los ejemplos de `mongoimport`. */
+const Comando: React.FC<{ children: string }> = ({ children }) => (
+  <pre className="mt-1 overflow-x-auto rounded bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2 text-[11px] leading-relaxed text-gray-800 dark:text-gray-200">{children}</pre>
+);
 
 export const MongoDbPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +33,8 @@ export const MongoDbPage: React.FC = () => {
   const [showInfo, setShowInfo] = useState(false);
   /** La configuración se lee acá también, para poder mostrar la frecuencia junto a las copias. */
   const [config, setConfig] = useState<ConfigBackup | null>(null);
+  /** Las copias se cargan acá también: el comparador necesita la lista para el selector. */
+  const [copias, setCopias] = useState<CopiaBackup[]>([]);
   useEffect(() => {
     backupsAPI.config().then(setConfig).catch(() => setConfig(null));
   }, []);
@@ -60,6 +68,13 @@ export const MongoDbPage: React.FC = () => {
    * sin esto la copia recién hecha no aparece hasta recargar la página.
    */
   const [recarga, setRecarga] = useState(0);
+
+  useEffect(() => {
+    backupsAPI
+      .copias()
+      .then((r) => setCopias(r.copias))
+      .catch(() => setCopias([]));
+  }, [recarga]);
 
   /*
     Sin confirmación: generar un backup no rompe nada y no se puede "deshacer mal". El único costo es la
@@ -114,12 +129,18 @@ export const MongoDbPage: React.FC = () => {
             <FontAwesomeIcon icon={faFolderOpen} className="text-xs" />
             DDBB Backup
           </button>
+          {/* La base viva, para comparar contra una copia: es lo único que dice si un backup sirve. */}
+          <button className={claseTab(tab === "base")} onClick={() => setTab("base")}>
+            <FontAwesomeIcon icon={faScaleBalanced} className="text-xs" />
+            Base actual
+          </button>
         </div>
       }
     >
       <div className="animate-in fade-in duration-300">
         {tab === "config" && <MongoDbConfig />}
         {tab === "backups" && <ListaCopiasBackup recarga={recarga} frecuenciaHoras={config?.intervaloHoras} retener={config?.retener} />}
+        {tab === "base" && <BaseActualVsCopia copias={copias} />}
       </div>
 
       {/*
@@ -138,6 +159,12 @@ export const MongoDbPage: React.FC = () => {
             <FontAwesomeIcon icon={faSpinner} spin className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             <p className="mt-3 font-semibold text-gray-900 dark:text-gray-100">Generando el backup…</p>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Se está recorriendo la base entera y subiendo una copia. Puede tardar varios minutos.</p>
+            {/* Barra indeterminada + contador: dos señales de que sigue vivo. Con el spinner solo, a los
+                treinta segundos parece colgado y alguien recarga la página a mitad de la subida. */}
+            <div className="mt-4 h-1 w-full overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+              <div className="h-full w-1/3 rounded bg-blue-600 animate-[indeterminado_1.4s_ease-in-out_infinite]" style={{ animationName: "indeterminado" }} />
+            </div>
+            <style>{`@keyframes indeterminado { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }`}</style>
             <p className="mt-3 text-xs text-gray-500 tabular-nums">
               {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")} transcurridos
             </p>
@@ -187,9 +214,21 @@ export const MongoDbPage: React.FC = () => {
 
           <div>
             <p className="font-semibold mb-1">Cómo se recupera</p>
-            <p>
-              Desde el clon en Atlas, mirando la base directamente. O desde Dropbox, bajando la carpeta e importándola con <code>mongoimport</code> — los comandos exactos están en la
-              pestaña Configuración. Siempre sobre una base vacía.
+            <p>Desde el clon en Atlas, mirando la base directamente. O desde Dropbox: bajás la copia con el botón de descarga, la descomprimís y, parada en la carpeta:</p>
+            <Comando>{`mongoimport --uri "mongodb+srv://<usuario>:<clave>@<cluster>/<base>" \\
+  --collection users --file users.json`}</Comando>
+            <p className="mt-2">Para importar la carpeta entera, una colección por archivo:</p>
+            <Comando>{`for f in *.json; do
+  [ "$f" = "_backup.json" ] && continue   # el manifiesto no es una colección
+  mongoimport --uri "mongodb+srv://<usuario>:<clave>@<cluster>/<base>" \\
+    --collection "\${f%.json}" --file "$f"
+done`}</Comando>
+            <p className="mt-2 text-xs text-gray-500">
+              <strong>Importá siempre sobre una base vacía</strong>, no sobre una con datos: <code>mongoimport</code> no borra lo que ya está, y los documentos con el mismo{" "}
+              <code>_id</code> se rechazan mientras el resto entra — quedaría una base mezclada.
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Sin <code>mongoimport</code> a mano, en el repo está <code>npm run restaurar:backup</code>, que hace lo mismo con la carpeta entera y arranca en modo simulación.
             </p>
           </div>
 

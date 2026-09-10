@@ -22,10 +22,6 @@ const formatearFecha = (iso: string | null): string => {
   return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
-const Comando: React.FC<{ children: string }> = ({ children }) => (
-  <pre className="mt-1 overflow-x-auto rounded bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2 text-[11px] leading-relaxed text-gray-800 dark:text-gray-200">{children}</pre>
-);
-
 export const MongoDbConfig: React.FC = () => {
   const [config, setConfig] = useState<ConfigBackup | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -68,15 +64,27 @@ export const MongoDbConfig: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6 text-sm text-gray-700 dark:text-gray-300">
-          {config?.ultimoError && (
-            <div className="flex items-start gap-2 rounded border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-red-700 dark:text-red-300">
-              <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5" />
-              <div>
-                <p className="font-semibold">La última copia automática falló</p>
-                <p className="text-xs mt-0.5 break-words">{config.ultimoError}</p>
-              </div>
-            </div>
-          )}
+          {/*
+            EL CARTEL DICE QUÉ FALLÓ, NO «FALLÓ».
+
+            Los destinos son dos y se intentan por separado. Decir «la última copia falló» cuando la
+            copia SÍ quedó en Dropbox y lo que no salió fue el clon dentro de Mongo manda a buscar un
+            problema que no existe —y peor: hace dudar de una copia que está bien—.
+          */}
+          {config?.ultimoError &&
+            (() => {
+              const soloMongo = /^Mongo de backup:/.test(config.ultimoError) && !/Dropbox:/.test(config.ultimoError);
+              return (
+                <div className={`flex items-start gap-2 rounded border p-3 ${soloMongo ? "border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300" : "border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"}`}>
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5" />
+                  <div>
+                    <p className="font-semibold">{soloMongo ? "La copia quedó en Dropbox, pero el clon dentro de Mongo falló" : "La última copia falló"}</p>
+                    <p className="text-xs mt-0.5 break-words">{config.ultimoError}</p>
+                    {soloMongo && <p className="text-xs mt-1 opacity-80">La copia de Dropbox está completa y sirve para restaurar. Lo que falta es la copia consultable desde Atlas.</p>}
+                  </div>
+                </div>
+              );
+            })()}
 
           <section className="space-y-3">
             <h4 className="font-semibold text-gray-900 dark:text-gray-100">Copia automática</h4>
@@ -147,32 +155,6 @@ export const MongoDbConfig: React.FC = () => {
             </div>
           </section>
 
-          <section className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Cómo importarla</h4>
-            <p className="text-xs">
-              Cada copia es una carpeta con un archivo <code>.json</code> por colección, en JSON extendido y sin comprimir: se puede abrir y leer tal cual. Es el formato que lee{" "}
-              <code>mongoimport</code>, así que entra en Atlas sin pasos intermedios. Bajá la carpeta y, parada en ella:
-            </p>
-            <Comando>{`mongoimport --uri "mongodb+srv://<usuario>:<clave>@<cluster>/<base>" \\
-  --collection users --file users.json`}</Comando>
-            <p className="text-xs">Para importar la carpeta entera, una colección por archivo:</p>
-            <Comando>{`for f in *.json; do
-  [ "$f" = "_backup.json" ] && continue   # el manifiesto no es una colección
-  mongoimport --uri "mongodb+srv://<usuario>:<clave>@<cluster>/<base>" \\
-    --collection "\${f%.json}" --file "$f"
-done`}</Comando>
-            <p className="text-xs text-gray-500">
-              <strong>Importá siempre sobre una base vacía</strong>, no sobre una con datos: <code>mongoimport</code> no borra lo que ya está, y los documentos con el mismo{" "}
-              <code>_id</code> se rechazan mientras el resto entra — quedaría una base mezclada.
-            </p>
-            <p className="text-xs text-gray-500">
-              El archivo <code>_backup.json</code> de cada carpeta dice de qué base salió, cuándo y cuántos documentos tiene cada colección: sirve para comprobar que la
-              importación quedó completa.
-            </p>
-            <p className="text-xs text-gray-500">
-              Sin <code>mongoimport</code> a mano, en el repo está <code>npm run restaurar:backup</code>, que hace lo mismo con la carpeta entera y arranca en modo simulación.
-            </p>
-          </section>
         </div>
       )}
 

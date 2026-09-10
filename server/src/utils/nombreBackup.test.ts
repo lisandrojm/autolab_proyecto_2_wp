@@ -129,9 +129,9 @@ describe("truncarBytes", () => {
 describe("selloFecha y el nombre con fecha", () => {
   it("el nombre lleva día y hora legibles, que es lo único que hace falta ver desde Atlas", () => {
     const sello = selloFecha(new Date(2026, 8, 10, 4, 34));
-    assert.equal(sello, "2026_09_10_04:34");
-    assert.equal(backupDbNameConFecha("weprodu", sello), "weprodu_2026_09_10_04:34");
-    assert.equal(B("weprodu_2026_09_10_04:34"), 24, "entra con margen en los 38 de Atlas Free/Flex");
+    assert.equal(sello, "2026_09_10_04-34");
+    assert.equal(backupDbNameConFecha("weprodu", sello), "weprodu_2026_09_10_04-34");
+    assert.equal(B("weprodu_2026_09_10_04-34"), 24, "entra con margen en los 38 de Atlas Free/Flex");
   });
 
   it("un prefijo largo se recorta hasta que la fecha entre", () => {
@@ -143,7 +143,7 @@ describe("selloFecha y el nombre con fecha", () => {
 
   it("reconoce como copia los TRES formatos de fecha que existieron", () => {
     // Si solo reconociera el actual, las copias viejas quedarían ocupando lugar para siempre.
-    for (const n of ["weprodu_2026_09_10_04:34", "weprodu_2026_09_10_0434", "weprodu_2026-09-10_0434"]) {
+    for (const n of ["weprodu_2026_09_10_04-34", "weprodu_2026_09_10_0434", "weprodu_2026-09-10_0434"]) {
       assert.equal(esBaseDeCopiaConFecha(n, "weprodu"), true, `${n} es una copia`);
     }
   });

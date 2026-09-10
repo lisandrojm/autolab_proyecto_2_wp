@@ -49,6 +49,27 @@ export interface ArchivoCopia {
   bytes: number;
 }
 
+export interface ColeccionViva {
+  nombre: string;
+  documentos: number;
+  bytes: number;
+}
+
+export interface BaseActual {
+  base: string;
+  colecciones: ColeccionViva[];
+  documentos: number;
+  bytes: number;
+}
+
+/** El `_backup.json` de una copia, con el detalle por colección. */
+export interface ManifiestoCopia {
+  base: string;
+  fecha: string;
+  documentos: number;
+  colecciones: Array<{ nombre: string; documentos: number; bytes: number }>;
+}
+
 export const backupsAPI = {
   /**
    * Fuerza un backup y espera a que termine.
@@ -84,6 +105,17 @@ export const backupsAPI = {
   },
 
   /** Qué colecciones hay adentro de una copia, sin bajar el zip entero. */
+  /** La base viva, colección por colección: es contra esto que se compara una copia. */
+  async baseActual(): Promise<BaseActual> {
+    const { data } = await axios.get("/backups/base-actual", { timeout: 2 * 60 * 1000 });
+    return data;
+  },
+
+  async manifiesto(path: string): Promise<ManifiestoCopia> {
+    const { data } = await axios.get("/backups/copias/manifiesto", { params: { path } });
+    return data;
+  },
+
   async archivosDeCopia(path: string): Promise<ArchivoCopia[]> {
     const { data } = await axios.get("/backups/copias/archivos", { params: { path } });
     return data.archivos;

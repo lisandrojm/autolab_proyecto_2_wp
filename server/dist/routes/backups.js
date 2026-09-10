@@ -3,6 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { correrBackup, backupEnCurso, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
 import { getTenantDropboxConfig, listFolder, downloadFileContent, deleteEntry, downloadFolderZip, getTemporaryLink } from "../services/dropboxService.js";
+import mongoose from "mongoose";
 import { Tenant } from "../models/Tenant.js";
 import { uriDeBackup, prefijoDeBase, esClusterAparte, proximaBaseCopia } from "../services/backupDestinoMongo.js";
 /**
@@ -344,6 +345,85 @@ router.delete("/copias", async (req, res) => {
     catch (error) {
         console.error("Borrar copia falló:", error);
         res.status(500).json({ error: String(error?.message || "No se pudo borrar la copia.") });
+    }
+});
+/**
+ * GET /backups/base-actual — la base VIVA, colección por colección.
+ *
+ * Sirve para lo único que dice si un backup es bueno: comparar. El manifiesto de una copia declara
+ * cuántos documentos tenía cada colección; esto dice cuántos tiene ahora. Si una colección aparece con
+ * cero acá y con miles en la copia, algo se borró; si aparece en la base y no en la copia, la copia
+ * quedó incompleta.
+ *
+ * `estimatedDocumentCount` y no `countDocuments`: el primero lee el metadato de la colección y contesta
+ * al instante; el segundo recorre. Con 58 colecciones y 21.000 documentos la diferencia es de segundos,
+ * y para comparar magnitudes el estimado alcanza.
+ */
+router.get("/base-actual", async (req, res) => {
+    if (!isAdmin(req)) {
+        res.status(403).json({ error: "Solo un administrador puede ver el estado de la base." });
+        return;
+    }
+    try {
+        const db = mongoose.connection.db;
+        if (!db) {
+            res.status(500).json({ error: "No hay conexión a MongoDB." });
+            return;
+        }
+        const info = await db.listCollections().toArray();
+        const nombres = info
+            .map((c) => String(c.name))
+            .filter((n) => !n.startsWith("system."))
+            .sort();
+        const colecciones = await Promise.all(nombres.map(async (nombre) => {
+            let documentos = 0;
+            let bytes = 0;
+            try {
+                documentos = await db.collection(nombre).estimatedDocumentCount();
+                // `collStats` puede no estar permitido en tiers compartidos: el tamaño es un extra, no rompe.
+                const stats = await db.command({ collStats: nombre }).catch(() => null);
+                bytes = Number(stats?.size) || 0;
+            }
+            catch {
+                // Una colección que no se puede leer se informa en cero, no tira abajo el listado entero.
+            }
+            return { nombre, documentos, bytes };
+        }));
+        res.json({
+            base: db.databaseName,
+            colecciones,
+            documentos: colecciones.reduce((a, c) => a + c.documentos, 0),
+            bytes: colecciones.reduce((a, c) => a + c.bytes, 0),
+        });
+    }
+    catch (error) {
+        console.error("Leer la base actual falló:", error);
+        res.status(500).json({ error: String(error?.message || "No se pudo leer la base.") });
+    }
+});
+/** GET /backups/copias/manifiesto?path=… — el `_backup.json` de una copia, con el detalle por colección. */
+router.get("/copias/manifiesto", async (req, res) => {
+    if (!isAdmin(req)) {
+        res.status(403).json({ error: "Solo un administrador puede ver una copia." });
+        return;
+    }
+    const path = String(req.query.path || "");
+    if (!path.startsWith(CARPETA_BACKUPS + "/")) {
+        res.status(400).json({ error: "Ruta fuera de la carpeta de backups." });
+        return;
+    }
+    try {
+        const tenant = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
+        const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+        if (!cfg) {
+            res.status(400).json({ error: "Dropbox no está conectado." });
+            return;
+        }
+        const crudo = await downloadFileContent(String(tenant._id), cfg, `${path}/_backup.json`);
+        res.json(JSON.parse(crudo.toString("utf8")));
+    }
+    catch (error) {
+        res.status(500).json({ error: String(error?.message || "No se pudo leer el manifiesto.") });
     }
 });
 export const backupRoutes = router;

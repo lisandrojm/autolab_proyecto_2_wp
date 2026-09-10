@@ -67,7 +67,7 @@ describe("prefijoDeBase", () => {
 describe("proximaBaseCopia", () => {
   it("por defecto la FECHA va en el nombre: es lo que se lee desde el listado de Atlas", () => {
     const r = proximaBaseCopia("weprodu_production_integration", null);
-    assert.match(r.base, /_\d{4}_\d{2}_\d{2}_\d{2}:\d{2}$/, `${r.base} debería terminar en fecha y hora`);
+    assert.match(r.base, /_\d{4}_\d{2}_\d{2}_\d{2}-\d{2}$/, `${r.base} debería terminar en fecha y hora`);
     assert.ok(r.bytes <= r.maximo, `${r.base} ocupa ${r.bytes} y el máximo es ${r.maximo}`);
   });
 
@@ -75,7 +75,7 @@ describe("proximaBaseCopia", () => {
     // Es lo que se consigue poniendo `MONGO_DB_NAME_BACKUP=weprodu`.
     process.env.MONGO_DB_NAME_BACKUP = "weprodu";
     const r = proximaBaseCopia("weprodu_production_integration", null);
-    assert.match(r.base, /^weprodu_\d{4}_\d{2}_\d{2}_\d{2}:\d{2}$/, "weprodu_2026_09_10_04:34");
+    assert.match(r.base, /^weprodu_\d{4}_\d{2}_\d{2}_\d{2}-\d{2}$/, "weprodu_2026_09_10_04-34");
     assert.equal(r.bytes, 24);
   });
 

@@ -41,6 +41,16 @@ export declare const RETENER_DEFAULT = 14;
 export declare const INTERVALOS_VALIDOS: readonly [6, 12, 24, 48];
 /** ¿Hay un backup en curso? Lo usa el endpoint para no arrancar uno encima. */
 export declare const backupEnCurso: () => boolean;
+/**
+ * El nombre de la copia: EL MISMO para la carpeta de Dropbox y para la base clonada en Mongo.
+ *
+ *   weprodu_2026_09_10_04-34
+ *
+ * Antes eran dos nombres distintos —la carpeta llevaba el nombre completo de la base y la fecha con
+ * guiones, la copia en Mongo otra cosa— y no había forma de mirar una carpeta en Dropbox y saber qué
+ * base de Atlas le correspondía. El sello ordena alfabéticamente igual que cronológicamente, que es de
+ * lo que depende la retención.
+ */
 export declare function nombreDeCarpeta(baseDatos: string, fecha?: Date): string;
 export interface ArchivoBackup {
     nombre: string;

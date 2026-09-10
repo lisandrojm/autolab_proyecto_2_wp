@@ -14,7 +14,7 @@ import { elegirParaBorrar, nombreDeCarpeta } from "./backupService.js";
  */
 const carpeta = (name) => ({ tag: "folder", name });
 /** 20 backups, del más viejo al más nuevo por nombre. */
-const veinte = Array.from({ length: 20 }, (_, i) => carpeta(`weprodu_production_integration_2026-09-${String(i + 1).padStart(2, "0")}_0300`));
+const veinte = Array.from({ length: 20 }, (_, i) => carpeta(`weprodu_production_integration_2026_09_${String(i + 1).padStart(2, "0")}_03-00`));
 describe("elegirParaBorrar — retención de los backups", () => {
     it("con menos de los que se retienen, no borra nada", () => {
         assert.deepEqual(elegirParaBorrar(veinte.slice(0, 14), "weprodu_production_integration"), []);
@@ -26,8 +26,13 @@ describe("elegirParaBorrar — retención de los backups", () => {
         // Los seis primeros días del mes son los más viejos; el 07 en adelante se conserva.
         assert.deepEqual(borrar.map((b) => b.name), veinte.slice(0, 6).map((b) => b.name).reverse());
     });
+    it("reconoce también las carpetas del nombre VIEJO, o no se limpiarían nunca", () => {
+        // Las creadas antes del cambio de formato llevan el nombre completo de la base y guiones en la fecha.
+        const viejas = Array.from({ length: 20 }, (_, i) => carpeta(`weprodu_production_integration_2026-09-${String(i + 1).padStart(2, "0")}_0300`));
+        assert.equal(elegirParaBorrar(viejas, "weprodu_production_integration").length, 6);
+    });
     it("no toca archivos de otra base ni cosas que alguien haya dejado en la carpeta", () => {
-        const mezcla = [...veinte, carpeta("otra_base_2026-09-01_0300"), carpeta("Notas viejas"), { tag: "file", name: "weprodu_production_integration_2026-01-01_0300" }];
+        const mezcla = [...veinte, carpeta("otra_base_2026_09_01_03-00"), carpeta("Notas viejas"), { tag: "file", name: "weprodu_production_integration_2026_01_01_03-00" }];
         const borrar = elegirParaBorrar(mezcla, "weprodu_production_integration");
         assert.equal(borrar.length, 6);
         assert.ok(borrar.every((b) => b.name.startsWith("weprodu_production_integration_")));
@@ -47,6 +52,6 @@ describe("nombreDeCarpeta", () => {
         const mismoDiaMasTarde = nombreDeCarpeta("db", new Date(2026, 0, 2, 15, 0));
         assert.ok(enero < octubre, `${enero} debería ordenar antes que ${octubre}`);
         assert.ok(enero < mismoDiaMasTarde, `${enero} debería ordenar antes que ${mismoDiaMasTarde}`);
-        assert.match(enero, /^db_2026-01-02_0300$/);
+        assert.match(enero, /^db_2026_01_02_03-00$/);
     });
 });

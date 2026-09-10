@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 import { EJSON } from "bson";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, listFolder, uploadFile, uploadFileSession, createFolder, deleteEntry } from "./dropboxService.js";
-import { clonarEnMongo } from "./backupDestinoMongo.js";
+import { clonarEnMongo, prefijoDeBase } from "./backupDestinoMongo.js";
+import { selloFecha } from "../utils/nombreBackup.js";
 
 /**
  * BACKUP DE LA BASE, CADA 12 HORAS, A DROPBOX.
@@ -74,14 +75,18 @@ let corriendo = false;
 /** ¿Hay un backup en curso? Lo usa el endpoint para no arrancar uno encima. */
 export const backupEnCurso = (): boolean => corriendo;
 
-/** "2026-09-09_0300" — ordena alfabéticamente igual que cronológicamente, de lo que depende la retención. */
-function selloDeTiempo(d = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
-}
-
+/**
+ * El nombre de la copia: EL MISMO para la carpeta de Dropbox y para la base clonada en Mongo.
+ *
+ *   weprodu_2026_09_10_04-34
+ *
+ * Antes eran dos nombres distintos —la carpeta llevaba el nombre completo de la base y la fecha con
+ * guiones, la copia en Mongo otra cosa— y no había forma de mirar una carpeta en Dropbox y saber qué
+ * base de Atlas le correspondía. El sello ordena alfabéticamente igual que cronológicamente, que es de
+ * lo que depende la retención.
+ */
 export function nombreDeCarpeta(baseDatos: string, fecha = new Date()): string {
-  return `${baseDatos}_${selloDeTiempo(fecha)}`;
+  return `${prefijoDeBase(baseDatos)}_${selloFecha(fecha)}`;
 }
 
 export interface ArchivoBackup {
@@ -179,9 +184,17 @@ async function subir(tenantId: string, cfg: any, ruta: string, contenido: Buffer
  * no se la lleva puesta.
  */
 export function elegirParaBorrar<T extends { tag?: string; name: string }>(entries: T[], baseDatos: string, retener = RETENER_DEFAULT): T[] {
-  const backups = entries
-    .filter((e) => e.tag === "folder" && e.name.startsWith(`${baseDatos}_`))
-    .sort((a, b) => b.name.localeCompare(a.name));
+  /*
+    Se reconocen los dos nombres: el actual —`<prefijo>_2026_09_10_04-34`— y el viejo, que llevaba el
+    nombre completo de la base. Sin los dos, las carpetas creadas antes de este cambio no entrarían
+    nunca en la retención y se quedarían ahí para siempre.
+
+    El orden sale del NOMBRE, no de la fecha que reporta Dropbox: el nombre lleva cuándo se GENERÓ la
+    copia, y la fecha de Dropbox es cuándo terminó de subir. Con una subida lenta no coinciden.
+  */
+  const prefijo = prefijoDeBase(baseDatos);
+  const esCopia = (n: string) => (n.startsWith(`${prefijo}_`) || n.startsWith(`${baseDatos}_`)) && /_\d{4}[-_]\d{2}[-_]\d{2}[-_]\d{2}[-_]?\d{2}$/.test(n);
+  const backups = entries.filter((e) => e.tag === "folder" && esCopia(e.name)).sort((a, b) => b.name.localeCompare(a.name));
   return backups.slice(retener);
 }
 
