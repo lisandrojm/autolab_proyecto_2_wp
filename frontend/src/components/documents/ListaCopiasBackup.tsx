@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faFolder, faDownload, faTriangleExclamation, faRotate, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faFolder, faDownload, faTriangleExclamation, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { backupsAPI, CopiaBackup } from "../../api/backups";
 import { sweetAlert } from "../../utils/sweetAlert";
 
@@ -36,6 +36,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
   const [copias, setCopias] = useState<CopiaBackup[]>([]);
   const [cargando, setCargando] = useState(true);
   const [conectado, setConectado] = useState(true);
+  const [tildadas, setTildadas] = useState<Set<string>>(new Set());
 
   const cargar = () => {
     setCargando(true);
@@ -44,6 +45,9 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
       .then((r) => {
         setCopias(r.copias);
         setConectado(r.dropboxConectado);
+        // La selección es de ESTA lista: si algo se borró o entró una copia nueva, lo tildado ya no
+        // corresponde y arrastrarlo llevaría a borrar otra cosa.
+        setTildadas(new Set());
       })
       .catch((e: any) => sweetAlert.error("No se pudieron listar las copias", String(e?.response?.data?.error || e?.message || "")))
       .finally(() => setCargando(false));
@@ -84,6 +88,55 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
     }
   };
 
+  const alternar = (path: string) =>
+    setTildadas((prev) => {
+      const s = new Set(prev);
+      s.has(path) ? s.delete(path) : s.add(path);
+      return s;
+    });
+
+  const todasTildadas = copias.length > 0 && tildadas.size === copias.length;
+
+  /**
+   * Borrado masivo. En SERIE y no en paralelo: son varias llamadas a Dropbox y mandarlas todas juntas
+   * es la forma más rápida de comerse un 429. Las que fallan se cuentan y se informan; las demás siguen.
+   */
+  const borrarTildadas = async () => {
+    const aBorrar = copias.filter((c) => tildadas.has(c.path));
+    if (aBorrar.length === 0) return;
+
+    // Se nombran las primeras: «¿Eliminar 5 copias?» sin decir cuáles se confirma a ciegas.
+    const muestra = aBorrar
+      .slice(0, 5)
+      .map((c) => `• ${formatearFecha(c.fecha, c.nombre)} (${formatearTamano(c.bytes)})`)
+      .join("\n");
+    /*
+      Si se llevan TODAS, se dice. Quedarse sin ninguna copia es una situación distinta de borrar unas
+      cuantas, y es justo la que uno no quiere descubrir el día que hace falta restaurar.
+    */
+    const seLlevaTodo = aBorrar.length === copias.length;
+    const res = await sweetAlert.confirm(
+      aBorrar.length === 1 ? "¿Eliminar esta copia?" : `¿Eliminar ${aBorrar.length} copias?`,
+      `${seLlevaTodo ? "SON TODAS las copias que hay: si las borrás no queda ninguna para restaurar.\n\n" : ""}Se borran de Dropbox y no se puede deshacer.\n\n${muestra}${aBorrar.length > 5 ? `\n…y ${aBorrar.length - 5} más.` : ""}\n\nEl clon dentro de Mongo no se toca.`,
+      "Sí, eliminar",
+    );
+    if (!res.isConfirmed) return;
+
+    const fallaron: string[] = [];
+    let borradas = 0;
+    for (const c of aBorrar) {
+      try {
+        await backupsAPI.borrarCopia(c.path);
+        borradas++;
+      } catch {
+        fallaron.push(c.nombre);
+      }
+    }
+    cargar();
+    if (fallaron.length === 0) sweetAlert.success("Listo", `Se ${borradas === 1 ? "eliminó 1 copia" : `eliminaron ${borradas} copias`}.`);
+    else sweetAlert.warningAlert("Quedaron algunas sin eliminar", `Se eliminaron ${borradas} de ${aBorrar.length}.\n\nNo se pudo con:\n${fallaron.slice(0, 5).map((n) => `• ${n}`).join("\n")}`);
+  };
+
   const total = copias.reduce((a, c) => a + c.bytes, 0);
 
   return (
@@ -110,9 +163,15 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
             {total > 0 && <> Ocupan {formatearTamano(total)} en total.</>}
           </p>
         </div>
-        <button onClick={cargar} disabled={cargando} className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-          <FontAwesomeIcon icon={faRotate} spin={cargando} className="h-3 w-3" />
-          Actualizar
+        {/* El número va en el botón: se ve cuántas se llevan antes de apretar, no recién en el cartel. */}
+        <button
+          onClick={borrarTildadas}
+          disabled={tildadas.size === 0}
+          title={tildadas.size === 0 ? "Tildá copias en la lista para poder eliminarlas juntas" : `Eliminar de Dropbox las ${tildadas.size} copias tildadas`}
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-700 dark:disabled:hover:text-gray-300"
+        >
+          <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+          {tildadas.size > 0 ? `Eliminar (${tildadas.size})` : "Eliminar"}
         </button>
       </div>
 
@@ -130,6 +189,15 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={todasTildadas}
+                    onChange={() => setTildadas(todasTildadas ? new Set() : new Set(copias.map((c) => c.path)))}
+                    title={todasTildadas ? "Destildar todas" : "Tildar todas"}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Copia</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tamaño</th>
@@ -140,7 +208,10 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               {copias.map((c) => (
-                <tr key={c.path} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <tr key={c.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${tildadas.has(c.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
+                  <td className="px-4 py-3">
+                    <input type="checkbox" checked={tildadas.has(c.path)} onChange={() => alternar(c.path)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <span className="inline-flex items-center gap-2 text-gray-800 dark:text-gray-200">
                       <FontAwesomeIcon icon={faFolder} className="text-amber-500" />
