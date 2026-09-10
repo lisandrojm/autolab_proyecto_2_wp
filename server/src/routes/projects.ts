@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -278,8 +279,12 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin") || primaryRole === "admin" || primaryRole === "superadmin";
 
     if (!isAdmin) {
-      // Usar Types.ObjectId para asegurar el match en el array de assignedUsers
-      filter.assignedUsers = new Types.ObjectId(req.user!.userId);
+      // Lo asignado MÁS los proyectos que la persona tiene a cargo como Responsable de Proyecto
+      // (ver `alcanceDeResponsable`). `sumarAlFiltro` se encarga de no pisar un `$or` que ya venga
+      // de la búsqueda por texto.
+      const { proyectos } = await alcanceDeResponsable(req.tenantObjectId, req.user!.userId);
+      if (proyectos.length > 0) sumarAlFiltro(filter, { $or: [{ assignedUsers: new Types.ObjectId(req.user!.userId) }, { _id: { $in: proyectos } }] });
+      else filter.assignedUsers = new Types.ObjectId(req.user!.userId);
     }
 
     console.log(`[PROJECTS] List for tenant ${req.tenantId}, isAdmin=${isAdmin}, limit=${limit}`);
@@ -639,7 +644,9 @@ router.get(
       const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin") || primaryRole === "admin" || primaryRole === "superadmin";
 
       if (!isAdmin) {
-        filter.assignedUsers = new Types.ObjectId(req.user!.userId);
+        const { proyectos } = await alcanceDeResponsable(req.tenantObjectId, req.user!.userId);
+        if (proyectos.length > 0) sumarAlFiltro(filter, { $or: [{ assignedUsers: new Types.ObjectId(req.user!.userId) }, { _id: { $in: proyectos } }] });
+        else filter.assignedUsers = new Types.ObjectId(req.user!.userId);
       }
 
       console.log(`[PROJECTS] List for client ${clientId} (externalId: ${externalId}), tenant ${req.tenantId}, isAdmin=${isAdmin}, limit=${limit}`);
@@ -806,7 +813,9 @@ router.get("/projects/count", requireTenant, authenticateToken, requireAnyRole, 
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
 
     if (!isAdmin) {
-      filter.assignedUsers = req.user!.userId;
+      const { proyectos } = await alcanceDeResponsable(req.tenantObjectId, req.user!.userId);
+      if (proyectos.length > 0) filter.$or = [{ assignedUsers: req.user!.userId }, { _id: { $in: proyectos } }];
+      else filter.assignedUsers = req.user!.userId;
     }
 
     const count = await Project.countDocuments(filter);
@@ -833,7 +842,9 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
 
     if (!isAdmin) {
-      filter.assignedUsers = req.user!.userId;
+      const { proyectos } = await alcanceDeResponsable(req.tenantObjectId, req.user!.userId);
+      if (proyectos.length > 0) filter.$or = [{ assignedUsers: req.user!.userId }, { _id: { $in: proyectos } }];
+      else filter.assignedUsers = req.user!.userId;
     }
 
     const project = await Project.findOne(filter)
@@ -1101,6 +1112,8 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
 
     if (!isAdmin) {
+      // A propósito NO se suma el alcance de Responsable de Proyecto: acá se EDITA. Tener un proyecto
+      // a cargo explica por qué alguien necesita verlo, no por qué podría modificarlo.
       filter.assignedUsers = req.user!.userId;
     }
 
@@ -1188,6 +1201,8 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
 
     if (!isAdmin) {
+      // Igual que en la edición: el alcance de Responsable de Proyecto es de LECTURA. Borrar sigue
+      // pidiendo estar asignado.
       filter.assignedUsers = req.user!.userId;
     }
 

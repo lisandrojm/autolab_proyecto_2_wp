@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { z } from "zod";
 import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
@@ -86,7 +87,14 @@ router.get("/", async (req, res) => {
         else {
             // Si no es superadmin global, respetar el tenant actual
             if (!isContextAdmin) {
-                filter.assignedUsers = req.user.userId;
+                // Se ve lo asignado Y los clientes de los proyectos que la persona tiene a cargo como
+                // Responsable de Proyecto (ver `alcanceDeResponsable`): sin esto, ese rol abría el escritorio
+                // sin un solo cliente y toda la navegación quedaba trabada en el primer paso.
+                const { clientes } = await alcanceDeResponsable(req.tenantObjectId, req.user.userId);
+                if (clientes.length > 0)
+                    filter.$or = [{ assignedUsers: req.user.userId }, { _id: { $in: clientes } }];
+                else
+                    filter.assignedUsers = req.user.userId;
             }
         }
         // Populate tenantId para mostrar badge
@@ -119,7 +127,13 @@ router.get("/count", async (req, res) => {
         }
         else {
             if (!isContextAdmin) {
-                filter.assignedUsers = req.user.userId;
+                // El mismo alcance que la lista: si contara distinto, el número del menú no coincidiría con
+                // las filas de la pantalla.
+                const { clientes } = await alcanceDeResponsable(req.tenantObjectId, req.user.userId);
+                if (clientes.length > 0)
+                    filter.$or = [{ assignedUsers: req.user.userId }, { _id: { $in: clientes } }];
+                else
+                    filter.assignedUsers = req.user.userId;
             }
         }
         const count = await Client.countDocuments(filter);
@@ -140,7 +154,13 @@ router.get("/:id", async (req, res) => {
         const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
         const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
         if (!isAdmin) {
-            filter.assignedUsers = req.user.userId;
+            // El mismo alcance que la lista: si el listado lo muestra y el detalle contesta 404, el cliente
+            // aparece en pantalla y no se puede abrir.
+            const { clientes } = await alcanceDeResponsable(req.tenantObjectId, req.user.userId);
+            if (clientes.length > 0)
+                filter.$or = [{ assignedUsers: req.user.userId }, { _id: { $in: clientes } }];
+            else
+                filter.assignedUsers = req.user.userId;
         }
         const client = await Client.findOne(filter).populate("assignedUsers", "email firstName lastName roles isActive").lean();
         if (!client)
