@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { BloqueEstado } from "../components/ui/BloqueEstado";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { rolesAPI, Role } from "../api/roles";
@@ -245,6 +246,7 @@ export const RolesPage: React.FC = () => {
   // Modal informativo (ⓘ)
   const [openInfo, setOpenInfo] = useState(false);
   const [showPermissionsInfo, setShowPermissionsInfo] = useState(false);
+  const [showDefaultInfo, setShowDefaultInfo] = useState(false);
 
   const helpEntry = getHelp(HELP_KEY);
 
@@ -700,26 +702,6 @@ export const RolesPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="flex items-start space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.isDefault}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        isDefault: e.target.checked,
-                      }))
-                    }
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Rol por defecto</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Se asigna automáticamente a nuevos usuarios. Solo puede haber un rol predeterminado por tenant.</p>
-                  </div>
-                </label>
-              </div>
-
-              <div>
                 <div className="flex items-center mb-4 gap-2">
                   <label className="block text-lg font-semibold text-gray-700 dark:text-gray-300">Permisos</label>
                   <button type="button" onClick={() => setShowPermissionsInfo(true)} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors" title="Información sobre permisos">
@@ -850,6 +832,29 @@ export const RolesPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/*
+                «Rol por defecto» va al FINAL y como switch, el mismo bloque que el Estado de un usuario
+                o un proyecto (`BloqueEstado`).
+
+                Arriba, como checkbox, quedaba entre la descripción y los permisos: en el medio del
+                camino de quien está armando el rol, y con el aspecto de un campo más del formulario.
+                Es una propiedad del rol entero —y además excluyente entre roles, que es lo que aclara
+                el texto de abajo—, así que corresponde el mismo lugar y el mismo gesto que el resto de
+                los estados de cierre de la plataforma.
+              */}
+              <BloqueEstado
+                titulo="Rol por defecto"
+                activo={formData.isDefault}
+                onChange={(activo) => setFormData((prev) => ({ ...prev, isDefault: activo }))}
+                etiquetaActivo="Por defecto"
+                etiquetaInactivo="No es el rol por defecto"
+                info={
+                  <button type="button" onClick={() => setShowDefaultInfo(true)} title="Qué implica el rol por defecto" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
+                    <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
+                  </button>
+                }
+              />
             </div>
           </form>
         ),
@@ -1085,6 +1090,26 @@ export const RolesPage: React.FC = () => {
           )}
         </>
       )}
+
+      <InfoModal
+        isOpen={showDefaultInfo}
+        onClose={() => setShowDefaultInfo(false)}
+        title="Rol por defecto"
+        size="sm"
+        zIndex={60}
+        actions={[{ label: "Entendido", onClick: () => setShowDefaultInfo(false), variant: "primary" }]}
+      >
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+          <p>
+            El rol por defecto <strong>se asigna solo a cada usuario nuevo</strong> del tenant, sin que nadie lo elija en el alta.
+          </p>
+          <p>
+            <strong>Solo puede haber uno por tenant.</strong> Si prendés este switch en un rol y ya había otro marcado, el otro deja de serlo — la pantalla avisa antes de guardar y dice
+            cuál era.
+          </p>
+          <p className="text-xs text-gray-500">Cambiarlo no toca a los usuarios que ya existen: solo cambia con qué rol nacen los que se den de alta de acá en adelante.</p>
+        </div>
+      </InfoModal>
 
       {/* Modal de información sobre permisos */}
       <InfoModal

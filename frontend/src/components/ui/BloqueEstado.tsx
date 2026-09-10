@@ -25,12 +25,23 @@ interface Props {
   etiquetaInactivo?: string;
   /** Título del bloque. Default «Estado». */
   titulo?: string;
+  /**
+   * Slot al lado del título, para un ⓘ que abra la explicación.
+   *
+   * Va acá y no como un párrafo debajo del switch: la aclaración de un estado suele ser larga —qué
+   * implica prenderlo, a quién le afecta— y puesta en el formulario compite con el propio control,
+   * que es lo único que hay que mirar para decidir.
+   */
+  info?: React.ReactNode;
   className?: string;
 }
 
-export const BloqueEstado: React.FC<Props> = ({ activo, onChange, etiquetaActivo = 'Activo', etiquetaInactivo = 'Inactivo', titulo = 'Estado', className = '' }) => (
+export const BloqueEstado: React.FC<Props> = ({ activo, onChange, etiquetaActivo = 'Activo', etiquetaInactivo = 'Inactivo', titulo = 'Estado', info, className = '' }) => (
   <div className={`border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 ${className}`}>
-    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{titulo}</label>
+    <div className="flex items-center gap-2 mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{titulo}</label>
+      {info}
+    </div>
     <button
       type="button"
       onClick={() => onChange(!activo)}
