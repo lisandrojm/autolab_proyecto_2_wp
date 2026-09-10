@@ -4,6 +4,13 @@ import { faSpinner, faFolder, faFolderOpen, faDownload, faTriangleExclamation, f
 import { backupsAPI, CopiaBackup, ArchivoCopia } from "../../api/backups";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { mensajeErrorApi } from "../../utils/errorApi";
+
+/** Un solo lugar para los errores de esta pantalla: distingue «falta deployar» de un error real. */
+const mostrarError = (e: any, titulo: string) => {
+  const m = mensajeErrorApi(e, titulo);
+  sweetAlert.error(m.titulo, m.detalle);
+};
 
 /**
  * El listado de copias, con FECHA y TAMAÑO.
@@ -50,7 +57,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
         // corresponde y arrastrarlo llevaría a borrar otra cosa.
         setTildadas(new Set());
       })
-      .catch((e: any) => sweetAlert.error("No se pudieron listar las copias", String(e?.response?.data?.error || e?.message || "")))
+      .catch((e: any) => mostrarError(e, "No se pudieron listar las copias"))
       .finally(() => setCargando(false));
   };
 
@@ -84,7 +91,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
       const lista = await backupsAPI.archivosDeCopia(copia.path);
       setArchivos((prev) => ({ ...prev, [copia.path]: lista }));
     } catch (e: any) {
-      sweetAlert.error("No se pudo abrir la copia", String(e?.response?.data?.error || e?.message || ""));
+      mostrarError(e, "No se pudo abrir la copia");
       setAbierta(null);
     } finally {
       setCargandoArchivos(false);
@@ -97,7 +104,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
       const r = await backupsAPI.verArchivo(archivo.path);
       setViendo({ nombre: archivo.nombre, ...r });
     } catch (e: any) {
-      sweetAlert.error("No se pudo leer el archivo", String(e?.response?.data?.error || e?.message || ""));
+      mostrarError(e, "No se pudo leer el archivo");
     } finally {
       setCargandoVista(false);
     }
@@ -107,7 +114,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
     try {
       window.open(await backupsAPI.linkArchivo(archivo.path), "_blank", "noopener");
     } catch (e: any) {
-      sweetAlert.error("No se pudo generar el link", String(e?.response?.data?.error || e?.message || ""));
+      mostrarError(e, "No se pudo generar el link");
     }
   };
 
@@ -130,7 +137,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
       // Sin esto el blob queda retenido en memoria hasta que se recargue la página; con 31 MB se nota.
       URL.revokeObjectURL(url);
     } catch (e: any) {
-      sweetAlert.error("No se pudo descargar la copia", String(e?.response?.data?.error || e?.message || ""));
+      mostrarError(e, "No se pudo descargar la copia");
     } finally {
       setBajando(null);
     }
@@ -154,7 +161,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
       cargar();
       sweetAlert.success("Copia eliminada", `Se borró ${copia.nombre}.`);
     } catch (e: any) {
-      sweetAlert.error("No se pudo eliminar", String(e?.response?.data?.error || e?.message || ""));
+      mostrarError(e, "No se pudo eliminar");
     }
   };
 

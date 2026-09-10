@@ -9,6 +9,7 @@ import { ListaCopiasBackup } from "../components/documents/ListaCopiasBackup";
 import { BaseActualVsCopia } from "../components/documents/BaseActualVsCopia";
 import { backupsAPI, ConfigBackup, CopiaBackup } from "../api/backups";
 import { sweetAlert } from "../utils/sweetAlert";
+import { mensajeErrorApi } from "../utils/errorApi";
 
 /**
  * Configuración → DDBB → MongoDB.
@@ -88,10 +89,12 @@ export const MongoDbPage: React.FC = () => {
       setTab("backups");
       sweetAlert.success("Backup generado", `${r.carpeta} · ${r.colecciones} colecciones · ${r.documentos.toLocaleString("es-AR")} documentos · ${(r.bytes / 1024 / 1024).toFixed(1)} MB`);
     } catch (e: any) {
-      const status = e?.response?.status;
       // El 409 no es un error del usuario: ya hay uno corriendo (el automático, o alguien más).
-      if (status === 409) sweetAlert.warningAlert("Ya hay un backup en curso", "Esperá a que termine y volvé a intentar.");
-      else sweetAlert.error("No se pudo generar el backup", String(e?.response?.data?.error || e?.message || "Probá de nuevo en un momento."));
+      if (e?.response?.status === 409) sweetAlert.warningAlert("Ya hay un backup en curso", "Esperá a que termine y volvé a intentar.");
+      else {
+        const m = mensajeErrorApi(e, "No se pudo generar el backup");
+        sweetAlert.error(m.titulo, m.detalle);
+      }
     } finally {
       setGenerandoBackup(false);
     }

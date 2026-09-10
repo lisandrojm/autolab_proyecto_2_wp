@@ -3,6 +3,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faTriangleExclamation, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { backupsAPI, BaseActual, CopiaBackup, ManifiestoCopia } from "../../api/backups";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { mensajeErrorApi } from "../../utils/errorApi";
+
+/** Un solo lugar para los errores de esta pantalla: distingue «falta deployar» de un error real. */
+const mostrarError = (e: any, titulo: string) => {
+  const m = mensajeErrorApi(e, titulo);
+  sweetAlert.error(m.titulo, m.detalle);
+};
 
 /**
  * LA BASE VIVA, Y LA COMPARACIÓN CONTRA UNA COPIA.
@@ -37,7 +44,7 @@ export const BaseActualVsCopia: React.FC<{ copias: CopiaBackup[] }> = ({ copias 
     backupsAPI
       .baseActual()
       .then(setBase)
-      .catch((e: any) => sweetAlert.error("No se pudo leer la base", String(e?.response?.data?.error || e?.message || "")))
+      .catch((e: any) => mostrarError(e, "No se pudo leer la base"))
       .finally(() => setCargando(false));
   }, []);
 
@@ -50,7 +57,7 @@ export const BaseActualVsCopia: React.FC<{ copias: CopiaBackup[] }> = ({ copias 
     backupsAPI
       .manifiesto(comparar)
       .then(setManifiesto)
-      .catch((e: any) => sweetAlert.error("No se pudo leer la copia", String(e?.response?.data?.error || e?.message || "")))
+      .catch((e: any) => mostrarError(e, "No se pudo leer la copia"))
       .finally(() => setCargandoCopia(false));
   }, [comparar]);
 

@@ -3,6 +3,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { backupsAPI, ConfigBackup } from "../../api/backups";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { mensajeErrorApi } from "../../utils/errorApi";
+
+/** Un solo lugar para los errores de esta pantalla: distingue «falta deployar» de un error real. */
+const mostrarError = (e: any, titulo: string) => {
+  const m = mensajeErrorApi(e, titulo);
+  sweetAlert.error(m.titulo, m.detalle);
+};
 
 /**
  * Configuración → DDBB → «MongoDB».
@@ -38,7 +45,7 @@ export const MongoDbConfig: React.FC = () => {
         setIntervalo(c.intervaloHoras);
         setRetener(c.retener);
       })
-      .catch((e: any) => sweetAlert.error("No se pudo leer la configuración", String(e?.response?.data?.error || e?.message || "")))
+      .catch((e: any) => mostrarError(e, "No se pudo leer la configuración"))
       .finally(() => setCargando(false));
   }, []);
 
@@ -49,7 +56,7 @@ export const MongoDbConfig: React.FC = () => {
       // El scheduler la relee en su próxima vuelta: no hay que reiniciar nada, pero tampoco es instantáneo.
       sweetAlert.success("Configuración guardada", `Copia cada ${intervalo} h, conservando ${retener}. Toma efecto en la próxima revisión (hasta 15 minutos).`);
     } catch (e: any) {
-      sweetAlert.error("No se pudo guardar", String(e?.response?.data?.error || e?.message || ""));
+      mostrarError(e, "No se pudo guardar");
     } finally {
       setGuardando(false);
     }
