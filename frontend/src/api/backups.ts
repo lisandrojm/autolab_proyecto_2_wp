@@ -9,6 +9,8 @@ export interface ResultadoBackup {
 }
 
 export interface ConfigBackup {
+  /** Estado del segundo destino (otro Mongo). `sin_configurar` no es un error: falta la variable. */
+  mongoDestino?: { estado: "ok" | "sin_configurar" | "error"; base?: string; error?: string };
   enCurso: boolean;
   carpeta: string;
   intervaloHoras: number;

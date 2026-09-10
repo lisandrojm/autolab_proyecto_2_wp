@@ -1,14 +1,12 @@
 import { useCallback, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faDatabase, faSpinner, faCloudArrowUp, faFileSignature } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark, faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { DropboxTab } from "../components/documents/DropboxTab";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { backupsAPI } from "../api/backups";
-import { sweetAlert } from "../utils/sweetAlert";
 
-type TabKey = "dropbox" | "afip" | "paritarias" | "ddbb";
+type TabKey = "dropbox" | "afip" | "paritarias";
 
 export function DocumentsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("dropbox");
@@ -17,36 +15,6 @@ export function DocumentsPage() {
   const helpEntry = getHelp("documents");
 
   const handleCountChange = useCallback((count: number | undefined) => setItemCount(count), []);
-
-  const [generandoBackup, setGenerandoBackup] = useState(false);
-  /**
-   * Cambia después de un backup manual para remontar el listado.
-   *
-   * El tab lee la carpeta de Dropbox al montarse; sin esto, el backup recién hecho no aparece hasta
-   * recargar la página, y da la impresión de que el botón no hizo nada.
-   */
-  const [recargaDdbb, setRecargaDdbb] = useState(0);
-
-  /*
-    Sin confirmación: generar un backup no rompe nada y no se puede "deshacer mal". El único costo es la
-    espera, y eso ya lo dice el botón —queda deshabilitado y en «Generando…» mientras corre—. Un cartel
-    rojo de confirmar acá sería el mismo que aparece para borrar, sobre una acción que no borra nada.
-  */
-  const forzarBackup = async () => {
-    setGenerandoBackup(true);
-    try {
-      const r = await backupsAPI.ejecutar();
-      setRecargaDdbb((n) => n + 1);
-      sweetAlert.success("Backup generado", `${r.carpeta} · ${r.colecciones} colecciones · ${r.documentos.toLocaleString("es-AR")} documentos · ${(r.bytes / 1024 / 1024).toFixed(1)} MB`);
-    } catch (e: any) {
-      const status = e?.response?.status;
-      // El 409 no es un error del usuario: ya hay uno corriendo (el automático, o alguien más).
-      if (status === 409) sweetAlert.warningAlert("Ya hay un backup en curso", "Esperá a que termine y volvé a intentar.");
-      else sweetAlert.error("No se pudo generar el backup", String(e?.response?.data?.error || e?.message || "Probá de nuevo en un momento."));
-    } finally {
-      setGenerandoBackup(false);
-    }
-  };
 
   return (
     <PageLayout
@@ -73,38 +41,7 @@ export function DocumentsPage() {
                 <FontAwesomeIcon icon={faFileSignature} className="text-xs" />
                 Paritarias
               </button>
-                            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === "ddbb" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("ddbb")} title="Backups automáticos de la base de datos">
-                <FontAwesomeIcon icon={faDatabase} className="text-xs" />
-                DDBB
-              </button>
             </div>
-            {/* El botón de backup solo tiene sentido en su propia pestaña. */}
-            {activeTab === "ddbb" && (
-              <button
-                onClick={forzarBackup}
-                disabled={generandoBackup}
-                title="Generar un backup de la base ahora, sin esperar la corrida automática de cada 12 horas"
-                className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <FontAwesomeIcon icon={generandoBackup ? faSpinner : faCloudArrowUp} spin={generandoBackup} className="text-xs" />
-                {generandoBackup ? "Generando…" : "Backup ahora"}
-              </button>
-            )}
-            {/*
-              El botón de la derecha cambia con la pestaña. «Configurar transición automática» es del
-              escaneo de HelloSign/ARCA —qué carpetas se vigilan para mover un contrato de estado— y no
-              tiene nada que ver con los backups; en DDBB, en su lugar, va la configuración de MongoDB.
-            */}
-            {activeTab === "ddbb" ? (
-              <a
-                href="/ddbb/mongodb"
-                title="Frecuencia de la copia automática y cómo importarla"
-                className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <FontAwesomeIcon icon={faDatabase} className="text-[10px]" />
-                MongoDB
-              </a>
-            ) : (
               <a
                 href="/escaneo-dropbox"
                 title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
@@ -112,7 +49,6 @@ export function DocumentsPage() {
               >
                 Configurar transición automática
               </a>
-            )}
           </div>
 
           {/* Tab Content */}
@@ -132,13 +68,6 @@ export function DocumentsPage() {
               pasó con ARCA cuando «/AFIP» se convirtió en «/WEPRODU/ARCA».
             */}
             {activeTab === "paritarias" && <DropboxTab key="paritarias" fixedRoot="/WEPRODU/Paritarias" rootLabel="Paritarias" onCountChange={handleCountChange} />}
-            {/*
-              DDBB: los backups automáticos de la base. Los sube el scheduler del server cada 12 horas
-              (`services/backupService.ts`), que es también el que borra los viejos y deja los últimos
-              14. Acá no hay nada que dispare un backup: esta pestaña solo mira la carpeta, con las
-              mismas acciones que las otras dos —descargar, subir, borrar—.
-            */}
-            {activeTab === "ddbb" && <DropboxTab key={`ddbb-${recargaDdbb}`} fixedRoot="/WEPRODU/DDBB" rootLabel="DDBB" ocultarActualizar onCountChange={handleCountChange} />}
           </div>
         </div>
       }

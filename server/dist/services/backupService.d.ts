@@ -5,14 +5,19 @@
  *
  *   weprodu_production_integration_2026-09-09_0300/
  *     _backup.json          ← manifiesto: qué colecciones, cuántos documentos, cuándo
- *     users.json.gz
- *     userprojects.json.gz
+ *     users.json
+ *     userprojects.json
  *     ...
  *
- * Cada `.json.gz` es JSON extendido (EJSON), un documento por línea, comprimido. Ese es EXACTAMENTE
+ * Cada `.json` es JSON extendido (EJSON), un documento por línea, SIN comprimir. Ese es EXACTAMENTE
  * el formato que come `mongoimport`, así que cada colección entra en Atlas sin pasos intermedios:
  *
- *   mongoimport --uri "<atlas>" --collection users --gzip --file users.json.gz
+ *   mongoimport --uri "<atlas>" --collection users --file users.json
+ *
+ * SIN COMPRIMIR A PROPÓSITO: un `.json` se abre, se busca y se lee tal cual desde Dropbox o desde
+ * cualquier editor, sin descomprimir nada primero. Se paga en tamaño —texto plano es varias veces un
+ * `.gz`— y en que es más probable cruzar el tope de 150 MB del endpoint simple de Dropbox; de eso se
+ * encarga `uploadFileSession`, que sube por partes.
  *
  * Antes esto era un solo archivo con todas las colecciones concatenadas y líneas marcadoras entre
  * medio. Se podía restaurar con un script propio, pero NO era importable: `mongoimport` importa a una
@@ -66,7 +71,20 @@ export interface ResultadoBackup {
     colecciones: number;
     documentos: number;
     bytes: number;
+    /** Copias viejas borradas en Dropbox. */
     borrados: number;
+    /** Cómo le fue a cada destino. Uno puede fallar sin llevarse al otro puesto. */
+    dropbox: {
+        ok: boolean;
+        error?: string;
+    };
+    mongo: {
+        ok: boolean;
+        configurado: boolean;
+        borrados?: number;
+        destino?: string;
+        error?: string;
+    };
 }
 /**
  * Una corrida completa: dump, subida y limpieza.

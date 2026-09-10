@@ -101,20 +101,41 @@ export const MongoDbConfig: React.FC = () => {
               Carpeta: <code>{config?.carpeta}</code> · Última copia: <strong>{formatearFecha(config?.ultimoBackupAt ?? null)}</strong>
               {config?.enCurso && <span className="ml-2 text-blue-600 dark:text-blue-400">· hay una en curso</span>}
             </p>
+
+            {/*
+              El segundo destino. Se dice el estado y no solo «sí/no» porque «sin configurar» y «mal
+              configurado» son cosas distintas: la primera es una instalación que todavía no lo activó,
+              la segunda es una URI que apunta a la base que se está respaldando —que no sería un backup—.
+            */}
+            <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs">
+              <span className="font-semibold text-gray-700 dark:text-gray-300">Segundo destino (otra base de Mongo): </span>
+              {config?.mongoDestino?.estado === "ok" && (
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  conectado a <code>{config.mongoDestino.base}</code> · se conserva solo la última copia
+                </span>
+              )}
+              {config?.mongoDestino?.estado === "sin_configurar" && (
+                <span className="text-gray-500">
+                  sin configurar. Las copias van solo a Dropbox. Se activa con <code>MONGO_URI_BACKUP</code> en el servidor.
+                </span>
+              )}
+              {config?.mongoDestino?.estado === "error" && <span className="text-red-600 dark:text-red-400">{config.mongoDestino.error}</span>}
+            </div>
           </section>
 
           <section className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-4">
             <h4 className="font-semibold text-gray-900 dark:text-gray-100">Cómo importarla</h4>
             <p className="text-xs">
-              Cada copia es una carpeta con un archivo por colección, en JSON extendido comprimido. Es el formato que lee <code>mongoimport</code>, así que entra en Atlas sin
-              pasos intermedios. Bajá la carpeta desde acá y, parada en ella:
+              Cada copia es una carpeta con un archivo <code>.json</code> por colección, en JSON extendido y sin comprimir: se puede abrir y leer tal cual. Es el formato que lee{" "}
+              <code>mongoimport</code>, así que entra en Atlas sin pasos intermedios. Bajá la carpeta y, parada en ella:
             </p>
             <Comando>{`mongoimport --uri "mongodb+srv://<usuario>:<clave>@<cluster>/<base>" \\
-  --collection users --gzip --file users.json.gz`}</Comando>
+  --collection users --file users.json`}</Comando>
             <p className="text-xs">Para importar la carpeta entera, una colección por archivo:</p>
-            <Comando>{`for f in *.json.gz; do
+            <Comando>{`for f in *.json; do
+  [ "$f" = "_backup.json" ] && continue   # el manifiesto no es una colección
   mongoimport --uri "mongodb+srv://<usuario>:<clave>@<cluster>/<base>" \\
-    --collection "\${f%.json.gz}" --gzip --file "$f"
+    --collection "\${f%.json}" --file "$f"
 done`}</Comando>
             <p className="text-xs text-gray-500">
               <strong>Importá siempre sobre una base vacía</strong>, no sobre una con datos: <code>mongoimport</code> no borra lo que ya está, y los documentos con el mismo{" "}

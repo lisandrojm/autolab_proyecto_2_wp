@@ -251,6 +251,13 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
     try {
       await dropboxAPI.remove(entry.path, full);
       await loadFolder(currentPath);
+      /*
+        El borrado de UNA fila no avisaba nada. El de varios sí («Se eliminaron N archivos»), así que la
+        misma acción confirmaba o no según cuántos hubiera: al borrar uno solo la fila desaparecía y
+        quedaba la duda de si se había ido de Dropbox o solo de la pantalla. En una carpeta de backups,
+        donde cada fila es una copia entera de la base, esa duda no es menor.
+      */
+      sweetAlert.success(entry.tag === "folder" ? "Carpeta eliminada" : "Archivo eliminado", `Se eliminó "${entry.name}" de Dropbox.`);
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo eliminar.");
     }

@@ -3,6 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { correrBackup, backupEnCurso, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
 import { Tenant } from "../models/Tenant.js";
+import { uriDeBackup, nombreDeBaseDestino } from "../services/backupDestinoMongo.js";
 /**
  * Forzar un backup a mano, sin esperar a la corrida de las 12 horas.
  *
@@ -26,7 +27,21 @@ router.get("/config", async (req, res) => {
     }
     const tenant = await Tenant.findOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 }).lean();
     const b = tenant?.integrations?.backup || {};
+    /*
+      Estado del segundo destino. Se informan tres casos distintos y no un booleano: «sin configurar» es
+      una instalación que todavía no lo activó, y «mal configurado» es una URI que apunta a la base de la
+      aplicación —que no sería un backup—. Nunca se devuelve la URI: solo el nombre de la base.
+    */
+    let mongoDestino;
+    try {
+        const uri = uriDeBackup();
+        mongoDestino = uri ? { estado: "ok", base: nombreDeBaseDestino(uri) } : { estado: "sin_configurar" };
+    }
+    catch (e) {
+        mongoDestino = { estado: "error", error: String(e?.message || e) };
+    }
     res.json({
+        mongoDestino,
         enCurso: backupEnCurso(),
         carpeta: CARPETA_BACKUPS,
         intervaloHoras: Number(b.intervaloHoras) || INTERVALO_HORAS_DEFAULT,

@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import zlib from "zlib";
 import readline from "readline";
 import mongoose from "mongoose";
 import { EJSON } from "bson";
@@ -10,7 +9,7 @@ import { EJSON } from "bson";
  *
  * El camino normal para Atlas es `mongoimport`, que lee los archivos tal cual están:
  *
- *   mongoimport --uri "<atlas>" --collection users --gzip --file users.json.gz
+ *   mongoimport --uri "<atlas>" --collection users --file users.json
  *
  * Este script existe para cuando no se tienen las mongodb-database-tools a mano, y para restaurar la
  * carpeta ENTERA de una sin escribir un `for` por colección.
@@ -19,14 +18,14 @@ import { EJSON } from "bson";
  *
  *  - Arranca en DRY RUN: lee, cuenta e informa, y no toca nada. Para escribir hay que pasar
  *    `DRY_RUN=false` a propósito.
- *  - Exige `MONGODB_URI_DESTINO` explícito y se NIEGA a usar la URI de la app. Restaurar encima de la
+ *  - Exige `MONGO_URI_DESTINO` explícito y se NIEGA a apuntar a la base de la app. Restaurar encima de la
  *    base de producción no debería poder pasar por olvidarse una variable: lo normal es levantar una
  *    base aparte, restaurar ahí y recién después decidir.
  *  - Inserta con `insertMany({ ordered: false })` sobre colecciones que espera VACÍAS. Si ya tienen
  *    datos, los `_id` repetidos se rechazan uno por uno y el resto entra; se informa cuántos.
  *
  * Uso:
- *   MONGODB_URI_DESTINO="mongodb://localhost:27017/weprodu_restore" \
+ *   MONGO_URI_DESTINO="mongodb://localhost:27017/weprodu_restore" \
  *   npm run restaurar:backup -- ruta/a/weprodu_production_integration_2026-09-09_0300
  *
  *   ... y cuando el dry run diga lo esperado, otra vez con DRY_RUN=false.
@@ -37,20 +36,25 @@ const LOTE = 500;
 async function main() {
   const carpeta = process.argv[2];
   if (!carpeta || !fs.existsSync(carpeta) || !fs.statSync(carpeta).isDirectory()) {
-    console.error("Falta la carpeta del backup (la que contiene los .json.gz).");
+    console.error("Falta la carpeta del backup (la que contiene los .json).");
     console.error("Uso: npm run restaurar:backup -- <carpeta>");
     process.exit(1);
   }
 
   const dryRun = String(process.env.DRY_RUN ?? "true").toLowerCase() !== "false";
-  const destino = String(process.env.MONGODB_URI_DESTINO || "").trim();
+  const destino = String(process.env.MONGO_URI_DESTINO || "").trim();
 
   if (!destino) {
-    console.error("Falta MONGODB_URI_DESTINO. Es a propósito: hay que decir explícitamente en qué base se restaura.");
+    console.error("Falta MONGO_URI_DESTINO. Es a propósito: hay que decir explícitamente en qué base se restaura.");
     process.exit(1);
   }
-  if (destino === String(process.env.MONGODB_URI || "").trim()) {
-    console.error("MONGODB_URI_DESTINO es la MISMA base que usa la aplicación. Restaurá en una base aparte y comparen antes de mover nada.");
+  /*
+    LA GUARDA ESTABA ROTA. Comparaba contra `MONGODB_URI`, y la variable de este proyecto se llama
+    `MONGO_URI` (ver `config/env.ts`): la condición nunca daba verdadera, así que el script se dejaba
+    apuntar a la base de producción sin decir nada. Justo la protección que más importa.
+  */
+  if (destino === String(process.env.MONGO_URI || "").trim()) {
+    console.error("MONGO_URI_DESTINO es la MISMA base que usa la aplicación. Restaurá en una base aparte y comparen antes de mover nada.");
     process.exit(1);
   }
 
@@ -60,9 +64,13 @@ async function main() {
     console.log(`   base original: ${m.base} · generado: ${m.fecha} · ${m.colecciones?.length ?? 0} colecciones · ${m.documentos} documentos`);
   }
 
-  const archivos = fs.readdirSync(carpeta).filter((f) => f.endsWith(".json.gz")).sort();
+  // `_backup.json` es el manifiesto, no una colección: se saltea.
+  const archivos = fs
+    .readdirSync(carpeta)
+    .filter((f) => f.endsWith(".json") && f !== "_backup.json")
+    .sort();
   if (archivos.length === 0) {
-    console.error("La carpeta no tiene ningún .json.gz. ¿Es la carpeta de un backup?");
+    console.error("La carpeta no tiene ninguna colección .json. ¿Es la carpeta de un backup?");
     process.exit(1);
   }
 
@@ -73,8 +81,8 @@ async function main() {
 
   let total = 0;
   for (const archivo of archivos) {
-    const coleccion = archivo.replace(/\.json\.gz$/, "");
-    const lineas = readline.createInterface({ input: fs.createReadStream(path.join(carpeta, archivo)).pipe(zlib.createGunzip()), crlfDelay: Infinity });
+    const coleccion = archivo.replace(/\.json$/, "");
+    const lineas = readline.createInterface({ input: fs.createReadStream(path.join(carpeta, archivo)), crlfDelay: Infinity });
 
     let lote: any[] = [];
     let cuenta = 0;

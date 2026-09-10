@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import zlib from "zlib";
 import { EJSON } from "bson";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, listFolder, uploadFile, uploadFileSession, createFolder, deleteEntry } from "./dropboxService.js";
+import { guardarEnMongo } from "./backupDestinoMongo.js";
 
 /**
  * BACKUP DE LA BASE, CADA 12 HORAS, A DROPBOX.
@@ -11,14 +11,19 @@ import { getTenantDropboxConfig, listFolder, uploadFile, uploadFileSession, crea
  *
  *   weprodu_production_integration_2026-09-09_0300/
  *     _backup.json          ← manifiesto: qué colecciones, cuántos documentos, cuándo
- *     users.json.gz
- *     userprojects.json.gz
+ *     users.json
+ *     userprojects.json
  *     ...
  *
- * Cada `.json.gz` es JSON extendido (EJSON), un documento por línea, comprimido. Ese es EXACTAMENTE
+ * Cada `.json` es JSON extendido (EJSON), un documento por línea, SIN comprimir. Ese es EXACTAMENTE
  * el formato que come `mongoimport`, así que cada colección entra en Atlas sin pasos intermedios:
  *
- *   mongoimport --uri "<atlas>" --collection users --gzip --file users.json.gz
+ *   mongoimport --uri "<atlas>" --collection users --file users.json
+ *
+ * SIN COMPRIMIR A PROPÓSITO: un `.json` se abre, se busca y se lee tal cual desde Dropbox o desde
+ * cualquier editor, sin descomprimir nada primero. Se paga en tamaño —texto plano es varias veces un
+ * `.gz`— y en que es más probable cruzar el tope de 150 MB del endpoint simple de Dropbox; de eso se
+ * encarga `uploadFileSession`, que sube por partes.
  *
  * Antes esto era un solo archivo con todas las colecciones concatenadas y líneas marcadoras entre
  * medio. Se podía restaurar con un script propio, pero NO era importable: `mongoimport` importa a una
@@ -52,7 +57,17 @@ export const INTERVALOS_VALIDOS = [6, 12, 24, 48] as const;
 const TOPE_SUBIDA_SIMPLE = 140 * 1024 * 1024;
 
 /** Colecciones que NO se respaldan: son caché reconstruible y de las que más pesan. */
-const EXCLUIDAS = new Set(["sessions"]);
+const EXCLUIDAS = new Set([
+  "sessions",
+  /*
+    Las colecciones de GridFS del destino de backup. `uriDeBackup()` ya rechaza que el destino sea la
+    misma base que la aplicación, así que en teoría nunca aparecen acá; se excluyen igual porque el
+    costo es cero y la falla sería fea: el dump se respaldaría a sí mismo y cada copia sería más grande
+    que la anterior, en potencia, hasta reventar.
+  */
+  "backups.files",
+  "backups.chunks",
+]);
 
 let corriendo = false;
 
@@ -76,38 +91,40 @@ export interface ArchivoBackup {
 }
 
 /**
- * Vuelca UNA colección a EJSON comprimido, un documento por línea.
+ * Vuelca UNA colección a EJSON, un documento por línea (NDJSON), sin comprimir.
  *
- * Se lee con cursor y se escribe respetando la contrapresión del gzip: sin eso, una colección grande
- * entra entera en memoria antes de comprimirse.
+ * Se lee con cursor para no traer la colección entera de la base de un saque, aunque el archivo
+ * resultante sí se arma completo en memoria antes de subirlo: es el mismo compromiso que ya había, y
+ * lo que evita sostener una subida por streaming contra Dropbox.
  */
 async function volcarColeccion(nombre: string): Promise<ArchivoBackup> {
   const db = mongoose.connection.db!;
-  const gzip = zlib.createGzip({ level: 9 });
-  const partes: Buffer[] = [];
-  gzip.on("data", (c: Buffer) => partes.push(c));
-  const terminado = new Promise<void>((resolve, reject) => {
-    gzip.on("end", resolve);
-    gzip.on("error", reject);
-  });
-
-  const escribir = (linea: string): Promise<void> =>
-    new Promise((resolve, reject) => {
-      if (gzip.write(linea)) return resolve();
-      gzip.once("drain", resolve);
-      gzip.once("error", reject);
-    });
-
+  const lineas: string[] = [];
   let documentos = 0;
+
   const cursor = db.collection(nombre).find({}, { batchSize: 500 });
   for await (const doc of cursor) {
-    await escribir(EJSON.stringify(doc) + "\n");
+    /*
+      CANÓNICO Y NO RELAJADO. Es la diferencia entre una copia fiel y una copia parecida.
+
+      En modo relajado los números se escriben tal cual (`42`, `9007199254740993`) y al leerlos vuelven
+      como `double` de JavaScript. Probado con un `Long` real: 9007199254740993 vuelve como
+      ...992 — un dígito distinto, en silencio. También se pierde si un campo era Int32 o Double.
+
+      En canónico cada valor lleva su tipo (`{"$numberLong":"9007199254740993"}`), así que un ObjectId
+      vuelve ObjectId, una fecha vuelve Date y un entero vuelve entero. Es más verboso de leer, y es el
+      precio de que un backup sea un backup.
+
+      `mongoimport` lee las dos formas —es JSON extendido v2 en los dos casos—, así que la importación
+      directa a Atlas sigue funcionando igual.
+    */
+    lineas.push(EJSON.stringify(doc, { relaxed: false }));
     documentos++;
   }
 
-  gzip.end();
-  await terminado;
-  return { nombre: `${nombre}.json.gz`, contenido: Buffer.concat(partes), documentos };
+  // Un solo `join` al final en vez de concatenar en cada vuelta: con colecciones de miles de
+  // documentos, sumar strings de a uno copia el acumulado entero cada vez.
+  return { nombre: `${nombre}.json`, contenido: Buffer.from(lineas.length > 0 ? lineas.join("\n") + "\n" : "", "utf8"), documentos };
 }
 
 /** Todas las colecciones de la base, cada una en su archivo, más el manifiesto. */
@@ -126,16 +143,16 @@ export async function generarArchivos(): Promise<{ archivos: ArchivoBackup[]; do
   const documentos = archivos.reduce((a, f) => a + f.documentos, 0);
 
   /*
-    El manifiesto va SIN comprimir y con extensión .json a secas, para poder abrirlo desde Dropbox sin
-    bajar nada. No termina en .json.gz a propósito: así un `for f in *.json.gz` que importe la carpeta
-    entera no lo toma como si fuera una colección.
+    El manifiesto se llama `_backup.json` con guion bajo adelante: ordena primero en cualquier listado,
+    y es lo que permite salteárselo al importar la carpeta entera (`for f in *.json` tiene que excluirlo,
+    porque no es una colección).
   */
   const manifiesto = {
     base: db.databaseName,
     fecha: new Date(),
     documentos,
-    colecciones: archivos.map((f) => ({ nombre: f.nombre.replace(/\.json\.gz$/, ""), documentos: f.documentos, bytes: f.contenido.length })),
-    comoImportar: "mongoimport --uri \"<atlas>\" --collection <coleccion> --gzip --file <coleccion>.json.gz",
+    colecciones: archivos.map((f) => ({ nombre: f.nombre.replace(/\.json$/, ""), documentos: f.documentos, bytes: f.contenido.length })),
+    comoImportar: "mongoimport --uri \"<atlas>\" --collection <coleccion> --file <coleccion>.json",
   };
   archivos.push({ nombre: "_backup.json", contenido: Buffer.from(JSON.stringify(manifiesto, null, 2)), documentos: 0 });
 
@@ -193,7 +210,11 @@ export interface ResultadoBackup {
   colecciones: number;
   documentos: number;
   bytes: number;
+  /** Copias viejas borradas en Dropbox. */
   borrados: number;
+  /** Cómo le fue a cada destino. Uno puede fallar sin llevarse al otro puesto. */
+  dropbox: { ok: boolean; error?: string };
+  mongo: { ok: boolean; configurado: boolean; borrados?: number; destino?: string; error?: string };
 }
 
 /**
@@ -224,20 +245,59 @@ export async function correrBackup(disparador: "cron" | "manual" = "cron"): Prom
     const carpeta = nombreDeCarpeta(baseDatos);
     const ruta = `${CARPETA_BACKUPS}/${carpeta}`;
 
-    await asegurarCarpeta(tenantId, cfg, CARPETA_BACKUPS);
-    await asegurarCarpeta(tenantId, cfg, ruta);
-    for (const archivo of archivos) await subir(tenantId, cfg, `${ruta}/${archivo.nombre}`, archivo.contenido);
-
-    const retener = Math.max(1, Number((tenant as any)?.integrations?.backup?.retener) || RETENER_DEFAULT);
-    const borrados = await limpiarViejos(tenantId, cfg, baseDatos, retener);
-
-    // Se guarda CUÁNDO terminó, no cuándo arrancó: es lo que decide si toca la próxima, y sobrevive a
-    // un reinicio del server (con un `setInterval` a secas, cada reinicio corría un backup de más).
-    await Tenant.updateOne({ _id: tenant._id }, { $set: { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": "" } });
     const bytes = archivos.reduce((a, f) => a + f.contenido.length, 0);
+    const retener = Math.max(1, Number((tenant as any)?.integrations?.backup?.retener) || RETENER_DEFAULT);
 
-    console.log(`[BACKUP:${disparador}] ${carpeta} · ${archivos.length - 1} colecciones · ${documentos} documentos · ${(bytes / 1024 / 1024).toFixed(1)} MB · ${borrados} viejos borrados`);
-    return { carpeta, colecciones: archivos.length - 1, documentos, bytes, borrados };
+    /*
+      LOS DOS DESTINOS SE INTENTAN POR SEPARADO, y el que falla no se lleva puesto al otro.
+
+      Que Dropbox esté caído no es motivo para no guardar la copia en el Mongo de backup, ni al revés.
+      Y cada uno limpia lo viejo solo si LO SUYO salió bien: una copia nueva a medias nunca puede costar
+      la copia anterior, que es la que todavía sirve.
+    */
+    const dropbox: ResultadoBackup["dropbox"] = { ok: false };
+    let borrados = 0;
+    try {
+      await asegurarCarpeta(tenantId, cfg, CARPETA_BACKUPS);
+      await asegurarCarpeta(tenantId, cfg, ruta);
+      // El manifiesto va ÚLTIMO —es el último del array—, así que su presencia es la señal de que la
+      // copia está completa. Una carpeta sin `_backup.json` es una copia a medias.
+      for (const archivo of archivos) await subir(tenantId, cfg, `${ruta}/${archivo.nombre}`, archivo.contenido);
+      borrados = await limpiarViejos(tenantId, cfg, baseDatos, retener);
+      dropbox.ok = true;
+    } catch (e: any) {
+      dropbox.error = String(e?.message || e);
+      console.error(`[BACKUP:${disparador}] Dropbox falló:`, dropbox.error);
+    }
+
+    const mongo: ResultadoBackup["mongo"] = { ok: false, configurado: false };
+    try {
+      const r = await guardarEnMongo(carpeta, archivos);
+      mongo.ok = true;
+      mongo.configurado = r.configurado;
+      mongo.borrados = r.borrados;
+      mongo.destino = r.destino;
+    } catch (e: any) {
+      mongo.error = String(e?.message || e);
+      console.error(`[BACKUP:${disparador}] Mongo de backup falló:`, mongo.error);
+    }
+
+    if (!dropbox.ok && !mongo.ok) throw new Error(`La copia no quedó en ningún destino. Dropbox: ${dropbox.error} · Mongo: ${mongo.error}`);
+
+    /*
+      `ultimoBackupAt` se escribe SIEMPRE que la copia haya quedado en algún lado, aunque un destino
+      falle. Es el reloj que espacia las corridas: si no se escribiera ante un fallo parcial, el
+      scheduler reintentaría cada 15 minutos y estaría recorriendo la base entera cuatro veces por hora.
+      Que algo falló se dice en `ultimoError`, que la pantalla muestra en rojo.
+    */
+    const fallos = [dropbox.ok ? "" : `Dropbox: ${dropbox.error}`, mongo.ok ? "" : `Mongo de backup: ${mongo.error}`].filter(Boolean).join(" · ");
+    await Tenant.updateOne({ _id: tenant._id }, { $set: { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": fallos } });
+
+    console.log(
+      `[BACKUP:${disparador}] ${carpeta} · ${archivos.length - 1} colecciones · ${documentos} documentos · ${(bytes / 1024 / 1024).toFixed(1)} MB · ` +
+        `dropbox=${dropbox.ok ? `ok (${borrados} viejos borrados)` : "FALLÓ"} · mongo=${mongo.ok ? (mongo.configurado ? `ok (${mongo.borrados} viejos borrados)` : "sin configurar") : "FALLÓ"}`,
+    );
+    return { carpeta, colecciones: archivos.length - 1, documentos, bytes, borrados, dropbox, mongo };
   } finally {
     corriendo = false;
   }
