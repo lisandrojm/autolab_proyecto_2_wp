@@ -309,9 +309,17 @@ class ProjectsAPI {
     return project;
   }
 
-  async getProject(projectId: string): Promise<Project> {
+  /**
+   * `team: "ids"` trae `assignedUsers` como ids pelados en lugar de las personas con su historial
+   * de contratos. Poblar el equipo es lo caro de este endpoint —proyectos grandes se iban a más de
+   * 60 s y cortaban por timeout— y las pantallas del panel solo necesitan cuántos son y quiénes,
+   * porque el equipo real lo cargan por su endpoint paginado. El móvil sí necesita los datos
+   * (los usa de fallback cuando el coordinador recibe 403 en `/users`), así que el default es poblar.
+   */
+  async getProject(projectId: string, opts?: { team?: "full" | "ids" }): Promise<Project> {
     const resp = await axios.get(`/projects/${projectId}`, {
       headers: this.getHeaders(),
+      params: opts?.team === "ids" ? { team: "ids" } : undefined,
     });
     return normalizeProject(resp.data);
   }
@@ -460,7 +468,7 @@ class ProjectsAPI {
     await axios.post(`/projects/${projectId}/assign-member`, data, {
       headers: this.getHeaders(),
     });
-    const project = await this.getProject(projectId);
+    const project = await this.getProject(projectId, { team: "ids" });
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", projectId, clientId);
   }
@@ -469,7 +477,7 @@ class ProjectsAPI {
     await axios.delete(`/projects/${projectId}/members/${userId}`, {
       headers: this.getHeaders(),
     });
-    const project = await this.getProject(projectId);
+    const project = await this.getProject(projectId, { team: "ids" });
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", projectId, clientId);
   }

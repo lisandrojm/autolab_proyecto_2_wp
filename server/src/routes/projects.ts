@@ -847,65 +847,104 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
       else filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOne(filter)
+    /**
+     * `?team=ids` devuelve `assignedUsers` como ids pelados, sin poblar.
+     *
+     * Poblar el equipo es lo caro de este endpoint y la mayoría de las pantallas no lo necesita:
+     * el panel web solo muestra el CONTADOR de personas (Detalle) o mapea la lista a `_id` para
+     * saber a quién no ofrecer al agregar (Equipo, que además carga el equipo real por su endpoint
+     * paginado). El móvil sí necesita los datos —usa `assignedUsers` como fallback cuando el
+     * coordinador recibe 403 en `/users`— así que el default sigue siendo poblado.
+     */
+    const soloIdsDeEquipo = String(req.query.team || "") === "ids";
+
+    const query = Project.findOne(filter)
       .populate("clientId", "name email")
-      .populate({
-        path: "assignedUsers",
-        select: "firstName lastName email metadata roles",
-        populate: [
-          { path: "metadata.projects", model: UserProject },
-          { path: "roles", select: "name" },
-        ],
-      })
       .populate("turnos")
       .populate("areasConfig.areaId")
       .populate("areasConfig.shiftIds")
       .populate("coordinatorAssignments.areaId")
       .populate("coordinatorAssignments.shiftId")
-      .populate("coordinatorAssignments.userId")
-      .lean();
+      // Los campos que el móvil usa para matchear al coordinador (`_id`, `metadata.id`, email o
+      // nombre). Antes venía el usuario ENTERO, con todo su `metadata`, por cada asignación.
+      .populate("coordinatorAssignments.userId", "firstName lastName name email metadata.id");
+
+    if (!soloIdsDeEquipo) {
+      query.populate({
+        path: "assignedUsers",
+        select: "firstName lastName email metadata roles",
+        populate: [{ path: "roles", select: "name" }],
+      });
+    }
+
+    const project = await query.lean();
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });
       return;
     }
 
+    /**
+     * EL VÍNCULO DE CADA MIEMBRO, SOLO EL DE ESTE PROYECTO.
+     *
+     * `user.metadata.projects` son refs a UserProject: UNO POR CADA PROYECTO en el que la persona
+     * estuvo alguna vez, con todo su historial de contratos adentro. Poblarlo anidado bajo
+     * `assignedUsers` traía, para un proyecto de N personas, N × (proyectos de cada una) documentos
+     * completos — decenas de MB y timeouts de más de 60 s en proyectos grandes.
+     *
+     * Acá se reemplaza por una sola consulta indexada (`{projectId, userId}`) que trae exactamente
+     * un documento por miembro: el de ESTE proyecto. Es lo único que los consumidores buscan
+     * (siempre hacen `projects.find(p => p.projectId === projectId)`).
+     */
+    if (!soloIdsDeEquipo) {
+      const miembros = ((project as any).assignedUsers || []).filter((u: any) => u && typeof u === "object");
+      if (miembros.length > 0) {
+        const vinculos = await UserProject.find({
+          projectId: project._id,
+          userId: { $in: miembros.map((u: any) => u._id) },
+        }).lean();
+        const porUsuario = new Map(vinculos.map((v: any) => [String(v.userId), v]));
+        for (const miembro of miembros) {
+          const vinculo = porUsuario.get(String(miembro._id));
+          miembro.metadata = { ...(miembro.metadata || {}), projects: vinculo ? [vinculo] : [] };
+        }
+      }
+    }
+
     // --- Resolución de Metadata ---
+    // Son búsquedas independientes entre sí: van en paralelo, no encadenadas.
     if (project.metadata) {
       const { responsableId, clienteId, sedeId, centroCostoId } = project.metadata;
-      const resolutions: any = {};
+      const externalProjId = project.metadata.id || project.externalId;
 
-      if (responsableId) {
-        const user = await User.findOne({ 
-          tenantId: req.tenantObjectId,
-          "metadata.id": responsableId 
-        }).select("firstName lastName email").lean();
-        if (user) resolutions.responsable = user;
-      }
-
-      if (clienteId) {
-        const client = await Client.findOne({
-          tenantId: req.tenantObjectId,
-          $or: [{ externalId: String(clienteId) }, { "metadata.clienteId": clienteId }],
-        })
-          .select("name email externalId")
-          .lean();
-        if (client) resolutions.cliente = client;
-      }
-
-      if (sedeId) {
-        const sede = await Info.findOne({
-          type: "sede",
-          "data.id": sedeId,
-        }).lean();
-        if (sede) resolutions.sede = sede;
-      }
-
-      if (centroCostoId) {
+      const [responsable, cliente, sede, centroCosto, userCount] = await Promise.all([
+        responsableId
+          ? User.findOne({ tenantId: req.tenantObjectId, "metadata.id": responsableId })
+              .select("firstName lastName email")
+              .lean()
+          : null,
+        clienteId
+          ? Client.findOne({
+              tenantId: req.tenantObjectId,
+              $or: [{ externalId: String(clienteId) }, { "metadata.clienteId": clienteId }],
+            })
+              .select("name email externalId")
+              .lean()
+          : null,
+        sedeId ? Info.findOne({ type: "sede", "data.id": sedeId }).lean() : null,
         // Los dos catálogos, con la misma preferencia que el listado: ver el comentario de arriba.
-        const cc = (await CentroCosto.findOne({ "data.id": centroCostoId }).lean()) || (await Info.findOne({ type: "centro-costo", "data.id": centroCostoId }).lean());
-        if (cc) resolutions.centroCosto = cc;
-      }
+        centroCostoId
+          ? (async () => (await CentroCosto.findOne({ "data.id": centroCostoId }).lean()) || (await Info.findOne({ type: "centro-costo", "data.id": centroCostoId }).lean()))()
+          : null,
+        // Contar personas desde la colección users_&_projects
+        externalProjId ? UserProject.countDocuments({ externalProjectId: externalProjId }) : null,
+      ]);
+
+      const resolutions: any = {};
+      if (responsable) resolutions.responsable = responsable;
+      if (cliente) resolutions.cliente = cliente;
+      if (sede) resolutions.sede = sede;
+      if (centroCosto) resolutions.centroCosto = centroCosto;
 
       (project as any).metadataResolutions = resolutions;
 
@@ -914,14 +953,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
         (project as any).clientId = resolutions.cliente;
       }
 
-      // Contar personas desde la colección users_&_projects
-      const externalProjId = project.metadata.id || project.externalId;
-      if (externalProjId) {
-        const userCount = await UserProject.countDocuments({
-          externalProjectId: externalProjId,
-        });
-        (project as any).metadataUserCount = userCount;
-      }
+      if (userCount !== null) (project as any).metadataUserCount = userCount;
     }
 
     await resolveProjectGlobalConfig(project, req.tenantObjectId);

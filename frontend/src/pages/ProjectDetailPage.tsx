@@ -110,7 +110,7 @@ export const ProjectDetailPage: React.FC = () => {
 
   const fetchProject = async () => {
     try {
-      const data = await projectsAPI.getProject(projectId!);
+      const data = await projectsAPI.getProject(projectId!, { team: "ids" });
       setProject(data);
       setProjectForm({
         name: data.name,

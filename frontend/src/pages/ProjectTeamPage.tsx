@@ -525,7 +525,7 @@ export const ProjectTeamPage: React.FC = () => {
       try {
         setLoading(true);
         const [projectData, vacationsData, areasData, shiftsData] = await Promise.all([
-          projectsAPI.getProject(projectId), // específico del proyecto: no se cachea
+          projectsAPI.getProject(projectId, { team: "ids" }), // específico del proyecto: no se cachea
           cachedFetch("vacations:all", () => vacationsAPI.getAll()),
           cachedFetch("areas:all", () => areasAPI.listAll()),
           cachedFetch("shifts:all", () => shiftsAPI.getAll()),
@@ -539,7 +539,7 @@ export const ProjectTeamPage: React.FC = () => {
           if (cleanupResult.removedCount > 0) {
             // Silent cleanup - no notification shown
             // Re-fetch project to get updated assignedUsers
-            const updatedProject = await projectsAPI.getProject(projectId);
+            const updatedProject = await projectsAPI.getProject(projectId, { team: "ids" });
             setProject(updatedProject);
             setTeamConfig(updatedProject.teamConfig || []);
           } else {
@@ -1807,7 +1807,7 @@ export const ProjectTeamPage: React.FC = () => {
       sweetAlert.success(wasApproving ? "Solicitud Aprobada" : isExistingMember ? "Miembro Actualizado" : "Miembro Agregado", `${nombre} ha sido ${wasApproving ? "aprobado e incorporado al equipo" : isExistingMember ? "actualizado" : "incorporado al equipo"}.`);
 
       // Refresh Data
-      const updatedProject = await projectsAPI.getProject(project._id);
+      const updatedProject = await projectsAPI.getProject(project._id, { team: "ids" });
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
 
@@ -1855,7 +1855,7 @@ export const ProjectTeamPage: React.FC = () => {
       await projectsAPI.removeMember(project._id, userId);
 
       // Refresh local state (equipo liviano + página actual, no todo el tenant → evita OOM)
-      const updatedProject = await projectsAPI.getProject(project._id);
+      const updatedProject = await projectsAPI.getProject(project._id, { team: "ids" });
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
       await fetchFullTeamLite();
@@ -2787,7 +2787,7 @@ export const ProjectTeamPage: React.FC = () => {
                 teamMembers={teamMembers}
                 onGoToTeam={() => setActiveTab("equipo")}
                 onUpdated={async () => {
-                  const updatedProject = await projectsAPI.getProject(projectId!);
+                  const updatedProject = await projectsAPI.getProject(projectId!, { team: "ids" });
                   setProject(updatedProject);
                   setTeamConfig(updatedProject.teamConfig || []);
                 }}

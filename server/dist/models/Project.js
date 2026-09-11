@@ -108,4 +108,7 @@ const projectSchema = new Schema({
 }, { timestamps: true });
 projectSchema.index({ tenantId: 1, clientId: 1, name: 1 }, { unique: true });
 projectSchema.index({ tenantId: 1, clientId: 1, createdAt: -1 });
+// `alcanceDeResponsable` corre en CADA request de alguien que no es admin (proyectos y clientes)
+// y busca por este campo; sin el índice, cada una escanea todos los proyectos del tenant.
+projectSchema.index({ tenantId: 1, "metadata.responsableId": 1 });
 export const Project = mongoose.model("Project", projectSchema);
