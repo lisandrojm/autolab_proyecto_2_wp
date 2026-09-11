@@ -756,16 +756,37 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const contratoActivoPorMembership = new Map();
         if (pageRows.length > 0) {
             const ids = pageRows.map((r) => new Types.ObjectId(r._id));
+            /*
+             * EL $switch VA POR ÍNDICE DE CONTRATO, NO POR FILA.
+             *
+             * Antes era una rama por fila de la página (`$eq` contra su `_id`), y Mongo evalúa ese árbol
+             * ENTERO por cada documento: con una página de 25 son 25 comparaciones y no se nota, pero la
+             * pantalla de Contratos pide el conjunto completo para poder contar las pestañas y correr las
+             * acciones masivas, y ahí son ~900 ramas × ~900 documentos. Cuadrático, y encima el comando
+             * que viaja a Mongo lleva las 900 ramas escritas adentro: varios MB de pipeline.
+             *
+             * Los índices distintos, en cambio, son un puñado (la mayoría de la gente tiene 1 o 2
+             * contratos en un proyecto). Agrupando por índice quedan ~5 ramas, cada una un `$in` nativo
+             * contra una lista de ids: el costo deja de depender del tamaño de la página.
+             *
+             * El índice 0 no necesita rama: ya es el `default`.
+             */
+            const idsPorIndice = new Map();
+            for (const r of pageRows) {
+                const idx = Number(r.contractIndex) || 0;
+                if (idx === 0)
+                    continue;
+                const lista = idsPorIndice.get(idx) || [];
+                lista.push(new Types.ObjectId(r._id));
+                idsPorIndice.set(idx, lista);
+            }
+            const ramas = [...idsPorIndice.entries()].map(([idx, lista]) => ({ case: { $in: ["$_id", lista] }, then: idx }));
+            const indiceDelContrato = ramas.length > 0 ? { $switch: { branches: ramas, default: 0 } } : 0;
             const docs = await UserProject.aggregate([
                 { $match: { _id: { $in: ids } } },
                 {
                     $project: {
-                        c: {
-                            $arrayElemAt: [
-                                { $ifNull: ["$contracts", []] },
-                                { $switch: { branches: pageRows.map((r) => ({ case: { $eq: ["$_id", new Types.ObjectId(r._id)] }, then: r.contractIndex })), default: 0 } },
-                            ],
-                        },
+                        c: { $arrayElemAt: [{ $ifNull: ["$contracts", []] }, indiceDelContrato] },
                     },
                 },
             ]);

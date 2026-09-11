@@ -9,6 +9,7 @@ import { usersAPI, SolicitudOverviewRow } from "../api/users";
 import { clientsAPI } from "../api/clients";
 import { projectsAPI } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 
 /**
@@ -30,9 +31,12 @@ import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, 
 
 const PAGE_SIZE = 25;
 
+const CLAVE_AYUDA = "solicitudes" as const;
+
 export const SolicitudesPage: React.FC = () => {
   const navigate = useNavigate();
   const catalogos = useCatalogosDeSolicitudes();
+  const ayuda = getHelp(CLAVE_AYUDA);
 
   const [rows, setRows] = useState<SolicitudOverviewRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -40,6 +44,7 @@ export const SolicitudesPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
@@ -162,6 +167,15 @@ export const SolicitudesPage: React.FC = () => {
       subtitle="Todas las solicitudes de alta, de todos los clientes y proyectos."
       faIcon={{ icon: faUserPlus }}
       itemCount={total}
+      infoModal={{
+        isOpen: ayudaAbierta,
+        onOpen: () => setAyudaAbierta(true),
+        onClose: () => setAyudaAbierta(false),
+        title: ayuda?.title || "Ayuda",
+        size: ayuda?.size as any,
+        content: ayuda?.content,
+      }}
+      shouldShowInfo={hasHelp(CLAVE_AYUDA)}
       /*
         Los filtros van detrás del botón de embudo, en el modal "Filtros Avanzados", igual que en
         Contratos: `SearchAndFilters` ya trae la búsqueda, el botón, el modal, los chips de lo que

@@ -9,7 +9,7 @@ import React from 'react';
  * referenciaba. La comprobación es que ningún archivo las nombre — TypeScript no avisa de una clave
  * de más, solo de una que falte.
  */
-export type HelpKey = 'fichas' | 'clients' | 'users' | 'roles' | 'tenants' | 'clientDetail' | 'clientProjects' | 'orders' | 'orderCategories' | 'positions' | 'levels' | 'pdfTemplates' | 'vacations' | 'vacationsRules' | 'activityLogs' | 'projectTeam' | 'projects' | 'sedes' | 'contracts' | 'categoriasSat' | 'centrosCosto' | 'contratosFrame' | 'empresas' | 'membretes' | 'bancos' | 'holidays' | 'funcionesFrame' | 'miPerfil' | 'requestsConfig' | 'obrasSociales' | 'convenios' | 'areas' | 'documents' | 'empresaFicha' | 'empresaObrasSociales' | 'empresaConvenios' | 'empresaDomicilios' | 'empresaCategorias' | 'empresaDefaults' | 'empresaGruposTipoServicio' | 'empresaContratos' | 'orderTypes' | 'releases' | 'importUsersWp' | 'arcaSucursales' | 'arcaActividades' | 'arcaModalidadContratacion' | 'arcaTipoServicio' | 'arcaGrupoTipoServicio' | 'arcaModalidadLiquidacion' | 'fuentesParitaria';
+export type HelpKey = 'fichas' | 'clients' | 'users' | 'roles' | 'tenants' | 'clientDetail' | 'clientProjects' | 'orders' | 'orderCategories' | 'positions' | 'levels' | 'pdfTemplates' | 'vacations' | 'vacationsRules' | 'activityLogs' | 'projectTeam' | 'projects' | 'sedes' | 'contracts' | 'solicitudes' | 'categoriasSat' | 'centrosCosto' | 'contratosFrame' | 'empresas' | 'membretes' | 'bancos' | 'holidays' | 'funcionesFrame' | 'miPerfil' | 'requestsConfig' | 'obrasSociales' | 'convenios' | 'areas' | 'documents' | 'empresaFicha' | 'empresaObrasSociales' | 'empresaConvenios' | 'empresaDomicilios' | 'empresaCategorias' | 'empresaDefaults' | 'empresaGruposTipoServicio' | 'empresaContratos' | 'orderTypes' | 'releases' | 'importUsersWp' | 'arcaSucursales' | 'arcaActividades' | 'arcaModalidadContratacion' | 'arcaTipoServicio' | 'arcaGrupoTipoServicio' | 'arcaModalidadLiquidacion' | 'fuentesParitaria';
 
 export type HelpEntry = {
   title: string;
@@ -124,6 +124,11 @@ const helpResources = {
       'contracts.title': 'Gestión de Contratos',
       'contracts.description': 'Historial completo de contrataciones y vinculaciones laborales.',
       'contracts.items': ['**Registros**: Detalle de cada contrato asociado a un usuario y proyecto.', '**Datos clave**: Incluye fechas de alta/baja, duración en días, sueldo y rol desempeñado.', '**Estado**: Visualiza si el contrato está vigente o finalizado.', '**Sede y Rol**: Ubicación y función específica que desempeña el usuario.', '**Datos ARCA**: para generar el alta, cada contrato necesita categoría, domicilio, actividad y obra social. Lo que falta se marca en la fila, pero casi siempre se resuelve UNA vez en la ficha de la empleadora —no contrato por contrato—: si la empresa no tiene convenios o domicilios registrados, ninguno de sus contratos puede generar el archivo.', '**El TXT es por CUIT**: ARCA rechaza un archivo que mezcle contratos de dos empleadoras, así que hay que filtrar por empresa antes de generarlo. Desde la ficha de cada empleadora ya viene acotado.', '**Filtros**: Busca por nombre de usuario, proyecto o contrato.', '**Vistas**: Alterna entre vista de tabla (detalle) y tarjetas (resumen).'],
+
+      // Solicitudes de contratación (va con Contratos: son dos etapas del mismo ciclo)
+      'solicitudes.title': 'Solicitudes de Contratación',
+      'solicitudes.description': 'Los pedidos de alta que manda el coordinador, esperando ser aprobados o rechazados.',
+      'solicitudes.items': ['**Qué son**: el pedido de dar de alta a alguien en un proyecto. Las manda el **coordinador** desde mobile, y acá se **aprueban o se rechazan**.', '**Todavía no son un contrato**: una solicitud dice qué se quiere contratar —rol, categoría, fechas, horario y valor de la jornada—, pero nada de eso existe hasta aprobarla.', '**Aprobar** abre el equipo del proyecto con el wizard precargado: ahí se completan contrato, área y turno, y recién entonces la persona queda contratada y aparece en Contratos.', '**Rechazar no borra**: la solicitud queda registrada como *rechazada*, y se puede **volver a pendiente** si fue un error. Eliminar es definitivo y recién se ofrece una vez rechazada o cancelada.', '**Estados**: *pendiente* (esperando respuesta), *aprobada* (ya se dio de alta), *rechazada* y *cancelada*. Las aprobadas siguen listadas: son el historial de cómo entró cada persona.', '**Tipo de alta**: por qué vía se pidió contratar —alta temprana de ARCA o servicios—. Es el dato del que después depende el trámite impositivo, y *Sin definir* significa que la solicitud no lo declaró.'],
 
       // Categorías
       'categoriasSat.title': 'Información de Categorías',
@@ -388,6 +393,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   projects: { title: 'Gestión de Proyectos', size: 'sm', content: buildHelpContent('projects') },
   sedes: { title: 'Gestión de Sedes', size: 'sm', content: buildHelpContent('sedes') },
   contracts: { title: 'Gestión de Contratos', size: 'sm', content: buildHelpContent('contracts') },
+  solicitudes: { title: 'Solicitudes de Contratación', size: 'sm', content: buildHelpContent('solicitudes') },
   membretes: { title: 'Información de Membrete/s y firma', size: 'sm', content: buildHelpContent('membretes') },
 
   orders: {

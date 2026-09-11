@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSort, faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload } from '@fortawesome/free-solid-svg-icons';
+import { faSort, faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { projectsAPI } from '../../api/projects';
 import { companiesAPI, Company } from '../../api/companies';
@@ -44,6 +44,61 @@ const conveniosApi = createSimpleCatalogApi('/convenios');
  * tres pestañas de una.
  */
 const CONTRACTS_OVERVIEW_CACHE = 'contracts-overview:';
+
+const FILAS_POR_PAGINA = 25;
+
+/**
+ * PAGINADO DEL RENDER, NO DE LOS DATOS.
+ *
+ * La pantalla trae de una todos los contratos de los estados que le interesan y de ahí salen los
+ * contadores de cada pestaña, el "seleccionar todos los del listado" y las acciones masivas: todas
+ * trabajan sobre el conjunto FILTRADO COMPLETO, no sobre lo que se ve. Paginar en el server
+ * cambiaría esa semántica sin que nadie lo pida —"todos" pasaría a significar "los 25 de esta
+ * página", que es justo lo que rompe un TXT masivo.
+ *
+ * Así que se pagina lo único que sobraba: las filas MONTADAS. Cada fila de esta tabla son
+ * diecinueve celdas, varias con `<select>` y lógica propia, así que dibujar ochocientas es lo que
+ * hace que la pestaña tarde en aparecer y que después cada click vaya lento. Con veinticinco a la
+ * vez el conjunto sigue entero en memoria —los contadores y el masivo no se enteran— y el DOM baja
+ * dos órdenes de magnitud.
+ */
+function usePaginado<T>(items: T[], porPagina: number = FILAS_POR_PAGINA) {
+  const [pagina, setPagina] = React.useState(1);
+  const totalPaginas = Math.max(1, Math.ceil(items.length / porPagina));
+  // Al filtrar, la página actual puede dejar de existir: se vuelve a la primera en vez de mostrar
+  // una página vacía. Editar una fila no cambia el total, así que no mueve de página.
+  const paginaValida = Math.min(pagina, totalPaginas);
+  React.useEffect(() => {
+    if (pagina !== paginaValida) setPagina(paginaValida);
+  }, [pagina, paginaValida]);
+  const desde = (paginaValida - 1) * porPagina;
+  const visibles = React.useMemo(() => items.slice(desde, desde + porPagina), [items, desde, porPagina]);
+  return { pagina: paginaValida, setPagina, totalPaginas, visibles, total: items.length, desde };
+}
+
+const Paginador: React.FC<{ pagina: number; totalPaginas: number; total: number; desde: number; mostrados: number; onPagina: (p: number) => void }> = ({ pagina, totalPaginas, total, desde, mostrados, onPagina }) => {
+  if (totalPaginas <= 1) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 px-1 pt-3">
+      {/* Se dice el rango y el total: sin el total, paginar esconde cuántos quedaron seleccionables
+          por el filtro, que es el número con el que se decide si correr una acción masiva. */}
+      <span className="text-xs text-gray-500 dark:text-gray-400">
+        {desde + 1}–{desde + mostrados} de {total}
+      </span>
+      <div className="flex items-center gap-1">
+        <button type="button" onClick={() => onPagina(pagina - 1)} disabled={pagina <= 1} className="p-2 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800" title="Página anterior">
+          <FontAwesomeIcon icon={faChevronLeft} className="h-3 w-3" />
+        </button>
+        <span className="text-xs text-gray-500 dark:text-gray-400 px-2 whitespace-nowrap">
+          {pagina} / {totalPaginas}
+        </span>
+        <button type="button" onClick={() => onPagina(pagina + 1)} disabled={pagina >= totalPaginas} className="p-2 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800" title="Página siguiente">
+          <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 /** Mismas opciones de rol que el filtro de la pestaña Contratos. */
 const MOBILE_ROLE_OPTIONS = [
@@ -1911,6 +1966,9 @@ export const ContractBulkAfipTab: React.FC<{
       return n;
     });
   const seleccionados = useMemo(() => filtered.filter((x) => selected.has(rowKey(x.row))), [filtered, selected]);
+
+  // Ojo: esto NO acota `filtered`. Solo dice qué filas se dibujan. Ver `usePaginado`.
+  const pag = usePaginado(filtered);
   /**
    * De lo tildado, lo que efectivamente se puede validar.
    *
@@ -2323,8 +2381,9 @@ export const ContractBulkAfipTab: React.FC<{
       ) : filtered.length === 0 ? (
         <EmptyState icon={faFileInvoiceDollar} title="Sin contratos impositivos" description={impositivoRows.length === 0 ? 'Ningún contrato tiene hoy un estado impositivo (Alta temprana de ARCA o Constancia de CUIT). Asigná uno de esos estados en el contrato del miembro.' : 'No hay resultados con los filtros aplicados.'} />
       ) : effectiveViewMode === 'cards' ? (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(({ row: r, result }) => {
+          {pag.visibles.map(({ row: r, result }) => {
             const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
             return (
               <div key={`${r._id}-${r.contractIndex}`} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
@@ -2401,37 +2460,34 @@ export const ContractBulkAfipTab: React.FC<{
             );
           })}
         </div>
+        <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
+        </>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           {/*
-            UNA SOLA BARRA DE SCROLL, sin perder el encabezado fijo.
+            UNA SOLA BARRA DE SCROLL: la de la página.
 
-            El alto era `max-h-[640px]`: un número sin relación con la pantalla, así que abajo del
-            contenedor siempre sobraba página. Quedaban DOS barras verticales —la de la tabla y la del
-            documento— y llegar al final de la tabla no era llegar al final de la página. Alcanza con
-            que haya un alto máximo para que aparezca la segunda: `overflow-x: auto` obliga al eje Y a
-            computar `auto`.
+            Antes este div tenía un alto máximo (el que quedaba de pantalla) y scrolleaba solo. Con
+            el scroll del documento encima quedaban DOS barras verticales anidadas: se scrolleaba la
+            página, se llegaba a la tabla y la rueda pasaba a moverla a ella. Ahora el contenedor
+            crece con su contenido y el único scroll vertical es el de la página.
 
-            Ahora el alto es EL QUE QUEDA de pantalla: `100svh` menos lo fijo de arriba, que
-            `PageLayout` publica en `--wp-sticky-top` —se mide y no se escribe a mano porque cambia
-            con lo que trae cada página: badges, subtítulo, filtros—. La tabla termina donde termina la
-            ventana, el documento no tiene sobrante que scrollear, y queda una sola barra.
+            EL COSTO, QUE ES REAL Y ELEGIDO: el `<thead>` ya no queda fijo. No es que falte ponerlo
+            —es que no se puede tener las dos cosas—. `overflow-x: auto` hace falta para las
+            diecinueve columnas, y CSS obliga entonces a que el eje Y compute `auto` también: este
+            div es sí o sí un scrollport vertical. Un `position: sticky` del thead se resuelve contra
+            ÉL, no contra el documento, así que solo se activa si este div scrollea — que es
+            exactamente lo que acabamos de sacar. Por eso el sticky del thead se fue con el alto.
 
-            `min-h` porque ese cálculo puede dar muy poco —pantalla baja, o encabezado alto— y una
-            tabla de tres filas no se puede usar. Cuando el mínimo y el máximo se cruzan, CSS le da la
-            razón al mínimo.
+            Lo que lo hace aceptable es el paginado (ver `usePaginado`): el recorrido es de 25 filas,
+            no de 860, así que el encabezado nunca queda muy lejos.
 
-            SE PROBÓ `overflow-y: clip` para mover el scroll vertical a la página: ROMPE el `<thead>`,
-            que queda flotando en medio de la tabla. El sticky se resuelve contra el scrollport más
-            cercano y, con `overflow-x: auto`, este div lo sigue siendo — el thead tiene que anclarse
-            acá, no al documento.
-
-            El eje X también es de este contenedor: son catorce columnas, y las dos primeras se quedan
-            fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
+            El eje X SIGUE siendo de este contenedor, y eso no cambió: las tres primeras columnas se
+            quedan fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
           */}
-          <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
-              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
                 {/*
                   LA FILA QUE NOMBRA AL GRUPO. Seis columnas que son una sola cosa.
 
@@ -2613,7 +2669,7 @@ export const ContractBulkAfipTab: React.FC<{
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filtered.map(({ row: r, result }) => (
+                {pag.visibles.map(({ row: r, result }) => (
                   <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
                     <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                       <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
@@ -2779,6 +2835,7 @@ export const ContractBulkAfipTab: React.FC<{
               </tbody>
             </table>
           </div>
+          <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
       )}
 
@@ -3605,6 +3662,9 @@ export const ContractBulkFirmaTab: React.FC<{
   // Solo se pueden marcar (y enviar) los contratos con Contrato Y Release(s) ya generados (botones
   // independientes) y todavía no enviados.
   const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman)), [filtered, contratoFrames, releasesQueFirman]);
+
+  // Igual que en la otra pestaña: acota el render, no el conjunto. Ver `usePaginado`.
+  const pag = usePaginado(filtered);
   const allSel = enviables.length > 0 && enviables.every((r) => selected.has(rowKey(r)));
   const toggleAll = () =>
     setSelected((prev) => {
@@ -3696,39 +3756,34 @@ export const ContractBulkFirmaTab: React.FC<{
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           {/*
-            UNA SOLA BARRA DE SCROLL, sin perder el encabezado fijo.
+            UNA SOLA BARRA DE SCROLL: la de la página.
 
-            El alto era `max-h-[640px]`: un número sin relación con la pantalla, así que abajo del
-            contenedor siempre sobraba página. Quedaban DOS barras verticales —la de la tabla y la del
-            documento— y llegar al final de la tabla no era llegar al final de la página. Alcanza con
-            que haya un alto máximo para que aparezca la segunda: `overflow-x: auto` obliga al eje Y a
-            computar `auto`.
+            Antes este div tenía un alto máximo (el que quedaba de pantalla) y scrolleaba solo. Con
+            el scroll del documento encima quedaban DOS barras verticales anidadas: se scrolleaba la
+            página, se llegaba a la tabla y la rueda pasaba a moverla a ella. Ahora el contenedor
+            crece con su contenido y el único scroll vertical es el de la página.
 
-            Ahora el alto es EL QUE QUEDA de pantalla: `100svh` menos lo fijo de arriba, que
-            `PageLayout` publica en `--wp-sticky-top` —se mide y no se escribe a mano porque cambia
-            con lo que trae cada página: badges, subtítulo, filtros—. La tabla termina donde termina la
-            ventana, el documento no tiene sobrante que scrollear, y queda una sola barra.
+            EL COSTO, QUE ES REAL Y ELEGIDO: el `<thead>` ya no queda fijo. No es que falte ponerlo
+            —es que no se puede tener las dos cosas—. `overflow-x: auto` hace falta para las
+            diecinueve columnas, y CSS obliga entonces a que el eje Y compute `auto` también: este
+            div es sí o sí un scrollport vertical. Un `position: sticky` del thead se resuelve contra
+            ÉL, no contra el documento, así que solo se activa si este div scrollea — que es
+            exactamente lo que acabamos de sacar. Por eso el sticky del thead se fue con el alto.
 
-            `min-h` porque ese cálculo puede dar muy poco —pantalla baja, o encabezado alto— y una
-            tabla de tres filas no se puede usar. Cuando el mínimo y el máximo se cruzan, CSS le da la
-            razón al mínimo.
+            Lo que lo hace aceptable es el paginado (ver `usePaginado`): el recorrido es de 25 filas,
+            no de 860, así que el encabezado nunca queda muy lejos.
 
-            SE PROBÓ `overflow-y: clip` para mover el scroll vertical a la página: ROMPE el `<thead>`,
-            que queda flotando en medio de la tabla. El sticky se resuelve contra el scrollport más
-            cercano y, con `overflow-x: auto`, este div lo sigue siendo — el thead tiene que anclarse
-            acá, no al documento.
-
-            El eje X también es de este contenedor: son catorce columnas, y las dos primeras se quedan
-            fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
+            El eje X SIGUE siendo de este contenedor, y eso no cambió: las tres primeras columnas se
+            quedan fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
           */}
-          <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
-              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className={`sticky top-0 left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
+                  <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
-                  <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
+                  <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Alta / Baja</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Trámite</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
@@ -3744,7 +3799,7 @@ export const ContractBulkFirmaTab: React.FC<{
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filtered.map((r) => {
+                {pag.visibles.map((r) => {
                   const tipo = tipoDelRow(r);
                   const template = findTemplate(r as unknown as Contract, contratoFrames);
                   const contratoAplica = contratoRequiereFirma(template);
@@ -3815,6 +3870,7 @@ export const ContractBulkFirmaTab: React.FC<{
               </tbody>
             </table>
           </div>
+          <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
       )}
     </div>

@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -138,6 +138,20 @@ const USUARIOS_PATH = '/users';
  * nombre los separa, y a cambio los cuatro se encuentran sin recordar cuál era «la entidad».
  */
 const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empresa'];
+
+/**
+ * Subgrupo «Contratación» de Admin GENERAL: el ciclo por el que pasa la incorporación de una persona.
+ *
+ * Las tres pantallas son etapas de lo MISMO y se recorren en este orden: se pide el alta
+ * (Solicitudes), se contrata y se hace el trámite impositivo (Contratos), y queda archivado lo
+ * firmado (Documentos). Sueltas en el menú se leían como tres cosas sin relación, y para seguir un
+ * alta había que saber de antemano en cuál de las tres mirar.
+ *
+ * Van en ORDEN DE FLUJO y no alfabético, que es la única excepción junto a «Centros de Costos» y
+ * «Clientes»: acá el orden es el dato —dice qué va antes y qué después—, y alfabético quedaría
+ * Contratos, Documentos, Solicitudes, que es el ciclo contado al revés.
+ */
+const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/documents'];
 /**
  * Subgrupo «Usuarios» de Configuración, con Roles adentro.
  *
@@ -191,6 +205,7 @@ const CONFIG_GROUPS = [
     ser solo de esa sección y pasó a ser el registro de todos los grupos plegables del menú, que es lo
     que le da a cada uno su estado abierto/cerrado y su persistencia.
   */
+  { key: 'contratacion', storageKey: 'generalContratacionOpen', paths: CONTRATACION_PATHS },
   { key: 'usuariosGeneral', storageKey: 'generalUsuariosOpen', paths: USUARIOS_PATHS_GENERAL },
   { key: 'usuariosConfig', storageKey: 'configUsuariosOpen', paths: ROLES_PATHS },
   // «Empresas»: el ABM y la ficha de una empleadora. Ver `empresasGroup` para por qué van juntos.
@@ -512,21 +527,33 @@ export const MobileNavbar: React.FC = () => {
     const usuariosGeneralChildren = (USUARIOS_PATHS_GENERAL.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
     const usuariosGeneralGroup = { path: '#usuarios-general', groupKey: 'usuariosGeneral', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosGeneralChildren };
 
-    // Los sueltos de la sección. El grupo entra aparte y ordena por su propio rótulo, «Usuarios».
-    const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/admin/contracts', '/admin/solicitudes', '/orders', '/vacations', '/requests', '/documents'];
+    /*
+      Subgrupo «Contratación». A diferencia de «Usuarios», sus hijos NO se ordenan alfabético: van en
+      el orden del ciclo (ver `CONTRATACION_PATHS`), porque ahí el orden dice qué etapa va antes.
+    */
+    const contratacionChildren = (CONTRATACION_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems);
+    const contratacionGroup = { path: '#contratacion', groupKey: 'contratacion', icon: faFileSignature, label: 'Contratación', scope: 'global' as const, children: contratacionChildren };
+
+    // Los sueltos de la sección. Los grupos entran aparte y ordenan por su propio rótulo.
+    // Solicitudes, Contratos y Documentos ya NO están acá: se fueron adentro de «Contratación», y
+    // dejarlos también sueltos los duplicaría en el menú.
+    const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/orders', '/vacations', '/requests'];
     /*
       «Centros de Costos» y «Clientes» van AL FINAL, después de Vacaciones, y no en el orden alfabético
       del resto de la sección.
 
-      Es la única excepción al alfabético del menú y es deliberada: son dos catálogos que se mudaron
-      desde Configuración porque se consultan a diario, pero no son operación como Proyectos o Pedidos.
-      Puestos por nombre caerían primeros —antes que Contratos— y encabezarían la sección con lo que
-      menos se abre de ella.
+      Es deliberado: son dos catálogos que se mudaron desde Configuración porque se consultan a
+      diario, pero no son operación como Proyectos o Pedidos. Puestos por nombre caerían primeros y
+      encabezarían la sección con lo que menos se abre de ella.
+
+      La otra excepción al alfabético es el INTERIOR de «Contratación», por un motivo distinto: ahí
+      el orden cuenta el ciclo (ver `CONTRATACION_PATHS`).
     */
     const generalAlFinal = isSuperAdminTenant ? [] : ['/centros-costo', '/clients'];
     const generalAdminItems = [
       ...[
         ...adminItems.filter((item) => generalSueltos.includes(item.path)),
+        ...(contratacionChildren.length > 0 ? [contratacionGroup] : []),
         ...(usuariosGeneralChildren.length > 0 ? [usuariosGeneralGroup] : []),
       ].sort(byLabel),
       ...generalAlFinal.map((ruta) => adminItems.find((item) => item.path === ruta)).filter(Boolean),
