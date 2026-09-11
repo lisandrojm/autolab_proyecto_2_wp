@@ -52,10 +52,18 @@ export const ContractDocsHeaders: React.FC<{
   /** Texto de la primera columna. Por defecto genérico; en pantallas donde el trámite es siempre el mismo (p. ej. Constancia de CUIT) conviene pasar uno específico. */
   altaLabel?: string;
 }> = ({ showContrato = true, showRelease = true, altaLabel = "Alta ARCA / Servicios" }) => (
+  /*
+    EL FONDO OPACO NO ES DECORACIÓN: estas celdas viven en un `<thead>` sticky.
+
+    El `<thead>` ya declara `bg-gray-50 dark:bg-gray-900`, pero con `border-collapse: collapse` el
+    navegador no pinta el fondo del thead ni del tr cuando están sticky — por eso en estas tablas
+    TODAS las cabeceras repiten el color en el `<th>`. Estas tres se habían quedado sin él, así que
+    al scrollear las filas se veían pasando por debajo del título.
+  */
   <>
-    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">{altaLabel}</th>
-    {showContrato && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Contrato | Empresa</th>}
-    {showRelease && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Release | Empresa</th>}
+    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">{altaLabel}</th>
+    {showContrato && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato | Empresa</th>}
+    {showRelease && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release | Empresa</th>}
   </>
 );
 
@@ -308,7 +316,8 @@ export const ContractDocsColumns: React.FC<{
 /* --------- Acciones de la fila: editar / eliminar ESE contrato --------- */
 
 /** Cabecera de la columna de acciones (misma que la tabla de Contratos). */
-export const ContractActionsHeader: React.FC = () => <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right whitespace-nowrap">Acciones</th>;
+/** El fondo opaco, por lo mismo que en `ContractDocsHeaders`: es la última celda de un thead sticky. */
+export const ContractActionsHeader: React.FC = () => <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right whitespace-nowrap bg-gray-50 dark:bg-gray-900">Acciones</th>;
 
 /**
  * Editar y eliminar el contrato de la fila, con el mismo comportamiento que la tabla de Contratos:

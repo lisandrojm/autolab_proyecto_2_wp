@@ -182,6 +182,39 @@ export interface ContractOverviewRow {
   actividadArca?: string | null;
 }
 
+/**
+ * Una fila de `GET /users/solicitudes-overview`: el equivalente de `ContractOverviewRow` para lo que
+ * todavía no es un contrato.
+ *
+ * Una fila por SOLICITUD (no por solicitud × proyecto): `metadata.projectIds` es un array —se puede
+ * pedir a la misma persona para varios proyectos en un solo pedido— y repetirla haría ver tres
+ * solicitudes donde hay una. Por eso los proyectos vienen adentro, ya con su cliente resuelto.
+ *
+ * Los campos que dependen de un catálogo (rol frame, categoría, trámite) vienen CRUDOS: los resuelve
+ * la pantalla contra el ABM, para que muestren el nombre que el catálogo tiene hoy y no el que tenía
+ * el día en que se pidió el alta.
+ */
+export interface SolicitudOverviewRow {
+  _id: string;
+  nombre: string;
+  email: string;
+  estado: "pendiente" | "aprobada" | "rechazada" | "cancelada";
+  creadaEl?: string;
+  proyectos: { _id: string; name: string; clienteId: string; clienteNombre: string }[];
+  roleFrameId?: any;
+  rolesFrameIds?: any[] | null;
+  roles_frame?: any[] | null;
+  categoriaSatId?: string | null;
+  tipoImpositivo?: string | null;
+  startDate?: string | null;
+  dueDate?: string | null;
+  schedule?: string | null;
+  dailyRate?: number | null;
+  comentarios?: string | null;
+  /** Usuario real al que corresponde, si la solicitud es para alguien que ya existe. */
+  solicitudUserId?: string | null;
+}
+
 export interface UserProjectMetadata {
   _id: string;
   projectId?: string | { _id: string; name?: string };
@@ -669,6 +702,31 @@ class UsersAPI {
     const { data } = await axios.get(`/users?solicitudAny=true&limit=500`, { headers: this.getHeaders() });
     const rows: any[] = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
     return rows.map(normalizeUser);
+  }
+
+  /**
+   * Listado GLOBAL de solicitudes, con filtros y paginado en el server (el equivalente de
+   * `contracts-overview` para lo que todavía no es un contrato).
+   *
+   * `listSolicitudes` de arriba sigue existiendo para la pestaña de un proyecto, que necesita el
+   * `User` completo para pasárselo al wizard de aprobación. Acá vuelven filas ya armadas: una por
+   * solicitud, con sus proyectos y clientes resueltos.
+   */
+  async listSolicitudesOverview(params: { search?: string; estado?: string; clientId?: string; projectId?: string; page?: number; limit?: number } = {}): Promise<{ rows: SolicitudOverviewRow[]; total: number; page: number; totalPages: number }> {
+    const sp = new URLSearchParams();
+    if (params.search) sp.append("search", params.search);
+    if (params.estado) sp.append("estado", params.estado);
+    if (params.clientId) sp.append("clientId", params.clientId);
+    if (params.projectId) sp.append("projectId", params.projectId);
+    sp.append("page", String(params.page ?? 1));
+    sp.append("limit", String(params.limit ?? 25));
+    const { data } = await axios.get(`/users/solicitudes-overview?${sp.toString()}`, { headers: this.getHeaders() });
+    return {
+      rows: Array.isArray(data?.rows) ? data.rows : [],
+      total: Number(data?.total ?? 0),
+      page: Number(data?.page ?? 1),
+      totalPages: Number(data?.totalPages ?? 1),
+    };
   }
 
   /** Cambia el estado de una solicitud SIN borrarla. "pendiente" deshace un rechazo/cancelación. */

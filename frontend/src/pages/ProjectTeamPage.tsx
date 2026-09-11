@@ -17,7 +17,7 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
@@ -381,7 +381,15 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
+  /**
+   * `?tab=solicitudes` abre directo esa pestaña.
+   *
+   * Lo usa el botón «Aprobar» de la pantalla global de Solicitudes: aprobar necesita el wizard de
+   * Configurar Miembro, que vive acá, así que la vista global manda para acá. Sin el parámetro caía
+   * en Equipo y había que buscar la pestaña a mano, que es justo lo que el botón venía a evitar.
+   */
+  const tabInicial = new URLSearchParams(location.search).get("tab");
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">(tabInicial === "solicitudes" || tabInicial === "coordinadores" ? tabInicial : "equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
   const [showSinAreasInfo, setShowSinAreasInfo] = useState(false);
@@ -2037,13 +2045,16 @@ export const ProjectTeamPage: React.FC = () => {
     const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
     const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
 
+    // `group` para que la celda fija pueda repintar su propio fondo en el hover: al ser opaca no la
+    // alcanza el `hover:` de la fila, que queda por detrás.
+    // El borde de abajo va en las celdas y no en el `<tr>`: la tabla usa `border-separate`, que
+    // ignora los bordes de fila (ver el comentario del `<table>`).
     return (
-      <tr key={user._id} onClick={() => handleOpenMemberDetail(user)} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
-        <td className="px-4 py-3">
+      <tr key={user._id} onClick={() => handleOpenMemberDetail(user)} className="group [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
+        <td className="sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
+          {/* Sin avatar: era el mismo ícono genérico en las 65 filas, así que no distinguía a nadie
+              y solo corría el nombre —lo único que sí identifica— hacia la derecha. */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center shrink-0">
-              <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
             <div className="min-w-0">
               <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
               <div className="flex flex-col gap-1.5 mt-0.5 min-w-0">
@@ -2069,6 +2080,28 @@ export const ProjectTeamPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </td>
+        {/* Vigencia y fechas del ÚLTIMO contrato, pegadas al nombre: es lo primero que se mira de
+            cada persona. Ver el encabezado «Último Contrato». */}
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+          {activeContract ? (
+            <div className="flex flex-col gap-1">
+              {(() => {
+                const vigente = esContratoVigente(activeContract);
+                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>;
+              })()}
+              <div className="flex flex-col gap-0.5">
+                <span>
+                  <span className="text-gray-400">Alta:</span> {formatContractDate(activeContract.fecha_alta_contrato)}
+                </span>
+                <span>
+                  <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : "—"}
+                </span>
+              </div>
+            </div>
+          ) : (
+            "—"
+          )}
         </td>
         {/* Cantidad de contratos de la persona EN ESTE PROYECTO (la columna Contrato muestra el último). */}
         <td className="px-4 py-3 text-center">
@@ -2321,26 +2354,6 @@ export const ProjectTeamPage: React.FC = () => {
             </div>
           ) : (
             <span className="text-xs text-gray-400">—</span>
-          )}
-        </td>
-        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-          {activeContract ? (
-            <div className="flex flex-col gap-1">
-              {(() => {
-                const vigente = esContratoVigente(activeContract);
-                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>;
-              })()}
-              <div className="flex flex-col gap-0.5">
-                <span>
-                  <span className="text-gray-400">Alta:</span> {formatContractDate(activeContract.fecha_alta_contrato)}
-                </span>
-                <span>
-                  <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : "—"}
-                </span>
-              </div>
-            </div>
-          ) : (
-            "—"
           )}
         </td>
         {/* Monto / Jornadas del contrato vigente (mismo formato que la tabla de Contratos). */}
@@ -2711,10 +2724,40 @@ export const ProjectTeamPage: React.FC = () => {
                   return effectiveViewMode === "table" ? (
                     <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        {/*
+                          `border-separate` Y NO `border-collapse`, PARA PODER FIJAR «Usuario».
+
+                          Con el modelo colapsado los bordes no son de la celda sino de la grilla de
+                          la tabla, así que no acompañan a una celda `sticky`: la columna viaja y su
+                          filo se queda. Separado, cada celda pinta lo suyo y se mueve con ella —es
+                          la misma configuración que usan las tablas de Contratos, que tienen tres
+                          columnas fijas.
+                          A cambio, el modelo separado IGNORA los bordes puestos en `<tr>`: los que
+                          separan las filas pasan a las celdas (`[&>td]:border-b`), que es de donde
+                          sí se dibujan.
+                        */}
+                        <table className="w-full text-left border-separate border-spacing-0">
                           <thead>
-                            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              <th className="px-4 py-3 font-semibold">Usuario</th>
+                            <tr className="bg-gray-50 dark:bg-gray-900/50 [&>th]:border-b [&>th]:border-gray-200 dark:[&>th]:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              {/*
+                                «Usuario» fija a la izquierda: con dieciocho columnas, al llegar a
+                                Contrato o Estado Impositivo ya no se sabía de quién era la fila, y
+                                justamente ahí es donde se está completando.
+                                El fondo va OPACO y no `dark:bg-gray-900/50` como el resto de la
+                                fila: por una celda fija translúcida se ve pasar lo que scrollea.
+                                `#18202f` es ese mismo gris ya mezclado sobre el fondo del panel.
+                              */}
+                              <th className="sticky left-0 z-[15] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Usuario</th>
+                              {/*
+                                «Último Contrato», y no «Alta / Baja».
+
+                                Una persona puede tener varios contratos en el proyecto —la columna
+                                «Contratos» dice cuántos—, así que un par de fechas sueltas no decía
+                                de CUÁL eran. Estas son las del último, que es el que manda. El detalle
+                                no se pierde: la celda sigue rotulando sus dos líneas con «Alta:» y
+                                «Baja:».
+                              */}
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Último Contrato</th>
                               <th className="px-4 py-3 font-semibold text-center">Contratos</th>
                               <th className="px-4 py-3 font-semibold">Rol/es</th>
                               <th className="px-4 py-3 font-semibold">Rol/es Frame</th>
@@ -2732,7 +2775,6 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
                               <th className="px-4 py-3 font-semibold">Reemplazo</th>
-                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Alta / Baja</th>
                               <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Monto / Jorn.</th>
                               <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Jornadas</th>
                               <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Días por semana</th>
@@ -2741,7 +2783,9 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">{rows.map((u) => renderUserRow(u))}</tbody>
+                          {/* Sin `divide-y`: en el modelo separado los bordes de `<tr>` no se
+                              dibujan. La línea entre filas la pone cada celda (ver `renderUserRow`). */}
+                          <tbody>{rows.map((u) => renderUserRow(u))}</tbody>
                         </table>
                       </div>
                     </div>

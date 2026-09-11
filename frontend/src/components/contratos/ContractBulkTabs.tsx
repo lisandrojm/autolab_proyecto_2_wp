@@ -653,11 +653,47 @@ const GRUPO_ENCUADRE_TH_FIN = `${GRUPO_ENCUADRE_TH} border-r-2 border-r-blue-500
 /**
  * Cuántas columnas hay antes de que empiece la banda, en la pestaña de Alta temprana.
  *
- * Son: el check, «Datos ARCA», «Alta / Baja», «Alta ARCA», «Usuario» y «CUIT». Lo usa el colSpan
+ * Son: el check, «Datos ARCA», «Usuario», «Alta / Baja», «Alta ARCA» y «CUIT». Lo usa el colSpan
  * de la fila que rotula el grupo: si se agrega una columna a la izquierda y esto no se actualiza,
  * el rótulo se corre y termina titulando columnas que no son.
  */
 const COLUMNAS_ANTES_DEL_GRUPO = 6;
+/**
+ * Cuántas columnas viajan FIJAS a la izquierda: el check, «Datos ARCA» y «Usuario».
+ *
+ * La fila que rotula el grupo la usa para que su primer relleno tape exactamente ese bloque y se
+ * quede quieto con él. El resto del hueco de la izquierda se calcula contra
+ * `COLUMNAS_ANTES_DEL_GRUPO` en vez de ir como un tercer número suelto: así el bloque sigue sumando
+ * lo mismo aunque cambie el offset del grupo.
+ */
+const COLUMNAS_FIJAS = 3;
+/**
+ * EL ANCHO DE LA COLUMNA DEL CHECK: 3rem EXACTAS, EN LAS DOS CELDAS.
+ *
+ * Es donde `left-12` ancla a «Datos ARCA», y ese 12 es un número escrito a mano. El ancho estaba
+ * declarado solo en el `<th>` y como `w-12` pelado: bajo `table-layout: auto` eso es una sugerencia,
+ * así que la columna podía resolver unos píxeles más angosta que 3rem. La celda de al lado, en
+ * cambio, se ancla en 3rem fijas —no en «donde termine la anterior»—, y esa diferencia queda como
+ * una ranura entre las dos por la que se ve pasar el contenido scrolleado.
+ *
+ * Con `min-w` y `max-w` iguales el ancho deja de negociarse y las dos celdas quedan pegadas. Mismo
+ * criterio que `anchoColFija`, y por el mismo motivo.
+ */
+const ANCHO_COL_CHECK = 'w-12 min-w-[3rem] max-w-[3rem]';
+/**
+ * Cuántas columnas quedan DESPUÉS de la banda, para taparlas con el mismo fondo.
+ *
+ * La fila que rotula el grupo terminaba en el rótulo y no completaba las de la derecha: una fila
+ * con menos celdas es válida en HTML, pero lo que queda no es blanco, es un agujero — y como el
+ * `<thead>` es sticky, por ahí se veían pasar las filas de datos mientras se scrollea. El síntoma
+ * era que «desde Empresa Release en adelante» el encabezado parecía transparente.
+ *
+ * Son: Empresa Release, Cliente, Proyecto, Contrato, Estado, Estado Impositivo y Acciones. A
+ * diferencia de las de la izquierda, ninguna es condicional —no dependen de `filterTipo` ni de
+ * `layoutConstancia`—, así que el número es estable; igual, si se agrega una columna al final hay
+ * que sumarla acá o el agujero vuelve.
+ */
+const COLUMNAS_DESPUES_DEL_GRUPO = 7;
 
 const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
@@ -1788,6 +1824,27 @@ export const ContractBulkAfipTab: React.FC<{
   const hayEncuadre = filterTipo === 'alta_temprana_afip';
 
   /**
+   * LAS TRES COLUMNAS QUE VIAJAN FIJAS, Y POR QUÉ ACÁ HAY NÚMEROS.
+   *
+   * «Usuario» está pegada a «Datos ARCA» y las dos quedan fijas al scrollear a lo ancho. Son
+   * diecinueve columnas: sin eso, para cuando se llega a Convenio o a Estado Impositivo ya no se
+   * sabe de quién es la fila, y había que volver al principio para leer el nombre.
+   *
+   * `position: sticky` pide un `left` concreto, así que el ancho de la columna del medio NO puede
+   * quedar librado a su contenido: si crece, el `left` de «Usuario» deja de coincidir y las dos se
+   * pisan o dejan un hueco. Por eso el ancho se fija acá y el offset se calcula a partir de él —los
+   * dos salen de la misma línea justamente para que no puedan desincronizarse.
+   *
+   * Cambia por pestaña porque el contenido de esa columna cambia: en Alta temprana es un badge corto
+   * («Completo», «12/13»), en Sin CUIT es un botón que dice «Enviar a Generar Documentos».
+   */
+  const anchoColFija = filterTipo === 'sin_cuit' ? 'w-60 min-w-[15rem] max-w-[15rem]' : 'w-44 min-w-[11rem] max-w-[11rem]';
+  /** 3rem del check + el ancho de arriba. */
+  const izquierdaColUsuario = filterTipo === 'sin_cuit' ? 'left-[18rem]' : 'left-[14rem]';
+  /** El borde marcado y la sombra van en la ÚLTIMA fija, que ahora es «Usuario». */
+  const bordeFinDeFijas = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
+
+  /**
    * El check es de selección GENERAL: se puede marcar cualquier fila. Cada acción masiva aplica
    * después su propio criterio (el TXT arma solo los completos y avisa cuántos omitió; Validar ARCA
    * solo consulta los que tienen CUIT válido). Antes solo se podían marcar los contratos ya
@@ -2387,19 +2444,31 @@ export const ContractBulkAfipTab: React.FC<{
                   suelto porque si mañana se agrega una columna a la izquierda, el rótulo se corre y
                   queda titulando las columnas equivocadas — un error que se ve pero no se entiende.
 
-                  Las de la derecha no se completan: una fila con menos celdas es válida, y así no hay
-                  un segundo número que mantener sincronizado.
+                  Las de la derecha SÍ se completan, aunque vayan vacías: ver `COLUMNAS_DESPUES_DEL_GRUPO`.
+
+                  EL PRIMER RELLENO VA FIJO, como las columnas que tiene abajo.
+
+                  Abarca justo las tres fijas —por eso usa `COLUMNAS_FIJAS`—, pero sin `sticky` esta
+                  fila entera scrolleaba a lo ancho mientras la de abajo se quedaba quieta: la banda
+                  de arriba de «Datos ARCA» y «Usuario» mostraba lo que iba pasando. Las dos filas del
+                  encabezado tienen que quedarse juntas o no se queda ninguna.
+
+                  Va sin el borde de cierre: el filo del bloque fijo ya lo dibujan la fila de abajo y
+                  las celdas del cuerpo. Repetirlo acá, en una banda vacía y más baja, se leía como
+                  una rayita suelta fuera de lugar en vez de como el borde de una columna.
                 */}
                 {hayEncuadre && (
                   <tr>
-                    <th colSpan={COLUMNAS_ANTES_DEL_GRUPO} className="p-0 bg-gray-50 dark:bg-gray-900" />
+                    <th colSpan={COLUMNAS_FIJAS} className="sticky left-0 z-[15] p-0 bg-gray-50 dark:bg-gray-900" />
+                    <th colSpan={COLUMNAS_ANTES_DEL_GRUPO - COLUMNAS_FIJAS} className="p-0 bg-gray-50 dark:bg-gray-900" />
                     <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-center ${GRUPO_ENCUADRE_TH}`}>
                       Datos que declara la empleadora ante ARCA
                     </th>
+                    <th colSpan={COLUMNAS_DESPUES_DEL_GRUPO} className="p-0 bg-gray-50 dark:bg-gray-900" />
                   </tr>
                 )}
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="sticky left-0 z-[15] px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+                  <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title="Seleccionar todos los del listado" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   {/*
@@ -2413,7 +2482,7 @@ export const ContractBulkAfipTab: React.FC<{
                     *    lleva la única forma de hacer el trámite de esa fila.
                     */}
                   {filterTipo === 'alta_temprana_afip' ? (
-                    <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
+                    <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>
                       <span className="inline-flex items-center gap-1.5">
                         Datos ARCA
                         <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
@@ -2422,8 +2491,17 @@ export const ContractBulkAfipTab: React.FC<{
                       </span>
                     </th>
                   ) : (
-                    <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
+                    <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>Acciones</th>
                   )}
+                  {/*
+                    «USUARIO», PEGADA A LA ANTERIOR Y TAMBIÉN FIJA.
+
+                    Es de quién es la fila: con diecinueve columnas, al llegar a Convenio o a Estado
+                    Impositivo el nombre ya había quedado fuera de pantalla y había que volver al
+                    principio para saber a quién se le estaba tocando el contrato. Ver `anchoColFija`
+                    para por qué el ancho de la de al lado está fijado a mano.
+                  */}
+                  <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>Usuario</th>
                   {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
                       y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
                       Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
@@ -2431,7 +2509,15 @@ export const ContractBulkAfipTab: React.FC<{
                       para «Sin CUIT», donde el contenido es otro. */}
                   {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Validación</th>}
                   {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Documentación</th>}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Alta / Baja</th>
+                  {/*
+                    «Último Contrato», y no «Alta / Baja».
+
+                    Una persona puede tener varios contratos en el proyecto, así que un par de fechas
+                    sueltas no decía de CUÁL eran. Estas son las del último, que es el que manda para
+                    el alta. El detalle no se pierde: la celda sigue rotulando sus dos líneas con
+                    «Alta:» y «Baja:», y arriba lleva el badge de vigencia.
+                  */}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Último Contrato</th>
                   {layoutConstancia && (
                     <>
                       {filterTipo !== 'sin_cuit' && (
@@ -2455,7 +2541,6 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">CUIT</th>
                   {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
                       columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
@@ -2530,10 +2615,10 @@ export const ContractBulkAfipTab: React.FC<{
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filtered.map(({ row: r, result }) => (
                   <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
-                    <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                    <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                       <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                     </td>
-                    <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                    <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColFija} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                       {filterTipo === 'alta_temprana_afip' ? (
                         <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
                       ) : noPoseeCuit(r.cuit, r.sinCuit) ? (
@@ -2544,6 +2629,14 @@ export const ContractBulkAfipTab: React.FC<{
                           <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
                         </div>
                       )}
+                    </td>
+                    {/* «Usuario», la otra columna fija: de quién es la fila. Ver `anchoColFija`. */}
+                    <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
+                        {r.userName}
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
                     {filterTipo === 'sin_cuit' && (
                       <td className="px-4 py-3">
@@ -2600,13 +2693,6 @@ export const ContractBulkAfipTab: React.FC<{
                       </>
                     )}
                     {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                        {r.userName}
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
-                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className={`px-4 py-3 ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`} onClick={(e) => e.stopPropagation()}>
                       <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
@@ -3639,7 +3725,7 @@ export const ContractBulkFirmaTab: React.FC<{
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="sticky top-0 left-0 z-[15] px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+                  <th className={`sticky top-0 left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
@@ -3665,7 +3751,7 @@ export const ContractBulkFirmaTab: React.FC<{
                   const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman);
                   return (
                     <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                      <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
+                      <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!enviable} onChange={() => toggleSel(rowKey(r))} title={enviable ? 'Incluir en el envío a firmar' : r.firmaEnviadaAt ? 'Ya se envió a firmar' : 'Generá primero el Contrato y el/los Release(s) ("Generar")'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                       </td>
                       <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>

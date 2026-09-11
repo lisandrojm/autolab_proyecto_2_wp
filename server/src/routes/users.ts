@@ -914,6 +914,110 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
   }
 });
 
+/*
+ * GET /users/solicitudes-overview - Listado GLOBAL de solicitudes de alta, el equivalente de
+ * `contracts-overview` para el otro lado del ciclo: lo que todavía no es un contrato.
+ *
+ * Hasta acá las solicitudes solo se veían adentro de un proyecto (pestaña Solicitudes de Gestionar
+ * Equipo), que obliga a saber de antemano en qué proyecto buscar. Acá se listan todas, con los
+ * mismos filtros de visualización que Contratos: búsqueda, cliente, proyecto y estado.
+ *
+ * OJO CON EL MODELO: una solicitud NO es una colección propia, es un `User` con
+ * `metadata.isSolicitud`. El filtro correcto es `metadata.solicitudStatus` y no `isSolicitud`:
+ * al aprobarla, `isSolicitud` pasa a false (el documento se convierte en el usuario real) pero el
+ * status queda en "aprobada", y una aprobada tiene que seguir listándose. Por eso el criterio es
+ * "tiene solicitudStatus", que es lo único que sobrevive a la aprobación.
+ *
+ * UNA FILA POR SOLICITUD, con sus proyectos adentro: `metadata.projectIds` es un array —se puede
+ * pedir a la misma persona para varios proyectos en un solo pedido— y repetirla por proyecto haría
+ * ver tres solicitudes donde hay una. Filtrar por proyecto o cliente devuelve la solicitud si
+ * ALGUNO de sus proyectos coincide.
+ */
+router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const search = req.query.search ? String(req.query.search).trim() : "";
+    const estado = req.query.estado ? String(req.query.estado) : "";
+    const clientId = req.query.clientId ? String(req.query.clientId) : "";
+    const projectId = req.query.projectId ? String(req.query.projectId) : "";
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Number(req.query.limit) || 25);
+
+    const and: any[] = [{ tenantId: req.tenantObjectId }, { "metadata.solicitudStatus": { $exists: true, $ne: null } }];
+
+    if (estado) and.push({ "metadata.solicitudStatus": estado });
+
+    /*
+     * Cliente y proyecto son el MISMO filtro sobre `metadata.projectIds`: por cliente se resuelven
+     * antes sus proyectos y se pide que la solicitud tenga alguno. Un `$in` sobre el array ya
+     * significa "alguno coincide", así que no hace falta nada más.
+     */
+    if (projectId) {
+      and.push({ "metadata.projectIds": projectId });
+    } else if (clientId) {
+      const delCliente = await Project.find({ tenantId: req.tenantObjectId, clientId }).distinct("_id");
+      and.push({ "metadata.projectIds": { $in: delCliente } }); // sin proyectos → 0 resultados
+    }
+
+    /*
+     * La búsqueda mira `metadata.fullName` ADEMÁS de nombre/apellido/email: una solicitud de alguien
+     * que todavía no es usuario trae el nombre solo ahí, así que buscar únicamente por `firstName`
+     * no encontraría justamente a las que están esperando ser aprobadas.
+     */
+    if (search) {
+      const rx = { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
+      and.push({ $or: [{ "metadata.fullName": rx }, { firstName: rx }, { lastName: rx }, { email: rx }] });
+    }
+
+    const filter = { $and: and };
+
+    const [docs, total] = await Promise.all([
+      User.find(filter)
+        .select("firstName lastName email createdAt metadata")
+        .populate({ path: "metadata.projectIds", select: "name clientId", model: Project, populate: { path: "clientId", select: "name", model: Client } })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
+
+    const rows = docs.map((u: any) => {
+      const m = u.metadata || {};
+      const proyectos = (m.projectIds || [])
+        .filter((p: any) => p && typeof p === "object")
+        .map((p: any) => ({ _id: String(p._id), name: p.name || "", clienteId: p.clientId?._id ? String(p.clientId._id) : "", clienteNombre: p.clientId?.name || "" }));
+
+      return {
+        _id: String(u._id),
+        // El alta desde mobile guarda el nombre en `metadata.fullName` y deja firstName/lastName vacíos.
+        nombre: m.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
+        email: u.email,
+        estado: m.solicitudStatus || "pendiente",
+        creadaEl: u.createdAt,
+        proyectos,
+        // El resto va crudo: quién lo resuelve a nombre es la pantalla, contra los catálogos que ya
+        // tiene cargados (roles frame, categorías SAT, estados), igual que la pestaña del proyecto.
+        roleFrameId: m.roleFrameId ?? null,
+        rolesFrameIds: m.rolesFrameIds ?? null,
+        roles_frame: m.roles_frame ?? null,
+        categoriaSatId: m.categoriaSatId ?? null,
+        tipoImpositivo: m.tipoImpositivo ?? null,
+        startDate: m.startDate ?? null,
+        dueDate: m.dueDate ?? null,
+        schedule: m.schedule ?? null,
+        dailyRate: m.dailyRate ?? null,
+        comentarios: m.comentarios ?? null,
+        solicitudUserId: m.solicitudUserId ? String(m.solicitudUserId) : null,
+      };
+    });
+
+    res.json({ rows, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) });
+  } catch (error) {
+    console.error("Get solicitudes overview error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /users - Crear usuario
 router.post("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

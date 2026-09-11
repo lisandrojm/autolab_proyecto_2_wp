@@ -23,6 +23,7 @@ import { TenantsPage } from "./pages/TenantsPage";
 import { ClientDetailPage } from "./pages/ClientDetailPage";
 import { ClientProjectsPage } from "./pages/ClientProjectsPage";
 import { ContractsPage } from "./pages/ContractsPage";
+import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { ProjectTeamPage } from "./pages/ProjectTeamPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -302,6 +303,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ContractsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/solicitudes"
+                element={
+                  <ProtectedRoute>
+                    <SolicitudesPage />
                   </ProtectedRoute>
                 }
               />

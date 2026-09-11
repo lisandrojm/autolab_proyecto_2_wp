@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf, faFileSignature, faUpload, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf, faFileSignature, faUpload, faSpinner, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { InfoModal } from "../ui/InfoModal";
 import { Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
@@ -219,6 +219,16 @@ export interface ContractCardProps {
   releaseEmpresas?: EmpresaOption[];
   /** Resalta la tarjeta en azul y muestra el badge "Último contrato". */
   isLatest?: boolean;
+  /**
+   * Arranca plegada: se ve el encabezado (cargo, tipo, fechas y badges) y el resto —importe,
+   * acciones y los bloques de documentos— aparece al abrirla.
+   *
+   * Es para las listas donde el que importa es UNO y los demás son historia: con cuatro o cinco
+   * contratos desplegados hay que scrollear la ficha entera para llegar al que rige. Plegada la
+   * tarjeta sigue diciendo de qué contrato se trata, que es lo que hace falta para decidir si vale
+   * la pena abrirla.
+   */
+  colapsable?: boolean;
   /** Badges extra antes de vigencia/estado (p. ej. cliente y proyecto en la vista cross-proyecto). */
   extraBadges?: React.ReactNode;
   /** Abre el editor del miembro precargado con ESTE contrato. También lo usa "Contrato inexistente". */
@@ -243,6 +253,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   contratoEmpresas = [],
   releaseEmpresas = [],
   isLatest = false,
+  colapsable = false,
   extraBadges,
   onEdit,
   onDelete,
@@ -253,6 +264,9 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   onUploadAltaDocumento,
 }) => {
   const [showInexistenteInfo, setShowInexistenteInfo] = React.useState(false);
+  /** Solo aplica si la tarjeta es `colapsable`; si no lo es, está siempre desplegada. */
+  const [desplegada, setDesplegada] = React.useState(false);
+  const abierta = !colapsable || desplegada;
   const [uploadingAltaDocumento, setUploadingAltaDocumento] = React.useState(false);
   const [downloadingAltaDocumento, setDownloadingAltaDocumento] = React.useState(false);
   const altaDocumentoInputRef = React.useRef<HTMLInputElement>(null);
@@ -332,10 +346,30 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   return (
     <>
       <div className={`rounded-xl border ${cardClass} p-4`}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white truncate">{cargo}</h4>
-            {contract.nombre_contrato && <p className="text-sm text-gray-600 dark:text-gray-300">{contract.nombre_contrato}</p>}
+        {/* Plegable: el encabezado entero es el botón, no una flechita de 16px al costado. */}
+        <div
+          className={`flex items-start justify-between gap-3 ${colapsable ? "cursor-pointer select-none" : ""}`}
+          onClick={colapsable ? () => setDesplegada((v) => !v) : undefined}
+          role={colapsable ? "button" : undefined}
+          tabIndex={colapsable ? 0 : undefined}
+          aria-expanded={colapsable ? abierta : undefined}
+          onKeyDown={
+            colapsable
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDesplegada((v) => !v);
+                  }
+                }
+              : undefined
+          }
+        >
+          <div className="min-w-0 flex items-start gap-2">
+            {colapsable && <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 mt-2 shrink-0 text-gray-400 transition-transform ${abierta ? "rotate-180" : ""}`} />}
+            <div className="min-w-0">
+              <h4 className="text-lg font-bold text-gray-900 dark:text-white truncate">{cargo}</h4>
+              {contract.nombre_contrato && <p className="text-sm text-gray-600 dark:text-gray-300">{contract.nombre_contrato}</p>}
+            </div>
           </div>
           {dateRange.trim() && <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">{dateRange}</span>}
         </div>
@@ -360,166 +394,173 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           {contract.nombre_estado_empleado && <EstadoBadge name={contract.nombre_estado_empleado} />}
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(contract.sueldo_mano)}</span>
-          <div className="flex items-center gap-1">
-            {onEdit && (
-              <button type="button" onClick={onEdit} title={editTitle} className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-              </button>
-            )}
-            {onDelete && (
-              <button type="button" onClick={onDelete} title={deleteTitle} className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Documento de "Alta" (ARCA/Servicios): para CUALQUIER estado impositivo, sin importar el
-            estado actual del contrato. El título sale del badge secundario o de la categoría. */}
-        {estadoImpositivo && (
-          <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{tituloAltaDocumento}</p>
-            <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-              {contract.altaDocumentoUrl ? (
-                <a
-                  href={getImageUrl(contract.altaDocumentoUrl)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline"
-                  title={contract.altaDocumentoNombre || tituloAltaDocumento}
-                >
-                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-                  <span className="truncate">{contract.altaDocumentoNombre || "Ver documento"}</span>
-                </a>
-              ) : (
-                <span className="text-sm text-gray-400 dark:text-gray-500 flex items-center gap-1.5 min-w-0">
-                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Sin documento cargado</span>
-                </span>
-              )}
-              {contract.altaDocumentoUrl && (
-                <button
-                  type="button"
-                  onClick={handleDownloadAltaDocumento}
-                  disabled={downloadingAltaDocumento}
-                  title="Descargar documento"
-                  className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <FontAwesomeIcon icon={downloadingAltaDocumento ? faSpinner : faDownload} spin={downloadingAltaDocumento} className="h-4 w-4" />
-                </button>
-              )}
-              {onUploadAltaDocumento && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => altaDocumentoInputRef.current?.click()}
-                    disabled={uploadingAltaDocumento}
-                    title={contract.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"}
-                    className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <FontAwesomeIcon icon={uploadingAltaDocumento ? faSpinner : faUpload} spin={uploadingAltaDocumento} className="h-4 w-4" />
+        {/* De acá para abajo es lo que se pliega: importe, acciones y los bloques de documentos.
+            El encabezado y los badges quedan siempre a la vista para poder identificar el contrato
+            sin tener que abrirlo. */}
+        {abierta && (
+          <>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(contract.sueldo_mano)}</span>
+              <div className="flex items-center gap-1">
+                {onEdit && (
+                  <button type="button" onClick={onEdit} title={editTitle} className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                    <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                   </button>
-                  <input ref={altaDocumentoInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleAltaDocumentoSelected} />
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Contrato: descarga con el nombre del tipo de contrato */}
-        <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
-          <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-            <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
-              <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-              <span className="truncate">{tipoContrato}</span>
-              {effectiveContratoEmpresas.map((emp) => (
-                <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title={savedContratoEmpresaId ? "Empresa fija del contrato" : "Empresa del proyecto"}>
-                  {emp.label}
-                </span>
-              ))}
-            </span>
-            {!contratoRequiereFirma ? (
-              <NoSeEnviaAFirmar />
-            ) : canDownloadContract ? (
-              <DownloadMenu empresas={effectiveContratoEmpresas} onDownload={onDownloadContract} title="Descargar contrato" />
-            ) : existeTemplate ? (
-              // La plantilla existe pero está vacía → redactarla en /contratos-frame.
-              <div className="flex items-center gap-2 shrink-0">
-                <Link
-                  to={`/contratos-frame?edit=${template!._id}`}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
-                  title="Redactar el contenido de esta plantilla de contrato"
-                >
-                  Sin contenido
-                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
-                </Link>
-                <span className="p-1.5 text-gray-400 dark:text-gray-500 opacity-40 cursor-not-allowed" title="La plantilla de este tipo de contrato no tiene contenido redactado">
-                  <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                </span>
+                )}
+                {onDelete && (
+                  <button type="button" onClick={onDelete} title={deleteTitle} className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                  </button>
+                )}
               </div>
-            ) : (
-              // El tipo de contrato no existe como plantilla → info (qué hacer) + link a editar el miembro.
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowInexistenteInfo(true)}
-                  className="text-red-500 hover:text-red-600 transition-colors"
-                  title="Qué significa 'Contrato inexistente'"
-                  aria-label="Información: contrato inexistente"
-                >
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  disabled={!onEdit}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline disabled:no-underline disabled:cursor-default"
-                  title="Editar el miembro para asignar un contrato existente"
-                >
-                  Contrato inexistente
-                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
-                </button>
+            </div>
+
+            {/* Documento de "Alta" (ARCA/Servicios): para CUALQUIER estado impositivo, sin importar el
+                estado actual del contrato. El título sale del badge secundario o de la categoría. */}
+            {estadoImpositivo && (
+              <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{tituloAltaDocumento}</p>
+                <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+                  {contract.altaDocumentoUrl ? (
+                    <a
+                      href={getImageUrl(contract.altaDocumentoUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline"
+                      title={contract.altaDocumentoNombre || tituloAltaDocumento}
+                    >
+                      <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                      <span className="truncate">{contract.altaDocumentoNombre || "Ver documento"}</span>
+                    </a>
+                  ) : (
+                    <span className="text-sm text-gray-400 dark:text-gray-500 flex items-center gap-1.5 min-w-0">
+                      <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Sin documento cargado</span>
+                    </span>
+                  )}
+                  {contract.altaDocumentoUrl && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadAltaDocumento}
+                      disabled={downloadingAltaDocumento}
+                      title="Descargar documento"
+                      className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FontAwesomeIcon icon={downloadingAltaDocumento ? faSpinner : faDownload} spin={downloadingAltaDocumento} className="h-4 w-4" />
+                    </button>
+                  )}
+                  {onUploadAltaDocumento && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => altaDocumentoInputRef.current?.click()}
+                        disabled={uploadingAltaDocumento}
+                        title={contract.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"}
+                        className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FontAwesomeIcon icon={uploadingAltaDocumento ? faSpinner : faUpload} spin={uploadingAltaDocumento} className="h-4 w-4" />
+                      </button>
+                      <input ref={altaDocumentoInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleAltaDocumentoSelected} />
+                    </>
+                  )}
+                </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Releases: lista con descarga directa */}
-        <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Release | Empresa</p>
-          {activeReleases.length === 0 ? (
-            <p className="text-xs text-gray-500">No hay releases disponibles.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {activeReleases.map((r) => {
-                const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(" | ");
-                // Sin ReleaseTipo vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
-                const releaseRequiereFirma = typeof r.releaseTipoId === "object" ? r.releaseTipoId?.requiereFirma !== false : true;
-                return (
-                  <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                    <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
-                      <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-                      <span className="truncate">{r.name}</span>
-                      {effectiveReleaseEmpresas.map((emp) => (
-                        <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 shrink-0" title={savedReleaseEmpresaId ? "Empresa fija del release" : "Empresa del proyecto"}>
-                          {emp.label}
-                        </span>
-                      ))}
+            {/* Contrato: descarga con el nombre del tipo de contrato */}
+            <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
+              <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+                <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
+                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                  <span className="truncate">{tipoContrato}</span>
+                  {effectiveContratoEmpresas.map((emp) => (
+                    <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title={savedContratoEmpresaId ? "Empresa fija del contrato" : "Empresa del proyecto"}>
+                      {emp.label}
                     </span>
-                    {releaseRequiereFirma ? (
-                      <DownloadMenu empresas={effectiveReleaseEmpresas} onDownload={(empresaId) => onDownloadRelease(r, empresaId)} title="Descargar release" />
-                    ) : (
-                      <NoSeEnviaAFirmar />
-                    )}
+                  ))}
+                </span>
+                {!contratoRequiereFirma ? (
+                  <NoSeEnviaAFirmar />
+                ) : canDownloadContract ? (
+                  <DownloadMenu empresas={effectiveContratoEmpresas} onDownload={onDownloadContract} title="Descargar contrato" />
+                ) : existeTemplate ? (
+                  // La plantilla existe pero está vacía → redactarla en /contratos-frame.
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      to={`/contratos-frame?edit=${template!._id}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
+                      title="Redactar el contenido de esta plantilla de contrato"
+                    >
+                      Sin contenido
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
+                    </Link>
+                    <span className="p-1.5 text-gray-400 dark:text-gray-500 opacity-40 cursor-not-allowed" title="La plantilla de este tipo de contrato no tiene contenido redactado">
+                      <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                    </span>
                   </div>
-                );
-              })}
+                ) : (
+                  // El tipo de contrato no existe como plantilla → info (qué hacer) + link a editar el miembro.
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowInexistenteInfo(true)}
+                      className="text-red-500 hover:text-red-600 transition-colors"
+                      title="Qué significa 'Contrato inexistente'"
+                      aria-label="Información: contrato inexistente"
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onEdit}
+                      disabled={!onEdit}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline disabled:no-underline disabled:cursor-default"
+                      title="Editar el miembro para asignar un contrato existente"
+                    >
+                      Contrato inexistente
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Releases: lista con descarga directa */}
+            <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Release | Empresa</p>
+              {activeReleases.length === 0 ? (
+                <p className="text-xs text-gray-500">No hay releases disponibles.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {activeReleases.map((r) => {
+                    const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(" | ");
+                    // Sin ReleaseTipo vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
+                    const releaseRequiereFirma = typeof r.releaseTipoId === "object" ? r.releaseTipoId?.requiereFirma !== false : true;
+                    return (
+                      <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+                        <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
+                          <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                          <span className="truncate">{r.name}</span>
+                          {effectiveReleaseEmpresas.map((emp) => (
+                            <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 shrink-0" title={savedReleaseEmpresaId ? "Empresa fija del release" : "Empresa del proyecto"}>
+                              {emp.label}
+                            </span>
+                          ))}
+                        </span>
+                        {releaseRequiereFirma ? (
+                          <DownloadMenu empresas={effectiveReleaseEmpresas} onDownload={(empresaId) => onDownloadRelease(r, empresaId)} title="Descargar release" />
+                        ) : (
+                          <NoSeEnviaAFirmar />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <InfoModal

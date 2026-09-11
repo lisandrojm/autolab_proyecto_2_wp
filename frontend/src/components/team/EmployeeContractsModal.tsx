@@ -150,6 +150,9 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                 contratoEmpresas={contratoEmpresas}
                 releaseEmpresas={releaseEmpresas}
                 isLatest={idx === idxQueRige}
+                // El que rige va desplegado; el resto es historial y arranca plegado, para no tener
+                // que scrollear cuatro tarjetas enteras hasta llegar al contrato que importa.
+                colapsable={idx !== idxQueRige}
                 onEdit={user ? () => onEdit(user, contract, indiceEnBD(contract)) : undefined}
                 onDelete={user ? () => onDelete(user._id) : undefined}
                 deleteTitle="Eliminar del proyecto"

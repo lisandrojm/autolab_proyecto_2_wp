@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -355,6 +355,10 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('admin_projects:view')) base.push({ path: '/admin/projects', icon: faBriefcase, label: 'Proyectos', scope: 'global', count: adminCounts.projects });
       if (hasPermission('admin_sedes:view')) base.push({ path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
       if (hasPermission('admin_contracts:view')) base.push({ path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global' });
+      // Solicitudes va pegada a Contratos porque son los dos extremos del mismo ciclo: lo que se
+      // pidió y lo que ya se contrató. Comparte permiso con Usuarios —una solicitud es un alta de
+      // usuario, no un contrato— igual que el endpoint que la alimenta.
+      if (hasPermission('admin_users:view')) base.push({ path: '/admin/solicitudes', icon: faUserPlus, label: 'Solicitudes', scope: 'global' });
       if (hasPermission('admin_activity_logs:view')) base.push({ path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
       if (hasPermission('admin_orders:view')) base.push({ path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (hasPermission('admin_vacations:view')) base.push({ path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
@@ -509,7 +513,7 @@ export const MobileNavbar: React.FC = () => {
     const usuariosGeneralGroup = { path: '#usuarios-general', groupKey: 'usuariosGeneral', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosGeneralChildren };
 
     // Los sueltos de la sección. El grupo entra aparte y ordena por su propio rótulo, «Usuarios».
-    const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'];
+    const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/admin/contracts', '/admin/solicitudes', '/orders', '/vacations', '/requests', '/documents'];
     /*
       «Centros de Costos» y «Clientes» van AL FINAL, después de Vacaciones, y no en el orden alfabético
       del resto de la sección.
