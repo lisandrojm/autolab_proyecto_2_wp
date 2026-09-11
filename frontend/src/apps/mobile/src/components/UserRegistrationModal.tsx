@@ -185,29 +185,71 @@ const TIME_OPTIONS = (() => {
 
   useEffect(() => {
     if (isOpen) {
-      const loadData = async () => {
+      /*
+        CADA DATO SE PINTA CUANDO LLEGA, NO CUANDO LLEGAN TODOS.
+
+        Esto era un `Promise.all` de seis consultas con un solo `await`: bastaba que UNA tardara para
+        que el formulario entero siguiera en "Cargando datos...", aunque los proyectos ya estuvieran
+        en la mano. Y si una fallaba, el `catch` se comía las otras cinco y el modal quedaba vacío sin
+        decir por qué. Ahora cada una setea lo suyo al resolverse y falla sola.
+
+        El spinner lo sueltan los proyectos: son lo primero del formulario y sin ellos no se puede
+        empezar a cargar nada. El resto (personas, categorías, motivos) termina de llegar solo, y
+        hasta entonces esos campos aparecen vacíos en vez de tapar la pantalla.
+      */
+      const loadData = () => {
         setLoadingData(true);
-        try {
-          const [frames, cats, projs, usersRes, estados, tiposNovedad] = await Promise.all([roleFrameAPI.list(), categoriaSatAPI.list(), projectsAPI.listAll(), usersAPI.list({ limit: 1000, metadataActivo: "true" }), infoAPI.listByType("estado-empleado").catch(() => [] as InfoItem[]), activityLogTypesAPI.getAll().catch(() => [] as RequestConfig[])]);
-          setImpositivos(estadosImpositivos(estados));
+
+        /*
+          `slimProjects` en la lista de personas.
+
+          Sin eso, `/users` pobla `metadata.projects` con TODOS los contratos de cada persona: con
+          `limit: 1000` eso es el N×M completo del tenant, y es lo que hacía que esta consulta se
+          comiera el tiempo (o directamente cortara por timeout) y, de paso, se llevara puestos a los
+          proyectos por estar en el mismo `Promise.all`.
+
+          Acá alcanza con lo liviano: el buscador de personas usa nombre, email y `externalInfo`, y el
+          de reemplazos necesita `metadata.projects[].projectId` para saber quién está en el proyecto.
+          Nada de eso son los contratos.
+        */
+        const personas = usersAPI
+          .list({ limit: 1000, metadataActivo: "true", slimProjects: true })
+          .then((r) => setPlatformUsers(r.users || []))
+          .catch((e) => console.error("Error cargando personas:", e));
+
+        const proyectos = projectsAPI
+          .listAll()
+          .then((projs) => {
+            // Filter projects by profile.projectIds (coordinator projects)
+            let activeProjects = projs.filter((p) => p.status === "active");
+            if (profile?.projectIds && profile.projectIds.length > 0) {
+              activeProjects = activeProjects.filter((p) => profile.projectIds?.includes(p._id));
+            }
+            setProjects(activeProjects);
+          })
+          .catch((e) => console.error("Error cargando proyectos:", e));
+
+        roleFrameAPI
+          .list()
+          .then(setRoleFrames)
+          .catch((e) => console.error("Error cargando roles empresa:", e));
+        categoriaSatAPI
+          .list()
+          .then(setCategoriasSat)
+          .catch((e) => console.error("Error cargando categorías:", e));
+        infoAPI
+          .listByType("estado-empleado")
+          .then((estados) => setImpositivos(estadosImpositivos(estados)))
+          .catch((e) => console.error("Error cargando estados:", e));
+        activityLogTypesAPI
+          .getAll()
           // Mismo filtro que Novedades: solo los activos y sin "horas extra", que no es una ausencia.
-          setMotivos(tiposNovedad.filter((t) => t.isActive && !t.name.toLowerCase().includes("horas extra")));
-          setRoleFrames(frames);
-          setCategoriasSat(cats);
-          setPlatformUsers(usersRes.users || []);
+          .then((tipos) => setMotivos(tipos.filter((t) => t.isActive && !t.name.toLowerCase().includes("horas extra"))))
+          .catch((e) => console.error("Error cargando motivos:", e));
 
-          // Filter projects by profile.projectIds (coordinator projects)
-          let activeProjects = projs.filter((p) => p.status === "active");
-          if (profile?.projectIds && profile.projectIds.length > 0) {
-            activeProjects = activeProjects.filter((p) => profile.projectIds?.includes(p._id));
-          }
-
-          setProjects(activeProjects);
-        } catch (error) {
-          console.error("Error loading form data:", error);
-        } finally {
-          setLoadingData(false);
-        }
+        // Personas entra en la espera del spinner porque el buscador es el segundo campo; si tarda
+        // más que los proyectos, igual no bloquea a los demás.
+        Promise.all([proyectos, personas]).finally(() => setLoadingData(false));
       };
       loadData();
     }

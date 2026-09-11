@@ -186,18 +186,18 @@ export const DropboxSignConfigPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
                 <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} className="rounded border-gray-300" />
                 Activar la lectura automática de la casilla
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Probar = solo conecta y cuenta avisos. Leer ahora = procesa y archiva en Pendbox. */}
-                <button type="button" onClick={() => leerAhora(true)} disabled={!!leyendo || guardando} title="Conecta a la casilla y cuenta los avisos pendientes, sin escribir nada" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                <button type="button" onClick={() => leerAhora(true)} disabled={!!leyendo || guardando} title="Conecta a la casilla y cuenta los avisos pendientes, sin escribir nada" className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
                   <FontAwesomeIcon icon={leyendo === 'prueba' ? faSpinner : faEnvelope} spin={leyendo === 'prueba'} className="h-4 w-4" />
                   Probar conexión
                 </button>
-                <button type="button" onClick={() => leerAhora(false)} disabled={!!leyendo || guardando} title="Lee la casilla y archiva en Pendbox los avisos de envío a firmar" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors">
+                <button type="button" onClick={() => leerAhora(false)} disabled={!!leyendo || guardando} title="Lee la casilla y archiva en Pendbox los avisos de envío a firmar" className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors">
                   <FontAwesomeIcon icon={leyendo === 'real' ? faSpinner : faInbox} spin={leyendo === 'real'} className="h-4 w-4" />
                   Leer ahora
                 </button>
@@ -207,13 +207,13 @@ export const DropboxSignConfigPage: React.FC = () => {
                   onClick={() => setShowLogs(true)}
                   disabled={!cfg?.lastCheckAt}
                   title={cfg?.lastCheckAt ? "Ver qué pasó con cada aviso en la última lectura" : "Todavía no se corrió ninguna lectura"}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
                 >
                   <FontAwesomeIcon icon={faListUl} className="h-4 w-4" />
                   Logs
                   {cfg?.lastCheckHistorial?.length ? <span className="text-xs font-bold text-gray-500 dark:text-gray-400">({cfg.lastCheckHistorial.length})</span> : null}
                 </button>
-                <button type="button" onClick={guardar} disabled={guardando} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                <button type="button" onClick={guardar} disabled={guardando} className="inline-flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-4 w-4" />
                   Guardar
                 </button>
