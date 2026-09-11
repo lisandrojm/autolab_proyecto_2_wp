@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faSearch, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { usersAPI, SolicitudOverviewRow } from "../api/users";
 import { clientsAPI } from "../api/clients";
@@ -161,66 +162,46 @@ export const SolicitudesPage: React.FC = () => {
       subtitle="Todas las solicitudes de alta, de todos los clientes y proyectos."
       faIcon={{ icon: faUserPlus }}
       itemCount={total}
+      /*
+        Los filtros van detrás del botón de embudo, en el modal "Filtros Avanzados", igual que en
+        Contratos: `SearchAndFilters` ya trae la búsqueda, el botón, el modal, los chips de lo que
+        está aplicado y el "Limpiar Todo". Sueltos arriba de la tabla ocupaban tres renglones para
+        algo que casi siempre queda en "todos".
+      */
       searchAndFilters={
-        <div className="space-y-3">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <FontAwesomeIcon icon={faSearch} />
-            </span>
-            <input type="text" className="input-field pl-10 h-10 w-full" placeholder="Buscar por nombre o email..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              className="input-field h-9 text-sm"
-              value={filtroCliente}
-              onChange={(e) => {
-                setFiltroCliente(e.target.value);
-                setFiltroProyecto(""); // el proyecto elegido puede no ser de este cliente
-              }}
-            >
-              <option value="">Todos los clientes</option>
-              {clientes.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-
-            <select className="input-field h-9 text-sm" value={filtroProyecto} onChange={(e) => setFiltroProyecto(e.target.value)}>
-              <option value="">Todos los proyectos</option>
-              {proyectosDelFiltro.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-
-            <select className="input-field h-9 text-sm" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-              <option value="">Todos los estados</option>
-              {ESTADOS_SOLICITUD.map((e) => (
-                <option key={e} value={e}>
-                  {ESTADO_SOLICITUD[e].texto}
-                </option>
-              ))}
-            </select>
-
-            {hayFiltros && (
-              <button
-                type="button"
-                onClick={() => {
-                  setBusqueda("");
-                  setFiltroEstado("");
-                  setFiltroCliente("");
-                  setFiltroProyecto("");
-                }}
-                className="text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline"
-              >
-                Limpiar filtros
-              </button>
-            )}
-          </div>
-        </div>
+        <SearchAndFilters
+          searchTerm={busqueda}
+          onSearchChange={setBusqueda}
+          searchPlaceholder="Buscar por nombre o email..."
+          selectFilters={[
+            {
+              label: "Cliente",
+              value: filtroCliente,
+              // El proyecto elegido puede no ser de este cliente: se limpia para no dejar una
+              // combinación que no existe y devuelve vacío sin explicar por qué.
+              onChange: (v) => {
+                setFiltroCliente(v);
+                setFiltroProyecto("");
+              },
+              placeholder: "Todos los clientes",
+              options: clientes.map((c) => ({ value: c._id, label: c.name })),
+            },
+            {
+              label: "Proyecto",
+              value: filtroProyecto,
+              onChange: setFiltroProyecto,
+              placeholder: "Todos los proyectos",
+              options: proyectosDelFiltro.map((p) => ({ value: p._id, label: p.name })),
+            },
+            {
+              label: "Estado",
+              value: filtroEstado,
+              onChange: setFiltroEstado,
+              placeholder: "Todos los estados",
+              options: ESTADOS_SOLICITUD.map((e) => ({ value: e, label: ESTADO_SOLICITUD[e].texto })),
+            },
+          ]}
+        />
       }
     >
       {cargando ? (
