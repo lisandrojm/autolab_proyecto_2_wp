@@ -269,19 +269,24 @@ class ProjectsAPI {
     return data;
   }
 
+  /**
+   * OJO CON EL `limit`: el server lo capea a 100 (`GET /projects`, "Cap limit to 100 to prevent
+   * OOM/Timeouts"). Pedir 500 no trae 500, trae 100 — y el resto sale por paginación.
+   *
+   * Esas páginas restantes iban de a una, encadenadas con `await`: con unos cientos de proyectos
+   * eran varias idas y vueltas en serie, cada una con todos los populates del listado. Van juntas;
+   * el orden se mantiene porque se reensamblan por índice, no por orden de llegada. Si alguna
+   * choca contra el límite de 200 req/min, el interceptor la reintenta respetando `Retry-After`.
+   */
   async listAll(params: { q?: string; limit?: number } = {}): Promise<Project[]> {
     const pageSize = params.limit ?? 200;
-    let resp = await this.list({ ...params, page: 1, limit: pageSize });
-    const all: Project[] = [...resp.projects];
+    const primera = await this.list({ ...params, page: 1, limit: pageSize });
 
-    const totalPages = resp.pagination?.pages ?? 1;
-    if (totalPages > 1) {
-      for (let page = 2; page <= totalPages; page++) {
-        resp = await this.list({ ...params, page, limit: pageSize });
-        all.push(...resp.projects);
-      }
-    }
-    return all;
+    const totalPages = primera.pagination?.pages ?? 1;
+    if (totalPages <= 1) return primera.projects;
+
+    const restantes = await Promise.all(Array.from({ length: totalPages - 1 }, (_, i) => this.list({ ...params, page: i + 2, limit: pageSize })));
+    return [...primera.projects, ...restantes.flatMap((r) => r.projects)];
   }
 
    async createProject(

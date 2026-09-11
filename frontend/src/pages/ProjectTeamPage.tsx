@@ -521,52 +521,36 @@ export const ProjectTeamPage: React.FC = () => {
   useEffect(() => {
     if (!projectId || !token) return;
 
+    /**
+     * QUÉ BLOQUEA EL SPINNER Y QUÉ NO.
+     *
+     * Esto era una cadena de SIETE tandas encadenadas con `await` —proyecto, cleanup, equipo
+     * liviano, clientes+proyectos, y siete catálogos— y "Cargando equipo..." no se iba hasta que
+     * terminaba la última. Se pagaban siete idas y vueltas en serie aunque ninguna dependiera de
+     * la anterior, y cualquiera de ellas lenta congelaba la pantalla entera.
+     *
+     * Ahora son dos grupos. El primero es lo único que la tabla necesita para dibujarse bien
+     * (proyecto, equipo y los catálogos con los que se resuelven área/turno de cada fila) y corre
+     * todo en paralelo. El segundo —los catálogos del wizard y de las tarjetas, más el cleanup de
+     * ids huérfanos— se completa en segundo plano: son listas que hasta que no se abre un modal no
+     * se miran, y mientras tanto degradan a vacío sin romper nada.
+     */
     const init = async () => {
-      try {
-        setLoading(true);
-        const [projectData, vacationsData, areasData, shiftsData] = await Promise.all([
-          projectsAPI.getProject(projectId, { team: "ids" }), // específico del proyecto: no se cachea
-          cachedFetch("vacations:all", () => vacationsAPI.getAll()),
-          cachedFetch("areas:all", () => areasAPI.listAll()),
-          cachedFetch("shifts:all", () => shiftsAPI.getAll()),
+      // Segundo grupo: en paralelo con el primero, pero NO retiene el spinner.
+      const enSegundoPlano = async () => {
+        const [clientes, proyectos, sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([
+          cachedFetch("clients:all", () => clientsAPI.listAll()),
+          cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 })),
+          cachedFetch("info:sede", () => infoAPI.listByType("sede")),
+          cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()),
+          cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")),
+          cachedFetch("info:contrato", () => infoAPI.listByType("contrato")),
+          cachedFetch("roleFrames:all", () => roleFrameAPI.list()),
+          cachedFetch("contratoFrames:all", () => contratoFrameAPI.list()),
+          cachedFetch("contratos:all", () => contratosAPI.list()),
         ]);
-
-        setAllShifts(shiftsData);
-
-        // Auto-cleanup orphaned user IDs from assignedUsers
-        try {
-          const cleanupResult = await projectsAPI.cleanupTeam(projectId);
-          if (cleanupResult.removedCount > 0) {
-            // Silent cleanup - no notification shown
-            // Re-fetch project to get updated assignedUsers
-            const updatedProject = await projectsAPI.getProject(projectId, { team: "ids" });
-            setProject(updatedProject);
-            setTeamConfig(updatedProject.teamConfig || []);
-          } else {
-            setProject(projectData);
-            setTeamConfig(projectData.teamConfig || []);
-          }
-        } catch (cleanupError) {
-          console.warn("Could not cleanup team:", cleanupError);
-          setProject(projectData);
-          setTeamConfig(projectData.teamConfig || []);
-        }
-
-        // Equipo: lista liviana completa (Coordinadores/contadores) + primera página con datos completos.
-        const teamUsers = await fetchFullTeamLite();
-        fetchTeamPage(1);
-
-        setVacations(vacationsData);
-        setAllAreas(areasData);
-
-        // Fetch additional data for user cards
-        const [allClientsData, allProjectsResponse] = await Promise.all([cachedFetch("clients:all", () => clientsAPI.listAll()), cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 }))]);
-
-        setAllClients(allClientsData);
-        setAllProjects(allProjectsResponse);
-
-        // Fetch Metadata Info (datos de referencia estables → cacheados)
-        const [sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([cachedFetch("info:sede", () => infoAPI.listByType("sede")), cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()), cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")), cachedFetch("info:contrato", () => infoAPI.listByType("contrato")), cachedFetch("roleFrames:all", () => roleFrameAPI.list()), cachedFetch("contratoFrames:all", () => contratoFrameAPI.list()), cachedFetch("contratos:all", () => contratosAPI.list())]);
+        setAllClients(clientes);
+        setAllProjects(proyectos);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);
@@ -574,6 +558,41 @@ export const ProjectTeamPage: React.FC = () => {
         setAllRoleFrames(rf);
         setContratoFrames(cfs);
         setContratos(contratosData);
+      };
+
+      // El cleanup de ids huérfanos es mantenimiento, no dato de pantalla: casi nunca borra algo y
+      // antes se esperaba a que contestara antes de pedir el equipo. Va al final y solo relee el
+      // proyecto si efectivamente sacó a alguien.
+      const limpiarHuerfanos = async () => {
+        const resultado = await projectsAPI.cleanupTeam(projectId);
+        if (resultado.removedCount > 0) {
+          const actualizado = await projectsAPI.getProject(projectId, { team: "ids" });
+          setProject(actualizado);
+          setTeamConfig(actualizado.teamConfig || []);
+        }
+      };
+
+      try {
+        setLoading(true);
+
+        enSegundoPlano().catch((e) => console.error("Error cargando catálogos:", e));
+
+        const [projectData, teamUsers, vacationsData, areasData, shiftsData] = await Promise.all([
+          projectsAPI.getProject(projectId, { team: "ids" }), // específico del proyecto: no se cachea
+          // Equipo: lista liviana completa (Coordinadores/contadores) + primera página con datos
+          // completos. La página no se espera: se pinta sola cuando llega (`teamFetching`).
+          fetchFullTeamLite(),
+          cachedFetch("vacations:all", () => vacationsAPI.getAll()),
+          cachedFetch("areas:all", () => areasAPI.listAll()),
+          cachedFetch("shifts:all", () => shiftsAPI.getAll()),
+        ]);
+        fetchTeamPage(1);
+
+        setProject(projectData);
+        setTeamConfig(projectData.teamConfig || []);
+        setVacations(vacationsData);
+        setAllAreas(areasData);
+        setAllShifts(shiftsData);
 
         // Default sede from project if available
         if (projectData.metadata?.sedeId) {
@@ -591,6 +610,8 @@ export const ProjectTeamPage: React.FC = () => {
           }
         });
         setUserLookup(lookupMap);
+
+        limpiarHuerfanos().catch((e) => console.warn("Could not cleanup team:", e));
       } catch (error) {
         console.error("Error loading data:", error);
         sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
