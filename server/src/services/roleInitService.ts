@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { Role } from '../models/Role.js';
 import { User } from '../models/User.js';
-import { ALL_MOBILE_PERMISSIONS, esPermisoMobile, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS } from '../utils/permisosMobile.js';
+import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS } from '../utils/permisosMobile.js';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -190,9 +190,8 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
     EL ROL «RESPONSABLE DE PROYECTO» YA NO SE CREA, y la migración lo borra.
 
     Existía para marcar quién podía quedar a cargo de un proyecto, y eso pasó a ser un tilde en la
-    ficha de la persona: el rol quedó nombrando algo que ya no decide. Lo que sí traía además eran
-    cinco permisos de escritorio, y por eso no alcanza con borrarlo: la migración mueve a esa gente a
-    un rol común llamado «Proyectos» con esos mismos permisos antes de sacarlo del medio.
+    ficha de la persona: el rol quedó nombrando algo que ya no decide. Ser responsable de un proyecto
+    no es un rol —no destapa pantallas—, es un atributo de la persona, y con el tilde alcanza.
   */
 
   // 5. User (Por defecto)
@@ -320,38 +319,39 @@ async function renombrar(tid: Types.ObjectId, patron: RegExp, nombreNuevo: strin
 }
 
 /**
- * Saca de circulación el rol «Responsable de Proyecto».
+ * La descripción con la que una versión anterior de esta migración creó el rol puente «Proyectos».
+ * Se usa para reconocerlo y borrarlo sin tocar un rol que el tenant haya armado con ese mismo nombre.
+ */
+const DESCRIPCION_ROL_PUENTE = 'Acceso de escritorio de quien lleva proyectos (reemplaza al viejo rol Responsable de Proyecto)';
+
+/**
+ * Borra el rol «Responsable de Proyecto».
  *
- * Dejó de tener sentido: marcaba quién podía quedar a cargo de un proyecto, y eso hoy es un tilde en
- * la ficha de la persona. Pero además traía cinco permisos de escritorio —Cliente, Clientes, Pedidos,
- * Vacaciones y Novedades— y borrarlo a secas dejaría a esa gente sin poder entrar a la plataforma: su
- * otro rol suele ser sólo del móvil.
+ * Marcaba quién podía quedar a cargo de un proyecto, y eso dejó de ser un rol: es un tilde en la ficha
+ * de la persona (`isProjectResponsible`), que es lo único que hace falta para que aparezca en el
+ * selector de responsable. El paso 1 de esta migración ya se lo puso a todos los que lo tenían, así
+ * que para cuando llega acá no queda nada que rescatar del rol.
  *
- * Así que primero se los muda a un rol común «Proyectos» con esos mismos permisos, y recién después
- * se borra. El rol nuevo NO es de sistema: se puede renombrar, editar o borrar desde la pantalla.
+ * Lo que el rol traía ADEMÁS eran cinco permisos de escritorio, y quien los siga necesitando va a
+ * quedarse sin ellos: es a propósito. Eran de un rol que nombraba otra cosa, y si esas personas tienen
+ * que ver Clientes o Pedidos, eso se les da con un rol que diga eso.
  */
 async function retirarRolResponsable(tid: Types.ObjectId): Promise<void> {
-  const viejo = await Role.findOne({ tenantId: tid, name: { $regex: /^responsable de proyecto$/i } });
-  if (!viejo) return;
+  const aBorrar = await Role.find({
+    tenantId: tid,
+    $or: [
+      { name: { $regex: /^responsable de proyecto$/i } },
+      // El rol puente que creó una versión anterior de esta migración, antes de que quedara claro que
+      // el tilde del usuario alcanza. Se reconoce por su descripción, no sólo por el nombre.
+      { name: 'Proyectos', description: DESCRIPCION_ROL_PUENTE },
+    ],
+  });
 
-  const usuarios = await User.find({ tenantId: tid, roles: viejo._id }).select('_id').lean();
-
-  if (usuarios.length > 0) {
-    // Los permisos de escritorio que traía. Se toman del rol real y no de una lista escrita acá: si
-    // alguien se los editó, lo que hay que conservar es lo que efectivamente tenía.
-    const dePlataforma = viejo.permissions.filter((p) => !esPermisoMobile(p));
-
-    if (dePlataforma.length > 0) {
-      const reemplazo = await ensureRole(tid, 'Proyectos', dePlataforma, 'Acceso de escritorio de quien lleva proyectos (reemplaza al viejo rol Responsable de Proyecto)', false, false);
-      await User.updateMany({ _id: { $in: usuarios.map((u) => u._id) } }, { $addToSet: { roles: reemplazo._id } });
-      console.log(`[RoleInit] ♻️ ${usuarios.length} usuario/s movido/s de "Responsable de Proyecto" al rol "Proyectos" (tenant ${tid})`);
-    }
-
-    await User.updateMany({ tenantId: tid, roles: viejo._id }, { $pull: { roles: viejo._id } });
+  for (const rol of aBorrar) {
+    const { modifiedCount } = await User.updateMany({ tenantId: tid, roles: rol._id }, { $pull: { roles: rol._id } });
+    await Role.deleteOne({ _id: rol._id });
+    console.log(`[RoleInit] 🗑️ Rol "${rol.name}" eliminado, desasignado de ${modifiedCount} usuario/s (tenant ${tid})`);
   }
-
-  await Role.deleteOne({ _id: viejo._id });
-  console.log(`[RoleInit] 🗑️ Rol "Responsable de Proyecto" eliminado (tenant ${tid})`);
 }
 
 export async function migrateMobileYResponsable(tenantId: Types.ObjectId | string): Promise<void> {
