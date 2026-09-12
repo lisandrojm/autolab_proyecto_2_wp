@@ -1004,17 +1004,15 @@ export const RolesPage: React.FC = () => {
                       title: role.name,
                       subtitle: role.description,
                       icon: faUserShield,
-                      // Badge SIEMPRE visible en las cards
+                      /*
+                        Sin el nombre del tenant.
+
+                        Estaba repetido en las nueve tarjetas y decía siempre lo mismo, porque un rol
+                        sólo puede ser del tenant en el que estás parado: el que manda es el selector
+                        del encabezado. Lo único que hacía era ocupar el primer renglón de cada tarjeta
+                        y empujar hacia abajo los dos badges que sí distinguen a un rol de otro.
+                      */
                       badges: [
-                        ...(role.tenant && role.tenant.name
-                          ? [
-                              {
-                                text: role.tenant.name,
-                                variant: "default" as const,
-                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800",
-                              },
-                            ]
-                          : []),
                         ...(role.isSystem
                           ? [
                               {

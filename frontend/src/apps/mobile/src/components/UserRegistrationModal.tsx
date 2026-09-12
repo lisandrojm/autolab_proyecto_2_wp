@@ -33,7 +33,20 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [loadingData, setLoadingData] = useState(false);
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [proyectosActivos, setProjects] = useState<Project[]>([]);
+
+  /**
+   * Los proyectos que se ofrecen: los que la persona coordina, si el perfil dice cuáles.
+   *
+   * El filtro se aplica ACÁ y no al pedirlos. El perfil llega por su cuenta unos milisegundos después
+   * de que el modal abre, y cuando el filtro vivía dentro del `.then` había que poner `profile` en las
+   * dependencias del efecto de carga: eso hacía que las seis consultas salieran dos veces y que el
+   * spinner se reiniciara a mitad de camino.
+   */
+  const projects = useMemo(() => {
+    const propios = profile?.projectIds || [];
+    return propios.length > 0 ? proyectosActivos.filter((p) => propios.includes(p._id)) : proyectosActivos;
+  }, [proyectosActivos, profile]);
   /** Catálogo de empresas y de convenios, para resolver nombres y la cadena proyecto → empresa → CCT. */
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
@@ -217,16 +230,17 @@ const TIME_OPTIONS = (() => {
           .then((r) => setPlatformUsers(r.users || []))
           .catch((e) => console.error("Error cargando personas:", e));
 
+        /*
+          Se guardan los proyectos ACTIVOS sin filtrar por el perfil: el filtro se aplica al pintar.
+
+          Estaba dentro del `.then`, y el efecto dependía de `profile`. Como el perfil llega por su
+          cuenta unos milisegundos después que el modal abre, el efecto se ejecutaba DOS veces: las
+          seis consultas salían duplicadas y el spinner se reiniciaba en el medio. Lo que se ve como
+          "tarda un montón en traer los proyectos" era, en buena parte, traerlos dos veces.
+        */
         const proyectos = projectsAPI
           .listAll()
-          .then((projs) => {
-            // Filter projects by profile.projectIds (coordinator projects)
-            let activeProjects = projs.filter((p) => p.status === "active");
-            if (profile?.projectIds && profile.projectIds.length > 0) {
-              activeProjects = activeProjects.filter((p) => profile.projectIds?.includes(p._id));
-            }
-            setProjects(activeProjects);
-          })
+          .then((projs) => setProjects(projs.filter((p) => p.status === "active")))
           .catch((e) => console.error("Error cargando proyectos:", e));
 
         roleFrameAPI
@@ -253,7 +267,9 @@ const TIME_OPTIONS = (() => {
       };
       loadData();
     }
-  }, [isOpen, profile]);
+    // Depende SOLO de `isOpen`: ver el comentario de los proyectos. Con `profile` en la lista, todo
+    // se pedía de nuevo apenas llegaba el perfil.
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && editingUser) {

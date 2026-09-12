@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { Role } from '../models/Role.js';
 import { User } from '../models/User.js';
-import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS } from '../utils/permisosMobile.js';
+import { ALL_MOBILE_PERMISSIONS, esPermisoMobile, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS } from '../utils/permisosMobile.js';
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * PERMISOS PARA ROL USER - SISTEMA SIMPLIFICADO
@@ -84,8 +84,17 @@ const ADMIN_PERMISSIONS = [
 /**
  * Helper para asegurar la existencia y sincronización de un rol
  */
+/*
+  El nombre se ESCAPA antes de meterlo en el regex.
+
+  Los roles del móvil se llaman «Mobile | Colaborador», y en una expresión regular la barra vertical
+  significa "o": `^Mobile | Colaborador$` se lee como "empieza con Mobile " O "termina con
+  Colaborador". Con eso, buscar un rol encontraba a cualquier otro que empezara igual, y los tres
+  roles del móvil se pisaban entre sí.
+*/
+const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 async function ensureRole(tenantId, name, permissions = [], description = '', isDefault = false, isSystem = false) {
-    let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${escaparRegex(name)}$`, 'i') } });
     if (!role) {
         console.log(`[RoleInit] Creating ${name} role for tenant: ${tenantId}`);
         role = await Role.create({
@@ -142,24 +151,30 @@ export async function ensureDefaultRoles(tenantId) {
     // 1. Admin (Sistema)
     const adminRole = await ensureRole(tid, 'Admin', ADMIN_PERMISSIONS, 'Administrador - Acceso completo a todos los módulos del sistema', false, true);
     /*
-      2. Responsable de Proyecto (Sistema)
+      2, 3 y 4. LOS TRES ROLES DEL MÓVIL, que son los que sí tiene sentido que sean de sistema.
   
-      Ya NO otorga la elegibilidad para quedar a cargo de un proyecto: eso pasó a ser un tilde en la
-      ficha de la persona (`User.isProjectResponsible`). El rol sobrevive por lo otro que trae —ver
-      clientes, pedidos, vacaciones y novedades—, que es de lo que depende quien hoy lo tiene.
+      Son los que reciben las altas y los que la gente reconoce por nombre, así que conviene que existan
+      siempre y que nadie los borre sin querer. Lo que ven SÍ se edita: son permisos como cualquier otro.
+  
+      Supervisor y Coordinador arrancan viendo lo mismo —las cuatro tarjetas—; la diferencia entre uno y
+      otro se ajusta destildando desde Usuarios → Roles cuando haga falta. `ensureRole` sólo AGREGA
+      permisos que falten, así que destildar algo acá no se revierte en el próximo arranque.
+  
+      Ojo con el nombre: lleva una barra vertical, que en una expresión regular significa "o". Por eso
+      `ensureRole` escapa el nombre antes de buscar (ver `escaparRegex`).
     */
-    const responsablePerms = ['client:view', 'admin_clients:view', 'admin_orders:view', 'admin_vacations:view', 'admin_activity_logs:view', ...MOBILE_BASE_PERMISSIONS];
-    await ensureRole(tid, 'Responsable de Proyecto', responsablePerms, 'Rol de responsable de proyectos', false, true);
+    await ensureRole(tid, 'Mobile | Supervisor', ALL_MOBILE_PERMISSIONS, 'Supervisa al equipo desde la app', false, true);
+    await ensureRole(tid, 'Mobile | Coordinador', ALL_MOBILE_PERMISSIONS, 'Carga las novedades de sus áreas y turnos, y pide contrataciones', false, true);
+    await ensureRole(tid, 'Mobile | Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', false, true);
     /*
-      Los roles Mobile-Colaborador y Mobile-Coordinador YA NO SE CREAN.
+      EL ROL «RESPONSABLE DE PROYECTO» YA NO SE CREA, y la migración lo borra.
   
-      Eran dos roles de sistema con un permiso cerrado cada uno, y media docena de lugares los buscaban
-      por nombre —con tres expresiones regulares distintas entre sí—. Lo que hacía falta saber de ellos
-      («¿entra a la app?», «¿carga novedades?») ahora se pregunta por permiso. Los que existan en la
-      base se conservan como roles comunes y editables: borrarlos acá dejaría sin app a todos los
-      usuarios importados, porque los permisos viven en el rol. Ver `migrateMobileYResponsable`.
+      Existía para marcar quién podía quedar a cargo de un proyecto, y eso pasó a ser un tilde en la
+      ficha de la persona: el rol quedó nombrando algo que ya no decide. Lo que sí traía además eran
+      cinco permisos de escritorio, y por eso no alcanza con borrarlo: la migración mueve a esa gente a
+      un rol común llamado «Proyectos» con esos mismos permisos antes de sacarlo del medio.
     */
-    // 3. User (Por defecto)
+    // 5. User (Por defecto)
     const userRole = await ensureRole(tid, 'User', USER_PERMISSIONS, 'Usuario estándar - Sin permisos por defecto', true, false);
     return { adminRole, userRole };
 }
@@ -230,6 +245,72 @@ export async function migrateRolePermissions(tenantId) {
  *      —import de FRAME y link de registro—, que antes recibían Mobile-Colaborador buscándolo por
  *      nombre con tres expresiones regulares distintas entre sí.
  */
+/**
+ * Lleva el rol viejo al nombre nuevo, sin dejar a su gente por el camino.
+ *
+ * Los roles del móvil pasaron de «Mobile-Colaborador» a «Mobile | Colaborador». Renombrar es lo
+ * correcto y no mover usuarios de un rol a otro: apuntan al rol por id, así que el rol con los 1371
+ * usuarios adentro sigue siendo el mismo, sólo que ahora se llama distinto.
+ *
+ * El caso feo es que el nombre nuevo YA exista —porque el seed lo creó antes, o porque alguien lo armó
+ * a mano—: ahí no se puede renombrar (el índice único de tenant + nombre lo rechaza) y quedarían dos
+ * roles que significan lo mismo, con la gente en el que nadie mira. Entonces se fusionan: los permisos
+ * del viejo se suman al nuevo, sus usuarios pasan al nuevo, y el viejo se borra.
+ */
+async function renombrar(tid, patron, nombreNuevo) {
+    const viejo = await Role.findOne({ tenantId: tid, name: { $regex: patron }, $expr: { $ne: ['$name', nombreNuevo] } });
+    if (!viejo)
+        return;
+    const destino = await Role.findOne({ tenantId: tid, name: nombreNuevo });
+    if (!destino) {
+        const anterior = viejo.name;
+        viejo.name = nombreNuevo;
+        viejo.isSystem = true;
+        await viejo.save();
+        console.log(`[RoleInit] ♻️ Rol "${anterior}" renombrado a "${nombreNuevo}" (tenant ${tid})`);
+        return;
+    }
+    // Fusión. Los permisos se UNEN: si alguien le había agregado algo al viejo, no se pierde.
+    const faltantes = viejo.permissions.filter((p) => !destino.permissions.includes(p));
+    if (faltantes.length > 0) {
+        destino.permissions = [...destino.permissions, ...faltantes];
+        await destino.save();
+    }
+    const movidos = await User.updateMany({ tenantId: tid, roles: viejo._id }, { $addToSet: { roles: destino._id } });
+    await User.updateMany({ tenantId: tid, roles: viejo._id }, { $pull: { roles: viejo._id } });
+    await Role.deleteOne({ _id: viejo._id });
+    console.log(`[RoleInit] ♻️ Rol "${viejo.name}" fusionado en "${nombreNuevo}": ${movidos.modifiedCount} usuario/s movido/s (tenant ${tid})`);
+}
+/**
+ * Saca de circulación el rol «Responsable de Proyecto».
+ *
+ * Dejó de tener sentido: marcaba quién podía quedar a cargo de un proyecto, y eso hoy es un tilde en
+ * la ficha de la persona. Pero además traía cinco permisos de escritorio —Cliente, Clientes, Pedidos,
+ * Vacaciones y Novedades— y borrarlo a secas dejaría a esa gente sin poder entrar a la plataforma: su
+ * otro rol suele ser sólo del móvil.
+ *
+ * Así que primero se los muda a un rol común «Proyectos» con esos mismos permisos, y recién después
+ * se borra. El rol nuevo NO es de sistema: se puede renombrar, editar o borrar desde la pantalla.
+ */
+async function retirarRolResponsable(tid) {
+    const viejo = await Role.findOne({ tenantId: tid, name: { $regex: /^responsable de proyecto$/i } });
+    if (!viejo)
+        return;
+    const usuarios = await User.find({ tenantId: tid, roles: viejo._id }).select('_id').lean();
+    if (usuarios.length > 0) {
+        // Los permisos de escritorio que traía. Se toman del rol real y no de una lista escrita acá: si
+        // alguien se los editó, lo que hay que conservar es lo que efectivamente tenía.
+        const dePlataforma = viejo.permissions.filter((p) => !esPermisoMobile(p));
+        if (dePlataforma.length > 0) {
+            const reemplazo = await ensureRole(tid, 'Proyectos', dePlataforma, 'Acceso de escritorio de quien lleva proyectos (reemplaza al viejo rol Responsable de Proyecto)', false, false);
+            await User.updateMany({ _id: { $in: usuarios.map((u) => u._id) } }, { $addToSet: { roles: reemplazo._id } });
+            console.log(`[RoleInit] ♻️ ${usuarios.length} usuario/s movido/s de "Responsable de Proyecto" al rol "Proyectos" (tenant ${tid})`);
+        }
+        await User.updateMany({ tenantId: tid, roles: viejo._id }, { $pull: { roles: viejo._id } });
+    }
+    await Role.deleteOne({ _id: viejo._id });
+    console.log(`[RoleInit] 🗑️ Rol "Responsable de Proyecto" eliminado (tenant ${tid})`);
+}
 export async function migrateMobileYResponsable(tenantId) {
     const tid = new Types.ObjectId(tenantId);
     // El tenant de administración de plataforma sólo tiene el rol Superadmin: no tiene app, ni rol por
@@ -269,7 +350,12 @@ export async function migrateMobileYResponsable(tenantId) {
             console.log(`[RoleInit] ♻️ Rol "${role.name}" migrado a los permisos nuevos (tenant ${tid})`);
         }
     }
-    // ── 4) El rol por defecto tiene que abrir la app ──
+    // ── 4) Los dos roles del móvil pasan a llamarse «Mobile | …» ──
+    await renombrar(tid, /^mobile[ _-]*colaborador$/i, 'Mobile | Colaborador');
+    await renombrar(tid, /^mobile[ _-]*coordinador$/i, 'Mobile | Coordinador');
+    // ── 5) «Responsable de Proyecto» se retira, sin dejar a nadie sin escritorio ──
+    await retirarRolResponsable(tid);
+    // ── 6) El rol por defecto tiene que abrir la app ──
     const rolPorDefecto = await Role.findOne({ tenantId: tid, isDefault: true });
     if (rolPorDefecto) {
         const faltantes = MOBILE_BASE_PERMISSIONS.filter((p) => !rolPorDefecto.permissions.includes(p));
@@ -279,7 +365,9 @@ export async function migrateMobileYResponsable(tenantId) {
             console.log(`[RoleInit] ♻️ Rol por defecto "${rolPorDefecto.name}": + ${faltantes.join(', ')} (tenant ${tid})`);
         }
     }
-    else {
+    else if (roles.length > 0) {
+        // Un tenant sin NINGÚN rol es uno recién creado: `ensureDefaultRoles`, que corre a continuación,
+        // le va a armar el rol por defecto. Avisar ahí sería una alarma por algo que se resuelve solo.
         console.warn(`[RoleInit] ⚠️ El tenant ${tid} no tiene rol por defecto: las altas van a quedar sin acceso a la app.`);
     }
 }
@@ -303,15 +391,21 @@ export async function ensureAllTenantsHaveDefaultRoles() {
         for (const tenant of tenants) {
             const tenantId = new Types.ObjectId(tenant._id);
             const rolesBefore = await Role.countDocuments({ tenantId });
-            await ensureDefaultRoles(tenantId);
             /*
-              Acá corría un dedupe automático de los roles Mobile (`cleanupDuplicateMobileRoles`). Se retiró
-              junto con esos roles: además de no quedarle nada que deduplicar, renombraba al ganador como
-              "Mobile - Coordinador" —con espacios—, un nombre que ningún seed creaba y que ninguna de las
-              búsquedas por nombre del resto del código encontraba. El arreglo automático rompía justo lo
-              que decía cuidar.
+              LA MIGRACIÓN VA PRIMERO, y el orden no es casual.
+      
+              `ensureDefaultRoles` crea los roles «Mobile | …» si no existen. Si corriera antes, encontraría
+              el nombre libre y crearía tres roles vacíos; después la migración querría renombrar
+              «Mobile-Colaborador» a un nombre ya ocupado y no podría, dejando los 1371 usuarios en el rol
+              viejo y tres roles nuevos sin nadie adentro. Migrar primero deja que el renombre agarre el rol
+              que tiene a la gente, y recién ahí `ensureDefaultRoles` completa lo que falte.
+      
+              (Acá también corría un dedupe automático de los roles Mobile, `cleanupDuplicateMobileRoles`.
+              Se retiró: renombraba al ganador como "Mobile - Coordinador" —con espacios—, un nombre que
+              ningún seed creaba y que ninguna de las búsquedas del resto del código encontraba.)
             */
             await migrateMobileYResponsable(tenantId);
+            await ensureDefaultRoles(tenantId);
             await migrateRolePermissions(tenantId);
             const rolesAfter = await Role.countDocuments({ tenantId });
             if (rolesAfter > rolesBefore) {

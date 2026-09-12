@@ -1278,8 +1278,24 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
     // de PDFs, el JSON crudo de la consulta a AFIP, etc.) que nadie mira desde este directory — solo
     // infla el payload y fue lo que estaba causando timeouts. El historial completo sigue disponible
     // desde `/users` o `/users/:id` para quien sí lo necesite.
+    /*
+      `metadata` VIENE RECORTADA, y esto es lo que hacía lento al directorio.
+
+      Estaba pidiendo el subdocumento ENTERO: cuarenta campos por persona —domicilio, CBU, número de
+      cuenta, CUIT, fecha de nacimiento, obra social— por cada uno de los ~1400 usuarios del tenant.
+      Medido contra la base: 1.4 MB de respuesta, de los cuales 1.1 MB eran esos campos que ninguna
+      de las dos pantallas que consumen este endpoint llega a leer. El tiempo de este endpoint es
+      proporcional a los bytes, así que era más de la mitad de la espera.
+
+      Los consumidores (`RequestsPage.tsx` y la vista Novedades del móvil) leen exactamente dos cosas
+      de `metadata`: `activo` y `projects`. Se agregan `id` y `fullName`, que pesan nada y son como se
+      matchea a la gente que viene de FRAME y a las solicitudes sin nombre cargado.
+
+      Si una pantalla necesita otro campo de la ficha, lo pide a `/users/:id`: este endpoint es un
+      roster, no la ficha de nadie.
+    */
     const users = await User.find(filter)
-      .select("firstName lastName email projectIds roles metadata")
+      .select("firstName lastName email projectIds roles metadata.activo metadata.id metadata.fullName metadata.projects")
       // `roles` con nombre y permisos: mobile los necesita para distinguir a los coordinadores al
       // armar el roster de novedades —hoy por permiso, antes por el nombre del rol—. Es un array chico
       // de refs con unos pocos strings, cuesta bastante menos que lo de arriba.
