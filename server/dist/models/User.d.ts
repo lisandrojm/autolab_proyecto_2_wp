@@ -181,6 +181,12 @@ export interface IUser extends Document {
     };
     seniorityAtEndOfYear: number;
     isSystem: boolean;
+    /**
+     * Puede quedar A CARGO de un proyecto (es lo que llena el selector de responsable en Proyectos y
+     * Clientes). Es un atributo de la persona, no una pantalla que se destapa: por eso vive acá y no
+     * como permiso de un rol, que era donde estaba antes (`project_responsible:eligible`).
+     */
+    isProjectResponsible: boolean;
     comparePassword(candidatePassword: string): Promise<boolean>;
     closeYear(maxDiasArrastre?: number): Promise<void>;
     name: string;

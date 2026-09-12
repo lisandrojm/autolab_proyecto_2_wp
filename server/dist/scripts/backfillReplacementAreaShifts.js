@@ -7,6 +7,7 @@ import { Project } from "../models/Project.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Role } from "../models/Role.js";
+import { MOBILE_ACTIVITY_LOGS } from "../utils/permisosMobile.js";
 const idOf = (v) => String(v?._id ?? v ?? "");
 const normalizeAssignments = (raw) => (raw || [])
     .map((a) => ({ areaId: idOf(a?.areaId), shiftIds: (a?.shiftIds || []).map(idOf).filter(Boolean) }))
@@ -48,9 +49,9 @@ async function backfillReplacementAreaShifts() {
         const areaMap = new Map(areas.map((a) => [String(a._id), a]));
         const shifts = await Shift.find({}).select("_id name").lean();
         const shiftMap = new Map(shifts.map((s) => [String(s._id), s.name]));
-        const coordinadorRoleIds = new Set((await Role.find({}).select("_id name").lean())
-            .filter((r) => String(r.name || "").toLowerCase().includes("mobile-coordinador"))
-            .map((r) => String(r._id)));
+        // Coordinador = puede cargar novedades. Antes se buscaba el rol por nombre ("mobile-coordinador"),
+        // que dejó de existir como rol fijo: ahora la pregunta es por el permiso.
+        const coordinadorRoleIds = new Set((await Role.find({ permissions: MOBILE_ACTIVITY_LOGS }).select("_id").lean()).map((r) => String(r._id)));
         // ── UserProjects del tenant (los de los proyectos filtrados) ───────
         const ups = await UserProject.find({ projectId: { $in: projects.map((p) => p._id) } });
         console.log(`📄 ${ups.length} asignaciones usuario-proyecto a revisar.\n`);

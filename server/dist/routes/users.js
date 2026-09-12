@@ -8,6 +8,7 @@ import { Tenant } from "../models/Tenant.js";
 import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
 import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
+import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds } from "../utils/permisosMobile.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { Area } from "../models/Area.js";
@@ -29,7 +30,7 @@ import { ImportHistory } from "../models/ImportHistory.js";
 import { ExternalApiService } from "../services/externalApiService.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { requirePermission } from "../middleware/permissions.js";
+import { requireAnyPermission, requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia.js";
@@ -56,7 +57,7 @@ async function resolveProjectTeamFilterIds(projectId, filtros) {
         return [];
     const members = await User.find({ projectIds: projectId })
         .select("_id firstName lastName roles metadata.projects")
-        .populate({ path: "roles", select: "name", model: Role })
+        .populate({ path: "roles", select: "name permissions", model: Role })
         .populate({
         path: "metadata.projects",
         model: UserProject,
@@ -69,9 +70,16 @@ async function resolveProjectTeamFilterIds(projectId, filtros) {
     })
         .lean();
     const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
-    // Mismo criterio laxo que el front (`checkIsCoordinator`): rol o nombre que diga "coordinador".
+    /*
+      Coordinador = puede cargar novedades. Se pregunta por PERMISO, no por el nombre del rol.
+  
+      Antes se buscaba la palabra "coordinador" en el nombre del rol, con lo cual dependía de que el rol
+      se siguiera llamando así; ahora el permiso es el dato. Se conserva el fallback por nombre de la
+      persona —el mismo criterio laxo que el front (`checkIsCoordinator`)— porque hay equipos donde el
+      puesto viene en el nombre y no hay usuario con rol detrás.
+    */
     const esCoordinador = (m) => {
-        if ((m.roles || []).some((r) => String(r?.name || "").toLowerCase().includes("coordinador")))
+        if (permisosDeRoles(m.roles).has(MOBILE_ACTIVITY_LOGS))
             return true;
         return `${m.firstName || ""} ${m.lastName || ""}`.toLowerCase().includes("coordinador");
     };
@@ -155,6 +163,8 @@ const createUserSchema = z.object({
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     roles: z.array(z.string()).default([]),
+    // Puede quedar a cargo de un proyecto. Es de la persona, no de sus roles: ver GET /eligible-responsables.
+    isProjectResponsible: z.boolean().optional(),
     hireDate: z
         .string()
         .or(z.date())
@@ -171,6 +181,7 @@ const updateUserSchema = z
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     roles: z.array(z.string()).optional(),
+    isProjectResponsible: z.boolean().optional(),
     hireDate: z
         .string()
         .or(z.date())
@@ -206,8 +217,15 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /users - Listar usuarios
-router.get("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+/*
+  GET /users - Listar usuarios
+
+  También lo mira la tarjeta «Usuarios» de la app mobile (el historial de solicitudes de
+  contratación), que hasta ahora pedía `admin_users:view` y por eso respondía 403 a todo el que no
+  fuera Admin: la pantalla estaba rota justo para quien la tenía habilitada. Con el permiso propio
+  del móvil ya no depende de tener acceso a la administración.
+*/
+router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req, res) => {
     try {
         const { page = 1, limit = 50, email, isActive, areaId } = req.query;
         const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
@@ -303,7 +321,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
         if (req.query.roleId) {
             andConditions.push({ roles: req.query.roleId });
         }
-        // Filtro por NOMBRE de rol (ej. "mobile-coordinador"). Se resuelve acá porque el cliente no puede
+        // Filtro por NOMBRE de rol (ej. "Administración"). Se resuelve acá porque el cliente no puede
         // listar /roles sin el permiso admin_roles:view. El separador es flexible: "Mobile-Coordinador",
         // "Mobile Coordinador" y "mobile_coordinador" matchean igual (match exacto sobre el nombre completo).
         if (req.query.roleName) {
@@ -318,6 +336,26 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
                 const roleIds = await Role.find(roleFilter).distinct("_id");
                 andConditions.push({ roles: { $in: roleIds } }); // sin roles que matcheen → 0 resultados
             }
+        }
+        /*
+          Filtro por PERMISO (ej. `permission=mobile_activity_logs:view`, «carga novedades»).
+    
+          Es el reemplazo del filtro por nombre de rol que usaban Contratos y Equipo de Proyecto para
+          separar coordinadores de colaboradores: preguntaban por dos roles que ya no existen como tales.
+          Con `notPermission` se pide el complemento —los que NO lo tienen—, que es la otra mitad de ese
+          mismo filtro y no se puede expresar con `$in`.
+        */
+        const filtroPorPermiso = async (permiso) => {
+            const roleFilter = { permissions: permiso };
+            if (!isSuperAdmin)
+                roleFilter.tenantId = req.tenantObjectId;
+            return Role.find(roleFilter).distinct("_id");
+        };
+        if (req.query.permission) {
+            andConditions.push({ roles: { $in: await filtroPorPermiso(String(req.query.permission)) } });
+        }
+        if (req.query.notPermission) {
+            andConditions.push({ roles: { $nin: await filtroPorPermiso(String(req.query.notPermission)) } });
         }
         // Filtros del equipo que dependen del último contrato o del área/turno del miembro. Resolverlos
         // acá (y no en el front sobre la página cargada) es lo que hace que la paginación sea correlativa.
@@ -636,7 +674,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 // dato no existiera. Así estuvo `nombreValidadoArcaAt`, y el mismo nombre salía validado en
                 // Usuarios y sin validar en Contratos.
                 .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.sinCuit metadata.nombreValidadoArcaAt")
-                .populate({ path: "roles", select: "name", model: Role })
+                // `permissions` además del nombre: el filtro por rol de esta pantalla pasó a ser por permiso.
+                .populate({ path: "roles", select: "name permissions", model: Role })
                 .lean(),
             Client.find({ _id: { $in: [...new Set(projectsList.map((p) => String(p.clientId?._id || p.clientId || "")))].filter((id) => Types.ObjectId.isValid(id)) } })
                 .select("name")
@@ -666,6 +705,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 .filter(Boolean)
             : [];
         const roleFilterRegex = roleNameParts.length > 0 ? new RegExp(`^${roleNameParts.join("[^a-z0-9]*")}$`, "i") : null;
+        // Filtro por PERMISO: reemplaza al que separaba coordinadores de colaboradores por nombre de rol.
+        const permisoRequerido = req.query.permission ? String(req.query.permission) : undefined;
+        const permisoExcluido = req.query.notPermission ? String(req.query.notPermission) : undefined;
         // Estados impositivos (u otros) pedidos por la pantalla de Gestión de Contratos: filtrar acá
         // evita devolverle el padrón entero al front para que descarte casi todo del lado del cliente.
         const estadosFiltro = req.query.estados
@@ -708,6 +750,13 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 continue;
             if (roleFilterRegex && !(user.roles || []).some((r) => roleFilterRegex.test(String(r?.name || ""))))
                 continue;
+            if (permisoRequerido || permisoExcluido) {
+                const permisos = permisosDeRoles(user.roles);
+                if (permisoRequerido && !permisos.has(permisoRequerido))
+                    continue;
+                if (permisoExcluido && permisos.has(permisoExcluido))
+                    continue;
+            }
             if (searchRegex) {
                 const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim();
                 const candidatos = [nombreCompleto, user.email, project.name, m.nombre_rol_frame, contratoActivo.nombre_contrato];
@@ -724,7 +773,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 /** El nombre de esta persona es literalmente el que ARCA tiene para su CUIT. */
                 userNombreValidadoArca: !!user.metadata?.nombreValidadoArcaAt,
                 userExternalId: user.metadata?.id ?? null,
-                userRoles: (user.roles || []).map((r) => ({ _id: String(r._id), name: r.name })),
+                // Con los permisos: las pantallas que separan «carga novedades» de «no carga» los necesitan,
+                // y antes lo deducían del nombre del rol.
+                userRoles: (user.roles || []).map((r) => ({ _id: String(r._id), name: r.name, permissions: r.permissions || [] })),
                 clientId,
                 clientName: clientNameById.get(clientId) || "",
                 projectId: String(project._id),
@@ -1139,9 +1190,10 @@ router.get("/directory", requireTenant, authenticateToken, async (req, res) => {
         // desde `/users` o `/users/:id` para quien sí lo necesite.
         const users = await User.find(filter)
             .select("firstName lastName email projectIds roles metadata")
-            // `roles` (solo el nombre): mobile lo necesita para distinguir a los coordinadores al armar
-            // el roster de novedades. Es un array chico de refs, cuesta bastante menos que lo de arriba.
-            .populate({ path: "roles", select: "name", model: Role })
+            // `roles` con nombre y permisos: mobile los necesita para distinguir a los coordinadores al
+            // armar el roster de novedades —hoy por permiso, antes por el nombre del rol—. Es un array chico
+            // de refs con unos pocos strings, cuesta bastante menos que lo de arriba.
+            .populate({ path: "roles", select: "name permissions", model: Role })
             .populate("projectIds", "name")
             .populate({
             path: "metadata.projects",
@@ -1160,26 +1212,23 @@ router.get("/directory", requireTenant, authenticateToken, async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /users/eligible-responsables - Listar usuarios elegibles como responsables de proyecto
-// Busca roles que tengan el permiso "project_responsible:eligible" y devuelve los usuarios con esos roles
+/*
+  GET /users/eligible-responsables — quiénes pueden quedar a cargo de un proyecto.
+
+  Sale de un tilde en la ficha de la persona (`isProjectResponsible`). Antes salía de los roles: se
+  buscaban los que tuvieran el permiso `project_responsible:eligible` O cuyo nombre dijera
+  "responsable", y después los usuarios con esos roles. Eso obligaba a inventarle un rol a alguien
+  para poder elegirlo en el selector, y hacía que renombrar un rol cambiara quién era elegible.
+  Poder estar a cargo de un proyecto es un atributo de la persona, no una pantalla que se destapa.
+*/
 router.get("/eligible-responsables", requireTenant, authenticateToken, async (req, res) => {
     try {
-        // 1. Encontrar todos los roles del tenant que incluyen el permiso o tienen "Responsable" en el nombre
-        const eligibleRoles = await Role.find({
-            tenantId: req.tenantObjectId,
-            $or: [
-                { permissions: "project_responsible:eligible" },
-                { name: { $regex: /responsable/i } }
-            ]
-        }).select("_id");
-        const eligibleRoleIds = eligibleRoles.map(r => r._id);
-        // 2. Encontrar usuarios activos que tengan alguno de esos roles
         const users = await User.find({
             tenantId: req.tenantObjectId,
             "metadata.activo": true,
-            roles: { $in: eligibleRoleIds },
+            isProjectResponsible: true,
         })
-            .select("firstName lastName email metadata")
+            .select("firstName lastName email metadata isProjectResponsible")
             .populate("roles", "name")
             .sort({ firstName: 1, lastName: 1 });
         res.json(users);
@@ -1336,22 +1385,28 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
             }
             data.roles = roleObjectIds.map((id) => id.toString());
             /*
-              No se le puede sacar Mobile-Coordinador a alguien que tiene turnos a cargo.
+              No se puede dejar sin el permiso de Novedades a alguien que tiene turnos a cargo.
       
-              La asignación vive en `Project.coordinatorAssignments`. Sin el rol, esa persona no entra a la
-              app como coordinador: las novedades de sus áreas/turnos no las carga nadie y aparecen vencidas
-              en Cumplimiento, sin nada que explique por qué. Primero se lo libera desde el equipo del
-              proyecto, después se le cambia el rol.
+              La asignación vive en `Project.coordinatorAssignments`. Sin ese permiso, esa persona abre la
+              app y no tiene dónde cargar las novedades de sus áreas/turnos: no las carga nadie y aparecen
+              vencidas en Cumplimiento, sin nada que explique por qué. Primero se la libera desde el equipo
+              del proyecto, después se le cambian los roles.
       
-              Va acá y no solo en el modal porque el front puede saltearse: esto es un PATCH del API.
+              Antes la pregunta era "¿le queda el rol Mobile-Coordinador?" y dependía de cómo se llamara ese
+              rol. Ahora se comparan los permisos EFECTIVOS —la unión de los de sus roles— antes y después,
+              que es lo que la persona realmente pierde o conserva.
+      
+              Va acá y no solo en el modal porque el front se puede saltear: esto es un PATCH del API.
             */
-            const teniaCoordinador = await Role.exists({ _id: { $in: currentUser.roles }, name: /mobile-coordinador/i });
-            const sigueCoordinador = existingRoles.some((r) => /mobile-coordinador/i.test(r.name));
-            if (teniaCoordinador && !sigueCoordinador) {
-                const proyectos = await Project.find({ "coordinatorAssignments.userId": currentUser._id }).select("name").lean();
+            const permisosAntes = await permisosDeRolesIds(targetTenantId, currentUser.roles);
+            const permisosDespues = permisosDeRoles(existingRoles);
+            if (permisosAntes.has(MOBILE_ACTIVITY_LOGS) && !permisosDespues.has(MOBILE_ACTIVITY_LOGS)) {
+                const proyectos = await Project.find({ tenantId: targetTenantId, "coordinatorAssignments.userId": currentUser._id })
+                    .select("name")
+                    .lean();
                 if (proyectos.length > 0) {
                     res.status(409).json({
-                        error: `No se puede sacar el rol Mobile-Coordinador: coordina turnos en ${proyectos.map((p) => p.name).join(", ")}. Liberá esas coordinaciones desde el equipo del proyecto y volvé a intentar.`,
+                        error: `Se quedaría sin el permiso "APP MOBILE | Novedades" y coordina turnos en ${proyectos.map((p) => p.name).join(", ")}. Liberá esas coordinaciones desde el equipo del proyecto y volvé a intentar.`,
                     });
                     return;
                 }

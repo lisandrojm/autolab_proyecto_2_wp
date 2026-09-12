@@ -27,8 +27,10 @@ export const requireSuperAdmin = () => {
 };
 /**
  * Middleware: Requiere un permiso específico (por ejemplo: "posts:view").
+ * Admite varios: en ese caso alcanza con tener uno (ver `requireAnyPermission`).
  */
 export const requirePermission = (perm) => {
+    const perms = Array.isArray(perm) ? perm : [perm];
     return async (req, res, next) => {
         try {
             const user = req.user;
@@ -55,7 +57,7 @@ export const requirePermission = (perm) => {
             }
             // ✅ Admin tiene acceso a todo excepto tenants
             if (lowerRoleNames.includes("admin") || primaryRole === "admin") {
-                const [module] = perm.split(":");
+                const [module] = perms[0].split(":");
                 if (module === "tenants") {
                     console.warn(`[Permission Check] Admin tried to access tenants module`);
                     return res.status(403).json({ error: "Insufficient permissions" });
@@ -63,12 +65,14 @@ export const requirePermission = (perm) => {
                 return next();
             }
             // ✅ Sistema Simplificado: Si tienes "Ver", tienes todo.
-            // Se comprueba el permiso solicitado, su versión :view, o el comodín *
-            const [module] = perm.split(":");
-            // Comprobar si existe el permiso explícito o su versión :view o wildcard
-            const allowed = permissions.has("*") || permissions.has(perm) || permissions.has(`${module}:view`) || permissions.has(`${module}:*`);
+            // Se comprueba cualquiera de los permisos pedidos, su versión :view, o el comodín *
+            const allowed = permissions.has("*") ||
+                perms.some((p) => {
+                    const [module] = p.split(":");
+                    return permissions.has(p) || permissions.has(`${module}:view`) || permissions.has(`${module}:*`);
+                });
             if (!allowed) {
-                console.warn(`[Permission Check] Access denied for ${user.email}. Req: ${perm}. Has: ${Array.from(permissions).join(", ")}`);
+                console.warn(`[Permission Check] Access denied for ${user.email}. Req: ${perms.join(" | ")}. Has: ${Array.from(permissions).join(", ")}`);
                 return res.status(403).json({ error: "Insufficient permissions" });
             }
             next();
@@ -79,6 +83,15 @@ export const requirePermission = (perm) => {
         }
     };
 };
+/**
+ * Igual que `requirePermission`, pero alcanza con tener UNO de los permisos.
+ *
+ * Nació con los permisos granulares del móvil: el listado de usuarios lo miran dos pantallas muy
+ * distintas —la de administración (`admin_users:view`) y la tarjeta «Usuarios» de la app
+ * (`mobile_users:view`)— y hasta ahora la segunda pedía el permiso de la primera, con lo cual
+ * respondía 403 a todo el que no fuera Admin: la tarjeta estaba rota justo para quien la tenía.
+ */
+export const requireAnyPermission = (...perms) => requirePermission(perms);
 /**
  * Helper: Verifica si un usuario puede ver un documento.
  * (No hay más funciones para editar, eliminar o compartir)

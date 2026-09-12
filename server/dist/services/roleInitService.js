@@ -1,15 +1,18 @@
 import { Types } from 'mongoose';
 import { Role } from '../models/Role.js';
-import { cleanupDuplicateMobileRoles } from './roleCleanupService.js';
+import { User } from '../models/User.js';
+import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS } from '../utils/permisosMobile.js';
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * PERMISOS PARA ROL USER - SISTEMA SIMPLIFICADO
  * ═══════════════════════════════════════════════════════════════════════
  *
- * El rol USER se crea sin permisos por defecto.
- * Los permisos deben ser asignados manualmente según las necesidades.
+ * El rol USER no da nada de la plataforma, pero SÍ el piso del móvil: es el rol «por defecto» del
+ * tenant y, desde este cambio, es el que reciben los usuarios importados de FRAME y los que entran
+ * por el link de registro. Si no trajera los permisos del móvil, esas altas quedarían sin poder
+ * abrir la app —que es exactamente para lo que se las da de alta—.
  */
-const USER_PERMISSIONS = [];
+const USER_PERMISSIONS = [...MOBILE_BASE_PERMISSIONS];
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * PERMISOS PARA ROL ADMIN - ACCESO COMPLETO
@@ -67,13 +70,16 @@ const ADMIN_PERMISSIONS = [
     'config_profile:view', // Mi Perfil
     'config_escaneo_dropbox:view', // Documentos (Dropbox) — configuración del escaneo automático
     'config_afip:view', // AFIP — conexión con el Padrón de AFIP
-    // ──────────── Proyectos ────────────
-];
-const MOBILE_COLLABORATOR_PERMISSIONS = [
-    'mobile_collaborator:view', // Permisos de colaborador mobile
-];
-const MOBILE_COORDINATOR_PERMISSIONS = [
-    'mobile_coordinator:view', // Permisos de coordinador mobile
+    /*
+      ──────────── App Mobile ────────────
+  
+      Admin es «acceso completo», así que también entra a la app. Hacía falta decirlo: el servidor deja
+      pasar a un Admin por cualquier `requirePermission` (ver `middleware/permissions.ts`), pero el
+      front NO lo hace —`hasPermission` sólo bypassea a superadmin— y la app mobile lee los permisos
+      crudos justamente para no heredar ese bypass. Estaba parchado a mano y de forma desprolija: el
+      seed de arranque le daba `mobile_collaborator:view` al Admin y este archivo no.
+    */
+    ...ALL_MOBILE_PERMISSIONS,
 ];
 /**
  * Helper para asegurar la existencia y sincronización de un rol
@@ -135,14 +141,25 @@ export async function ensureDefaultRoles(tenantId) {
     }
     // 1. Admin (Sistema)
     const adminRole = await ensureRole(tid, 'Admin', ADMIN_PERMISSIONS, 'Administrador - Acceso completo a todos los módulos del sistema', false, true);
-    // 2. Responsable de Proyecto (Sistema)
-    const responsablePerms = ['client:view', 'admin_clients:view', 'admin_orders:view', 'admin_vacations:view', 'admin_activity_logs:view', 'mobile_collaborator:view', 'project_responsible:eligible'];
+    /*
+      2. Responsable de Proyecto (Sistema)
+  
+      Ya NO otorga la elegibilidad para quedar a cargo de un proyecto: eso pasó a ser un tilde en la
+      ficha de la persona (`User.isProjectResponsible`). El rol sobrevive por lo otro que trae —ver
+      clientes, pedidos, vacaciones y novedades—, que es de lo que depende quien hoy lo tiene.
+    */
+    const responsablePerms = ['client:view', 'admin_clients:view', 'admin_orders:view', 'admin_vacations:view', 'admin_activity_logs:view', ...MOBILE_BASE_PERMISSIONS];
     await ensureRole(tid, 'Responsable de Proyecto', responsablePerms, 'Rol de responsable de proyectos', false, true);
-    // 3. Mobile-Coordinador (Sistema)
-    await ensureRole(tid, 'Mobile-Coordinador', MOBILE_COORDINATOR_PERMISSIONS, 'Rol de coordinador para app mobile', false, true);
-    // 4. Mobile-Colaborador (Sistema)
-    await ensureRole(tid, 'Mobile-Colaborador', MOBILE_COLLABORATOR_PERMISSIONS, 'Rol de colaborador para app mobile', false, true);
-    // 5. User (Por defecto)
+    /*
+      Los roles Mobile-Colaborador y Mobile-Coordinador YA NO SE CREAN.
+  
+      Eran dos roles de sistema con un permiso cerrado cada uno, y media docena de lugares los buscaban
+      por nombre —con tres expresiones regulares distintas entre sí—. Lo que hacía falta saber de ellos
+      («¿entra a la app?», «¿carga novedades?») ahora se pregunta por permiso. Los que existan en la
+      base se conservan como roles comunes y editables: borrarlos acá dejaría sin app a todos los
+      usuarios importados, porque los permisos viven en el rol. Ver `migrateMobileYResponsable`.
+    */
+    // 3. User (Por defecto)
     const userRole = await ensureRole(tid, 'User', USER_PERMISSIONS, 'Usuario estándar - Sin permisos por defecto', true, false);
     return { adminRole, userRole };
 }
@@ -160,7 +177,7 @@ export async function migrateRolePermissions(tenantId) {
         'roles:view': 'admin_roles:view',
         'areas:view': 'admin_areas:view',
         'users:view': 'admin_users:view',
-        'mobile:access': 'mobile_collaborator:view',
+        'mobile:access': MOBILE_ORDERS,
     };
     const roles = await Role.find({ tenantId: tid });
     for (const role of roles) {
@@ -173,9 +190,11 @@ export async function migrateRolePermissions(tenantId) {
             }
             return perm;
         });
-        // 2) Filtrar: Solo permitir permisos que terminen en :view, :eligible o sean el comodín *
-        // Esto elimina permisos granulares (:edit, :delete, :create) que ya no son necesarios
-        const filteredPermissions = updatedPermissions.filter((perm) => perm === '*' || perm.endsWith(':view') || perm.endsWith(':eligible') || perm.startsWith('mobile_'));
+        // 2) Filtrar: Solo permitir permisos que terminen en :view o sean el comodín *
+        // Esto elimina permisos granulares (:edit, :delete, :create) que ya no son necesarios.
+        // `:eligible` salió de la lista blanca: el único que existía era `project_responsible:eligible`,
+        // que dejó de ser un permiso y pasó a ser un campo de la persona (`User.isProjectResponsible`).
+        const filteredPermissions = updatedPermissions.filter((perm) => perm === '*' || perm.endsWith(':view') || perm.startsWith('mobile_'));
         if (filteredPermissions.length !== updatedPermissions.length) {
             needsUpdate = true;
             updatedPermissions = filteredPermissions;
@@ -190,6 +209,78 @@ export async function migrateRolePermissions(tenantId) {
             await role.save();
             console.log(`[RoleInit] ♻️ Migrated role ${role.name} permissions for tenant ${tid}`);
         }
+    }
+}
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * MIGRACIÓN: los dos roles Mobile se vuelven permisos, y «responsable» se vuelve del usuario
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Es idempotente y corre en cada arranque, como el resto de las migraciones de este archivo. Hace
+ * cuatro cosas, y el orden importa:
+ *
+ *   1. Marca `isProjectResponsible` en las personas que HOY son elegibles como responsables. Va
+ *      primero porque esa elegibilidad se lee de los roles y el paso 2 la borra. El criterio es el
+ *      mismo que usaba `GET /users/eligible-responsables`: el permiso, o un rol que diga «responsable».
+ *   2. Traduce los permisos cerrados del móvil a los granulares y saca el de elegibilidad.
+ *   3. Baja `isSystem` de los dos roles Mobile: dejan de ser intocables y pasan a editarse, renombrarse
+ *      o borrarse desde Usuarios → Roles como cualquier otro. NO se borran acá: los permisos viven en
+ *      el rol, así que borrarlos dejaría sin app a todos los usuarios importados.
+ *   4. Se asegura de que el rol POR DEFECTO del tenant abra la app. Es el que reciben las altas
+ *      —import de FRAME y link de registro—, que antes recibían Mobile-Colaborador buscándolo por
+ *      nombre con tres expresiones regulares distintas entre sí.
+ */
+export async function migrateMobileYResponsable(tenantId) {
+    const tid = new Types.ObjectId(tenantId);
+    // El tenant de administración de plataforma sólo tiene el rol Superadmin: no tiene app, ni rol por
+    // defecto, ni nada que migrar. Sin esto avisaría en cada arranque de algo que está bien así.
+    const { Tenant } = await import('../models/Tenant.js');
+    const tenant = await Tenant.findById(tid);
+    if (tenant?.isSystem || tenant?.slug === 'superadmin')
+        return;
+    const roles = await Role.find({ tenantId: tid });
+    // ── 1) La elegibilidad de responsable pasa del rol a la persona ──
+    const idsElegibles = roles.filter((r) => r.permissions.includes(LEGACY_PROJECT_RESPONSIBLE) || /responsable/i.test(r.name)).map((r) => r._id);
+    if (idsElegibles.length > 0) {
+        const { modifiedCount } = await User.updateMany({ tenantId: tid, roles: { $in: idsElegibles }, isProjectResponsible: { $ne: true } }, { $set: { isProjectResponsible: true } });
+        if (modifiedCount > 0) {
+            console.log(`[RoleInit] ♻️ ${modifiedCount} usuario/s marcado/s como Responsable de Proyecto (tenant ${tid})`);
+        }
+    }
+    // ── 2 y 3) Permisos cerrados → granulares; los roles Mobile dejan de ser de sistema ──
+    const esRolMobile = /^mobile[ _-]*(colaborador|coordinador)$/i;
+    for (const role of roles) {
+        const permisos = new Set(role.permissions);
+        if (permisos.delete(LEGACY_MOBILE_COLLABORATOR)) {
+            MOBILE_BASE_PERMISSIONS.forEach((p) => permisos.add(p));
+        }
+        if (permisos.delete(LEGACY_MOBILE_COORDINATOR)) {
+            ALL_MOBILE_PERMISSIONS.forEach((p) => permisos.add(p));
+        }
+        permisos.delete(LEGACY_PROJECT_RESPONSIBLE);
+        const finales = [...permisos];
+        const cambioPermisos = finales.length !== role.permissions.length || finales.some((p) => !role.permissions.includes(p));
+        const dejaDeSerSistema = role.isSystem && esRolMobile.test(role.name.trim());
+        if (cambioPermisos || dejaDeSerSistema) {
+            role.permissions = finales;
+            if (dejaDeSerSistema)
+                role.isSystem = false;
+            await role.save();
+            console.log(`[RoleInit] ♻️ Rol "${role.name}" migrado a los permisos nuevos (tenant ${tid})`);
+        }
+    }
+    // ── 4) El rol por defecto tiene que abrir la app ──
+    const rolPorDefecto = await Role.findOne({ tenantId: tid, isDefault: true });
+    if (rolPorDefecto) {
+        const faltantes = MOBILE_BASE_PERMISSIONS.filter((p) => !rolPorDefecto.permissions.includes(p));
+        if (faltantes.length > 0) {
+            rolPorDefecto.permissions = [...rolPorDefecto.permissions, ...faltantes];
+            await rolPorDefecto.save();
+            console.log(`[RoleInit] ♻️ Rol por defecto "${rolPorDefecto.name}": + ${faltantes.join(', ')} (tenant ${tid})`);
+        }
+    }
+    else {
+        console.warn(`[RoleInit] ⚠️ El tenant ${tid} no tiene rol por defecto: las altas van a quedar sin acceso a la app.`);
     }
 }
 /**
@@ -213,8 +304,14 @@ export async function ensureAllTenantsHaveDefaultRoles() {
             const tenantId = new Types.ObjectId(tenant._id);
             const rolesBefore = await Role.countDocuments({ tenantId });
             await ensureDefaultRoles(tenantId);
-            // Automatic cleanup of duplicates on startup
-            await cleanupDuplicateMobileRoles(tenantId, false);
+            /*
+              Acá corría un dedupe automático de los roles Mobile (`cleanupDuplicateMobileRoles`). Se retiró
+              junto con esos roles: además de no quedarle nada que deduplicar, renombraba al ganador como
+              "Mobile - Coordinador" —con espacios—, un nombre que ningún seed creaba y que ninguna de las
+              búsquedas por nombre del resto del código encontraba. El arreglo automático rompía justo lo
+              que decía cuidar.
+            */
+            await migrateMobileYResponsable(tenantId);
             await migrateRolePermissions(tenantId);
             const rolesAfter = await Role.countDocuments({ tenantId });
             if (rolesAfter > rolesBefore) {

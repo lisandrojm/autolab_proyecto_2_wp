@@ -17,6 +17,7 @@ import { validate } from "../middleware/validate.js";
 import { checkEmailAvailability } from "../controllers/authController.js";
 import { signJwt } from "../utils/jwt.js";
 import { addUserToClientUsuarios } from "../services/clientUsuariosService.js";
+import { esPermisoMobile } from "../utils/permisosMobile.js";
 import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
 import { z } from "zod";
@@ -158,12 +159,20 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
         const rolePermissions = user.roles ? user.roles.flatMap((role) => role.permissions || []) : [];
         // Eliminar duplicados
         const permissions = [...new Set(rolePermissions)];
-        // Calcular redirectTo basado en permisos
+        /*
+          A dónde entra.
+    
+          El criterio salió de dos roles con nombre fijo y pasó a los permisos: si sólo tiene tarjetas del
+          móvil, va derecho a la app; si además tiene algo de la plataforma, el front le muestra el
+          selector de portal y decide la persona (ver `LoginPage.tsx`).
+        */
+        const tienePermisosMobile = permissions.some((p) => esPermisoMobile(p));
+        const tienePermisosPlataforma = permissions.some((p) => !esPermisoMobile(p));
         let redirectTo = "/orders"; // Ruta por defecto
         if (primaryRoleName.toLowerCase() === "superadmin") {
             redirectTo = "/tenants";
         }
-        else if (permissions.includes("mobile_collaborator:view") || permissions.includes("mobile_coordinator:view")) {
+        else if (tienePermisosMobile && !tienePermisosPlataforma) {
             redirectTo = "/mobile";
         }
         const payload = {
@@ -685,9 +694,19 @@ router.post("/registro", async (req, res) => {
             res.status(409).json({ error: `Ese CUIT ya figura a nombre de ${duplicado.nombre}. Si sos vos, entrá con tu cuenta o escribile a la productora. Si no, revisá el número.` });
             return;
         }
-        // Rol por defecto: únicamente mobile-colaborador
-        const mobileRole = await Role.findOne({ tenantId, name: { $regex: /^mobile-colaborador$/i } }).select("_id");
-        const roles = [mobileRole?._id].filter(Boolean);
+        /*
+          Rol por defecto: el que el tenant tenga marcado como tal.
+    
+          Antes se buscaba literalmente el rol "Mobile-Colaborador" por nombre —con un regex distinto del
+          que usaba el import de FRAME, que hacía lo mismo—. Ese rol dejó de ser especial: lo que define
+          qué ve una persona recién registrada es el rol por defecto del tenant, que se elige desde
+          Usuarios → Roles y que la migración se encarga de que abra la app.
+        */
+        const rolPorDefecto = await Role.findOne({ tenantId, isDefault: true }).select("_id");
+        if (!rolPorDefecto) {
+            console.warn(`[registro] El tenant ${tenantId} no tiene rol por defecto: el alta queda sin permisos.`);
+        }
+        const roles = [rolPorDefecto?._id].filter(Boolean);
         const num = (v) => (v != null && v !== "" ? Number(v) : undefined);
         /*
           VARIOS roles empresa, no uno.

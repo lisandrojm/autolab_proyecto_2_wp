@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { Project } from '../models/Project.js';
 import { User } from '../models/User.js';
-import { Role } from '../models/Role.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -29,15 +28,6 @@ async function run() {
             continue;
         }
         const tenantId = project.tenantId;
-        // Find the "Responsable de Proyecto" role for this tenant
-        const role = await Role.findOne({
-            tenantId,
-            name: { $regex: /^responsable de proyecto$/i }
-        });
-        if (!role) {
-            console.warn(`Role "Responsable de Proyecto" not found for tenant ${tenantId}`);
-            continue;
-        }
         // Find the user by metadata.id
         const user = await User.findOne({
             tenantId,
@@ -47,17 +37,19 @@ async function run() {
             console.warn(`User with metadata.id ${responsableId} not found for tenant ${tenantId} (Project: ${project.name})`);
             continue;
         }
-        // Add role if not present
-        const roleId = role._id;
-        const hasRole = user.roles.some(r => r.toString() === roleId.toString());
-        if (!hasRole) {
-            user.roles.push(roleId);
+        /*
+          Antes esto le agregaba el rol "Responsable de Proyecto", buscándolo por nombre. Poder quedar a
+          cargo de un proyecto dejó de ser un rol: es un tilde en la ficha de la persona, que es lo que
+          lee el selector de responsable (`GET /users/eligible-responsables`).
+        */
+        if (!user.isProjectResponsible) {
+            user.isProjectResponsible = true;
             await user.save();
-            console.log(`[UPDATED] Assigned role to user: ${user.firstName} ${user.lastName} (ID: ${responsableId}) - Project: ${project.name}`);
+            console.log(`[UPDATED] Marked as project responsible: ${user.firstName} ${user.lastName} (ID: ${responsableId}) - Project: ${project.name}`);
             updatedCount++;
         }
         else {
-            console.log(`[SKIP] User ${user.firstName} ${user.lastName} already has the role - Project: ${project.name}`);
+            console.log(`[SKIP] User ${user.firstName} ${user.lastName} is already marked - Project: ${project.name}`);
         }
     }
     console.log(`\nMigration complete. Total users updated: ${updatedCount}`);

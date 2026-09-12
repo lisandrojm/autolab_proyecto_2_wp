@@ -257,15 +257,21 @@ export class ExternalApiService {
         try {
             const employees = await this.getEmployees();
             const tenantObjectId = new mongoose.Types.ObjectId(tenantId);
-            // Default role assigned to every newly imported user: "Mobile-Colaborador".
-            // Tolerant match (hyphen/spaces, case-insensitive) to cover legacy naming.
-            const mobileCollabRole = await Role.findOne({
-                tenantId: tenantObjectId,
-                name: { $regex: /^mobile\s*-?\s*colaborador$/i },
-            });
-            const defaultRoleIds = mobileCollabRole ? [mobileCollabRole._id] : [];
-            if (!mobileCollabRole) {
-                console.warn("[EXTERNAL API] Role 'Mobile-Colaborador' not found for this tenant. New users will be created WITHOUT a role.");
+            /*
+              Rol de toda alta importada: el que el tenant tenga marcado POR DEFECTO.
+
+              Antes se buscaba el rol llamado "Mobile-Colaborador", con un regex tolerante al guion y a
+              los espacios porque el nombre había mutado con los años. Ese rol dejó de ser especial: lo
+              que abre la app hoy son permisos, y cuál de ellos recibe una persona recién importada lo
+              decide el rol por defecto, que se elige desde Usuarios → Roles.
+
+              Si el tenant no tiene rol por defecto, las altas quedan sin permisos y no pueden entrar a
+              ningún lado: por eso el aviso es ruidoso.
+            */
+            const rolPorDefecto = await Role.findOne({ tenantId: tenantObjectId, isDefault: true });
+            const defaultRoleIds = rolPorDefecto ? [rolPorDefecto._id] : [];
+            if (!rolPorDefecto) {
+                console.warn("[EXTERNAL API] Este tenant no tiene rol por defecto. Los usuarios nuevos se van a crear SIN rol y no van a poder entrar a la app.");
             }
             if (sinceDays) {
                 thresholdDate = new Date();

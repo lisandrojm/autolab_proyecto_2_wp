@@ -14,6 +14,7 @@ import { VacationConfig } from "../models/VacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
 import { RequestConfig } from "../models/RequestConfig.js";
 import { ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
+import { ALL_MOBILE_PERMISSIONS, MOBILE_BASE_PERMISSIONS } from "../utils/permisosMobile.js";
 import { Types } from "mongoose";
 /* ----------------------------- helpers ----------------------------- */
 const PdfsList = [
@@ -456,18 +457,28 @@ export async function seedOnStart() {
         console.log("🧹 Note: VacationCounter is now embedded in Vacation model.");
         // ---- ROLES ----
         console.log("👥 Seeding Roles...");
-        // 1. Admin (Sistema)
-        const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_releases:view", "config_holidays:view", "mobile_collaborator:view"];
+        /*
+          Los permisos del móvil son granulares y se comparten con `services/roleInitService.ts`, que es
+          donde se definen. Antes eran dos permisos cerrados —colaborador y coordinador— y lo que cada uno
+          destapaba estaba escrito en el código de la app.
+        */
+        // 1. Admin (Sistema) — acceso completo, la app incluida
+        const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_releases:view", "config_holidays:view", ...ALL_MOBILE_PERMISSIONS];
         await ensureRole(tenantId, "Admin", adminPerms, "Rol de administrador del sistema", false, true);
-        // 2. Responsable de Proyecto (Sistema)
-        const responsablePerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view", "project_responsible:eligible"];
+        // 2. Responsable de Proyecto (Sistema) — la elegibilidad ya no es un permiso: es `User.isProjectResponsible`
+        const responsablePerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", ...MOBILE_BASE_PERMISSIONS];
         await ensureRole(tenantId, "Responsable de Proyecto", responsablePerms, "Rol de responsable de proyectos", false, true);
-        // 3. Mobile-Coordinador (Sistema)
-        await ensureRole(tenantId, "Mobile-Coordinador", ["mobile_coordinator:view"], "Rol de coordinador para app mobile", false, true);
-        // 4. Mobile-Colaborador (Sistema)
-        await ensureRole(tenantId, "Mobile-Colaborador", ["mobile_collaborator:view"], "Rol de colaborador para app mobile", false, true);
-        // 5. User (No sistema, por defecto)
-        const userPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view"];
+        /*
+          3 y 4. Los dos roles del móvil, ahora como roles COMUNES (isSystem = false).
+    
+          Siguen existiendo porque los usuarios demo de más abajo los usan y porque los nombres son los que
+          la gente reconoce, pero ya no son intocables ni los busca nadie por nombre: son un punto de
+          partida editable desde Usuarios → Roles, igual que cualquier rol que arme el tenant.
+        */
+        await ensureRole(tenantId, "Mobile-Coordinador", ALL_MOBILE_PERMISSIONS, "Carga novedades del equipo, además de sus pedidos y vacaciones", false, false);
+        await ensureRole(tenantId, "Mobile-Colaborador", MOBILE_BASE_PERMISSIONS, "Sus pedidos y sus vacaciones desde la app", false, false);
+        // 5. User (No sistema, por defecto) — es el rol que reciben las altas, así que tiene que abrir la app
+        const userPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", ...MOBILE_BASE_PERMISSIONS];
         await ensureRole(tenantId, "User", userPerms, "User role", true, false);
         console.log("✅ Roles seeded");
         // ---- AREAS ----
@@ -892,7 +903,7 @@ export async function seedOnStart() {
         console.log(`👤 Admin: ${adminEmail} / ${adminPassword}`);
         console.log("📱 Mobile Colaborador: colaborador@mobile.com / colaborador123");
         console.log("📱 Mobile Coordinador: coordinador@mobile.com / coordinador-123");
-        console.log("🔐 Roles: admin, Mobile-Coordinador (mobile:access + mobile:coordinator), Mobile-Colaborador (mobile:access + mobile:collaborator)");
+        console.log("🔐 Roles: Admin, Mobile-Coordinador (las cuatro tarjetas de la app), Mobile-Colaborador (pedidos y vacaciones)");
     }
     catch (error) {
         console.error("❌ Seed error:", error);
