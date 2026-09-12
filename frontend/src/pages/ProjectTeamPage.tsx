@@ -29,6 +29,8 @@ import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia"
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
 import { TipoContratoSelect } from "../components/contratos/TipoContratoSelect";
+// «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
+import { cargaNovedades, MOBILE_ACTIVITY_LOGS } from "../utils/permisosMobile";
 import { contratosAPI, ContratoItem } from "../api/contratos";
 import { releasesAPI, Release } from "../api/release";
 import { companiesAPI, Company } from "../api/companies";
@@ -56,11 +58,18 @@ function formatContractDate(d?: string): string {
   return isNaN(dt.getTime()) ? "—" : dt.toLocaleDateString();
 }
 
-// Roles de sistema con acceso a la app mobile. El valor viaja al server como `roleName=mobile-<value>`,
-// que matchea el nombre completo del rol tolerando el separador ("Mobile-Coordinador", "Mobile Coordinador", ...).
+/*
+  Se filtra por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
+
+  Antes el valor viajaba como `roleName=mobile-<value>` y matcheaba el nombre completo del rol
+  tolerando el separador ("Mobile-Coordinador", "Mobile Coordinador", …). Esos dos roles dejaron de
+  ser fijos: cualquiera puede armar los suyos y llamarlos como quiera, así que buscar por nombre
+  vaciaba el filtro sin decir por qué. Lo que se quiere separar es quién carga las novedades del
+  equipo, y eso es un permiso.
+*/
 const MOBILE_ROLE_OPTIONS = [
-  { value: "colaborador", label: "Mobile-Colaborador" },
-  { value: "coordinador", label: "Mobile-Coordinador" },
+  { value: "con", label: "Carga novedades" },
+  { value: "sin", label: "No carga novedades" },
 ];
 
 function numeroALetras(num: number): string {
@@ -495,7 +504,8 @@ export const ProjectTeamPage: React.FC = () => {
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === "active") params.metadataActivo = "true";
       if (status === "inactive") params.metadataActivo = "false";
-      if (rolMobile) params.roleName = `mobile-${rolMobile}`;
+      if (rolMobile === "con") params.permission = MOBILE_ACTIVITY_LOGS;
+      if (rolMobile === "sin") params.notPermission = MOBILE_ACTIVITY_LOGS;
       if (vigencia) params.vigencia = vigencia;
       if (tipoContrato) params.tipoContrato = tipoContrato;
       if (areaTurno) params.areaTurno = areaTurno;
@@ -965,14 +975,8 @@ export const ProjectTeamPage: React.FC = () => {
     return teamMembers.length;
   }, [activeTab, teamTotal, coordinadoresCount, solicitudesCount, teamMembers.length]);
 
-  const hasMobileCoordinator = useMemo(() => {
-    return teamMembers.some((u) =>
-      u.roles?.some((r) => {
-        const n = r.name.toLowerCase();
-        return n.includes("mobile") && n.includes("coordinador");
-      }),
-    );
-  }, [teamMembers]);
+  // ¿Hay alguien en el equipo que pueda cargar novedades? Antes se preguntaba por el nombre del rol.
+  const hasMobileCoordinator = useMemo(() => teamMembers.some((u) => cargaNovedades(u.roles)), [teamMembers]);
 
   /**
    * Códigos de CCT habilitados para la empleadora elegida en el contrato.
@@ -1215,8 +1219,9 @@ export const ProjectTeamPage: React.FC = () => {
     return filtered;
   }, [allRoleFrames, selectedUserForWizard]);
 
-  // Check Is Coordinator Helper
-  const checkIsCoordinator = (user: User) => (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+  // Coordinador = puede cargar novedades. Se conserva el fallback por el nombre de la persona, que
+  // cubre a quien tiene el puesto escrito en el nombre y ningún rol detrás.
+  const checkIsCoordinator = (user: User) => cargaNovedades(user.roles) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
 
   // Get standard shifts for a user assigned to an area
   const getStandardShifts = (user: User, userConfig: any, activeContract: any, areaId: string, areaName: string) => {
@@ -1975,7 +1980,7 @@ export const ProjectTeamPage: React.FC = () => {
       return;
     }
     const replacedName = `${replaced.firstName || ""} ${replaced.lastName || ""}`.trim() || replaced.email;
-    const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes("mobile-coordinador"));
+    const isCoordinadorRole = cargaNovedades(selectedUserForWizard?.roles);
 
     const assignments = getMemberAssignments(replaced._id)
       .map((a) => {
@@ -3990,7 +3995,7 @@ export const ProjectTeamPage: React.FC = () => {
 
                       <div className="space-y-3">
                         {(() => {
-                          const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes("mobile-coordinador"));
+                          const isCoordinadorRole = cargaNovedades(selectedUserForWizard?.roles);
                           // Helper to check time overlap
                           const timeToMinutes = (t: string) => {
                             const [h, m] = t.split(":").map(Number);
@@ -4041,7 +4046,7 @@ export const ProjectTeamPage: React.FC = () => {
                                   <div className="flex items-center gap-2">
                                     <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
                                     <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
-                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Rol Coordinador</span>}
+                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Novedades</span>}
                                   </div>
                                   {isAreaActive && (
                                     <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
@@ -4051,7 +4056,7 @@ export const ProjectTeamPage: React.FC = () => {
                                 </div>
                                 {isAreaRestricted && (
                                   <div className="px-4 pb-3">
-                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Este usuario no tiene el rol "mobile-coordinador". Debes asignarle el rol primero para habilitar esta área.</p>
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no tiene el permiso "APP MOBILE | Novedades", así que no tendría dónde cargar las de esta área. Dale un rol que lo incluya desde su ficha.</p>
                                   </div>
                                 )}
                                 <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>

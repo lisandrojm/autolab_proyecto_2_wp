@@ -32,6 +32,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
 import { cachedFetch, invalidateRefCache } from '../utils/refCache';
 import { formatCuit } from '../utils/cuit';
+import { cargaNovedades, MOBILE_ACTIVITY_LOGS } from '../utils/permisosMobile';
 import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
 
 const HELP_KEY = 'users' as const;
@@ -1521,7 +1522,8 @@ export const UsersPage: React.FC = () => {
                         </label>
                         <div className="flex flex-wrap gap-2">
                           {viewUser.roles.map((role) => {
-                            const isCoord = role.name.toLowerCase().includes('coordinador');
+                            // Se destaca el rol que carga novedades —lo que antes era «coordinador»—, ahora por permiso.
+                            const isCoord = (role.permissions || []).includes(MOBILE_ACTIVITY_LOGS);
                             const classes = isCoord ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
 
                             return (
@@ -1636,7 +1638,7 @@ export const UsersPage: React.FC = () => {
                                     return String(uid) === String(viewUser?._id);
                                   }) || false;
 
-                                const isCoord = hasCoordAssignments || (viewUser?.roles && viewUser.roles.some((r) => r.name.toLowerCase().includes('coordinador'))) || viewUser?.firstName?.toLowerCase().includes('coordinador') || viewUser?.lastName?.toLowerCase().includes('coordinador') || (up.nombre_rol_frame && String(up.nombre_rol_frame).toLowerCase().includes('coordinador')) || (c.nombre_rol_frame && String(c.nombre_rol_frame).toLowerCase().includes('coordinador')) || (viewUser?.externalInfo?.rolFrames && viewUser.externalInfo.rolFrames.some((rf: string) => rf.toLowerCase().includes('coordinador')));
+                                const isCoord = hasCoordAssignments || cargaNovedades(viewUser?.roles) || viewUser?.firstName?.toLowerCase().includes('coordinador') || viewUser?.lastName?.toLowerCase().includes('coordinador') || (up.nombre_rol_frame && String(up.nombre_rol_frame).toLowerCase().includes('coordinador')) || (c.nombre_rol_frame && String(c.nombre_rol_frame).toLowerCase().includes('coordinador')) || (viewUser?.externalInfo?.rolFrames && viewUser.externalInfo.rolFrames.some((rf: string) => rf.toLowerCase().includes('coordinador')));
 
                                 if (standardAreaData.length === 0 && isCoord && project?.coordinatorAssignments) {
                                   const myAssignments = project.coordinatorAssignments.filter((asm: any) => {
@@ -2088,8 +2090,7 @@ export const UsersPage: React.FC = () => {
                         <td className="py-4 px-6 hidden md:table-cell">
                           <div className="flex flex-wrap gap-1">
                             {user.roles.map((r) => {
-                              const lower = r.name.toLowerCase();
-                              const isCoord = lower.includes('coordinador');
+                              const isCoord = (r.permissions || []).includes(MOBILE_ACTIVITY_LOGS);
 
                               let classes = 'bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300';
                               if (isCoord) {

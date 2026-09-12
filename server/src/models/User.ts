@@ -184,6 +184,12 @@ export interface IUser extends Document {
   vacationDays: { lawDays: number; extraDays: number; carryOverDays: number; totalDays: number };
   seniorityAtEndOfYear: number;
   isSystem: boolean;
+  /**
+   * Puede quedar A CARGO de un proyecto (es lo que llena el selector de responsable en Proyectos y
+   * Clientes). Es un atributo de la persona, no una pantalla que se destapa: por eso vive acá y no
+   * como permiso de un rol, que era donde estaba antes (`project_responsible:eligible`).
+   */
+  isProjectResponsible: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
   closeYear(maxDiasArrastre?: number): Promise<void>;
   name: string; // Keep name for backward compat if needed, or derived
@@ -213,6 +219,7 @@ const userSchema = new Schema<IUser>(
     carryOverVacationDays: { type: Number, default: 0 },
     lastLoginAt: { type: Date },
     isSystem: { type: Boolean, default: false },
+    isProjectResponsible: { type: Boolean, default: false },
     name: { type: String }, // Optional compatibility field
     metadata: {
       id: Number,
@@ -347,6 +354,8 @@ userSchema.index({ tenantId: 1, clientIds: 1 });
 userSchema.index({ tenantId: 1, projectIds: 1 });
 // Soporta el filtro por proyecto en GET /users ($or sobre metadata.projects.projectId)
 userSchema.index({ tenantId: 1, "metadata.projects.projectId": 1 });
+// Soporta GET /users/eligible-responsables, que lista los candidatos a responsable de un proyecto.
+userSchema.index({ tenantId: 1, isProjectResponsible: 1 });
 
 userSchema.pre("save", async function (this: IUser, next) {
   if (!this.isModified("password")) return next();

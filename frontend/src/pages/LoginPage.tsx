@@ -6,6 +6,8 @@ import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Logo } from "../components/ui/Logo";
 import { useAuthStore } from "../stores/authStore";
+// A qué portal entra cada uno: lo deciden los permisos, no el nombre del rol. Ver ese módulo.
+import { esPermisoMobile } from "../utils/permisosMobile";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagicWandSparkles, faEye, faEyeSlash, faBuilding, faMobileScreen, faLaptop, faEnvelope, faLock, faSpinner } from "@fortawesome/free-solid-svg-icons";
 
@@ -185,25 +187,22 @@ export const LoginPage: React.FC = () => {
       const roleNames = rolesFromResult.map((r) => (typeof r === "string" ? r : r?.name || "").toLowerCase());
 
       const isSuperadmin = roleNames.includes("superadmin");
-      
+
       /*
-        «RESPONSABLE DE PROYECTO» ENTRA A LOS DOS LADOS, Y ELIGE.
+        A DÓNDE ENTRA: LO DICEN LOS PERMISOS, NO EL NOMBRE DEL ROL.
 
-        Antes contaba como rol SOLO-mobile: `hasPlatformAccess` lo excluía explícitamente, así que
-        quien tuviera únicamente ese rol caía derecho en `/mobile` sin ver el selector — aunque su rol
-        tuviera permisos del escritorio asignados (Novedades, Pedidos, Vacaciones…), que se editan en
-        Usuarios → Roles y quedaban sin forma de usarse.
+        Antes esto se resolvía leyendo nombres: si el rol decía "mobile" era acceso a la app, y había
+        un caso especial escrito a mano para "Responsable de Proyecto", que contaba para los dos lados.
+        Bastaba con renombrar un rol para que alguien dejara de poder entrar, sin ninguna señal.
 
-        Que use mobile todos los días no significa que no pueda necesitar el escritorio: es la misma
-        persona la que carga novedades desde el teléfono y después mira un reporte en la computadora.
-        Ahora cuenta para los dos accesos, con lo cual cae en la rama del selector de más abajo y elige.
-
-        Lo que se ve en el escritorio lo siguen decidiendo los permisos del rol, no esto: si no tiene
-        ninguno, entra a una plataforma vacía. Esto abre la puerta; lo de adentro ya estaba resuelto.
+        Ahora: tener cualquier permiso de la app abre la app; tener cualquier otro abre la plataforma.
+        Quien tiene de los dos ve el selector y elige — que es lo que se quería para el responsable de
+        proyecto y vale igual para cualquiera: la misma persona carga novedades desde el teléfono y
+        después mira un reporte en la computadora.
       */
-      const esResponsableProyecto = roleNames.some((n) => n.includes("responsable de proyecto"));
-      const hasMobileAccess = roleNames.some((n) => n.includes("mobile")) || esResponsableProyecto;
-      const hasPlatformAccess = roleNames.some((n) => !n.includes("mobile") && !n.includes("responsable de proyecto")) || esResponsableProyecto;
+      const permisos: string[] = (result?.user?.permissions as string[]) || useAuthStore.getState().user?.permissions || [];
+      const hasMobileAccess = permisos.some((p) => esPermisoMobile(p));
+      const hasPlatformAccess = permisos.some((p) => !esPermisoMobile(p));
 
       // 1. Si tiene ambos accesos, mostrar selector (prioridad máxima)
       if (hasPlatformAccess && hasMobileAccess) {

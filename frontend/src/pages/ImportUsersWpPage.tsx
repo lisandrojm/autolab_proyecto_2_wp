@@ -341,7 +341,7 @@ export const ImportUsersWpPage: React.FC = () => {
                 </h3>
                 <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1.5 leading-relaxed list-disc list-inside">
                   <li>Trae <strong>todos</strong> los empleados desde FRAME (sincronización completa, no incremental).</li>
-                  <li>Crea los <strong>usuarios nuevos</strong> (contraseña inicial = DNI) con rol <em>Mobile-Colaborador</em>; los que ya existen se <strong>omiten</strong>.</li>
+                  <li>Crea los <strong>usuarios nuevos</strong> (contraseña inicial = DNI) con el <em>rol por defecto</em> del tenant, el que esté marcado así en Usuarios → Roles; los que ya existen se <strong>omiten</strong>.</li>
                   <li>Actualiza de forma <strong>aditiva</strong> sus <strong>contratos, roles frame y datos personales</strong> (nunca pisa datos ya cargados en WeProdu).</li>
                   <li>Crea los <strong>proyectos de FRAME que falten</strong> (con su cliente y responsable) y <strong>vincula</strong> a cada empleado con su proyecto.</li>
                 </ul>

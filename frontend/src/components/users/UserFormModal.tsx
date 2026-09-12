@@ -16,6 +16,8 @@ import { cuitEsValido } from "../../utils/cuit";
 import { generarPassword } from "../../utils/password";
 import { mensajeErrorArca } from "../../utils/errorArca";
 import { fuzzyMatch } from "../../utils/searchHelpers";
+// Las tarjetas de la app no se eligen acá: salen de los roles. Ver ese módulo.
+import { MOBILE_ACTIVITY_LOGS, MOBILE_ITEMS } from "../../utils/permisosMobile";
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida, tipoDocumentoDeArca } from "../../utils/nacionalidadDocumento";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -92,6 +94,8 @@ interface UserFormData {
   lastName: string;
   isActive: boolean;
   roles: string[];
+  /** Puede quedar a cargo de un proyecto. No sale de los roles: es un atributo de la persona. */
+  isProjectResponsible: boolean;
   hireDate: string;
   extraVacationDays: number;
   clientIds: string[];
@@ -140,6 +144,7 @@ const emptyForm = (): UserFormData => ({
   lastName: "",
   isActive: true,
   roles: [],
+  isProjectResponsible: false,
   hireDate: new Date().toISOString().split("T")[0],
   extraVacationDays: 0,
   clientIds: [],
@@ -166,8 +171,8 @@ export interface UserFormModalProps {
  * Proyectos donde esta persona figura como coordinadora de algún área/turno.
  *
  * La asignación vive en `Project.coordinatorAssignments`, que llega poblado dentro de
- * `metadata.projects[].projectId`. Es la fuente real: el rol Mobile-Coordinador es el permiso para
- * usar la app como coordinador, pero lo que lo hace obligatorio es tener turnos a cargo.
+ * `metadata.projects[].projectId`. Es la fuente real: el permiso APP MOBILE | Novedades es lo que le
+ * permite cargarlas, pero lo que lo hace obligatorio es tener turnos a cargo.
  */
 const proyectosQueCoordina = (u: User | null): string[] => {
   const nombres = new Set<string>();
@@ -182,11 +187,11 @@ const proyectosQueCoordina = (u: User | null): string[] => {
 
 export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, mode = "edit", onSaved, zIndex }) => {
   /*
-    Si coordina turnos, el rol Mobile-Coordinador queda fijo.
+    Si coordina turnos, no se la puede dejar sin el permiso de Novedades.
 
-    Sacárselo lo dejaría con áreas y turnos a cargo pero sin poder entrar a la app como coordinador:
-    esas novedades no las carga nadie y aparecen como vencidas en Cumplimiento, sin ninguna señal de
-    por qué. Para cambiarle el rol hay que liberarlo antes desde el equipo del proyecto.
+    Dejarla sin él la deja con áreas y turnos a cargo pero sin dónde cargar las novedades: no las carga
+    nadie y aparecen como vencidas en Cumplimiento, sin ninguna señal de por qué. Para poder sacárselo
+    hay que liberarla antes desde el equipo del proyecto. Ver `sinNovedadesCoordinando`.
   */
   /*
     Traer de ARCA nombre, apellido y DNI a partir del CUIT.
@@ -296,8 +301,21 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const coordinaEn = proyectosQueCoordina(user);
   const coordinacionBloqueada = coordinaEn.length > 0;
   const [infoMobile, setInfoMobile] = useState(false);
-  /** Los roles Mobile que la persona TIENE. Solo se muestran: quién los asigna es otra pantalla. */
-  const rolesMobileAsignados = () => roles.filter((r) => r.name.toLowerCase().includes("mobile") && formData.roles.includes(r._id));
+
+  /**
+   * Los permisos EFECTIVOS: la unión de los de todos los roles tildados. Es el mismo cálculo que
+   * hace el login, y se recalcula mientras se tildan roles para que lo de abajo no quede viejo.
+   */
+  const permisosEfectivos = (): Set<string> => new Set(roles.filter((r) => formData.roles.includes(r._id)).flatMap((r) => r.permissions || []));
+
+  /** Las tarjetas de la app que la persona ve, deducidas de sus roles. Se muestran, no se eligen. */
+  const itemsMobileEfectivos = (): string[] => {
+    const permisos = permisosEfectivos();
+    return MOBILE_ITEMS.filter((i) => permisos.has(i.permiso)).map((i) => i.label);
+  };
+
+  /** Coordina turnos y los roles elegidos la dejarían sin dónde cargar novedades. El server también lo rechaza. */
+  const sinNovedadesCoordinando = coordinacionBloqueada && !permisosEfectivos().has(MOBILE_ACTIVITY_LOGS);
 
   // Catálogos propios del modal
   const [roles, setRoles] = useState<Role[]>([]);
@@ -434,6 +452,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         lastName: user.lastName || "",
         isActive: user.metadata?.activo ?? true,
         roles: user.roles.map((r) => r._id),
+        isProjectResponsible: !!(user as any).isProjectResponsible,
         hireDate,
         extraVacationDays: user.extraVacationDays || 0,
         clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
@@ -495,11 +514,17 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       setTieneCuil(!!user.metadata?.cuit);
     } else {
       // ── Alta ──
+      /*
+        El alta arranca con el ROL POR DEFECTO del tenant, y con ese solo.
+
+        Antes también se preseleccionaba el rol llamado "Mobile-Colaborador", buscándolo por nombre,
+        porque era el que abría la app. Ese rol dejó de ser especial: lo que abre la app son permisos,
+        y el rol por defecto ya los trae. Preseleccionar dos roles porque uno se llamaba de cierta
+        manera hacía que renombrarlo cambiara en silencio con qué permisos nacía cada alta.
+      */
       const defaultRole = roles.find((role) => role.isDefault);
-      const mobileCollabRole = roles.find((role) => role.name.toLowerCase() === "mobile-colaborador");
       const defaultRolesSet = new Set<string>();
       if (defaultRole) defaultRolesSet.add(defaultRole._id);
-      if (mobileCollabRole) defaultRolesSet.add(mobileCollabRole._id);
 
       // Argentina viene preseleccionada en el ALTA: es la nacionalidad de casi todas, y hasta que se
       // elegía una, documento y CUIL quedaban apagados. En la edición no se toca: manda lo cargado.
@@ -547,6 +572,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     if (cbuIncompleto) {
       sweetAlert.error("CBU incompleto", `Un CBU tiene ${CBU_DIGITOS} dígitos y cargaste ${(formData.cbu || "").length}. Completalo o dejalo vacío.`);
       setModalActiveTab("bancarios");
+      return;
+    }
+
+    /*
+      No se puede dejar sin Novedades a quien coordina turnos.
+
+      El servidor devuelve 409 igual, pero enterarse recién al guardar —con toda la ficha llena— es
+      perder el trabajo por algo que se sabía desde que se destildó el rol.
+    */
+    if (sinNovedadesCoordinando) {
+      sweetAlert.error("Se queda sin Novedades", `Coordina turnos en ${coordinaEn.join(", ")} y con estos roles no tiene el permiso "APP MOBILE | Novedades": no va a tener dónde cargarlas. Dale un rol que lo incluya, o liberá la coordinación desde el equipo del proyecto.`);
+      setModalActiveTab("sistema");
       return;
     }
     if (cuilVisible && formData.cuit && !isValidCuit(formData.cuit)) {
@@ -597,6 +634,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         firstName: formData.firstName,
         lastName: formData.lastName,
         roles: formData.roles,
+        isProjectResponsible: formData.isProjectResponsible,
         hireDate: formData.hireDate,
         extraVacationDays: formData.extraVacationDays,
         clientIds: formData.clientIds,
@@ -1675,8 +1713,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         Sistema
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/*
+                          Se listan TODOS los roles del tenant (menos superadmin).
+
+                          Antes se escondían los que tuvieran "mobile" en el nombre, porque eran dos
+                          roles aparte que se asignaban por otro lado. Ya no hay roles de móvil: hay
+                          roles, y cada uno lleva los permisos que lleva —de la plataforma, de la app,
+                          o de las dos—. Esconder por el nombre dejaría media lista invisible.
+                        */}
                         {roles
-                          .filter((r) => r.name.toLowerCase() !== "superadmin" && !r.name.toLowerCase().includes("mobile"))
+                          .filter((r) => r.name.toLowerCase() !== "superadmin")
                           .map((r) => (
                             <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
                               <input
@@ -1698,55 +1744,78 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                           ))}
                       </div>
                     </div>
-                    {roles.some((r) => r.name.toLowerCase().includes("mobile")) && (
-                      <div>
-                        {/*
-                          EL ROL MOBILE NO SE ELIGE: SE DEDUCE. Por eso se muestra y no se edita.
+                    <div>
+                      {/*
+                        QUÉ VE EN LA APP: SE MUESTRA, NO SE ELIGE.
 
-                          Sale de un solo dato, que ya está cargado en otra pantalla: quien tiene áreas o
-                          turnos a cargo en un proyecto es Coordinador, y el resto es Colaborador. Elegirlo
-                          a mano acá abría dos formas de contestar la misma pregunta, y la de esta pantalla
-                          no era la que mandaba: al asignarle turnos a alguien desde el equipo del proyecto,
-                          el rol cambia igual y lo tildado acá quedaba pisado sin aviso.
+                        Sale de los roles tildados acá arriba, que son los que llevan los permisos. Un
+                        segundo juego de casillas para lo mismo daría dos formas de contestar la misma
+                        pregunta, y la de esta pantalla no sería la que manda: al cambiarle los permisos
+                        al rol desde Usuarios → Roles, lo tildado acá quedaría pisado sin aviso.
+                      */}
+                      <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
+                        App Mobile
+                        <button type="button" onClick={() => setInfoMobile(true)} title="De dónde sale lo que ve en la app" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      </h4>
 
-                          Al revés también rompía: destildar Coordinador dejaba a una persona con turnos a
-                          cargo sin poder entrar a la app, y esas novedades no las cargaba nadie —aparecían
-                          vencidas en Cumplimiento sin ninguna señal de por qué—. Ese caso ya estaba
-                          bloqueado; lo que faltaba era que el resto tampoco fuera editable.
-                        */}
-                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
-                          <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
-                          Mobile (App)
-                          <button type="button" onClick={() => setInfoMobile(true)} title="Cómo se asigna el rol Mobile" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                          </button>
-                        </h4>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {itemsMobileEfectivos().length > 0 ? (
+                          itemsMobileEfectivos().map((label) => (
+                            <span key={label} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800">
+                              <FontAwesomeIcon icon={faMobileAlt} className="h-3 w-3" />
+                              {label}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-500 dark:text-gray-400 italic">No entra a la app: ningún rol suyo tiene permisos de App Mobile</span>
+                        )}
+                      </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
-                          {rolesMobileAsignados().length > 0 ? (
-                            rolesMobileAsignados().map((r) => (
-                              <span key={r._id} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800">
-                                <FontAwesomeIcon icon={faMobileAlt} className="h-3 w-3" />
-                                {r.name}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-sm text-gray-500 dark:text-gray-400 italic">Sin rol Mobile asignado</span>
-                          )}
-                        </div>
-
-                        <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
-                          {coordinacionBloqueada ? (
+                      {/*
+                        El aviso de coordinación. Dejar sin Novedades a alguien con turnos a cargo lo deja
+                        con equipo a cargo y sin dónde cargar sus novedades: aparecen vencidas en
+                        Cumplimiento sin que nada explique por qué. El servidor devuelve 409 igual (ver
+                        `routes/users.ts`); esto es para no enterarse recién al guardar.
+                      */}
+                      {coordinacionBloqueada && (
+                        <p className={`mt-2 text-[11px] ${sinNovedadesCoordinando ? "text-red-600 dark:text-red-400 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
+                          {sinNovedadesCoordinando ? (
                             <>
-                              Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que le corresponde <strong>Mobile-Coordinador</strong>. Para cambiarlo, liberalo desde el equipo del proyecto.
+                              Coordina turnos en <strong>{coordinaEn.join(", ")}</strong> y así no le queda <strong>Novedades</strong>: no va a tener dónde cargarlas. Dale un rol que incluya ese permiso, o liberá la coordinación desde el equipo del proyecto.
                             </>
                           ) : (
-                            <>Se asigna solo: <strong>Mobile-Coordinador</strong> a quien tenga áreas o turnos a cargo, <strong>Mobile-Colaborador</strong> al resto.</>
+                            <>
+                              Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que necesita conservar <strong>Novedades</strong>.
+                            </>
                           )}
                         </p>
-                      </div>
-                    )}
+                      )}
+
+                      {!coordinacionBloqueada && <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Lo que ve en la app lo deciden los roles de arriba. Se arma en Usuarios → Roles, sección App Mobile.</p>}
+                    </div>
                   </div>
+                </div>
+
+                {/*
+                  PROYECTOS: quién puede quedar a cargo de uno.
+
+                  Era un permiso dentro de los roles (`project_responsible:eligible`), y no tenía nada
+                  que hacer ahí: no destapa ninguna pantalla. Obligaba a inventarle un rol a alguien
+                  sólo para poder elegirlo en el selector de responsable, y renombrar un rol cambiaba
+                  en silencio quién era elegible. Es un atributo de la persona y ahora vive acá.
+                */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Proyectos</label>
+                  <label className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.isProjectResponsible ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
+                    <input type="checkbox" checked={formData.isProjectResponsible} onChange={(e) => setFormData((prev) => ({ ...prev, isProjectResponsible: e.target.checked }))} className="mt-0.5 rounded text-blue-500 focus:ring-blue-500" />
+                    <span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Responsable de Proyecto</span>
+                      <span className="block text-[11px] text-gray-500 dark:text-gray-400">Aparece en el selector de responsable al crear o editar un proyecto.</span>
+                    </span>
+                  </label>
                 </div>
 
                 {/* El mismo bloque que Proyecto y Contrato: ver `components/ui/BloqueEstado`. */}
@@ -1945,26 +2014,30 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           </div>
         </Modal>
       )}
-      <InfoModal isOpen={infoMobile} onClose={() => setInfoMobile(false)} title="Rol Mobile" subtitle="Por qué no se elige acá" size="sm" zIndex={(zIndex || 50) + 10}>
+      <InfoModal isOpen={infoMobile} onClose={() => setInfoMobile(false)} title="App Mobile" subtitle="De dónde sale lo que ve" size="sm" zIndex={(zIndex || 50) + 10}>
         <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
           <p>
-            El rol de la app <strong>no se elige a mano</strong>: sale de si la persona tiene áreas o turnos a cargo en algún proyecto.
+            Acá no se elige: lo que la persona ve en la app <strong>sale de los roles tildados arriba</strong>. Cada rol lleva sus permisos, y los de la app son cuatro, uno por tarjeta
+            de la pantalla de inicio.
           </p>
           <ul className="space-y-1 list-disc pl-5">
             <li>
-              <strong>Mobile-Coordinador</strong>: coordina áreas o turnos. Es quien carga las novedades del equipo.
+              <strong>Novedades</strong>: carga las novedades de sus áreas y turnos. Es lo que antes hacía el rol Coordinador.
             </li>
             <li>
-              <strong>Mobile-Colaborador</strong>: el resto. Es el que traen todas las altas por defecto.
+              <strong>Pedidos</strong> y <strong>Vacaciones</strong>: los suyos. Es lo que traen las altas por defecto.
+            </li>
+            <li>
+              <strong>Usuarios</strong>: el historial de solicitudes de contratación.
             </li>
           </ul>
           <p>
-            Se cambia asignando o quitando la coordinación desde <strong>el equipo del proyecto</strong>, no desde acá. Elegirlo en esta pantalla abría dos formas de contestar la misma
-            pregunta, y esta no era la que mandaba: al darle turnos a alguien, el rol cambiaba igual y lo tildado acá quedaba pisado sin aviso.
+            Se combinan como se quiera, y se arman en <strong>Usuarios → Roles</strong>, sección App Mobile. Antes eran dos roles cerrados —Colaborador y Coordinador— y lo que cada uno
+            mostraba estaba escrito en el código: no había manera de dar Pedidos sin dar Vacaciones.
           </p>
           <p className="text-xs text-gray-500">
-            Sacarle Coordinador a quien tiene turnos a cargo lo dejaría sin poder entrar a la app, y esas novedades no las cargaría nadie: aparecerían vencidas en Cumplimiento sin
-            ninguna señal de por qué.
+            Quien tiene turnos a cargo no puede quedarse sin <strong>Novedades</strong>: no las cargaría nadie y aparecerían vencidas en Cumplimiento sin ninguna señal de por qué. Para
+            eso hay que liberarle la coordinación desde el equipo del proyecto.
           </p>
         </div>
       </InfoModal>

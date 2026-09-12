@@ -32,11 +32,19 @@ import { ContractDropboxTab, fetchDropboxCounts, InstructivoParaFirmar } from ".
 import { AlcanceBanner } from "../components/context/AlcanceBanner";
 import { useEmpresaContextStore } from "../stores/empresaContextStore";
 import { firmaDigitalAPI, FirmaDigitalConfig } from "../api/firmaDigital";
+import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from "../utils/permisosMobile";
 
-/** Mismas opciones que usa el filtro "Rol/es" del tab Equipo de Gestionar Equipo. */
+/*
+  Filtro por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
+
+  Antes eran los dos roles fijos, Mobile-Colaborador y Mobile-Coordinador, y el filtro los buscaba por
+  nombre: si alguien renombraba el rol, el filtro dejaba de encontrar a nadie sin decir por qué. Lo
+  que se quiere separar es quién carga las novedades del equipo y quién no, y eso hoy es un permiso.
+  Mismas opciones que el filtro "Rol/es" del tab Equipo de Gestionar Equipo.
+*/
 const MOBILE_ROLE_OPTIONS = [
-  { value: "colaborador", label: "Mobile-Colaborador" },
-  { value: "coordinador", label: "Mobile-Coordinador" },
+  { value: "con", label: "Carga novedades" },
+  { value: "sin", label: "No carga novedades" },
 ];
 
 const PAGE_SIZE = 25;
@@ -264,7 +272,8 @@ export const ContractsPage: React.FC = () => {
         clientId: filterClientId || undefined,
         projectId: filterProjectId || undefined,
         metadataActivo: filterUserStatus ? String(filterUserStatus === "active") : undefined,
-        roleName: filterRolMobile ? `mobile-${filterRolMobile}` : undefined,
+        permission: filterRolMobile === "con" ? PERMISO_NOVEDADES_MOBILE : undefined,
+        notPermission: filterRolMobile === "sin" ? PERMISO_NOVEDADES_MOBILE : undefined,
         vigencia: filterVigencia || undefined,
         tipoContrato: filterTipoContrato || undefined,
         estadoContrato: filterEstadoContrato || undefined,
@@ -495,10 +504,10 @@ export const ContractsPage: React.FC = () => {
                   options: projectOptions.map((p) => ({ value: p.id, label: p.name })),
                 },
                 {
-                  label: "Rol/es",
+                  label: "Novedades",
                   value: filterRolMobile,
                   onChange: setFilterRolMobile,
-                  placeholder: "Todos los roles",
+                  placeholder: "Todos",
                   options: MOBILE_ROLE_OPTIONS,
                 },
                 {
@@ -700,7 +709,7 @@ export const ContractsPage: React.FC = () => {
                           return (
                             <>
                               {filteredRoles.slice(0, 3).map((r) => {
-                                const isCoordinador = r.name.toLowerCase().includes("coordinador");
+                                const isCoordinador = (r.permissions || []).includes(PERMISO_NOVEDADES_MOBILE);
                                 const badgeClasses = isCoordinador ? "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400" : "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
                                 return (
                                   <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>

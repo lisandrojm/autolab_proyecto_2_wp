@@ -10,6 +10,7 @@ import { projectsAPI, Project } from '../../../../api/projects';
 import { areasAPI, Area } from '../../../../api/areas';
 import { shiftsAPI, Shift } from '../../../../api/shifts';
 import { infoAPI, InfoItem } from '../../../../api/info';
+import { MOBILE_ACTIVITY_LOGS } from '../../../../utils/permisosMobile';
 
 type RegistroInfoTab = 'general' | 'domicilio' | 'bancarios';
 
@@ -94,7 +95,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   const getProjectDetails = (proj: any) => {
     if (!proj) return null;
 
-    // El mobile-coordinador/colaborador NO tiene permiso para /areas ni /shifts (403),
+    // Quien entra sólo por la app NO tiene permiso para /areas ni /shifts (403),
     // así que allAreas/allShifts suelen venir vacíos. Como fallback resolvemos nombres
     // desde la data que el server SÍ pobla en el proyecto (areasConfig, coordinatorAssignments,
     // y teamConfig si vinieran poblados).
@@ -396,11 +397,20 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
 
   if (loading || isLoadingProjects) return null;
 
-  const isMobileCoordinator = user?.roles?.some((r) => r.toLowerCase().includes('coordinador'));
-  const isMobileCollaborator = user?.roles?.some((r) => r.toLowerCase().includes('colaborador'));
+  /*
+    El cartelito del perfil muestra EL ROL QUE LA PERSONA TIENE, con su nombre.
 
-  const userRole = isMobileCoordinator ? 'Mobile-Coordinador' : isMobileCollaborator ? 'Mobile-Colaborador' : 'Usuario';
-  const roleColor = isMobileCoordinator ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
+    Antes decía "Mobile-Coordinador" o "Mobile-Colaborador" según si el nombre del rol contenía esas
+    palabras — dos roles que ya no existen como algo fijo, con lo cual el cartel habría dicho "Usuario"
+    para cualquiera que armara los suyos. Y encima se contradecía con el resto de la app, que decidía
+    por permiso mientras esto decidía por nombre.
+
+    Lo que distingue a un coordinador es poder cargar novedades; eso se usa para el color, y el texto
+    es sencillamente cómo se llama su rol.
+  */
+  const cargaNovedadesEnApp = (user?.permissions || []).includes(MOBILE_ACTIVITY_LOGS);
+  const userRole = user?.roles?.[0] || 'Usuario';
+  const roleColor = cargaNovedadesEnApp ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
 
   const userProjects = profile?.metadata?.projects || [];
 
@@ -633,6 +643,9 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
                 )}
 
                 {profile?.roleNames
+                  /* «Responsable de Proyecto» ya se muestra arriba, con su propio badge: repetirlo como rol
+                     sobra. Se sigue filtrando por nombre porque ese rol existe y se llama así; el dato
+                     de quién es responsable, en cambio, sale de `isResponsable` del proyecto. */
                   ?.filter((role: string) => !role.toLowerCase().includes('responsable de proyecto'))
                   .map((role: string, idx: number) => {
                     const lowerRole = role.toLowerCase();

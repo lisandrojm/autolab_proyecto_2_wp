@@ -11,11 +11,15 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase, faCheckDouble, faBroom } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faCheckDouble, faBroom } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+// Un permiso por tarjeta de la app. Ver el porqué y la contraparte del server en ese módulo.
+import { esPermisoMobile, MOBILE_ITEMS, MOBILE_PERMISSIONS } from "../utils/permisosMobile";
 import { useNavigate } from "react-router-dom";
 
 const HELP_KEY = "roles" as const;
+
+
 
 // Definición de módulos con metadatos
 interface PermissionModule {
@@ -116,25 +120,26 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
       "admin_users_import:view",
     ],
   },
-  project_responsible: {
-    label: "Proyectos",
-    icon: faBriefcase,
-    description: "Capacidades relacionadas con la gestión de proyectos",
-    permissions: ["project_responsible:eligible"],
-  },
+  /*
+    «Proyectos → Responsable de Proyecto» ya no está acá.
+
+    Poder quedar a cargo de un proyecto no destapa ninguna pantalla: es un atributo de la persona, y
+    como permiso obligaba a inventarle un rol a alguien sólo para poder elegirlo en el selector de
+    responsable. Pasó a ser un tilde en la ficha del usuario, pestaña Sistema.
+  */
   mobile: {
-    label: "Mobile",
+    label: "App Mobile",
     icon: faMobileAlt,
-    description: "Acceso a la aplicación móvil",
-    permissions: ["mobile_collaborator:view", "mobile_coordinator:view"],
+    description: "Las tarjetas de la pantalla de inicio de la app. Se elige una por una: tener alguna ES el acceso a la app.",
+    permissions: MOBILE_PERMISSIONS,
   },
 };
 
-// Todos los permisos seleccionables con "Seleccionar todos" (se excluye Mobile: colaborador y
-// coordinador son mutuamente excluyentes, se eligen aparte).
-const ALL_SELECTABLE_PERMISSIONS: string[] = Object.entries(AVAILABLE_PERMISSIONS)
-  .filter(([module]) => module !== "mobile")
-  .flatMap(([, mod]) => mod.permissions);
+/** Los módulos de PLATAFORMA, en el orden del menú. `mobile` va en su propia sección. */
+const PLATFORM_MODULE_KEYS = Object.keys(AVAILABLE_PERMISSIONS).filter((key) => key !== "mobile");
+
+const PLATFORM_PERMISSIONS: string[] = PLATFORM_MODULE_KEYS.flatMap((key) => AVAILABLE_PERMISSIONS[key].permissions);
+
 
 /** El nombre de cada permiso es el del ítem del menú que destapa. Ver el comentario de arriba. */
 const MODULE_LABELS: Record<string, string> = {
@@ -192,10 +197,8 @@ const MODULE_LABELS: Record<string, string> = {
   "config_vacations:view": "Vacaciones",
   "admin_users_import:view": "Import WP",
 
-  // Fuera del menú
-  "project_responsible:eligible": "Responsable de Proyecto",
-  "mobile_collaborator:view": "Colaborador",
-  "mobile_coordinator:view": "Coordinador",
+  // App Mobile: una etiqueta por tarjeta de la pantalla de inicio de la app
+  ...Object.fromEntries(MOBILE_ITEMS.map((i) => [i.permiso, i.label])),
 };
 
 const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
@@ -212,6 +215,34 @@ const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
     permissions: ["*"],
   },
 };
+
+/**
+ * Una de las dos secciones de permisos, con su interruptor.
+ *
+ * Plegar la que no se usa es lo que hace legible la pantalla: la lista de la plataforma son unas
+ * cincuenta casillas y la del móvil cuatro, así que tenerlas las dos abiertas dejaba lo importante
+ * abajo de todo. El contador en la cabecera existe para que, plegada, se siga viendo que ahí hay algo.
+ */
+const SeccionPermisos: React.FC<{
+  titulo: string;
+  icono: any;
+  prendida: boolean;
+  cantidad: number;
+  onToggle: () => void;
+  children: React.ReactNode;
+}> = ({ titulo, icono, prendida, cantidad, onToggle, children }) => (
+  <div className={`rounded-lg border transition-colors ${prendida ? "border-gray-200 dark:border-gray-700" : "border-dashed border-gray-200 dark:border-gray-700"}`}>
+    <button type="button" onClick={onToggle} aria-pressed={prendida} className="w-full flex items-center gap-3 px-4 py-3 text-left">
+      <span className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${prendida ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
+        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${prendida ? "translate-x-4" : "translate-x-0.5"}`} />
+      </span>
+      <FontAwesomeIcon icon={icono} className={prendida ? "text-blue-600 dark:text-blue-400" : "text-gray-400"} />
+      <span className={`text-xs font-bold uppercase tracking-wider ${prendida ? "text-gray-700 dark:text-gray-200" : "text-gray-400"}`}>{titulo}</span>
+      <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">{cantidad > 0 ? `${cantidad} permiso${cantidad > 1 ? "s" : ""}` : prendida ? "sin permisos todavía" : "apagado"}</span>
+    </button>
+    {prendida && <div className="px-4 pb-4">{children}</div>}
+  </div>
+);
 
 interface RoleFormData {
   name: string;
@@ -235,6 +266,16 @@ export const RolesPage: React.FC = () => {
 
   // Modal de acción (crear/editar)
   const [showModal, setShowModal] = useState(false);
+  /*
+    Las dos secciones de permisos, como interruptores.
+
+    No son un dato del rol: se derivan de qué permisos tiene y sólo existen mientras el modal está
+    abierto. Sirven para que la pantalla no muestre las cincuenta casillas de la plataforma a quien
+    está armando un rol de campo. Apagar una sección borra sus permisos; las dos apagadas no se
+    permite, porque un rol sin nada no deja entrar a ningún lado.
+  */
+  const [seccionPlataforma, setSeccionPlataforma] = useState(false);
+  const [seccionMobile, setSeccionMobile] = useState(true);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formData, setFormData] = useState<RoleFormData>({
     name: "",
@@ -359,6 +400,16 @@ export const RolesPage: React.FC = () => {
       permissions: [],
       isDefault: false,
     });
+    /*
+      Un rol nuevo arranca siendo del móvil.
+
+      Es el caso de lejos más común —la app es por donde entra casi todo el mundo— y dejar las dos
+      secciones apagadas obligaba a un clic que nadie entiende para qué es. La plataforma se prende
+      aparte, y recién entonces aparecen sus grupos: así la pantalla no arranca con cincuenta casillas
+      para quien sólo quiere dar de alta gente de campo.
+    */
+    setSeccionMobile(true);
+    setSeccionPlataforma(false);
     setShowModal(true);
   };
 
@@ -374,6 +425,12 @@ export const RolesPage: React.FC = () => {
       permissions: expandedPermissions,
       isDefault: role.isDefault,
     });
+    // Al editar, cada sección arranca prendida si el rol ya tiene algo de ella. Un rol sin nada
+    // (los había: "User" nacía vacío) se abre como uno nuevo, con el móvil prendido.
+    const tienePlataforma = expandedPermissions.some((p) => !esPermisoMobile(p));
+    const tieneMobile = expandedPermissions.some((p) => esPermisoMobile(p));
+    setSeccionPlataforma(tienePlataforma);
+    setSeccionMobile(tieneMobile || !tienePlataforma);
     setShowModal(true);
   };
 
@@ -394,6 +451,17 @@ export const RolesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    /*
+      Un rol sin ningún permiso no deja entrar a ningún lado: ni a la app ni a la plataforma.
+
+      Se podían crear —y existían: el rol "User" nacía vacío— y después nadie entendía por qué la
+      persona que lo tenía veía una pantalla en blanco. El rol es el permiso; sin permisos no es nada.
+    */
+    if (formData.permissions.length === 0) {
+      sweetAlert.error("Falta elegir permisos", "Un rol sin permisos no deja entrar a ningún lado. Marcá al menos uno, de Plataforma o de App Mobile.");
+      return;
+    }
 
     // Si se marca como predeterminado, verificar si ya existe otro rol predeterminado
     if (formData.isDefault) {
@@ -453,45 +521,61 @@ export const RolesPage: React.FC = () => {
     }
   };
 
-  // Marca todos los permisos seleccionables (sin tocar los de Mobile ya elegidos).
+  // Marca todo lo de las secciones prendidas. Lo de una sección apagada no se toca: no está a la vista.
   const selectAllPermissions = () => {
     setFormData((prev) => {
-      const mobileSelected = prev.permissions.filter((p) => p.startsWith("mobile_"));
-      return { ...prev, permissions: Array.from(new Set([...ALL_SELECTABLE_PERMISSIONS, ...mobileSelected])) };
+      const aMarcar = [...(seccionPlataforma ? PLATFORM_PERMISSIONS : []), ...(seccionMobile ? MOBILE_PERMISSIONS : [])];
+      return { ...prev, permissions: Array.from(new Set([...prev.permissions, ...aMarcar])) };
     });
   };
 
-  // Limpia todos los permisos.
-  const clearAllPermissions = () => setFormData((prev) => ({ ...prev, permissions: [] }));
+  // Limpia los permisos de las secciones prendidas.
+  const clearAllPermissions = () =>
+    setFormData((prev) => ({
+      ...prev,
+      permissions: prev.permissions.filter((p) => (esPermisoMobile(p) ? !seccionMobile : !seccionPlataforma)),
+    }));
 
   const togglePermission = (permission: string) => {
     setFormData((prev) => {
-      const currentPermissions = [...prev.permissions];
-      const isCurrentlySelected = currentPermissions.includes(permission);
-
-      if (isCurrentlySelected) {
-        return {
-          ...prev,
-          permissions: currentPermissions.filter((p) => p !== permission),
-        };
-      } else {
-        let newPermissions = [...currentPermissions, permission];
-
-        // Lógica de exclusión mutua para roles Mobile
-        if (permission === "mobile_collaborator:view") {
-          // Si selecciono colaborador, quito coordinador
-          newPermissions = newPermissions.filter((p) => p !== "mobile_coordinator:view");
-        } else if (permission === "mobile_coordinator:view") {
-          // Si selecciono coordinador, quito colaborador
-          newPermissions = newPermissions.filter((p) => p !== "mobile_collaborator:view");
-        }
-
-        return {
-          ...prev,
-          permissions: newPermissions,
-        };
-      }
+      const yaEstaba = prev.permissions.includes(permission);
+      return {
+        ...prev,
+        // La exclusión mutua entre colaborador y coordinador se fue con esos dos permisos: las cuatro
+        // tarjetas del móvil se combinan libremente, que era justamente lo que faltaba poder hacer.
+        permissions: yaEstaba ? prev.permissions.filter((p) => p !== permission) : [...prev.permissions, permission],
+      };
     });
+  };
+
+  /**
+   * Prende o apaga una sección entera. Apagarla se lleva puestos sus permisos —si no, el rol
+   * guardaría cosas que la pantalla no muestra— así que primero se avisa.
+   */
+  const toggleSeccion = async (seccion: "plataforma" | "mobile") => {
+    const esPlataforma = seccion === "plataforma";
+    const estaPrendida = esPlataforma ? seccionPlataforma : seccionMobile;
+    const setSeccion = esPlataforma ? setSeccionPlataforma : setSeccionMobile;
+    const nombre = esPlataforma ? "Plataforma" : "App Mobile";
+
+    if (!estaPrendida) {
+      setSeccion(true);
+      return;
+    }
+
+    // Apagar la única sección prendida dejaría al rol sin nada, y un rol sin permisos no sirve para nada.
+    if (esPlataforma ? !seccionMobile : !seccionPlataforma) {
+      sweetAlert.error("Tiene que quedar una", "Un rol sin permisos no deja entrar a ningún lado. Prendé la otra sección antes de apagar esta.");
+      return;
+    }
+
+    const tildados = formData.permissions.filter((p) => (esPlataforma ? !esPermisoMobile(p) : esPermisoMobile(p)));
+    if (tildados.length > 0) {
+      const result = await sweetAlert.confirm(`Apagar ${nombre}`, `Se van a destildar los ${tildados.length} permiso/s de ${nombre} que tiene este rol. ¿Continuar?`);
+      if (!result.isConfirmed) return;
+      setFormData((prev) => ({ ...prev, permissions: prev.permissions.filter((p) => (esPlataforma ? esPermisoMobile(p) : !esPermisoMobile(p))) }));
+    }
+    setSeccion(false);
   };
 
   const filteredRoles = roles.filter((r) => {
@@ -719,12 +803,15 @@ export const RolesPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {/* Permisos de Sistema */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <FontAwesomeIcon icon={faUserShield} className="text-gray-400" />
-                      Permisos de Sistema
-                    </label>
+                  {/*
+                    PLATAFORMA Y APP MOBILE, CADA UNA CON SU INTERRUPTOR.
+
+                    Las dos listas estaban siempre desplegadas, una arriba de la otra, y la de la
+                    plataforma son cincuenta casillas: quien arma un rol para gente de campo tenía que
+                    bajar hasta el final para encontrar las cuatro que le importan. Ahora la sección
+                    que no se usa queda plegada, y la que se usa se ve entera.
+                  */}
+                  <SeccionPermisos titulo="Plataforma" icono={faUserShield} prendida={seccionPlataforma} cantidad={formData.permissions.filter((p) => !esPermisoMobile(p)).length} onToggle={() => toggleSeccion("plataforma")}>
                     <div className="space-y-3">
                       {Object.entries(AVAILABLE_PERMISSIONS)
                         .filter(([module]) => module !== "mobile")
@@ -790,14 +877,9 @@ export const RolesPage: React.FC = () => {
                           );
                         })}
                     </div>
-                  </div>
+                  </SeccionPermisos>
 
-                  {/* Permisos Mobile (App) */}
-                  <div className="pt-4">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <FontAwesomeIcon icon={faMobileAlt} className="text-gray-400" />
-                      Permisos Mobile (App)
-                    </label>
+                  <SeccionPermisos titulo="App Mobile" icono={faMobileAlt} prendida={seccionMobile} cantidad={formData.permissions.filter((p) => esPermisoMobile(p)).length} onToggle={() => toggleSeccion("mobile")}>
                     <div className="space-y-3">
                       {Object.entries(AVAILABLE_PERMISSIONS)
                         .filter(([module]) => module === "mobile")
@@ -829,7 +911,7 @@ export const RolesPage: React.FC = () => {
                           );
                         })}
                     </div>
-                  </div>
+                  </SeccionPermisos>
                 </div>
               </div>
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
+import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../../utils/permisosMobile';
 import { projectsAPI } from '../../api/projects';
 import { companiesAPI, Company } from '../../api/companies';
 import { infoAPI, InfoItem } from '../../api/info';
@@ -100,10 +101,14 @@ const Paginador: React.FC<{ pagina: number; totalPaginas: number; total: number;
   );
 };
 
-/** Mismas opciones de rol que el filtro de la pestaña Contratos. */
+/*
+  Mismas opciones que el filtro de la pestaña Contratos: se separa por lo que la persona puede hacer
+  en la app —cargar o no las novedades del equipo— y no por cómo se llama su rol, que antes hacía que
+  renombrar un rol vaciara el filtro sin decir por qué.
+*/
 const MOBILE_ROLE_OPTIONS = [
-  { value: 'colaborador', label: 'Mobile-Colaborador' },
-  { value: 'coordinador', label: 'Mobile-Coordinador' },
+  { value: 'con', label: 'Carga novedades' },
+  { value: 'sin', label: 'No carga novedades' },
 ];
 
 /** YYYYMMDD de hoy para el nombre del archivo. */
@@ -1620,7 +1625,10 @@ export const ContractBulkAfipTab: React.FC<{
         const vig = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
         if (filterVigencia === 'vigente' ? !vig : vig) return false;
       }
-      if (filterRolMobile && !(r.userRoles || []).some((rol) => (rol.name || '').toLowerCase().includes(filterRolMobile))) return false;
+      if (filterRolMobile) {
+        const cargaNovedades = (r.userRoles || []).some((rol) => (rol.permissions || []).includes(PERMISO_NOVEDADES_MOBILE));
+        if (filterRolMobile === 'con' ? !cargaNovedades : cargaNovedades) return false;
+      }
       if (filterTipoContrato && r.nombre_contrato !== filterTipoContrato) return false;
       if (filterEstadoContrato && estadoLabel(r.nombre_estado_empleado || '') !== filterEstadoContrato) return false;
       if (filterReemplazo && (filterReemplazo === 'con' ? !r.reemplazo : r.reemplazo)) return false;
@@ -2148,7 +2156,7 @@ export const ContractBulkAfipTab: React.FC<{
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
               // El filtro de Empresa se hace con la columna "Empresa Contrato" de cada fila, no con un select general.
-              { label: 'Rol/es', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos los roles', options: MOBILE_ROLE_OPTIONS },
+              { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
               { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
               // Solo en Alta temprana: en Constancia de CUIT la obra social no participa del trámite.
               ...(filterTipo === 'alta_temprana_afip'

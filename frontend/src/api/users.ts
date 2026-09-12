@@ -87,7 +87,7 @@ export interface ContractOverviewRow {
   userActivo: boolean;
   /** id externo (FRAME) del usuario — para resolver a quién reemplaza otro contrato de la misma página. */
   userExternalId: number | null;
-  userRoles: { _id: string; name: string }[];
+  userRoles: { _id: string; name: string; permissions?: string[] }[];
   clientId: string;
   clientName: string;
   projectId: string;
@@ -265,6 +265,12 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   isSystem: boolean;
+  /**
+   * Puede quedar a cargo de un proyecto: es lo que llena el selector de responsable. Es un atributo
+   * de la persona, no de sus roles —antes era el permiso `project_responsible:eligible`, que obligaba
+   * a inventarle un rol a alguien para poder elegirlo—.
+   */
+  isProjectResponsible?: boolean;
   externalInfo?: {
     sedes: string[];
     rolFrames: string[];
@@ -485,6 +491,7 @@ function normalizeUser(raw: any): User {
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: String(raw?.updatedAt ?? ""),
     isSystem: !!raw?.isSystem,
+    isProjectResponsible: !!raw?.isProjectResponsible,
     externalInfo: raw?.externalInfo,
     metadata: raw?.metadata,
   };
@@ -515,8 +522,15 @@ class UsersAPI {
       projectId?: string;
       metadataActivo?: string;
       isSolicitud?: string;
-      /** Nombre del rol (separadores flexibles), ej. "mobile-coordinador". Filtra server-side. */
+      /** Nombre del rol (separadores flexibles), ej. "Administración". Filtra server-side. */
       roleName?: string;
+      /*
+        Filtro por PERMISO, que reemplaza al filtro por los dos roles Mobile que ya no existen.
+        `permission` deja los que lo tienen; `notPermission`, los que no. Se resuelven server-side
+        porque el cliente no puede listar /roles sin `admin_roles:view`.
+      */
+      permission?: string;
+      notPermission?: string;
       /* Filtros del equipo de un proyecto (requieren `projectId`): se resuelven sobre el último
          contrato del miembro / su área-turno, para que la paginación sea correlativa. */
       vigencia?: string; // "vigente" | "novigente"
@@ -550,6 +564,8 @@ class UsersAPI {
     if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
     if (params.areaTurno) searchParams.append("areaTurno", params.areaTurno);
     if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
+    if (params.permission) searchParams.append("permission", params.permission);
+    if (params.notPermission) searchParams.append("notPermission", params.notPermission);
     if (params.lightweight) searchParams.append("lightweight", "true");
     if (params.slimProjects) searchParams.append("slimProjects", "true");
 
@@ -583,6 +599,9 @@ class UsersAPI {
       projectId?: string;
       metadataActivo?: string;
       roleName?: string;
+      /** Filtro por permiso: `permission` deja los que lo tienen, `notPermission` los que no. */
+      permission?: string;
+      notPermission?: string;
       vigencia?: string;
       tipoContrato?: string;
       estadoContrato?: string;
@@ -606,6 +625,8 @@ class UsersAPI {
     if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
     if (params.empresaContratoId) searchParams.append("empresaContratoId", params.empresaContratoId);
     if (params.roleName) searchParams.append("roleName", params.roleName);
+    if (params.permission) searchParams.append("permission", params.permission);
+    if (params.notPermission) searchParams.append("notPermission", params.notPermission);
     if (params.vigencia) searchParams.append("vigencia", params.vigencia);
     if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);
     if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
@@ -626,7 +647,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; roles?: string[]; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[]; metadata?: any }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; roles?: string[]; isProjectResponsible?: boolean; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[]; metadata?: any }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -646,6 +667,7 @@ class UsersAPI {
       firstName?: string;
       lastName?: string;
       roles?: string[];
+      isProjectResponsible?: boolean;
       hireDate?: string;
       extraVacationDays?: number;
       clientIds?: string[];

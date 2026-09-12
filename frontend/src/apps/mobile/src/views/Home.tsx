@@ -6,6 +6,8 @@ import { useNotifications } from "../hooks/useNotifications";
 import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 import { ProfileData } from "../../../../api/personnel";
+// Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
+import { MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -14,12 +16,13 @@ interface HomeProps {
 export default function Home({ onNavigate }: HomeProps) {
   const { user, logout } = useAuthStore();
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
 
-  // FIX: Check permissions directly to avoid Admin global override
-  const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
-  const isMobileCollaborator = user?.permissions?.includes("mobile_collaborator:view");
-
+  /*
+    Se leen los permisos crudos y no `hasPermission`: en el servidor un Admin pasa cualquier chequeo,
+    y acá eso le mostraría tarjetas que su rol no tiene.
+  */
+  const puede = (permiso: string) => (user?.permissions || []).includes(permiso);
   const latestNotification = notifications.find((n) => !n.isRead);
 
   const hasActiveContract = (p: ProfileData | null): boolean => {
@@ -37,13 +40,33 @@ export default function Home({ onNavigate }: HomeProps) {
     return hasActive;
   };
 
-  // ⬇️ QUICK ACTIONS — badgeBg y badgeText
+  /*
+    LAS TARJETAS: UNA POR PERMISO.
+
+    Antes se armaban por rol —el coordinador veía Novedades y Usuarios, el colaborador no— y cambiarlo
+    exigía tocar este archivo. Ahora cada una aparece si el permiso está, y qué permisos tiene cada
+    rol se decide en Usuarios → Roles. El campo `roles` de cada acción se fue con eso: no lo leía nadie.
+
+    EL CHEQUEO DE CONTRATO AHORA VALE PARA TODOS, y antes no.
+
+    Pedidos y Vacaciones se muestran apagadas, con el motivo, cuando no hay contrato activo. Es
+    distinto de no tener el permiso —ahí la tarjeta directamente no está—: "sin contrato activo" es
+    algo que se resuelve, y conviene que se vea.
+
+    Antes ese chequeo lo esquivaba quien tuviera el rol Colaborador, que era casi todo el mundo: en
+    los hechos sólo lo sufrían los coordinadores. No hay forma de traducir esa excepción sin el rol
+    que la definía, así que la regla queda pareja para todos.
+
+    Mientras el perfil se está cargando no se apaga nada: `profile` arranca en null y apagarlas ahí
+    mostraría "Sin contrato activo" a alguien que sí lo tiene, hasta que llegue la respuesta.
+  */
+  const sinContrato = !profileLoading && !hasActiveContract(profile);
+
   const novedadesAction = {
     icon: faFileAlt,
     title: "Novedades",
     description: "Gestión de novedades",
     view: "activity_logs" as ViewType,
-    roles: ["coordinator"],
     disabled: false,
   };
 
@@ -52,7 +75,6 @@ export default function Home({ onNavigate }: HomeProps) {
     title: "Vacaciones",
     description: "Solicitá tus días libres",
     view: "vacations" as ViewType,
-    roles: ["coordinator", "collaborator"],
     disabled: false,
     /*       badge: "New", */
     badgeBg: "bg-red-500",
@@ -64,7 +86,6 @@ export default function Home({ onNavigate }: HomeProps) {
     title: "Pedidos",
     description: "Gestiona tus pedidos",
     view: "orders" as ViewType,
-    roles: ["coordinator", "collaborator"],
     disabled: false,
     /*       badge: "Finish", */
     badgeBg: "bg-blue-500",
@@ -76,41 +97,33 @@ export default function Home({ onNavigate }: HomeProps) {
     title: "Usuarios",
     description: "Solicitud de contratación",
     view: "user_history" as ViewType,
-    roles: ["mobile-coordinador"],
     disabled: false,
   };
 
-  // Construct quickActions based on role and desired order
-  const quickActions = [];
+  const quickActions: any[] = [];
 
-  if (isMobileCoordinator) {
+  if (puede(MOBILE_ACTIVITY_LOGS)) {
     quickActions.push(novedadesAction);
   }
 
-  if (hasActiveContract(profile) || isMobileCollaborator) {
-    quickActions.push(ordersAction);
-  } else {
-    quickActions.push({
-      ...ordersAction,
-      disabled: true,
-      description: "Sin contrato activo",
-    });
+  if (puede(MOBILE_ORDERS)) {
+    quickActions.push(sinContrato ? { ...ordersAction, disabled: true, description: "Sin contrato activo" } : ordersAction);
   }
 
-  // Only show vacations if enabled or mobile collaborator
-  if (isMobileCollaborator || (profile?.vacationsEnabled !== false && hasActiveContract(profile))) {
-    quickActions.push(vacationsAction);
-  } else {
-    // Show disabled if no active contract or globally disabled
-    quickActions.push({
-      ...vacationsAction,
-      disabled: true,
-      description: hasActiveContract(profile) ? "Módulo deshabilitado" : "Sin contrato activo",
-      title: "Vacaciones",
-    });
+  if (puede(MOBILE_VACATIONS)) {
+    const vacacionesDeshabilitadas = sinContrato || profile?.vacationsEnabled === false;
+    quickActions.push(
+      vacacionesDeshabilitadas
+        ? {
+            ...vacationsAction,
+            disabled: true,
+            description: sinContrato ? "Sin contrato activo" : "Módulo deshabilitado",
+          }
+        : vacationsAction,
+    );
   }
 
-  if (isMobileCoordinator) {
+  if (puede(MOBILE_USERS)) {
     quickActions.push(userCreateAction);
   }
 

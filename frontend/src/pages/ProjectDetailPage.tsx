@@ -1386,7 +1386,7 @@ export const ProjectDetailPage: React.FC = () => {
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                <strong>Rol de Sistema:</strong> Debe tener asignado el rol "Responsable de Proyecto" o un rol con permisos de elegibilidad.
+                <strong>Responsable de Proyecto:</strong> hay que tildarlo en su ficha, pestaña Sistema, bloque Proyectos. No depende de sus roles.
               </span>
             </li>
           </ul>

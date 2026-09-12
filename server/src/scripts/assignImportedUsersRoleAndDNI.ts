@@ -7,8 +7,10 @@ import { Types } from "mongoose";
 
 /**
  * Ajusta los usuarios IMPORTADOS desde FRAME (los que tienen `metadata.id`):
- *   1. Les asigna el rol "Mobile-Colaborador" y, si lo tuvieran por error, les quita
- *      "Mobile-Coordinador" (sin tocar otros roles que ya tengan).
+ *   1. Les asigna el ROL POR DEFECTO del tenant, sin tocar los otros roles que ya tengan. Antes
+ *      buscaba el rol "Mobile-Colaborador" por nombre y le quitaba "Mobile-Coordinador" si lo tenía;
+ *      esos dos roles dejaron de ser especiales (lo que abre la app ahora son permisos granulares),
+ *      así que quitarle uno a alguien sería quitarle permisos que quizá le correspondan.
  *   2. Les setea la contraseña = su DNI (metadata.documento). El pre-save hook de
  *      models/User.ts se encarga de hashearla.
  *
@@ -75,24 +77,16 @@ async function assignImportedUsersRoleAndDNI() {
 
     console.log(`📋 Se encontraron ${users.length} usuarios para procesar.`);
 
-    // Cache de roles por tenant: el que se debe AGREGAR (Mobile-Colaborador) y el
-    // que se debe QUITAR (Mobile-Coordinador, asignado por error previamente).
-    // Búsqueda tolerante a guión/espacios y mayúsculas.
-    const roleCache = new Map<string, { add: Types.ObjectId | null; remove: Types.ObjectId | null }>();
-    const getTenantRoles = async (tenantId: Types.ObjectId) => {
+    // Cache del rol POR DEFECTO de cada tenant, que es el que recibe toda alta importada.
+    const roleCache = new Map<string, Types.ObjectId | null>();
+    const getRolPorDefecto = async (tenantId: Types.ObjectId) => {
       const key = tenantId.toString();
       if (roleCache.has(key)) return roleCache.get(key)!;
-      const [collab, coord] = await Promise.all([
-        Role.findOne({ tenantId, name: { $regex: /^mobile\s*-?\s*colaborador$/i } }),
-        Role.findOne({ tenantId, name: { $regex: /^mobile\s*-?\s*coordinador$/i } }),
-      ]);
-      if (!collab) {
-        console.warn(`⚠️ Tenant ${key}: no existe el rol "Mobile-Colaborador".`);
+      const rol = await Role.findOne({ tenantId, isDefault: true });
+      if (!rol) {
+        console.warn(`⚠️ Tenant ${key}: no tiene rol por defecto, así que no hay nada que asignar.`);
       }
-      const value = {
-        add: collab ? (collab._id as Types.ObjectId) : null,
-        remove: coord ? (coord._id as Types.ObjectId) : null,
-      };
+      const value = rol ? (rol._id as Types.ObjectId) : null;
       roleCache.set(key, value);
       return value;
     };
@@ -105,20 +99,13 @@ async function assignImportedUsersRoleAndDNI() {
       let changed = false;
       const changes: string[] = [];
 
-      const { add: collabId, remove: coordId } = await getTenantRoles(user.tenantId as Types.ObjectId);
-      let roles = (user.roles || []).map((r) => r.toString());
+      const rolPorDefectoId = await getRolPorDefecto(user.tenantId as Types.ObjectId);
+      const roles = (user.roles || []).map((r) => r.toString());
 
-      // 1a) Quitar Mobile-Coordinador si fue asignado por error.
-      if (coordId && roles.includes(coordId.toString())) {
-        roles = roles.filter((r) => r !== coordId.toString());
-        changes.push("rol -Mobile-Coordinador");
-        changed = true;
-      }
-
-      // 1b) Agregar Mobile-Colaborador (sin duplicar ni quitar otros roles).
-      if (collabId && !roles.includes(collabId.toString())) {
-        roles.push(collabId.toString());
-        changes.push("rol +Mobile-Colaborador");
+      // Agregar el rol por defecto, sin duplicar ni quitar los otros que ya tenga.
+      if (rolPorDefectoId && !roles.includes(rolPorDefectoId.toString())) {
+        roles.push(rolPorDefectoId.toString());
+        changes.push("rol por defecto +");
         changed = true;
         roleAssigned++;
       }

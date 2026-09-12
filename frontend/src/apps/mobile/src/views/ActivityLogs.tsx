@@ -21,6 +21,7 @@ import { InfoModal } from "../../../../components/ui/InfoModal";
 import { overtimeUtils, splitOvertime } from "../../../../utils/overtimeUtils";
 
 import { esContratoVigente, getContratoActivo } from "../../../../utils/contratoVigencia";
+import { cargaNovedades } from "../../../../utils/permisosMobile";
 
 interface EmployeeOption {
   id: string;
@@ -28,7 +29,8 @@ interface EmployeeOption {
   email?: string;
   projectIds: string[];
   role?: string;
-  roles?: { name: string }[];
+  // Con los permisos: quién puede cargar novedades se pregunta por permiso, no por el nombre del rol.
+  roles?: { name: string; permissions?: string[] }[];
   positionName?: string;
   isActive?: boolean;
   hasActiveContract?: boolean;
@@ -403,8 +405,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     let shiftName = "";
 
     // 0. If employee is a coordinator, prioritize their own personal assignment in metadataProjects (since they coordinate multiple shifts/areas)
-    const isCoord = 
-      emp.roles?.some((r: any) => r.name?.toLowerCase()?.includes("coordinador")) || 
+    const isCoord =
+      cargaNovedades(emp.roles) ||
       emp.role?.toLowerCase()?.includes("coordinador") ||
       (selectedProject?.coordinatorAssignments?.some((asm: any) => {
         const uid = typeof asm.userId === "object" ? asm.userId?._id || asm.userId?.id : asm.userId;
@@ -1254,7 +1256,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         return String(cUserId) === String(e.id);
       });
 
-      const isCoordGlobal = e.roles?.some((r) => r.name?.toLowerCase()?.includes("coordinador"));
+      const isCoordGlobal = cargaNovedades(e.roles);
       const hasPersonalContractShift = projMeta && (projMeta.areaId || projMeta.shiftId || projMeta.areaShiftAssignments?.length || (projMeta.contractStartTime && projMeta.contractEndTime));
 
       if (teamConfigMember && teamConfigMember.areaShiftAssignments?.length > 0) {
@@ -5163,7 +5165,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       };
                     });
 
-                    const checkIsCoordinator = (u: any) => u.positionName?.toLowerCase().includes("coordinador") || u.roles?.some((r: any) => r.name.toLowerCase().includes("coordinador")) || u.firstName?.toLowerCase().includes("coordinador") || u.lastName?.toLowerCase().includes("coordinador");
+                    // Coordinador = puede cargar novedades. Antes se buscaba la palabra en el nombre del rol,
+                    // que dejó de ser un dato: se conserva el fallback por puesto y por nombre de la persona,
+                    // que cubre a quien figura en el roster sin usuario detrás.
+                    const checkIsCoordinator = (u: any) => cargaNovedades(u.roles) || u.positionName?.toLowerCase().includes("coordinador") || u.firstName?.toLowerCase().includes("coordinador") || u.lastName?.toLowerCase().includes("coordinador");
 
                     const coordinators = enrichedUsers.filter(checkIsCoordinator);
                     const collaborators = enrichedUsers.filter((u) => !checkIsCoordinator(u));

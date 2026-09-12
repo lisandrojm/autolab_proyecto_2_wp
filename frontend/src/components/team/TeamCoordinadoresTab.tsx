@@ -6,6 +6,8 @@ import { User } from "../../api/users";
 import { Area, areasAPI } from "../../api/areas";
 import { Shift, shiftsAPI } from "../../api/shifts";
 import { cachedFetch } from "../../utils/refCache";
+// Coordinar un turno requiere poder cargar sus novedades, que es un permiso. Ver ese módulo.
+import { cargaNovedades } from "../../utils/permisosMobile";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faUserTie, faInfoCircle, faTable } from "@fortawesome/free-solid-svg-icons";
@@ -104,16 +106,15 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     return combos;
   }, [groupedCombinations]);
 
-  const eligibleCoordinators = React.useMemo(() => {
-    return teamMembers.filter(u => {
-      if (!u.roles || !Array.isArray(u.roles)) return false;
-      // Filter strictly by the requirement: users with the "Mobile-coordinador" role
-      return u.roles.some(r => {
-        const n = r.name.toLowerCase();
-        return n.includes("mobile") && n.includes("coordinador");
-      });
-    });
-  }, [teamMembers]);
+  /*
+    Candidatos: los del equipo que PUEDEN CARGAR NOVEDADES.
+
+    Antes se buscaba la palabra "mobile" y "coordinador" en el nombre del rol. Esos dos roles dejaron
+    de existir como algo fijo —cualquiera arma los suyos y los llama como quiera—, así que el filtro
+    se habría vaciado sin avisar. Lo que hace falta para coordinar un turno es el permiso, no el
+    nombre: sin él, esa persona no tendría dónde cargar las novedades de su área.
+  */
+  const eligibleCoordinators = React.useMemo(() => teamMembers.filter((u) => cargaNovedades(u.roles)), [teamMembers]);
 
   useEffect(() => {
     if (!loading && eligibleCoordinators.length === 0 && groupedCombinations.length > 0 && !autoShown) {
@@ -320,10 +321,10 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                     Asignación requerida
                   </p>
                   <p className="text-amber-700 dark:text-amber-500 leading-normal">
-                    Usted debe asignar al equipo un usuario con el role de sistema <strong>"mobile coordinador"</strong> para poder asignarlo.
+                    Hay que sumar al equipo a alguien que tenga el permiso <strong>"APP MOBILE | Novedades"</strong>: es quien va a poder cargar las novedades del área.
                   </p>
                   <p className="text-[11px] text-amber-600 dark:text-amber-600 italic">
-                    Vuelva a la pestaña "Equipo" y agregue un miembro con dicho rol antes de configurar los roles en esta pestaña.
+                    Volvé a la pestaña "Equipo" y agregá un miembro con un rol que lo incluya antes de configurar los coordinadores acá.
                   </p>
                 </div>
               ) : (
@@ -333,7 +334,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   </p>
                   <ul className="list-disc pl-5 space-y-1.5 marker:text-blue-500">
                     <li>Son miembros activos del <strong>equipo del proyecto</strong>.</li>
-                    <li>Tienen asignado explícitamente el rol de <strong>Mobile - Coordinador</strong>.</li>
+                    <li>Alguno de sus roles incluye el permiso <strong>APP MOBILE | Novedades</strong>, que es lo que les permite cargarlas.</li>
                   </ul>
                 </>
               )}
@@ -345,7 +346,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   <span className="text-sm font-medium text-gray-900 dark:text-white">Nombre del Coordinador</span>
                   <div className="flex items-center gap-1.5">
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 whitespace-nowrap">
-                      Mobile-Coordinador
+                      Carga novedades
                     </span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 whitespace-nowrap">
                       {project.name}

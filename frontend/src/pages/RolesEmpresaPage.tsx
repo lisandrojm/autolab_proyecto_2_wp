@@ -10,8 +10,8 @@ import { RolesEmpresaAbm, RolesEmpresaAbmHandle } from '../components/rolesEmpre
  *
  * QUÉ SON, Y POR QUÉ NO SON "Roles". En WeProdu conviven dos cosas que se llamaban igual:
  *
- *   · Usuarios → Roles          permisos de la plataforma (Admin, Mobile-Coordinador, User). Deciden
- *                               qué pantallas ve una persona. Son cinco y casi no cambian.
+ *   · Usuarios → Roles          los permisos: qué pantallas de la plataforma y qué tarjetas de la app
+ *                               ve una persona. Son unos pocos y casi no cambian.
  *   · Usuarios → Roles Empresa  el oficio con el que alguien trabaja en una producción: Actor,
  *                               Animador 2D, Asistente de Cámara. Son cientos, y cada uno mapea a las
  *                               categorías de ARCA con las que se liquida un contrato.

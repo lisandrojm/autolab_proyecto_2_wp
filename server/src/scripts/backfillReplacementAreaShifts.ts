@@ -7,6 +7,7 @@ import { Project } from "../models/Project.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Role } from "../models/Role.js";
+import { MOBILE_ACTIVITY_LOGS } from "../utils/permisosMobile.js";
 
 /**
  * BACKFILL de área/turno para los contratos marcados como REEMPLAZO.
@@ -19,7 +20,8 @@ import { Role } from "../models/Role.js";
  * Reglas (las mismas que aplica la UI):
  *   - El área debe seguir configurada en el proyecto (project.areasConfig).
  *   - Los turnos deben seguir ofrecidos por esa área.
- *   - Las áreas de sistema (coordinador) solo se copian si el reemplazante tiene rol "mobile-coordinador".
+ *   - Las áreas de sistema (coordinador) solo se copian si el reemplazante puede cargar novedades
+ *     (permiso APP MOBILE | Novedades). Antes esto se preguntaba por el nombre del rol.
  *   - Origen del área/turno del reemplazado: project.teamConfig y, si ahí no hay, su último contrato.
  *
  * Escribe en `users_&_projects.contracts[i].areaShiftAssignments` y, si el miembro ya tiene entrada en
@@ -90,10 +92,10 @@ async function backfillReplacementAreaShifts() {
     const areaMap = new Map(areas.map((a: any) => [String(a._id), a]));
     const shifts = await Shift.find({}).select("_id name").lean();
     const shiftMap = new Map(shifts.map((s: any) => [String(s._id), s.name]));
+    // Coordinador = puede cargar novedades. Antes se buscaba el rol por nombre ("mobile-coordinador"),
+    // que dejó de existir como rol fijo: ahora la pregunta es por el permiso.
     const coordinadorRoleIds = new Set(
-      (await Role.find({}).select("_id name").lean())
-        .filter((r: any) => String(r.name || "").toLowerCase().includes("mobile-coordinador"))
-        .map((r: any) => String(r._id)),
+      (await Role.find({ permissions: MOBILE_ACTIVITY_LOGS }).select("_id").lean()).map((r: any) => String(r._id)),
     );
 
     // ── UserProjects del tenant (los de los proyectos filtrados) ───────

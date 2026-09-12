@@ -44,7 +44,7 @@ const helpResources = {
       // Roles
       'roles.title': 'Información de Roles',
       'roles.description': 'Sistema de permisos y roles',
-      'roles.items': ['**Roles**: Agrupan permisos para simplificar la administración (ej: *Viewer*, *Manager*, *Content Creator*)', '**Rol por defecto**: Se asigna automáticamente a usuarios nuevos', '**Permisos**: Agrupados por módulo con opciones *Marcar todo* / *Desmarcar todo*', '**Gestión**: Crear roles personalizados y asignar permisos granulares'],
+      'roles.items': ['**Un rol es un conjunto de permisos**, y cada permiso destapa una pantalla. Quien tenga el rol ve eso y nada más.', '**Dos secciones, cada una con su interruptor**: *Plataforma* (lo del escritorio) y *App Mobile* (las tarjetas de la app: Novedades, Pedidos, Vacaciones y Usuarios). Un rol nuevo arranca siendo de la app; la plataforma se prende aparte.', '**No se puede guardar un rol sin permisos**: no dejaría entrar a ningún lado.', '**Rol por defecto**: es el que reciben las altas —los usuarios importados de FRAME y los que entran por el link de registro—, así que conviene que abra la app.', '**Quién coordina turnos necesita *Novedades***: sin ese permiso no tiene dónde cargar las de su área, y el sistema no deja sacárselo hasta liberarle la coordinación desde el equipo del proyecto.'],
 
       // Positions
       'positions.title': 'Información de Cargos',

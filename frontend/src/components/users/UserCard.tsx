@@ -12,6 +12,7 @@ import { Vacation } from "../../api/vacations";
 import { RoleFrameItem } from "../../api/roleFrames";
 import { Card } from "../ui/Card";
 import { InfoModal } from "../ui/InfoModal";
+import { MOBILE_ACTIVITY_LOGS } from "../../utils/permisosMobile";
 
 interface UserCardProps {
   user: User;
@@ -419,6 +420,9 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
           const userMetaId = user.metadata?.id;
           const isReallyResponsable = projectRespId && userMetaId && Number(projectRespId) === Number(userMetaId);
 
+          // El rol llamado "Responsable de Proyecto" sigue existiendo y sigue dando permisos de
+          // plataforma; lo que ya no da es la elegibilidad, que es el tilde de la ficha. Si la persona
+          // ES la responsable de este proyecto, el badge verde lo dice y repetir el rol sobra.
           const filteredRoles = user.roles.filter((r) => {
             const isResponsableRole = r.name.toLowerCase().includes("responsable");
             if (isResponsableRole && isReallyResponsable) return false;
@@ -433,8 +437,9 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             <div className="flex flex-wrap gap-1">
               {isReallyResponsable && <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">Responsable de Proyecto</span>}
               {filteredRoles.slice(0, 3).map((role) => {
-                const lower = role.name.toLowerCase();
-                const isCoord = lower.includes("coordinador");
+                // Se pinta distinto al rol que carga novedades, que es lo que antes se llamaba «coordinador».
+                // Antes se miraba el nombre; ahora el permiso, que es lo que el rol realmente hace.
+                const isCoord = (role.permissions || []).includes(MOBILE_ACTIVITY_LOGS);
 
                 let classes = "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300";
                 if (isCoord) {
