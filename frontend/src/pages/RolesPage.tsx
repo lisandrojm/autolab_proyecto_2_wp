@@ -223,23 +223,51 @@ const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
  * cincuenta casillas y la del móvil cuatro, así que tenerlas las dos abiertas dejaba lo importante
  * abajo de todo. El contador en la cabecera existe para que, plegada, se siga viendo que ahí hay algo.
  */
+/**
+ * «Todos» y «Limpiar» para un grupo de permisos.
+ *
+ * Va en la cabecera de cada sección y en la de cada grupo. Antes había UN par de botones arriba de
+ * todo, que marcaba o borraba los cincuenta permisos de golpe: para armar un rol que viera sólo
+ * Contratos y Pedidos no servía de nada, y para limpiar un grupo había que destildar de a uno. El
+ * alcance de cada par es el grupo en el que está, que es como se piensa un rol.
+ */
+const BotonesSeleccion: React.FC<{ alcance: string; onTodos: () => void; onLimpiar: () => void }> = ({ alcance, onTodos, onLimpiar }) => (
+  <div className="ml-auto flex shrink-0 items-center gap-1">
+    <button type="button" onClick={onTodos} title={`Marcar todo en ${alcance}`} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
+      <FontAwesomeIcon icon={faCheckDouble} className="h-3 w-3" />
+      Todos
+    </button>
+    <button type="button" onClick={onLimpiar} title={`Desmarcar todo en ${alcance}`} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">
+      <FontAwesomeIcon icon={faBroom} className="h-3 w-3" />
+      Limpiar
+    </button>
+  </div>
+);
+
 const SeccionPermisos: React.FC<{
   titulo: string;
   icono: any;
   prendida: boolean;
   cantidad: number;
   onToggle: () => void;
+  onTodos: () => void;
+  onLimpiar: () => void;
   children: React.ReactNode;
-}> = ({ titulo, icono, prendida, cantidad, onToggle, children }) => (
+}> = ({ titulo, icono, prendida, cantidad, onToggle, onTodos, onLimpiar, children }) => (
   <div className={`rounded-lg border transition-colors ${prendida ? "border-gray-200 dark:border-gray-700" : "border-dashed border-gray-200 dark:border-gray-700"}`}>
-    <button type="button" onClick={onToggle} aria-pressed={prendida} className="w-full flex items-center gap-3 px-4 py-3 text-left">
-      <span className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${prendida ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${prendida ? "translate-x-4" : "translate-x-0.5"}`} />
-      </span>
-      <FontAwesomeIcon icon={icono} className={prendida ? "text-blue-600 dark:text-blue-400" : "text-gray-400"} />
-      <span className={`text-xs font-bold uppercase tracking-wider ${prendida ? "text-gray-700 dark:text-gray-200" : "text-gray-400"}`}>{titulo}</span>
-      <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">{cantidad > 0 ? `${cantidad} permiso${cantidad > 1 ? "s" : ""}` : prendida ? "sin permisos todavía" : "apagado"}</span>
-    </button>
+    {/* La fila NO es un botón: adentro hay otros. Lo clickeable es el interruptor con su etiqueta. */}
+    <div className="flex w-full items-center gap-3 px-4 py-3">
+      <button type="button" onClick={onToggle} aria-pressed={prendida} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+        <span className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${prendida ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${prendida ? "translate-x-4" : "translate-x-0.5"}`} />
+        </span>
+        <FontAwesomeIcon icon={icono} className={prendida ? "text-blue-600 dark:text-blue-400" : "text-gray-400"} />
+        <span className={`text-xs font-bold uppercase tracking-wider ${prendida ? "text-gray-700 dark:text-gray-200" : "text-gray-400"}`}>{titulo}</span>
+        <span className="truncate text-xs text-gray-500 dark:text-gray-400">{cantidad > 0 ? `${cantidad} permiso${cantidad > 1 ? "s" : ""}` : prendida ? "sin permisos todavía" : "apagado"}</span>
+      </button>
+      {/* Apagada no hay nada que marcar ni que limpiar: los botones sobrarían. */}
+      {prendida && <BotonesSeleccion alcance={titulo} onTodos={onTodos} onLimpiar={onLimpiar} />}
+    </div>
     {prendida && <div className="px-4 pb-4">{children}</div>}
   </div>
 );
@@ -521,20 +549,17 @@ export const RolesPage: React.FC = () => {
     }
   };
 
-  // Marca todo lo de las secciones prendidas. Lo de una sección apagada no se toca: no está a la vista.
-  const selectAllPermissions = () => {
-    setFormData((prev) => {
-      const aMarcar = [...(seccionPlataforma ? PLATFORM_PERMISSIONS : []), ...(seccionMobile ? MOBILE_PERMISSIONS : [])];
-      return { ...prev, permissions: Array.from(new Set([...prev.permissions, ...aMarcar])) };
-    });
-  };
+  /*
+    Marcar y limpiar SIEMPRE con un alcance: la sección o el grupo desde donde se llamó.
 
-  // Limpia los permisos de las secciones prendidas.
-  const clearAllPermissions = () =>
-    setFormData((prev) => ({
-      ...prev,
-      permissions: prev.permissions.filter((p) => (esPermisoMobile(p) ? !seccionMobile : !seccionPlataforma)),
-    }));
+    Antes era un único par de botones arriba de todo que operaba sobre los cincuenta permisos juntos.
+    Para armar un rol que viera sólo Contratos y Pedidos no servía —había que marcar todo y destildar
+    cuarenta y ocho—, y tampoco servía para vaciar un grupo. Ahora cada sección y cada grupo tienen el
+    suyo, y nada de lo que está fuera de ese alcance se toca.
+  */
+  const marcarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: Array.from(new Set([...prev.permissions, ...permisos])) }));
+
+  const limpiarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: prev.permissions.filter((p) => !permisos.includes(p)) }));
 
   const togglePermission = (permission: string) => {
     setFormData((prev) => {
@@ -786,21 +811,17 @@ export const RolesPage: React.FC = () => {
               </div>
 
               <div>
+                {/*
+                  Acá arriba había un «Seleccionar todos» y un «Limpiar» globales. Marcaban o borraban
+                  los cincuenta y pico de permisos de un saque, que casi nunca es lo que uno quiere: un
+                  rol se piensa por bloques —«que vea Contratos y Pedidos y nada más»—. Ahora cada
+                  sección y cada grupo tienen su propio par, con el alcance a la vista.
+                */}
                 <div className="flex items-center mb-4 gap-2">
                   <label className="block text-lg font-semibold text-gray-700 dark:text-gray-300">Permisos</label>
                   <button type="button" onClick={() => setShowPermissionsInfo(true)} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors" title="Información sobre permisos">
                     <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
                   </button>
-                  <div className="ml-auto flex items-center gap-2">
-                    <button type="button" onClick={selectAllPermissions} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Marcar todos los permisos">
-                      <FontAwesomeIcon icon={faCheckDouble} className="h-3.5 w-3.5" />
-                      Seleccionar todos
-                    </button>
-                    <button type="button" onClick={clearAllPermissions} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Desmarcar todos los permisos">
-                      <FontAwesomeIcon icon={faBroom} className="h-3.5 w-3.5" />
-                      Limpiar
-                    </button>
-                  </div>
                 </div>
                 <div className="space-y-3">
                   {/*
@@ -811,7 +832,15 @@ export const RolesPage: React.FC = () => {
                     bajar hasta el final para encontrar las cuatro que le importan. Ahora la sección
                     que no se usa queda plegada, y la que se usa se ve entera.
                   */}
-                  <SeccionPermisos titulo="Plataforma" icono={faUserShield} prendida={seccionPlataforma} cantidad={formData.permissions.filter((p) => !esPermisoMobile(p)).length} onToggle={() => toggleSeccion("plataforma")}>
+                  <SeccionPermisos
+                    titulo="Plataforma"
+                    icono={faUserShield}
+                    prendida={seccionPlataforma}
+                    cantidad={formData.permissions.filter((p) => !esPermisoMobile(p)).length}
+                    onToggle={() => toggleSeccion("plataforma")}
+                    onTodos={() => marcarPermisos(PLATFORM_PERMISSIONS)}
+                    onLimpiar={() => limpiarPermisos(PLATFORM_PERMISSIONS)}
+                  >
                     <div className="space-y-3">
                       {Object.entries(AVAILABLE_PERMISSIONS)
                         .filter(([module]) => module !== "mobile")
@@ -822,10 +851,11 @@ export const RolesPage: React.FC = () => {
                                 <div className="w-6 h-6 rounded bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 flex items-center justify-center flex-shrink-0">
                                   <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400" />
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
                                 </div>
+                                <BotonesSeleccion alcance={moduleData.label} onTodos={() => marcarPermisos(moduleData.permissions)} onLimpiar={() => limpiarPermisos(moduleData.permissions)} />
                               </div>
                               <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
                                 {moduleData.permissions.map((permission) => {
@@ -853,13 +883,14 @@ export const RolesPage: React.FC = () => {
                                 <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 flex items-center justify-center flex-shrink-0">
                                   <FontAwesomeIcon icon={moduleData.icon} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
                                     <span className="text-xs px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>
                                   </div>
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
                                 </div>
+                                <BotonesSeleccion alcance={moduleData.label} onTodos={() => marcarPermisos(moduleData.permissions)} onLimpiar={() => limpiarPermisos(moduleData.permissions)} />
                               </div>
                               <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
                                 {moduleData.permissions.map((permission) => {
@@ -879,7 +910,15 @@ export const RolesPage: React.FC = () => {
                     </div>
                   </SeccionPermisos>
 
-                  <SeccionPermisos titulo="App Mobile" icono={faMobileAlt} prendida={seccionMobile} cantidad={formData.permissions.filter((p) => esPermisoMobile(p)).length} onToggle={() => toggleSeccion("mobile")}>
+                  <SeccionPermisos
+                    titulo="App Mobile"
+                    icono={faMobileAlt}
+                    prendida={seccionMobile}
+                    cantidad={formData.permissions.filter((p) => esPermisoMobile(p)).length}
+                    onToggle={() => toggleSeccion("mobile")}
+                    onTodos={() => marcarPermisos(MOBILE_PERMISSIONS)}
+                    onLimpiar={() => limpiarPermisos(MOBILE_PERMISSIONS)}
+                  >
                     <div className="space-y-3">
                       {Object.entries(AVAILABLE_PERMISSIONS)
                         .filter(([module]) => module === "mobile")
@@ -890,10 +929,11 @@ export const RolesPage: React.FC = () => {
                                 <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 flex items-center justify-center flex-shrink-0">
                                   <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
                                 </div>
+                                <BotonesSeleccion alcance={moduleData.label} onTodos={() => marcarPermisos(moduleData.permissions)} onLimpiar={() => limpiarPermisos(moduleData.permissions)} />
                               </div>
                               <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
                                 {moduleData.permissions.map((permission) => {
