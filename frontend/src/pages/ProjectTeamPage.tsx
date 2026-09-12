@@ -1535,8 +1535,15 @@ export const ProjectTeamPage: React.FC = () => {
     const initialContratoFrameId = initialCf?._id || "";
     const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || "";
     if (initialCf?.data?.id != null) initialTipoContratoId = String(initialCf.data.id);
-    // El Contrato (tipo) se resuelve a partir de la Plantilla del último contrato del miembro.
-    const initialContratoId = (typeof initialCf?.contratoId === "object" ? initialCf?.contratoId?._id : initialCf?.contratoId) || "";
+    /*
+      El Contrato (tipo) se resuelve a partir de la Plantilla del último contrato del miembro, y si no
+      hay, de lo que declaró la SOLICITUD.
+
+      Desde que la solicitud del móvil pide el tipo de contrato —y no sólo el trámite—, ese dato llega
+      elegido por quien conoce a la persona. Volver a preguntarlo acá era pedir dos veces lo mismo y
+      arriesgarse a que la respuesta no coincida con la de la solicitud que se está aprobando.
+    */
+    const initialContratoId = (typeof initialCf?.contratoId === "object" ? initialCf?.contratoId?._id : initialCf?.contratoId) || (user.metadata as any)?.contratoId || "";
 
     let initialEstadoId = "";
     if (lastContract) {
@@ -1608,6 +1615,17 @@ export const ProjectTeamPage: React.FC = () => {
     // Secondary source: user contract history (if teamConfig is missing it)
     if (existingAssignments.length === 0 && lastContract?.areaShiftAssignments) {
       existingAssignments = lastContract.areaShiftAssignments;
+    }
+
+    /*
+      Tercera fuente: el área y turno que declaró la SOLICITUD.
+
+      Para un alta nueva las dos de arriba están vacías —la persona todavía no es del equipo ni tiene
+      contratos—, así que el wizard abría sin área y había que elegirla de nuevo. La solicitud la trae
+      desde el móvil: es el área que coordina quien pidió el alta.
+    */
+    if (existingAssignments.length === 0 && Array.isArray((user.metadata as any)?.areaShiftAssignments)) {
+      existingAssignments = (user.metadata as any).areaShiftAssignments;
     }
 
     // Map existing assignments to the wizard format, ensuring we use string IDs

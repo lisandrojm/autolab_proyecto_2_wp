@@ -244,6 +244,42 @@ const BotonesSeleccion: React.FC<{ alcance: string; onTodos: () => void; onLimpi
   </div>
 );
 
+/**
+ * De qué es un rol, en una línea: «Plataforma (41) · App Mobile (4)».
+ *
+ * Es lo que uno quiere saber mirando la grilla —¿este rol abre el escritorio, la app, o los dos?— y
+ * antes había que entrar al rol para averiguarlo: la tarjeta sólo decía cuántos permisos tenía en
+ * total, que no distingue un administrador de alguien que sólo carga novedades desde el teléfono.
+ *
+ * Sólo se nombra la sección que el rol efectivamente tiene: un rol de campo no necesita que le
+ * aclaren que no abre el escritorio.
+ */
+const ResumenPermisos: React.FC<{ permisos: string[] }> = ({ permisos }) => {
+  const mobile = permisos.filter(esPermisoMobile).length;
+  const plataforma = permisos.length - mobile;
+
+  if (permisos.length === 0) {
+    return <span className="text-xs italic text-gray-400 dark:text-gray-500">Sin permisos</span>;
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      {plataforma > 0 && (
+        <span className="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+          <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 text-blue-500" />
+          Plataforma ({plataforma})
+        </span>
+      )}
+      {mobile > 0 && (
+        <span className="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+          <FontAwesomeIcon icon={faMobileAlt} className="h-3 w-3 text-indigo-400" />
+          App Mobile ({mobile})
+        </span>
+      )}
+    </span>
+  );
+};
+
 const SeccionPermisos: React.FC<{
   titulo: string;
   icono: any;
@@ -1041,7 +1077,15 @@ export const RolesPage: React.FC = () => {
                       ],
                     }}
                     footer={{
-                      leftContent: isSuperAdminRole ? <span className="text-xs text-gray-500 dark:text-gray-500">Acceso total al sistema</span> : <span className="text-xs text-gray-500 dark:text-gray-500">{role.permissions.length} permisos</span>,
+                      /*
+                        Abajo dice DE QUÉ es el rol, no cuántos permisos tiene.
+
+                        Antes decía «46 permisos», que es un número del que no se deduce nada: el que
+                        mira la grilla quiere saber si ese rol abre la app, el escritorio o los dos, y
+                        eso estaba a dos clics de distancia. La cantidad sigue estando, pero ahora
+                        repartida en las dos secciones que se eligen al armarlo.
+                      */
+                      leftContent: isSuperAdminRole ? <span className="text-xs text-gray-500 dark:text-gray-500">Acceso total al sistema</span> : <ResumenPermisos permisos={role.permissions} />,
                       actions: isSuperAdminRole
                         ? [
                             {
@@ -1143,7 +1187,8 @@ export const RolesPage: React.FC = () => {
                                 Total
                               </span>
                             ) : (
-                              <span className="text-sm text-gray-600 dark:text-gray-400">{role.permissions.length} permisos</span>
+                              // Mismo desglose que en las tarjetas: de qué es el rol, no cuántos permisos tiene.
+                              <ResumenPermisos permisos={role.permissions} />
                             )}
                           </td>
                           <td className="px-6 py-4">{role.tenant && role.tenant.name ? <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{role.tenant.name}</span> : <span className="text-xs text-gray-400">—</span>}</td>

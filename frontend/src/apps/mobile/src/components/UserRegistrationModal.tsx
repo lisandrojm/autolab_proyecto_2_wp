@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faFileInvoiceDollar, faPlus, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo, faltaDefinirDias } from "../../../../components/contratos/DiasDeTrabajo";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
@@ -15,10 +15,11 @@ import { useProfile } from "../hooks/useProfile";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { infoAPI, InfoItem } from "../../../../api/info";
 import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
-import { estadoLabel } from "../../../../components/EstadoSelect";
 import { fuzzyMatch } from "../../../../utils/searchHelpers";
-import { estadosImpositivos, esTipoImpositivo, TipoImpositivo } from "../../../../utils/tramiteImpositivo";
-import { TRAMITE_ALTA_TEMPRANA } from "../../../../components/contratos/altaTemprana";
+import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeContrato } from "../../../../utils/tramiteImpositivo";
+import { contratosAPI, ContratoItem } from "../../../../api/contratos";
+import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
+import { EstadoBadge } from "../../../../components/EstadoSelect";
 
 interface UserRegistrationModalProps {
   isOpen: boolean;
@@ -47,6 +48,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     const propios = profile?.projectIds || [];
     return propios.length > 0 ? proyectosActivos.filter((p) => propios.includes(p._id)) : proyectosActivos;
   }, [proyectosActivos, profile]);
+
+  /** «Cliente | Proyecto», que es como se lo reconoce: el nombre solo se repite entre clientes. */
+  const etiquetaProyecto = (p: Project) => (typeof p.clientId === "object" && p.clientId?.name ? `${p.clientId.name} | ${p.name}` : p.name);
   /** Catálogo de empresas y de convenios, para resolver nombres y la cadena proyecto → empresa → CCT. */
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
@@ -59,6 +63,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   /* Los dos estados impositivos configurados. Salen del ABM y no de una lista escrita acá: si
      alguien les cambia el nombre o el color, esta pantalla lo muestra igual. */
   const [impositivos, setImpositivos] = useState<InfoItem[]>([]);
+  /*
+    Los TIPOS DE CONTRATO y sus plantillas.
+
+    El trámite (ARCA o Servicios) no se elige más a mano: lo declara el tipo de contrato, a través de
+    sus plantillas. `tipoImpositivoDeContrato` hace ese recorrido —tipo → plantillas → estado
+    impositivo— y necesita la lista COMPLETA de estados, no sólo los impositivos, así que se guarda
+    aparte de `impositivos`.
+  */
+  const [contratos, setContratos] = useState<ContratoItem[]>([]);
+  const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
+  const [todosLosEstados, setTodosLosEstados] = useState<InfoItem[]>([]);
+  const [contratoModalOpen, setContratoModalOpen] = useState(false);
   const [showRoleFilterMenu, setShowRoleFilterMenu] = useState(false);
   /** Las dos ventanas de selección de personas. Reemplazan a los desplegables flotantes. */
   const [personaModalOpen, setPersonaModalOpen] = useState(false);
@@ -74,6 +90,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [motivoModalOpen, setMotivoModalOpen] = useState(false);
   /** Ventana de rol empresa, con su propio buscador. Mismo patrón que la de Usuarios. */
   const [rolModalOpen, setRolModalOpen] = useState(false);
+  const [proyectoModalOpen, setProyectoModalOpen] = useState(false);
   const [rolSearchTerm, setRolSearchTerm] = useState("");
   /** Texto del buscador dentro de la ventana de "a quién reemplaza". */
   const [replacedSearchTerm, setReplacedSearchTerm] = useState("");
@@ -107,6 +124,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     isReplacement: false,
     /** Por qué vía se contrata: alta temprana ante ARCA o locación de servicios. */
     tipoImpositivo: "" as TipoImpositivo | "",
+    /** El tipo de contrato elegido (`Contrato._id`). De él sale el trámite. */
+    contratoId: "",
+    /** El área y turno que coordina quien pide, ya puestos en la solicitud. */
+    areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
     /** A quién reemplaza: el id numérico que usa el contrato (puede faltar) y el `_id`, que no. */
     empleado_id_reemplezado: "",
     replacedUserId: "",
@@ -214,19 +235,18 @@ const TIME_OPTIONS = (() => {
         setLoadingData(true);
 
         /*
-          `slimProjects` en la lista de personas.
+          MODO SELECTOR en la lista de personas.
 
-          Sin eso, `/users` pobla `metadata.projects` con TODOS los contratos de cada persona: con
-          `limit: 1000` eso es el N×M completo del tenant, y es lo que hacía que esta consulta se
-          comiera el tiempo (o directamente cortara por timeout) y, de paso, se llevara puestos a los
-          proyectos por estar en el mismo `Promise.all`.
+          Esta pantalla usa de cada persona: el nombre, el mail, el documento, y con qué rol empresa
+          figura en sus proyectos —para el filtro por rol y para saber quién está en el proyecto
+          cuando hay que elegir a quién reemplaza—. El listado completo, en cambio, traía la ficha
+          entera de cada una: domicilio, datos bancarios, cliente, tenant y los proyectos poblados.
 
-          Acá alcanza con lo liviano: el buscador de personas usa nombre, email y `externalInfo`, y el
-          de reemplazos necesita `metadata.projects[].projectId` para saber quién está en el proyecto.
-          Nada de eso son los contratos.
+          Medido contra la base para 83 personas: 1280 ms y 131 KB antes, 224 ms y 16 KB con `picker`.
+          Y la diferencia crece con la cantidad de gente del tenant, que es el caso real.
         */
         const personas = usersAPI
-          .list({ limit: 1000, metadataActivo: "true", slimProjects: true })
+          .list({ limit: 1000, metadataActivo: "true", picker: true })
           .then((r) => setPlatformUsers(r.users || []))
           .catch((e) => console.error("Error cargando personas:", e));
 
@@ -239,7 +259,10 @@ const TIME_OPTIONS = (() => {
           "tarda un montón en traer los proyectos" era, en buena parte, traerlos dos veces.
         */
         const proyectos = projectsAPI
-          .listAll()
+          // `slim`: nombre, cliente, estado y las empresas/convenios del proyecto, que es todo lo que
+          // esta pantalla lee. El listado normal trae además áreas, turnos y coordinadores poblados,
+          // y resuelve sede, centro de costo y responsable: 1451 ms y 84 KB contra 142 ms y 5 KB.
+          .listAll({ slim: true })
           .then((projs) => setProjects(projs.filter((p) => p.status === "active")))
           .catch((e) => console.error("Error cargando proyectos:", e));
 
@@ -253,8 +276,20 @@ const TIME_OPTIONS = (() => {
           .catch((e) => console.error("Error cargando categorías:", e));
         infoAPI
           .listByType("estado-empleado")
-          .then((estados) => setImpositivos(estadosImpositivos(estados)))
+          .then((estados) => {
+            setTodosLosEstados(estados);
+            setImpositivos(estadosImpositivos(estados));
+          })
           .catch((e) => console.error("Error cargando estados:", e));
+        // Los tipos de contrato y sus plantillas: de ahí sale el trámite, que ya no se elige a mano.
+        contratosAPI
+          .list()
+          .then((cs) => setContratos(cs.filter((c) => c.isActive !== false)))
+          .catch((e) => console.error("Error cargando tipos de contrato:", e));
+        contratoFrameAPI
+          .list()
+          .then(setContratoFrames)
+          .catch((e) => console.error("Error cargando plantillas de contrato:", e));
         activityLogTypesAPI
           .getAll()
           // Mismo filtro que Novedades: solo los activos y sin "horas extra", que no es una ausencia.
@@ -298,6 +333,8 @@ const TIME_OPTIONS = (() => {
         // Las solicitudes anteriores a este campo se abren sin trámite: hay que elegirlo, en vez de
         // dar por hecho uno de los dos.
         tipoImpositivo: esTipoImpositivo(meta.tipoImpositivo) ? meta.tipoImpositivo : "",
+        contratoId: (meta as any).contratoId || "",
+        areaShiftAssignments: Array.isArray((meta as any).areaShiftAssignments) ? (meta as any).areaShiftAssignments : [],
         empleado_id_reemplezado: meta.empleado_id_reemplezado != null ? String(meta.empleado_id_reemplezado) : "",
         replacedUserId: meta.replacedUserId ? String(meta.replacedUserId) : "",
         motivoReemplazoId: meta.motivoReemplazoId ? String(meta.motivoReemplazoId) : "",
@@ -322,6 +359,8 @@ const TIME_OPTIONS = (() => {
         dailyRate: "",
         isReplacement: false,
         tipoImpositivo: "",
+        contratoId: "",
+        areaShiftAssignments: [],
         empleado_id_reemplezado: "",
         replacedUserId: "",
         motivoReemplazoId: "",
@@ -344,11 +383,6 @@ const TIME_OPTIONS = (() => {
     editando. Y sale de los estados del ABM: si el de alta temprana no está configurado, no se
     inventa una selección que no existe.
   */
-  useEffect(() => {
-    if (!isOpen || formData.tipoImpositivo) return;
-    const porDefecto = impositivos.find((e) => e.data?.tipoImpositivo === TRAMITE_ALTA_TEMPRANA);
-    if (porDefecto?.data?.tipoImpositivo) setFormData((p) => (p.tipoImpositivo ? p : { ...p, tipoImpositivo: TRAMITE_ALTA_TEMPRANA }));
-  }, [isOpen, impositivos, formData.tipoImpositivo]);
 
   /*
     LAS PERSONAS QUE OFRECE LA VENTANA: por texto y por rol.
@@ -374,6 +408,74 @@ const TIME_OPTIONS = (() => {
     proyecto no es un reemplazo, y ofrecer la lista completa de la plataforma convertiría el
     buscador en una lista de cientos de nombres donde el correcto es uno.
   */
+  /** El proyecto elegido, resuelto. La solicitud es de UNO: `projectIds` guarda ese uno. */
+  const proyectoElegido = useMemo(() => projects.find((p) => formData.projectIds.includes(p._id)) || null, [projects, formData.projectIds]);
+
+  const contratoElegido = useMemo(() => contratos.find((c) => c._id === formData.contratoId) || null, [contratos, formData.contratoId]);
+
+  /** El trámite que declara cada tipo de contrato, por sus plantillas. Es lo que pinta el badge. */
+  const tramitePorContrato = useMemo(() => {
+    const m = new Map<string, TipoImpositivo>();
+    for (const c of contratos) {
+      const t = tipoImpositivoDeContrato(c._id, contratoFrames, todosLosEstados);
+      if (t) m.set(c._id, t);
+    }
+    return m;
+  }, [contratos, contratoFrames, todosLosEstados]);
+
+  /** El estado impositivo del tipo elegido: de ahí salen el nombre y el color del badge. */
+  const estadoDelTramite = useMemo(() => {
+    const tipo = formData.contratoId ? tramitePorContrato.get(formData.contratoId) : undefined;
+    return tipo ? impositivos.find((e) => e.data?.tipoImpositivo === tipo) || null : null;
+  }, [formData.contratoId, tramitePorContrato, impositivos]);
+
+  /*
+    LAS COORDINACIONES DE QUIEN PIDE EN EL PROYECTO ELEGIDO.
+
+    El server manda en `coordinatorAssignments` sólo las propias (ver `?slim=true` en
+    `routes/projects.ts`), así que esto es «mis áreas y turnos acá». Es lo que se deja puesto en la
+    solicitud: el coordinador pide el alta para su área, no para el proyecto entero.
+  */
+  const coordinacionesEnProyecto = useMemo(() => {
+    const idDe = (x: any) => (x && typeof x === "object" ? String(x._id) : String(x || ""));
+    return ((proyectoElegido as any)?.coordinatorAssignments || [])
+      .filter((a: any) => a?.areaId && a?.shiftId)
+      .map((a: any) => ({
+        areaId: idDe(a.areaId),
+        shiftId: idDe(a.shiftId),
+        etiqueta: `${typeof a.areaId === "object" ? a.areaId?.name : "Área"} · ${typeof a.shiftId === "object" ? a.shiftId?.name : "Turno"}`,
+      }));
+  }, [proyectoElegido]);
+
+  /*
+    El trámite se DEDUCE del tipo de contrato elegido y se guarda con la solicitud.
+
+    Antes se elegía a mano, con «Pedido de ARCA» preseleccionado. Ahora el tipo de contrato lo
+    determina, así que este efecto sólo copia el resultado al formulario: el wizard de aprobación
+    sigue leyendo `tipoImpositivo` para precargarse, y así no se entera del cambio.
+  */
+  useEffect(() => {
+    const tipo = formData.contratoId ? tramitePorContrato.get(formData.contratoId) || "" : "";
+    if (tipo !== formData.tipoImpositivo) setFormData((p) => ({ ...p, tipoImpositivo: tipo }));
+  }, [formData.contratoId, formData.tipoImpositivo, tramitePorContrato]);
+
+  /*
+    El área y turno que coordina quien pide quedan puestos solos.
+
+    Si coordina UNA sola combinación en ese proyecto —el caso normal— se asigna sin preguntar: es
+    exactamente el dato que el alta necesita y que hoy hay que volver a cargar al aprobar. Si coordina
+    varias, se limpia y las elige abajo; si no coordina ninguna, la solicitud viaja sin esto y el área
+    se define al aprobar, como antes.
+  */
+  useEffect(() => {
+    if (coordinacionesEnProyecto.length === 1) {
+      const { areaId, shiftId } = coordinacionesEnProyecto[0];
+      setFormData((p) => (p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds[0] === shiftId ? p : { ...p, areaShiftAssignments: [{ areaId, shiftIds: [shiftId] }] }));
+    } else if (coordinacionesEnProyecto.length === 0) {
+      setFormData((p) => (p.areaShiftAssignments.length === 0 ? p : { ...p, areaShiftAssignments: [] }));
+    }
+  }, [coordinacionesEnProyecto]);
+
   const candidatosAReemplazar = useMemo(() => {
     if (formData.projectIds.length === 0) return [];
     const busca = replacedSearchTerm.trim().toLowerCase();
@@ -542,18 +644,16 @@ const TIME_OPTIONS = (() => {
       Una solicitud sin los días se convierte en un contrato sin los días: la carga la sigue alguien
       del otro lado, que no sabe cuáles eran y termina preguntando por mensaje. Es más barato pedirlo
       donde está la persona que lo sabe.
-
-      Misma regla que en «Agregar miembro» y «Configurar miembro» — se importa, no se reescribe.
-    */
     /*
-      SIN TRÁMITE NO SE MANDA.
+      SIN TIPO DE CONTRATO NO SE MANDA.
 
-      Es el dato del que después dependen el TXT de ARCA y qué papeles hay que juntar. Dejarlo
-      opcional lo convierte en algo que alguien completa más tarde adivinando, y adivinar mal acá
-      se descubre recién cuando el alta sale mal ante el organismo.
+      Es lo que define qué se firma y, con eso, por qué vía se declara el vínculo ante el organismo:
+      el TXT de ARCA y los papeles que hay que juntar salen de ahí. Dejarlo opcional lo convierte en
+      algo que alguien completa más tarde adivinando, y adivinar mal acá se descubre recién cuando el
+      alta sale mal ante ARCA.
     */
-    if (!formData.tipoImpositivo && impositivos.length > 0) {
-      sweetAlert.warning("Falta el tipo de alta", "Elegí si la contratación va por alta de ARCA o por servicios.");
+    if (!formData.contratoId && contratos.length > 0) {
+      sweetAlert.warning("Falta el tipo de contrato", "Elegí qué tipo de contrato se le va a hacer a esta persona.");
       return;
     }
     /*
@@ -628,6 +728,14 @@ const TIME_OPTIONS = (() => {
           comentarios: formData.comentarios.trim() || undefined,
           // El trámite declarado viaja con la solicitud: es lo que después precarga el wizard.
           tipoImpositivo: formData.tipoImpositivo || undefined,
+          /*
+            El tipo de contrato elegido y el área/turno que coordina quien pide. Los dos existían ya
+            como precarga del wizard de aprobación (`metadata.contratoId`, `areaShiftAssignments`):
+            lo que faltaba era que la solicitud los trajera, en vez de volver a cargarlos al aprobar.
+          */
+          contratoId: formData.contratoId || undefined,
+          nombre_contrato: contratoElegido?.name || undefined,
+          areaShiftAssignments: formData.areaShiftAssignments.length > 0 ? formData.areaShiftAssignments : undefined,
           isSolicitud: true,
         },
       };
@@ -659,6 +767,8 @@ const TIME_OPTIONS = (() => {
         dailyRate: "",
         isReplacement: false,
         tipoImpositivo: "",
+        contratoId: "",
+        areaShiftAssignments: [],
         empleado_id_reemplezado: "",
         replacedUserId: "",
         motivoReemplazoId: "",
@@ -712,41 +822,37 @@ const TIME_OPTIONS = (() => {
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
             <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-            Clientes | Proyectos* (Selecciona uno o más)
+            Cliente | Proyecto* (elegí uno)
           </label>
           {/* Sin marco propio: cada proyecto YA es una tarjeta con su borde, y el contenedor
               alrededor los dejaba como una caja adentro de otra caja. El alto máximo queda para que
               una lista larga no empuje el resto del formulario fuera de la vista. */}
-          <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-            {loadingData ? (
-              <div className="flex items-center justify-center h-full py-4">
-                <LoadingSpinner message="Cargando datos..." />
+          {/*
+            CON UN SOLO PROYECTO NO HAY NADA QUE ELEGIR: se muestra y listo.
+
+            Con varios, la lista entera acá arriba ocupaba media pantalla del teléfono y empujaba el
+            resto del formulario fuera de la vista. Se abre en su propia ventana, igual que Persona,
+            Rol/es Empresa y Motivo, y acá queda sólo el elegido con un «Cambiar» al lado.
+          */}
+          {loadingData ? (
+            <div className="flex items-center justify-center py-4">
+              <LoadingSpinner message="Cargando datos..." />
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="flex items-center justify-center py-4 text-slate-500 italic text-sm">No hay proyectos disponibles</div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex flex-1 items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-left dark:border-blue-700 dark:bg-blue-900/20">
+                <FontAwesomeIcon icon={faBriefcase} className="text-[10px] text-blue-500" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{proyectoElegido ? etiquetaProyecto(proyectoElegido) : "Elegí un proyecto"}</span>
               </div>
-            ) : projects.length === 0 ? (
-              <div className="flex items-center justify-center h-full py-4 text-slate-500 italic text-sm">No hay proyectos disponibles</div>
-            ) : (
-              projects.map((p) => {
-                const isSelected = formData.projectIds.includes(p._id);
-                return (
-                  <button
-                    key={p._id}
-                    type="button"
-                    onClick={() => {
-                      if (isSelected) {
-                        setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== p._id) }));
-                      } else {
-                        setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, p._id] }));
-                      }
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 opacity-60"}`}
-                  >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center border ${isSelected ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}>{isSelected && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}</div>
-                    <span className="text-sm font-medium">{typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}</span>
-                  </button>
-                );
-              })
-            )}
-          </div>
+              {projects.length > 1 && (
+                <button type="button" onClick={() => setProyectoModalOpen(true)} className="shrink-0 rounded-lg border border-slate-300 px-3 py-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
+                  Cambiar
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/*
@@ -1025,51 +1131,83 @@ const TIME_OPTIONS = (() => {
             </div>
           </div>
         </div>
-
         {/*
-          POR QUÉ VÍA SE CONTRATA: alta temprana ante ARCA, o locación de servicios.
+          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él.
 
-          Lo sabe quien pide el alta —conoce a la persona y cómo va a trabajar— y hasta ahora no
-          había dónde decirlo: la solicitud llegaba sin trámite y del otro lado había que adivinarlo
-          o preguntar por mensaje. Es el mismo dato que después define el TXT de ARCA, así que se
-          pide donde está quien lo sabe.
+          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
+          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
+          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
+          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
+          solicitud que se contradecía a sí misma.
 
-          SIN EL COLOR DEL BADGE, a propósito. Estos dos estados se dibujan rojo y naranja en el
-          escritorio, y acá —al lado de los días, del horario y del importe— dos manchas de color
-          fuerte se leen como una advertencia y no como una opción. Quien usa esta pantalla es un
-          coordinador cargando un alta, no alguien revisando el estado de un contrato.
-
-          Van con el MISMO botón que «Días que trabaja»: azul lo elegido, apagado lo demás. Es el
-          patrón que esta pantalla ya usa dos veces más arriba, y elegir es la misma acción.
-
-          El texto sí sale del ABM (`estadoLabel`), así que si alguien renombra el estado, acá se
-          renombra solo.
+          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
+          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
+          qué contrato va a firmar esa persona; el trámite es una consecuencia.
         */}
+        {/*
+          EL ÁREA Y TURNO QUE COORDINA QUIEN PIDE, ya puestos en la solicitud.
+
+          El coordinador pide el alta para SU área, y ese dato ya está cargado en el proyecto: el
+          server manda acá sólo sus propias coordinaciones (ver `?slim=true` en `routes/projects.ts`).
+          Antes la solicitud llegaba sin área y había que volver a elegirla al aprobar, sabiendo menos
+          que quien la pidió.
+
+          Con una sola coordinación no se muestra como pregunta: se informa. Con varias hay que elegir,
+          porque la persona que entra trabaja en una.
+        */}
+        {coordinacionesEnProyecto.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
+              Área y turno{coordinacionesEnProyecto.length > 1 && <span className="text-red-500">*</span>}
+            </label>
+            {coordinacionesEnProyecto.length === 1 ? (
+              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{coordinacionesEnProyecto[0].etiqueta}</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {coordinacionesEnProyecto.map((c: { areaId: string; shiftId: string; etiqueta: string }) => {
+                  const elegido = formData.areaShiftAssignments.some((a) => a.areaId === c.areaId && a.shiftIds.includes(c.shiftId));
+                  return (
+                    <button
+                      key={`${c.areaId}-${c.shiftId}`}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: c.areaId, shiftIds: [c.shiftId] }] }))}
+                      aria-pressed={elegido}
+                      className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${elegido ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
+                    >
+                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
+                      <span className="text-sm font-medium">{c.etiqueta}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <FontAwesomeIcon icon={faFileInvoiceDollar} className="text-blue-500 text-[10px]" />
-            Tipo de alta <span className="text-red-500">*</span>
+            <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
+            Tipo de contrato <span className="text-red-500">*</span>
           </label>
-          {impositivos.length === 0 ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">No hay estados impositivos configurados. Avisale a administración: sin esto la solicitud no dice por qué vía se contrata.</p>
+          {contratos.length === 0 ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">No hay tipos de contrato configurados. Avisale a administración: sin esto la solicitud no dice qué se va a firmar.</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {impositivos.map((e) => {
-                const tipo = e.data?.tipoImpositivo;
-                const elegido = !!tipo && formData.tipoImpositivo === tipo;
-                return (
-                  <button
-                    key={e._id}
-                    type="button"
-                    aria-pressed={elegido}
-                    onClick={() => setFormData((p) => ({ ...p, tipoImpositivo: tipo || "" }))}
-                    className={`px-4 h-9 rounded-lg text-xs font-bold border transition-colors ${elegido ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:border-blue-400"}`}
-                  >
-                    {estadoLabel(e.name)}
-                  </button>
-                );
-              })}
-            </div>
+            <button type="button" onClick={() => setContratoModalOpen(true)} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-700 dark:bg-slate-900">
+              {contratoElegido ? (
+                <>
+                  <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{contratoElegido.name}</span>
+                  {estadoDelTramite ? <EstadoBadge name={estadoDelTramite.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite configurado</span>}
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faSearch} className="text-[10px] text-slate-400" />
+                  <span className="flex-1 text-sm text-slate-400">Elegí el tipo de contrato…</span>
+                </>
+              )}
+            </button>
           )}
         </div>
 
@@ -1509,6 +1647,99 @@ const TIME_OPTIONS = (() => {
 
         {/* Motivo del reemplazo: es «Configurar Ausencia» de Novedades con otro título, porque acá lo
             que se declara es por qué falta el que se reemplaza. Misma lista, mismo control. */}
+        {/*
+          Elegir el tipo de contrato.
+
+          Va en ventana propia como Persona, Proyecto y Motivo: son catorce tipos con su badge de
+          trámite al lado, y esa lista adentro del formulario tapa el resto en un teléfono.
+        */}
+        <Modal
+          isOpen={contratoModalOpen}
+          onClose={() => setContratoModalOpen(false)}
+          title="Tipo de contrato"
+          subtitle="El trámite ante ARCA sale de lo que elijas"
+          size="md"
+          zIndex={80}
+          footer={
+            <div className="flex w-full justify-end items-center gap-3">
+              <button type="button" onClick={() => setContratoModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                Listo
+              </button>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-1 gap-2 py-2">
+            {contratos.map((c) => {
+              const elegido = formData.contratoId === c._id;
+              const tipo = tramitePorContrato.get(c._id);
+              const estado = tipo ? impositivos.find((e) => e.data?.tipoImpositivo === tipo) : null;
+              return (
+                <button
+                  key={c._id}
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, contratoId: c._id }));
+                    setContratoModalOpen(false);
+                  }}
+                  aria-pressed={elegido}
+                  className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${elegido ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
+                >
+                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
+                  <span className="flex-1 text-sm font-medium">{c.name}</span>
+                  {/* El badge sale del ABM, así que respeta el nombre y el color que tenga configurado
+                      cada estado —incluido el renombre de AFIP a ARCA, que se aplica al dibujar—. */}
+                  {estado ? <EstadoBadge name={estado.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite</span>}
+                </button>
+              );
+            })}
+          </div>
+        </Modal>
+
+        {/*
+          Elegir el proyecto, cuando hay más de uno.
+
+          Una solicitud es de UN proyecto: cada uno tiene su contrato, sus fechas, su categoría y su
+          empleadora, y todo eso se carga una sola vez en este formulario. Por eso es una lista de
+          opciones excluyentes y elegir una cierra la ventana.
+        */}
+        <Modal
+          isOpen={proyectoModalOpen}
+          onClose={() => setProyectoModalOpen(false)}
+          title="Elegí el proyecto"
+          subtitle={`${projects.length} disponibles`}
+          size="md"
+          zIndex={80}
+          footer={
+            <div className="flex w-full justify-end items-center gap-3">
+              <button type="button" onClick={() => setProyectoModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                Listo
+              </button>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-1 gap-2 py-2">
+            {projects.map((p) => {
+              const isSelected = formData.projectIds.includes(p._id);
+              return (
+                <button
+                  key={p._id}
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, projectIds: [p._id] }));
+                    setProyectoModalOpen(false);
+                  }}
+                  aria-pressed={isSelected}
+                  className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${isSelected ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
+                >
+                  {/* Redondo: es una opción entre varias, no una casilla que se suma. */}
+                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{isSelected && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
+                  <span className="text-sm font-medium">{etiquetaProyecto(p)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Modal>
+
         <Modal
           isOpen={motivoModalOpen}
           onClose={() => setMotivoModalOpen(false)}

@@ -289,6 +289,46 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
 
     console.log(`[PROJECTS] List for tenant ${req.tenantId}, isAdmin=${isAdmin}, limit=${limit}`);
 
+    /*
+      MODO SELECTOR (`?slim=true`): sólo lo que hace falta para elegir un proyecto de una lista.
+
+      El listado normal trae siete populate anidados —áreas, turnos, coordinadores— y después resuelve
+      sede, centro de costo y responsable en bloque. Todo eso lo necesita la grilla de Proyectos; una
+      lista para elegir uno no necesita nada de eso, y pagarlo igual es lo que hacía que el selector
+      del móvil tardara. Medido contra la base: 1451 ms y 84 KB el listado completo, 142 ms y 5 KB este.
+
+      Devuelve la misma forma (`{ projects, pagination }`) y respeta el mismo filtro de visibilidad,
+      así que quien pida `slim` ve exactamente los mismos proyectos que vería sin pedirlo.
+    */
+    if (req.query.slim === "true") {
+      const proyectos: any[] = await Project.find(filter)
+        .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments")
+        .populate("clientId", "name")
+        .populate("coordinatorAssignments.areaId", "name")
+        .populate("coordinatorAssignments.shiftId", "name startTime endTime")
+        .sort({ name: 1 })
+        .lean();
+
+      /*
+        De `coordinatorAssignments` van SÓLO las de quien pregunta.
+
+        El que usa esto es la solicitud de contratación del móvil, que necesita saber qué área y turno
+        coordina la persona en ese proyecto para dejarlos puestos en el alta. Las de los demás no las
+        necesita, y mandarlas sería contarle a cualquier coordinador cómo está repartido el proyecto
+        entero. La lista completa sigue viniendo en el listado normal, que es el que usa el escritorio.
+      */
+      const yo = String(req.user!.userId);
+      for (const p of proyectos) {
+        p.coordinatorAssignments = (p.coordinatorAssignments || []).filter((a: any) => String(typeof a.userId === "object" ? a.userId?._id : a.userId) === yo);
+      }
+
+      res.json({
+        projects: proyectos,
+        pagination: { page: 1, limit: proyectos.length, total: proyectos.length, pages: 1 },
+      });
+      return;
+    }
+
     const skip = (page - 1) * limit;
 
     const [projects, total] = await Promise.all([

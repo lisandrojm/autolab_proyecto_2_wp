@@ -539,6 +539,11 @@ class UsersAPI {
       areaTurno?: string; // "__none__" | "areaId::shiftId"
       reemplazo?: string; // "con" | "sin"
       lightweight?: boolean;
+      /**
+       * Modo selector: nombre, mail, documento y con qué rol empresa figura en sus proyectos. Es lo
+       * que necesita un buscador de personas, sin la ficha entera de cada una.
+       */
+      picker?: boolean;
       slimProjects?: boolean;
       /** Columna de orden: "name" | "email" | "cuit" | "documento" | "estado" | "contratos" | "roles". */
       sort?: string;
@@ -567,6 +572,7 @@ class UsersAPI {
     if (params.permission) searchParams.append("permission", params.permission);
     if (params.notPermission) searchParams.append("notPermission", params.notPermission);
     if (params.lightweight) searchParams.append("lightweight", "true");
+    if (params.picker) searchParams.append("picker", "true");
     if (params.slimProjects) searchParams.append("slimProjects", "true");
 
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });

@@ -240,11 +240,14 @@ class ProjectsAPI {
     };
   }
 
-  async list(params: { q?: string; page?: number; limit?: number } = {}): Promise<ProjectsListResponse> {
+  async list(params: { q?: string; page?: number; limit?: number; slim?: boolean } = {}): Promise<ProjectsListResponse> {
     const sp = new URLSearchParams();
     if (params.q) sp.append("q", params.q);
     if (params.page) sp.append("page", String(params.page));
     if (params.limit) sp.append("limit", String(params.limit));
+    // `slim`: sólo nombre, cliente, estado y las empresas/convenios del proyecto. Para elegir uno de
+    // una lista; sin áreas, turnos, coordinadores ni las resoluciones de sede y centro de costo.
+    if (params.slim) sp.append("slim", "true");
 
     const { data } = await axios.get(`/projects?${sp.toString()}`, {
       headers: this.getHeaders(),
@@ -278,7 +281,11 @@ class ProjectsAPI {
    * el orden se mantiene porque se reensamblan por índice, no por orden de llegada. Si alguna
    * choca contra el límite de 200 req/min, el interceptor la reintenta respetando `Retry-After`.
    */
-  async listAll(params: { q?: string; limit?: number } = {}): Promise<Project[]> {
+  /**
+   * Todos los proyectos visibles. Con `slim` viene sólo lo necesario para elegir uno de una lista y
+   * el server devuelve todo en una sola página, así que ni siquiera se pagina.
+   */
+  async listAll(params: { q?: string; limit?: number; slim?: boolean } = {}): Promise<Project[]> {
     const pageSize = params.limit ?? 200;
     const primera = await this.list({ ...params, page: 1, limit: pageSize });
 
