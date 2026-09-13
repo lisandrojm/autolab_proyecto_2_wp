@@ -2026,7 +2026,7 @@ export const ProjectTeamPage: React.FC = () => {
                   const isReallyResponsable = projectRespId && userMetaId && Number(projectRespId) === Number(userMetaId);
 
                   if (isReallyResponsable) {
-                    return <span className="w-fit text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">Responsable de Proyecto</span>;
+                    return <span className="w-fit text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">Supervisor del Proyecto</span>;
                   }
                   return null;
                 })()}
@@ -2270,6 +2270,51 @@ export const ProjectTeamPage: React.FC = () => {
                           })}
                         </div>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </td>
+        {/*
+          Coordinadores supervisados: sólo en la fila del supervisor del proyecto. Cada coordinador con
+          las áreas que tiene a cargo, sin turnos: el detalle por turno está en Área/Turno Coordinada
+          de la fila de cada coordinador. Los nombres salen de `allUsers` (el equipo completo), no de
+          la página cargada, para que no falte ninguno.
+        */}
+        <td className="px-4 py-3">
+          {(() => {
+            const respId = project?.metadata?.responsableId;
+            const userMetaId = (user.metadata as any)?.id;
+            const esSupervisor = respId != null && userMetaId != null && Number(respId) === Number(userMetaId);
+            if (!esSupervisor) return <span className="text-xs text-gray-400">—</span>;
+
+            const areasPorCoordinador = new Map<string, Map<string, string>>();
+            for (const asm of project?.coordinatorAssignments || []) {
+              const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+              const aid = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+              if (!uid || !aid) continue;
+              const nombreArea = (typeof asm.areaId === "object" ? asm.areaId?.name : "") || allAreas.find((a) => String(a._id) === String(aid))?.name || "Área";
+              if (!areasPorCoordinador.has(String(uid))) areasPorCoordinador.set(String(uid), new Map());
+              areasPorCoordinador.get(String(uid))!.set(String(aid), nombreArea);
+            }
+            if (areasPorCoordinador.size === 0) return <span className="text-xs italic text-gray-400">Sin coordinadores</span>;
+
+            return (
+              <div className="flex flex-col gap-2">
+                {[...areasPorCoordinador].map(([uid, areas]) => {
+                  const coord = allUsers.find((x) => String(x._id) === uid);
+                  return (
+                    <div key={uid} className="flex flex-col gap-1">
+                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{coord ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() || coord.email : "Coordinador"}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {[...areas].map(([aid, nombre]) => (
+                          <span key={aid} className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                            {nombre}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   );
                 })}
@@ -2728,6 +2773,7 @@ export const ProjectTeamPage: React.FC = () => {
                                   </button>
                                 </span>
                               </th>
+                              <th className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Coordinadores supervisados</th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
@@ -3284,8 +3330,19 @@ export const ProjectTeamPage: React.FC = () => {
 
                 if (shifts.length === 0) return <p className="text-center text-gray-500 py-12">No hay turnos asignados para esta área.</p>;
 
+                // En los que coordina, cada turno abre el detalle de sus personas: la columna de la
+                // tabla ya muestra sólo las áreas, así que es el camino para ver un horario puntual.
+                const abrirDetalle = (s: any) => {
+                  setViewingShiftsData(null);
+                  handleOpenAreaShiftDetail(areaId, viewingShiftsData.areaName, s);
+                };
                 return shifts.map((s, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3">
+                  <div
+                    key={idx}
+                    onClick={assignmentType === "coordinated" ? () => abrirDetalle(s) : undefined}
+                    title={assignmentType === "coordinated" ? "Ver las personas de este turno" : undefined}
+                    className={`p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3 ${assignmentType === "coordinated" ? "cursor-pointer hover:border-amber-300 dark:hover:border-amber-600 transition-colors" : ""}`}
+                  >
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                         {s.name}

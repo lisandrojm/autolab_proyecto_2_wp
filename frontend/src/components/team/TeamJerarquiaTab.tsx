@@ -428,7 +428,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-900/20">
           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
             <FontAwesomeIcon icon={faUserShield} />
-            Supervisor · responsable del proyecto
+            Supervisor del proyecto
           </p>
           <p className="mt-1 text-sm font-bold text-emerald-900 dark:text-emerald-200">
             {supervisor ? nombreDe(supervisor) : <span className="font-normal italic text-emerald-700/70 dark:text-emerald-400/70">Sin responsable asignado. Se elige en la ficha del proyecto.</span>}

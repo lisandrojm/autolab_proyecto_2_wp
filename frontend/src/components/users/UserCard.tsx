@@ -435,7 +435,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
 
           return (
             <div className="flex flex-wrap gap-1">
-              {isReallyResponsable && <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">Responsable de Proyecto</span>}
+              {isReallyResponsable && <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">Supervisor del Proyecto</span>}
               {filteredRoles.slice(0, 3).map((role) => {
                 // Se pinta distinto al rol que carga novedades, que es lo que antes se llamaba «coordinador».
                 // Antes se miraba el nombre; ahora el permiso, que es lo que el rol realmente hace.

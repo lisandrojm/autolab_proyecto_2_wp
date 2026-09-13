@@ -48,7 +48,7 @@ export const PROJECT_SUPERVISOR = "project_supervisor:eligible";
 export const PROJECT_COORDINATOR = "project_coordinator:eligible";
 
 export const CAPACIDAD_ITEMS = [
-  { permiso: PROJECT_SUPERVISOR, label: "Responsable de Proyecto" },
+  { permiso: PROJECT_SUPERVISOR, label: "Supervisor del Proyecto" },
   { permiso: PROJECT_COORDINATOR, label: "Coordina áreas y turnos" },
 ];
 

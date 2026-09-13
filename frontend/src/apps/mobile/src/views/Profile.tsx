@@ -633,7 +633,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
                 {selectedProjectInfo.isResponsable ? (
                   <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500 text-white text-[8px] font-black uppercase tracking-wider shadow-sm">
                     <FontAwesomeIcon icon={faUserShield} size="xs" />
-                    Responsable de Proyecto
+                    Supervisor del Proyecto
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[8px] font-black uppercase tracking-wider shadow-sm">

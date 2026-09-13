@@ -245,7 +245,7 @@ export const ProjectDetailPage: React.FC = () => {
     e.preventDefault();
     if (!project) return;
     if (!projectForm.metadata?.responsableId) {
-      sweetAlert.error("Datos incompletos", "El responsable del proyecto es obligatorio");
+      sweetAlert.error("Datos incompletos", "El supervisor del proyecto es obligatorio");
       return;
     }
 
@@ -468,7 +468,7 @@ export const ProjectDetailPage: React.FC = () => {
 
                 <div className="pt-2">
                   <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    Responsable del Proyecto
+                    Supervisor del Proyecto
                     <button 
                       type="button"
                       onClick={() => setShowResponsableInfo(true)}
@@ -834,7 +834,7 @@ export const ProjectDetailPage: React.FC = () => {
 
                     {/* Responsable */}
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Responsable de Proyecto</span>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Supervisor del Proyecto</span>
                       <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.responsable ? `${project.metadataResolutions.responsable.firstName} ${project.metadataResolutions.responsable.lastName || ""}` : project.metadata?.responsableId ? `ID: ${project.metadata.responsableId}` : "—"}</span>
                     </div>
 
@@ -1364,8 +1364,8 @@ export const ProjectDetailPage: React.FC = () => {
       <InfoModal
         isOpen={showResponsableInfo}
         onClose={() => setShowResponsableInfo(false)}
-        title="Responsable de Proyecto"
-        subtitle="Información sobre la selección de responsables"
+        title="Supervisor del Proyecto"
+        subtitle="Información sobre la selección de supervisores"
         size="sm"
         zIndex={100}
         actions={[
@@ -1386,7 +1386,7 @@ export const ProjectDetailPage: React.FC = () => {
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                <strong>Responsable de Proyecto:</strong> hay que tildarlo en su ficha, pestaña Sistema, bloque Proyectos. No depende de sus roles.
+                <strong>Supervisor del Proyecto:</strong> hay que tildarlo en su ficha, pestaña Sistema, bloque Proyectos. No depende de sus roles.
               </span>
             </li>
           </ul>
