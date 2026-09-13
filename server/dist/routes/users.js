@@ -413,8 +413,21 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           este. La diferencia crece con la cantidad de gente del tenant.
         */
         const picker = req.query.picker === "true";
+        /*
+          LOS PERMISOS DEL ROL VIAJAN SIEMPRE, AUNQUE LA LISTA SEA LIVIANA.
+    
+          Quién puede coordinar un área, quién es responsable del proyecto y qué ve cada uno en el móvil
+          se responden mirando `role.permissions`, no el nombre del rol. Traer los roles con `select: "name"`
+          —que alcanzaba cuando la pregunta era `name === "Mobile | Coordinador"`— deja ahora `permissions`
+          en `undefined`, y entonces TODOS contestan que no: Gestionar Equipo mostraba "Asignación
+          requerida" en un proyecto con doce coordinadores asignados, y la pestaña Coordinadores no
+          ofrecía a nadie.
+    
+          Es un campo chico sobre un puñado de documentos de roles (un solo `$in`), así que no hay nada
+          que ahorrar sacándolo. Si aparece otro `populate` de `roles`, va con `permissions`.
+        */
         let query = lightweight
-            ? User.find(filter).select("firstName lastName email metadata.id metadata.activo metadata.isSolicitud roles").populate({ path: "roles", select: "name", model: Role })
+            ? User.find(filter).select("firstName lastName email metadata.id metadata.activo metadata.isSolicitud roles").populate({ path: "roles", select: "name permissions", model: Role })
             : picker
                 ? User.find(filter)
                     .select("firstName lastName email metadata.id metadata.activo metadata.documento metadata.fullName metadata.projects metadata.roles_frame")
@@ -422,7 +435,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
                     .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
                 : User.find(filter)
                     .select("-password")
-                    .populate({ path: "roles", select: "name", model: Role })
+                    .populate({ path: "roles", select: "name permissions", model: Role })
                     .populate({
                     path: "projectIds",
                     select: "name clientId",

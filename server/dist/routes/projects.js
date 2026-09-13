@@ -850,7 +850,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
             query.populate({
                 path: "assignedUsers",
                 select: "firstName lastName email metadata roles",
-                populate: [{ path: "roles", select: "name" }],
+                populate: [{ path: "roles", select: "name permissions" }],
             });
         }
         const project = await query.lean();
