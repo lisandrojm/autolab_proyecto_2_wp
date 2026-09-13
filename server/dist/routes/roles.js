@@ -7,7 +7,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray, toObjectIdOrNull } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
-import { PermisosEnDesarrollo, permisosEnDesarrollo } from "../models/PermisosEnDesarrollo.js";
+import { guardarPermisosEnDesarrollo, permisosEnDesarrollo } from "../utils/permisosEnDesarrollo.js";
 const router = Router();
 const esSuperAdmin = (req) => !!req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
 /**
@@ -162,8 +162,7 @@ router.put("/permisos-en-desarrollo", requireTenant, authenticateToken, async (r
             return;
         }
         const { permisos } = z.object({ permisos: z.array(z.string()) }).parse(req.body);
-        const doc = await PermisosEnDesarrollo.findOneAndUpdate({ clave: "global" }, { $set: { permisos: [...new Set(permisos)] } }, { new: true, upsert: true, setDefaultsOnInsert: true });
-        res.json({ permisos: doc.permisos });
+        res.json({ permisos: await guardarPermisosEnDesarrollo(permisos) });
     }
     catch (error) {
         if (error instanceof z.ZodError) {
