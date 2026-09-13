@@ -686,6 +686,19 @@ class UsersAPI {
     return user;
   }
 
+  /**
+   * Le suma oficios (roles empresa) a la ficha de una persona, sin tocar el resto de la ficha.
+   *
+   * Lo usan la solicitud del móvil y el wizard de Configurar Miembro: cuando se contrata a alguien
+   * puede aparecer que además hace otra cosa, y eso es un dato de la persona, no del contrato.
+   * Sólo agrega; quitar se hace desde Usuarios.
+   */
+  async agregarRolesFrame(id: string, roleFrameIds: string[]): Promise<void> {
+    if (roleFrameIds.length === 0) return;
+    await axios.post(`/users/${id}/roles-frame`, { roleFrameIds }, { headers: this.getHeaders() });
+    emitUsersChanged("update", id);
+  }
+
   async updatePassword(id: string, password: string): Promise<void> {
     await axios.patch(`/users/${id}/password`, { password }, { headers: this.getHeaders() });
   }

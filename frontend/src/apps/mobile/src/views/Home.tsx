@@ -94,8 +94,11 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const userCreateAction = {
     icon: faUserPlus,
-    title: "Usuarios",
-    description: "Solicitud de contratación",
+    // «Contratación» y no «Usuarios»: lo que se hace acá es pedir un alta, no administrar gente. El
+    // nombre viejo prometía una pantalla de usuarios que esta no es.
+    title: "Contratación",
+    // «Solicitudes» a secas: «de alta» se confunde con el alta temprana de ARCA, que es otra cosa.
+    description: "Solicitudes",
     view: "user_history" as ViewType,
     disabled: false,
   };

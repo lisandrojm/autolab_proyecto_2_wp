@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
@@ -6,6 +6,8 @@ import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo, faltaDefinirDias } from "../../../../components/contratos/DiasDeTrabajo";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
+// La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
+import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
 import { projectsAPI, Project } from "../../../../api/projects";
@@ -75,6 +77,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
   const [todosLosEstados, setTodosLosEstados] = useState<InfoItem[]>([]);
   const [contratoModalOpen, setContratoModalOpen] = useState(false);
+  const [convenioModalOpen, setConvenioModalOpen] = useState(false);
+  const [categoriaModalOpen, setCategoriaModalOpen] = useState(false);
+  const [categoriaBusqueda, setCategoriaBusqueda] = useState("");
+  /** El escape del filtro por rol, por convenio: ver todas las categorías de ESTE convenio. */
+  const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
+  /** Lo último que la cascada limpió sola. Se muestra para que no parezca un error de la pantalla. */
+  const [avisoCascada, setAvisoCascada] = useState("");
   const [showRoleFilterMenu, setShowRoleFilterMenu] = useState(false);
   /** Las dos ventanas de selección de personas. Reemplazan a los desplegables flotantes. */
   const [personaModalOpen, setPersonaModalOpen] = useState(false);
@@ -153,26 +162,82 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   }, [projects, companies, formData.projectIds]);
 
   /**
-   * Los convenios que se pueden elegir para la empresa marcada.
+  /**
+   * Los CCT que se pueden usar: los de la empleadora, acotados por el proyecto si éste acotó.
    *
-   * Si el proyecto acotó sus convenios, se ofrecen ESOS —cruzados con los que la empleadora tiene
-   * registrados, porque ARCA solo acepta categorías de los CCT de ese CUIT—. Si no acotó nada, se
-   * ofrecen todos los de la empleadora: vacío en el proyecto significa «todavía no se acotó», no
-   * «ninguno», y leerlo al revés dejaría el alta sin convenios que elegir.
+   * ARCA sólo acepta categorías de un convenio que la EMPLEADORA registró, así que ese es el filtro
+   * duro. El proyecto puede recortar más —si declaró sus convenios— y si no declaró ninguno significa
+   * «todavía no se acotó», no «ninguno»: leerlo al revés dejaría el alta sin convenios que elegir.
+   *
+   * Se devuelven CÓDIGOS de CCT («0634/11») y no ids, porque es con eso con lo que las categorías
+   * declaran a qué convenio pertenecen (`data.convenio`).
    */
-  const conveniosDisponibles = useMemo(() => {
-    const empresa = companies.find((c) => c._id === formData.empresaContratoId);
-    if (!empresa) return [];
-    const deLaEmpresa = new Set((empresa.convenioIds || []).map(String));
+  const codigosEmpleadora = useMemo(() => {
+    const deLaEmpresa = codigosDeConveniosDeLaEmpleadora(
+      companies.find((c) => c._id === formData.empresaContratoId),
+      convenios,
+    );
+    if (!deLaEmpresa) return null;
+
     const delProyecto = new Set<string>();
     for (const p of projects) {
       if (!formData.projectIds.includes(p._id)) continue;
-      for (const id of p.convenioIds || []) delProyecto.add(String(id));
+      for (const id of p.convenioIds || []) {
+        const cct = String(convenios.find((c) => c._id === String(id))?.externalId || "").trim();
+        if (cct) delProyecto.add(cct);
+      }
     }
-    const permitidos = delProyecto.size > 0 ? [...delProyecto].filter((id) => deLaEmpresa.has(id)) : [...deLaEmpresa];
-    return convenios.filter((c) => permitidos.includes(c._id));
+    if (delProyecto.size === 0) return deLaEmpresa;
+    const cruce = deLaEmpresa.filter((cct) => delProyecto.has(cct));
+    return cruce.length > 0 ? cruce : deLaEmpresa;
   }, [companies, convenios, projects, formData.projectIds, formData.empresaContratoId]);
 
+  /** El CCT elegido. `formData.convenioId` guarda el `_id`, que es lo que viaja en la solicitud. */
+  const convenioCct = useMemo(() => String(convenios.find((c) => c._id === formData.convenioId)?.externalId || "").trim(), [convenios, formData.convenioId]);
+
+  /** Los convenios ofrecidos, con cuántas categorías tiene cada uno. Misma lógica que el escritorio. */
+  const conveniosDisponibles = useMemo(
+    () => conveniosOfrecidos({ codigosEmpleadora, convenioElegido: convenioCct, categorias: categoriasSat, convenios }),
+    [codigosEmpleadora, convenioCct, categoriasSat, convenios],
+  );
+
+  /** De un CCT al documento del convenio, para poder guardar su `_id`. */
+  const convenioPorCct = useMemo(() => new Map(convenios.map((c) => [String(c.externalId || "").trim(), c])), [convenios]);
+
+  /** El convenio elegido, ya resuelto: se muestra su código y su nombre. */
+  const convenioElegido = useMemo(() => conveniosDisponibles.find((c) => c.externalId === convenioCct) || null, [conveniosDisponibles, convenioCct]);
+
+  /*
+    HASTA QUE NO HAY PERSONA, EL RESTO NO SE TOCA.
+
+    Todo lo que sigue habla DE ELLA: con qué oficio entra, qué categoría le corresponde, cuánto se le
+    paga. Completarlo antes es cargar datos que no se sabe de quién son, y encima el formulario hereda
+    del elegido su oficio y su categoría —así que lo cargado a mano se pisaría solo—.
+
+    Se hace con un <fieldset disabled>, que el navegador propaga a TODOS los controles de adentro: no
+    hay que acordarse de deshabilitar cada uno, ni se escapa el que se agregue mañana.
+  */
+  const sinPersona = !formData.fullName;
+
+  /** La categoría elegida, resuelta al catálogo: de ahí salen su código de ARCA y su escala. */
+  const categoriaElegida = useMemo(() => categoriasSat.find((c) => c._id === formData.categoriaSatId) || null, [categoriasSat, formData.categoriaSatId]);
+
+  /*
+    LA DIFERENCIA CONTRA LA ESCALA, cuando se pisa el importe propuesto.
+
+    El número de la categoría es el del convenio; el que se paga puede ser otro, y está bien que lo
+    sea. Lo que no puede pasar es que la diferencia quede invisible: pagar de menos que la escala es
+    un problema, y pagar de más es una decisión que alguien tomó y conviene que se vea escrita.
+
+    `null` mientras no haya categoría o el importe coincida: no hay nada que mostrar.
+  */
+  const diferenciaContraEscala = useMemo(() => {
+    const escala = importePorJornadaDeCategoria(categoriaElegida || undefined);
+    const cargado = Number(formData.dailyRate);
+    if (!escala || !Number.isFinite(cargado) || !formData.dailyRate) return null;
+    const delta = Number((cargado - escala).toFixed(2));
+    return delta === 0 ? null : { escala, delta };
+  }, [categoriaElegida, formData.dailyRate]);
   /*
     CUANDO HAY UNA SOLA OPCIÓN, SE ELIGE SOLA.
 
@@ -187,18 +252,16 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     const valida = empresasDelProyecto.some((c) => c._id === formData.empresaContratoId);
     if (!valida) {
       const unica = empresasDelProyecto.length === 1 ? empresasDelProyecto[0]._id : "";
-      if (formData.empresaContratoId !== unica) setFormData((p) => ({ ...p, empresaContratoId: unica, convenioId: "" }));
+      /*
+        Cambiar de empleadora se lleva convenio, categoría e importe.
+
+        Los convenios registrados son de CADA CUIT: la categoría que había salía de los de la empresa
+        anterior y no tiene por qué ser válida acá. Y el importe salía de la escala de esa categoría,
+        así que arrastrarlo sería declarar el sueldo de un convenio que ya no interviene.
+      */
+      if (formData.empresaContratoId !== unica) setFormData((p) => ({ ...p, empresaContratoId: unica, convenioId: "", categoriaSatId: "", dailyRate: "" }));
     }
   }, [empresasDelProyecto, formData.empresaContratoId]);
-
-  useEffect(() => {
-    const valido = conveniosDisponibles.some((c) => c._id === formData.convenioId);
-    if (!valido) {
-      const unico = conveniosDisponibles.length === 1 ? conveniosDisponibles[0]._id : "";
-      if (formData.convenioId !== unico) setFormData((p) => ({ ...p, convenioId: unico }));
-    }
-  }, [conveniosDisponibles, formData.convenioId]);
-
 
   const conveniosApi = createSimpleCatalogApi("/convenios");
 
@@ -401,6 +464,26 @@ const TIME_OPTIONS = (() => {
   }, [platformUsers, userSearchTerm, selectedRoleFilters]);
 
   /*
+    CUÁNTA GENTE TIENE CADA ROL, para el filtro de la ventana de personas.
+
+    Sin el número, el filtro es una lista de trescientas especialidades donde la mayoría no filtra
+    nada: se elige una, la lista de personas queda vacía y no hay forma de saber si el filtro está mal
+    o si de verdad no hay nadie. El conteo contesta eso antes de tocar nada.
+
+    Se cuenta con el MISMO criterio que después filtra (`personasFiltradas`): el rol figura en su
+    ficha o en alguno de sus proyectos. Si contara distinto, el número prometería un resultado que el
+    filtro no da.
+  */
+  const personasPorRol = useMemo(() => {
+    const cuenta = new Map<string, number>();
+    for (const u of platformUsers) {
+      const suyos = new Set<string>([...((u.externalInfo?.rolFrames || []) as string[]), ...((u.metadata?.projects || []) as any[]).map((p) => p?.nombre_rol_frame).filter(Boolean)]);
+      for (const nombre of suyos) cuenta.set(nombre, (cuenta.get(nombre) || 0) + 1);
+    }
+    return cuenta;
+  }, [platformUsers]);
+
+  /*
     QUIÉNES PUEDEN SER REEMPLAZADOS: el equipo del proyecto elegido, menos la persona del alta.
 
     Se filtra por los proyectos que tiene cargados cada ficha (`metadata.projects`), que es el mismo
@@ -580,48 +663,150 @@ const TIME_OPTIONS = (() => {
   const alternarRol = (id: string) => setFormData((prev) => ({ ...prev, roleFrameIds: prev.roleFrameIds.includes(id) ? prev.roleFrameIds.filter((x) => x !== id) : [...prev.roleFrameIds, id] }));
 
   /**
-   * Los roles que se ofrecen: los de la persona elegida (o todos, si el nombre se escribió a mano),
-   * filtrados por el buscador de la ventana.
+   * SE OFRECE EL CATÁLOGO ENTERO, con los de la persona arriba.
+   *
+   * Antes la lista se recortaba a los oficios que la persona tenía cargados, y eso dejaba sin salida
+   * al caso más común: el coordinador la contrata para algo que no figura en su ficha —porque nunca lo
+   * hizo acá, o porque quedó incompleta— y no había forma de decirlo. Ahora están todos, y los suyos
+   * se muestran primero y marcados, que es la señal que hacía falta: no es lo mismo elegir uno de los
+   * suyos que sumarle uno nuevo.
    */
   const rolesDisponibles = useMemo(() => {
-    const base = roleFrames.filter((rf) => rolesDelUsuario.length === 0 || rolesDelUsuario.includes(rf._id));
-    return rolSearchTerm.trim() ? base.filter((rf) => fuzzyMatch(rf.name, rolSearchTerm)) : base;
+    const base = rolSearchTerm.trim() ? roleFrames.filter((rf) => fuzzyMatch(rf.name, rolSearchTerm)) : roleFrames;
+    if (rolesDelUsuario.length === 0) return base;
+    const suyos = base.filter((rf) => rolesDelUsuario.includes(rf._id));
+    return [...suyos, ...base.filter((rf) => !rolesDelUsuario.includes(rf._id))];
   }, [roleFrames, rolesDelUsuario, rolSearchTerm]);
 
-  /*
-    LAS CATEGORÍAS QUE SE OFRECEN: la UNIÓN de las que habilita cada rol elegido.
+  /** Los elegidos que la persona NO tenía en su ficha: se le suman al guardar. */
+  const rolesNuevosParaLaFicha = useMemo(() => (selectedUser ? formData.roleFrameIds.filter((id) => !rolesDelUsuario.includes(id)) : []), [selectedUser, formData.roleFrameIds, rolesDelUsuario]);
 
-    Con un rol solo era su lista. Con varios no se puede intersecar —un Animador 2D que además es
-    Asistente de Cámara puede entrar por una categoría de cualquiera de los dos oficios— así que se
-    suman. Y se sigue respetando lo que la persona ya tiene asignado, que es el otro filtro.
+  /*
+    LAS CATEGORÍAS QUE SE OFRECEN: el cruce rol empresa ∩ convenio ∩ convenios de la empleadora.
+
+    Antes se filtraba SÓLO por el rol empresa, sin mirar el convenio: se podía elegir el convenio
+    0634/11 y una categoría del 0131/75. La pantalla lo aceptaba y ARCA rechazaba el alta, que es la
+    peor forma de un error —se descubre lejos de donde se cometió—.
+
+    La regla es la misma que usa el escritorio, literalmente la misma función: ver
+    `utils/seleccionConvenioCategoria.ts`. Con varios oficios elegidos se SUMAN sus categorías: un
+    Animador 2D que además es Asistente de Cámara puede entrar por cualquiera de los dos.
+  */
+  const { categorias: categoriasOfrecidasLista, rolNoTieneCategoriasDelConvenio } = useMemo(
+    () =>
+      categoriasOfrecidas({
+        rolesFrame: roleFrames.filter((rf) => formData.roleFrameIds.includes(rf._id)),
+        convenioElegido: convenioCct,
+        codigosEmpleadora,
+        categorias: categoriasSat,
+        verTodasDelConvenio,
+        categoriaElegidaId: categoriasSat.find((c) => c._id === formData.categoriaSatId)?.data?.id,
+      }),
+    [roleFrames, formData.roleFrameIds, convenioCct, codigosEmpleadora, categoriasSat, verTodasDelConvenio, formData.categoriaSatId],
+  );
+
+  /*
+    Las mismas categorías, resueltas al documento del catálogo.
+
+    La lista de arriba trabaja con `data.id` —es el identificador que comparten el catálogo y la copia
+    denormalizada de las funciones FRAME—, pero la solicitud guarda el `_id`, que es lo que el wizard
+    de aprobación busca después. Traducir acá una vez evita hacerlo en cada lugar que la use.
   */
   const categoriasDisponibles = useMemo(() => {
-    if (formData.roleFrameIds.length === 0) return [];
-    const habilitadas = new Set<string>();
-    for (const id of formData.roleFrameIds) {
-      const rf = roleFrames.find((x) => x._id === id);
-      for (const c of (rf?.data?.categoriasSat || []) as any[]) habilitadas.add(String(c?.id ?? c));
-    }
-    return categoriasSat.filter((cat) => {
-      const porRol = habilitadas.has(String(cat.externalId)) || habilitadas.has(String(cat.data?.id));
-      const porUsuario = !selectedUser?.metadata?.categoriaSatIds?.length || selectedUser.metadata.categoriaSatIds.includes(cat._id);
-      return porRol && porUsuario;
-    });
-  }, [categoriasSat, roleFrames, formData.roleFrameIds, selectedUser]);
+    const porDataId = new Map(categoriasSat.map((c) => [String(c.data?.id), c]));
+    return categoriasOfrecidasLista.map((c) => porDataId.get(String(c.id))).filter(Boolean) as CategoriaSatItem[];
+  }, [categoriasOfrecidasLista, categoriasSat]);
+
+
+  /** Lo que muestra la ventana de categorías: las ofrecidas, filtradas por el buscador. */
+  const categoriasParaElegir = useMemo(() => (categoriaBusqueda.trim() ? categoriasDisponibles.filter((c) => fuzzyMatch(c.name, categoriaBusqueda) || String(c.data?.codigoArca || "").includes(categoriaBusqueda.trim())) : categoriasDisponibles), [categoriasDisponibles, categoriaBusqueda]);
 
   /*
-    Si la categoría cargada dejó de estar habilitada, se limpia.
+    LA CASCADA: cambiar el convenio limpia la categoría, pero SÓLO si no le pertenece.
+
+    Limpiar siempre castigaba al que volvía a mirar el mismo convenio, y no limpiar nunca dejaba la
+    contradicción que ARCA rechaza. Va con aviso: un campo que se vacía solo, sin decir por qué, se
+    lee como un error de la pantalla.
+  */
+  useEffect(() => {
+    const valido = conveniosDisponibles.some((c) => c.externalId === convenioCct);
+    if (!valido) {
+      const unico = conveniosDisponibles.length === 1 ? convenioPorCct.get(conveniosDisponibles[0].externalId)?._id || "" : "";
+      if (formData.convenioId !== unico) setFormData((p) => ({ ...p, convenioId: unico }));
+      return;
+    }
+    if (!formData.categoriaSatId) return;
+    const cctDeLaCategoria = String(categoriasSat.find((c) => c._id === formData.categoriaSatId)?.data?.convenio || "").trim();
+    if (convenioCct && cctDeLaCategoria !== convenioCct) {
+      setFormData((p) => ({ ...p, categoriaSatId: "", dailyRate: "" }));
+      setAvisoCascada("Se limpió la categoría: no pertenece al convenio elegido.");
+    }
+  }, [conveniosDisponibles, convenioCct, convenioPorCct, formData.convenioId, formData.categoriaSatId, categoriasSat]);
+
+  /*
+    EL CONVENIO SE PRECARGA DESDE EL ROL EMPRESA DE LA PERSONA.
+
+    El oficio ya está cargado en la plataforma y sus categorías declaran a qué CCT pertenecen: si
+    todas apuntan al mismo —y ese está entre los de la empleadora— no hay nada que preguntar. Elegirlo
+    a mano sería pedir un dato que el sistema ya tiene.
+
+    Sólo cuando NO hay convenio elegido: no pisa lo que alguien eligió, ni lo que traiga una solicitud
+    que se está editando. Y sólo si el rol apunta a UNO: con dos, la decisión es real y se pregunta.
+  */
+  useEffect(() => {
+    if (formData.convenioId || formData.roleFrameIds.length === 0) return;
+
+    const cctDelRol = new Set<string>();
+    for (const rf of roleFrames.filter((r) => formData.roleFrameIds.includes(r._id))) {
+      for (const c of (rf.data?.categoriasSat || []) as any[]) {
+        const cct = String(categoriasSat.find((x) => String(x.data?.id) === String(c?.id))?.data?.convenio || "").trim();
+        if (cct && (!codigosEmpleadora || codigosEmpleadora.includes(cct))) cctDelRol.add(cct);
+      }
+    }
+    if (cctDelRol.size !== 1) return;
+
+    const unico = [...cctDelRol][0];
+    const id = convenioPorCct.get(unico)?._id;
+    if (id) setFormData((p) => ({ ...p, convenioId: id }));
+  }, [formData.convenioId, formData.roleFrameIds, roleFrames, categoriasSat, codigosEmpleadora, convenioPorCct]);
+
+  /* Cambiar de convenio vuelve a esconder las que el rol no habilita: el escape es por convenio. */
+  useEffect(() => {
+    setVerTodasDelConvenio(false);
+  }, [convenioCct]);
+
+  /*
+    Si la categoría elegida dejó de estar ofrecida —porque cambió el rol o el convenio— se limpia.
 
     Antes se limpiaba SIEMPRE al tocar el rol, y con varios roles eso era peor: agregar un segundo
-    oficio borraba una categoría que seguía siendo válida. Ahora solo se borra la que de verdad ya no
-    corresponde — que es el caso que importa, porque el desplegable la dejaba de listar pero el valor
-    seguía viajando en el submit.
+    oficio borraba una categoría que seguía siendo válida. Ahora sólo se borra la que de verdad ya no
+    corresponde, que es la que seguía viajando en el submit aunque el desplegable no la listara.
   */
   useEffect(() => {
     if (!formData.categoriaSatId) return;
     if (categoriasDisponibles.some((c) => c._id === formData.categoriaSatId)) return;
-    setFormData((prev) => ({ ...prev, categoriaSatId: "" }));
+    setFormData((prev) => ({ ...prev, categoriaSatId: "", dailyRate: "" }));
+    setAvisoCascada("Se limpió la categoría: ya no la habilita el rol empresa elegido.");
   }, [categoriasDisponibles, formData.categoriaSatId]);
+
+  /*
+    EL IMPORTE POR JORNADA LO PROPONE LA CATEGORÍA.
+
+    Es `neto / 30` de la escala del convenio, el mismo número que el escritorio calcula como
+    `sueldo_diario_neto`. Se PROPONE: lo pactado puede ser otro y el campo queda editable. Pero que
+    haya que sacarlo a mano de una escala que la plataforma ya tiene cargada es trabajo inventado.
+
+    Sólo pisa el campo cuando cambia la categoría, no en cada render: si no, sería imposible escribir
+    un importe distinto.
+  */
+  const categoriaAnterior = useRef(formData.categoriaSatId);
+  useEffect(() => {
+    if (categoriaAnterior.current === formData.categoriaSatId) return;
+    categoriaAnterior.current = formData.categoriaSatId;
+    if (!formData.categoriaSatId) return;
+    const propuesto = importePorJornadaDeCategoria(categoriasSat.find((c) => c._id === formData.categoriaSatId));
+    if (propuesto > 0) setFormData((p) => ({ ...p, dailyRate: String(propuesto) }));
+  }, [formData.categoriaSatId, categoriasSat]);
 
   /** El motivo elegido, para mostrar su nombre sin repetir el `find` en cada lugar donde se usa. */
   const motivoElegido = motivos.find((m) => String(m._id) === String(formData.motivoReemplazoId)) || null;
@@ -654,6 +839,24 @@ const TIME_OPTIONS = (() => {
     */
     if (!formData.contratoId && contratos.length > 0) {
       sweetAlert.warning("Falta el tipo de contrato", "Elegí qué tipo de contrato se le va a hacer a esta persona.");
+      return;
+    }
+
+    /*
+      LA CATEGORÍA TIENE QUE SER DEL CONVENIO ELEGIDO.
+
+      La pantalla ya lo impide —la lista sale del cruce— pero esto viaja al alta de ARCA, que rechaza
+      la combinación incoherente sin decir cuál de los dos estaba mal. Vale el cinturón además de los
+      tirantes: un estado viejo del formulario, o un `metadata` de una solicitud que se está editando,
+      pueden traer una categoría de otro convenio.
+    */
+    if (conveniosDisponibles.length > 0 && !formData.convenioId) {
+      sweetAlert.warning("Falta el convenio", "Elegí el convenio: es lo que define qué categorías se le pueden dar de alta.");
+      return;
+    }
+    const cctDeLaCategoria = String(categoriaElegida?.data?.convenio || "").trim();
+    if (convenioCct && cctDeLaCategoria && cctDeLaCategoria !== convenioCct) {
+      sweetAlert.warning("La categoría no es de ese convenio", `La categoría elegida es del convenio ${cctDeLaCategoria} y el alta va por el ${convenioCct}. ARCA rechaza esa combinación.`);
       return;
     }
     /*
@@ -746,6 +949,21 @@ const TIME_OPTIONS = (() => {
       } else {
         await usersAPI.create(submitData as any);
         sweetAlert.success("Solicitud enviada", "La solicitud de alta ha sido enviada correctamente.");
+      }
+
+      /*
+        Los oficios nuevos quedan en la FICHA de la persona, no sólo en esta solicitud.
+
+        Que alguien además sea Utilero es un dato de la persona: si quedara sólo acá, la próxima vez
+        habría que volver a agregarlo. Va después de guardar y con su propio catch: si esto falla, la
+        solicitud ya se mandó y eso es lo que no se puede perder.
+      */
+      if (selectedUser && rolesNuevosParaLaFicha.length > 0) {
+        try {
+          await usersAPI.agregarRolesFrame(selectedUser._id, rolesNuevosParaLaFicha);
+        } catch (e) {
+          console.error("No se pudieron agregar los roles empresa a la ficha:", e);
+        }
       }
       onSuccess();
       onClose();
@@ -914,8 +1132,11 @@ const TIME_OPTIONS = (() => {
           {/* El nombre escrito a mano —alguien que todavía no es usuario de la plataforma— se marca,
               porque el resto del formulario se comporta distinto: no hereda rol ni categoría. */}
           {formData.fullName && !selectedUser && <p className="text-[11px] text-amber-600 dark:text-amber-400">Nombre escrito a mano: todavía no es usuario de la plataforma.</p>}
+          {sinPersona && <p className="text-[11px] text-slate-400">Elegila para completar el resto: lo que sigue habla de ella.</p>}
         </div>
 
+        {/* Ver `sinPersona`: el navegador propaga el `disabled` a todos los controles de adentro. */}
+        <fieldset disabled={sinPersona} className="space-y-6 disabled:opacity-50">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             {/*
@@ -939,8 +1160,10 @@ const TIME_OPTIONS = (() => {
                 <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
                 Rol/es Empresa*
               </label>
-              {rolesElegidos.length > 0 && rolesDelUsuario.length !== 1 && (
-                <button type="button" onClick={() => setRolModalOpen(true)} title="Agregar otro rol" className="h-4 w-4 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shrink-0 ml-0.5">
+              {/* Siempre, aunque la persona tenga un solo oficio: cambiarlo o sumarle otro es
+                  justamente lo que hace falta poder hacer al contratarla. */}
+              {rolesElegidos.length > 0 && (
+                <button type="button" onClick={() => setRolModalOpen(true)} title="Cambiar o agregar un rol" className="h-4 w-4 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shrink-0 ml-0.5">
                   <FontAwesomeIcon icon={faPlus} className="h-2 w-2" />
                 </button>
               )}
@@ -952,11 +1175,9 @@ const TIME_OPTIONS = (() => {
                 {rolesElegidos.map((rf) => (
                   <span key={rf._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                     <span className="truncate max-w-[12rem]">{rf.name}</span>
-                    {rolesDelUsuario.length !== 1 && (
-                      <button type="button" onClick={() => alternarRol(rf._id)} title={`Quitar ${rf.name}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                      </button>
-                    )}
+                    <button type="button" onClick={() => alternarRol(rf._id)} title={`Quitar ${rf.name}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                      <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                    </button>
                   </span>
                 ))}
               </div>
@@ -971,37 +1192,137 @@ const TIME_OPTIONS = (() => {
               </button>
             )}
           </div>
+
+          {/*
+            CON QUÉ EMPLEADORA. Al lado del oficio, porque las dos cosas definen el contrato.
+
+            Sale del proyecto: sus empresas del contrato. Con una sola se elige sola y el campo queda
+            de lectura —un combo de un ítem no es una decisión—. Con dos o más hay que elegir:
+            equivocar la empleadora manda el alta con el CUIT que no es, y eso se descubre cuando ARCA
+            devuelve el archivo.
+          */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-[10px]" />
+              Empresa que contrata
+            </label>
+            {formData.projectIds.length === 0 ? (
+              <p className="text-xs text-slate-400 py-2">Elegí primero el proyecto: la empleadora sale de las que ese proyecto tiene asignadas.</p>
+            ) : empresasDelProyecto.length === 0 ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400 py-2">Ese proyecto no tiene empresa del contrato asignada. Sin eso, el alta no sabe con qué CUIT se contrata.</p>
+            ) : empresasDelProyecto.length === 1 ? (
+              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">{empresasDelProyecto[0].razonSocial}</p>
+            ) : (
+              <select name="empresaContratoId" value={formData.empresaContratoId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
+                <option value="">Elegí la empresa</option>
+                {empresasDelProyecto.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.razonSocial}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/*
+          LA CADENA, EN UNA FILA Y EN ORDEN: convenio → categoría → importe.
+
+          Estaban repartidos por el formulario —el convenio abajo de todo, la categoría arriba— y esa
+          distancia escondía que uno depende del otro. Puestos en fila y en el orden en que se
+          completan, la dependencia se ve sin que nadie la explique.
+        */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
+              Convenio
+            </label>
+            {!formData.empresaContratoId ? (
+              <p className="text-xs text-slate-400 py-2">Elegí primero la empresa.</p>
+            ) : conveniosDisponibles.length === 0 ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400 py-2">Esa empleadora no tiene convenios registrados ante ARCA, así que no hay categorías que se le puedan dar de alta.</p>
+            ) : (
+              /* Con uno solo no hay nada que elegir: se muestra. Con varios, se abre la ventana. */
+              <button
+                type="button"
+                onClick={() => conveniosDisponibles.length > 1 && setConvenioModalOpen(true)}
+                disabled={conveniosDisponibles.length === 1}
+                className="flex h-12 w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-left font-medium transition-all disabled:cursor-default dark:border-slate-700 dark:bg-slate-900"
+              >
+                {convenioElegido ? (
+                  <>
+                    <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{convenioElegido.externalId}</span>
+                    <span className="truncate text-sm text-slate-900 dark:text-white">{convenioElegido.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faSearch} className="shrink-0 text-sm text-slate-400" />
+                    <span className="text-slate-400">Elegí el convenio…</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
               Categoría*
             </label>
             {/*
-              CERRADA HASTA QUE HAYA ROL. La categoría CUELGA del rol empresa: la lista de abajo son
-              las categorías que ese rol habilita.
+              CUELGA DEL CONVENIO, NO SÓLO DEL ROL.
 
-              Sin rol elegido el filtro no aplica y el desplegable ofrecía el catálogo entero, así
-              que se podía cargar una categoría que el rol no habilita — y eso se descubría recién
-              del otro lado, al armar el contrato. Cerrarlo dice el orden en el que hay que
-              completar, en vez de dejar elegir mal.
+              Antes se filtraba sólo por el rol empresa y se podía elegir una categoría de otro
+              convenio: ARCA rechaza esa alta. Ahora el orden es empresa → convenio → categoría, que
+              es el que el organismo exige, y la ventana queda cerrada hasta tener los dos de arriba:
+              decir el orden en el que hay que completar es mejor que dejar elegir mal.
             */}
-            <select
-              name="categoriaSatId"
-              value={formData.categoriaSatId}
-              onChange={handleChange}
-              disabled={formData.roleFrameIds.length === 0}
-              title={formData.roleFrameIds.length === 0 ? "Elegí primero el rol empresa" : undefined}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+            <button
+              type="button"
+              onClick={() => convenioCct && setCategoriaModalOpen(true)}
+              disabled={!convenioCct}
+              title={!convenioCct ? "Elegí primero el convenio" : undefined}
+              className="flex h-12 w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-left font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="">{formData.roleFrameIds.length === 0 ? "Elegí primero el rol empresa" : "Selecciona categoría"}</option>
-              {/* La lista sale de `categoriasDisponibles`: la unión de lo que habilita cada rol elegido. */}
-              {categoriasDisponibles.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.data?.numeroCategoria ? `(${cat.data.numeroCategoria}) ` : ""}
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+              {categoriaElegida ? (
+                <>
+                  {categoriaElegida.data?.codigoArca && <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{categoriaElegida.data.codigoArca}</span>}
+                  <span className="truncate text-sm text-slate-900 dark:text-white">{categoriaElegida.name}</span>
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faSearch} className="shrink-0 text-sm text-slate-400" />
+                  <span className="text-slate-400">{!convenioCct ? "Elegí primero el convenio" : "Elegí la categoría…"}</span>
+                </>
+              )}
+            </button>
+            {avisoCascada && <p className="text-[11px] text-amber-600 dark:text-amber-400">{avisoCascada}</p>}
+          </div>
+
+          <div className="space-y-1">
+            {/* Mismo rótulo con ícono que «Horario»: sin él, las dos etiquetas tenían alturas
+                distintas y los campos de la fila arrancaban desparejos. La altura de los controles
+                también se fija (`h-12`) en vez de depender del `py-3`, que en un <select> y en un
+                <input> no da lo mismo. */}
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
+              Importe por Jornada
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <FontAwesomeIcon icon={faMoneyBillWave} />
+              </span>
+              <input type="number" name="dailyRate" value={formData.dailyRate} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="0" />
+            </div>
+            {/* De dónde salió el número, y cuánto se apartó de él si alguien lo cambió. */}
+            {categoriaElegida && !diferenciaContraEscala && <p className="text-[11px] text-slate-400">De la escala de {categoriaElegida.name}{convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.</p>}
+            {diferenciaContraEscala && (
+              <p className={`text-[11px] font-medium ${diferenciaContraEscala.delta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                {diferenciaContraEscala.delta > 0 ? "+" : "−"}
+                {Math.abs(diferenciaContraEscala.delta).toLocaleString("es-AR", { minimumFractionDigits: 2 })} contra la escala ({diferenciaContraEscala.escala.toLocaleString("es-AR", { minimumFractionDigits: 2 })})
+              </p>
+            )}
           </div>
         </div>
 
@@ -1056,80 +1377,6 @@ const TIME_OPTIONS = (() => {
             </div>
           </div>
 
-          {/*
-            CON QUÉ EMPLEADORA Y BAJO QUÉ CONVENIO. Debajo del horario, que es donde termina lo que
-            se pacta con la persona y empieza lo que define el alta.
-
-            Sale del proyecto: sus empresas del contrato, y de cada una sus convenios registrados. Con
-            una sola opción se elige sola y el campo queda de lectura — un combo de un ítem no es una
-            decisión. Con dos o más hay que elegir: equivocar la empleadora manda el alta con el CUIT
-            que no es, y eso se descubre cuando ARCA devuelve el archivo.
-          */}
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-[10px]" />
-              Empresa que contrata
-            </label>
-            {formData.projectIds.length === 0 ? (
-              <p className="text-xs text-slate-400 py-2">Elegí primero el proyecto: la empleadora sale de las que ese proyecto tiene asignadas.</p>
-            ) : empresasDelProyecto.length === 0 ? (
-              <p className="text-xs text-amber-600 dark:text-amber-400 py-2">Ese proyecto no tiene empresa del contrato asignada. Sin eso, el alta no sabe con qué CUIT se contrata.</p>
-            ) : empresasDelProyecto.length === 1 ? (
-              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">{empresasDelProyecto[0].razonSocial}</p>
-            ) : (
-              <select name="empresaContratoId" value={formData.empresaContratoId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
-                <option value="">Elegí la empresa</option>
-                {empresasDelProyecto.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.razonSocial}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
-              Convenio
-            </label>
-            {!formData.empresaContratoId ? (
-              <p className="text-xs text-slate-400 py-2">Elegí primero la empresa.</p>
-            ) : conveniosDisponibles.length === 0 ? (
-              <p className="text-xs text-amber-600 dark:text-amber-400 py-2">Esa empleadora no tiene convenios registrados ante ARCA, así que no hay categorías que se le puedan dar de alta.</p>
-            ) : conveniosDisponibles.length === 1 ? (
-              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">
-                <span className="font-mono text-xs text-blue-600 dark:text-blue-400 mr-2">{conveniosDisponibles[0].externalId}</span>
-                {conveniosDisponibles[0].name}
-              </p>
-            ) : (
-              <select name="convenioId" value={formData.convenioId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
-                <option value="">Elegí el convenio</option>
-                {conveniosDisponibles.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.externalId} — {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            {/* Mismo rótulo con ícono que «Horario»: sin él, las dos etiquetas tenían alturas
-                distintas y los campos de la fila arrancaban desparejos. La altura de los controles
-                también se fija (`h-12`) en vez de depender del `py-3`, que en un <select> y en un
-                <input> no da lo mismo. */}
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
-              Importe por Jornada
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-              </span>
-              <input type="number" name="dailyRate" value={formData.dailyRate} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="0" />
-            </div>
-          </div>
         </div>
         {/*
           EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él.
@@ -1353,6 +1600,7 @@ const TIME_OPTIONS = (() => {
             placeholder="Algo que haga falta aclarar sobre esta contratación (opcional)…"
           />
         </div>
+        </fieldset>
 
         {/*
           VENTANA PARA ELEGIR A LA PERSONA DEL ALTA.
@@ -1592,6 +1840,9 @@ const TIME_OPTIONS = (() => {
           }
         >
           <div className="space-y-3">
+            {/* Se dice qué va a pasar antes de que pase: el oficio nuevo queda en la ficha de la
+                persona, no sólo en esta solicitud. */}
+            {rolesNuevosParaLaFicha.length > 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">Los marcados como «nuevo» se le van a agregar a la ficha de la persona, así la próxima vez ya figuran entre los suyos.</p>}
             {rolesElegidos.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {rolesElegidos.map((rf) => (
@@ -1626,6 +1877,9 @@ const TIME_OPTIONS = (() => {
               ) : (
                 rolesDisponibles.map((rf) => {
                   const elegido = formData.roleFrameIds.includes(rf._id);
+                  // Los que la persona ya tiene en su ficha se distinguen de los que se le sumarían:
+                  // elegir uno de los suyos es una cosa, agregarle un oficio nuevo es otra.
+                  const esSuyo = rolesDelUsuario.includes(rf._id);
                   return (
                     // La ventana NO se cierra al elegir: son varios, y cerrarla obligaría a reabrirla
                     // por cada rol. Se cierra con «Listo».
@@ -1636,7 +1890,8 @@ const TIME_OPTIONS = (() => {
                       className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all ${elegido ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"}`}
                     >
                       <span className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ${elegido ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="text-[9px]" />}</span>
-                      <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{rf.name}</span>
+                      <span className="flex-1 truncate text-sm text-slate-700 dark:text-slate-200">{rf.name}</span>
+                      {selectedUser && !esSuyo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
                     </button>
                   );
                 })
@@ -1647,6 +1902,112 @@ const TIME_OPTIONS = (() => {
 
         {/* Motivo del reemplazo: es «Configurar Ausencia» de Novedades con otro título, porque acá lo
             que se declara es por qué falta el que se reemplaza. Misma lista, mismo control. */}
+        {/* Elegir el convenio: sólo los que la empleadora tiene registrados ante ARCA. */}
+        <Modal
+          isOpen={convenioModalOpen}
+          onClose={() => setConvenioModalOpen(false)}
+          title="Convenio"
+          subtitle="Define qué categorías se pueden elegir"
+          size="md"
+          zIndex={80}
+          footer={
+            <div className="flex w-full justify-end items-center gap-3">
+              <button type="button" onClick={() => setConvenioModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                Listo
+              </button>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-1 gap-2 py-2">
+            {conveniosDisponibles.map((c) => {
+              const elegido = c.externalId === convenioCct;
+              return (
+                <button
+                  key={c.externalId}
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, convenioId: convenioPorCct.get(c.externalId)?._id || "" }));
+                    setAvisoCascada("");
+                    setConvenioModalOpen(false);
+                  }}
+                  aria-pressed={elegido}
+                  className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${elegido ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
+                >
+                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
+                  <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{c.externalId}</span>
+                  <span className="flex-1 truncate text-sm font-medium">{c.name}</span>
+                  {/* Cuántas categorías tiene: es lo que anticipa si elegirlo va a servir de algo. */}
+                  <span className="shrink-0 text-[10px] text-slate-400">{c.cantidadCategorias} cat.</span>
+                </button>
+              );
+            })}
+          </div>
+        </Modal>
+
+        {/*
+          Elegir la categoría, con buscador.
+
+          Ofrece el cruce rol empresa ∩ convenio. Cuando la función FRAME de la persona no tiene
+          categorías de este convenio, el cruce da vacío: eso se detecta y se avisa, en vez de dejar
+          una lista vacía sin explicación. «Ver todas las de este convenio» es la salida, y es por
+          convenio: al cambiar de convenio vuelve a su filtro.
+        */}
+        <Modal
+          isOpen={categoriaModalOpen}
+          onClose={() => setCategoriaModalOpen(false)}
+          title="Categoría"
+          subtitle={convenioElegido ? `Del convenio ${convenioElegido.externalId}` : undefined}
+          size="md"
+          zIndex={80}
+          footer={
+            <div className="flex w-full justify-end items-center gap-3">
+              <button type="button" onClick={() => setCategoriaModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                Listo
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            {rolNoTieneCategoriasDelConvenio && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">El rol empresa de esta persona no tiene categorías de este convenio, así que se muestran todas las del convenio.</p>}
+
+            {!verTodasDelConvenio && !rolNoTieneCategoriasDelConvenio && (
+              <button type="button" onClick={() => setVerTodasDelConvenio(true)} className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                ¿No está la que buscás? Ver todas las de este convenio
+              </button>
+            )}
+
+            <input type="text" autoFocus value={categoriaBusqueda} onChange={(e) => setCategoriaBusqueda(e.target.value)} placeholder="Buscar categoría…" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-medium outline-none dark:border-slate-700 dark:bg-slate-900" />
+
+            <div className="grid max-h-[45vh] grid-cols-1 gap-2 overflow-y-auto pr-1">
+              {categoriasParaElegir.length === 0 ? (
+                <p className="py-8 text-center text-xs italic text-slate-400">{categoriaBusqueda ? `No hay categorías que coincidan con "${categoriaBusqueda}"` : "No hay categorías para este convenio."}</p>
+              ) : (
+                categoriasParaElegir.map((cat) => {
+                  const elegida = cat._id === formData.categoriaSatId;
+                  return (
+                    <button
+                      key={cat._id}
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, categoriaSatId: cat._id }));
+                        setAvisoCascada("");
+                        setCategoriaModalOpen(false);
+                        setCategoriaBusqueda("");
+                      }}
+                      aria-pressed={elegida}
+                      className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${elegida ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
+                    >
+                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegida && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
+                      {cat.data?.codigoArca && <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{cat.data.codigoArca}</span>}
+                      <span className="flex-1 truncate text-sm font-medium">{cat.name}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </Modal>
+
         {/*
           Elegir el tipo de contrato.
 
@@ -1800,24 +2161,37 @@ const TIME_OPTIONS = (() => {
           <div className="space-y-4">
             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Seleccioná uno o más roles para acotar la lista de personas.</p>
             <div className="space-y-1 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-              {roleFrames.map((rf) => {
-                const isSelected = selectedRoleFilters.includes(rf.name);
-                return (
-                  <div key={rf._id} className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800/50 last:border-0 group">
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-blue-500 transition-colors">{rf.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isSelected) setSelectedRoleFilters((prev) => prev.filter((r) => r !== rf.name));
-                        else setSelectedRoleFilters((prev) => [...prev, rf.name]);
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${isSelected ? "bg-blue-500 shadow-inner" : "bg-slate-200 dark:bg-slate-700"}`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${isSelected ? "translate-x-6" : "translate-x-1"}`} />
-                    </button>
-                  </div>
-                );
-              })}
+              {/*
+                Los roles CON gente arriba y activos; los que no tienen a nadie quedan abajo y
+                apagados. Se dejan a la vista —y no se esconden— porque «no está en la lista» se lee
+                como que el rol no existe, y lo que pasa es otra cosa: existe y no lo tiene nadie.
+              */}
+              {[...roleFrames]
+                .sort((a, b) => (personasPorRol.get(b.name) || 0) - (personasPorRol.get(a.name) || 0) || a.name.localeCompare(b.name, "es", { sensitivity: "base" }))
+                .map((rf) => {
+                  const isSelected = selectedRoleFilters.includes(rf.name);
+                  const cantidad = personasPorRol.get(rf.name) || 0;
+                  const sinGente = cantidad === 0;
+                  return (
+                    <div key={rf._id} className={`flex items-center justify-between gap-3 py-3 border-b border-slate-100 dark:border-slate-800/50 last:border-0 group ${sinGente ? "opacity-40" : ""}`}>
+                      <span className={`text-sm font-semibold text-slate-700 dark:text-slate-200 ${sinGente ? "" : "group-hover:text-blue-500"} transition-colors`}>
+                        {rf.name} <span className="font-normal text-slate-400">({cantidad})</span>
+                      </span>
+                      <button
+                        type="button"
+                        disabled={sinGente}
+                        title={sinGente ? "Nadie tiene este rol: filtrar por él dejaría la lista vacía" : undefined}
+                        onClick={() => {
+                          if (isSelected) setSelectedRoleFilters((prev) => prev.filter((r) => r !== rf.name));
+                          else setSelectedRoleFilters((prev) => [...prev, rf.name]);
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all duration-300 focus:outline-none disabled:cursor-not-allowed ${isSelected ? "bg-blue-500 shadow-inner" : "bg-slate-200 dark:bg-slate-700"}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${isSelected ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </Modal>

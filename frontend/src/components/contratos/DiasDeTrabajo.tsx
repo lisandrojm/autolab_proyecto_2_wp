@@ -128,9 +128,21 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
     onDias([...dias, indice].sort((a, b) => a - b));
   };
 
+  /*
+    EN MÓVIL, TODO DENTRO DE UN MISMO CONTORNO.
+
+    La cantidad, el switch y los días son una sola cosa —cuántos días trabaja y cuáles—, pero estaban
+    como tres cajas sueltas en una pantalla donde arriba y abajo hay otros campos con el mismo aspecto.
+    Con un borde alrededor se lee como un bloque; y la cantidad y el switch van lado a lado, que es
+    como se completan: se escribe el número y se decide ahí mismo si son fijos o rotativos.
+  */
+  const marco = mobile ? "space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700" : "space-y-3";
+
   return (
-    <div className={`space-y-3 ${className}`}>
-      <div className="space-y-1.5">
+    <div className={`${marco} ${className}`}>
+      {/* En escritorio queda apilado como estaba: `space-y-3` mantiene el mismo ritmo vertical. */}
+      <div className={mobile ? "flex flex-col gap-3 sm:flex-row sm:items-start" : "space-y-3"}>
+      <div className={`space-y-1.5 ${mobile ? "sm:w-40 sm:shrink-0" : ""}`}>
         <label className={etiqueta}>Días por semana</label>
         <input
           type="number"
@@ -152,11 +164,11 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
           className={input}
           placeholder="Ej: 5"
         />
-        <p className={mobile ? "text-[11px] text-slate-400" : "text-[10px] text-gray-400 ml-1"}>Cuántos días de la semana trabaja. Por ejemplo 3, 5 o 7.</p>
+        <p className={mobile ? "text-[11px] text-slate-400" : "text-[10px] text-gray-400 ml-1"}>Cuántos días de la semana trabaja. Máximo 7.</p>
       </div>
 
-      {/* El switch va ENTRE la cantidad y los días porque cambia qué significan los de abajo. */}
-      <label className={`flex items-center gap-3 cursor-pointer select-none ${mobile ? "p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700" : "rounded-lg border border-gray-200 dark:border-gray-700 p-3"}`}>
+      {/* El switch va PEGADO a la cantidad porque cambia qué significan los días de abajo. */}
+      <label className={`flex flex-1 items-center gap-3 cursor-pointer select-none ${mobile ? "p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700" : "rounded-lg border border-gray-200 dark:border-gray-700 p-3"}`}>
         <span className={`w-10 h-6 flex items-center rounded-full p-1 shrink-0 duration-300 ease-in-out ${rotativos ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
           <span className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${rotativos ? "translate-x-4" : ""}`} />
         </span>
@@ -166,6 +178,7 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
           <span className={`block text-[11px] ${mobile ? "text-slate-400" : "text-gray-500 dark:text-gray-400"}`}>{rotativos ? "Marcá entre qué días rota. Pueden ser más que los días que trabaja." : "Marcá los días fijos que trabaja."}</span>
         </span>
       </label>
+      </div>
 
       {/*
         La relación con las jornadas TOTALES, dicha y no aplicada.

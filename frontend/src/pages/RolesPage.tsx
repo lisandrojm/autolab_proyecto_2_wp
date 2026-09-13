@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BloqueEstado } from "../components/ui/BloqueEstado";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
@@ -11,7 +11,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faCheckDouble, faBroom } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faCheckDouble, faBroom, faSort, faSortUp, faSortDown } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 // Un permiso por tarjeta de la app. Ver el porqué y la contraparte del server en ese módulo.
 import { esPermisoMobile, MOBILE_ITEMS, MOBILE_PERMISSIONS } from "../utils/permisosMobile";
@@ -280,6 +280,27 @@ const ResumenPermisos: React.FC<{ permisos: string[] }> = ({ permisos }) => {
   );
 };
 
+/** Por qué columna y en qué sentido está ordenada la lista. */
+type OrdenRoles = { columna: "nombre" | "permisos"; dir: "asc" | "desc" };
+
+/**
+ * Una cabecera de la tabla que ordena al tocarla.
+ *
+ * La flecha sólo aparece en la columna activa: una flecha en cada cabecera no dice cuál manda. La
+ * inactiva muestra el ícono neutro tenue, que es lo que anticipa que se puede clickear.
+ */
+const CabeceraOrdenable: React.FC<{ etiqueta: string; columna: OrdenRoles["columna"]; orden: OrdenRoles; onOrdenar: (columna: OrdenRoles["columna"]) => void }> = ({ etiqueta, columna, orden, onOrdenar }) => {
+  const activa = orden.columna === columna;
+  return (
+    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+      <button type="button" onClick={() => onOrdenar(columna)} aria-sort={activa ? (orden.dir === "asc" ? "ascending" : "descending") : "none"} className="inline-flex items-center gap-1.5 uppercase tracking-wider transition-colors hover:text-gray-800 dark:hover:text-gray-200">
+        {etiqueta}
+        <FontAwesomeIcon icon={activa ? (orden.dir === "asc" ? faSortUp : faSortDown) : faSort} className={`h-3 w-3 ${activa ? "text-blue-500" : "text-gray-300 dark:text-gray-600"}`} />
+      </button>
+    </th>
+  );
+};
+
 const SeccionPermisos: React.FC<{
   titulo: string;
   icono: any;
@@ -360,6 +381,9 @@ export const RolesPage: React.FC = () => {
   const [viewRole, setViewRole] = useState<Role | null>(null);
 
   // View Mode Logic
+  // Alfabético por nombre al abrir: es como se busca un rol cuando ya se sabe cuál se quiere.
+  const [orden, setOrden] = useState<OrdenRoles>({ columna: "nombre", dir: "asc" });
+
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
@@ -660,6 +684,33 @@ export const RolesPage: React.FC = () => {
 
     return matchesSearch && matchesStatus && matchesDate;
   });
+
+  /*
+    EL ORDEN, CLICKEABLE DESDE LAS CABECERAS.
+
+    Se ordena la lista COMPLETA, no la tabla: las tarjetas y la tabla son dos vistas de lo mismo y que
+    cambien de orden al alternar entre ellas no tendría ninguna explicación.
+
+    Por nombre es alfabético con `localeCompare` en español y sin distinguir mayúsculas ni acentos —con
+    una comparación de strings a secas, «Ávila» cae después de «Zúñiga»—. Por permisos se ordena por
+    CANTIDAD: la columna muestra «Plataforma (22) · App Mobile (2)», y alfabetizar eso ordenaría por la
+    palabra «App», que no dice nada.
+  */
+  const rolesOrdenados = useMemo(() => {
+    const dir = orden.dir === "asc" ? 1 : -1;
+    return [...filteredRoles].sort((a, b) => {
+      if (orden.columna === "permisos") {
+        const diferencia = a.permissions.length - b.permissions.length;
+        // Empate por cantidad: alfabético, para que el orden sea estable y no dependa del backend.
+        if (diferencia !== 0) return diferencia * dir;
+        return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+      }
+      return a.name.localeCompare(b.name, "es", { sensitivity: "base" }) * dir;
+    });
+  }, [filteredRoles, orden]);
+
+  /** Click en una cabecera: la misma columna invierte el sentido; otra empieza ascendente. */
+  const ordenarPor = (columna: "nombre" | "permisos") => setOrden((prev) => (prev.columna === columna ? { columna, dir: prev.dir === "asc" ? "desc" : "asc" } : { columna, dir: "asc" }));
 
   return (
     <PageLayout
@@ -1028,7 +1079,7 @@ export const RolesPage: React.FC = () => {
           {/* Grid */}
           {viewMode === "cards" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-              {filteredRoles.map((role) => {
+              {rolesOrdenados.map((role) => {
                 const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
 
                 return (
@@ -1156,15 +1207,21 @@ export const RolesPage: React.FC = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
+                    {/*
+                      SIN LA COLUMNA TENANT.
+
+                      Decía lo mismo en todas las filas: un rol sólo puede ser del tenant en el que
+                      estás parado, y cuál es lo dice el selector del encabezado. Ocupaba una columna
+                      entera para repetir algo que ya está en pantalla.
+                    */}
                     <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Permisos</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tenant</th>
+                      <CabeceraOrdenable etiqueta="Rol" columna="nombre" orden={orden} onOrdenar={ordenarPor} />
+                      <CabeceraOrdenable etiqueta="Permisos" columna="permisos" orden={orden} onOrdenar={ordenarPor} />
                       <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {filteredRoles.map((role) => {
+                    {rolesOrdenados.map((role) => {
                       const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
                       // const isActionDisabled = isSuperAdminRole && !isSuperAdmin; // Removed unsed var
                       return (
@@ -1191,7 +1248,6 @@ export const RolesPage: React.FC = () => {
                               <ResumenPermisos permisos={role.permissions} />
                             )}
                           </td>
-                          <td className="px-6 py-4">{role.tenant && role.tenant.name ? <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{role.tenant.name}</span> : <span className="text-xs text-gray-400">—</span>}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                               {!isSuperAdminRole && (

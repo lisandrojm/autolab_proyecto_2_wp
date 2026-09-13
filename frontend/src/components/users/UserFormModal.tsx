@@ -2028,7 +2028,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               <strong>Pedidos</strong> y <strong>Vacaciones</strong>: los suyos. Es lo que traen las altas por defecto.
             </li>
             <li>
-              <strong>Usuarios</strong>: el historial de solicitudes de contratación.
+              <strong>Contratación</strong>: pedir el alta de alguien y ver el historial de solicitudes.
             </li>
           </ul>
           <p>

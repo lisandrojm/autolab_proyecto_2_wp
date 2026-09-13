@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { Types } from "mongoose";
 import { User } from "../models/User.js";
@@ -1111,8 +1111,66 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
   }
 });
 
+/*
+  POST /users/:id/roles-frame — sumarle un oficio a la ficha de una persona.
+
+  Cuando se contrata a alguien puede aparecer que además hace otra cosa —«este también es Utilero»—, y
+  eso es un dato de la persona, no del contrato: la próxima vez tiene que estar ahí. Lo descubre quien
+  está contratando, así que se agrega desde donde está esa persona: la solicitud del móvil y el wizard
+  de Configurar Miembro.
+
+  Endpoint propio y no un PATCH de la ficha entera, por dos razones. Una: `PATCH /users/:id` reemplaza
+  `metadata` completo, así que para agregar un id habría que reenviar toda la ficha y cualquier campo
+  que el cliente no conozca se perdería. Acá es un `$addToSet` sobre un solo campo. La otra: el móvil
+  no tiene —ni debe tener— permiso para editar la ficha de otra persona, y esto sí puede hacerlo.
+
+  SÓLO AGREGA. Quitar un oficio se hace desde Usuarios, con la ficha a la vista.
+*/
+router.post("/:id/roles-frame", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const ids = Array.isArray(req.body?.roleFrameIds) ? req.body.roleFrameIds.filter((id: any) => Types.ObjectId.isValid(String(id))).map((id: any) => new Types.ObjectId(String(id))) : [];
+
+    if (ids.length === 0) {
+      res.status(400).json({ error: "No vino ningún rol empresa válido" });
+      return;
+    }
+
+    const user = await User.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { $addToSet: { "metadata.roles_frame": { $each: ids } } }, { new: true })
+      .select("metadata.roles_frame")
+      .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
+      .lean();
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({ rolesFrame: (user as any).metadata?.roles_frame || [] });
+  } catch (error) {
+    console.error("Add roles frame error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
+  CREAR USUARIO: administración, o una SOLICITUD desde la app.
+
+  Pedía `admin_users:view` a secas, y con eso la «Solicitud de Contratación» del móvil sólo funcionaba
+  si quien la mandaba era además administrador: para un coordinador —que es quien la usa— terminaba en
+  403 al tocar Enviar. Es el mismo agujero que tenía el listado de usuarios.
+
+  Una solicitud no es un usuario: nace inactiva, con `isSolicitud`, y no existe como persona hasta que
+  alguien la aprueba desde el escritorio. Por eso el permiso del móvil alcanza SÓLO para eso; crear un
+  usuario de verdad sigue pidiendo el de administración.
+*/
+const permisoParaCrearUsuario = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const esSolicitud = req.body?.metadata?.isSolicitud === true;
+  const middleware = esSolicitud ? requireAnyPermission("admin_users:view", MOBILE_USERS) : requirePermission("admin_users:view");
+  return middleware(req, res, next);
+};
+
 // POST /users - Crear usuario
-router.post("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = createUserSchema.parse(req.body);
     normalizarRolesFrame((data as any).metadata);

@@ -21,14 +21,16 @@
 export const MOBILE_ACTIVITY_LOGS = "mobile_activity_logs:view"; // Novedades
 export const MOBILE_ORDERS = "mobile_orders:view"; // Pedidos
 export const MOBILE_VACATIONS = "mobile_vacations:view"; // Vacaciones
-export const MOBILE_USERS = "mobile_users:view"; // Usuarios (solicitud de contratación)
+// La CLAVE sigue diciendo `users` porque renombrarla es migrar los roles de todos los tenants; lo
+// que se ve es «Contratación», que es lo que la tarjeta hace: pedir un alta, no administrar gente.
+export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes de alta)
 
 /** En el orden en que se muestran, tanto en el editor de roles como en la ficha del usuario. */
 export const MOBILE_ITEMS = [
   { permiso: MOBILE_ACTIVITY_LOGS, label: "Novedades" },
   { permiso: MOBILE_ORDERS, label: "Pedidos" },
   { permiso: MOBILE_VACATIONS, label: "Vacaciones" },
-  { permiso: MOBILE_USERS, label: "Usuarios" },
+  { permiso: MOBILE_USERS, label: "Contratación" },
 ];
 
 export const MOBILE_PERMISSIONS = MOBILE_ITEMS.map((i) => i.permiso);

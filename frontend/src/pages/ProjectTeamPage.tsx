@@ -40,8 +40,11 @@ import { userProjectsAPI } from "../api/userProjects";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { clientsAPI } from "../api/clients";
 import { infoAPI, InfoItem } from "../api/info";
-import { categoriaSatAPI, CategoriaSatItem, esElegible } from "../api/categoriasSat";
+import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
+import { fuzzyMatch } from "../utils/searchHelpers";
+// La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
+import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from "../utils/seleccionConvenioCategoria";
 import { cachedFetch } from "../utils/refCache";
 
 const HELP_KEY = "projectTeam" as const;
@@ -991,16 +994,10 @@ export const ProjectTeamPage: React.FC = () => {
    * dejaría el select vacío sin que el operador pueda hacer nada al respecto desde acá. El checklist
    * de Datos ARCA ya marca esos casos por su cuenta.
    */
-  const conveniosDeLaEmpleadora = useMemo(() => {
-    const empresa = companies.find((c) => c._id === wizardData.empresaContratoId);
-    if (!empresa) return null;
-    const ids = (empresa.convenioIds || []).map(String);
-    const codigos = allConvenios
-      .filter((c) => ids.includes(c._id))
-      .map((c) => String(c.externalId || "").trim())
-      .filter(Boolean);
-    return codigos.length > 0 ? codigos : null;
-  }, [companies, allConvenios, wizardData.empresaContratoId]);
+  const conveniosDeLaEmpleadora = useMemo(
+    () => codigosDeConveniosDeLaEmpleadora(companies.find((c) => c._id === wizardData.empresaContratoId), allConvenios),
+    [companies, allConvenios, wizardData.empresaContratoId],
+  );
 
   /**
    * Los convenios que se pueden elegir. NUNCA el catálogo entero (~2.669): solo los de la empleadora.
@@ -1035,133 +1032,38 @@ export const ProjectTeamPage: React.FC = () => {
     }
   };
 
-  const conveniosDisponibles = useMemo(() => {
-    const codigos = new Set<string>(conveniosDeLaEmpleadora || []);
-    // Un contrato viejo puede tener una categoría de un convenio que la empleadora ya no tiene
-    // registrado. Se ofrece igual, marcado: esconderlo rompería la edición de ese contrato, y el
-    // error ya lo marca el checklist de Datos ARCA, que es donde corresponde.
-    if (convenioFiltro) codigos.add(convenioFiltro);
-
-    const cantidadPorCct = new Map<string, number>();
-    for (const c of allCategoriasSat) {
-      if (!esElegible(c)) continue;
-      const cct = String(c.data?.convenio || "").trim();
-      if (cct) cantidadPorCct.set(cct, (cantidadPorCct.get(cct) || 0) + 1);
-    }
-    const nombrePorCct = new Map(allConvenios.map((c) => [String(c.externalId || "").trim(), String(c.name || "")]));
-
-    return [...codigos]
-      .map((externalId) => ({
-        externalId,
-        name: nombrePorCct.get(externalId) || "",
-        cantidadCategorias: cantidadPorCct.get(externalId) || 0,
-        registrado: (conveniosDeLaEmpleadora || []).includes(externalId),
-      }))
-      .filter((c) => c.cantidadCategorias > 0 || c.externalId === convenioFiltro)
-      .sort((a, b) => a.externalId.localeCompare(b.externalId));
-  }, [conveniosDeLaEmpleadora, convenioFiltro, allCategoriasSat, allConvenios]);
-
+  const conveniosDisponibles = useMemo(
+    () => conveniosOfrecidos({ codigosEmpleadora: conveniosDeLaEmpleadora, convenioElegido: convenioFiltro, categorias: allCategoriasSat, convenios: allConvenios }),
+    [conveniosDeLaEmpleadora, convenioFiltro, allCategoriasSat, allConvenios],
+  );
   const {
     categorias: availableCategoriasSat,
     ocultasPorConvenio: categoriasOcultasPorConvenio,
     ocultasPorFiltroConvenio,
     rolNoTieneCategoriasDelConvenio,
-  } = useMemo(() => {
-    // El convenio de cada categoría vive SOLO en el catálogo: la copia denormalizada de las funciones
-    // FRAME no lo guarda, así que todo lo que use el CCT se resuelve contra este mapa por `data.id`.
-    const convenioPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.convenio || "").trim()]));
+  } = useMemo(
+    () =>
+      categoriasOfrecidas({
+        // El wizard elige UN rol frame; la función recibe lista porque el móvil admite varios.
+        rolesFrame: allRoleFrames.filter((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id)),
+        convenioElegido: convenioFiltro,
+        codigosEmpleadora: conveniosDeLaEmpleadora,
+        categorias: allCategoriasSat,
+        verTodasDelConvenio,
+        categoriaElegidaId: wizardData.categoria_sat_id,
+      }),
+    [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio],
+  );
 
-    const delRol: any[] = (() => {
-      if (!wizardData.rol_frame_id) return [];
-      const selectedRF = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
-      return selectedRF && Array.isArray(selectedRF.data?.categoriasSat) ? [...selectedRF.data.categoriasSat] : [];
-    })();
+  /*
+    EL OFICIO QUE SE AGREGA DESDE EL BUSCADOR, y que la persona todavía no tiene en su ficha.
 
-    /*
-      EL CASO QUE BLOQUEA UN CONVENIO ENTERO.
-
-      Si la función Frame tiene categorías cargadas, se usan SOLO esas. Cuando ninguna es del convenio
-      elegido, el cruce da vacío y el convenio queda inalcanzable — que es exactamente lo que pasa con
-      0131/75 (218 categorías en el catálogo, cero ofrecidas). No es un dato faltante del operador: es
-      que la función Frame se cargó con las categorías de otro convenio.
-
-      Se detecta y se sale del filtro por función, avisando. Callarlo dejaría un select vacío sin
-      explicación, que es lo que había.
-    */
-    const rolNoTieneCategoriasDelConvenio = !!wizardData.rol_frame_id && !!convenioFiltro && delRol.length > 0 && !delRol.some((c) => convenioPorId.get(String(c.id)) === convenioFiltro);
-    const ignorarFiltroPorRol = !!convenioFiltro && (verTodasDelConvenio || rolNoTieneCategoriasDelConvenio);
-
-    let list: any[] = ignorarFiltroPorRol ? [] : delRol;
-
-    // Fallback: If list is empty but we have allCategoriasSat, use allCategoriasSat as options.
-    // Se filtran las no elegibles (alias que existen solo para que resuelvan contratos históricos):
-    // acá se ELIGE una categoría para un contrato nuevo, no se resuelve una ya cargada.
-    if (list.length === 0 && allCategoriasSat.length > 0) {
-      list = allCategoriasSat.filter(esElegible).map((c) => ({
-        id: c.data?.id,
-        nombre: c.name,
-        numeroCategoria: c.data?.numeroCategoria || c.data?.id,
-      }));
-    }
-
-    // Solo las categorías de los convenios de la empleadora. Este filtro es de ARCA, no una
-    // preferencia: el organismo rechaza el alta con una categoría de un convenio que la empleadora no
-    // registró.
-    let ocultasPorConvenio = 0;
-    if (conveniosDeLaEmpleadora) {
-      const antes = list.length;
-      // Una categoría SIN convenio tampoco se ofrece: no se puede verificar que ARCA la acepte, y su
-      // alta va a salir sin categoría profesional. Se cuenta aparte para poder decirlo.
-      list = list.filter((c) => {
-        const cct = convenioPorId.get(String(c.id));
-        return !!cct && conveniosDeLaEmpleadora.includes(cct);
-      });
-      ocultasPorConvenio = antes - list.length;
-    }
-
-    /*
-      El filtro que pidió el operador, aplicado DESPUÉS del de la empleadora.
-
-      Ese orden importa para lo que se cuenta: «ocultas por convenio» son las que ARCA no aceptaría y
-      hay que explicar; «ocultas por el filtro» son las que el propio operador acaba de dejar afuera y
-      destraba solo. Sumarlas en un número las volvería la misma cosa.
-
-      Una categoría SIN convenio cargado sobrevive con el filtro en «todos» pero no cuando hay uno
-      elegido: no se puede afirmar que pertenezca al convenio pedido.
-    */
-    let ocultasPorFiltroConvenio = 0;
-    if (convenioFiltro) {
-      const antes = list.length;
-      list = list.filter((c) => convenioPorId.get(String(c.id)) === convenioFiltro);
-      ocultasPorFiltroConvenio = antes - list.length;
-    }
-
-    // La categoría ya elegida se muestra siempre, aunque el filtro la haya sacado: esconderla
-    // convertiría un contrato mal cargado en un select vacío, sin decir qué tenía.
-    if (wizardData.categoria_sat_id) {
-      const alreadyInList = list.some((c) => String(c.id) === String(wizardData.categoria_sat_id));
-      if (!alreadyInList) {
-        // Find it in global list
-        const globalCat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
-        if (globalCat) {
-          list.push({
-            id: globalCat.data?.id,
-            nombre: globalCat.name,
-            numeroCategoria: globalCat.data?.numeroCategoria || globalCat.data?.id,
-          });
-        }
-      }
-    }
-
-    // Lo que identifica a una categoría es su código de ARCA de 6 dígitos, no el "Nº Cat." — que era
-    // el número del GRUPO salarial, compartido por decenas de categorías distintas. La copia
-    // denormalizada de las funciones FRAME guarda el código como número, así que se re-resuelve
-    // contra el catálogo, donde está canónico con sus ceros.
-    const codigoPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.codigoArca || "").trim()]));
-    const conCodigo = list.map((c) => ({ ...c, codigoArca: codigoPorId.get(String(c.id)) || "" }));
-
-    return { categorias: conCodigo, ocultasPorConvenio, ocultasPorFiltroConvenio, rolNoTieneCategoriasDelConvenio };
-  }, [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio]);
+    Vive aparte de `wizardData` porque no es un dato del contrato: es lo que hay que sumarle a la ficha
+    al guardar. Se limpia al cerrar el wizard, como todo lo demás.
+  */
+  const [rolFrameAgregado, setRolFrameAgregado] = useState<RoleFrameItem | null>(null);
+  const [rolFrameBuscadorOpen, setRolFrameBuscadorOpen] = useState(false);
+  const [rolFrameBusqueda, setRolFrameBusqueda] = useState("");
 
   const userAssignedRoleFrames = useMemo(() => {
     if (!selectedUserForWizard) return [];
@@ -1218,6 +1120,16 @@ export const ProjectTeamPage: React.FC = () => {
 
     return filtered;
   }, [allRoleFrames, selectedUserForWizard]);
+
+  /** Lo que ofrece el desplegable: los oficios de la persona, más el que se haya agregado a mano. */
+  const rolesFrameOfrecidos = useMemo(() => (rolFrameAgregado && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id) ? [...userAssignedRoleFrames, rolFrameAgregado] : userAssignedRoleFrames), [userAssignedRoleFrames, rolFrameAgregado]);
+
+  /** El catálogo entero para el buscador, sin los que la persona ya tiene. */
+  const rolesFrameParaBuscar = useMemo(() => {
+    const suyos = new Set(userAssignedRoleFrames.map((rf) => rf._id));
+    const base = allRoleFrames.filter((rf) => !suyos.has(rf._id));
+    return rolFrameBusqueda.trim() ? base.filter((rf) => fuzzyMatch(rf.name, rolFrameBusqueda)) : base;
+  }, [allRoleFrames, userAssignedRoleFrames, rolFrameBusqueda]);
 
   // Coordinador = puede cargar novedades. Se conserva el fallback por el nombre de la persona, que
   // cubre a quien tiene el puesto escrito en el nombre y ningún rol detrás.
@@ -1854,6 +1766,21 @@ export const ProjectTeamPage: React.FC = () => {
         },
       });
 
+      /*
+        El oficio elegido por el buscador se le suma a la FICHA de la persona.
+
+        Que además sea Utilero no es un dato de este contrato: la próxima vez tiene que aparecer en la
+        lista corta sin que nadie lo vuelva a buscar. Va con su propio catch porque el miembro ya quedó
+        guardado y eso es lo que no se puede perder.
+      */
+      if (rolFrameAgregado) {
+        try {
+          await usersAPI.agregarRolesFrame(selectedUserForWizard._id, [rolFrameAgregado._id]);
+        } catch (e) {
+          console.error("No se pudo agregar el rol empresa a la ficha:", e);
+        }
+      }
+
       const wasApproving = !!approvingSolicitudId;
       const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || "El usuario";
       sweetAlert.success(wasApproving ? "Solicitud Aprobada" : isExistingMember ? "Miembro Actualizado" : "Miembro Agregado", `${nombre} ha sido ${wasApproving ? "aprobado e incorporado al equipo" : isExistingMember ? "actualizado" : "incorporado al equipo"}.`);
@@ -1879,6 +1806,8 @@ export const ProjectTeamPage: React.FC = () => {
       setApprovingSolicitudId(null);
 
       setSelectedUserForWizard(null);
+      setRolFrameAgregado(null);
+      setRolFrameBusqueda("");
       setShowAddModal(false);
     } catch (error: any) {
       console.error("Assign member error:", error);
@@ -3445,10 +3374,62 @@ export const ProjectTeamPage: React.FC = () => {
             )}
           </Modal>
 
+          {/*
+            Buscador del catálogo completo de oficios, para cuando el que corresponde no está entre
+            los de la persona. Se elige UNO: es con el que se la contrata acá, y al guardar se le suma
+            a la ficha. Va por encima del wizard, que es desde donde se abre.
+          */}
+          <Modal
+            isOpen={rolFrameBuscadorOpen}
+            onClose={() => setRolFrameBuscadorOpen(false)}
+            title="Otro rol empresa"
+            subtitle="El que elijas se le agrega a la ficha de la persona al guardar"
+            size="md"
+            zIndex={110}
+            footer={
+              <div className="flex w-full justify-end">
+                <button type="button" onClick={() => setRolFrameBuscadorOpen(false)} className="btn-secondary">
+                  Cancelar
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-3">
+              <input type="text" autoFocus value={rolFrameBusqueda} onChange={(e) => setRolFrameBusqueda(e.target.value)} placeholder="Buscar especialidad…" className="input-field w-full" />
+              <div className="grid max-h-[45vh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                {rolesFrameParaBuscar.length === 0 ? (
+                  <p className="col-span-full py-8 text-center text-xs italic text-gray-400">{rolFrameBusqueda ? `No hay especialidades que coincidan con "${rolFrameBusqueda}"` : "La persona ya tiene todos los oficios del catálogo."}</p>
+                ) : (
+                  rolesFrameParaBuscar.map((rf) => (
+                    <button
+                      key={rf._id}
+                      type="button"
+                      onClick={() => {
+                        setRolFrameAgregado(rf);
+                        // Se deja elegido en el desplegable, que es lo que el wizard guarda.
+                        setWizardData((prev) => ({ ...prev, rol_frame_id: String(rf.data?.rol?.id || ""), categoria_sat_id: "" }));
+                        setRolFrameBuscadorOpen(false);
+                        setRolFrameBusqueda("");
+                      }}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-left text-sm text-gray-700 transition-all hover:border-blue-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200"
+                    >
+                      {rf.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </Modal>
+
           {/* Wizard Modal */}
           <Modal
             isOpen={!!selectedUserForWizard}
-            onClose={() => setSelectedUserForWizard(null)}
+            onClose={() => {
+              setSelectedUserForWizard(null);
+              // El oficio agregado a mano es de ESTA carga: si se cierra sin guardar, no queda nada.
+              setRolFrameAgregado(null);
+              setRolFrameBusqueda("");
+            }}
             title={esEdicionMiembro ? "Configurar Miembro" : "Agregar Miembro"}
             subtitle={
               selectedUserForWizard ? (
@@ -3574,18 +3555,37 @@ export const ProjectTeamPage: React.FC = () => {
                       <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
                     </div>
 
+                    {/*
+                      EL DESPLEGABLE OFRECE LOS OFICIOS DE LA PERSONA; EL BOTÓN, TODOS LOS DEMÁS.
+
+                      La lista corta es la correcta el 90% de las veces y por eso sigue siendo la que se
+                      ve. Pero cuando se contrata a alguien para algo que no figura en su ficha —porque
+                      nunca lo hizo acá, o porque quedó incompleta— antes no había salida: el select no
+                      lo ofrecía y el wizard exige uno. Se elegía cualquiera con tal de avanzar.
+
+                      Lo que se elige por el buscador se le AGREGA a la ficha al guardar: que además sea
+                      Utilero es un dato de la persona, no de este contrato, y la próxima vez tiene que
+                      estar en la lista corta.
+                    */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
                         Role Frame a Desempeñar <span className="text-red-500">*</span>
                       </label>
-                      <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))} required>
-                        <option value="">Selecciona role frame...</option>
-                        {userAssignedRoleFrames.map((rf) => (
-                          <option key={rf._id} value={rf.data.rol.id}>
-                            {rf.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))} required>
+                          <option value="">Selecciona role frame...</option>
+                          {rolesFrameOfrecidos.map((rf) => (
+                            <option key={rf._id} value={rf.data.rol.id}>
+                              {rf.name}
+                              {!userAssignedRoleFrames.some((p) => p._id === rf._id) ? " (nuevo)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={() => setRolFrameBuscadorOpen(true)} title="Buscar otro rol empresa" className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
+                          Otro rol
+                        </button>
+                      </div>
+                      {rolFrameAgregado && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
                     </div>
 
                     {/*

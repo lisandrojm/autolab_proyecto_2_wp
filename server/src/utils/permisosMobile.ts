@@ -23,7 +23,7 @@ import { Role } from "../models/Role.js";
 export const MOBILE_ACTIVITY_LOGS = "mobile_activity_logs:view"; // Novedades
 export const MOBILE_ORDERS = "mobile_orders:view"; // Pedidos
 export const MOBILE_VACATIONS = "mobile_vacations:view"; // Vacaciones
-export const MOBILE_USERS = "mobile_users:view"; // Usuarios (solicitud de contratación)
+export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes de alta)
 
 export const ALL_MOBILE_PERMISSIONS = [MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_USERS];
 
