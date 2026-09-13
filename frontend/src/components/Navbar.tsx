@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -161,7 +161,9 @@ const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/document
  * se opera arriba, lo que se define abajo. Sin el grupo, «Roles» quedaba suelto entre nomencladores
  * y no se leía como parte de la misma familia.
  */
-const ROLES_PATHS = ['/roles'];
+// «Permisos» (qué permisos están activos para toda la plataforma) va junto a Roles. Sólo existe en el
+// menú del SuperAdmin; para el resto el `filter(Boolean)` de abajo lo descarta.
+const ROLES_PATHS = ['/roles', '/permisos'];
 
 /**
  * Subgrupo "Documentos" (dentro de Configuración): la integración con Dropbox, entera.
@@ -354,9 +356,12 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
+      base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/permisos', icon: faToggleOn, label: 'Permisos', scope: 'global' }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
     } else {
       if (hasPermission('admin_roles:view')) base.push({ path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles });
+      // «Permisos» es del SuperAdmin aunque esté parado en un tenant común: se decide por su rol, no por
+      // el tenant. Sin distinguir mayúsculas, como el resto de la app (el rol llega como «SuperAdmin»).
+      if (user?.primaryRole?.toLowerCase() === 'superadmin' || (user?.roles || []).some((r: any) => String(typeof r === 'string' ? r : r?.name || '').toLowerCase() === 'superadmin')) base.push({ path: '/permisos', icon: faToggleOn, label: 'Permisos', scope: 'global' });
       if (hasPermission('admin_roles_empresa:view')) base.push({ path: '/roles-empresa', icon: faUserTag, label: 'Roles Empresa', scope: 'global' });
       if (hasPermission('admin_areas:view')) base.push({ path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
       if (hasPermission('admin_users:view')) base.push({ path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users });

@@ -22,7 +22,7 @@ const HELP_KEY = "roles" as const;
 
 
 // Definición de módulos con metadatos
-interface PermissionModule {
+export interface PermissionModule {
   label: string;
   icon: any;
   description: string;
@@ -45,7 +45,7 @@ interface PermissionModule {
  *   - Si un permiso destapa MÁS de un ítem, la etiqueta los nombra a todos: es la única forma de que
  *     no parezca que falta un permiso.
  */
-const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
+export const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   client: {
     label: "Fichas",
     icon: faUsers,
@@ -151,7 +151,7 @@ const PLATFORM_PERMISSIONS: string[] = PLATFORM_MODULE_KEYS.flatMap((key) => AVA
 
 
 /** El nombre de cada permiso es el del ítem del menú que destapa. Ver el comentario de arriba. */
-const MODULE_LABELS: Record<string, string> = {
+export const MODULE_LABELS: Record<string, string> = {
   // Fichas
   "client:view": "Cliente",
 
@@ -213,7 +213,7 @@ const MODULE_LABELS: Record<string, string> = {
   ...Object.fromEntries(CAPACIDAD_ITEMS.map((i) => [i.permiso, i.label])),
 };
 
-const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
+export const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
   tenants: {
     label: "Tenants",
     icon: faBuilding,
@@ -360,8 +360,9 @@ const COLOR_CHECK = {
  * UNA FILA POR PERMISO, en columna: tildado, nombre, para qué es (si hay ayuda) y si está en desarrollo.
  *
  * «En desarrollo» deja el permiso a la vista pero sin poder tildarlo ni destildarlo, para que nadie
- * habilite algo que todavía no está terminado. El interruptor Activo/Inactivo lo ve sólo el SuperAdmin,
- * que es quien desarrolla; para él el check sigue funcionando, así puede probarlo.
+ * habilite algo que todavía no está terminado. Qué permisos lo están se decide UNA vez, para toda la
+ * plataforma, en Configuración → Permisos (`PermisosPage`), no rol por rol. `exento` es el SuperAdmin:
+ * para él el check sigue funcionando, así puede probar lo que desarrolla.
  */
 const FilaPermiso: React.FC<{
   label: string;
@@ -370,10 +371,9 @@ const FilaPermiso: React.FC<{
   onToggle: () => void;
   color: keyof typeof COLOR_CHECK;
   enDesarrollo: boolean;
-  puedeCambiarEstado: boolean;
-  onCambiarEstado: () => void;
-}> = ({ label, ayuda, checked, onToggle, color, enDesarrollo, puedeCambiarEstado, onCambiarEstado }) => {
-  const bloqueado = enDesarrollo && !puedeCambiarEstado;
+  exento: boolean;
+}> = ({ label, ayuda, checked, onToggle, color, enDesarrollo, exento }) => {
+  const bloqueado = enDesarrollo && !exento;
   return (
     <div className="flex items-start justify-between gap-3">
       <label className={`group flex min-w-0 items-start gap-2 ${bloqueado ? "cursor-not-allowed" : "cursor-pointer"}`} title={bloqueado ? "En desarrollo: todavía no se puede asignar" : undefined}>
@@ -386,20 +386,6 @@ const FilaPermiso: React.FC<{
           {ayuda && <span className="block text-xs text-gray-500 dark:text-gray-400">{ayuda}</span>}
         </span>
       </label>
-      {puedeCambiarEstado && (
-        <button
-          type="button"
-          onClick={onCambiarEstado}
-          aria-pressed={!enDesarrollo}
-          title={enDesarrollo ? "Activar: se va a poder asignar" : "Desactivar: queda visible pero nadie lo puede asignar"}
-          className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-semibold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${enDesarrollo ? "bg-gray-300 dark:bg-gray-600" : "bg-green-500"}`}>
-            <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${enDesarrollo ? "translate-x-0.5" : "translate-x-3.5"}`} />
-          </span>
-          {enDesarrollo ? "Inactivo" : "Activo"}
-        </button>
-      )}
     </div>
   );
 };
@@ -489,7 +475,9 @@ export const RolesPage: React.FC = () => {
   }, [viewMode, isLarge]);
 
   const canManage = hasPermission("admin_roles:view") || user?.primaryRole?.toLowerCase() === "admin" || user?.primaryRole?.toLowerCase() === "superadmin";
-  const isSuperAdmin = user?.primaryRole === "superadmin";
+  // Sin distinguir mayúsculas y mirando también la lista de roles, igual que `authStore`: el server manda
+  // el nombre del rol tal como está guardado («SuperAdmin»), y compararlo exacto contra «superadmin» fallaba.
+  const isSuperAdmin = user?.primaryRole?.toLowerCase() === "superadmin" || (user?.roles || []).some((r: any) => String(typeof r === "string" ? r : r?.name || "").toLowerCase() === "superadmin");
 
   useEffect(() => {
     fetchRoles();
@@ -707,21 +695,8 @@ export const RolesPage: React.FC = () => {
         /* sin la lista, nada queda bloqueado en pantalla; el server igual valida al guardar */
       });
   }, []);
+  // Qué está en desarrollo se cambia en Configuración → Permisos, para toda la plataforma de una vez.
   const bloqueado = (permiso: string) => !isSuperAdmin && enDesarrollo.has(permiso);
-
-  const cambiarEnDesarrollo = async (permiso: string) => {
-    const anterior = enDesarrollo;
-    const siguiente = new Set(anterior);
-    if (siguiente.has(permiso)) siguiente.delete(permiso);
-    else siguiente.add(permiso);
-    setEnDesarrollo(siguiente);
-    try {
-      setEnDesarrollo(new Set(await rolesAPI.setPermisosEnDesarrollo([...siguiente])));
-    } catch (error: any) {
-      setEnDesarrollo(anterior);
-      sweetAlert.error("No se pudo cambiar", error?.response?.data?.error || "Probá de nuevo en un momento.");
-    }
-  };
 
   // «Todos» y «Limpiar» saltean los bloqueados: quedan como estaban.
   const marcarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: Array.from(new Set([...prev.permissions, ...permisos.filter((p) => !bloqueado(p))])) }));
@@ -1113,8 +1088,7 @@ export const RolesPage: React.FC = () => {
                                     onToggle={() => togglePermission(permission)}
                                     color="primary"
                                     enDesarrollo={enDesarrollo.has(permission)}
-                                    puedeCambiarEstado={isSuperAdmin}
-                                    onCambiarEstado={() => cambiarEnDesarrollo(permission)}
+                                    exento={isSuperAdmin}
                                   />
                                 ))}
                               </div>
@@ -1150,8 +1124,7 @@ export const RolesPage: React.FC = () => {
                                     onToggle={() => togglePermission(permission)}
                                     color="blue"
                                     enDesarrollo={enDesarrollo.has(permission)}
-                                    puedeCambiarEstado={isSuperAdmin}
-                                    onCambiarEstado={() => cambiarEnDesarrollo(permission)}
+                                    exento={isSuperAdmin}
                                   />
                                 ))}
                               </div>
@@ -1195,8 +1168,7 @@ export const RolesPage: React.FC = () => {
                                   onToggle={() => togglePermission(item.permiso)}
                                   color="indigo"
                                   enDesarrollo={enDesarrollo.has(item.permiso)}
-                                  puedeCambiarEstado={isSuperAdmin}
-                                  onCambiarEstado={() => cambiarEnDesarrollo(item.permiso)}
+                                  exento={isSuperAdmin}
                                 />
                               ))}
                             </div>
@@ -1236,8 +1208,7 @@ export const RolesPage: React.FC = () => {
                               onToggle={() => togglePermission(permission)}
                               color="emerald"
                               enDesarrollo={enDesarrollo.has(permission)}
-                              puedeCambiarEstado={isSuperAdmin}
-                              onCambiarEstado={() => cambiarEnDesarrollo(permission)}
+                              exento={isSuperAdmin}
                             />
                           ))}
                         </div>

@@ -11,6 +11,7 @@ import { RegistroPage } from "./pages/RegistroPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
 import { RolesPage } from "./pages/RolesPage";
+import { PermisosPage } from "./pages/PermisosPage";
 import { RolesEmpresaPage } from "./pages/RolesEmpresaPage";
 import { AreasPage } from "./pages/AreasPage";
 import { ShiftsPage } from "./pages/ShiftsPage";
@@ -336,6 +337,15 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RolesPage />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Qué permisos están activos para toda la plataforma. Sólo SuperAdmin (lo valida la página y el server). */}
+              <Route
+                path="/permisos"
+                element={
+                  <ProtectedRoute>
+                    <PermisosPage />
                   </ProtectedRoute>
                 }
               />
