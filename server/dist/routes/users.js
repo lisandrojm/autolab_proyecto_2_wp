@@ -8,7 +8,7 @@ import { Tenant } from "../models/Tenant.js";
 import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
 import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
-import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds } from "../utils/permisosMobile.js";
+import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../utils/permisosMobile.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { Area } from "../models/Area.js";
@@ -71,15 +71,18 @@ async function resolveProjectTeamFilterIds(projectId, filtros) {
         .lean();
     const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
     /*
-      Coordinador = puede cargar novedades. Se pregunta por PERMISO, no por el nombre del rol.
+      Coordinador = tiene áreas y turnos a cargo. Se pregunta por la CAPACIDAD del rol.
   
-      Antes se buscaba la palabra "coordinador" en el nombre del rol, con lo cual dependía de que el rol
-      se siguiera llamando así; ahora el permiso es el dato. Se conserva el fallback por nombre de la
-      persona —el mismo criterio laxo que el front (`checkIsCoordinator`)— porque hay equipos donde el
-      puesto viene en el nombre y no hay usuario con rol detrás.
+      Pasó por dos criterios peores: la palabra "coordinador" en el nombre del rol —que dependía de cómo
+      se llamara— y después «¿puede cargar novedades?», que también contesta que sí el Supervisor. La
+      capacidad es lo único que distingue a uno del otro, porque miran las mismas pantallas.
+  
+      Se conserva el fallback por nombre de la persona —el mismo criterio laxo que el front
+      (`checkIsCoordinator`)— porque hay equipos donde el puesto viene en el nombre y no hay usuario con
+      rol detrás.
     */
     const esCoordinador = (m) => {
-        if (permisosDeRoles(m.roles).has(MOBILE_ACTIVITY_LOGS))
+        if (permisosDeRoles(m.roles).has(PROJECT_COORDINATOR))
             return true;
         return `${m.firstName || ""} ${m.lastName || ""}`.toLowerCase().includes("coordinador");
     };
@@ -1301,18 +1304,21 @@ router.get("/directory", requireTenant, authenticateToken, async (req, res) => {
 /*
   GET /users/eligible-responsables — quiénes pueden quedar a cargo de un proyecto.
 
-  Sale de un tilde en la ficha de la persona (`isProjectResponsible`). Antes salía de los roles: se
-  buscaban los que tuvieran el permiso `project_responsible:eligible` O cuyo nombre dijera
-  "responsable", y después los usuarios con esos roles. Eso obligaba a inventarle un rol a alguien
-  para poder elegirlo en el selector, y hacía que renombrar un rol cambiara quién era elegible.
-  Poder estar a cargo de un proyecto es un atributo de la persona, no una pantalla que se destapa.
+  Son los que tienen un rol con la capacidad `project_supervisor:eligible`, que en la práctica es el
+  rol Supervisor: ser responsable de un proyecto ES lo que significa serlo.
+
+  Pasó por dos formas peores. Primero se buscaban los roles cuyo nombre dijera "responsable", así que
+  renombrar un rol cambiaba en silencio quién era elegible. Después fue un tilde suelto en la ficha de
+  cada persona, que separaba el dato del rol que lo explica: alguien podía ser Supervisor y no ser
+  elegible, o al revés, sin que nada lo dijera.
 */
 router.get("/eligible-responsables", requireTenant, authenticateToken, async (req, res) => {
     try {
+        const rolesSupervisores = await Role.find({ tenantId: req.tenantObjectId, permissions: PROJECT_SUPERVISOR }).distinct("_id");
         const users = await User.find({
             tenantId: req.tenantObjectId,
             "metadata.activo": true,
-            isProjectResponsible: true,
+            roles: { $in: rolesSupervisores },
         })
             .select("firstName lastName email metadata isProjectResponsible")
             .populate("roles", "name")

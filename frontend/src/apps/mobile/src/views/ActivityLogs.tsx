@@ -21,7 +21,7 @@ import { InfoModal } from "../../../../components/ui/InfoModal";
 import { overtimeUtils, splitOvertime } from "../../../../utils/overtimeUtils";
 
 import { esContratoVigente, getContratoActivo } from "../../../../utils/contratoVigencia";
-import { cargaNovedades } from "../../../../utils/permisosMobile";
+import { coordinaAreas } from "../../../../utils/permisosMobile";
 
 interface EmployeeOption {
   id: string;
@@ -406,7 +406,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     // 0. If employee is a coordinator, prioritize their own personal assignment in metadataProjects (since they coordinate multiple shifts/areas)
     const isCoord =
-      cargaNovedades(emp.roles) ||
+      coordinaAreas(emp.roles) ||
       emp.role?.toLowerCase()?.includes("coordinador") ||
       (selectedProject?.coordinatorAssignments?.some((asm: any) => {
         const uid = typeof asm.userId === "object" ? asm.userId?._id || asm.userId?.id : asm.userId;
@@ -457,7 +457,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         shiftId = String(teamConfigMember.shiftId?._id || teamConfigMember.shiftId);
         if (!shiftName && teamConfigMember.shiftId?.name) shiftName = teamConfigMember.shiftId.name;
       }
-      if (teamConfigMember.areaShiftAssignments?.length > 0) {
+      if (teamConfigMember.areaShiftAssignments && teamConfigMember.areaShiftAssignments.length > 0) {
         // Try to match existing selected areaId or default to first
         let asa = teamConfigMember.areaShiftAssignments.find((a: any) => {
           const aId = String(a.areaId?._id || a.areaId || "");
@@ -615,7 +615,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         }
         if (!inferredShiftId && inferredAreaId) {
           const team = selectedProject.teamConfig.find((t: any) => String(t.areaId?._id || t.areaId) === inferredAreaId && t.areaShiftAssignments?.length > 0);
-          if (team) {
+          if (team?.areaShiftAssignments?.length) {
             const asa = team.areaShiftAssignments[0];
             if (asa.shiftIds && asa.shiftIds.length > 0) {
               inferredShiftId = String(asa.shiftIds[0]?._id || asa.shiftIds[0] || "");
@@ -1256,10 +1256,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         return String(cUserId) === String(e.id);
       });
 
-      const isCoordGlobal = cargaNovedades(e.roles);
+      const isCoordGlobal = coordinaAreas(e.roles);
       const hasPersonalContractShift = projMeta && (projMeta.areaId || projMeta.shiftId || projMeta.areaShiftAssignments?.length || (projMeta.contractStartTime && projMeta.contractEndTime));
 
-      if (teamConfigMember && teamConfigMember.areaShiftAssignments?.length > 0) {
+      if (teamConfigMember?.areaShiftAssignments && teamConfigMember.areaShiftAssignments.length > 0) {
         teamConfigMember.areaShiftAssignments.forEach((asa: any) => {
           const aId = String(asa.areaId?._id || asa.areaId || "");
           if (asa.shiftIds && asa.shiftIds.length > 0) {
@@ -5168,7 +5168,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     // Coordinador = puede cargar novedades. Antes se buscaba la palabra en el nombre del rol,
                     // que dejó de ser un dato: se conserva el fallback por puesto y por nombre de la persona,
                     // que cubre a quien figura en el roster sin usuario detrás.
-                    const checkIsCoordinator = (u: any) => cargaNovedades(u.roles) || u.positionName?.toLowerCase().includes("coordinador") || u.firstName?.toLowerCase().includes("coordinador") || u.lastName?.toLowerCase().includes("coordinador");
+                    const checkIsCoordinator = (u: any) => coordinaAreas(u.roles) || u.positionName?.toLowerCase().includes("coordinador") || u.firstName?.toLowerCase().includes("coordinador") || u.lastName?.toLowerCase().includes("coordinador");
 
                     const coordinators = enrichedUsers.filter(checkIsCoordinator);
                     const collaborators = enrichedUsers.filter((u) => !checkIsCoordinator(u));

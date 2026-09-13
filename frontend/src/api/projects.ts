@@ -71,7 +71,13 @@ export interface Project {
     useProjectSchedule?: boolean;
     startTime?: string;
     endTime?: string;
-    shiftId?: string;
+    areaId?: string | any;
+    shiftId?: string | any;
+    /** El área y turno de esta persona DENTRO del proyecto. Es de donde lee la jerarquía quién trabaja en qué. */
+    areaShiftAssignments?: {
+      areaId: string | any;
+      shiftIds: (string | any)[];
+    }[];
   }[];
   turnos?: (string | any)[];
   areasConfig?: {
@@ -410,6 +416,16 @@ class ProjectsAPI {
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", project._id, clientId);
     return project;
+  }
+
+  /**
+   * Cambia el área y turno de UNA persona del equipo, sin tocar el resto de su configuración.
+   *
+   * Lo usa el tab de jerarquía al arrastrar. No reescribe `teamConfig` entero —así dos personas pueden
+   * acomodar el mismo equipo sin pisarse— y no toca contratos.
+   */
+  async asignarAreasDeMiembro(projectId: string, userId: string, areaShiftAssignments: { areaId: string; shiftIds: string[] }[]): Promise<void> {
+    await axios.patch(`/projects/${projectId}/team-config/${userId}/areas`, { areaShiftAssignments }, { headers: this.getHeaders() });
   }
 
   async updateTeamConfig(

@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { Role } from '../models/Role.js';
 import { User } from '../models/User.js';
-import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS } from '../utils/permisosMobile.js';
+import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from '../utils/permisosMobile.js';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -95,10 +95,10 @@ const ADMIN_PERMISSIONS = [
 /*
   El nombre se ESCAPA antes de meterlo en el regex.
 
-  Los roles del móvil se llaman «Mobile | Colaborador», y en una expresión regular la barra vertical
-  significa "o": `^Mobile | Colaborador$` se lee como "empieza con Mobile " O "termina con
-  Colaborador". Con eso, buscar un rol encontraba a cualquier otro que empezara igual, y los tres
-  roles del móvil se pisaban entre sí.
+  Los nombres los escribe una persona desde la pantalla de Roles, y cualquier metacarácter —un punto,
+  un paréntesis, una barra vertical— convertiría la búsqueda en otra cosa. Pasó con «Mobile |
+  Colaborador»: en una expresión regular esa barra significa "o", así que `^Mobile | Colaborador$` se
+  leía como "empieza con Mobile " O "termina con Colaborador", y los tres roles se pisaban entre sí.
 */
 const escaparRegex = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -179,12 +179,10 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
     otro se ajusta destildando desde Usuarios → Roles cuando haga falta. `ensureRole` sólo AGREGA
     permisos que falten, así que destildar algo acá no se revierte en el próximo arranque.
 
-    Ojo con el nombre: lleva una barra vertical, que en una expresión regular significa "o". Por eso
-    `ensureRole` escapa el nombre antes de buscar (ver `escaparRegex`).
   */
-  await ensureRole(tid, 'Mobile | Supervisor', ALL_MOBILE_PERMISSIONS, 'Supervisa al equipo desde la app', false, true);
-  await ensureRole(tid, 'Mobile | Coordinador', ALL_MOBILE_PERMISSIONS, 'Carga las novedades de sus áreas y turnos, y pide contrataciones', false, true);
-  await ensureRole(tid, 'Mobile | Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', false, true);
+  await ensureRole(tid, 'Supervisor', [...ALL_MOBILE_PERMISSIONS, PROJECT_SUPERVISOR], 'Responsable del proyecto: aprueba y controla lo que cargan los coordinadores', false, true);
+  await ensureRole(tid, 'Coordinador', [...ALL_MOBILE_PERMISSIONS, PROJECT_COORDINATOR], 'Tiene áreas y turnos a cargo, y carga las novedades de su gente', false, true);
+  await ensureRole(tid, 'Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', true, true);
 
   /*
     EL ROL «RESPONSABLE DE PROYECTO» YA NO SE CREA, y la migración lo borra.
@@ -194,8 +192,17 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
     no es un rol —no destapa pantallas—, es un atributo de la persona, y con el tilde alcanza.
   */
 
-  // 5. User (Por defecto)
-  const userRole = await ensureRole(tid, 'User', USER_PERMISSIONS, 'Usuario estándar - Sin permisos por defecto', true, false);
+  /*
+    EL ROL «USER» YA NO SE CREA, y la migración lo borra.
+
+    Nombraba una categoría, no un trabajo: todo el mundo es un usuario. El rol POR DEFECTO —el que
+    reciben las altas importadas de FRAME y las del link de registro— pasa a ser «Colaborador», que
+    dice qué hace esa persona y da exactamente lo mismo que daba User: sus pedidos y sus vacaciones.
+
+    `ensureDefaultRoles` devuelve el rol por defecto como `userRole` porque así lo esperan sus
+    llamadores; lo que cambió es cuál es, no el contrato de la función.
+  */
+  const userRole = await Role.findOne({ tenantId: tid, isDefault: true });
 
   return { adminRole, userRole };
 }
@@ -232,13 +239,16 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
       return perm;
     });
 
-    // 2) Filtrar: Solo permitir permisos que terminen en :view o sean el comodín *
-    // Esto elimina permisos granulares (:edit, :delete, :create) que ya no son necesarios.
-    // `:eligible` salió de la lista blanca: el único que existía era `project_responsible:eligible`,
-    // que dejó de ser un permiso y pasó a ser un campo de la persona (`User.isProjectResponsible`).
-    const filteredPermissions = updatedPermissions.filter(
-      (perm) => perm === '*' || perm.endsWith(':view') || perm.startsWith('mobile_'), // Mantener los permisos del móvil
-    );
+    /*
+      2) Filtrar: sólo `:view`, `:eligible`, los del móvil y el comodín `*`.
+
+      Elimina permisos granulares (:edit, :delete, :create) que ya no se usan. `:eligible` estuvo un
+      rato fuera de esta lista —cuando el responsable de proyecto era un tilde en la ficha— y hay que
+      tenerlo presente: mientras estuvo afuera, este filtro BORRABA las capacidades en cada arranque,
+      justo después de que `ensureDefaultRoles` las agregara. El síntoma era un rol que se "actualiza"
+      todas las veces y nunca queda como debe.
+    */
+    const filteredPermissions = updatedPermissions.filter((perm) => perm === '*' || perm.endsWith(':view') || perm.endsWith(':eligible') || perm.startsWith('mobile_'));
 
     if (filteredPermissions.length !== updatedPermissions.length) {
       needsUpdate = true;
@@ -281,7 +291,7 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
 /**
  * Lleva el rol viejo al nombre nuevo, sin dejar a su gente por el camino.
  *
- * Los roles del móvil pasaron de «Mobile-Colaborador» a «Mobile | Colaborador». Renombrar es lo
+ * Los roles del móvil pasaron de «Mobile-Colaborador» a «Colaborador». Renombrar es lo
  * correcto y no mover usuarios de un rol a otro: apuntan al rol por id, así que el rol con los 1371
  * usuarios adentro sigue siendo el mismo, sólo que ahora se llama distinto.
  *
@@ -354,6 +364,74 @@ async function retirarRolResponsable(tid: Types.ObjectId): Promise<void> {
   }
 }
 
+/**
+ * Quien tenía el tilde «Responsable de Proyecto» en su ficha pasa a tener el rol Supervisor.
+ *
+ * Ser responsable de un proyecto pasó por tres formas: un permiso del rol, un tilde suelto en la ficha
+ * de la persona, y ahora una capacidad del rol Supervisor —que es lo que siempre fue, porque eso ES
+ * ser Supervisor—. Esta función cierra el círculo: sin ella, los que estaban marcados dejarían de
+ * aparecer en el selector de responsable de un proyecto de un día para el otro.
+ *
+ * El tilde NO se borra. Ya no se lee, pero es el único registro de quiénes estaban marcados y borrarlo
+ * no aporta nada: si esto sale mal, es por dónde se empieza a mirar.
+ */
+export async function migrarJerarquiaDeProyecto(tenantId: Types.ObjectId | string): Promise<void> {
+  const tid = new Types.ObjectId(tenantId);
+
+  /*
+    VA DESPUÉS DE `ensureDefaultRoles`, y el orden importa: necesita el rol Supervisor con su
+    capacidad ya puesta, que es lo que `ensureDefaultRoles` acaba de asegurar. Corriendo antes, la
+    primera vez no lo encontraría y se saltearía en silencio.
+
+    `retirarRolUser`, en cambio, va ANTES —dentro de `migrateMobileYResponsable`—: ver su comentario.
+  */
+  await migrarResponsablesASupervisor(tid);
+}
+
+async function migrarResponsablesASupervisor(tid: Types.ObjectId): Promise<void> {
+  const supervisor = await Role.findOne({ tenantId: tid, permissions: PROJECT_SUPERVISOR }).select('_id name');
+  if (!supervisor) return;
+
+  const { modifiedCount } = await User.updateMany({ tenantId: tid, isProjectResponsible: true, roles: { $ne: supervisor._id } }, { $addToSet: { roles: supervisor._id } });
+
+  if (modifiedCount > 0) {
+    console.log(`[RoleInit] ♻️ ${modifiedCount} responsable/s de proyecto recibieron el rol "${supervisor.name}" (tenant ${tid})`);
+  }
+}
+
+/**
+ * Retira el rol «User»: su gente pasa a «Colaborador», que queda como rol por defecto.
+ *
+ * «User» nombraba una categoría, no un trabajo —todo el mundo es un usuario— y daba exactamente lo
+ * mismo que Colaborador: los pedidos y las vacaciones propias. El rol por defecto importa: es el que
+ * reciben las altas importadas de FRAME y las del link de registro.
+ *
+ * El orden NO es negociable, y por dos motivos. Uno: el índice `{tenantId, isDefault}` es único y
+ * parcial, así que hay que sacarle la marca a «User» antes de ponérsela a Colaborador. El otro: esto
+ * tiene que correr ANTES de `ensureDefaultRoles`, que es quien marca a Colaborador como por defecto —
+ * si «User» todavía la tiene, ese `save()` muere con un duplicate key.
+ */
+async function retirarRolUser(tid: Types.ObjectId): Promise<void> {
+  const colaborador = await Role.findOne({ tenantId: tid, name: { $regex: /^colaborador$/i } });
+  if (!colaborador) return; // Sin a dónde mover a la gente, no se toca nada.
+
+  const viejo = await Role.findOne({ tenantId: tid, name: { $regex: /^user$/i } });
+  if (viejo) {
+    const { modifiedCount } = await User.updateMany({ tenantId: tid, roles: viejo._id }, { $addToSet: { roles: colaborador._id } });
+    await User.updateMany({ tenantId: tid, roles: viejo._id }, { $pull: { roles: viejo._id } });
+    await Role.deleteOne({ _id: viejo._id });
+    console.log(`[RoleInit] 🗑️ Rol "User" eliminado; ${modifiedCount} usuario/s pasaron a "Colaborador" (tenant ${tid})`);
+  }
+
+  if (!colaborador.isDefault) {
+    // Por las dudas: si quedó otro marcado, se le saca la marca antes (índice único parcial).
+    await Role.updateMany({ tenantId: tid, isDefault: true, _id: { $ne: colaborador._id } }, { $set: { isDefault: false } });
+    colaborador.isDefault = true;
+    await colaborador.save();
+    console.log(`[RoleInit] ♻️ "Colaborador" es ahora el rol por defecto (tenant ${tid})`);
+  }
+}
+
 export async function migrateMobileYResponsable(tenantId: Types.ObjectId | string): Promise<void> {
   const tid = new Types.ObjectId(tenantId);
 
@@ -401,12 +479,24 @@ export async function migrateMobileYResponsable(tenantId: Types.ObjectId | strin
     }
   }
 
-  // ── 4) Los dos roles del móvil pasan a llamarse «Mobile | …» ──
-  await renombrar(tid, /^mobile[ _-]*colaborador$/i, 'Mobile | Colaborador');
-  await renombrar(tid, /^mobile[ _-]*coordinador$/i, 'Mobile | Coordinador');
+  /*
+    ── 4) Los roles del móvil se llaman por el oficio, sin prefijo ──
+
+    Pasaron por «Mobile-Colaborador» y por «Mobile | Colaborador» antes de quedar en «Colaborador». El
+    prefijo sobra: el rol se elige desde una pantalla que ya dice de qué se trata, y lo que hace lo
+    dicen sus permisos —que son de App Mobile— no su nombre. El patrón acepta las tres formas para que
+    cualquier base, sin importar en qué paso quedó, termine en el mismo lugar.
+  */
+  await renombrar(tid, /^mobile[ |_-]*colaborador$/i, 'Colaborador');
+  await renombrar(tid, /^mobile[ |_-]*coordinador$/i, 'Coordinador');
+  await renombrar(tid, /^mobile[ |_-]*supervisor$/i, 'Supervisor');
 
   // ── 5) «Responsable de Proyecto» se retira, sin dejar a nadie sin escritorio ──
   await retirarRolResponsable(tid);
+
+  // ── 6) El rol «User» se retira: el por defecto pasa a ser «Colaborador» ──
+  await retirarRolUser(tid);
+
 
   // ── 6) El rol por defecto tiene que abrir la app ──
   const rolPorDefecto = await Role.findOne({ tenantId: tid, isDefault: true });
@@ -465,6 +555,9 @@ export async function ensureAllTenantsHaveDefaultRoles(): Promise<void> {
       await migrateMobileYResponsable(tenantId);
 
       await ensureDefaultRoles(tenantId);
+
+      // Necesita los roles que `ensureDefaultRoles` acaba de dejar listos: ver su comentario.
+      await migrarJerarquiaDeProyecto(tenantId);
 
       await migrateRolePermissions(tenantId);
 

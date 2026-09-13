@@ -14,7 +14,7 @@ import { VacationConfig } from "../models/VacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
 import { RequestConfig } from "../models/RequestConfig.js";
 import { ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
-import { ALL_MOBILE_PERMISSIONS, MOBILE_BASE_PERMISSIONS } from "../utils/permisosMobile.js";
+import { ALL_MOBILE_PERMISSIONS, MOBILE_BASE_PERMISSIONS, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../utils/permisosMobile.js";
 import { Types } from "mongoose";
 /* ----------------------------- helpers ----------------------------- */
 const PdfsList = [
@@ -149,8 +149,8 @@ async function ensureTenant({ name, slug }) {
 /*
   Los nombres de rol se ESCAPAN antes de armar el regex.
 
-  Los del móvil llevan una barra vertical —«Mobile | Colaborador»— y en una expresión regular eso
-  significa "o": sin escapar, buscar uno encontraba a cualquiera de los tres.
+  Un nombre con metacaracteres —un punto, un paréntesis, una barra vertical— convertiría la búsqueda
+  en otra cosa: sin escapar, buscar un rol podía encontrar a cualquier otro.
 */
 const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 async function ensureRole(tenantId, name, permissions = [], description = "", isDefault = false, isSystem = false) {
@@ -404,7 +404,7 @@ export async function ensureSuperAdmin() {
         // Usamos regex case-insensitive para capturar variaciones como "Admin", "admin", "USER", etc.
         const deleteResult = await Role.deleteMany({
             tenantId: superAdminTenantId,
-            name: { $in: [/^admin$/i, /^user$/i, /^mobile[ |_-]*(supervisor|coordinador|colaborador)$/i, /^responsable de proyecto$/i] },
+            name: { $in: [/^admin$/i, /^user$/i, /^(mobile[ |_-]*)?(supervisor|coordinador|colaborador)$/i, /^responsable de proyecto$/i] },
         });
         if (deleteResult.deletedCount > 0) {
             console.log(`🗑️ Deleted ${deleteResult.deletedCount} unwanted roles from Platform Administration`);
@@ -479,12 +479,10 @@ export async function seedOnStart() {
           hoy es un tilde en la ficha de la persona. Ver `retirarRolResponsable` en roleInitService, que
           además mueve a quien lo tenía a un rol común con los permisos de escritorio que traía.
         */
-        await ensureRole(tenantId, "Mobile | Supervisor", ALL_MOBILE_PERMISSIONS, "Supervisa al equipo desde la app", false, true);
-        await ensureRole(tenantId, "Mobile | Coordinador", ALL_MOBILE_PERMISSIONS, "Carga las novedades de sus áreas y turnos, y pide contrataciones", false, true);
-        await ensureRole(tenantId, "Mobile | Colaborador", MOBILE_BASE_PERMISSIONS, "Sus pedidos y sus vacaciones desde la app", false, true);
-        // 5. User (No sistema, por defecto) — es el rol que reciben las altas, así que tiene que abrir la app
-        const userPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", ...MOBILE_BASE_PERMISSIONS];
-        await ensureRole(tenantId, "User", userPerms, "User role", true, false);
+        await ensureRole(tenantId, "Supervisor", [...ALL_MOBILE_PERMISSIONS, PROJECT_SUPERVISOR], "Responsable del proyecto: aprueba y controla lo que cargan los coordinadores", false, true);
+        await ensureRole(tenantId, "Coordinador", [...ALL_MOBILE_PERMISSIONS, PROJECT_COORDINATOR], "Tiene áreas y turnos a cargo, y carga las novedades de su gente", false, true);
+        await ensureRole(tenantId, "Colaborador", MOBILE_BASE_PERMISSIONS, "Sus pedidos y sus vacaciones desde la app", true, true);
+        // El rol «User» ya no se crea: el por defecto es «Colaborador». Ver `roleInitService`.
         console.log("✅ Roles seeded");
         // ---- AREAS ----
         console.log("🏢 Seeding Areas...");
@@ -549,7 +547,7 @@ export async function seedOnStart() {
             tenantId,
             email: adminEmail,
             password: adminPassword,
-            roleNames: ["Admin", "Mobile | Colaborador"],
+            roleNames: ["Admin", "Colaborador"],
             firstName: "Admin",
             lastName: "User",
             isActive: true,
@@ -564,7 +562,7 @@ export async function seedOnStart() {
             tenantId,
             email: "user@example.com",
             password: "user123",
-            roleNames: ["User", "Mobile | Colaborador"],
+            roleNames: ["User", "Colaborador"],
             firstName: "User",
             lastName: "User",
             isActive: true,
@@ -578,7 +576,7 @@ export async function seedOnStart() {
             tenantId,
             email: "colaborador@mobile.com",
             password: "colaborador123",
-            roleNames: ["Mobile | Colaborador"],
+            roleNames: ["Colaborador"],
             firstName: "Juan",
             lastName: "Colaborador",
             isActive: true,
@@ -592,7 +590,7 @@ export async function seedOnStart() {
             tenantId,
             email: "coordinador@mobile.com",
             password: "coordinador-123",
-            roleNames: ["Mobile | Coordinador"],
+            roleNames: ["Coordinador"],
             firstName: "María",
             lastName: "Coordinadora",
             isActive: true,
@@ -908,7 +906,7 @@ export async function seedOnStart() {
         console.log(`👤 Admin: ${adminEmail} / ${adminPassword}`);
         console.log("📱 Mobile Colaborador: colaborador@mobile.com / colaborador123");
         console.log("📱 Mobile Coordinador: coordinador@mobile.com / coordinador-123");
-        console.log("🔐 Roles: Admin, Mobile | Supervisor y Mobile | Coordinador (las cuatro tarjetas de la app), Mobile | Colaborador (pedidos y vacaciones)");
+        console.log("🔐 Roles: Admin, Supervisor y Coordinador (las cuatro tarjetas de la app), Colaborador (pedidos y vacaciones)");
     }
     catch (error) {
         console.error("❌ Seed error:", error);

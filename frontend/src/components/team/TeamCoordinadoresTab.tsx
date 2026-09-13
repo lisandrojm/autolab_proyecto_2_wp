@@ -7,7 +7,7 @@ import { Area, areasAPI } from "../../api/areas";
 import { Shift, shiftsAPI } from "../../api/shifts";
 import { cachedFetch } from "../../utils/refCache";
 // Coordinar un turno requiere poder cargar sus novedades, que es un permiso. Ver ese módulo.
-import { cargaNovedades } from "../../utils/permisosMobile";
+import { coordinaAreas } from "../../utils/permisosMobile";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faUserTie, faInfoCircle, faTable } from "@fortawesome/free-solid-svg-icons";
@@ -114,7 +114,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     se habría vaciado sin avisar. Lo que hace falta para coordinar un turno es el permiso, no el
     nombre: sin él, esa persona no tendría dónde cargar las novedades de su área.
   */
-  const eligibleCoordinators = React.useMemo(() => teamMembers.filter((u) => cargaNovedades(u.roles)), [teamMembers]);
+  const eligibleCoordinators = React.useMemo(() => teamMembers.filter((u) => coordinaAreas(u.roles)), [teamMembers]);
 
   useEffect(() => {
     if (!loading && eligibleCoordinators.length === 0 && groupedCombinations.length > 0 && !autoShown) {
@@ -321,7 +321,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                     Asignación requerida
                   </p>
                   <p className="text-amber-700 dark:text-amber-500 leading-normal">
-                    Hay que sumar al equipo a alguien que tenga el permiso <strong>"APP MOBILE | Novedades"</strong>: es quien va a poder cargar las novedades del área.
+                    Hay que sumar al equipo a alguien con el rol <strong>Coordinador</strong> —o cualquier rol que incluya <strong>«Coordina áreas y turnos»</strong>—: es quien puede tener un área a cargo.
                   </p>
                   <p className="text-[11px] text-amber-600 dark:text-amber-600 italic">
                     Volvé a la pestaña "Equipo" y agregá un miembro con un rol que lo incluya antes de configurar los coordinadores acá.
@@ -334,7 +334,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   </p>
                   <ul className="list-disc pl-5 space-y-1.5 marker:text-blue-500">
                     <li>Son miembros activos del <strong>equipo del proyecto</strong>.</li>
-                    <li>Alguno de sus roles incluye el permiso <strong>APP MOBILE | Novedades</strong>, que es lo que les permite cargarlas.</li>
+                    <li>Alguno de sus roles incluye <strong>Proyectos → Coordina áreas y turnos</strong>, que es lo que habilita tener un área a cargo.</li>
                   </ul>
                 </>
               )}

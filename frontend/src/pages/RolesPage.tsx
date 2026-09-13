@@ -11,10 +11,10 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faCheckDouble, faBroom, faSort, faSortUp, faSortDown } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase, faCheckDouble, faBroom, faSort, faSortUp, faSortDown } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 // Un permiso por tarjeta de la app. Ver el porqué y la contraparte del server en ese módulo.
-import { esPermisoMobile, MOBILE_ITEMS, MOBILE_PERMISSIONS } from "../utils/permisosMobile";
+import { CAPACIDAD_ITEMS, CAPACIDAD_PERMISSIONS, esPermisoMobile, MOBILE_ITEMS, MOBILE_PERMISSIONS } from "../utils/permisosMobile";
 import { useNavigate } from "react-router-dom";
 
 const HELP_KEY = "roles" as const;
@@ -121,12 +121,21 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     ],
   },
   /*
-    «Proyectos → Responsable de Proyecto» ya no está acá.
+    PROYECTOS: capacidades, no pantallas.
 
-    Poder quedar a cargo de un proyecto no destapa ninguna pantalla: es un atributo de la persona, y
-    como permiso obligaba a inventarle un rol a alguien sólo para poder elegirlo en el selector de
-    responsable. Pasó a ser un tilde en la ficha del usuario, pestaña Sistema.
+    Los otros grupos destapan pantallas; estos dos dicen PARA QUÉ se puede elegir a alguien. Hacen
+    falta porque la jerarquía del proyecto no se deduce de lo que cada uno ve: Supervisor y Coordinador
+    miran las mismas cuatro tarjetas de la app y sin embargo uno aprueba lo que hace el otro.
+
+    Van en su propio grupo, fuera de Plataforma y de App Mobile, porque no pertenecen a ninguna de las
+    dos: son del proyecto.
   */
+  proyectos: {
+    label: "Proyectos",
+    icon: faBriefcase,
+    description: "Para qué se puede elegir a esta persona dentro de un proyecto. No destapan pantallas.",
+    permissions: CAPACIDAD_PERMISSIONS,
+  },
   mobile: {
     label: "App Mobile",
     icon: faMobileAlt,
@@ -136,7 +145,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
 };
 
 /** Los módulos de PLATAFORMA, en el orden del menú. `mobile` va en su propia sección. */
-const PLATFORM_MODULE_KEYS = Object.keys(AVAILABLE_PERMISSIONS).filter((key) => key !== "mobile");
+const PLATFORM_MODULE_KEYS = Object.keys(AVAILABLE_PERMISSIONS).filter((key) => key !== "mobile" && key !== "proyectos");
 
 const PLATFORM_PERMISSIONS: string[] = PLATFORM_MODULE_KEYS.flatMap((key) => AVAILABLE_PERMISSIONS[key].permissions);
 
@@ -199,6 +208,9 @@ const MODULE_LABELS: Record<string, string> = {
 
   // App Mobile: una etiqueta por tarjeta de la pantalla de inicio de la app
   ...Object.fromEntries(MOBILE_ITEMS.map((i) => [i.permiso, i.label])),
+
+  // Proyectos: las capacidades
+  ...Object.fromEntries(CAPACIDAD_ITEMS.map((i) => [i.permiso, i.label])),
 };
 
 const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
@@ -256,7 +268,9 @@ const BotonesSeleccion: React.FC<{ alcance: string; onTodos: () => void; onLimpi
  */
 const ResumenPermisos: React.FC<{ permisos: string[] }> = ({ permisos }) => {
   const mobile = permisos.filter(esPermisoMobile).length;
-  const plataforma = permisos.length - mobile;
+  // Las capacidades no son una sección: se cuentan aparte para no inflar el número de Plataforma.
+  const capacidades = permisos.filter((p) => CAPACIDAD_PERMISSIONS.includes(p)).length;
+  const plataforma = permisos.length - mobile - capacidades;
 
   if (permisos.length === 0) {
     return <span className="text-xs italic text-gray-400 dark:text-gray-500">Sin permisos</span>;
@@ -274,6 +288,12 @@ const ResumenPermisos: React.FC<{ permisos: string[] }> = ({ permisos }) => {
         <span className="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
           <FontAwesomeIcon icon={faMobileAlt} className="h-3 w-3 text-indigo-400" />
           App Mobile ({mobile})
+        </span>
+      )}
+      {capacidades > 0 && (
+        <span className="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+          <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-emerald-500" />
+          Proyectos ({capacidades})
         </span>
       )}
     </span>
@@ -515,7 +535,8 @@ export const RolesPage: React.FC = () => {
     });
     // Al editar, cada sección arranca prendida si el rol ya tiene algo de ella. Un rol sin nada
     // (los había: "User" nacía vacío) se abre como uno nuevo, con el móvil prendido.
-    const tienePlataforma = expandedPermissions.some((p) => !esPermisoMobile(p));
+    // Las capacidades no cuentan para prender una sección: no viven en ninguna de las dos.
+    const tienePlataforma = expandedPermissions.some((p) => !esPermisoMobile(p) && !CAPACIDAD_PERMISSIONS.includes(p));
     const tieneMobile = expandedPermissions.some((p) => esPermisoMobile(p));
     setSeccionPlataforma(tienePlataforma);
     setSeccionMobile(tieneMobile || !tienePlataforma);
@@ -930,7 +951,7 @@ export const RolesPage: React.FC = () => {
                   >
                     <div className="space-y-3">
                       {Object.entries(AVAILABLE_PERMISSIONS)
-                        .filter(([module]) => module !== "mobile")
+                        .filter(([module]) => module !== "mobile" && module !== "proyectos")
                         .map(([module, moduleData]) => {
                           return (
                             <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
@@ -1039,6 +1060,38 @@ export const RolesPage: React.FC = () => {
                         })}
                     </div>
                   </SeccionPermisos>
+
+                  {/*
+                    PROYECTOS VA FUERA DE LAS DOS SECCIONES, y siempre visible.
+
+                    No es ni de Plataforma ni de App Mobile: no destapa pantallas, dice para qué se
+                    puede elegir a esta persona dentro de un proyecto. Meterlo en una sección la haría
+                    desaparecer al apagarla, y entonces un rol de campo no podría declarar que coordina.
+                  */}
+                  {Object.entries(AVAILABLE_PERMISSIONS)
+                    .filter(([module]) => module === "proyectos")
+                    .map(([module, moduleData]) => (
+                      <div key={module} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30">
+                            <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
+                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{moduleData.description}</p>
+                          </div>
+                          <BotonesSeleccion alcance={moduleData.label} onTodos={() => marcarPermisos(moduleData.permissions)} onLimpiar={() => limpiarPermisos(moduleData.permissions)} />
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-3 pl-[36px]">
+                          {moduleData.permissions.map((permission) => (
+                            <label key={permission} className="group flex cursor-pointer items-center gap-2">
+                              <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="cursor-pointer rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0" />
+                              <span className="text-sm text-gray-700 transition-colors group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100">{MODULE_LABELS[permission] || permission}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
 

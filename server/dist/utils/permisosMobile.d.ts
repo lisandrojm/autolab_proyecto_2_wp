@@ -25,6 +25,30 @@ export declare const MOBILE_USERS = "mobile_users:view";
 export declare const ALL_MOBILE_PERMISSIONS: string[];
 /** Lo que veía un Colaborador: sus pedidos y sus vacaciones. Es el piso de cualquier alta. */
 export declare const MOBILE_BASE_PERMISSIONS: string[];
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * CAPACIDADES: PARA QUÉ SE PUEDE ELEGIR A ALGUIEN
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Los permisos de arriba dicen QUÉ PANTALLAS ve una persona. Estos dos dicen otra cosa: para qué se
+ * la puede elegir. No destapan nada, y por eso van en su propio grupo en el editor de roles.
+ *
+ * Hacen falta porque la jerarquía del proyecto no se puede deducir de lo que cada uno ve: Supervisor
+ * y Coordinador miran las mismas cuatro tarjetas de la app, y sin embargo uno aprueba lo que hace el
+ * otro. Preguntar «¿puede coordinar un área?» por las tarjetas devolvía que sí para los dos, y eso
+ * rompía la asignación de área y turno: cualquiera aparecía como candidato a coordinador.
+ *
+ *   Supervisor  — es el responsable del proyecto. Aprueba, controla y desaprueba lo de los coordinadores.
+ *   Coordinador — tiene áreas y turnos a cargo, y carga las novedades de su gente.
+ *   Colaborador — carga lo suyo.
+ *
+ * Van en el rol y no en la ficha de la persona: ser responsable de un proyecto ES lo que significa ser
+ * Supervisor, no un atributo suelto que se tilda aparte.
+ */
+export declare const PROJECT_SUPERVISOR = "project_supervisor:eligible";
+export declare const PROJECT_COORDINATOR = "project_coordinator:eligible";
+export declare const ALL_CAPACIDADES: string[];
+export declare const esCapacidad: (permiso: string) => boolean;
 /** Permisos que este cambio retira. Se traducen en `migrateMobileYResponsable`. */
 export declare const LEGACY_MOBILE_COLLABORATOR = "mobile_collaborator:view";
 export declare const LEGACY_MOBILE_COORDINATOR = "mobile_coordinator:view";

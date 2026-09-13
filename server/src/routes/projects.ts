@@ -245,6 +245,14 @@ const createProjectSchema = z.object({
     .transform((v) => v ?? undefined),
 });
 
+/*
+  El esquema ACEPTA el área y los turnos, y no es un agregado cosmético.
+
+  Este endpoint reemplaza `teamConfig` entero con lo que recibe, y el esquema no listaba `areaId` ni
+  `areaShiftAssignments` —que el modelo sí tiene—, así que zod los descartaba en silencio: guardar la
+  configuración del equipo borraba a quién estaba asignado a qué área. El wizard después leía el área
+  del contrato (su respaldo) y por eso no se notaba enseguida.
+*/
 const updateTeamConfigSchema = z.object({
   config: z.array(
     z.object({
@@ -253,9 +261,16 @@ const updateTeamConfigSchema = z.object({
       useProjectSchedule: z.boolean().optional(),
       startTime: z.string().optional(),
       endTime: z.string().optional(),
+      areaId: z.string().optional(),
       shiftId: z.string().optional(),
+      areaShiftAssignments: z.array(z.object({ areaId: z.string(), shiftIds: z.array(z.string()) })).optional(),
     }),
   ),
+});
+
+/** Las áreas y turnos de UN miembro. Ver el endpoint de más abajo. */
+const asignarAreasSchema = z.object({
+  areaShiftAssignments: z.array(z.object({ areaId: z.string(), shiftIds: z.array(z.string()) })),
 });
 
 // GET /projects
@@ -1312,6 +1327,59 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
     res.json({ message: "Project deleted successfully" });
   } catch (error) {
     console.error("Delete project error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
+  PATCH /projects/:projectId/team-config/:userId/areas — el área y turno de UNA persona.
+
+  Existe aparte del endpoint de abajo por dos razones. La primera es que ese reemplaza el array entero:
+  con dos personas acomodando el mismo equipo a la vez, la última pisa a la otra sin que nadie se
+  entere. Acá se toca un elemento y el resto ni se lee.
+
+  La segunda es de alcance: esto lo usa el tab de jerarquía, donde se arrastra a alguien de un área a
+  otra. Cambiar el área de un miembro no debería poder alterar de paso su horario ni si puede
+  registrar novedades, y con un endpoint que manda todo junto eso depende de que el cliente reenvíe
+  bien lo que no quiso tocar.
+
+  NO toca contratos: el wizard lee el área de `teamConfig` primero y del contrato sólo como respaldo,
+  así que arrastrar mal no altera un alta de ARCA ni un sueldo.
+*/
+router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId, userId } = req.params;
+    const { areaShiftAssignments } = asignarAreasSchema.parse(req.body);
+
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const asignaciones = areaShiftAssignments.map((a) => ({
+      areaId: new Types.ObjectId(a.areaId),
+      shiftIds: a.shiftIds.map((s) => new Types.ObjectId(s)),
+    }));
+
+    const config: any[] = project.teamConfig || [];
+    const entrada = config.find((c: any) => String(c.userId) === String(userId));
+
+    if (entrada) {
+      entrada.areaShiftAssignments = asignaciones;
+    } else {
+      // Alguien del equipo que todavía no tenía fila propia en `teamConfig`: se crea con los defaults
+      // del modelo, sin inventarle horario.
+      config.push({ userId: new Types.ObjectId(userId), canRegister: true, useProjectSchedule: true, areaShiftAssignments: asignaciones });
+    }
+
+    project.teamConfig = config;
+    await project.save();
+
+    res.json({ teamConfig: project.teamConfig });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid data", details: error.errors });
+      return;
+    }
+    console.error("Assign areas error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

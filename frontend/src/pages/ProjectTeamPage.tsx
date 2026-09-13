@@ -17,10 +17,11 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
+import { TeamJerarquiaTab } from "../components/team/TeamJerarquiaTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
 import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from "../components/contratos/DiasDeTrabajo";
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
@@ -30,7 +31,7 @@ import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
 import { TipoContratoSelect } from "../components/contratos/TipoContratoSelect";
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
-import { cargaNovedades, MOBILE_ACTIVITY_LOGS } from "../utils/permisosMobile";
+import { coordinaAreas, PROJECT_COORDINATOR } from "../utils/permisosMobile";
 import { contratosAPI, ContratoItem } from "../api/contratos";
 import { releasesAPI, Release } from "../api/release";
 import { companiesAPI, Company } from "../api/companies";
@@ -71,8 +72,8 @@ function formatContractDate(d?: string): string {
   equipo, y eso es un permiso.
 */
 const MOBILE_ROLE_OPTIONS = [
-  { value: "con", label: "Carga novedades" },
-  { value: "sin", label: "No carga novedades" },
+  { value: "con", label: "Coordina áreas" },
+  { value: "sin", label: "No coordina" },
 ];
 
 function numeroALetras(num: number): string {
@@ -401,7 +402,7 @@ export const ProjectTeamPage: React.FC = () => {
    * en Equipo y había que buscar la pestaña a mano, que es justo lo que el botón venía a evitar.
    */
   const tabInicial = new URLSearchParams(location.search).get("tab");
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">(tabInicial === "solicitudes" || tabInicial === "coordinadores" ? tabInicial : "equipo");
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores" | "jerarquia">(tabInicial === "solicitudes" || tabInicial === "coordinadores" || tabInicial === "jerarquia" ? tabInicial : "equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
   const [showSinAreasInfo, setShowSinAreasInfo] = useState(false);
@@ -507,8 +508,8 @@ export const ProjectTeamPage: React.FC = () => {
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === "active") params.metadataActivo = "true";
       if (status === "inactive") params.metadataActivo = "false";
-      if (rolMobile === "con") params.permission = MOBILE_ACTIVITY_LOGS;
-      if (rolMobile === "sin") params.notPermission = MOBILE_ACTIVITY_LOGS;
+      if (rolMobile === "con") params.permission = PROJECT_COORDINATOR;
+      if (rolMobile === "sin") params.notPermission = PROJECT_COORDINATOR;
       if (vigencia) params.vigencia = vigencia;
       if (tipoContrato) params.tipoContrato = tipoContrato;
       if (areaTurno) params.areaTurno = areaTurno;
@@ -978,8 +979,8 @@ export const ProjectTeamPage: React.FC = () => {
     return teamMembers.length;
   }, [activeTab, teamTotal, coordinadoresCount, solicitudesCount, teamMembers.length]);
 
-  // ¿Hay alguien en el equipo que pueda cargar novedades? Antes se preguntaba por el nombre del rol.
-  const hasMobileCoordinator = useMemo(() => teamMembers.some((u) => cargaNovedades(u.roles)), [teamMembers]);
+  // ¿Hay en el equipo alguien que pueda tener un área a cargo? Ver `coordinaAreas`.
+  const hasMobileCoordinator = useMemo(() => teamMembers.some((u) => coordinaAreas(u.roles)), [teamMembers]);
 
   /**
    * Códigos de CCT habilitados para la empleadora elegida en el contrato.
@@ -1131,9 +1132,9 @@ export const ProjectTeamPage: React.FC = () => {
     return rolFrameBusqueda.trim() ? base.filter((rf) => fuzzyMatch(rf.name, rolFrameBusqueda)) : base;
   }, [allRoleFrames, userAssignedRoleFrames, rolFrameBusqueda]);
 
-  // Coordinador = puede cargar novedades. Se conserva el fallback por el nombre de la persona, que
-  // cubre a quien tiene el puesto escrito en el nombre y ningún rol detrás.
-  const checkIsCoordinator = (user: User) => cargaNovedades(user.roles) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+  // Coordinador = tiene áreas a cargo. Se conserva el fallback por el nombre de la persona, que cubre
+  // a quien tiene el puesto escrito en el nombre y ningún rol detrás.
+  const checkIsCoordinator = (user: User) => coordinaAreas(user.roles) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
 
   // Get standard shifts for a user assigned to an area
   const getStandardShifts = (user: User, userConfig: any, activeContract: any, areaId: string, areaName: string) => {
@@ -1927,7 +1928,7 @@ export const ProjectTeamPage: React.FC = () => {
       return;
     }
     const replacedName = `${replaced.firstName || ""} ${replaced.lastName || ""}`.trim() || replaced.email;
-    const isCoordinadorRole = cargaNovedades(selectedUserForWizard?.roles);
+    const isCoordinadorRole = coordinaAreas(selectedUserForWizard?.roles);
 
     const assignments = getMemberAssignments(replaced._id)
       .map((a) => {
@@ -2527,6 +2528,10 @@ export const ProjectTeamPage: React.FC = () => {
                   <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                 </span>
               </button>
+              <button onClick={() => setActiveTab("jerarquia")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "jerarquia" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                <FontAwesomeIcon icon={faSitemap} className="text-xs" />
+                Jerarquía
+              </button>
               <button onClick={() => setActiveTab("solicitudes")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "solicitudes" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                 <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
                 Solicitudes
@@ -2651,7 +2656,7 @@ export const ProjectTeamPage: React.FC = () => {
                       Asignación requerida
                     </p>
                     <p className="text-amber-700 dark:text-amber-500 text-xs leading-normal">
-                      Usted debe asignar al equipo un usuario con el role de sistema <strong>"mobile coordinador"</strong> para poder asignarlo.
+                      Para asignar áreas y turnos hace falta que el equipo tenga a alguien con el rol <strong>Coordinador</strong>, o con cualquier rol que incluya <strong>«Coordina áreas y turnos»</strong>.
                     </p>
                   </div>
                 )}
@@ -2804,6 +2809,20 @@ export const ProjectTeamPage: React.FC = () => {
                 teamMembers={teamMembers}
                 onGoToTeam={() => setActiveTab("equipo")}
                 onUpdated={async () => {
+                  const updatedProject = await projectsAPI.getProject(projectId!, { team: "ids" });
+                  setProject(updatedProject);
+                  setTeamConfig(updatedProject.teamConfig || []);
+                }}
+              />
+            )}
+
+            {activeTab === "jerarquia" && project && (
+              <TeamJerarquiaTab
+                project={project}
+                teamMembers={teamMembers}
+                allAreas={allAreas}
+                allShifts={allShifts}
+                onRefresh={async () => {
                   const updatedProject = await projectsAPI.getProject(projectId!, { team: "ids" });
                   setProject(updatedProject);
                   setTeamConfig(updatedProject.teamConfig || []);
@@ -4013,7 +4032,7 @@ export const ProjectTeamPage: React.FC = () => {
 
                       <div className="space-y-3">
                         {(() => {
-                          const isCoordinadorRole = cargaNovedades(selectedUserForWizard?.roles);
+                          const isCoordinadorRole = coordinaAreas(selectedUserForWizard?.roles);
                           // Helper to check time overlap
                           const timeToMinutes = (t: string) => {
                             const [h, m] = t.split(":").map(Number);
@@ -4064,7 +4083,7 @@ export const ProjectTeamPage: React.FC = () => {
                                   <div className="flex items-center gap-2">
                                     <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
                                     <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
-                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Novedades</span>}
+                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Coordinador</span>}
                                   </div>
                                   {isAreaActive && (
                                     <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
@@ -4074,7 +4093,7 @@ export const ProjectTeamPage: React.FC = () => {
                                 </div>
                                 {isAreaRestricted && (
                                   <div className="px-4 pb-3">
-                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no tiene el permiso "APP MOBILE | Novedades", así que no tendría dónde cargar las de esta área. Dale un rol que lo incluya desde su ficha.</p>
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Coordina áreas y turnos». Dale el rol Coordinador desde su ficha.</p>
                                   </div>
                                 )}
                                 <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>

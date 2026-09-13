@@ -17,7 +17,7 @@ import { generarPassword } from "../../utils/password";
 import { mensajeErrorArca } from "../../utils/errorArca";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 // Las tarjetas de la app no se eligen acá: salen de los roles. Ver ese módulo.
-import { MOBILE_ACTIVITY_LOGS, MOBILE_ITEMS } from "../../utils/permisosMobile";
+import { CAPACIDAD_ITEMS, MOBILE_ACTIVITY_LOGS, MOBILE_ITEMS } from "../../utils/permisosMobile";
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida, tipoDocumentoDeArca } from "../../utils/nacionalidadDocumento";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -307,6 +307,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
    * hace el login, y se recalcula mientras se tildan roles para que lo de abajo no quede viejo.
    */
   const permisosEfectivos = (): Set<string> => new Set(roles.filter((r) => formData.roles.includes(r._id)).flatMap((r) => r.permissions || []));
+
+  /** Para qué se la puede elegir dentro de un proyecto. Sale de los roles, como todo lo demás. */
+  const capacidadesEfectivas = (): string[] => {
+    const permisos = permisosEfectivos();
+    return CAPACIDAD_ITEMS.filter((c) => permisos.has(c.permiso)).map((c) => c.label);
+  };
 
   /** Las tarjetas de la app que la persona ve, deducidas de sus roles. Se muestran, no se eligen. */
   const itemsMobileEfectivos = (): string[] => {
@@ -634,7 +640,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         firstName: formData.firstName,
         lastName: formData.lastName,
         roles: formData.roles,
-        isProjectResponsible: formData.isProjectResponsible,
         hireDate: formData.hireDate,
         extraVacationDays: formData.extraVacationDays,
         clientIds: formData.clientIds,
@@ -1798,26 +1803,29 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     </div>
                   </div>
                 </div>
-
                 {/*
-                  PROYECTOS: quién puede quedar a cargo de uno.
+                  «Responsable de Proyecto» NO se tilda acá: es una capacidad del rol Supervisor.
 
-                  Era un permiso dentro de los roles (`project_responsible:eligible`), y no tenía nada
-                  que hacer ahí: no destapa ninguna pantalla. Obligaba a inventarle un rol a alguien
-                  sólo para poder elegirlo en el selector de responsable, y renombrar un rol cambiaba
-                  en silencio quién era elegible. Es un atributo de la persona y ahora vive acá.
+                  Estuvo un rato como un tilde suelto en esta ficha y era una contradicción: alguien
+                  podía ser Supervisor y no ser elegible, o al revés, sin que nada lo explicara. Ser
+                  responsable de un proyecto ES lo que significa ser Supervisor, así que se declara
+                  donde se declara todo lo demás del rol — Usuarios → Roles, grupo Proyectos.
+
+                  Lo que sigue mostrándose es el efecto: los roles tildados arriba dicen si esta
+                  persona puede quedar a cargo de un proyecto y si puede coordinar áreas.
                 */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Proyectos</label>
-                  <label className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.isProjectResponsible ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
-                    <input type="checkbox" checked={formData.isProjectResponsible} onChange={(e) => setFormData((prev) => ({ ...prev, isProjectResponsible: e.target.checked }))} className="mt-0.5 rounded text-blue-500 focus:ring-blue-500" />
-                    <span>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Responsable de Proyecto</span>
-                      <span className="block text-[11px] text-gray-500 dark:text-gray-400">Aparece en el selector de responsable al crear o editar un proyecto.</span>
-                    </span>
-                  </label>
-                </div>
-
+                {capacidadesEfectivas().length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Proyectos</label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {capacidadesEfectivas().map((label) => (
+                        <span key={label} className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {/* El mismo bloque que Proyecto y Contrato: ver `components/ui/BloqueEstado`. */}
                 <BloqueEstado activo={!!formData.isActive} onChange={(activo) => setFormData((prev) => ({ ...prev, isActive: activo }))} />
               </div>

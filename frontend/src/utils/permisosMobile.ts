@@ -35,6 +35,26 @@ export const MOBILE_ITEMS = [
 
 export const MOBILE_PERMISSIONS = MOBILE_ITEMS.map((i) => i.permiso);
 
+/**
+ * CAPACIDADES: para qué se puede elegir a alguien, no qué pantallas ve.
+ *
+ * La jerarquía del proyecto no se puede deducir de lo que cada uno ve: Supervisor y Coordinador miran
+ * las mismas cuatro tarjetas de la app y sin embargo uno aprueba lo que hace el otro. Preguntar
+ * «¿puede coordinar un área?» por las tarjetas devolvía que sí para los dos.
+ *
+ * Tiene que coincidir con `server/src/utils/permisosMobile.ts`.
+ */
+export const PROJECT_SUPERVISOR = "project_supervisor:eligible";
+export const PROJECT_COORDINATOR = "project_coordinator:eligible";
+
+export const CAPACIDAD_ITEMS = [
+  { permiso: PROJECT_SUPERVISOR, label: "Responsable de Proyecto" },
+  { permiso: PROJECT_COORDINATOR, label: "Coordina áreas y turnos" },
+];
+
+export const CAPACIDAD_PERMISSIONS = CAPACIDAD_ITEMS.map((i) => i.permiso);
+
+
 /** Todo lo que no es del móvil es de la plataforma, incluidos el comodín y los permisos de SuperAdmin. */
 export const esPermisoMobile = (permiso: string): boolean => permiso.startsWith("mobile_");
 
@@ -43,3 +63,11 @@ export const permisosDeRoles = (roles: Array<{ permissions?: string[] }> | undef
 
 /** Atajo del caso que más se pregunta: ¿carga las novedades de su equipo? */
 export const cargaNovedades = (roles: Array<{ permissions?: string[] }> | undefined | null): boolean => permisosDeRoles(roles).has(MOBILE_ACTIVITY_LOGS);
+
+/**
+ * Quién puede recibir un área y un turno a cargo.
+ *
+ * Reemplaza al viejo «¿carga novedades?»: esa pregunta también la contestaba que sí el Supervisor, y
+ * por eso cualquiera aparecía como candidato a coordinador.
+ */
+export const coordinaAreas = (roles: Array<{ permissions?: string[] }> | undefined | null): boolean => permisosDeRoles(roles).has(PROJECT_COORDINATOR);
