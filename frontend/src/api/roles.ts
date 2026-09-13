@@ -85,6 +85,18 @@ class RolesAPI {
     };
   }
 
+  /** Permisos visibles pero bloqueados en el editor de roles (en desarrollo). Es de plataforma. */
+  async getPermisosEnDesarrollo(): Promise<string[]> {
+    const { data } = await axios.get(`/roles/permisos-en-desarrollo`, { headers: this.getHeaders() });
+    return Array.isArray(data?.permisos) ? data.permisos : [];
+  }
+
+  /** Sólo SuperAdmin. Reemplaza la lista entera. */
+  async setPermisosEnDesarrollo(permisos: string[]): Promise<string[]> {
+    const { data } = await axios.put(`/roles/permisos-en-desarrollo`, { permisos }, { headers: this.getHeaders() });
+    return Array.isArray(data?.permisos) ? data.permisos : [];
+  }
+
   async list(
     params: {
       page?: number;

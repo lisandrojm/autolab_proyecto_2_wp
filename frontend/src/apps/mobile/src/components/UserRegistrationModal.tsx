@@ -25,6 +25,31 @@ import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
 import { EstadoBadge } from "../../../../components/EstadoSelect";
 
+/** Un área y turno que se puede asignar en la solicitud, ya con los nombres para mostrarlo. */
+interface OpcionAreaTurno {
+  areaId: string;
+  areaNombre: string;
+  shiftId: string;
+  turnoNombre: string;
+  horario: string;
+  /** Para ordenar los turnos como transcurre el día. Sin horario, al final. */
+  orden: string;
+}
+
+/** Arma la opción a partir de área y turno, poblados (con nombre) o como id pelado. */
+const opcionAreaTurno = (area: any, turno: any): OpcionAreaTurno => {
+  const idDe = (x: any) => (x && typeof x === "object" ? String(x._id) : String(x || ""));
+  const t = turno && typeof turno === "object" ? turno : null;
+  return {
+    areaId: idDe(area),
+    areaNombre: (area && typeof area === "object" && area.name) || "Área",
+    shiftId: idDe(turno),
+    turnoNombre: t?.name || "Turno",
+    horario: t?.startTime && t?.endTime ? `${t.startTime} a ${t.endTime}` : "",
+    orden: t?.startTime || "99:99",
+  };
+};
+
 interface UserRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -554,16 +579,54 @@ const TIME_OPTIONS = (() => {
     `routes/projects.ts`), así que esto es «mis áreas y turnos acá». Es lo que se deja puesto en la
     solicitud: el coordinador pide el alta para su área, no para el proyecto entero.
   */
-  const coordinacionesEnProyecto = useMemo(() => {
-    const idDe = (x: any) => (x && typeof x === "object" ? String(x._id) : String(x || ""));
+  const coordinacionesEnProyecto = useMemo<OpcionAreaTurno[]>(() => {
     return ((proyectoElegido as any)?.coordinatorAssignments || [])
       .filter((a: any) => a?.areaId && a?.shiftId)
-      .map((a: any) => ({
-        areaId: idDe(a.areaId),
-        shiftId: idDe(a.shiftId),
-        etiqueta: `${typeof a.areaId === "object" ? a.areaId?.name : "Área"} · ${typeof a.shiftId === "object" ? a.shiftId?.name : "Turno"}`,
-      }));
+      .map((a: any) => opcionAreaTurno(a.areaId, a.shiftId));
   }, [proyectoElegido]);
+
+  /*
+    Y SI QUIEN PIDE NO COORDINA NADA ACÁ —un supervisor, un admin—, TODAS LAS DEL PROYECTO.
+
+    El área y turno es obligatorio: es lo que precarga el wizard de aprobación. El listado de proyectos
+    del móvil es liviano y no trae las áreas, así que se pide el proyecto con `team: "ids"` (sin el
+    equipo poblado, que pesa MB). `null` mientras llega.
+  */
+  const [areasDelProyecto, setAreasDelProyecto] = useState<OpcionAreaTurno[] | null>(null);
+  useEffect(() => {
+    const id = proyectoElegido?._id;
+    setAreasDelProyecto(null);
+    if (!id || coordinacionesEnProyecto.length > 0) return;
+    let cancelado = false;
+    projectsAPI
+      .getProject(id, { team: "ids" })
+      .then((p) => {
+        if (cancelado) return;
+        setAreasDelProyecto(((p.areasConfig || []) as any[]).flatMap((ac) => (ac.shiftIds || []).map((s: any) => opcionAreaTurno(ac.areaId, s))));
+      })
+      .catch(() => !cancelado && setAreasDelProyecto([]));
+    return () => {
+      cancelado = true;
+    };
+  }, [proyectoElegido?._id, coordinacionesEnProyecto.length]);
+
+  const coordinaEnElProyecto = coordinacionesEnProyecto.length > 0;
+  /** Lo que se puede elegir. `null` = todavía cargando las áreas del proyecto. */
+  const opcionesAreaTurno: OpcionAreaTurno[] | null = coordinaEnElProyecto ? coordinacionesEnProyecto : areasDelProyecto;
+
+  /** Por área, con sus turnos en el orden del día: con muchas combinaciones, una lista plana no se lee. */
+  const areasAgrupadas = useMemo(() => {
+    const porArea = new Map<string, { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }>();
+    for (const o of opcionesAreaTurno || []) {
+      const area = porArea.get(o.areaId) || { areaId: o.areaId, nombre: o.areaNombre, turnos: [] };
+      if (!area.turnos.some((t) => t.shiftId === o.shiftId)) area.turnos.push(o);
+      porArea.set(o.areaId, area);
+    }
+    return [...porArea.values()].map((a) => ({ ...a, turnos: a.turnos.sort((x, y) => x.orden.localeCompare(y.orden)) })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [opcionesAreaTurno]);
+
+  /** La combinación elegida, si es una de las ofrecidas. Sin esto la solicitud no se envía. */
+  const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId))) || null;
 
   /*
     El trámite se DEDUCE del tipo de contrato elegido y se guarda con la solicitud.
@@ -578,21 +641,23 @@ const TIME_OPTIONS = (() => {
   }, [formData.contratoId, formData.tipoImpositivo, tramitePorContrato]);
 
   /*
-    El área y turno que coordina quien pide quedan puestos solos.
-
-    Si coordina UNA sola combinación en ese proyecto —el caso normal— se asigna sin preguntar: es
-    exactamente el dato que el alta necesita y que hoy hay que volver a cargar al aprobar. Si coordina
-    varias, se limpia y las elige abajo; si no coordina ninguna, la solicitud viaja sin esto y el área
-    se define al aprobar, como antes.
+    Con UNA sola opción —el coordinador de un área y un turno, el caso normal— queda puesta sola: es
+    exactamente el dato que el alta necesita. Con varias se elige abajo. Si lo que estaba elegido ya
+    no es una opción (cambió el proyecto), se limpia. Mientras cargan las áreas no se toca nada: una
+    solicitud que se está editando no tiene que perder su área por un instante sin datos.
   */
   useEffect(() => {
-    if (coordinacionesEnProyecto.length === 1) {
-      const { areaId, shiftId } = coordinacionesEnProyecto[0];
-      setFormData((p) => (p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds[0] === shiftId ? p : { ...p, areaShiftAssignments: [{ areaId, shiftIds: [shiftId] }] }));
-    } else if (coordinacionesEnProyecto.length === 0) {
-      setFormData((p) => (p.areaShiftAssignments.length === 0 ? p : { ...p, areaShiftAssignments: [] }));
+    if (!opcionesAreaTurno) return;
+    if (opcionesAreaTurno.length === 1) {
+      const { areaId, shiftId } = opcionesAreaTurno[0];
+      setFormData((p) => (p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds.includes(shiftId) ? p : { ...p, areaShiftAssignments: [{ areaId, shiftIds: [shiftId] }] }));
+      return;
     }
-  }, [coordinacionesEnProyecto]);
+    setFormData((p) => {
+      const sigueValida = p.areaShiftAssignments.some((a) => opcionesAreaTurno.some((o) => o.areaId === a.areaId && a.shiftIds.includes(o.shiftId)));
+      return sigueValida || p.areaShiftAssignments.length === 0 ? p : { ...p, areaShiftAssignments: [] };
+    });
+  }, [opcionesAreaTurno]);
 
   const candidatosAReemplazar = useMemo(() => {
     if (formData.projectIds.length === 0) return [];
@@ -924,6 +989,15 @@ const TIME_OPTIONS = (() => {
       return;
     }
     /*
+      SIN ÁREA Y TURNO NO SE MANDA: es lo que precarga la aprobación. El mensaje va en el campo y la
+      pantalla baja hasta él. El server también lo exige al crear.
+    */
+    if (!areaTurnoElegido) {
+      setIntentoEnviar(true);
+      document.getElementById("bloque-area-turno")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    /*
       LOS DÍAS QUE TRABAJA SON OBLIGATORIOS TAMBIÉN ACÁ.
 
       Una solicitud sin los días se convierte en un contrato sin los días: la carga la sigue alguien
@@ -1049,7 +1123,8 @@ const TIME_OPTIONS = (() => {
           */
           contratoId: formData.contratoId || undefined,
           nombre_contrato: contratoElegido?.name || undefined,
-          areaShiftAssignments: formData.areaShiftAssignments.length > 0 ? formData.areaShiftAssignments : undefined,
+          // Siempre: la solicitud no se envía sin área y turno, y es lo que precarga el wizard de aprobación.
+          areaShiftAssignments: formData.areaShiftAssignments,
           isSolicitud: true,
         },
       };
@@ -1440,6 +1515,45 @@ const TIME_OPTIONS = (() => {
           </div>
         </div>
 
+        {/*
+          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él. Va pegado a convenio, categoría e importe
+          porque se decide junto con ellos: es qué se le va a hacer firmar a la persona, antes de
+          definir el período y los días.
+
+          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
+          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
+          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
+          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
+          solicitud que se contradecía a sí misma.
+
+          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
+          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
+          qué contrato va a firmar esa persona; el trámite es una consecuencia.
+        */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
+            Tipo de contrato <span className="text-red-500">*</span>
+          </label>
+          {contratos.length === 0 ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">No hay tipos de contrato configurados. Avisale a administración: sin esto la solicitud no dice qué se va a firmar.</p>
+          ) : (
+            <button type="button" onClick={() => setContratoModalOpen(true)} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-700 dark:bg-slate-900">
+              {contratoElegido ? (
+                <>
+                  <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{contratoElegido.name}</span>
+                  {estadoDelTramite ? <EstadoBadge name={estadoDelTramite.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite configurado</span>}
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faSearch} className="text-[10px] text-slate-400" />
+                  <span className="flex-1 text-sm text-slate-400">Elegí el tipo de contrato…</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
         <div id="bloque-fechas" className="space-y-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -1525,84 +1639,72 @@ const TIME_OPTIONS = (() => {
 
         </div>
         {/*
-          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él.
+          EL ÁREA Y TURNO DE LA PERSONA: OBLIGATORIO, y es lo que precarga el wizard de aprobación.
 
-          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
-          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
-          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
-          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
-          solicitud que se contradecía a sí misma.
+          El coordinador pide el alta para SU área: se le ofrecen sus coordinaciones en el proyecto (el
+          server manda sólo las propias, ver `?slim=true`). Quien no coordina nada ahí —un supervisor, un
+          admin— elige entre todas las del proyecto. Antes, en ese caso la solicitud viajaba sin área y
+          había que elegirla al aprobar, sabiendo menos que quien la pidió.
 
-          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
-          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
-          qué contrato va a firmar esa persona; el trámite es una consecuencia.
+          Con una sola opción no se pregunta: se informa, ya puesta.
         */}
-        {/*
-          EL ÁREA Y TURNO QUE COORDINA QUIEN PIDE, ya puestos en la solicitud.
-
-          El coordinador pide el alta para SU área, y ese dato ya está cargado en el proyecto: el
-          server manda acá sólo sus propias coordinaciones (ver `?slim=true` en `routes/projects.ts`).
-          Antes la solicitud llegaba sin área y había que volver a elegirla al aprobar, sabiendo menos
-          que quien la pidió.
-
-          Con una sola coordinación no se muestra como pregunta: se informa. Con varias hay que elegir,
-          porque la persona que entra trabaja en una.
-        */}
-        {coordinacionesEnProyecto.length > 0 && (
-          <div className="space-y-2">
+        {proyectoElegido && (
+          <div id="bloque-area-turno" className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-              Área y turno{coordinacionesEnProyecto.length > 1 && <span className="text-red-500">*</span>}
+              Área y turno <span className="text-red-500">*</span>
             </label>
-            {coordinacionesEnProyecto.length === 1 ? (
+            {opcionesAreaTurno === null ? (
+              <p className="text-xs text-slate-400">Cargando las áreas y turnos del proyecto…</p>
+            ) : opcionesAreaTurno.length === 0 ? (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona.
+              </p>
+            ) : opcionesAreaTurno.length === 1 ? (
               <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{coordinacionesEnProyecto[0].etiqueta}</span>
+                <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    {opcionesAreaTurno[0].areaNombre} · {opcionesAreaTurno[0].turnoNombre}
+                  </span>
+                  {opcionesAreaTurno[0].horario && <span className="block text-[11px] text-slate-400">{opcionesAreaTurno[0].horario}</span>}
+                </span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2">
-                {coordinacionesEnProyecto.map((c: { areaId: string; shiftId: string; etiqueta: string }) => {
-                  const elegido = formData.areaShiftAssignments.some((a) => a.areaId === c.areaId && a.shiftIds.includes(c.shiftId));
-                  return (
-                    <button
-                      key={`${c.areaId}-${c.shiftId}`}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: c.areaId, shiftIds: [c.shiftId] }] }))}
-                      aria-pressed={elegido}
-                      className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${elegido ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
-                    >
-                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
-                      <span className="text-sm font-medium">{c.etiqueta}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <>
+                <p className="text-[11px] text-slate-400">{coordinaEnElProyecto ? "Las áreas y turnos que coordinás en este proyecto." : "Elegí en qué área y turno va a trabajar."}</p>
+                <div className="space-y-2">
+                  {areasAgrupadas.map((area) => (
+                    <div key={area.areaId} className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{area.nombre}</p>
+                      <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                        {area.turnos.map((t) => {
+                          const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId;
+                          return (
+                            <button
+                              key={`${t.areaId}-${t.shiftId}`}
+                              type="button"
+                              onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: t.areaId, shiftIds: [t.shiftId] }] }))}
+                              aria-pressed={elegido}
+                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+                            >
+                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-medium">{t.turnoNombre}</span>
+                                {t.horario && <span className="block text-[10px] text-slate-400">{t.horario}</span>}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
+            {intentoEnviar && !areaTurnoElegido && (opcionesAreaTurno?.length ?? 0) > 0 && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">Elegí el área y el turno donde va a trabajar.</p>}
           </div>
         )}
-
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
-            Tipo de contrato <span className="text-red-500">*</span>
-          </label>
-          {contratos.length === 0 ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">No hay tipos de contrato configurados. Avisale a administración: sin esto la solicitud no dice qué se va a firmar.</p>
-          ) : (
-            <button type="button" onClick={() => setContratoModalOpen(true)} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-700 dark:bg-slate-900">
-              {contratoElegido ? (
-                <>
-                  <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{contratoElegido.name}</span>
-                  {estadoDelTramite ? <EstadoBadge name={estadoDelTramite.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite configurado</span>}
-                </>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faSearch} className="text-[10px] text-slate-400" />
-                  <span className="flex-1 text-sm text-slate-400">Elegí el tipo de contrato…</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">

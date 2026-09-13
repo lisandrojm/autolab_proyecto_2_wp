@@ -1114,6 +1114,21 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
         const data = createUserSchema.parse(req.body);
         normalizarRolesFrame(data.metadata);
         // Toda solicitud de alta nace "pendiente" (ciclo de vida tipo Pedido).
+        /*
+          UNA SOLICITUD DE ALTA NUEVA TRAE ÁREA Y TURNO.
+    
+          Es lo que precarga el wizard de aprobación: sin eso llega vacía y quien aprueba tiene que elegir
+          el área sabiendo menos que quien pidió el alta. La pantalla ya lo exige; esto es para que no se
+          pueda saltear llamando al API. Sólo al CREAR: editar una solicitud vieja o aprobarla no se frena.
+        */
+        if (data.metadata?.isSolicitud === true) {
+            const asignaciones = data.metadata.areaShiftAssignments;
+            const tieneAreaYTurno = Array.isArray(asignaciones) && asignaciones.some((a) => a?.areaId && Array.isArray(a.shiftIds) && a.shiftIds.length > 0);
+            if (!tieneAreaYTurno) {
+                res.status(400).json({ error: "La solicitud tiene que traer el área y el turno de la persona." });
+                return;
+            }
+        }
         if (data.metadata?.isSolicitud === true && !data.metadata.solicitudStatus) {
             data.metadata.solicitudStatus = "pendiente";
         }

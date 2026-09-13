@@ -7,7 +7,19 @@ import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray, toObjectIdOrNull } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+import { PermisosEnDesarrollo, permisosEnDesarrollo } from "../models/PermisosEnDesarrollo.js";
 const router = Router();
+const esSuperAdmin = (req) => !!req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+/**
+ * Qué permisos EN DESARROLLO cambiaría este guardado. Vacío = no toca ninguno.
+ *
+ * Un permiso en desarrollo no se agrega ni se saca: el rol que ya lo tenía lo conserva y el que no, no
+ * lo recibe. El SuperAdmin sí puede (es quien desarrolla y prueba); para él no se llama a esto.
+ */
+async function cambiosEnPermisosEnDesarrollo(antes, despues) {
+    const bloqueados = await permisosEnDesarrollo();
+    return bloqueados.filter((p) => antes.includes(p) !== despues.includes(p));
+}
 const createRoleSchema = z.object({
     name: z.string().min(1).max(50),
     description: z.string().optional(),
@@ -95,6 +107,13 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_roles
 router.post("/", requireTenant, authenticateToken, requirePermission("admin_roles:view"), async (req, res) => {
     try {
         const data = createRoleSchema.parse(req.body);
+        if (!esSuperAdmin(req)) {
+            const tocados = await cambiosEnPermisosEnDesarrollo([], data.permissions);
+            if (tocados.length > 0) {
+                res.status(400).json({ error: `Hay permisos en desarrollo que todavía no se pueden asignar: ${tocados.join(", ")}` });
+                return;
+            }
+        }
         // Verificar que no existe un rol con el mismo nombre en el tenant
         const existingRole = await Role.findOne({
             name: data.name,
@@ -121,6 +140,37 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_role
             return;
         }
         console.error("Create role error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /roles/permisos-en-desarrollo - Los permisos visibles pero bloqueados en el editor de roles.
+// Va ANTES de `/:id`, que si no lo tomaría como un id.
+router.get("/permisos-en-desarrollo", requireTenant, authenticateToken, requirePermission("admin_roles:view"), async (_req, res) => {
+    try {
+        res.json({ permisos: await permisosEnDesarrollo() });
+    }
+    catch (error) {
+        console.error("Get permisos en desarrollo error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PUT /roles/permisos-en-desarrollo - Sólo SuperAdmin: es de plataforma, no de un tenant.
+router.put("/permisos-en-desarrollo", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        if (!esSuperAdmin(req)) {
+            res.status(403).json({ error: "Sólo el SuperAdmin puede marcar permisos en desarrollo" });
+            return;
+        }
+        const { permisos } = z.object({ permisos: z.array(z.string()) }).parse(req.body);
+        const doc = await PermisosEnDesarrollo.findOneAndUpdate({ clave: "global" }, { $set: { permisos: [...new Set(permisos)] } }, { new: true, upsert: true, setDefaultsOnInsert: true });
+        res.json({ permisos: doc.permisos });
+    }
+    catch (error) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Invalid data", details: error.errors });
+            return;
+        }
+        console.error("Update permisos en desarrollo error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -175,6 +225,15 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
             });
             if (existingRole) {
                 res.status(409).json({ error: "Role name already exists in this tenant" });
+                return;
+            }
+        }
+        // Los permisos en desarrollo quedan como estaban: ni se agregan ni se sacan (salvo el SuperAdmin).
+        if (data.permissions && !esSuperAdmin(req)) {
+            const actual = await Role.findOne({ _id: roleId, tenantId: req.tenantObjectId }).select("permissions").lean();
+            const tocados = await cambiosEnPermisosEnDesarrollo(actual?.permissions || [], data.permissions);
+            if (tocados.length > 0) {
+                res.status(400).json({ error: `Hay permisos en desarrollo que todavía no se pueden cambiar: ${tocados.join(", ")}` });
                 return;
             }
         }
