@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserShield, faUserTie, faUsers, faLayerGroup, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faUserShield, faUserTie, faUsers, faLayerGroup, faCircleInfo, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { AreaShiftMember, Project, projectsAPI } from "../../api/projects";
 import { EstadoBadge } from "../EstadoSelect";
 import { User } from "../../api/users";
@@ -104,9 +104,6 @@ const etiquetaDeTurno = (nombre: string): string => {
 const idDe = (x: any): string => (x && typeof x === "object" ? String(x._id || x.id || "") : String(x || ""));
 const nombreDe = (u: User | null): string => (u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email : "");
 
-/** Las iniciales, para el avatar. Con una sola palabra alcanza con su primera letra. */
-const iniciales = (u: User): string => `${(u.firstName || "").charAt(0)}${(u.lastName || "").charAt(0)}`.toUpperCase() || (u.email || "?").charAt(0).toUpperCase();
-
 /** Fecha de contrato ("YYYY-MM-DD...") a d/m/yyyy, sin pasar por `Date` para no correrla de día por la zona horaria. */
 const fechaContrato = (d?: string): string => {
   const [y, m, dia] = String(d || "")
@@ -144,9 +141,14 @@ const TarjetaPersona: React.FC<{
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm ${colores} ${estado && !estado.cuenta ? "opacity-75" : ""} ${arrastrable ? "cursor-grab active:cursor-grabbing" : ""} ${isDragging ? "opacity-30" : ""}`}
+      className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm ${
+        estado && !estado.cuenta
+          ? "border-red-300 bg-red-50 text-gray-800 dark:border-red-900/70 dark:bg-red-950/20 dark:text-gray-200"
+          : estado && tono === "colaborador"
+            ? "border-green-300 bg-green-50 text-gray-800 dark:border-green-800/70 dark:bg-green-950/20 dark:text-gray-200"
+            : colores
+      } ${arrastrable ? "cursor-grab active:cursor-grabbing" : ""} ${isDragging ? "opacity-30" : ""}`}
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-[10px] font-bold text-white">{iniciales(user)}</span>
       <div className="min-w-0 flex-1">
         <span className="block truncate font-medium">{nombreDe(user)}</span>
         {estado && (
@@ -189,6 +191,34 @@ const ZonaSoltar: React.FC<{
 export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAreas, allShifts, onRefresh }) => {
   const [arrastrando, setArrastrando] = useState<User | null>(null);
   const [guardando, setGuardando] = useState(false);
+
+  /**
+   * Qué áreas («area::<id>») y turnos (su `clave`) están abiertos. Todo arranca colapsado: un
+   * proyecto grande son decenas de tarjetas y se abre sólo lo que se quiere ver. Se recuerda por
+   * proyecto en este navegador; si el storage no está disponible, simplemente arranca cerrado.
+   */
+  const claveAbiertos = `jerarquia-abiertos:${project._id}`;
+  const [abiertos, setAbiertos] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem(claveAbiertos) || "[]"));
+    } catch {
+      return new Set<string>();
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(claveAbiertos, JSON.stringify([...abiertos]));
+    } catch {
+      /* sin storage: no se recuerda, nada más */
+    }
+  }, [claveAbiertos, abiertos]);
+  const alternar = (clave: string) =>
+    setAbiertos((prev) => {
+      const next = new Set(prev);
+      if (next.has(clave)) next.delete(clave);
+      else next.add(clave);
+      return next;
+    });
 
   // Un umbral de movimiento para que un click siga siendo un click y no empiece a arrastrar.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -277,6 +307,26 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
    * cada persona trae los turnos que tiene ahí. Se vuelve a pedir después de cada movimiento.
    */
   const [detallePorArea, setDetallePorArea] = useState<Map<string, AreaShiftMember[]>>(new Map());
+
+  /**
+   * El estado de todo el equipo, tenga área o no. Es lo que explica a «Sin área asignada»: si no
+   * tiene contrato vigente o está inactivo, se ve ahí mismo, sin abrir su ficha.
+   */
+  const [estadoGeneral, setEstadoGeneral] = useState<Map<string, AreaShiftMember>>(new Map());
+  useEffect(() => {
+    let cancelado = false;
+    projectsAPI
+      .getProjectMembersStatus(project._id)
+      .then((members) => {
+        if (!cancelado) setEstadoGeneral(new Map(members.map((m) => [String(m._id), m])));
+      })
+      .catch(() => {
+        /* sin detalle: las tarjetas se muestran sin estado, como antes */
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [project._id, project.areasConfig, project.teamConfig, project.coordinatorAssignments]);
   useEffect(() => {
     const areaIds = [...new Set((project.areasConfig || []).map((ac: any) => idDe(ac.areaId)).filter(Boolean))];
     let cancelado = false;
@@ -435,107 +485,204 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
           </p>
         </div>
 
+        {/* Abrir o cerrar todo de una vez. */}
+        <div className="flex items-center justify-end gap-2 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setAbiertos(new Set([...bloques.map((b) => "area::" + b.areaId), ...columnas.map((c) => c.clave), "sin-asignar"]))}
+            className="text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Expandir todo
+          </button>
+          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <button type="button" onClick={() => setAbiertos(new Set())} className="text-blue-600 hover:underline dark:text-blue-400">
+            Colapsar todo
+          </button>
+        </div>
+
         {/* Un bloque por área. Dentro, sus turnos en orden de horario. */}
-        {bloques.map((b) => (
-          <div key={b.areaId} className="rounded-xl border border-gray-200 bg-gray-50/50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
-            <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-gray-200 pb-2 dark:border-gray-700">
-              <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-sm font-bold uppercase tracking-wide text-gray-800 dark:text-gray-100">{b.areaNombre}</span>
-              {b.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{b.diasComunes}</span>}
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                {b.turnos.length} {b.turnos.length === 1 ? "turno" : "turnos"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {b.turnos.map((c) => {
-                const detalle = detalleDeTurno(c);
-                // Quien no figura en el detalle (todavía cargando) queda arriba, sin estado: no se lo
-                // manda a «no suman» sin saberlo.
-                const suman = c.colaboradores.filter((u) => detalle?.estadoDe.get(String(u._id))?.cuenta !== false);
-                const noSuman = c.colaboradores.filter((u) => detalle?.estadoDe.get(String(u._id))?.cuenta === false);
-                return (
-                  <div key={c.clave} className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                    <div>
-                      <div className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{c.turnoNombre}</span>
-                        {/* Los días sólo acá cuando los turnos del área no coinciden: si no, ya están arriba. */}
-                        {!b.diasComunes && c.dias && <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">{c.dias}</span>}
-                      </div>
-                      {c.horario && <p className="text-[11px] text-gray-500 dark:text-gray-400">{c.horario}</p>}
-                    </div>
-
-                    {/* El lugar del coordinador. Sólo acepta a quien puede tener un área a cargo. */}
-                    <ZonaSoltar id={`coord::${c.areaId}::${c.shiftId}`} activa={zonaAcepta(`coord::${c.areaId}::${c.shiftId}`)}>
-                      <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
-                        <FontAwesomeIcon icon={faUserTie} />
-                        Coordinador
-                      </p>
-                      {c.coordinador ? (
-                        <TarjetaPersona user={c.coordinador} arrastrable tono="coordinador" estado={detalle?.estadoDe.get(String(c.coordinador._id))} />
-                      ) : (
-                        <p className="rounded-lg border border-dashed border-amber-300 px-2.5 py-2 text-xs italic text-amber-600 dark:border-amber-800 dark:text-amber-500">
-                          Arrastrá acá a alguien con el rol Coordinador
-                        </p>
-                      )}
-                    </ZonaSoltar>
-
-                    {/* Y su gente. */}
-                    <ZonaSoltar id={c.clave} activa className="flex-1">
-                      <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
-                        <FontAwesomeIcon icon={faUsers} />
-                        Colaboradores ({c.colaboradores.length})
-                      </p>
-                      {detalle && detalle.total > 0 && (
-                        <p
-                          className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
-                          title="El número de la columna Área/Turno Coordinada es el primero."
+        {bloques.map((b) => {
+          const areaAbierta = abiertos.has("area::" + b.areaId);
+          return (
+            <div key={b.areaId} className="rounded-xl border border-gray-200 bg-gray-50/50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+              <button
+                type="button"
+                onClick={() => alternar("area::" + b.areaId)}
+                aria-expanded={areaAbierta}
+                className={`flex w-full flex-wrap items-center gap-2 text-left ${areaAbierta ? "mb-3 border-b border-gray-200 pb-2 dark:border-gray-700" : ""}`}
+              >
+                <FontAwesomeIcon icon={areaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
+                <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-sm font-bold uppercase tracking-wide text-gray-800 dark:text-gray-100">{b.areaNombre}</span>
+                {b.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{b.diasComunes}</span>}
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  {b.turnos.length} {b.turnos.length === 1 ? "turno" : "turnos"}
+                </span>
+                {/* Cerrada, el área igual dice cuántos suman en cada turno: alcanza para decidir cuál abrir. */}
+                {!areaAbierta && (
+                  <span className="ml-auto flex flex-wrap gap-1.5">
+                    {b.turnos.map((c) => {
+                      const d = detalleDeTurno(c);
+                      return (
+                        <span
+                          key={c.clave}
+                          className="rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                         >
-                          <strong>{detalle.cuentan}</strong> persona
-                          {detalle.cuentan === 1 ? "" : "s"} activa
-                          {detalle.cuentan === 1 ? "" : "s"} con contrato vigente
-                          {detalle.total !== detalle.cuentan && (
+                          {c.turnoNombre}
+                          {d && (
                             <>
-                              {" "}
-                              · <strong>{detalle.total}</strong> asignada
-                              {detalle.total === 1 ? "" : "s"} en total
+                              {" · "}
+                              <span className="text-green-600 dark:text-green-400">{d.cuentan}</span>
+                              {d.total !== d.cuentan && <span className="text-gray-400">/{d.total}</span>}
                             </>
                           )}
-                        </p>
-                      )}
-                      <div className="min-h-[3rem] space-y-1.5">
-                        {suman.map((u) => (
-                          <TarjetaPersona key={u._id} user={u} arrastrable estado={detalle?.estadoDe.get(String(u._id))} />
-                        ))}
-                        {noSuman.length > 0 && (
-                          <>
-                            <p className="pt-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">No suman al total ({noSuman.length})</p>
-                            {noSuman.map((u) => (
+                        </span>
+                      );
+                    })}
+                  </span>
+                )}
+              </button>
+
+              {areaAbierta && (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {b.turnos.map((c) => {
+                    const detalle = detalleDeTurno(c);
+                    // Quien no figura en el detalle (todavía cargando) queda arriba, sin estado: no se lo
+                    // manda a «no suman» sin saberlo.
+                    const suman = c.colaboradores.filter((u) => detalle?.estadoDe.get(String(u._id))?.cuenta !== false);
+                    const noSuman = c.colaboradores.filter((u) => detalle?.estadoDe.get(String(u._id))?.cuenta === false);
+                    const turnoAbierto = abiertos.has(c.clave);
+
+                    const encabezado = (
+                      <button type="button" onClick={() => alternar(c.clave)} aria-expanded={turnoAbierto} className="flex w-full items-start gap-2 text-left">
+                        <FontAwesomeIcon icon={turnoAbierto ? faChevronDown : faChevronRight} className="mt-1 h-3 w-3 shrink-0 text-gray-400" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{c.turnoNombre}</span>
+                            {/* Los días sólo acá cuando los turnos del área no coinciden: si no, ya están arriba. */}
+                            {!b.diasComunes && c.dias && (
+                              <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">{c.dias}</span>
+                            )}
+                          </div>
+                          {c.horario && <p className="text-[11px] text-gray-500 dark:text-gray-400">{c.horario}</p>}
+                        </div>
+                      </button>
+                    );
+
+                    // Cerrado muestra el resumen del turno, y sigue aceptando que le suelten a alguien:
+                    // cae como colaborador, igual que en la lista abierta.
+                    if (!turnoAbierto) {
+                      return (
+                        <ZonaSoltar key={c.clave} id={c.clave} activa>
+                          <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/40">
+                            {encabezado}
+                            <div className="flex flex-wrap items-center gap-1.5 pl-5 text-[10px] font-semibold">
+                              <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                                <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
+                                {c.coordinador ? nombreDe(c.coordinador) : "Sin coordinador"}
+                              </span>
+                              {detalle ? (
+                                <>
+                                  <span className="rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                                    {detalle.cuentan} suman
+                                  </span>
+                                  {detalle.total > detalle.cuentan && (
+                                    <span className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-red-700 dark:border-red-900/70 dark:bg-red-950/20 dark:text-red-300">
+                                      {detalle.total - detalle.cuentan} no suman
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-gray-500 dark:text-gray-400">{c.colaboradores.length} colaboradores</span>
+                              )}
+                            </div>
+                          </div>
+                        </ZonaSoltar>
+                      );
+                    }
+
+                    return (
+                      <div key={c.clave} className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/40">
+                        {encabezado}
+
+                        {/* El lugar del coordinador. Sólo acepta a quien puede tener un área a cargo. */}
+                        <ZonaSoltar id={`coord::${c.areaId}::${c.shiftId}`} activa={zonaAcepta(`coord::${c.areaId}::${c.shiftId}`)}>
+                          <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                            <FontAwesomeIcon icon={faUserTie} />
+                            Coordinador
+                          </p>
+                          {c.coordinador ? (
+                            <TarjetaPersona user={c.coordinador} arrastrable tono="coordinador" estado={detalle?.estadoDe.get(String(c.coordinador._id))} />
+                          ) : (
+                            <p className="rounded-lg border border-dashed border-amber-300 px-2.5 py-2 text-xs italic text-amber-600 dark:border-amber-800 dark:text-amber-500">
+                              Arrastrá acá a alguien con el rol Coordinador
+                            </p>
+                          )}
+                        </ZonaSoltar>
+
+                        {/* Y su gente. */}
+                        <ZonaSoltar id={c.clave} activa className="flex-1">
+                          <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                            <FontAwesomeIcon icon={faUsers} />
+                            Colaboradores ({c.colaboradores.length})
+                          </p>
+                          {detalle && detalle.total > 0 && (
+                            <p
+                              className="mb-2 rounded-lg border border-green-200 bg-green-50 px-2 py-1.5 text-[11px] text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
+                              title="El número de la columna Área/Turno Coordinada es el primero."
+                            >
+                              <strong>{detalle.cuentan}</strong> persona
+                              {detalle.cuentan === 1 ? "" : "s"} activa
+                              {detalle.cuentan === 1 ? "" : "s"} con contrato vigente
+                              {detalle.total !== detalle.cuentan && (
+                                <>
+                                  {" "}
+                                  · <strong>{detalle.total}</strong> asignada
+                                  {detalle.total === 1 ? "" : "s"} en total
+                                </>
+                              )}
+                            </p>
+                          )}
+                          <div className="min-h-[3rem] space-y-1.5">
+                            {suman.map((u) => (
                               <TarjetaPersona key={u._id} user={u} arrastrable estado={detalle?.estadoDe.get(String(u._id))} />
                             ))}
-                          </>
-                        )}
+                            {noSuman.length > 0 && (
+                              <>
+                                <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
+                                {noSuman.map((u) => (
+                                  <TarjetaPersona key={u._id} user={u} arrastrable estado={detalle?.estadoDe.get(String(u._id))} />
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        </ZonaSoltar>
                       </div>
-                    </ZonaSoltar>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <ZonaSoltar id="sin-asignar" activa>
+          {/* Cerrado sigue aceptando que le suelten a alguien: le saca el área, como abierto. */}
           <div className="rounded-xl border border-dashed border-gray-300 p-3 dark:border-gray-600">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Sin área asignada ({sinAsignar.length})</p>
-            {sinAsignar.length === 0 ? (
-              <p className="text-xs italic text-gray-400">Todo el equipo está ubicado.</p>
-            ) : (
-              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
-                {sinAsignar.map((u) => (
-                  <TarjetaPersona key={u._id} user={u} arrastrable />
-                ))}
-              </div>
-            )}
+            <button type="button" onClick={() => alternar("sin-asignar")} aria-expanded={abiertos.has("sin-asignar")} className="flex w-full items-center gap-2 text-left">
+              <FontAwesomeIcon icon={abiertos.has("sin-asignar") ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Sin área asignada ({sinAsignar.length})</span>
+            </button>
+            {abiertos.has("sin-asignar") &&
+              (sinAsignar.length === 0 ? (
+                <p className="mt-2 text-xs italic text-gray-400">Todo el equipo está ubicado.</p>
+              ) : (
+                <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+                  {sinAsignar.map((u) => (
+                    <TarjetaPersona key={u._id} user={u} arrastrable estado={estadoGeneral.get(String(u._id))} />
+                  ))}
+                </div>
+              ))}
           </div>
         </ZonaSoltar>
       </div>

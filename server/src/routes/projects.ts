@@ -1103,8 +1103,11 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
   try {
     const { projectId } = req.params;
     const { areaId, shiftId, shiftIds } = req.query;
+    // `todos=true`: el estado de TODO el equipo, tenga área o no. Lo usa la Jerarquía para explicar
+    // por qué alguien figura «sin área asignada» (sin contrato vigente, inactivo...).
+    const todos = req.query.todos === "true";
 
-    if (!areaId) {
+    if (!areaId && !todos) {
       res.status(400).json({ error: "areaId es obligatorio" });
       return;
     }
@@ -1154,7 +1157,7 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
       // Turnos que la persona tiene en esta área, acotados a los pedidos (los que coordina quien abre el detalle).
       const turnosDelMiembro = [...keys].filter((k) => k.startsWith(prefijoArea)).map((k) => k.split("::")[1]!);
       const shiftIdsDelMiembro = turnosPedidos.length > 0 ? turnosDelMiembro.filter((s) => turnosPedidos.includes(String(s))) : turnosDelMiembro;
-      if (shiftIdsDelMiembro.length === 0) continue;
+      if (!todos && shiftIdsDelMiembro.length === 0) continue;
 
       const activo = (member as any).metadata?.activo === true;
       const vigente = esContratoVigente(contratoActivo, hoy);

@@ -370,6 +370,14 @@ class ProjectsAPI {
     return { members: resp.data?.members || [], total: resp.data?.total || 0, cuentan: resp.data?.cuentan || 0 };
   }
 
+  /** El mismo detalle (estado, vigencia, alta/baja) para TODO el equipo del proyecto, tenga área o no. */
+  async getProjectMembersStatus(projectId: string): Promise<AreaShiftMember[]> {
+    const resp = await axios.get(`/projects/${projectId}/area-shift-members?todos=true`, {
+      headers: this.getHeaders(),
+    });
+    return resp.data?.members || [];
+  }
+
   async updateProject(
     projectId: string,
     data: {
