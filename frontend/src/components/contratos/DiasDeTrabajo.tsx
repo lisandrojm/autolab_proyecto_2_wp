@@ -104,22 +104,32 @@ interface Props {
   /** Período del contrato, para estimar las jornadas totales. Sin él, no se sugiere nada. */
   desde?: string;
   hasta?: string;
-  /** Las jornadas totales cargadas hoy, y cómo cambiarlas si se acepta la sugerencia. */
+  /**
+   * Las jornadas totales cargadas hoy, y cómo cambiarlas si se acepta la sugerencia. Sin
+   * `onJornadasTotales` no se sugiere nada: la solicitud de mobile ya las calcula por su cuenta.
+   */
   jornadasTotales?: number;
   onJornadasTotales?: (n: number) => void;
+  /** Errores al intentar guardar, dichos debajo de cada campo. */
+  errorDiasPorSemana?: string;
+  errorDias?: string;
   /** `mobile` usa la paleta de esa app; `desk` usa las clases del formulario de escritorio. */
   variante?: "desk" | "mobile";
   className?: string;
 }
 
-export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, desde, hasta, jornadasTotales, onJornadasTotales, variante = "desk", className = "" }) => {
+export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, desde, hasta, jornadasTotales, onJornadasTotales, errorDiasPorSemana, errorDias, variante = "desk", className = "" }) => {
   const estimadas = jornadasEstimadas(desde, hasta, jornadas);
   const mobile = variante === "mobile";
   const maximo = maximoDiasElegibles(jornadas, rotativos);
   const problema = problemaDeDias(jornadas, rotativos, dias);
+  // Con esquema fijo y sin la cantidad cargada, el tope es 0: todos los días quedan bloqueados.
+  const sinCantidad = !rotativos && !jornadas;
 
   const etiqueta = mobile ? "text-xs font-bold text-slate-500 uppercase tracking-wider" : "block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1";
   const input = mobile ? "w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" : "input-field w-full";
+  const ayuda = mobile ? "text-[11px] text-slate-400" : "text-[10px] text-gray-400 ml-1";
+  const error = "text-[11px] font-medium text-red-600 dark:text-red-400 ml-0.5";
 
   const alternarDia = (indice: number) => {
     if (dias.includes(indice)) return onDias(dias.filter((d) => d !== indice));
@@ -129,28 +139,23 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
   };
 
   /*
-    EN MÓVIL, TODO DENTRO DE UN MISMO CONTORNO.
-
-    La cantidad, el switch y los días son una sola cosa —cuántos días trabaja y cuáles—, pero estaban
-    como tres cajas sueltas en una pantalla donde arriba y abajo hay otros campos con el mismo aspecto.
-    Con un borde alrededor se lee como un bloque; y la cantidad y el switch van lado a lado, que es
-    como se completan: se escribe el número y se decide ahí mismo si son fijos o rotativos.
+    EN MÓVIL, TODO DENTRO DE UN MISMO CONTORNO: la cantidad y los días son una sola cosa —cuántos días
+    trabaja y cuáles— y con el borde se leen como un bloque entre otros campos del mismo aspecto.
   */
-  const marco = mobile ? "space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700" : "space-y-3";
+  const marco = mobile ? "space-y-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700" : "space-y-3";
 
   return (
     <div className={`${marco} ${className}`}>
-      {/* En escritorio queda apilado como estaba: `space-y-3` mantiene el mismo ritmo vertical. */}
-      <div className={mobile ? "flex flex-col gap-3 sm:flex-row sm:items-start" : "space-y-3"}>
-      <div className={`space-y-1.5 ${mobile ? "sm:w-40 sm:shrink-0" : ""}`}>
+      <div className={`space-y-1.5 ${mobile ? "sm:max-w-[10rem]" : ""}`}>
         <label className={etiqueta}>Días por semana</label>
         <input
           type="number"
           min={1}
           max={7}
+          step={1}
           value={jornadas || ""}
           onChange={(e) => {
-            const n = Math.max(0, Math.min(7, Number(e.target.value) || 0));
+            const n = Math.max(0, Math.min(7, Math.trunc(Number(e.target.value)) || 0));
             onJornadas(n);
             /*
               Bajar la cantidad recorta lo que ya estaba marcado, y solo en esquema fijo.
@@ -161,31 +166,16 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
             */
             if (!rotativos && dias.length > n) onDias(dias.slice(0, n));
           }}
-          className={input}
+          className={`${input} ${errorDiasPorSemana ? "border-red-400 dark:border-red-700" : ""}`}
           placeholder="Ej: 5"
+          aria-invalid={!!errorDiasPorSemana}
         />
-        <p className={mobile ? "text-[11px] text-slate-400" : "text-[10px] text-gray-400 ml-1"}>Cuántos días de la semana trabaja. Máximo 7.</p>
-      </div>
-
-      {/* El switch va PEGADO a la cantidad porque cambia qué significan los días de abajo. */}
-      <label className={`flex flex-1 items-center gap-3 cursor-pointer select-none ${mobile ? "p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700" : "rounded-lg border border-gray-200 dark:border-gray-700 p-3"}`}>
-        <span className={`w-10 h-6 flex items-center rounded-full p-1 shrink-0 duration-300 ease-in-out ${rotativos ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
-          <span className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${rotativos ? "translate-x-4" : ""}`} />
-        </span>
-        <input type="checkbox" checked={rotativos} onChange={(e) => onRotativos(e.target.checked)} className="hidden" />
-        <span className="min-w-0">
-          <span className={`block text-sm ${mobile ? "text-slate-700 dark:text-slate-200" : "text-gray-700 dark:text-gray-300"}`}>Días rotativos</span>
-          <span className={`block text-[11px] ${mobile ? "text-slate-400" : "text-gray-500 dark:text-gray-400"}`}>{rotativos ? "Marcá entre qué días rota. Pueden ser más que los días que trabaja." : "Marcá los días fijos que trabaja."}</span>
-        </span>
-      </label>
+        {errorDiasPorSemana ? <p className={error}>{errorDiasPorSemana}</p> : <p className={ayuda}>Cuántos días de la semana trabaja. Máximo 7.</p>}
       </div>
 
       {/*
-        La relación con las jornadas TOTALES, dicha y no aplicada.
-
-        Las dos cosas están ligadas —las jornadas del contrato salen de los días por semana y del
-        período— pero la cuenta de calendario no sabe de feriados ni de semanas cortadas, y ese número
-        multiplica al sueldo por jornada. Se ofrece con un botón; aceptarla es una decisión.
+        La relación con las jornadas TOTALES, dicha y no aplicada (sólo en escritorio: la solicitud de
+        mobile las calcula y no pasa `onJornadasTotales`).
       */}
       {estimadas !== null && onJornadasTotales && estimadas !== jornadasTotales && (
         <p className={"text-[11px] text-blue-700 dark:text-blue-400 flex flex-wrap items-center gap-1.5"}>
@@ -197,28 +187,56 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
       )}
 
       <div className="space-y-1.5">
-        <label className={etiqueta}>{rotativos ? "Rota entre estos días" : "Días que trabaja"}</label>
+        {/*
+          EL SWITCH VA EN LA FILA DE LOS DÍAS, que es lo que gobierna: cambia qué significan los chips
+          de abajo. Antes era una tarjeta con borde propio, estirada al lado de la cantidad, y se veía
+          descentrada y desconectada de lo que controla.
+        */}
+        <div className="flex items-center justify-between gap-3">
+          <label className={etiqueta}>{rotativos ? "Rota entre estos días" : "Días que trabaja"}</label>
+          <label className="flex cursor-pointer select-none items-center gap-2">
+            <span className={`text-sm ${mobile ? "text-slate-700 dark:text-slate-200" : "text-gray-700 dark:text-gray-300"}`}>Días rotativos</span>
+            <span className={`flex h-6 w-10 shrink-0 items-center rounded-full p-1 duration-300 ease-in-out ${rotativos ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
+              <span className={`h-4 w-4 transform rounded-full bg-white shadow-md duration-300 ease-in-out ${rotativos ? "translate-x-4" : ""}`} />
+            </span>
+            <input type="checkbox" checked={rotativos} onChange={(e) => onRotativos(e.target.checked)} className="hidden" />
+          </label>
+        </div>
+
+        <p className={ayuda}>{rotativos ? "Marcá entre qué días rota. Pueden ser más que los días que trabaja." : "Marcá los días fijos que trabaja."}</p>
+
         <div className="flex flex-wrap gap-1.5">
           {DIAS_SEMANA.map((d) => {
             const elegido = dias.includes(d.indice);
             // Deshabilitado y no oculto: se ve que existe y por qué no se puede marcar (llegó al tope).
             const bloqueado = !elegido && dias.length >= maximo;
             return (
-              <button key={d.indice} type="button" onClick={() => alternarDia(d.indice)} disabled={bloqueado} title={bloqueado ? `Ya elegiste ${maximo} día(s)` : d.largo} aria-pressed={elegido} className={`w-11 h-9 rounded-lg text-xs font-bold border transition-colors ${elegido ? "bg-blue-600 text-white border-blue-600" : bloqueado ? `${mobile ? "bg-slate-100 dark:bg-slate-900" : "bg-gray-50 dark:bg-gray-800"} text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-50` : `${mobile ? "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"} text-gray-700 dark:text-gray-300 hover:border-blue-400`}`}>
+              <button
+                key={d.indice}
+                type="button"
+                onClick={() => alternarDia(d.indice)}
+                disabled={bloqueado}
+                title={sinCantidad ? "Ingresá días por semana para habilitar los días" : bloqueado ? `Ya elegiste ${maximo} día(s)` : d.largo}
+                aria-pressed={elegido}
+                className={`w-11 h-9 rounded-lg text-xs font-bold border transition-colors ${elegido ? "bg-blue-600 text-white border-blue-600" : bloqueado ? `${mobile ? "bg-slate-100 dark:bg-slate-900" : "bg-gray-50 dark:bg-gray-800"} text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-50` : `${mobile ? "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"} text-gray-700 dark:text-gray-300 hover:border-blue-400`}`}
+              >
                 {d.corto}
               </button>
             );
           })}
         </div>
         {/*
-          El renglón dice SIEMPRE lo mismo y solo cambia de color. Antes eran dos textos distintos —el
-          reclamo mientras faltaba, la cuenta cuando estaba completo— y eso hacía que el número
-          apareciera recién al terminar, justo cuando ya no hacía falta. Ahora la cuenta está desde el
-          primer día tildado y el ámbar dice si todavía falta.
+          El renglón dice SIEMPRE lo mismo y solo cambia de color: la cuenta está desde el primer día
+          tildado y el ámbar dice si todavía falta. Sin la cantidad cargada, en vez de dejar botones
+          grises sin explicación, se dice qué los habilita. Al guardar, el error manda.
         */}
-        <p className={problema ? "text-[11px] text-amber-700 dark:text-amber-400 ml-0.5" : mobile ? "text-[11px] text-slate-400" : "text-[10px] text-gray-400 ml-1"}>
-          {problema || (rotativos ? `Trabaja ${jornadas || 0} de estos ${dias.length} días, rotando.` : `${dias.length} de ${jornadas || 0} elegidos.`)}
-        </p>
+        {errorDias ? (
+          <p className={error}>{errorDias}</p>
+        ) : sinCantidad ? (
+          <p className={ayuda}>Ingresá días por semana para habilitar los días.</p>
+        ) : (
+          <p className={problema ? "text-[11px] text-amber-700 dark:text-amber-400 ml-0.5" : ayuda}>{problema || (rotativos ? `Trabaja ${jornadas || 0} de estos ${dias.length} días, rotando.` : `${dias.length} de ${jornadas || 0} elegidos.`)}</p>
+        )}
       </div>
     </div>
   );

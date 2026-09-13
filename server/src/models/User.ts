@@ -145,6 +145,19 @@ export interface IUserMetadata {
   startDate?: string;
   dueDate?: string;
   workdaysCount?: number;
+  /**
+   * Auditoría de las jornadas de la solicitud. `workdaysCount` es lo que se liquida; esto dice de dónde
+   * salió. `workdaysCalculated` es lo que dio el calendario (fechas × días fijos) y se guarda SIEMPRE,
+   * haya o no ajuste, para poder auditar sin recalcular con reglas que quizás cambiaron. Con días
+   * rotativos no hay calendario del cual derivarlo y queda en null.
+   */
+  workdaysCalculated?: number | null;
+  /** true si `workdaysCount` se cargó a mano distinto del calculado. */
+  workdaysOverridden?: boolean;
+  /** Por qué se apartó del calendario. Obligatorio cuando `workdaysOverridden`. */
+  workdaysOverrideReason?: "extension_rodaje" | "jornada_caida" | "feriado_trabajado" | "franco_trabajado" | "alta_baja_parcial" | "reemplazo_parcial" | "otro" | null;
+  /** Aclaración del motivo. Obligatoria (mín. 10 caracteres) cuando el motivo es «otro». */
+  workdaysOverrideNote?: string | null;
   /** Días de la semana de la solicitud (0=domingo…6=sábado). Ver `dias_semana` del contrato. */
   diasPorSemana?: number;
   diasSemana?: number[];
@@ -278,6 +291,10 @@ const userSchema = new Schema<IUser>(
       startDate: String,
       dueDate: String,
       workdaysCount: Number,
+      workdaysCalculated: { type: Number, default: undefined },
+      workdaysOverridden: { type: Boolean, default: undefined },
+      workdaysOverrideReason: { type: String, enum: ["extension_rodaje", "jornada_caida", "feriado_trabajado", "franco_trabajado", "alta_baja_parcial", "reemplazo_parcial", "otro", null], default: undefined },
+      workdaysOverrideNote: { type: String, default: undefined },
       diasPorSemana: { type: Number },
       diasSemana: { type: [Number], default: undefined },
       diasRotativos: { type: Boolean, default: false },

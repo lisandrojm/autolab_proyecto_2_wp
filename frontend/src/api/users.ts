@@ -303,6 +303,13 @@ export interface User {
     startDate?: string;
     dueDate?: string;
     workdaysCount?: number;
+    /** Lo que dio el calendario (fechas × días fijos). Se guarda siempre; null con días rotativos. */
+    workdaysCalculated?: number | null;
+    /** `workdaysCount` se cargó a mano distinto del calculado. */
+    workdaysOverridden?: boolean;
+    /** Ver `MOTIVOS_AJUSTE_JORNADAS` en `utils/jornadas.ts`. */
+    workdaysOverrideReason?: "extension_rodaje" | "jornada_caida" | "feriado_trabajado" | "franco_trabajado" | "alta_baja_parcial" | "reemplazo_parcial" | "otro" | null;
+    workdaysOverrideNote?: string | null;
     schedule?: string;
     dailyRate?: number;
     isReplacement?: boolean;

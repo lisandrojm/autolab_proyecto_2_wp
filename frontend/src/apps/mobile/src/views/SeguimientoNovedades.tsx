@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCalendarCheck, faChevronLeft, faChevronRight, faBell, faSpinner, faChevronDown, faChevronUp, faCircleCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCalendarCheck, faChevronLeft, faChevronRight, faBell, faSpinner, faChevronDown, faChevronUp, faCircleCheck, faXmark, faUser, faUsers, faMagnifyingGlass, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { complianceAPI, ComplianceResponse, CoordinatorCompliance } from "../../../../api/compliance";
 import { sweetAlert } from "../../../../utils/sweetAlert";
@@ -75,6 +75,10 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
   const [diaElegido, setDiaElegido] = useState<string | null>(null);
   const [verFaltantes, setVerFaltantes] = useState(false);
   const [recordando, setRecordando] = useState<Set<string>>(new Set());
+  // A quién se revisa se elige en un menú que sube desde abajo, no en un carrusel: con muchos
+  // coordinadores había que deslizar a ciegas buscando un nombre cortado.
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   // Los proyectos que aparecieron alguna vez sin filtro: con el filtro puesto la respuesta sólo trae
   // uno, y el selector se quedaría sin opciones para volver.
   const [proyectos, setProyectos] = useState<Map<string, string>>(new Map());
@@ -282,16 +286,16 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
           <>
             {/* 1. RESUMEN */}
             <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
-                <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{data ? `${resumen.pct}%` : "—"}</p>
+              <div className="rounded-xl border border-slate-200 px-2 py-2 text-center dark:border-slate-700">
+                <p className="text-lg font-black leading-tight text-slate-900 dark:text-slate-100">{data ? `${resumen.pct}%` : "—"}</p>
                 <p className="text-[10px] font-semibold uppercase text-slate-500">Cumplido</p>
               </div>
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center dark:border-red-900/70 dark:bg-red-950/20">
-                <p className="text-2xl font-black text-red-700 dark:text-red-300">{data ? resumen.vencidas : "—"}</p>
+              <div className="rounded-xl border border-red-200 bg-red-50 px-2 py-2 text-center dark:border-red-900/70 dark:bg-red-950/20">
+                <p className="text-lg font-black leading-tight text-red-700 dark:text-red-300">{data ? resumen.vencidas : "—"}</p>
                 <p className="text-[10px] font-semibold uppercase text-red-600 dark:text-red-400">Vencidas</p>
               </div>
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center dark:border-blue-900/70 dark:bg-blue-950/20">
-                <p className="text-2xl font-black text-blue-700 dark:text-blue-300">{data ? resumen.aTiempo : "—"}</p>
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-2 py-2 text-center dark:border-blue-900/70 dark:bg-blue-950/20">
+                <p className="text-lg font-black leading-tight text-blue-700 dark:text-blue-300">{data ? resumen.aTiempo : "—"}</p>
                 <p className="text-[10px] font-semibold uppercase text-blue-600 dark:text-blue-400">A tiempo</p>
               </div>
             </div>
@@ -301,30 +305,27 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
               </p>
             )}
 
-            {/* 2. A QUIÉN SE MIRA */}
+            {/* 2. A QUIÉN SE REVISA: un botón que dice quién es, y abre el menú para cambiarlo */}
             {coordinadores.length > 0 && (
-              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-                <button
-                  onClick={() => elegirCoordinador(null)}
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${!elegido ? "border-blue-500 bg-blue-600 text-white" : "border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}
-                >
-                  Todos ({coordinadores.length})
-                </button>
-                {coordinadores.map((c) => {
-                  const { vencidas } = conteos(c);
-                  const activo = elegido?.userId === c.userId;
-                  return (
-                    <button
-                      key={c.userId}
-                      onClick={() => elegirCoordinador(activo ? null : c.userId)}
-                      className={`inline-flex max-w-[12rem] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${activo ? "border-blue-500 bg-blue-600 text-white" : "border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}
-                    >
-                      <span className="truncate">{c.name}</span>
-                      {vencidas > 0 && <span className="rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{vencidas}</span>}
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                onClick={() => {
+                  setBusqueda("");
+                  setSelectorAbierto(true);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2.5 text-left dark:border-blue-800 dark:bg-blue-950/30"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+                  <FontAwesomeIcon icon={elegido ? faUser : faUsers} className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Revisando</span>
+                  <span className="block truncate text-sm font-bold text-slate-900 dark:text-slate-100">{elegido ? elegido.name : `Todos los coordinadores (${coordinadores.length})`}</span>
+                </span>
+                {elegido && conteos(elegido).vencidas > 0 && <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">{conteos(elegido).vencidas} vencidas</span>}
+                <span className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  Cambiar <FontAwesomeIcon icon={faChevronDown} className="ml-0.5 h-3 w-3" />
+                </span>
+              </button>
             )}
 
             {/* 3. CALENDARIO */}
@@ -494,6 +495,80 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
           </>
         )}
       </div>
+
+      {/*
+        MENÚ PARA ELEGIR A QUIÉN REVISAR: sube desde abajo, al alcance del pulgar. Cada fila dice cómo
+        viene esa persona (enviadas, vencidas, a tiempo), así se elige sabiendo a quién conviene mirar;
+        los más atrasados van primero. Con muchos coordinadores, el buscador evita recorrer la lista.
+      */}
+      {selectorAbierto && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setSelectorAbierto(false)}>
+          <div className="flex max-h-[80vh] w-full flex-col rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 xl:w-1/2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <p className="text-base font-bold text-slate-900 dark:text-slate-100">¿A quién querés revisar?</p>
+              <button onClick={() => setSelectorAbierto(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
+                <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
+              </button>
+            </div>
+
+            {coordinadores.length > 6 && (
+              <div className="border-b border-slate-200 px-4 py-2 dark:border-slate-700">
+                <div className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-600">
+                  <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3.5 w-3.5 text-slate-400" />
+                  <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar coordinador…" className="w-full bg-transparent text-sm text-slate-900 outline-none dark:text-slate-100" />
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
+              {!busqueda && (
+                <button
+                  onClick={() => {
+                    elegirCoordinador(null);
+                    setSelectorAbierto(false);
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left ${!elegido ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
+                >
+                  <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-blue-500" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-slate-900 dark:text-slate-100">Todos los coordinadores</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">El calendario combinado de los {coordinadores.length}</span>
+                  </span>
+                  {!elegido && <FontAwesomeIcon icon={faCheck} className="text-blue-600" />}
+                </button>
+              )}
+
+              {coordinadores
+                .filter((c) => c.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(busqueda.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()))
+                .map((c) => {
+                  const { vencidas, aTiempo } = conteos(c);
+                  const activo = elegido?.userId === c.userId;
+                  return (
+                    <button
+                      key={c.userId}
+                      onClick={() => {
+                        elegirCoordinador(c.userId);
+                        setSelectorAbierto(false);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left ${activo ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : vencidas > 0 ? "border-red-200 dark:border-red-900/70" : "border-slate-200 dark:border-slate-700"}`}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-slate-900 dark:text-slate-100">{c.name}</span>
+                        <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          {c.submittedCount}/{c.expectedCount} enviadas
+                          {vencidas > 0 && <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">{vencidas} vencidas</span>}
+                          {aTiempo > 0 && <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">{aTiempo} a tiempo</span>}
+                          {c.missingCount === 0 && <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] font-bold text-green-600 dark:text-green-400">Al día</span>}
+                        </span>
+                      </span>
+                      {activo && <FontAwesomeIcon icon={faCheck} className="text-blue-600" />}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

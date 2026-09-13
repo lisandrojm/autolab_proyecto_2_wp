@@ -3,7 +3,9 @@ import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
-import { DiasDeTrabajo, faltaDefinirDias } from "../../../../components/contratos/DiasDeTrabajo";
+import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
+import { JornadasSolicitud } from "./JornadasSolicitud";
+import { erroresDeJornadas, hayAjuste, jornadasDelCalendario } from "../../../../utils/jornadas";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
@@ -124,6 +126,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     diasPorSemana: "",
     diasSemana: [] as number[],
     diasRotativos: false,
+    /** Jornadas cargadas a mano distintas del calendario, y por qué. Ver `utils/jornadas.ts`. */
+    workdaysOverridden: false,
+    workdaysOverrideReason: "",
+    workdaysOverrideNote: "",
     inTime: "",
     outTime: "",
     /** La empleadora que contrata y el convenio bajo el que lo hace. Salen del proyecto elegido. */
@@ -145,6 +151,19 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     /** Lo que no entra en ningún otro campo. Opcional. */
     comentarios: "",
   });
+
+  /*
+    Los errores de los días y las jornadas se dicen DEBAJO DE CADA CAMPO, y recién después del primer
+    intento de enviar: marcar en rojo lo que alguien todavía no llegó a completar es ruido.
+  */
+  const [intentoEnviar, setIntentoEnviar] = useState(false);
+  /** Algo que cambió sin que la persona lo pidiera (se descartó un ajuste de jornadas). */
+  const [avisoJornadas, setAvisoJornadas] = useState("");
+  useEffect(() => {
+    if (!isOpen) return;
+    setIntentoEnviar(false);
+    setAvisoJornadas("");
+  }, [isOpen]);
 
   /**
    * LA CADENA: proyecto → empresa del contrato → convenio.
@@ -373,6 +392,16 @@ const TIME_OPTIONS = (() => {
     if (isOpen && editingUser) {
       const meta = editingUser.metadata || {};
       const [inTime, outTime] = (meta.schedule || " - ").split(" - ");
+      /*
+        Una solicitud guardada ANTES de esta regla puede traer jornadas que no coinciden con su propio
+        calendario. No se pisan en silencio —cambiaría lo que se liquida—: se abre en ajuste, con la
+        diferencia a la vista, y hay que justificarla o volver al calculado.
+      */
+      const m: any = meta;
+      const rotativos = !!m.diasRotativos;
+      const guardadas = meta.workdaysCount;
+      const calculadasAlAbrir = rotativos ? null : jornadasDelCalendario(meta.startDate || editingUser.hireDate?.split("T")[0] || "", meta.dueDate || "", Array.isArray(m.diasSemana) ? m.diasSemana : []);
+      const abreEnAjuste = !rotativos && (!!m.workdaysOverridden || (guardadas != null && calculadasAlAbrir !== null && guardadas !== calculadasAlAbrir));
       setFormData({
         fullName: meta.fullName || `${editingUser.firstName} ${editingUser.lastName}`,
         projectIds: meta.projectIds || [],
@@ -387,6 +416,9 @@ const TIME_OPTIONS = (() => {
         diasPorSemana: (meta as any).diasPorSemana?.toString() || "",
         diasSemana: Array.isArray((meta as any).diasSemana) ? ((meta as any).diasSemana as number[]) : [],
         diasRotativos: !!(meta as any).diasRotativos,
+        workdaysOverridden: abreEnAjuste,
+        workdaysOverrideReason: abreEnAjuste ? m.workdaysOverrideReason || "" : "",
+        workdaysOverrideNote: abreEnAjuste ? m.workdaysOverrideNote || "" : "",
         inTime: inTime || "",
         empresaContratoId: meta.empresaContratoId || "",
         convenioId: meta.convenioId || "",
@@ -415,6 +447,9 @@ const TIME_OPTIONS = (() => {
         diasPorSemana: "",
         diasSemana: [],
         diasRotativos: false,
+        workdaysOverridden: false,
+        workdaysOverrideReason: "",
+        workdaysOverrideNote: "",
         inTime: "",
         empresaContratoId: "",
         convenioId: "",
@@ -818,6 +853,71 @@ const TIME_OPTIONS = (() => {
     return u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email : "";
   })();
 
+  /*
+    ═══ LAS JORNADAS: CALCULADAS, O A MANO CON MOTIVO ═══  (la regla completa, en `utils/jornadas.ts`)
+
+    Con días fijos salen del calendario —cuántas veces caen los días marcados entre las dos fechas— y
+    se recalculan solas ante cualquier cambio de fechas, días o del switch. Con rotativos no hay patrón
+    del cual deducirlas: se cargan a mano y ahí no existe «calculado» ni ajuste.
+  */
+  const jornadasCalculadas = useMemo(
+    () => (formData.diasRotativos ? null : jornadasDelCalendario(formData.startDate, formData.dueDate, formData.diasSemana)),
+    [formData.diasRotativos, formData.startDate, formData.dueDate, formData.diasSemana],
+  );
+
+  /*
+    Corre SÓLO cuando cambia el calculado (fechas, días o switch), no mientras se escribe: así un valor
+    manual no se pisa tecla a tecla. Sin ajuste, el campo es el calculado. Con ajuste, se respeta lo
+    cargado; pero si el cambio de fechas o días hace que vuelvan a coincidir, ya no hay nada que
+    justificar y se sale solo del ajuste, limpiando motivo y aclaración.
+  */
+  useEffect(() => {
+    if (formData.diasRotativos) return;
+    setFormData((p) => {
+      if (p.workdaysOverridden) {
+        const coinciden = jornadasCalculadas !== null && p.workdaysCount !== "" && Number(p.workdaysCount) === jornadasCalculadas;
+        return coinciden ? { ...p, workdaysOverridden: false, workdaysOverrideReason: "", workdaysOverrideNote: "" } : p;
+      }
+      const valor = jornadasCalculadas === null ? "" : String(jornadasCalculadas);
+      return p.workdaysCount === valor ? p : { ...p, workdaysCount: valor };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jornadasCalculadas, formData.diasRotativos]);
+
+  const editarJornadasAMano = () => {
+    setFormData((p) => ({ ...p, workdaysOverridden: true }));
+    setAvisoJornadas("");
+  };
+
+  /** Cancelar el ajuste vuelve al calculado: lo manual, el motivo y la aclaración se descartan. */
+  const volverAlCalculado = () =>
+    setFormData((p) => ({ ...p, workdaysOverridden: false, workdaysOverrideReason: "", workdaysOverrideNote: "", workdaysCount: jornadasCalculadas === null ? "" : String(jornadasCalculadas) }));
+
+  /*
+    Encender «Días rotativos» con un ajuste en curso lo descarta: con rotativos no hay calculado contra
+    el cual justificar nada. Se avisa, porque se pierde algo que la persona escribió. Los días marcados
+    NO se borran: se ignoran mientras el switch esté encendido y vuelven a contar si se apaga.
+  */
+  const cambiarRotativos = (v: boolean) => {
+    const descartaAjuste = v && formData.workdaysOverridden;
+    setFormData((p) => ({ ...p, diasRotativos: v, ...(descartaAjuste ? { workdaysOverridden: false, workdaysOverrideReason: "", workdaysOverrideNote: "" } : {}) }));
+    setAvisoJornadas(descartaAjuste ? "Se descartó el ajuste manual de jornadas y su motivo: con días rotativos las jornadas se cargan a mano." : "");
+  };
+
+  const datosJornadas = {
+    desde: formData.startDate,
+    hasta: formData.dueDate,
+    diasPorSemana: formData.diasPorSemana,
+    dias: formData.diasSemana,
+    rotativos: formData.diasRotativos,
+    jornadas: formData.workdaysCount,
+    calculadas: jornadasCalculadas,
+    ajustado: formData.workdaysOverridden,
+    motivo: formData.workdaysOverrideReason,
+    nota: formData.workdaysOverrideNote,
+  };
+  const erroresJornadas = erroresDeJornadas(datosJornadas);
+
   const handleSubmit = async () => {
     if (!formData.fullName || !formData.projectIds.length || formData.roleFrameIds.length === 0 || !formData.categoriaSatId) {
       sweetAlert.warning("Campos incompletos", "Por favor completa los campos obligatorios.");
@@ -878,9 +978,14 @@ const TIME_OPTIONS = (() => {
       sweetAlert.warning("Falta el motivo", "Indicá por qué falta la persona que se reemplaza.");
       return;
     }
-    const faltaDias = faltaDefinirDias(Number(formData.diasPorSemana) || 0, formData.diasRotativos, formData.diasSemana);
-    if (faltaDias) {
-      sweetAlert.warning("Faltan los días que trabaja", `${faltaDias.charAt(0).toUpperCase()}${faltaDias.slice(1)}.`);
+    /*
+      FECHAS, DÍAS Y JORNADAS: el mensaje va en el campo, no en un alert, y se lleva la pantalla hasta
+      el primero que falla. Un alert se cierra y la persona tiene que volver a buscar qué estaba mal.
+    */
+    if (Object.keys(erroresJornadas).length > 0) {
+      setIntentoEnviar(true);
+      const bloque = erroresJornadas.fechas ? "bloque-fechas" : erroresJornadas.diasPorSemana || erroresJornadas.dias ? "bloque-dias" : "bloque-jornadas";
+      document.getElementById(bloque)?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -908,7 +1013,13 @@ const TIME_OPTIONS = (() => {
           categoriaSatId: formData.categoriaSatId,
           startDate: formData.startDate,
           dueDate: formData.dueDate,
+          // Lo que se liquida. De dónde salió viaja al lado, para auditarlo sin recalcular.
           workdaysCount: Number(formData.workdaysCount),
+          // El calculado se guarda SIEMPRE, haya ajuste o no: las reglas del calendario pueden cambiar.
+          workdaysCalculated: jornadasCalculadas,
+          workdaysOverridden: hayAjuste(datosJornadas),
+          workdaysOverrideReason: hayAjuste(datosJornadas) ? formData.workdaysOverrideReason : null,
+          workdaysOverrideNote: hayAjuste(datosJornadas) ? formData.workdaysOverrideNote.trim() || null : null,
           diasPorSemana: Number(formData.diasPorSemana) || undefined,
           diasSemana: formData.diasSemana,
           diasRotativos: formData.diasRotativos,
@@ -978,6 +1089,9 @@ const TIME_OPTIONS = (() => {
         diasPorSemana: "",
         diasSemana: [],
         diasRotativos: false,
+        workdaysOverridden: false,
+        workdaysOverrideReason: "",
+        workdaysOverrideNote: "",
         inTime: "",
         empresaContratoId: "",
         convenioId: "",
@@ -1326,26 +1440,58 @@ const TIME_OPTIONS = (() => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <CustomDatePicker label="Start Date" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
+        <div id="bloque-fechas" className="space-y-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <CustomDatePicker label="Start Date" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
+            </div>
+            <div className="space-y-1">
+              <CustomDatePicker label="Due Date" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
+            </div>
           </div>
-          <div className="space-y-1">
-            <CustomDatePicker label="Due Date" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
-          </div>
+          {/* Se dice apenas pasa, no al enviar: con el fin antes del inicio no hay jornadas que calcular. */}
+          {erroresJornadas.fechas && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{erroresJornadas.fechas}</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Las jornadas TOTALES del contrato (22, 30…). Es lo que multiplica al sueldo por jornada,
-              y NO es lo mismo que los días de la semana: son dos números distintos. */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cantidad de Jornadas</label>
-            <input type="number" name="workdaysCount" value={formData.workdaysCount} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="Ej: 22" />
+          {/*
+            PRIMERO LOS DÍAS DE LA SEMANA, DESPUÉS LAS JORNADAS: de las fechas y los días salen las
+            jornadas, así que van en el orden en que se deducen. Mismo componente que el escritorio.
+          */}
+          <div id="bloque-dias" className="md:col-span-3">
+            <DiasDeTrabajo
+              variante="mobile"
+              jornadas={Number(formData.diasPorSemana) || 0}
+              onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))}
+              rotativos={formData.diasRotativos}
+              onRotativos={cambiarRotativos}
+              dias={formData.diasSemana}
+              onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
+              errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
+              errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
+            />
           </div>
 
-          {/* Y los días de la SEMANA, con el mismo componente que el escritorio. */}
+          {/* Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada. */}
           <div className="md:col-span-3">
-            <DiasDeTrabajo variante="mobile" jornadas={Number(formData.diasPorSemana) || 0} onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))} rotativos={formData.diasRotativos} onRotativos={(v) => setFormData((p) => ({ ...p, diasRotativos: v }))} dias={formData.diasSemana} onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))} desde={formData.startDate} hasta={formData.dueDate} jornadasTotales={Number(formData.workdaysCount) || 0} onJornadasTotales={(n) => setFormData((p) => ({ ...p, workdaysCount: String(n) }))} />
+            <JornadasSolicitud
+              desde={formData.startDate}
+              hasta={formData.dueDate}
+              rotativos={formData.diasRotativos}
+              calculadas={jornadasCalculadas}
+              valor={formData.workdaysCount}
+              onValor={(v) => setFormData((p) => ({ ...p, workdaysCount: v }))}
+              ajustado={formData.workdaysOverridden}
+              motivo={formData.workdaysOverrideReason}
+              nota={formData.workdaysOverrideNote}
+              onEditarManual={editarJornadasAMano}
+              onCancelarAjuste={volverAlCalculado}
+              onMotivo={(m) => setFormData((p) => ({ ...p, workdaysOverrideReason: m }))}
+              onNota={(n) => setFormData((p) => ({ ...p, workdaysOverrideNote: n }))}
+              errores={erroresJornadas}
+              mostrarErrores={intentoEnviar}
+              aviso={avisoJornadas}
+            />
           </div>
           <div className="space-y-1 md:col-span-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
