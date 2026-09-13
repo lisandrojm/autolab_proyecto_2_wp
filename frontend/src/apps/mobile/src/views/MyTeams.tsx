@@ -1,0 +1,341 @@
+import { useEffect, useMemo, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faSitemap, faLayerGroup, faClock, faChevronDown, faChevronRight, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { ViewType } from "../types";
+import { useAuthStore } from "../../../../stores/authStore";
+import { useProfile } from "../hooks/useProfile";
+import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects";
+import { areasAPI, Area } from "../../../../api/areas";
+import { shiftsAPI, Shift } from "../../../../api/shifts";
+
+interface MyTeamsProps {
+  onNavigate: (view: ViewType) => void;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * MIS EQUIPOS: LAS ÁREAS Y TURNOS QUE TENGO A CARGO, CON SU GENTE
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Es la Jerarquía del panel web vista desde el que manda, y de sólo lectura:
+ *
+ *   · Coordinador — ve las combinaciones área/turno que tiene asignadas (`coordinatorAssignments`).
+ *   · Supervisor  — es el responsable del proyecto (`metadata.responsableId` = su id de FRAME), así que
+ *                   ve todas las áreas y turnos del proyecto.
+ *
+ * Quién suma y quién no sale del mismo endpoint que la Jerarquía (`area-shift-members?todos=true`):
+ * activo y con contrato vigente, el criterio del número de «Área/Turno Coordinada». Es una llamada por
+ * proyecto, y el server ya elige el contrato que rige de cada uno sin mandar el historial.
+ */
+
+const idDe = (x: any): string => (x && typeof x === "object" ? String(x._id || x.id || "") : String(x || ""));
+
+/** Fecha de contrato ("YYYY-MM-DD...") a d/m/yyyy, sin pasar por `Date` para no correrla de día por la zona horaria. */
+const fechaContrato = (d?: string): string => {
+  const [y, m, dia] = String(d || "")
+    .substring(0, 10)
+    .split("-");
+  return y && m && dia ? `${Number(dia)}/${Number(m)}/${y}` : "—";
+};
+
+const chip = (ok: boolean) => `rounded px-1 py-0.5 text-[9px] font-bold uppercase ${ok ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`;
+
+interface TurnoACargo {
+  clave: string;
+  shiftId: string;
+  nombre: string;
+  horario: string;
+  orden: string;
+  coordinadorId: string;
+  coordinadorNombre: string;
+}
+
+interface AreaACargo {
+  areaId: string;
+  nombre: string;
+  turnos: TurnoACargo[];
+}
+
+export default function MyTeams({ onNavigate }: MyTeamsProps) {
+  const { user } = useAuthStore();
+  const { profile } = useProfile();
+
+  const [proyectos, setProyectos] = useState<Project[] | null>(null);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [turnos, setTurnos] = useState<Shift[]>([]);
+  const [error, setError] = useState("");
+  const [proyectoId, setProyectoId] = useState("");
+  const [personas, setPersonas] = useState<AreaShiftMember[] | null>(null);
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelado = false;
+    Promise.all([projectsAPI.listAll(), areasAPI.listAll(), shiftsAPI.getAll()])
+      .then(([ps, as, ss]) => {
+        if (cancelado) return;
+        setProyectos(ps);
+        setAreas(as);
+        setTurnos(ss);
+      })
+      .catch(() => !cancelado && setError("No se pudieron cargar tus proyectos. Probá de nuevo en un momento."));
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  /*
+    Quién soy, para reconocer mis asignaciones. Mismos datos que usa Novedades (`isMyAssignment`): los
+    ids del usuario y del perfil y, de respaldo, el email. El id de FRAME (`metadata.id`) es el que
+    guarda `responsableId`: con el `_id` no matchearía nunca.
+  */
+  const misIds = useMemo(() => new Set([(user as any)?.id, (user as any)?._id, profile?.userId, profile?._id].filter(Boolean).map(String)), [user, profile]);
+  const miEmail = String(user?.email || profile?.email || "").toLowerCase();
+  const miIdFrame = (profile as any)?.metadata?.id ?? (user as any)?.metadata?.id;
+
+  /** Los proyectos donde tengo algo a cargo, con qué: todas sus áreas si lo superviso, o lo que coordino. */
+  const equipos = useMemo(() => {
+    if (!proyectos) return null;
+    const nombreArea = new Map(areas.map((a) => [String(a._id), a.name]));
+    const turnoPorId = new Map(turnos.map((s) => [String(s._id), s]));
+
+    const esMia = (asm: any) => misIds.has(idDe(asm.userId)) || (!!miEmail && String(asm.userId?.email || "").toLowerCase() === miEmail);
+
+    return proyectos
+      .map((p) => {
+        const supervisa = miIdFrame != null && p.metadata?.responsableId != null && String(p.metadata.responsableId) === String(miIdFrame);
+        const coordinaciones = (p.coordinatorAssignments || []).filter(esMia);
+
+        // Las combinaciones que me tocan: todas las del proyecto si lo superviso.
+        const combos: { areaId: string; shiftId: string }[] = supervisa
+          ? (p.areasConfig || []).flatMap((ac: any) => (ac.shiftIds || []).map((s: any) => ({ areaId: idDe(ac.areaId), shiftId: idDe(s) })))
+          : coordinaciones.map((a: any) => ({ areaId: idDe(a.areaId), shiftId: idDe(a.shiftId) }));
+
+        const porArea = new Map<string, AreaACargo>();
+        for (const c of combos) {
+          if (!c.areaId || !c.shiftId) continue;
+          const area =
+            porArea.get(c.areaId) ||
+            ({
+              areaId: c.areaId,
+              nombre: nombreArea.get(c.areaId) || (p.areasConfig || []).map((ac: any) => ac.areaId).find((a: any) => idDe(a) === c.areaId)?.name || "Área",
+              turnos: [],
+            } as AreaACargo);
+          if (area.turnos.some((t) => t.shiftId === c.shiftId)) continue;
+          const turno = turnoPorId.get(c.shiftId);
+          const coord: any = (p.coordinatorAssignments || []).find((a: any) => idDe(a.areaId) === c.areaId && idDe(a.shiftId) === c.shiftId)?.userId;
+          area.turnos.push({
+            clave: `${c.areaId}::${c.shiftId}`,
+            shiftId: c.shiftId,
+            nombre: turno?.name || "Turno",
+            horario: turno?.startTime && turno?.endTime ? `${turno.startTime} a ${turno.endTime}` : "",
+            // Mañana, tarde, noche: el orden en que transcurre el día. Sin horario, al final.
+            orden: turno?.startTime || "99:99",
+            coordinadorId: idDe(coord),
+            coordinadorNombre: coord && typeof coord === "object" ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() : "",
+          });
+          porArea.set(c.areaId, area);
+        }
+        const areasACargo = [...porArea.values()].map((a) => ({ ...a, turnos: a.turnos.sort((x, y) => x.orden.localeCompare(y.orden)) })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+        return { proyecto: p, supervisa, areas: areasACargo };
+      })
+      .filter((e) => e.areas.length > 0)
+      .sort((a, b) => a.proyecto.name.localeCompare(b.proyecto.name));
+  }, [proyectos, areas, turnos, misIds, miEmail, miIdFrame]);
+
+  // Con un solo proyecto no hay nada que elegir: queda seleccionado.
+  useEffect(() => {
+    if (equipos && equipos.length > 0 && !equipos.some((e) => e.proyecto._id === proyectoId)) setProyectoId(equipos[0].proyecto._id);
+  }, [equipos, proyectoId]);
+
+  useEffect(() => {
+    if (!proyectoId) return;
+    let cancelado = false;
+    setPersonas(null);
+    projectsAPI
+      .getProjectMembersStatus(proyectoId)
+      .then((ms) => !cancelado && setPersonas(ms))
+      .catch(() => !cancelado && setPersonas([]));
+    return () => {
+      cancelado = true;
+    };
+  }, [proyectoId]);
+
+  const equipo = equipos?.find((e) => e.proyecto._id === proyectoId) || null;
+
+  const porTurno = useMemo(() => {
+    const m = new Map<string, AreaShiftMember[]>();
+    for (const persona of personas || []) {
+      for (const clave of persona.claves || []) {
+        const lista = m.get(clave) || [];
+        lista.push(persona);
+        m.set(clave, lista);
+      }
+    }
+    return m;
+  }, [personas]);
+
+  const alternar = (clave: string) =>
+    setAbiertos((prev) => {
+      const next = new Set(prev);
+      if (next.has(clave)) next.delete(clave);
+      else next.add(clave);
+      return next;
+    });
+
+  const nombreDe = (m: AreaShiftMember) => `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.email;
+
+  const tarjeta = (m: AreaShiftMember, esCoordinador: boolean) => (
+    <div
+      key={m._id}
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${m.cuenta ? "border-green-300 bg-green-50 dark:border-green-800/70 dark:bg-green-950/20" : "border-red-300 bg-red-50 dark:border-red-900/70 dark:bg-red-950/20"}`}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{nombreDe(m)}</p>
+          {esCoordinador && <span className="shrink-0 rounded border border-amber-300 bg-amber-100 px-1 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Coordinador</span>}
+        </div>
+        <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+          Alta: {fechaContrato(m.fechaAlta)} · Baja: {m.fechaBaja ? fechaContrato(m.fechaBaja) : "—"}
+          {m.estadoContrato ? ` · ${m.estadoContrato}` : ""}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <span className={chip(m.activo)}>{m.activo ? "Activo" : "Inactivo"}</span>
+        <span className={chip(m.vigente)}>{m.vigente ? "Vigente" : "No vigente"}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex-1 pb-24">
+      {/* HEADER */}
+      <div className="sticky top-0 z-30 border-b border-slate-800 bg-slate-50/90 px-4 py-4 backdrop-blur-sm dark:bg-slate-900/90">
+        <div className="flex items-center gap-3">
+          <button onClick={() => onNavigate("home")} className="flex h-10 w-10 items-center justify-center rounded transition-colors hover:bg-slate-200 dark:hover:bg-slate-800">
+            <FontAwesomeIcon icon={faArrowLeft} className="h-5 w-5 text-slate-900 dark:text-slate-100" />
+          </button>
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon icon={faSitemap} className="h-5 w-5 text-slate-900 dark:text-slate-100" />
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Mis equipos</h1>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4 px-4 pt-4">
+        {error ? (
+          <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</p>
+        ) : !equipos ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-xl border bg-white dark:border-slate-800 dark:bg-slate-900/70" />
+            ))}
+          </div>
+        ) : equipos.length === 0 ? (
+          <div className="rounded-xl border bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
+            <FontAwesomeIcon icon={faSitemap} className="mb-3 h-10 w-10 text-slate-300" />
+            <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no tenés áreas ni turnos a cargo en ningún proyecto.</p>
+          </div>
+        ) : (
+          <>
+            {/* PROYECTO: se elige sólo si hay más de uno */}
+            {equipos.length > 1 ? (
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-500 dark:text-slate-400">Proyecto</label>
+                <select value={proyectoId} onChange={(e) => setProyectoId(e.target.value)} className="w-full rounded border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                  {equipos.map((e) => (
+                    <option key={e.proyecto._id} value={e.proyecto._id}>
+                      {typeof e.proyecto.clientId === "object" && e.proyecto.clientId?.name ? `${e.proyecto.clientId.name} | ` : ""}
+                      {e.proyecto.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                {typeof equipo?.proyecto.clientId === "object" && equipo?.proyecto.clientId?.name ? `${equipo.proyecto.clientId.name} | ` : ""}
+                {equipo?.proyecto.name}
+              </p>
+            )}
+
+            {equipo && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {equipo.supervisa ? "Sos el supervisor de este proyecto: ves todas sus áreas y turnos." : "Estas son las áreas y turnos que coordinás."}
+              </p>
+            )}
+
+            {equipo?.areas.map((a) => (
+              <section key={a.areaId} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">
+                  <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
+                  {a.nombre}
+                </h2>
+
+                {a.turnos.map((t) => {
+                  const lista = porTurno.get(t.clave) || [];
+                  const suman = lista.filter((m) => m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
+                  const noSuman = lista.filter((m) => !m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
+                  const abierto = abiertos.has(t.clave);
+                  return (
+                    <div key={t.clave} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button onClick={() => alternar(t.clave)} aria-expanded={abierto} className="flex w-full items-start gap-2 px-3 py-2 text-left">
+                        <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="mt-1 h-3 w-3 shrink-0 text-slate-400" />
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                            <FontAwesomeIcon icon={faClock} className="h-3 w-3 text-purple-500" />
+                            {t.nombre}
+                          </p>
+                          {t.horario && <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.horario}</p>}
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+                            <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                              <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
+                              {t.coordinadorNombre || "Sin coordinador"}
+                            </span>
+                            {personas === null ? (
+                              <span className="text-slate-400">Cargando…</span>
+                            ) : (
+                              <>
+                                <span className="rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">{suman.length} suman</span>
+                                {noSuman.length > 0 && <span className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-red-700 dark:border-red-900/70 dark:bg-red-950/20 dark:text-red-300">{noSuman.length} no suman</span>}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+
+                      {abierto && personas !== null && (
+                        <div className="space-y-1.5 border-t border-slate-200 p-3 dark:border-slate-700">
+                          {lista.length === 0 ? (
+                            <p className="text-center text-xs italic text-slate-400">No hay personas asignadas a este turno.</p>
+                          ) : (
+                            <>
+                              <p className="rounded-lg border border-green-200 bg-green-50 px-2 py-1.5 text-[11px] text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                                <strong>{suman.length}</strong> {suman.length === 1 ? "persona activa" : "personas activas"} con contrato vigente
+                                {noSuman.length > 0 && (
+                                  <>
+                                    {" "}
+                                    · <strong>{lista.length}</strong> {lista.length === 1 ? "asignada" : "asignadas"} en total
+                                  </>
+                                )}
+                              </p>
+                              {suman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                              {noSuman.length > 0 && (
+                                <>
+                                  <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
+                                  {noSuman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </section>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

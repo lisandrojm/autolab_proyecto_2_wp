@@ -3,6 +3,8 @@ export interface ComplianceParams {
     from: string;
     to: string;
     projectId?: string;
+    /** Acota a estos proyectos (los que supervisa quien pregunta). `projectId`, si viene, gana. */
+    projectIds?: string[];
     coordinatorId?: string;
     areaId?: string;
     shiftId?: string;

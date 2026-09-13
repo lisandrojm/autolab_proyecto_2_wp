@@ -11,10 +11,12 @@ import Orders from "./views/Orders";
 import Requests from "./views/Requests";
 import ActivityLogs from "./views/ActivityLogs";
 import UserHistory from "./views/UserHistory";
+import MyTeams from "./views/MyTeams";
+import SeguimientoNovedades from "./views/SeguimientoNovedades";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
-import { MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
+import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
@@ -92,6 +94,10 @@ function App() {
         return puede(MOBILE_ACTIVITY_LOGS) ? <ActivityLogs onNavigate={setCurrentView} /> : inicio;
       case "user_history":
         return puede(MOBILE_USERS) ? <UserHistory onNavigate={setCurrentView} /> : inicio;
+      case "my_teams":
+        return puede(MOBILE_TEAMS) ? <MyTeams onNavigate={setCurrentView} /> : inicio;
+      case "activity_compliance":
+        return puede(MOBILE_ACTIVITY_COMPLIANCE) ? <SeguimientoNovedades onNavigate={setCurrentView} /> : inicio;
       default:
         return inicio;
     }

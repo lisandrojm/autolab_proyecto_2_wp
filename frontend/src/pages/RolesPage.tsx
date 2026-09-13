@@ -14,7 +14,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase, faCheckDouble, faBroom, faSort, faSortUp, faSortDown } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 // Un permiso por tarjeta de la app. Ver el porqué y la contraparte del server en ese módulo.
-import { CAPACIDAD_ITEMS, CAPACIDAD_PERMISSIONS, esPermisoMobile, MOBILE_ITEMS, MOBILE_PERMISSIONS } from "../utils/permisosMobile";
+import { avisosDeRol, CAPACIDAD_ITEMS, CAPACIDAD_PERMISSIONS, esPermisoMobile, esPermisoPlataforma, MOBILE_GRUPOS, MOBILE_ITEMS, MOBILE_PERMISSIONS, PLANTILLAS_ROL } from "../utils/permisosMobile";
 import { useNavigate } from "react-router-dom";
 
 const HELP_KEY = "roles" as const;
@@ -642,6 +642,20 @@ export const RolesPage: React.FC = () => {
 
   const limpiarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: prev.permissions.filter((p) => !permisos.includes(p)) }));
 
+  /**
+   * Una plantilla es un punto de partida: reemplaza lo de App Mobile y Proyectos por lo recomendado y
+   * deja Plataforma como estaba. Si ya había algo tildado ahí, se pregunta antes de pisarlo.
+   */
+  const aplicarPlantilla = async (plantilla: (typeof PLANTILLAS_ROL)[number]) => {
+    const esDeLaApp = (p: string) => esPermisoMobile(p) || CAPACIDAD_PERMISSIONS.includes(p);
+    if (formData.permissions.some(esDeLaApp)) {
+      const r = await sweetAlert.confirm(`Empezar desde «${plantilla.nombre}»`, "Reemplaza lo tildado en App Mobile y Proyectos por lo recomendado. Lo de Plataforma no se toca, y después podés ajustar a mano.", "Aplicar");
+      if (!r.isConfirmed) return;
+    }
+    setFormData((prev) => ({ ...prev, permissions: [...prev.permissions.filter((p) => !esDeLaApp(p)), ...plantilla.permisos] }));
+    setSeccionMobile(true);
+  };
+
   const togglePermission = (permission: string) => {
     setFormData((prev) => {
       const yaEstaba = prev.permissions.includes(permission);
@@ -675,11 +689,14 @@ export const RolesPage: React.FC = () => {
       return;
     }
 
-    const tildados = formData.permissions.filter((p) => (esPlataforma ? !esPermisoMobile(p) : esPermisoMobile(p)));
+    // Apagar una sección se lleva SÓLO sus permisos: las capacidades de Proyectos no son de ninguna de
+    // las dos y quedan como estaban.
+    const esDeLaSeccion = (p: string) => (esPlataforma ? esPermisoPlataforma(p) : esPermisoMobile(p));
+    const tildados = formData.permissions.filter(esDeLaSeccion);
     if (tildados.length > 0) {
       const result = await sweetAlert.confirm(`Apagar ${nombre}`, `Se van a destildar los ${tildados.length} permiso/s de ${nombre} que tiene este rol. ¿Continuar?`);
       if (!result.isConfirmed) return;
-      setFormData((prev) => ({ ...prev, permissions: prev.permissions.filter((p) => (esPlataforma ? esPermisoMobile(p) : !esPermisoMobile(p))) }));
+      setFormData((prev) => ({ ...prev, permissions: prev.permissions.filter((p) => !esDeLaSeccion(p)) }));
     }
     setSeccion(false);
   };
@@ -931,6 +948,39 @@ export const RolesPage: React.FC = () => {
                     <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
                   </button>
                 </div>
+
+                {/*
+                  PLANTILLAS: el camino corto para los roles de campo. Tildan lo recomendado para cada
+                  lugar del equipo —quién carga, quién coordina, quién supervisa— y después se ajusta.
+                */}
+                <div className="mb-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                  <p className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">Empezar desde una plantilla</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {PLANTILLAS_ROL.map((plantilla) => (
+                      <button
+                        key={plantilla.nombre}
+                        type="button"
+                        onClick={() => aplicarPlantilla(plantilla)}
+                        className="rounded border border-gray-200 px-3 py-2 text-left transition-colors hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:hover:border-blue-600 dark:hover:bg-blue-900/20"
+                      >
+                        <span className="block text-sm font-semibold text-gray-900 dark:text-white">{plantilla.nombre}</span>
+                        <span className="block text-xs text-gray-500 dark:text-gray-400">{plantilla.descripcion}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* AVISOS: combinaciones que se pueden guardar pero no van a funcionar como uno espera. No bloquean. */}
+                {avisosDeRol(formData.permissions).length > 0 && (
+                  <div className="mb-4 space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+                    {avisosDeRol(formData.permissions).map((aviso) => (
+                      <p key={aviso} className="text-xs text-amber-800 dark:text-amber-300">
+                        ⚠ {aviso}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   {/*
                     PLATAFORMA Y APP MOBILE, CADA UNA CON SU INTERRUPTOR.
@@ -944,7 +994,7 @@ export const RolesPage: React.FC = () => {
                     titulo="Plataforma"
                     icono={faUserShield}
                     prendida={seccionPlataforma}
-                    cantidad={formData.permissions.filter((p) => !esPermisoMobile(p)).length}
+                    cantidad={formData.permissions.filter((p) => esPermisoPlataforma(p)).length}
                     onToggle={() => toggleSeccion("plataforma")}
                     onTodos={() => marcarPermisos(PLATFORM_PERMISSIONS)}
                     onLimpiar={() => limpiarPermisos(PLATFORM_PERMISSIONS)}
@@ -1027,37 +1077,35 @@ export const RolesPage: React.FC = () => {
                     onTodos={() => marcarPermisos(MOBILE_PERMISSIONS)}
                     onLimpiar={() => limpiarPermisos(MOBILE_PERMISSIONS)}
                   >
+                    {/*
+                      APP MOBILE, AGRUPADA POR TEMA. Cada acción es una línea con para quién es: con
+                      «Novedades» partida en cargar (coordinador) y seguir el cumplimiento (supervisor),
+                      una lista plana de tildes ya no alcanzaba para entender qué se estaba dando.
+                    */}
                     <div className="space-y-3">
-                      {Object.entries(AVAILABLE_PERMISSIONS)
-                        .filter(([module]) => module === "mobile")
-                        .map(([module, moduleData]) => {
-                          return (
-                            <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
-                              <div className="flex items-start gap-3">
-                                <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 flex items-center justify-center flex-shrink-0">
-                                  <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
-                                </div>
-                                <BotonesSeleccion alcance={moduleData.label} onTodos={() => marcarPermisos(moduleData.permissions)} onLimpiar={() => limpiarPermisos(moduleData.permissions)} />
-                              </div>
-                              <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
-                                {moduleData.permissions.map((permission) => {
-                                  const permissionLabel = MODULE_LABELS[permission] || permission;
-
-                                  return (
-                                    <label key={permission} className="flex items-center gap-2 group cursor-pointer">
-                                      <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer" />
-                                      <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
-                                    </label>
-                                  );
-                                })}
-                              </div>
+                      {MOBILE_GRUPOS.map((grupo) => {
+                        const items = MOBILE_ITEMS.filter((i) => i.grupo === grupo);
+                        const permisosDelGrupo = items.map((i) => i.permiso);
+                        return (
+                          <div key={grupo} className="rounded border border-gray-200 p-4 transition-colors hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600">
+                            <div className="flex items-center justify-between gap-3">
+                              <h4 className="font-semibold text-gray-900 dark:text-white">{grupo}</h4>
+                              {items.length > 1 && <BotonesSeleccion alcance={grupo} onTodos={() => marcarPermisos(permisosDelGrupo)} onLimpiar={() => limpiarPermisos(permisosDelGrupo)} />}
                             </div>
-                          );
-                        })}
+                            <div className="mt-2 space-y-2">
+                              {items.map((item) => (
+                                <label key={item.permiso} className="group flex cursor-pointer items-start gap-2">
+                                  <input type="checkbox" checked={formData.permissions.includes(item.permiso)} onChange={() => togglePermission(item.permiso)} className="mt-0.5 cursor-pointer rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0" />
+                                  <span className="min-w-0">
+                                    <span className="block text-sm text-gray-700 transition-colors group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100">{item.label}</span>
+                                    <span className="block text-xs text-gray-500 dark:text-gray-400">{item.ayuda}</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </SeccionPermisos>
 

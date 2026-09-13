@@ -14,6 +14,8 @@ export async function computeCompliance(tenantId, params) {
     const to = params.to > today ? today : params.to; // clamp a hoy
     // 1. Proyectos con asignaciones + schedule.
     const projectFilter = { tenantId };
+    if (params.projectIds)
+        projectFilter._id = { $in: params.projectIds.filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id)) };
     if (params.projectId)
         projectFilter._id = params.projectId;
     // OJO: traer activityLogConfig COMPLETO (no sólo .schedule): necesitamos useGlobalConfig

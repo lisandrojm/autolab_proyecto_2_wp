@@ -17,7 +17,7 @@ import { validate } from "../middleware/validate.js";
 import { checkEmailAvailability } from "../controllers/authController.js";
 import { signJwt } from "../utils/jwt.js";
 import { addUserToClientUsuarios } from "../services/clientUsuariosService.js";
-import { esPermisoMobile } from "../utils/permisosMobile.js";
+import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile.js";
 import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
 import { z } from "zod";
@@ -167,7 +167,8 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
           selector de portal y decide la persona (ver `LoginPage.tsx`).
         */
         const tienePermisosMobile = permissions.some((p) => esPermisoMobile(p));
-        const tienePermisosPlataforma = permissions.some((p) => !esPermisoMobile(p));
+        // Supervisor / Coordinador (`:eligible`) no abren la plataforma: ver `esPermisoPlataforma`.
+        const tienePermisosPlataforma = permissions.some((p) => esPermisoPlataforma(p));
         let redirectTo = "/orders"; // Ruta por defecto
         if (primaryRoleName.toLowerCase() === "superadmin") {
             redirectTo = "/tenants";

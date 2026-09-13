@@ -113,6 +113,8 @@ export interface AreaShiftMember {
   cuenta: boolean;
   /** Turnos que la persona tiene en el área consultada. */
   shiftIds: string[];
+  /** Todas sus combinaciones "areaId::shiftId" en el proyecto, sin importar el área consultada. */
+  claves?: string[];
   nombreContrato: string;
   estadoContrato: string;
   fechaAlta: string;

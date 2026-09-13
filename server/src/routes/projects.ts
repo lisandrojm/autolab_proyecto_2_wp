@@ -74,6 +74,7 @@ function sumarAlFiltro(filter: any, condicion: Record<string, unknown>): void {
 }
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -954,10 +955,15 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
     if (!soloIdsDeEquipo) {
       const miembros = ((project as any).assignedUsers || []).filter((u: any) => u && typeof u === "object");
       if (miembros.length > 0) {
+        // Sólo los campos de contrato que lee el móvil (vigencia, horario y área/turno), los mismos que
+        // manda `/users/directory`: el vínculo entero de 254 personas eran 5,5 MB y ~56 s, y la
+        // llamada se cortaba por timeout. El historial completo sigue en `/users/:id`.
         const vinculos = await UserProject.find({
           projectId: project._id,
           userId: { $in: miembros.map((u: any) => u._id) },
-        }).lean();
+        })
+          .select("projectId userId areaId nombre_proyecto nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments")
+          .lean();
         const porUsuario = new Map(vinculos.map((v: any) => [String(v.userId), v]));
         for (const miembro of miembros) {
           const vinculo = porUsuario.get(String(miembro._id));
@@ -1051,15 +1057,11 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
       return;
     }
 
-    const members = await User.find({ projectIds: projectId })
-      .select("_id metadata.activo metadata.projects")
-      // `fecha_alta_contrato` y `fecha_carga` son obligatorios: `getContratoActivo` los usa para
-      // desempatar cuál es el contrato más reciente (sin ellos todos empatan y termina eligiendo
-      // el último del array en vez del realmente más nuevo).
-      .populate({ path: "metadata.projects", model: UserProject, select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga" })
-      .lean();
-
     const hoy = hoyArgentina();
+    // Con `tenantId` el filtro usa el índice {tenantId, projectIds}; sin él recorría todos los usuarios.
+    // Los contratos no se traen: la base devuelve sólo el que rige de cada uno.
+    const [members, contratoDe] = await Promise.all([User.find({ tenantId: req.tenantObjectId, projectIds: projectId }).select("_id metadata.activo").lean(), contratosQueRigenDelProyecto(projectId, hoy)]);
+
     const configByUser = new Map<string, any>((project.teamConfig || []).map((c: any) => [String(c.userId), c]));
     const counts: Record<string, number> = {};
     // Ids por combinación: el front los usa para el total del área sin contar dos veces a quien
@@ -1069,11 +1071,8 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
     for (const member of members) {
       if ((member as any).metadata?.activo !== true) continue;
 
-      const up: any = ((member as any).metadata?.projects || []).find((p: any) => p && String(p.projectId) === String(projectId));
-      const contracts: any[] = up?.contracts || [];
-      // Contrato que representa su situación actual: el vigente más reciente (un tiempo
-      // indeterminado no tiene baja y siempre lo es), no simplemente el último cargado.
-      const contratoActivo = getContratoActivo(contracts, hoy);
+      // Contrato que representa su situación actual (ver `contratosQueRigenDelProyecto`).
+      const contratoActivo = contratoDe.get(String(member._id));
       if (!contratoActivo || !esContratoVigente(contratoActivo, hoy)) continue;
 
       let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
@@ -1129,26 +1128,18 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
       return;
     }
 
-    const members = await User.find({ projectIds: projectId })
-      .select("_id firstName lastName email metadata.activo metadata.projects")
-      .populate({
-        path: "metadata.projects",
-        model: UserProject,
-        // `fecha_carga` también hace falta para desempatar `getContratoActivo` cuando dos
-        // contratos comparten `fecha_alta_contrato`.
-        select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_estado_empleado contracts.nombre_contrato",
-      })
-      .lean();
-
     const hoy = hoyArgentina();
+    // Igual que `area-shift-counts`: usuarios por índice y sólo el contrato que rige de cada uno.
+    const [members, contratoDe] = await Promise.all([
+      User.find({ tenantId: req.tenantObjectId, projectIds: projectId }).select("_id firstName lastName email metadata.activo").lean(),
+      contratosQueRigenDelProyecto(String(projectId), hoy),
+    ]);
     const configByUser = new Map<string, any>((project.teamConfig || []).map((c: any) => [String(c.userId), c]));
     const prefijoArea = `${areaId}::`;
     const rows: any[] = [];
 
     for (const member of members) {
-      const up: any = ((member as any).metadata?.projects || []).find((p: any) => p && String(p.projectId) === String(projectId));
-      const contracts: any[] = up?.contracts || [];
-      const contratoActivo = getContratoActivo(contracts, hoy);
+      const contratoActivo = contratoDe.get(String(member._id)) || null;
 
       let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
       if (assignments.length === 0) assignments = contratoActivo?.areaShiftAssignments || [];
@@ -1171,6 +1162,9 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
         vigente,
         cuenta: activo && vigente,
         shiftIds: shiftIdsDelMiembro,
+        // Todas sus combinaciones "areaId::shiftId" del proyecto: con `todos=true` alcanza una sola
+        // llamada para repartir a cada uno en sus turnos, en vez de una por área.
+        claves: [...keys],
         nombreContrato: contratoActivo?.nombre_contrato || "",
         estadoContrato: contratoActivo?.nombre_estado_empleado || "",
         fechaAlta: contratoActivo?.fecha_alta_contrato || "",

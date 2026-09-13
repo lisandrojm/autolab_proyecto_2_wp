@@ -12,6 +12,8 @@ export interface ComplianceParams {
   from: string;
   to: string;
   projectId?: string;
+  /** Acota a estos proyectos (los que supervisa quien pregunta). `projectId`, si viene, gana. */
+  projectIds?: string[];
   coordinatorId?: string;
   areaId?: string;
   shiftId?: string;
@@ -100,6 +102,7 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
 
   // 1. Proyectos con asignaciones + schedule.
   const projectFilter: any = { tenantId };
+  if (params.projectIds) projectFilter._id = { $in: params.projectIds.filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id)) };
   if (params.projectId) projectFilter._id = params.projectId;
   // OJO: traer activityLogConfig COMPLETO (no sólo .schedule): necesitamos useGlobalConfig
   // y allowedPastDays para resolver la ventana de "Días Permitidos" por proyecto.

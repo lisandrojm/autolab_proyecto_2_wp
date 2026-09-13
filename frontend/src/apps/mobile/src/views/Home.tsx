@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus, faSitemap, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -7,7 +7,7 @@ import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 import { ProfileData } from "../../../../api/personnel";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
-import { MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
+import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -103,10 +103,40 @@ export default function Home({ onNavigate }: HomeProps) {
     disabled: false,
   };
 
+  // «Mis equipos»: las áreas y turnos que la persona tiene a cargo, con su gente.
+  const equiposAction = {
+    icon: faSitemap,
+    title: "Mis equipos",
+    description: "Áreas, turnos y personas a cargo",
+    view: "my_teams" as ViewType,
+    disabled: false,
+  };
+
   const quickActions: any[] = [];
 
-  if (puede(MOBILE_ACTIVITY_LOGS)) {
+  if (puede(MOBILE_TEAMS)) {
+    quickActions.push(equiposAction);
+  }
+
+  /*
+    NOVEDADES: CARGAR O SEGUIR.
+
+    El coordinador carga las de su gente; el supervisor sigue el cumplimiento de sus coordinadores. A
+    quien sólo sigue, la tarjeta se llama «Novedades» igual —es donde las busca—; a quien hace las dos
+    cosas se le muestran separadas, para que no tenga que adivinar cuál abre qué.
+  */
+  const cargaNovedades = puede(MOBILE_ACTIVITY_LOGS);
+  if (cargaNovedades) {
     quickActions.push(novedadesAction);
+  }
+  if (puede(MOBILE_ACTIVITY_COMPLIANCE)) {
+    quickActions.push({
+      icon: faCalendarCheck,
+      title: cargaNovedades ? "Cumplimiento" : "Novedades",
+      description: "Cumplimiento de tus coordinadores",
+      view: "activity_compliance" as ViewType,
+      disabled: false,
+    });
   }
 
   if (puede(MOBILE_ORDERS)) {

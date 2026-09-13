@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { Role } from '../models/Role.js';
 import { User } from '../models/User.js';
-import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from '../utils/permisosMobile.js';
+import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS, PERMISOS_COORDINADOR, PERMISOS_SUPERVISOR, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from '../utils/permisosMobile.js';
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * PERMISOS PARA ROL USER - SISTEMA SIMPLIFICADO
@@ -93,7 +93,13 @@ const ADMIN_PERMISSIONS = [
   leía como "empieza con Mobile " O "termina con Colaborador", y los tres roles se pisaban entre sí.
 */
 const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-async function ensureRole(tenantId, name, permissions = [], description = '', isDefault = false, isSystem = false) {
+/**
+ * `sincronizarPermisos`: si al rol que ya existe se le agregan en cada arranque los permisos que le
+ * falten. Sirve para Admin, que tiene que recibir los módulos nuevos de la plataforma. Para los roles
+ * de la app NO: su configuración es de quien los edita, y reinyectar lo que se destildó —«Cargar
+ * novedades» en Supervisor, por ejemplo— deshacía el cambio en el próximo reinicio sin avisar.
+ */
+async function ensureRole(tenantId, name, permissions = [], description = '', isDefault = false, isSystem = false, sincronizarPermisos = true) {
     let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${escaparRegex(name)}$`, 'i') } });
     if (!role) {
         console.log(`[RoleInit] Creating ${name} role for tenant: ${tenantId}`);
@@ -120,7 +126,7 @@ async function ensureRole(tenantId, name, permissions = [], description = '', is
         }
         // Sincronizar permisos esenciales (unión)
         const currentPerms = new Set(role.permissions);
-        const missingPerms = permissions.filter((p) => !currentPerms.has(p));
+        const missingPerms = sincronizarPermisos ? permissions.filter((p) => !currentPerms.has(p)) : [];
         if (missingPerms.length > 0) {
             role.permissions = [...role.permissions, ...missingPerms];
             hasChanges = true;
@@ -156,14 +162,13 @@ export async function ensureDefaultRoles(tenantId) {
       Son los que reciben las altas y los que la gente reconoce por nombre, así que conviene que existan
       siempre y que nadie los borre sin querer. Lo que ven SÍ se edita: son permisos como cualquier otro.
   
-      Supervisor y Coordinador arrancan viendo lo mismo —las cuatro tarjetas—; la diferencia entre uno y
-      otro se ajusta destildando desde Usuarios → Roles cuando haga falta. `ensureRole` sólo AGREGA
-      permisos que falten, así que destildar algo acá no se revierte en el próximo arranque.
-  
+      Nacen con lo de las plantillas del editor: el Coordinador CARGA novedades, el Supervisor SIGUE el
+      cumplimiento de sus coordinadores. Los permisos se ponen sólo al CREARLOS (`sincronizarPermisos`
+      en false): después son de quien los edita, y destildar algo no se revierte en el próximo arranque.
     */
-    await ensureRole(tid, 'Supervisor', [...ALL_MOBILE_PERMISSIONS, PROJECT_SUPERVISOR], 'Responsable del proyecto: aprueba y controla lo que cargan los coordinadores', false, true);
-    await ensureRole(tid, 'Coordinador', [...ALL_MOBILE_PERMISSIONS, PROJECT_COORDINATOR], 'Tiene áreas y turnos a cargo, y carga las novedades de su gente', false, true);
-    await ensureRole(tid, 'Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', true, true);
+    await ensureRole(tid, 'Supervisor', PERMISOS_SUPERVISOR, 'Supervisa a los coordinadores: sigue su cumplimiento de novedades', false, true, false);
+    await ensureRole(tid, 'Coordinador', PERMISOS_COORDINADOR, 'Tiene áreas y turnos a cargo, y carga las novedades de su gente', false, true, false);
+    await ensureRole(tid, 'Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', true, true, false);
     /*
       EL ROL «RESPONSABLE DE PROYECTO» YA NO SE CREA, y la migración lo borra.
   
@@ -412,7 +417,8 @@ export async function migrateMobileYResponsable(tenantId) {
             MOBILE_BASE_PERMISSIONS.forEach((p) => permisos.add(p));
         }
         if (permisos.delete(LEGACY_MOBILE_COORDINATOR)) {
-            ALL_MOBILE_PERMISSIONS.forEach((p) => permisos.add(p));
+            // Lo que hace un coordinador, no todo el móvil: el seguimiento de novedades es del supervisor.
+            PERMISOS_COORDINADOR.filter((p) => p !== PROJECT_COORDINATOR).forEach((p) => permisos.add(p));
         }
         permisos.delete(LEGACY_PROJECT_RESPONSIBLE);
         const finales = [...permisos];

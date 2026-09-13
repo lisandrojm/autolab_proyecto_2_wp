@@ -19,6 +19,8 @@ import { Types } from "mongoose";
  * rol Coordinador hacía de más que valga la pena preguntar.
  */
 export declare const MOBILE_ACTIVITY_LOGS = "mobile_activity_logs:view";
+export declare const MOBILE_ACTIVITY_COMPLIANCE = "mobile_activity_compliance:view";
+export declare const MOBILE_TEAMS = "mobile_teams:view";
 export declare const MOBILE_ORDERS = "mobile_orders:view";
 export declare const MOBILE_VACATIONS = "mobile_vacations:view";
 export declare const MOBILE_USERS = "mobile_users:view";
@@ -48,12 +50,26 @@ export declare const MOBILE_BASE_PERMISSIONS: string[];
 export declare const PROJECT_SUPERVISOR = "project_supervisor:eligible";
 export declare const PROJECT_COORDINATOR = "project_coordinator:eligible";
 export declare const ALL_CAPACIDADES: string[];
+/**
+ * Con qué nacen los roles de sistema. Son los mismos que ofrecen las plantillas del editor de roles
+ * (`frontend/src/utils/permisosMobile.ts`): si se cambia uno, se cambia el otro.
+ */
+export declare const PERMISOS_COORDINADOR: string[];
+export declare const PERMISOS_SUPERVISOR: string[];
 export declare const esCapacidad: (permiso: string) => boolean;
 /** Permisos que este cambio retira. Se traducen en `migrateMobileYResponsable`. */
 export declare const LEGACY_MOBILE_COLLABORATOR = "mobile_collaborator:view";
 export declare const LEGACY_MOBILE_COORDINATOR = "mobile_coordinator:view";
 export declare const LEGACY_PROJECT_RESPONSIBLE = "project_responsible:eligible";
 export declare const esPermisoMobile: (permiso: string) => boolean;
+/**
+ * Lo que abre la plataforma: todo lo que no es del móvil NI una capacidad.
+ *
+ * Las capacidades no dan acceso a ningún lado —dicen si alguien supervisa coordinadores o coordina
+ * colaboradores—. Contarlas como plataforma hacía que un rol de campo con «Supervisor del Proyecto»
+ * entrara por el selector de portal y se le ofreciera la web.
+ */
+export declare const esPermisoPlataforma: (permiso: string) => boolean;
 /** Los permisos de una persona son la UNIÓN de los de sus roles. Mismo criterio que el login. */
 export declare function permisosDeRoles(roles: Array<{
     permissions?: string[];

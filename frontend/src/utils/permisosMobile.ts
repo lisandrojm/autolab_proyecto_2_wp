@@ -18,20 +18,36 @@
  *   · «Es coordinador» = puede cargar novedades. Era lo único que el rol Coordinador hacía de más que
  *     valga la pena preguntar.
  */
-export const MOBILE_ACTIVITY_LOGS = "mobile_activity_logs:view"; // Novedades
+/*
+  NOVEDADES SON DOS COSAS DISTINTAS, y por eso dos permisos: el coordinador CARGA las novedades de su
+  gente; el supervisor no carga nada, SIGUE cómo vienen cumpliendo sus coordinadores. La clave de
+  «cargar» es la de siempre, así los roles existentes no cambian.
+*/
+export const MOBILE_ACTIVITY_LOGS = "mobile_activity_logs:view"; // Cargar novedades
+export const MOBILE_ACTIVITY_COMPLIANCE = "mobile_activity_compliance:view"; // Seguimiento de novedades
+export const MOBILE_TEAMS = "mobile_teams:view"; // Mis equipos
 export const MOBILE_ORDERS = "mobile_orders:view"; // Pedidos
 export const MOBILE_VACATIONS = "mobile_vacations:view"; // Vacaciones
 // La CLAVE sigue diciendo `users` porque renombrarla es migrar los roles de todos los tenants; lo
 // que se ve es «Contratación», que es lo que la tarjeta hace: pedir un alta, no administrar gente.
 export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes de alta)
 
-/** En el orden en que se muestran, tanto en el editor de roles como en la ficha del usuario. */
+/**
+ * En el orden en que se muestran, tanto en el editor de roles como en la ficha del usuario.
+ *
+ * `grupo` es el tema de la tarjeta en el editor (una acción nueva se suma como otra línea de su grupo)
+ * y `ayuda` dice para quién es, que es lo que hace falta saber al tildar.
+ */
 export const MOBILE_ITEMS = [
-  { permiso: MOBILE_ACTIVITY_LOGS, label: "Novedades" },
-  { permiso: MOBILE_ORDERS, label: "Pedidos" },
-  { permiso: MOBILE_VACATIONS, label: "Vacaciones" },
-  { permiso: MOBILE_USERS, label: "Contratación" },
+  { permiso: MOBILE_ACTIVITY_LOGS, label: "Cargar novedades", grupo: "Novedades", ayuda: "Carga la asistencia de las personas de sus áreas y turnos. Es del coordinador." },
+  { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Seguimiento de novedades", grupo: "Novedades", ayuda: "Calendario de cumplimiento de sus coordinadores: quién envió y a quién le falta. Es del supervisor." },
+  { permiso: MOBILE_TEAMS, label: "Mis equipos", grupo: "Equipo", ayuda: "Las áreas y turnos que tiene a cargo, con su gente." },
+  { permiso: MOBILE_USERS, label: "Contratación", grupo: "Contratación", ayuda: "Pedir altas de personal." },
+  { permiso: MOBILE_ORDERS, label: "Pedidos", grupo: "Personal", ayuda: "Sus propios pedidos." },
+  { permiso: MOBILE_VACATIONS, label: "Vacaciones", grupo: "Personal", ayuda: "Sus propias vacaciones." },
 ];
+
+export const MOBILE_GRUPOS = [...new Set(MOBILE_ITEMS.map((i) => i.grupo))];
 
 export const MOBILE_PERMISSIONS = MOBILE_ITEMS.map((i) => i.permiso);
 
@@ -54,9 +70,48 @@ export const CAPACIDAD_ITEMS = [
 
 export const CAPACIDAD_PERMISSIONS = CAPACIDAD_ITEMS.map((i) => i.permiso);
 
+/**
+ * PLANTILLAS DEL EDITOR DE ROLES: un punto de partida, no un rol cerrado.
+ *
+ * Aplicar una reemplaza lo de App Mobile y Proyectos por lo recomendado y deja intacto lo de
+ * Plataforma; después se ajusta tildando. Son los mismos permisos con que nacen los roles de sistema
+ * (`server/src/utils/permisosMobile.ts`): si se cambia uno, se cambia el otro.
+ */
+export const PLANTILLAS_ROL = [
+  { nombre: "Colaborador", descripcion: "Carga lo suyo: pedidos y vacaciones.", permisos: [MOBILE_ORDERS, MOBILE_VACATIONS] },
+  { nombre: "Coordinador", descripcion: "Coordina áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
+  { nombre: "Supervisor", descripcion: "Supervisa a los coordinadores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, PROJECT_SUPERVISOR] },
+];
 
-/** Todo lo que no es del móvil es de la plataforma, incluidos el comodín y los permisos de SuperAdmin. */
+/**
+ * Combinaciones que se pueden guardar pero no van a funcionar como uno espera. Se AVISAN, no se
+ * bloquean: puede haber un motivo (un rol a medio armar, alguien que todavía no tiene equipo).
+ */
+export const avisosDeRol = (permisos: string[]): string[] => {
+  const p = new Set(permisos);
+  const avisos: string[] = [];
+  if (p.has(MOBILE_ACTIVITY_LOGS) && !p.has(PROJECT_COORDINATOR)) avisos.push("«Cargar novedades» sin «Coordina áreas y turnos»: no va a tener áreas ni turnos donde cargarlas.");
+  if (p.has(PROJECT_COORDINATOR) && !p.has(MOBILE_ACTIVITY_LOGS)) avisos.push("«Coordina áreas y turnos» sin «Cargar novedades»: puede quedar a cargo de turnos pero no va a poder cargar sus novedades, y aparecerán vencidas.");
+  if (p.has(MOBILE_ACTIVITY_COMPLIANCE) && !p.has(PROJECT_SUPERVISOR)) avisos.push("«Seguimiento de novedades» sin «Supervisor del Proyecto»: no va a tener coordinadores que seguir.");
+  if (p.has(MOBILE_TEAMS) && !p.has(PROJECT_COORDINATOR) && !p.has(PROJECT_SUPERVISOR)) avisos.push("«Mis equipos» sin «Coordina áreas y turnos» ni «Supervisor del Proyecto»: la pantalla va a estar vacía.");
+  return avisos;
+};
+
+
 export const esPermisoMobile = (permiso: string): boolean => permiso.startsWith("mobile_");
+
+/** Supervisor del Proyecto y Coordina áreas y turnos: el poder dentro del equipo, no una pantalla. */
+export const esCapacidad = (permiso: string): boolean => permiso.endsWith(":eligible");
+
+/**
+ * Lo que abre la plataforma: todo lo que no es del móvil NI una capacidad (incluye el comodín y los
+ * de SuperAdmin).
+ *
+ * Las capacidades no dan acceso a ningún lado: dicen si alguien supervisa coordinadores o coordina
+ * colaboradores. Contarlas como plataforma hacía que un rol de campo con «Supervisor del Proyecto»
+ * sumara «1 permiso» de Plataforma y que el login le ofreciera entrar a la web.
+ */
+export const esPermisoPlataforma = (permiso: string): boolean => !esPermisoMobile(permiso) && !esCapacidad(permiso);
 
 /** Los permisos de una persona son la UNIÓN de los de sus roles. Mismo criterio que el login. */
 export const permisosDeRoles = (roles: Array<{ permissions?: string[] }> | undefined | null): Set<string> => new Set((roles || []).flatMap((r) => r?.permissions || []));

@@ -1636,7 +1636,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
           .lean();
         if (proyectos.length > 0) {
           res.status(409).json({
-            error: `Se quedaría sin el permiso "APP MOBILE | Novedades" y coordina turnos en ${proyectos.map((p: any) => p.name).join(", ")}. Liberá esas coordinaciones desde el equipo del proyecto y volvé a intentar.`,
+            error: `Se quedaría sin el permiso "APP MOBILE | Cargar novedades" y coordina turnos en ${proyectos.map((p: any) => p.name).join(", ")}. Liberá esas coordinaciones desde el equipo del proyecto y volvé a intentar.`,
           });
           return;
         }

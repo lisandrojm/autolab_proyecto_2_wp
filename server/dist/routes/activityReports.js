@@ -6,6 +6,9 @@ import { Notification } from "../models/Notification.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { computeCompliance } from "../services/complianceService.js";
+import { Role } from "../models/Role.js";
+import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
+import { MOBILE_ACTIVITY_COMPLIANCE } from "../utils/permisosMobile.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
 const isAdminReq = (req) => {
@@ -13,6 +16,31 @@ const isAdminReq = (req) => {
     const primary = req.user?.primaryRole?.toLowerCase();
     return roles.includes("admin") || roles.includes("superadmin") || primary === "admin" || primary === "superadmin";
 };
+const escaparRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/**
+ * QUÉ CUMPLIMIENTO PUEDE VER QUIEN PREGUNTA.
+ *
+ *   · Admin: todo, como hasta ahora (el modal del panel web).
+ *   · Con «Seguimiento de novedades» (el supervisor en el móvil): SÓLO los proyectos que supervisa, es
+ *     decir aquellos cuyo responsable es él. Un supervisor no ve los coordinadores de otro.
+ *   · Cualquier otro: nada (`null` → 403).
+ *
+ * `{}` significa sin recorte; `{ projectIds }` es la lista a la que se acota (puede venir vacía).
+ */
+async function alcanceCumplimiento(req) {
+    if (isAdminReq(req))
+        return {};
+    const roleNames = req.user?.roles || [];
+    if (roleNames.length === 0)
+        return null;
+    const roles = await Role.find({ tenantId: req.tenantObjectId, name: { $in: roleNames.map((n) => new RegExp(`^${escaparRegex(String(n))}$`, "i")) } })
+        .select("permissions")
+        .lean();
+    if (!roles.some((r) => (r.permissions || []).includes(MOBILE_ACTIVITY_COMPLIANCE)))
+        return null;
+    const { proyectos } = await alcanceDeResponsable(req.tenantObjectId, req.user.userId);
+    return { projectIds: proyectos.map(String) };
+}
 const MAX_RANGE_DAYS = 92;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const attendanceSchema = z.object({
@@ -112,10 +140,12 @@ router.post("/", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /compliance - Control de cumplimiento de novedades por coordinador (admin-only)
+// GET /compliance - Control de cumplimiento de novedades por coordinador (admin, o supervisor sobre sus proyectos)
 router.get("/compliance", async (req, res) => {
     try {
-        if (!isAdminReq(req)) {
+        const alcance = await alcanceCumplimiento(req);
+        const projectIdPedido = req.query.projectId ? String(req.query.projectId) : undefined;
+        if (!alcance || (projectIdPedido && alcance.projectIds && !alcance.projectIds.includes(projectIdPedido))) {
             res.status(403).json({ error: "No autorizado" });
             return;
         }
@@ -134,7 +164,8 @@ router.get("/compliance", async (req, res) => {
         const data = await computeCompliance(req.tenantObjectId, {
             from,
             to,
-            projectId: req.query.projectId ? String(req.query.projectId) : undefined,
+            projectId: projectIdPedido,
+            projectIds: alcance.projectIds,
             coordinatorId: req.query.coordinatorId ? String(req.query.coordinatorId) : undefined,
             areaId: req.query.areaId ? String(req.query.areaId) : undefined,
             shiftId: req.query.shiftId ? String(req.query.shiftId) : undefined,
@@ -146,20 +177,22 @@ router.get("/compliance", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// POST /compliance/remind - Notifica a los coordinadores con novedades faltantes (admin-only)
+// POST /compliance/remind - Notifica a los coordinadores con novedades faltantes (admin, o supervisor sobre sus proyectos)
 router.post("/compliance/remind", async (req, res) => {
     try {
-        if (!isAdminReq(req)) {
+        const { from, to, projectId, coordinatorIds, message } = req.body || {};
+        const alcance = await alcanceCumplimiento(req);
+        if (!alcance || (projectId && alcance.projectIds && !alcance.projectIds.includes(String(projectId)))) {
             res.status(403).json({ error: "No autorizado" });
             return;
         }
-        const { from, to, projectId, coordinatorIds, message } = req.body || {};
         if (!DATE_RE.test(String(from)) || !DATE_RE.test(String(to)) || String(from) > String(to)) {
             res.status(400).json({ error: "Parámetros 'from'/'to' inválidos" });
             return;
         }
         // Recalcular server-side (nunca confiar en una lista del cliente).
-        const data = await computeCompliance(req.tenantObjectId, { from, to, projectId });
+        // Con el mismo alcance que la consulta: un supervisor sólo puede recordarle a los de sus proyectos.
+        const data = await computeCompliance(req.tenantObjectId, { from, to, projectId, projectIds: alcance.projectIds });
         const idSet = Array.isArray(coordinatorIds) && coordinatorIds.length ? new Set(coordinatorIds.map(String)) : null;
         const behind = data.coordinators.filter((c) => c.missingCount > 0 && (!idSet || idSet.has(c.userId)));
         // Dedupe: no crear un segundo recordatorio no-leído del mismo tipo el mismo día.

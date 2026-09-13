@@ -323,7 +323,6 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
       schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : 'Sin horario',
       isResponsable,
       contractType: activeContract?.nombre_contrato || 'Sin contrato',
-      salary: activeContract?.sueldo_mano,
       dates: activeContract?.fecha_alta_contrato ? `${format(new Date(activeContract.fecha_alta_contrato), 'dd/MM/yy')} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), 'dd/MM/yy') : 'Actualidad'}` : 'Sin fechas',
       shiftsText: uniqueShiftNames || activeContract?.nombre_turno || 'Sin turno',
       detailedShifts,
@@ -358,7 +357,9 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
       if (!pid) return;
 
       try {
-        const fullProj = await projectsAPI.getProject(pid);
+        // `team: "ids"`: acá sólo se usan teamConfig y coordinatorAssignments; el equipo poblado con
+        // sus contratos pesaba MB y cortaba por timeout en proyectos grandes (ver ActivityLogs).
+        const fullProj = await projectsAPI.getProject(pid, { team: "ids" });
         setCurrentFullProject(fullProj);
       } catch (err) {
         console.error('Error fetching full project details:', err);
@@ -694,10 +695,6 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
               <div className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Horario</p>
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{selectedProjectInfo.schedule}</p>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 mt-2">
-                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Sueldo en mano</p>
-                <p className="text-lg font-black text-slate-900 dark:text-slate-100">$ {selectedProjectInfo.salary ? Number(selectedProjectInfo.salary).toLocaleString('es-ES') : 'N/A'}</p>
               </div>
             </div>
 

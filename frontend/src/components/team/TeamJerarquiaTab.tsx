@@ -124,9 +124,13 @@ const TarjetaPersona: React.FC<{
   arrastrable: boolean;
   tono?: "coordinador" | "colaborador";
   estado?: AreaShiftMember;
-}> = ({ user, arrastrable, tono = "colaborador", estado }) => {
+  /** Para mostrar a la misma persona dos veces (coordinador que además trabaja en el turno): dnd-kit exige ids únicos. */
+  idArrastre?: string;
+  /** Un rótulo al lado del nombre, p. ej. «Coordinador». */
+  etiqueta?: string;
+}> = ({ user, arrastrable, tono = "colaborador", estado, idArrastre, etiqueta }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: user._id,
+    id: idArrastre || user._id,
     disabled: !arrastrable,
     data: { user },
   });
@@ -150,7 +154,14 @@ const TarjetaPersona: React.FC<{
       } ${arrastrable ? "cursor-grab active:cursor-grabbing" : ""} ${isDragging ? "opacity-30" : ""}`}
     >
       <div className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{nombreDe(user)}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate font-medium">{nombreDe(user)}</span>
+          {etiqueta && (
+            <span className="shrink-0 rounded border border-amber-300 bg-amber-100 px-1 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+              {etiqueta}
+            </span>
+          )}
+        </span>
         {estado && (
           <span className="block truncate text-[10px] text-gray-500 dark:text-gray-400">
             Alta: {fechaContrato(estado.fechaAlta)} · Baja: {estado.fechaBaja ? fechaContrato(estado.fechaBaja) : "—"}
@@ -300,19 +311,16 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
   }, [project, allAreas, allShifts, teamMembers, porId]);
 
   /**
-   * Quién suma y quién no en cada turno, por área.
+   * El estado de TODO el equipo, en una sola llamada: quién suma y quién no (activo y con contrato
+   * vigente, el mismo criterio que el número de la columna Área/Turno Coordinada), y en qué turnos
+   * trabaja cada uno (`claves`). Alcanza para repartirlos en las columnas y para explicar a «Sin área
+   * asignada».
    *
-   * Lo decide el server con el mismo criterio que el número de la columna Área/Turno Coordinada:
-   * activo y con contrato vigente. Se pide el área completa —una llamada por área, no por turno— y
-   * cada persona trae los turnos que tiene ahí. Se vuelve a pedir después de cada movimiento.
+   * Antes era una llamada por área, y cada una bajaba los contratos de todo el equipo: con diez áreas
+   * eran ~10 MB para mostrar unos colores. Se vuelve a pedir después de cada movimiento. `null`
+   * mientras no llegó: ahí las tarjetas se muestran sin estado.
    */
-  const [detallePorArea, setDetallePorArea] = useState<Map<string, AreaShiftMember[]>>(new Map());
-
-  /**
-   * El estado de todo el equipo, tenga área o no. Es lo que explica a «Sin área asignada»: si no
-   * tiene contrato vigente o está inactivo, se ve ahí mismo, sin abrir su ficha.
-   */
-  const [estadoGeneral, setEstadoGeneral] = useState<Map<string, AreaShiftMember>>(new Map());
+  const [estadoGeneral, setEstadoGeneral] = useState<Map<string, AreaShiftMember> | null>(null);
   useEffect(() => {
     let cancelado = false;
     projectsAPI
@@ -327,32 +335,25 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
       cancelado = true;
     };
   }, [project._id, project.areasConfig, project.teamConfig, project.coordinatorAssignments]);
-  useEffect(() => {
-    const areaIds = [...new Set((project.areasConfig || []).map((ac: any) => idDe(ac.areaId)).filter(Boolean))];
-    let cancelado = false;
-    Promise.all(
-      areaIds.map((areaId) =>
-        projectsAPI
-          .getAreaShiftMembers(project._id, areaId)
-          .then((r) => [areaId, r.members] as const)
-          .catch(() => [areaId, null] as const),
-      ),
-    ).then((res) => {
-      if (cancelado) return;
-      const m = new Map<string, AreaShiftMember[]>();
-      for (const [areaId, members] of res) if (members) m.set(areaId, members);
-      setDetallePorArea(m);
-    });
-    return () => {
-      cancelado = true;
-    };
-  }, [project._id, project.areasConfig, project.teamConfig, project.coordinatorAssignments]);
+
+  /** Las personas de cada turno ("areaId::shiftId"), armado una vez por respuesta y no por columna. */
+  const personasPorTurno = useMemo(() => {
+    if (!estadoGeneral) return null;
+    const m = new Map<string, AreaShiftMember[]>();
+    for (const persona of estadoGeneral.values()) {
+      for (const clave of persona.claves || []) {
+        const lista = m.get(clave) || [];
+        lista.push(persona);
+        m.set(clave, lista);
+      }
+    }
+    return m;
+  }, [estadoGeneral]);
 
   /** El detalle de un turno, o null mientras no llegó: ahí las tarjetas se muestran sin estado. */
   const detalleDeTurno = (c: Columna) => {
-    const delArea = detallePorArea.get(c.areaId);
-    if (!delArea) return null;
-    const enTurno = delArea.filter((m) => (m.shiftIds || []).some((s) => String(s) === c.shiftId));
+    if (!personasPorTurno) return null;
+    const enTurno = personasPorTurno.get(c.clave) || [];
     return {
       estadoDe: new Map(enTurno.map((m) => [String(m._id), m])),
       cuentan: enTurno.filter((m) => m.cuenta).length,
@@ -551,6 +552,20 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                     // manda a «no suman» sin saberlo.
                     const suman = c.colaboradores.filter((u) => detalle?.estadoDe.get(String(u._id))?.cuenta !== false);
                     const noSuman = c.colaboradores.filter((u) => detalle?.estadoDe.get(String(u._id))?.cuenta === false);
+                    // El coordinador que ADEMÁS trabaja en su turno cuenta en el número, así que se lo
+                    // muestra también en la lista: si no, «2 personas» con una sola tarjeta no se entiende.
+                    const estadoCoord = c.coordinador ? detalle?.estadoDe.get(String(c.coordinador._id)) : undefined;
+                    const tarjetaCoordEnTurno =
+                      c.coordinador && estadoCoord ? (
+                        <TarjetaPersona
+                          key={`coord-en-turno-${c.coordinador._id}`}
+                          user={c.coordinador}
+                          arrastrable={false}
+                          idArrastre={`${c.coordinador._id}::en-turno::${c.clave}`}
+                          etiqueta="Coordinador"
+                          estado={estadoCoord}
+                        />
+                      ) : null;
                     const turnoAbierto = abiertos.has(c.clave);
 
                     const encabezado = (
@@ -612,7 +627,10 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                             Coordinador
                           </p>
                           {c.coordinador ? (
-                            <TarjetaPersona user={c.coordinador} arrastrable tono="coordinador" estado={detalle?.estadoDe.get(String(c.coordinador._id))} />
+                            <>
+                              <TarjetaPersona user={c.coordinador} arrastrable tono="coordinador" estado={estadoCoord} />
+                              {estadoCoord && <p className="mt-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">También trabaja en este turno: figura abajo y suma en el total.</p>}
+                            </>
                           ) : (
                             <p className="rounded-lg border border-dashed border-amber-300 px-2.5 py-2 text-xs italic text-amber-600 dark:border-amber-800 dark:text-amber-500">
                               Arrastrá acá a alguien con el rol Coordinador
@@ -624,7 +642,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                         <ZonaSoltar id={c.clave} activa className="flex-1">
                           <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
                             <FontAwesomeIcon icon={faUsers} />
-                            Colaboradores ({c.colaboradores.length})
+                            Colaboradores ({c.colaboradores.length}){tarjetaCoordEnTurno && " + coordinador"}
                           </p>
                           {detalle && detalle.total > 0 && (
                             <p
@@ -644,12 +662,16 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                             </p>
                           )}
                           <div className="min-h-[3rem] space-y-1.5">
+                            {estadoCoord?.cuenta && tarjetaCoordEnTurno}
                             {suman.map((u) => (
                               <TarjetaPersona key={u._id} user={u} arrastrable estado={detalle?.estadoDe.get(String(u._id))} />
                             ))}
-                            {noSuman.length > 0 && (
+                            {(noSuman.length > 0 || (estadoCoord && !estadoCoord.cuenta)) && (
                               <>
-                                <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
+                                <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
+                                  No suman al total ({noSuman.length + (estadoCoord && !estadoCoord.cuenta ? 1 : 0)})
+                                </p>
+                                {estadoCoord && !estadoCoord.cuenta && tarjetaCoordEnTurno}
                                 {noSuman.map((u) => (
                                   <TarjetaPersona key={u._id} user={u} arrastrable estado={detalle?.estadoDe.get(String(u._id))} />
                                 ))}
@@ -679,7 +701,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
               ) : (
                 <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
                   {sinAsignar.map((u) => (
-                    <TarjetaPersona key={u._id} user={u} arrastrable estado={estadoGeneral.get(String(u._id))} />
+                    <TarjetaPersona key={u._id} user={u} arrastrable estado={estadoGeneral?.get(String(u._id))} />
                   ))}
                 </div>
               ))}

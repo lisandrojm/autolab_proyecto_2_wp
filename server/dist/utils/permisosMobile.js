@@ -18,11 +18,20 @@ import { Role } from "../models/Role.js";
  * Y una tercera, la que más se busca: «es coordinador» = puede cargar novedades. Era lo único que el
  * rol Coordinador hacía de más que valga la pena preguntar.
  */
-export const MOBILE_ACTIVITY_LOGS = "mobile_activity_logs:view"; // Novedades
+/*
+  NOVEDADES SON DOS COSAS DISTINTAS, y por eso dos permisos.
+
+  El coordinador CARGA las novedades de su gente. El supervisor no carga nada: SIGUE cómo vienen
+  cumpliendo sus coordinadores, en el calendario de cumplimiento. Con un solo tilde no había forma de
+  darle a uno sin darle al otro. La clave de «cargar» es la de siempre, así los roles existentes no cambian.
+*/
+export const MOBILE_ACTIVITY_LOGS = "mobile_activity_logs:view"; // Cargar novedades (coordinador)
+export const MOBILE_ACTIVITY_COMPLIANCE = "mobile_activity_compliance:view"; // Seguimiento de novedades (supervisor)
+export const MOBILE_TEAMS = "mobile_teams:view"; // Mis equipos
 export const MOBILE_ORDERS = "mobile_orders:view"; // Pedidos
 export const MOBILE_VACATIONS = "mobile_vacations:view"; // Vacaciones
 export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes de alta)
-export const ALL_MOBILE_PERMISSIONS = [MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_USERS];
+export const ALL_MOBILE_PERMISSIONS = [MOBILE_ACTIVITY_LOGS, MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_USERS];
 /** Lo que veía un Colaborador: sus pedidos y sus vacaciones. Es el piso de cualquier alta. */
 export const MOBILE_BASE_PERMISSIONS = [MOBILE_ORDERS, MOBILE_VACATIONS];
 /**
@@ -48,6 +57,12 @@ export const MOBILE_BASE_PERMISSIONS = [MOBILE_ORDERS, MOBILE_VACATIONS];
 export const PROJECT_SUPERVISOR = "project_supervisor:eligible"; // Responsable de Proyecto
 export const PROJECT_COORDINATOR = "project_coordinator:eligible"; // Coordina áreas y turnos
 export const ALL_CAPACIDADES = [PROJECT_SUPERVISOR, PROJECT_COORDINATOR];
+/**
+ * Con qué nacen los roles de sistema. Son los mismos que ofrecen las plantillas del editor de roles
+ * (`frontend/src/utils/permisosMobile.ts`): si se cambia uno, se cambia el otro.
+ */
+export const PERMISOS_COORDINADOR = [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR];
+export const PERMISOS_SUPERVISOR = [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, PROJECT_SUPERVISOR];
 export const esCapacidad = (permiso) => permiso.endsWith(":eligible");
 /** Permisos que este cambio retira. Se traducen en `migrateMobileYResponsable`. */
 export const LEGACY_MOBILE_COLLABORATOR = "mobile_collaborator:view";
@@ -59,6 +74,14 @@ export const LEGACY_MOBILE_COORDINATOR = "mobile_coordinator:view";
 */
 export const LEGACY_PROJECT_RESPONSIBLE = "project_responsible:eligible";
 export const esPermisoMobile = (permiso) => permiso.startsWith("mobile_");
+/**
+ * Lo que abre la plataforma: todo lo que no es del móvil NI una capacidad.
+ *
+ * Las capacidades no dan acceso a ningún lado —dicen si alguien supervisa coordinadores o coordina
+ * colaboradores—. Contarlas como plataforma hacía que un rol de campo con «Supervisor del Proyecto»
+ * entrara por el selector de portal y se le ofreciera la web.
+ */
+export const esPermisoPlataforma = (permiso) => !esPermisoMobile(permiso) && !esCapacidad(permiso);
 /** Los permisos de una persona son la UNIÓN de los de sus roles. Mismo criterio que el login. */
 export function permisosDeRoles(roles) {
     return new Set((roles || []).flatMap((r) => r?.permissions || []));

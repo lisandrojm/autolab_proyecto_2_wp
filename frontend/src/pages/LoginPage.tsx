@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Logo } from "../components/ui/Logo";
 import { useAuthStore } from "../stores/authStore";
 // A qué portal entra cada uno: lo deciden los permisos, no el nombre del rol. Ver ese módulo.
-import { esPermisoMobile } from "../utils/permisosMobile";
+import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagicWandSparkles, faEye, faEyeSlash, faBuilding, faMobileScreen, faLaptop, faEnvelope, faLock, faSpinner } from "@fortawesome/free-solid-svg-icons";
 
@@ -202,7 +202,8 @@ export const LoginPage: React.FC = () => {
       */
       const permisos: string[] = (result?.user?.permissions as string[]) || useAuthStore.getState().user?.permissions || [];
       const hasMobileAccess = permisos.some((p) => esPermisoMobile(p));
-      const hasPlatformAccess = permisos.some((p) => !esPermisoMobile(p));
+      // Las capacidades (Supervisor / Coordinador) no abren la plataforma: ver `esPermisoPlataforma`.
+      const hasPlatformAccess = permisos.some((p) => esPermisoPlataforma(p));
 
       // 1. Si tiene ambos accesos, mostrar selector (prioridad máxima)
       if (hasPlatformAccess && hasMobileAccess) {

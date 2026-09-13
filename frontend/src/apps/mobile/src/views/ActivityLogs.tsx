@@ -1142,8 +1142,20 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return;
     }
     let isMounted = true;
+    /*
+      `team: "ids"`: el equipo NO viene poblado.
+
+      Poblado, el server manda cada miembro con su vínculo y TODOS sus contratos: en un proyecto de
+      254 personas eran 5,5 MB y ~60 s, así que la llamada se cortaba por timeout. Sin este proyecto
+      completo la pantalla caía al resumen del listado, que no trae `teamConfig`, y el reporte decía
+      «0 colaboradores» a un coordinador con cinco personas activas.
+
+      Los datos de cada persona (nombre, roles, contratos, área/turno) ya salen del directorio
+      (`employees`); de acá sólo se necesita `teamConfig`, `coordinatorAssignments` y los ids de
+      `assignedUsers`, que es exactamente lo que devuelve este modo (~80 KB).
+    */
     projectsAPI
-      .getProject(selectedProjectId)
+      .getProject(selectedProjectId, { team: "ids" })
       .then((proj) => {
         if (isMounted) {
           setFullProjectData(proj);
