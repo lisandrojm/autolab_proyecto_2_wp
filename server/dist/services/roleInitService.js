@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { Role } from '../models/Role.js';
 import { User } from '../models/User.js';
-import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS, PERMISOS_COORDINADOR, PERMISOS_SUPERVISOR, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from '../utils/permisosMobile.js';
+import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS, PERMISOS_COORDINADOR, PERMISOS_SUPERVISOR, PROJECT_COORDINATOR } from '../utils/permisosMobile.js';
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * PERMISOS PARA ROL USER - SISTEMA SIMPLIFICADO
@@ -82,7 +82,7 @@ const ADMIN_PERMISSIONS = [
     ...ALL_MOBILE_PERMISSIONS,
 ];
 /**
- * Helper para asegurar la existencia y sincronización de un rol
+ * Crea un rol si no existe. Si ya existe, no lo toca (ver el comentario de `ensureRole`).
  */
 /*
   El nombre se ESCAPA antes de meterlo en el regex.
@@ -94,12 +94,18 @@ const ADMIN_PERMISSIONS = [
 */
 const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /**
- * `sincronizarPermisos`: si al rol que ya existe se le agregan en cada arranque los permisos que le
- * falten. Sirve para Admin, que tiene que recibir los módulos nuevos de la plataforma. Para los roles
- * de la app NO: su configuración es de quien los edita, y reinyectar lo que se destildó —«Cargar
- * novedades» en Supervisor, por ejemplo— deshacía el cambio en el próximo reinicio sin avisar.
+ * Crea el rol con `permissions`, `isDefault` e `isSystem` si todavía no existe. Si ya existe, lo deja
+ * exactamente como está.
+ *
+ * Hubo un parámetro `sincronizarPermisos` que le sumaba a Admin, en cada arranque, los permisos que le
+ * faltaran, para que recibiera solo los módulos nuevos de la plataforma. Se sacó a propósito: esa misma
+ * unión reinyectaba lo que alguien le hubiera destildado a mano, y el cambio se deshacía en el próximo
+ * deploy sin avisar. Para los roles de la app ya estaba apagado por ese motivo; ahora vale para todos.
+ *
+ * El costo es explícito: un permiso nuevo del código NO le llega solo a un Admin que ya existe. Hay que
+ * dárselo con un script aditivo, con dry run, como `scripts/otorgarPermisoRolesEmpresa.ts`.
  */
-async function ensureRole(tenantId, name, permissions = [], description = '', isDefault = false, isSystem = false, sincronizarPermisos = true) {
+async function ensureRole(tenantId, name, permissions = [], description = '', isDefault = false, isSystem = false) {
     let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${escaparRegex(name)}$`, 'i') } });
     if (!role) {
         console.log(`[RoleInit] Creating ${name} role for tenant: ${tenantId}`);
@@ -113,30 +119,19 @@ async function ensureRole(tenantId, name, permissions = [], description = '', is
         });
         console.log(`[RoleInit] ✅ ${name} role created: ${role._id}`);
     }
-    else {
-        // Sincronizar configuración básica
-        let hasChanges = false;
-        if (role.isDefault !== isDefault) {
-            role.isDefault = isDefault;
-            hasChanges = true;
-        }
-        if (role.isSystem !== isSystem) {
-            role.isSystem = isSystem;
-            hasChanges = true;
-        }
-        // Sincronizar permisos esenciales (unión)
-        const currentPerms = new Set(role.permissions);
-        const missingPerms = sincronizarPermisos ? permissions.filter((p) => !currentPerms.has(p)) : [];
-        if (missingPerms.length > 0) {
-            role.permissions = [...role.permissions, ...missingPerms];
-            hasChanges = true;
-            console.log(`[RoleInit] ♻️ Adding missing permissions to ${name} role: ${missingPerms.join(', ')}`);
-        }
-        if (hasChanges) {
-            await role.save();
-            console.log(`[RoleInit] ♻️ ${name} role updated`);
-        }
-    }
+    /*
+      UN ROL QUE YA EXISTE NO SE TOCA: ni sus permisos, ni si es el rol por defecto, ni si es de sistema.
+  
+      Esto corre en CADA arranque del server, así que cualquier "sincronización" acá es una reversión
+      silenciosa de lo que alguien configuró a mano en Usuarios → Roles. Antes pasaba en tres lugares:
+      Admin recuperaba los permisos que se le hubieran sacado (la unión), el rol por defecto volvía a
+      ser Colaborador aunque se hubiera elegido otro, y la marca de sistema se re-forzaba. Destildar algo
+      y verlo volver después de un deploy es exactamente lo que no tiene que pasar.
+  
+      Los valores de acá son el punto de PARTIDA de un rol nuevo (un tenant recién creado), no un estado
+      que se mantiene. Si un permiso NUEVO del código tiene que llegar a roles que ya existen, no se hace
+      desde el arranque: se hace con un script aditivo y explícito, como `scripts/otorgarPermisoRolesEmpresa.ts`.
+    */
     return role;
 }
 /**
@@ -154,7 +149,8 @@ export async function ensureDefaultRoles(tenantId) {
         const userRole = await Role.findOne({ tenantId: tid, name: { $regex: /^User$/i } });
         return { adminRole, userRole };
     }
-    // 1. Admin (Sistema)
+    // 1. Admin (Sistema). Igual que los demás: `ADMIN_PERMISSIONS` es con lo que NACE, no algo que se le
+    // vuelva a sumar en cada arranque. Un permiso nuevo para Admins existentes va por script (ver `ensureRole`).
     const adminRole = await ensureRole(tid, 'Admin', ADMIN_PERMISSIONS, 'Administrador - Acceso completo a todos los módulos del sistema', false, true);
     /*
       2, 3 y 4. LOS TRES ROLES DEL MÓVIL, que son los que sí tiene sentido que sean de sistema.
@@ -163,12 +159,12 @@ export async function ensureDefaultRoles(tenantId) {
       siempre y que nadie los borre sin querer. Lo que ven SÍ se edita: son permisos como cualquier otro.
   
       Nacen con lo de las plantillas del editor: el Coordinador CARGA novedades, el Supervisor SIGUE el
-      cumplimiento de sus coordinadores. Los permisos se ponen sólo al CREARLOS (`sincronizarPermisos`
-      en false): después son de quien los edita, y destildar algo no se revierte en el próximo arranque.
+      cumplimiento de sus coordinadores. Los permisos se ponen sólo al CREARLOS: después son de quien los
+      edita, y destildar algo no se revierte en el próximo arranque (ver `ensureRole`).
     */
-    await ensureRole(tid, 'Supervisor', PERMISOS_SUPERVISOR, 'Supervisa a los coordinadores: sigue su cumplimiento de novedades', false, true, false);
-    await ensureRole(tid, 'Coordinador', PERMISOS_COORDINADOR, 'Tiene áreas y turnos a cargo, y carga las novedades de su gente', false, true, false);
-    await ensureRole(tid, 'Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', true, true, false);
+    await ensureRole(tid, 'Supervisor', PERMISOS_SUPERVISOR, 'Supervisa a los coordinadores: sigue su cumplimiento de novedades', false, true);
+    await ensureRole(tid, 'Coordinador', PERMISOS_COORDINADOR, 'Tiene áreas y turnos a cargo, y carga las novedades de su gente', false, true);
+    await ensureRole(tid, 'Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', true, true);
     /*
       EL ROL «RESPONSABLE DE PROYECTO» YA NO SE CREA, y la migración lo borra.
   
@@ -331,37 +327,6 @@ async function retirarRolResponsable(tid) {
     }
 }
 /**
- * Quien tenía el tilde «Responsable de Proyecto» en su ficha pasa a tener el rol Supervisor.
- *
- * Ser responsable de un proyecto pasó por tres formas: un permiso del rol, un tilde suelto en la ficha
- * de la persona, y ahora una capacidad del rol Supervisor —que es lo que siempre fue, porque eso ES
- * ser Supervisor—. Esta función cierra el círculo: sin ella, los que estaban marcados dejarían de
- * aparecer en el selector de responsable de un proyecto de un día para el otro.
- *
- * El tilde NO se borra. Ya no se lee, pero es el único registro de quiénes estaban marcados y borrarlo
- * no aporta nada: si esto sale mal, es por dónde se empieza a mirar.
- */
-export async function migrarJerarquiaDeProyecto(tenantId) {
-    const tid = new Types.ObjectId(tenantId);
-    /*
-      VA DESPUÉS DE `ensureDefaultRoles`, y el orden importa: necesita el rol Supervisor con su
-      capacidad ya puesta, que es lo que `ensureDefaultRoles` acaba de asegurar. Corriendo antes, la
-      primera vez no lo encontraría y se saltearía en silencio.
-  
-      `retirarRolUser`, en cambio, va ANTES —dentro de `migrateMobileYResponsable`—: ver su comentario.
-    */
-    await migrarResponsablesASupervisor(tid);
-}
-async function migrarResponsablesASupervisor(tid) {
-    const supervisor = await Role.findOne({ tenantId: tid, permissions: PROJECT_SUPERVISOR }).select('_id name');
-    if (!supervisor)
-        return;
-    const { modifiedCount } = await User.updateMany({ tenantId: tid, isProjectResponsible: true, roles: { $ne: supervisor._id } }, { $addToSet: { roles: supervisor._id } });
-    if (modifiedCount > 0) {
-        console.log(`[RoleInit] ♻️ ${modifiedCount} responsable/s de proyecto recibieron el rol "${supervisor.name}" (tenant ${tid})`);
-    }
-}
-/**
  * Retira el rol «User»: su gente pasa a «Colaborador», que queda como rol por defecto.
  *
  * «User» nombraba una categoría, no un trabajo —todo el mundo es un usuario— y daba exactamente lo
@@ -384,12 +349,18 @@ async function retirarRolUser(tid) {
         await Role.deleteOne({ _id: viejo._id });
         console.log(`[RoleInit] 🗑️ Rol "User" eliminado; ${modifiedCount} usuario/s pasaron a "Colaborador" (tenant ${tid})`);
     }
-    if (!colaborador.isDefault) {
-        // Por las dudas: si quedó otro marcado, se le saca la marca antes (índice único parcial).
-        await Role.updateMany({ tenantId: tid, isDefault: true, _id: { $ne: colaborador._id } }, { $set: { isDefault: false } });
+    /*
+      Colaborador pasa a ser el por defecto SOLO si el tenant no tiene ninguno —que es el caso de la
+      migración: al borrar «User» se va con él la marca—.
+  
+      Antes lo forzaba en cada arranque aunque desde Usuarios → Roles se hubiera elegido otro rol por
+      defecto, así que esa elección no sobrevivía a un deploy.
+    */
+    const hayPorDefecto = await Role.exists({ tenantId: tid, isDefault: true });
+    if (!hayPorDefecto) {
         colaborador.isDefault = true;
         await colaborador.save();
-        console.log(`[RoleInit] ♻️ "Colaborador" es ahora el rol por defecto (tenant ${tid})`);
+        console.log(`[RoleInit] ♻️ "Colaborador" es ahora el rol por defecto: el tenant no tenía ninguno (tenant ${tid})`);
     }
 }
 export async function migrateMobileYResponsable(tenantId) {
@@ -447,14 +418,18 @@ export async function migrateMobileYResponsable(tenantId) {
     await retirarRolResponsable(tid);
     // ── 6) El rol «User» se retira: el por defecto pasa a ser «Colaborador» ──
     await retirarRolUser(tid);
-    // ── 6) El rol por defecto tiene que abrir la app ──
+    /*
+      ── 7) El rol por defecto debería abrir la app: se AVISA, no se corrige ──
+  
+      Antes le volvía a sumar Pedidos y Vacaciones en cada arranque, así que sacárselos desde Roles no
+      duraba hasta el próximo deploy. Si falta algo puede ser un error o una decisión, y eso lo decide
+      quien administra los roles, no el arranque del server.
+    */
     const rolPorDefecto = await Role.findOne({ tenantId: tid, isDefault: true });
     if (rolPorDefecto) {
         const faltantes = MOBILE_BASE_PERMISSIONS.filter((p) => !rolPorDefecto.permissions.includes(p));
         if (faltantes.length > 0) {
-            rolPorDefecto.permissions = [...rolPorDefecto.permissions, ...faltantes];
-            await rolPorDefecto.save();
-            console.log(`[RoleInit] ♻️ Rol por defecto "${rolPorDefecto.name}": + ${faltantes.join(', ')} (tenant ${tid})`);
+            console.warn(`[RoleInit] ⚠️ El rol por defecto "${rolPorDefecto.name}" no tiene ${faltantes.join(', ')}: las altas nuevas no van a ver esas pantallas en la app (tenant ${tid}).`);
         }
     }
     else if (roles.length > 0) {
@@ -498,8 +473,6 @@ export async function ensureAllTenantsHaveDefaultRoles() {
             */
             await migrateMobileYResponsable(tenantId);
             await ensureDefaultRoles(tenantId);
-            // Necesita los roles que `ensureDefaultRoles` acaba de dejar listos: ver su comentario.
-            await migrarJerarquiaDeProyecto(tenantId);
             await migrateRolePermissions(tenantId);
             const rolesAfter = await Role.countDocuments({ tenantId });
             if (rolesAfter > rolesBefore) {

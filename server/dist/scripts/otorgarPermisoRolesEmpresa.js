@@ -2,9 +2,12 @@ import mongoose from "mongoose";
 /**
  * Le da `admin_roles_empresa:view` a los roles que ya administran roles de plataforma.
  *
- * POR QUÉ HACE FALTA. El permiso es nuevo, y `ensureRole` (roleInitService) solo hace la unión al
- * arrancar el server. Hasta que el VPS reinicie, el ítem "Usuarios → Roles Empresa" no aparece en el
- * menú de nadie. Esto adelanta exactamente lo que haría ese arranque.
+ * POR QUÉ HACE FALTA. El permiso es nuevo, y el arranque del server ya NO les suma permisos a los roles
+ * que existen (ver `ensureRole` en roleInitService: los roles quedan como los dejó quien los edita).
+ * Sin esto, el ítem "Usuarios → Roles Empresa" no le aparece a nadie que ya tuviera su rol armado.
+ *
+ * Es el modelo para cualquier permiso nuevo que tenga que llegar a roles existentes: aditivo, con dry
+ * run, y corrido a propósito — no escondido en el arranque.
  *
  * ES ADITIVO: `$addToSet` sobre los roles que ya tienen `admin_roles:view`. No saca ningún permiso ni
  * toca roles que no administren roles.

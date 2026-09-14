@@ -179,43 +179,19 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
     });
     console.log(`✅ Created role: ${name} (perms: ${permissions.length}, default: ${isDefault}, system: ${isSystem})`);
   } else {
-    // Sync permissions, description and isDefault
-    let hasChanges = false;
+    /*
+      UN ROL QUE YA EXISTE NO SE TOCA.
 
-    // Check permissions
-    const currentPerms = new Set(role.permissions);
-    const newPerms = new Set(permissions);
-    const permsChanged = currentPerms.size !== newPerms.size || [...newPerms].some((p) => !currentPerms.has(p));
+      Esto antes REEMPLAZABA los permisos del rol por la lista de acá (no sumaba: reemplazaba), además de
+      la descripción, el por defecto y la marca de sistema. Con `SEED_ON_START=true` —hoy está en false,
+      pero es un flag que se prende para poblar una base— cada arranque borraba lo configurado a mano en
+      Usuarios → Roles. Y encima con listas que contradicen las plantillas del editor: a Supervisor y a
+      Coordinador les daba TODO el móvil.
 
-    if (permsChanged) {
-      role.permissions = permissions;
-      hasChanges = true;
-    }
-
-    // Check description
-    if (description && role.description !== description) {
-      role.description = description;
-      hasChanges = true;
-    }
-
-    // Check isDefault
-    if (role.isDefault !== isDefault) {
-      role.isDefault = isDefault;
-      hasChanges = true;
-    }
-
-    // Check isSystem
-    if (role.isSystem !== isSystem) {
-      role.isSystem = isSystem;
-      hasChanges = true;
-    }
-
-    if (hasChanges) {
-      await role.save();
-      console.log(`♻️ Updated role: ${name} (synced)`);
-    } else {
-      console.log(`✔️ Role exists: ${name}`);
-    }
+      Mismo criterio que `ensureRole` en `services/roleInitService.ts`, que corre siempre y antes que
+      esto: los valores de acá son con lo que NACE un rol, no un estado que se mantiene.
+    */
+    console.log(`✔️ Role exists: ${name} (no se modifica)`);
   }
   return role;
 }
