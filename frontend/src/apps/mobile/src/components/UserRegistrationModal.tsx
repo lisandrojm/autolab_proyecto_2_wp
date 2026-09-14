@@ -301,6 +301,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     }
   };
 
+  /*
+    SERVICIOS: el tipo de contrato declara «Constancia de CUIT» (locación de servicios), no un alta
+    temprana ante ARCA.
+
+    Un servicio no se encuadra en un convenio ni en una categoría: esos dos datos son los del alta ante
+    ARCA. Así que con un tipo de Servicios se esconden, no viajan en la solicitud, y el importe por
+    jornada queda libre —no hay escala de donde proponerlo—. La cuenta del total (importe × jornadas)
+    no cambia: nunca dependió de la categoría.
+  */
+  const esServicios = formData.tipoImpositivo === "constancia_cuit";
+
   /** La categoría elegida, resuelta al catálogo: de ahí salen su código de ARCA y su escala. */
   const categoriaElegida = useMemo(() => categoriasSat.find((c) => c._id === formData.categoriaSatId) || null, [categoriasSat, formData.categoriaSatId]);
 
@@ -341,9 +352,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         anterior y no tiene por qué ser válida acá. Y el importe salía de la escala de esa categoría,
         así que arrastrarlo sería declarar el sueldo de un convenio que ya no interviene.
       */
-      if (formData.empresaContratoId !== unica) setFormData((p) => ({ ...p, empresaContratoId: unica, convenioId: "", categoriaSatId: "", dailyRate: "" }));
+      if (formData.empresaContratoId !== unica) setFormData((p) => ({ ...p, empresaContratoId: unica, convenioId: "", categoriaSatId: "", dailyRate: esServicios ? p.dailyRate : "" }));
     }
-  }, [empresasDelProyecto, formData.empresaContratoId]);
+  }, [empresasDelProyecto, formData.empresaContratoId, esServicios]);
 
   const conveniosApi = createSimpleCatalogApi("/convenios");
 
@@ -972,6 +983,19 @@ const TIME_OPTIONS = (() => {
     if (propuesto > 0) setFormData((p) => ({ ...p, dailyRate: String(propuesto) }));
   }, [formData.categoriaSatId, categoriasSat]);
 
+  /*
+    AL ELEGIR UN TIPO DE SERVICIOS SE SUELTA LA CATEGORÍA, y el importe se queda.
+
+    La categoría escondida seguiría viajando si no se limpia. El importe, en cambio, es lo que se va a
+    pagar y ahora se carga a mano: borrarlo sería hacerle perder a alguien lo que acaba de escribir.
+    El convenio no se toca acá —lo reponen solos los efectos de arriba— y simplemente no se manda.
+  */
+  useEffect(() => {
+    if (!esServicios || !formData.categoriaSatId) return;
+    setFormData((p) => ({ ...p, categoriaSatId: "" }));
+    setAvisoCascada("");
+  }, [esServicios, formData.categoriaSatId]);
+
   /** El motivo elegido, para mostrar su nombre sin repetir el `find` en cada lugar donde se usa. */
   const motivoElegido = motivos.find((m) => String(m._id) === String(formData.motivoReemplazoId)) || null;
 
@@ -1052,7 +1076,7 @@ const TIME_OPTIONS = (() => {
       sweetAlert.warning("Falta la persona", puedeCompartirLink ? "Elegí a una persona registrada. Si todavía no se registró, mandale tu link de registro desde el buscador." : "Elegí a una persona registrada. Si todavía no se registró, pedí el link de registro para mandarle.");
       return;
     }
-    if (!formData.fullName ||!formData.projectIds.length || formData.roleFrameIds.length === 0 || !formData.categoriaSatId) {
+    if (!formData.fullName ||!formData.projectIds.length || formData.roleFrameIds.length === 0 || (!esServicios && !formData.categoriaSatId)) {
       sweetAlert.warning("Campos incompletos", "Por favor completa los campos obligatorios.");
       return;
     }
@@ -1083,6 +1107,11 @@ const TIME_OPTIONS = (() => {
       sweetAlert.warning("Falta el tipo de contrato", "Elegí qué tipo de contrato se le va a hacer a esta persona.");
       return;
     }
+    // Un servicio no tiene categoría que proponga el importe: si no se carga, la solicitud no dice cuánto se paga.
+    if (esServicios && !(Number(formData.dailyRate) > 0)) {
+      sweetAlert.warning("Falta el importe por jornada", "Es un servicio: no sale de ninguna categoría, así que hay que cargarlo a mano.");
+      return;
+    }
 
     /*
       LA CATEGORÍA TIENE QUE SER DEL CONVENIO ELEGIDO.
@@ -1092,12 +1121,12 @@ const TIME_OPTIONS = (() => {
       tirantes: un estado viejo del formulario, o un `metadata` de una solicitud que se está editando,
       pueden traer una categoría de otro convenio.
     */
-    if (conveniosDisponibles.length > 0 && !formData.convenioId) {
+    if (!esServicios && conveniosDisponibles.length > 0 && !formData.convenioId) {
       sweetAlert.warning("Falta el convenio", "Elegí el convenio: es lo que define qué categorías se le pueden dar de alta.");
       return;
     }
     const cctDeLaCategoria = String(categoriaElegida?.data?.convenio || "").trim();
-    if (convenioCct && cctDeLaCategoria && cctDeLaCategoria !== convenioCct) {
+    if (!esServicios && convenioCct && cctDeLaCategoria && cctDeLaCategoria !== convenioCct) {
       sweetAlert.warning("La categoría no es de ese convenio", `La categoría elegida es del convenio ${cctDeLaCategoria} y el alta va por el ${convenioCct}. ARCA rechaza esa combinación.`);
       return;
     }
@@ -1152,7 +1181,7 @@ const TIME_OPTIONS = (() => {
           // nombre se escribió a mano (persona que todavía no existe), queda vacío.
           solicitudUserId: selectedUser?._id || undefined,
           roles_frame: formData.roleFrameIds,
-          categoriaSatId: formData.categoriaSatId,
+          categoriaSatId: esServicios ? undefined : formData.categoriaSatId,
           startDate: formData.startDate,
           dueDate: formData.dueDate,
           // Lo que se liquida. De dónde salió viaja al lado, para auditarlo sin recalcular.
@@ -1169,7 +1198,7 @@ const TIME_OPTIONS = (() => {
           // Con qué CUIT se contrata y bajo qué CCT. Sin esto el alta llega sin empleadora y hay que
           // deducirla del proyecto más tarde, cuando ya nadie recuerda cuál de las tres era.
           empresaContratoId: formData.empresaContratoId || undefined,
-          convenioId: formData.convenioId || undefined,
+          convenioId: esServicios ? undefined : formData.convenioId || undefined,
           dailyRate: Number(formData.dailyRate),
           isReplacement: formData.isReplacement,
           // A quién reemplaza. Los dos identificadores: el numérico que usa el contrato (puede
@@ -1490,13 +1519,56 @@ const TIME_OPTIONS = (() => {
         </div>
 
         {/*
-          LA CADENA, EN UNA FILA Y EN ORDEN: convenio → categoría → importe.
+          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él. Va ANTES de convenio, categoría e importe
+          porque decide si hacen falta: con un tipo de Servicios (constancia de CUIT) no hay convenio
+          ni categoría, y el importe se carga a mano. Elegirlo después obligaba a completar dos campos
+          que el tipo de contrato podía terminar escondiendo.
+
+          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
+          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
+          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
+          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
+          solicitud que se contradecía a sí misma.
+
+          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
+          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
+          qué contrato va a firmar esa persona; el trámite es una consecuencia.
+        */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
+            Tipo de contrato <span className="text-red-500">*</span>
+          </label>
+          {contratos.length === 0 ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">No hay tipos de contrato configurados. Avisale a administración: sin esto la solicitud no dice qué se va a firmar.</p>
+          ) : (
+            <button type="button" onClick={() => setContratoModalOpen(true)} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-700 dark:bg-slate-900">
+              {contratoElegido ? (
+                <>
+                  <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{contratoElegido.name}</span>
+                  {estadoDelTramite ? <EstadoBadge name={estadoDelTramite.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite configurado</span>}
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faSearch} className="text-[10px] text-slate-400" />
+                  <span className="flex-1 text-sm text-slate-400">Elegí el tipo de contrato…</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/*
+          LA CADENA, EN UNA FILA Y EN ORDEN: convenio → categoría → importe. Con un tipo de contrato de
+          Servicios queda sólo el importe, libre (ver `esServicios`).
 
           Estaban repartidos por el formulario —el convenio abajo de todo, la categoría arriba— y esa
           distancia escondía que uno depende del otro. Puestos en fila y en el orden en que se
           completan, la dependencia se ve sin que nadie la explique.
         */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${esServicios ? "" : "md:grid-cols-3"}`}>
+          {!esServicios && (
+          <>
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
@@ -1563,6 +1635,8 @@ const TIME_OPTIONS = (() => {
             </button>
             {avisoCascada && <p className="text-[11px] text-amber-600 dark:text-amber-400">{avisoCascada}</p>}
           </div>
+          </>
+          )}
 
           <div className="space-y-1">
             {/* Mismo rótulo con ícono que «Horario»: sin él, las dos etiquetas tenían alturas
@@ -1579,6 +1653,7 @@ const TIME_OPTIONS = (() => {
               </span>
               <input type="number" name="dailyRate" value={formData.dailyRate} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="0" />
             </div>
+            {esServicios && <p className="text-[11px] text-slate-400">Es un servicio: no hay convenio ni categoría, así que el importe se carga a mano.</p>}
             {/* De dónde salió el número, y cuánto se apartó de él si alguien lo cambió. */}
             {categoriaElegida && !diferenciaContraEscala && <p className="text-[11px] text-slate-400">De la escala de {categoriaElegida.name}{convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.</p>}
             {diferenciaContraEscala && (
@@ -1588,45 +1663,6 @@ const TIME_OPTIONS = (() => {
               </p>
             )}
           </div>
-        </div>
-
-        {/*
-          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él. Va pegado a convenio, categoría e importe
-          porque se decide junto con ellos: es qué se le va a hacer firmar a la persona, antes de
-          definir el período y los días.
-
-          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
-          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
-          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
-          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
-          solicitud que se contradecía a sí misma.
-
-          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
-          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
-          qué contrato va a firmar esa persona; el trámite es una consecuencia.
-        */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
-            Tipo de contrato <span className="text-red-500">*</span>
-          </label>
-          {contratos.length === 0 ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">No hay tipos de contrato configurados. Avisale a administración: sin esto la solicitud no dice qué se va a firmar.</p>
-          ) : (
-            <button type="button" onClick={() => setContratoModalOpen(true)} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-700 dark:bg-slate-900">
-              {contratoElegido ? (
-                <>
-                  <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{contratoElegido.name}</span>
-                  {estadoDelTramite ? <EstadoBadge name={estadoDelTramite.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite configurado</span>}
-                </>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faSearch} className="text-[10px] text-slate-400" />
-                  <span className="flex-1 text-sm text-slate-400">Elegí el tipo de contrato…</span>
-                </>
-              )}
-            </button>
-          )}
         </div>
 
         <div id="bloque-fechas" className="space-y-1">

@@ -888,6 +888,20 @@ export const ProjectTeamPage: React.FC = () => {
     return contratos.filter((c) => tramitePorContrato.get(c._id) === filtroTramite || c._id === wizardData.contrato_id);
   }, [contratos, filtroTramite, tramitePorContrato, wizardData.contrato_id]);
 
+  /*
+    SERVICIOS: el tipo de contrato elegido declara «Constancia de CUIT» (locación de servicios).
+
+    Un servicio no se encuadra en convenio ni categoría —son datos del alta ante ARCA—, así que se
+    esconden, la categoría deja de ser obligatoria y se suelta. El sueldo por jornada se carga a mano
+    y el sueldo en mano sigue saliendo de jornada × jornadas; lo que cuelga de la categoría (neto,
+    bruto, diario) queda en 0, como ya pasaba sin categoría. Es la misma regla que la solicitud del móvil.
+  */
+  const esServicios = !!wizardData.contrato_id && tramitePorContrato.get(wizardData.contrato_id) === "constancia_cuit";
+  useEffect(() => {
+    if (!esServicios || !wizardData.categoria_sat_id) return;
+    setWizardData((prev) => ({ ...prev, categoria_sat_id: "" }));
+  }, [esServicios, wizardData.categoria_sat_id]);
+
   const sedeName = useMemo(() => {
     if (!project) return null;
     return (project as any).metadataResolutions?.sede?.name || (project as any).metadataResolutions?.sede?.data?.nombre || null;
@@ -1680,7 +1694,7 @@ export const ProjectTeamPage: React.FC = () => {
   const faltantesPaso1 = (): string[] => {
     const faltan: string[] = [];
     if (!wizardData.rol_frame_id) faltan.push("Role Frame a Desempeñar");
-    if (!wizardData.categoria_sat_id) faltan.push("Categoría");
+    if (!esServicios && !wizardData.categoria_sat_id) faltan.push("Categoría");
     if (!wizardData.contrato_id) faltan.push("Tipo de contrato");
     // La Plantilla solo se elige a mano cuando el contrato tiene más de una (si hay una sola se
     // asigna sola, y si no hay ninguna se puede guardar igual: solo no se podrá generar el PDF).
@@ -3702,6 +3716,9 @@ export const ProjectTeamPage: React.FC = () => {
                       </select>
                     </div>
 
+                    {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}
+                    {!esServicios && (
+                    <>
                     {/*
                       CONVENIO — es un FILTRO, no un dato del contrato.
 
@@ -3784,6 +3801,9 @@ export const ProjectTeamPage: React.FC = () => {
                         </p>
                       )}
                     </div>
+
+                    </>
+                    )}
 
                     <div className="space-y-1.5">
                       {/*
