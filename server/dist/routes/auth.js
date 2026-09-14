@@ -513,6 +513,10 @@ async function verifyRegistroToken(token) {
             tenantSlug: link.tenantSlug,
             ...(link.clientId ? { clientId: String(link.clientId) } : {}),
             linkId: String(link._id),
+            ...(link.createdBy ? { createdBy: String(link.createdBy) } : {}),
+            ...(link.projectId ? { projectId: String(link.projectId) } : {}),
+            ...(link.areaId ? { areaId: String(link.areaId) } : {}),
+            ...(link.shiftId ? { shiftId: String(link.shiftId) } : {}),
         };
     }
     // 2. Fallback: JWT legacy
@@ -595,8 +599,36 @@ router.get("/registro-info", async (req, res) => {
             name: b.name,
             tipoEntidad: b.tipoEntidad || "banco",
         }));
+        /*
+          EL LINK MISMO: cuántos días le quedan y, si lo generó alguien desde el móvil, quién invita y para
+          qué proyecto, área y turno. La página lo muestra arriba, así quien se registra sabe hasta cuándo
+          tiene y dónde va a trabajar.
+        */
+        let link = null;
+        if (payload.linkId) {
+            const l = await RegistroLink.findById(payload.linkId).lean();
+            if (l) {
+                const vence = getRegistroLinkExpiry(l);
+                const [{ Project }, { Area }, { Shift }] = await Promise.all([import("../models/Project.js"), import("../models/Area.js"), import("../models/Shift.js")]);
+                const [proyecto, area, turno, invitador] = await Promise.all([
+                    l.projectId ? Project.findById(l.projectId).select("name").lean() : null,
+                    l.areaId ? Area.findById(l.areaId).select("name").lean() : null,
+                    l.shiftId ? Shift.findById(l.shiftId).select("name").lean() : null,
+                    l.createdBy ? User.findById(l.createdBy).select("firstName lastName").lean() : null,
+                ]);
+                link = {
+                    expiresAt: new Date(vence).toISOString(),
+                    diasRestantes: Math.max(0, Math.ceil((vence - Date.now()) / 86400000)),
+                    proyecto: proyecto?.name || null,
+                    area: area?.name || null,
+                    turno: turno?.name || null,
+                    invitadoPor: invitador ? `${invitador.firstName || ""} ${invitador.lastName || ""}`.trim() || null : null,
+                };
+            }
+        }
         res.json({
             tenantSlug: payload.tenantSlug,
+            link,
             generos: pick("genero"),
             tiposDocumento: pick("tipo-documento"),
             nivelesEstudio: pick("nivel-estudio"),
@@ -758,6 +790,21 @@ router.post("/registro", async (req, res) => {
             aliasBancario: body.aliasBancario || undefined,
             nroDeCuentaBancaria: body.nroDeCuentaBancaria || undefined,
         };
+        /*
+          DE QUÉ LINK VINO. Con un link del móvil queda quién invitó y para qué proyecto, área y turno: es lo
+          que arma la lista «Registrados» de esa persona. Sale del link en la base, nunca del body.
+        */
+        if (payload.linkId) {
+            const oid = (id) => (id && Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : undefined);
+            metadata.registro = {
+                linkId: oid(payload.linkId),
+                invitadoPor: oid(payload.createdBy),
+                projectId: oid(payload.projectId),
+                areaId: oid(payload.areaId),
+                shiftId: oid(payload.shiftId),
+                registradoAt: new Date(),
+            };
+        }
         const clientIds = payload.clientId && Types.ObjectId.isValid(payload.clientId) ? [new Types.ObjectId(payload.clientId)] : [];
         /*
           EL SELLO LO PONE EL SERVIDOR, también acá — y con más razón que en el alta interna.

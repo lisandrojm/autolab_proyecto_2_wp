@@ -12,6 +12,45 @@ export interface RegistroLink {
   createdAt: string;
   expiresAt: string | null;
   createdByName: string | null;
+  /** «mobile» si lo generó un supervisor o coordinador desde la sección Registro del móvil. */
+  origen?: "web" | "mobile";
+  projectName?: string | null;
+  areaName?: string | null;
+  shiftName?: string | null;
+}
+
+/** Mi link vigente del móvil para una combinación proyecto/área/turno. */
+export interface MiRegistroLink {
+  _id: string;
+  token: string;
+  expiresAt: string;
+  diasRestantes: number;
+  usageCount: number;
+}
+
+/** Una persona que se registró con alguno de mis links. */
+export interface Registrado {
+  _id: string;
+  nombre: string;
+  email: string;
+  registradoAt: string;
+  activo: boolean;
+  validadoEnArca: boolean;
+  proyecto: string | null;
+  area: string | null;
+  turno: string | null;
+}
+
+/** Cómo se registró: sólo lectura. Los datos bancarios vienen resumidos. */
+export interface DetalleRegistrado {
+  _id: string;
+  registradoAt: string;
+  proyecto: string | null;
+  area: string | null;
+  turno: string | null;
+  personales: Record<string, any>;
+  domicilio: Record<string, any>;
+  bancarios: Record<string, any>;
 }
 
 /** Construye la URL pública de registro a partir de un token. */
@@ -56,6 +95,24 @@ class RegistroLinksAPI {
   async generate(clientId?: string, durationDays?: number): Promise<string> {
     const { data } = await axios.post(`/auth/registro-link`, { clientId, durationDays });
     return data.token;
+  }
+
+  /** Móvil: mi link vigente para esa combinación; si no hay o venció, el server genera uno de 7 días. */
+  async miLink(projectId: string, areaId: string, shiftId: string): Promise<MiRegistroLink> {
+    const { data } = await axios.post(`/registro-links/mio`, { projectId, areaId, shiftId });
+    return data.link;
+  }
+
+  /** Móvil: quiénes se registraron con mis links. */
+  async misRegistrados(): Promise<Registrado[]> {
+    const { data } = await axios.get(`/registro-links/mis-registrados`);
+    return data.registrados || [];
+  }
+
+  /** Móvil: cómo se registró una persona que invité (sólo lectura). */
+  async detalleRegistrado(userId: string): Promise<DetalleRegistrado> {
+    const { data } = await axios.get(`/registro-links/mis-registrados/${userId}`);
+    return data;
   }
 
   /** Revoca (desactiva) un link. */

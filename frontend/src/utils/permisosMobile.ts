@@ -31,6 +31,7 @@ export const MOBILE_VACATIONS = "mobile_vacations:view"; // Vacaciones
 // La CLAVE sigue diciendo `users` porque renombrarla es migrar los roles de todos los tenants; lo
 // que se ve es «Contratación», que es lo que la tarjeta hace: pedir un alta, no administrar gente.
 export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes de alta)
+export const MOBILE_REGISTRO = "mobile_registro:view"; // Registro: link de registro y registrados
 
 /**
  * En el orden en que se muestran, tanto en el editor de roles como en la ficha del usuario.
@@ -44,6 +45,7 @@ export const MOBILE_ITEMS = [
   { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Cumplimiento de novedades", grupo: "Novedades", ayuda: "Calendario de cumplimiento de sus coordinadores: quién envió y a quién le falta. Es del supervisor." },
   { permiso: MOBILE_TEAMS, label: "Mis equipos", grupo: "Equipo", ayuda: "Las áreas y turnos que tiene a cargo, con su gente." },
   { permiso: MOBILE_USERS, label: "Contratación", grupo: "Contratación", ayuda: "Pedir altas de personal." },
+  { permiso: MOBILE_REGISTRO, label: "Registro", grupo: "Contratación", ayuda: "Generar el link de registro para su área y turno (vence a los 7 días y se renueva solo) y ver, sin editar, quiénes se registraron." },
   { permiso: MOBILE_ORDERS, label: "Pedidos", grupo: "Personal", ayuda: "Sus propios pedidos." },
   { permiso: MOBILE_VACATIONS, label: "Vacaciones", grupo: "Personal", ayuda: "Sus propias vacaciones." },
 ];
@@ -80,8 +82,8 @@ export const CAPACIDAD_PERMISSIONS = CAPACIDAD_ITEMS.map((i) => i.permiso);
  */
 export const PLANTILLAS_ROL = [
   { nombre: "Colaborador", descripcion: "Carga lo suyo: pedidos y vacaciones.", permisos: [MOBILE_ORDERS, MOBILE_VACATIONS] },
-  { nombre: "Coordinador", descripcion: "Coordina áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
-  { nombre: "Supervisor", descripcion: "Supervisa a los coordinadores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, PROJECT_SUPERVISOR] },
+  { nombre: "Coordinador", descripcion: "Coordina áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
+  { nombre: "Supervisor", descripcion: "Supervisa a los coordinadores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, PROJECT_SUPERVISOR] },
 ];
 
 /**

@@ -2383,6 +2383,9 @@ export const UsersPage: React.FC = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         {!link.active ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Revocado</span> : expired ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Vencido</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Activo</span>}
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{link.clientName || 'General'}</span>
+                        {/* Los del móvil dicen para dónde son: proyecto · área · turno. Quién lo generó va abajo, en «Por». */}
+                        {link.origen === 'mobile' && <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">Móvil</span>}
+                        {link.projectName && <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{[link.projectName, link.areaName, link.shiftName].filter(Boolean).join(' · ')}</span>}
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {link.usageCount} {link.usageCount === 1 ? 'registro' : 'registros'}
                         </span>

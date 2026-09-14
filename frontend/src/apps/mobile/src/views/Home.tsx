@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus, faSitemap, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus, faSitemap, faCalendarCheck, faLink } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -8,17 +8,18 @@ import { useProfile } from "../hooks/useProfile";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { ProfileData } from "../../../../api/personnel";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
-import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
+import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 
 /** La notificación destacada arriba de las tarjetas, apagada hasta que vivan en la campanita. Ver el render. */
 const MOSTRAR_NOTIFICACION_DESTACADA = false;
 
 /**
- * EL ORDEN DE LAS TARJETAS. Lo que tiene que ver con la gente a cargo primero; después Contratación y
- * Cargar novedades, que son lo que se hace todos los días; y al final lo propio —Pedidos y Vacaciones—.
- * Va por vista y no por el orden en que se agregan abajo, así sumar una tarjeta no reordena las demás.
+ * EL ORDEN DE LAS TARJETAS: Mis equipos, Contratación, Cumplimiento, Cargar novedades, y al final lo
+ * propio —Pedidos y Vacaciones—. Va por vista y no por el orden en que se agregan abajo, así sumar una
+ * tarjeta no reordena las demás.
  */
-const ORDEN_DE_TARJETAS: ViewType[] = ["my_teams", "activity_compliance", "user_history", "activity_logs", "orders", "vacations"];
+// Registro va pegado a Contratación: son las dos formas de sumar gente.
+const ORDEN_DE_TARJETAS: ViewType[] = ["my_teams", "user_history", "registro", "activity_compliance", "activity_logs", "orders", "vacations"];
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -173,6 +174,11 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push(userCreateAction);
   }
 
+  // Registro: el link para que la gente de su área y turno se registre sola, y quiénes lo hicieron.
+  if (puede(MOBILE_REGISTRO)) {
+    quickActions.push({ icon: faLink, title: "Registro", description: "Link de registro y registrados", view: "registro" as ViewType, disabled: false });
+  }
+
   /*
     LEGAJOS, RECIBOS, GESTIÓN DE EQUIPO Y REPORTES NO SE MUESTRAN.
 
@@ -201,6 +207,7 @@ export default function Home({ onNavigate }: HomeProps) {
     orders: MOBILE_ORDERS,
     vacations: MOBILE_VACATIONS,
     user_history: MOBILE_USERS,
+    registro: MOBILE_REGISTRO,
   };
   const posicion = (vista: ViewType) => {
     const i = ORDEN_DE_TARJETAS.indexOf(vista);

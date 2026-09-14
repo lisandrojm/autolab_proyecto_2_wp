@@ -118,47 +118,16 @@ export const MongoDbConfig: React.FC = () => {
             </p>
 
             {/*
-              El segundo destino. Se dice el estado y no solo «sí/no» porque «sin configurar» y «mal
-              configurado» son cosas distintas: la primera es una instalación que todavía no lo activó,
-              la segunda es una URI que apunta a la base que se está respaldando —que no sería un backup—.
-            */}
-            {/*
-              El clon en Mongo. Se dice DÓNDE queda y qué protege: en el mismo cluster resuelve un
-              borrado accidental, pero no una caída del cluster —y prometerlo sería peor que no tenerlo—.
-            */}
-            <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs space-y-1">
-              <div>
-                <span className="font-semibold text-gray-700 dark:text-gray-300">Copia dentro de Mongo: </span>
-                {config?.mongoDestino?.estado === "ok" && (
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    la base se clona alternando entre dos slots, <code>_bkpA</code> y <code>_bkpB</code>. Mientras se llena uno, el otro sigue siendo una copia completa.
-                  </span>
-                )}
-                {config?.mongoDestino?.estado === "sin_configurar" && <span className="text-gray-500">no hay conexión a Mongo configurada.</span>}
-                {config?.mongoDestino?.estado === "error" && <span className="text-red-600 dark:text-red-400">{config.mongoDestino.error}</span>}
-              </div>
+              DÓNDE QUEDA LA COPIA: sólo en Dropbox.
 
-              {config?.mongoDestino?.estado === "ok" && (
-                <>
-                  {config.mongoDestino.ultimaBase && (
-                    <div className="text-gray-500">
-                      Última: <code>{config.mongoDestino.ultimaBase}</code> — se abre desde Atlas y se consulta como cualquier base, sin importar nada. La fecha está adentro, en{" "}
-                      <code>_backup_meta</code>: no entra en el nombre porque Atlas Free/Flex corta en {config.mongoDestino.maximoBytes ?? 38} bytes.
-                    </div>
-                  )}
-                  {/* El nombre que va a usar la próxima, con su tamaño: el problema se ve ANTES de fallar. */}
-                  {config.mongoDestino.proximaBase && (
-                    <div className={config.mongoDestino.proximaBytes && config.mongoDestino.maximoBytes && config.mongoDestino.proximaBytes > config.mongoDestino.maximoBytes ? "text-red-600 dark:text-red-400" : "text-gray-500"}>
-                      Próxima copia: <code>{config.mongoDestino.proximaBase}</code> ({config.mongoDestino.proximaBytes}/{config.mongoDestino.maximoBytes} bytes)
-                    </div>
-                  )}
-                  <div className={config.mongoDestino.clusterAparte ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
-                    {config.mongoDestino.clusterAparte
-                      ? "En otro cluster: sobrevive a la caída del de producción."
-                      : "En el MISMO cluster que producción: sirve para recuperar un borrado accidental, pero si el cluster se cae o se pierde, la copia se va con él. El respaldo fuera del cluster es Dropbox."}
-                  </div>
-                </>
-              )}
+              Antes también se clonaba la base entera dentro del mismo cluster de Mongo. Se apagó: cada clon
+              suma todas las colecciones de la base y el cluster llegó a su tope de 500, y encima no protegía
+              de una caída del cluster. Dropbox está afuera y es la copia que sirve para restaurar.
+            */}
+            <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs">
+              <span className="font-semibold text-gray-700 dark:text-gray-300">Destino: </span>
+              <span className="text-emerald-600 dark:text-emerald-400">sólo Dropbox.</span>{" "}
+              <span className="text-gray-500">La copia ya no se clona dentro de Mongo: llenaba el cluster y no protegía de que se cayera.</span>
             </div>
           </section>
 

@@ -158,6 +158,18 @@ export interface IUserMetadata {
   workdaysOverrideReason?: "extension_rodaje" | "jornada_caida" | "feriado_trabajado" | "franco_trabajado" | "alta_baja_parcial" | "reemplazo_parcial" | "otro" | null;
   /** Aclaración del motivo. Obligatoria (mín. 10 caracteres) cuando el motivo es «otro». */
   workdaysOverrideNote?: string | null;
+  /**
+   * De qué link de registro vino la persona, y con eso quién la invitó y para qué proyecto, área y turno.
+   * Lo escribe `POST /auth/registro`. Es lo que arma la lista «Registrados» del móvil de quien invitó.
+   */
+  registro?: {
+    linkId?: Types.ObjectId;
+    invitadoPor?: Types.ObjectId;
+    projectId?: Types.ObjectId;
+    areaId?: Types.ObjectId;
+    shiftId?: Types.ObjectId;
+    registradoAt?: Date;
+  };
   /** Días de la semana de la solicitud (0=domingo…6=sábado). Ver `dias_semana` del contrato. */
   diasPorSemana?: number;
   diasSemana?: number[];
@@ -295,6 +307,14 @@ const userSchema = new Schema<IUser>(
       workdaysOverridden: { type: Boolean, default: undefined },
       workdaysOverrideReason: { type: String, enum: ["extension_rodaje", "jornada_caida", "feriado_trabajado", "franco_trabajado", "alta_baja_parcial", "reemplazo_parcial", "otro", null], default: undefined },
       workdaysOverrideNote: { type: String, default: undefined },
+      registro: {
+        linkId: { type: Schema.Types.ObjectId, ref: "RegistroLink" },
+        invitadoPor: { type: Schema.Types.ObjectId, ref: "User" },
+        projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+        areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+        shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
+        registradoAt: { type: Date },
+      },
       diasPorSemana: { type: Number },
       diasSemana: { type: [Number], default: undefined },
       diasRotativos: { type: Boolean, default: false },

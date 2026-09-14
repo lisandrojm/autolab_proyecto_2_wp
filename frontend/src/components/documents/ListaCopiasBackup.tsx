@@ -150,7 +150,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
   const borrar = async (copia: CopiaBackup) => {
     const res = await sweetAlert.confirm(
       "¿Eliminar esta copia?",
-      `Se va a borrar de Dropbox la copia del ${formatearFecha(copia.fecha, copia.nombre)}${copia.bytes ? ` (${formatearTamano(copia.bytes)})` : ""}.\n\nEl clon dentro de Mongo no se toca: ese es siempre el de la última corrida. Esta acción no se puede deshacer.`,
+      `Se va a borrar de Dropbox la copia del ${formatearFecha(copia.fecha, copia.nombre)}${copia.bytes ? ` (${formatearTamano(copia.bytes)})` : ""}.\n\nEsta acción no se puede deshacer.`,
       "Sí, eliminar",
     );
     if (!res.isConfirmed) return;
@@ -194,7 +194,7 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
     const seLlevaTodo = aBorrar.length === copias.length;
     const res = await sweetAlert.confirm(
       aBorrar.length === 1 ? "¿Eliminar esta copia?" : `¿Eliminar ${aBorrar.length} copias?`,
-      `${seLlevaTodo ? "SON TODAS las copias que hay: si las borrás no queda ninguna para restaurar.\n\n" : ""}Se borran de Dropbox y no se puede deshacer.\n\n${muestra}${aBorrar.length > 5 ? `\n…y ${aBorrar.length - 5} más.` : ""}\n\nEl clon dentro de Mongo no se toca.`,
+      `${seLlevaTodo ? "SON TODAS las copias que hay: si las borrás no queda ninguna para restaurar.\n\n" : ""}Se borran de Dropbox y no se puede deshacer.\n\n${muestra}${aBorrar.length > 5 ? `\n…y ${aBorrar.length - 5} más.` : ""}`,
       "Sí, eliminar",
     );
     if (!res.isConfirmed) return;

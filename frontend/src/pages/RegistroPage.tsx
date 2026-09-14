@@ -298,6 +298,11 @@ export const RegistroPage: React.FC = () => {
   const [paises, setPaises] = useState<InfoOption[]>([]);
   const [bancos, setBancos] = useState<BancoOption[]>([]);
   const [rolesFrame, setRolesFrame] = useState<InfoOption[]>([]);
+  /**
+   * El link mismo: cuántos días le quedan y, si lo compartió un supervisor o coordinador desde el
+   * móvil, quién invita y para qué proyecto, área y turno. `null` para links viejos que no lo traen.
+   */
+  const [linkInfo, setLinkInfo] = useState<{ expiresAt: string; diasRestantes: number; proyecto: string | null; area: string | null; turno: string | null; invitadoPor: string | null } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [invalidToken, setInvalidToken] = useState(false);
@@ -339,6 +344,7 @@ export const RegistroPage: React.FC = () => {
         if (argentina) setForm((prev) => (prev.nacionalidadId ? prev : { ...prev, nacionalidadId: String(argentina.id) }));
         setBancos(data.bancos || []);
         setRolesFrame(data.rolesFrame || []);
+        setLinkInfo(data.link || null);
       } catch {
         if (!cancelled) setInvalidToken(true);
       } finally {
@@ -802,9 +808,27 @@ export const RegistroPage: React.FC = () => {
           <div className="px-6 pt-5">
             <h1 className="text-xl font-bold text-gray-100">Registro</h1>
             {/* Solo el asterisco va en rojo; el texto usa el gris de las pestañas inactivas. */}
-            <p className="text-sm text-gray-400 mt-1 mb-4">
+            <p className={`text-sm text-gray-400 mt-1 ${linkInfo ? "mb-3" : "mb-4"}`}>
               Los campos marcados con <span className="text-red-500">*</span> son obligatorios
             </p>
+            {/*
+              HASTA CUÁNDO SIRVE ESTE LINK, y para dónde es. Quien lo abre desde un grupo de WhatsApp no
+              sabe si llegó a tiempo; así lo ve antes de empezar a completar. En ámbar los últimos 2 días.
+            */}
+            {linkInfo && (
+              <div className={`mb-4 rounded-lg border px-3 py-2 text-xs ${linkInfo.diasRestantes <= 2 ? "border-amber-600/50 bg-amber-500/10 text-amber-300" : "border-blue-600/40 bg-blue-500/10 text-blue-200"}`}>
+                <p className="font-semibold">
+                  {linkInfo.diasRestantes === 0 ? "Este link vence hoy" : `Este link vence en ${linkInfo.diasRestantes} ${linkInfo.diasRestantes === 1 ? "día" : "días"}`} ({new Date(linkInfo.expiresAt).toLocaleDateString("es-AR")})
+                </p>
+                {(linkInfo.invitadoPor || linkInfo.proyecto) && (
+                  <p className="mt-0.5 text-gray-300">
+                    {linkInfo.invitadoPor && <>Te invita {linkInfo.invitadoPor}</>}
+                    {linkInfo.invitadoPor && linkInfo.proyecto && " · "}
+                    {linkInfo.proyecto && [linkInfo.proyecto, linkInfo.area, linkInfo.turno].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex">
               {tabs.map((t) => (
                 <button key={t.key} type="button" onClick={() => setActiveTab(t.key)} disabled={bloqueadoHastaValidar && t.key !== "general"} title={bloqueadoHastaValidar && t.key !== "general" ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === t.key ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-transparent text-gray-400 hover:text-gray-200"}`}>

@@ -17,6 +17,16 @@ export interface IRegistroLink extends Document {
   label?: string;
   active: boolean;
   createdBy?: Types.ObjectId;
+  /**
+   * Para DÓNDE es el link, cuando lo genera un supervisor o coordinador desde el móvil (sección Registro):
+   * quien se registra queda asociado a ese proyecto, área y turno, y a quien lo invitó. Los links del
+   * panel web son generales y no los tienen.
+   */
+  projectId?: Types.ObjectId;
+  areaId?: Types.ObjectId;
+  shiftId?: Types.ObjectId;
+  /** «mobile» si salió de la sección Registro del móvil (7 días, se renueva solo); ausente = panel web. */
+  origen?: "web" | "mobile";
   usageCount: number;
   lastUsedAt?: Date;
   expiresAt?: Date;
@@ -33,6 +43,10 @@ const registroLinkSchema = new Schema<IRegistroLink>(
     label: { type: String },
     active: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+    shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
+    origen: { type: String, enum: ["web", "mobile"] },
     usageCount: { type: Number, default: 0 },
     lastUsedAt: { type: Date },
     expiresAt: { type: Date },
