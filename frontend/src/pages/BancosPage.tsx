@@ -53,6 +53,17 @@ export const BancosPage: React.FC = () => {
         // Sin tipo cargado se ofrece como banco en el registro y en la ficha: filtrar por «Banco» la trae.
         valorPorDefecto: "banco",
         options: opcionesTipo,
+        /*
+          UNA ENTIDAD «ACTIVA» CON TIPO INACTIVO NO SE VE EN NINGÚN LADO: en el registro y en la ficha
+          primero se elige el tipo, y el inactivo no aparece. Desde esta tabla eso no se adivinaba —la fila
+          dice Activa—, así que se marca y se explica.
+        */
+        avisoOculta: {
+          titulo: "Tipo de entidad inactivo",
+          texto: (tipo) =>
+            `El tipo «${tipo}» está inactivo, así que esta entidad no se ofrece al registrarse ni al cargar datos bancarios en la ficha de usuario, aunque figure como Activa.\n\nEn esos formularios primero se elige el tipo, y un tipo inactivo no aparece. Quien ya tiene cargada una entidad de este tipo la conserva.\n\nPara que vuelva a ofrecerse, activá el tipo en la pestaña «Tipos de entidad».`,
+          pestana: { id: "tipos", label: "Ir a Tipos de entidad" },
+        },
       },
       {
         /*

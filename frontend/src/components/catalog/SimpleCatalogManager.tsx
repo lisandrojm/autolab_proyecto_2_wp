@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faTriangleExclamation, faFilter, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faTriangleExclamation, faFilter, faCheck, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../ui/PageLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Card } from '../ui/Card';
@@ -53,6 +53,13 @@ export interface CatalogExtraField {
   valorPorDefecto?: string;
   /** Texto de ayuda debajo del campo, en el formulario. */
   ayuda?: string;
+  /**
+   * Qué decir cuando el valor de un registro es una opción `oculta` (ej. una entidad cuyo TIPO está
+   * inactivo). La fila puede figurar como activa y aun así no ofrecerse en ningún lado, y eso no se
+   * adivina mirando la tabla: se marca con un «i» amarillo que abre esta explicación.
+   * `pestana` agrega un botón para ir a la pestaña donde se resuelve.
+   */
+  avisoOculta?: { titulo: string; texto: (etiqueta: string) => string; pestana?: { id: string; label: string } };
 }
 
 interface SimpleCatalogManagerProps {
@@ -355,6 +362,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [filtrosCampo, setFiltrosCampo] = useState<Record<string, string[]>>({});
   const [showFiltros, setShowFiltros] = useState(false);
   const [cambiandoEstado, setCambiandoEstado] = useState<string | null>(null);
+  // El aviso de «opción inactiva» abierto (ver `avisoOculta`).
+  const [avisoAbierto, setAvisoAbierto] = useState<{ campo: CatalogExtraField; etiqueta: string } | null>(null);
 
   /**
    * Error de LECTURA, en la página y no en un modal.
@@ -627,7 +636,44 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   };
 
   /** Un registro con algún campo `estado` apagado: se atenúa su nombre para que se distinga de un vistazo. */
-  const estaInactivo = (item: SimpleCatalogItem) => extraFields.some((f) => f.type === 'estado' && item[f.key] === false);
+  /**
+   * La opción `oculta` que tiene puesta este registro en un campo con `avisoOculta`, si la hay. Sin valor
+   * cargado cuenta `valorPorDefecto`: una entidad sin tipo se ofrece como banco, así que si «Banco» se
+   * apaga, también a ella le corresponde el aviso.
+   */
+  const opcionOcultaDe = (f: CatalogExtraField, item: SimpleCatalogItem) => {
+    if (f.type !== 'select' || !f.avisoOculta) return null;
+    const v = item[f.key];
+    const valor = v == null || v === '' ? f.valorPorDefecto ?? '' : String(v);
+    const opcion = f.options?.find((o) => o.value === valor);
+    return opcion?.oculta ? opcion : null;
+  };
+
+  /** Una celda de campo extra: su valor y, si es una opción inactiva, el «i» amarillo que lo explica. */
+  const celdaExtra = (f: CatalogExtraField, item: SimpleCatalogItem) => {
+    const texto = extraDisplay(f, item[f.key]);
+    const oculta = opcionOcultaDe(f, item);
+    if (!oculta) return texto;
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        {texto === '—' ? oculta.label : texto}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAvisoAbierto({ campo: f, etiqueta: oculta.label });
+          }}
+          title={`«${oculta.label}» está inactivo: no se ofrece. Tocá para ver qué significa.`}
+          aria-label={`${oculta.label} inactivo: ver qué significa`}
+          className="text-amber-500 transition-colors hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300"
+        >
+          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+        </button>
+      </span>
+    );
+  };
+
+  const estaInactivo = (item: SimpleCatalogItem) => extraFields.some((f) => (f.type === 'estado' && item[f.key] === false) || !!opcionOcultaDe(f, item));
 
   const handleDownloadTemplate = async () => {
     try {
@@ -822,7 +868,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 // Los nombres de catálogo son largos y se parecen entre sí: ver `titleLines` en Card.
                 titleLines: 2 as const,
                 icon,
-                badges: [...extraFields.filter((f) => f.showColumn && (f.type === 'estado' || item[f.key])).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
+                badges: [...extraFields.filter((f) => f.showColumn && (f.type === 'estado' || item[f.key])).map((f) => ({ text: `${extraDisplay(f, item[f.key])}${opcionOcultaDe(f, item) ? ' (inactivo)' : ''}`, variant: 'cyan' as const })), ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
@@ -916,7 +962,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     .filter((f) => f.showColumn)
                     .map((f) => (
                       <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                        {f.type === 'estado' ? interruptorEstado(f, item) : extraDisplay(f, item[f.key])}
+                        {f.type === 'estado' ? interruptorEstado(f, item) : celdaExtra(f, item)}
                       </td>
                     ))}
                   {showExternalId && <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>}
@@ -1007,6 +1053,12 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     <input type="text" value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
                   )}
                   {f.ayuda && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{f.ayuda}</p>}
+                  {f.type === 'select' && f.avisoOculta && f.options?.find((o) => o.value === extraValues[f.key])?.oculta && (
+                    <p className="mt-1.5 flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 h-3 w-3 shrink-0" />
+                      {f.avisoOculta.texto(f.options.find((o) => o.value === extraValues[f.key])?.label || '').split('\n\n')[0]} {f.avisoOculta.pestana ? `Se activa en «${f.avisoOculta.pestana.label.replace(/^Ir a /, '')}».` : ''}
+                    </p>
+                  )}
                 </div>
               ))}
               {showExternalId && (
@@ -1120,6 +1172,41 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             );
           })}
         </div>
+      </Modal>
+
+      {/* Qué significa que el valor de una fila esté inactivo (ver `avisoOculta`). */}
+      <Modal
+        isOpen={!!avisoAbierto}
+        onClose={() => setAvisoAbierto(null)}
+        title={avisoAbierto?.campo.avisoOculta?.titulo || ''}
+        size="sm"
+        footer={
+          <div className="flex w-full items-center justify-end gap-3">
+            <button type="button" onClick={() => setAvisoAbierto(null)} className="btn-secondary">
+              Cerrar
+            </button>
+            {avisoAbierto?.campo.avisoOculta?.pestana && (
+              <button
+                type="button"
+                onClick={() => {
+                  const destino = avisoAbierto.campo.avisoOculta!.pestana!.id;
+                  setAvisoAbierto(null);
+                  setTabActiva(destino);
+                }}
+                className="btn-primary"
+              >
+                {avisoAbierto.campo.avisoOculta.pestana.label}
+              </button>
+            )}
+          </div>
+        }
+      >
+        {avisoAbierto?.campo.avisoOculta && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+            <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" />
+            <p className="whitespace-pre-line text-sm leading-relaxed text-amber-900 dark:text-amber-200">{avisoAbierto.campo.avisoOculta.texto(avisoAbierto.etiqueta)}</p>
+          </div>
+        )}
       </Modal>
     </PageLayout>
   );
