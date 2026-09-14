@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 import { EJSON } from "bson";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, listFolder, uploadFile, uploadFileSession, createFolder, deleteEntry } from "./dropboxService.js";
-import { clonarEnMongo, prefijoDeBase } from "./backupDestinoMongo.js";
+// `clonarEnMongo` ya no se usa: la copia va sólo a Dropbox (ver `correrBackup`).
+import { prefijoDeBase } from "./backupDestinoMongo.js";
 import { selloFecha } from "../utils/nombreBackup.js";
 /**
  * BACKUP DE LA BASE, CADA 12 HORAS, A DROPBOX.
@@ -226,11 +227,15 @@ export async function correrBackup(disparador = "cron") {
         const bytes = archivos.reduce((a, f) => a + f.contenido.length, 0);
         const retener = Math.max(1, Number(tenant?.integrations?.backup?.retener) || RETENER_DEFAULT);
         /*
-          LOS DOS DESTINOS SE INTENTAN POR SEPARADO, y el que falla no se lleva puesto al otro.
+          LA COPIA VA SOLO A DROPBOX.
     
-          Que Dropbox esté caído no es motivo para no guardar la copia en el Mongo de backup, ni al revés.
-          Y cada uno limpia lo viejo solo si LO SUYO salió bien: una copia nueva a medias nunca puede costar
-          la copia anterior, que es la que todavía sirve.
+          Había un segundo destino: clonar la base entera dentro del mismo cluster de Mongo. Se apagó porque
+          llenaba el cluster sin sentido —cada clon suma todas las colecciones de la base, y Atlas tiene un
+          tope de 500 entre todas las bases: ya lo alcanzó— y además no protegía de lo único grave, que el
+          cluster se caiga. Dropbox está fuera del cluster y es la copia que sirve para restaurar.
+    
+          Lo viejo se limpia solo si la copia nueva subió entera: una copia a medias nunca puede costar la
+          anterior, que es la que todavía sirve.
         */
         const dropbox = { ok: false };
         let borrados = 0;
@@ -248,44 +253,22 @@ export async function correrBackup(disparador = "cron") {
             dropbox.error = String(e?.message || e);
             console.error(`[BACKUP:${disparador}] Dropbox falló:`, dropbox.error);
         }
+        // El clon dentro de Mongo está apagado (ver arriba). Se informa como «sin configurar» para no cambiar
+        // la forma del resultado que consumen la pantalla y el log.
         const mongo = { ok: false, configurado: false };
-        try {
-            // Se clona desde la base, no desde los `.json` ya generados: escribir los documentos tal cual
-            // deja una base normal, navegable desde Atlas, en vez de archivos que habría que importar.
-            const r = await clonarEnMongo(baseDatos, nombresDeColecciones(archivos), tenant?.integrations?.backup?.ultimoSlotOk, tenant?.integrations?.backup?.ultimaBaseCopia);
-            mongo.ok = true;
-            mongo.configurado = r.configurado;
-            mongo.base = r.base;
-            mongo.slot = r.slot;
-            mongo.documentos = r.documentos;
-            mongo.borrados = r.borrados;
-        }
-        catch (e) {
-            mongo.error = String(e?.message || e);
-            console.error(`[BACKUP:${disparador}] Mongo de backup falló:`, mongo.error);
-        }
-        if (!dropbox.ok && !mongo.ok)
-            throw new Error(`La copia no quedó en ningún destino. Dropbox: ${dropbox.error} · Mongo: ${mongo.error}`);
+        if (!dropbox.ok)
+            throw new Error(`La copia no quedó en Dropbox: ${dropbox.error}`);
         /*
           `ultimoBackupAt` se escribe SIEMPRE que la copia haya quedado en algún lado, aunque un destino
           falle. Es el reloj que espacia las corridas: si no se escribiera ante un fallo parcial, el
           scheduler reintentaría cada 15 minutos y estaría recorriendo la base entera cuatro veces por hora.
           Que algo falló se dice en `ultimoError`, que la pantalla muestra en rojo.
         */
-        const fallos = [dropbox.ok ? "" : `Dropbox: ${dropbox.error}`, mongo.ok ? "" : `Mongo de backup: ${mongo.error}`].filter(Boolean).join(" · ");
-        const cambios = { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": fallos };
-        /*
-          El slot bueno solo se mueve si el clon TERMINÓ bien. Si falló a mitad, el slot que sigue siendo la
-          copia completa es el anterior — marcar el nuevo dejaría a la próxima corrida escribiendo encima de
-          la única copia sana.
-        */
-        if (mongo.ok && mongo.slot) {
-            cambios["integrations.backup.ultimoSlotOk"] = mongo.slot;
-            cambios["integrations.backup.ultimaBaseCopia"] = mongo.base;
-        }
+        // Llegar acá es que Dropbox salió bien: se limpia cualquier error viejo (incluido el del clon de Mongo).
+        const cambios = { "integrations.backup.ultimoBackupAt": new Date(), "integrations.backup.ultimoError": "" };
         await Tenant.updateOne({ _id: tenant._id }, { $set: cambios });
         console.log(`[BACKUP:${disparador}] ${carpeta} · ${archivos.length - 1} colecciones · ${documentos} documentos · ${(bytes / 1024 / 1024).toFixed(1)} MB · ` +
-            `dropbox=${dropbox.ok ? `ok (${borrados} viejos borrados)` : "FALLÓ"} · mongo=${mongo.ok ? (mongo.configurado ? `ok → ${mongo.base} (${mongo.documentos} docs, ${mongo.borrados} bases viejas borradas)` : "sin configurar") : "FALLÓ"}`);
+            `dropbox=ok (${borrados} viejos borrados) · mongo=desactivado`);
         return { carpeta, colecciones: archivos.length - 1, documentos, bytes, borrados, dropbox, mongo };
     }
     finally {
