@@ -5,6 +5,7 @@ import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
 import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
+import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { ProfileData } from "../../../../api/personnel";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
@@ -173,6 +174,24 @@ export default function Home({ onNavigate }: HomeProps) {
     historial las conserva; volver a mostrarlas es escribirlas con lo que la pantalla sea ese día.
   */
 
+  /*
+    LAS FUNCIONES EN DESARROLLO SE VEN, PERO APAGADAS.
+
+    Si el permiso de una tarjeta está inactivo (Configuración → Permisos), la tarjeta sigue ahí —quien
+    la tiene asignada sabe que viene—, gris y con «En desarrollo», sin poder entrar. `App.tsx` además
+    cierra la vista, por si se llega sin pasar por acá.
+  */
+  const inactivo = usePermisoInactivo();
+  const PERMISO_DE_VISTA: Partial<Record<ViewType, string>> = {
+    activity_logs: MOBILE_ACTIVITY_LOGS,
+    activity_compliance: MOBILE_ACTIVITY_COMPLIANCE,
+    my_teams: MOBILE_TEAMS,
+    orders: MOBILE_ORDERS,
+    vacations: MOBILE_VACATIONS,
+    user_history: MOBILE_USERS,
+  };
+  const acciones = quickActions.map((action) => (inactivo(PERMISO_DE_VISTA[action.view as ViewType]) ? { ...action, disabled: true, description: "En desarrollo" } : action));
+
   const handleLogout = () => {
     logout();
     window.location.href = "/login";
@@ -212,7 +231,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
       {/* GRID */}
       <div className={`grid grid-cols-2 gap-4 p-4`}>
-        {quickActions.map((action, index) => {
+        {acciones.map((action, index) => {
           return (
             <button
               key={index}

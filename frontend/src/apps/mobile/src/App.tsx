@@ -15,6 +15,7 @@ import MyTeams from "./views/MyTeams";
 import SeguimientoNovedades from "./views/SeguimientoNovedades";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
+import { usePermisoInactivo } from "../../../stores/permisosInactivosStore";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
 
@@ -55,7 +56,10 @@ function App() {
     de cambiarlo sin tocar el código. Ahora cada tarjeta es un permiso que se tilda en Usuarios → Roles.
   */
   const permisos = user?.permissions || [];
-  const puede = (permiso: string) => permisos.includes(permiso);
+  // Un permiso inactivo (en desarrollo) no abre su vista: la tarjeta se ve apagada y, si se llega igual,
+  // se vuelve al inicio. Al SuperAdmin no le aplica: es quien lo prueba. El ACCESO a la app no cambia.
+  const inactivo = usePermisoInactivo();
+  const puede = (permiso: string) => permisos.includes(permiso) && !inactivo(permiso);
   const hasMobileAccess = permisos.some((p) => p.startsWith("mobile_"));
 
   /*

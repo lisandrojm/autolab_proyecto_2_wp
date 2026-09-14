@@ -357,12 +357,10 @@ const COLOR_CHECK = {
 } as const;
 
 /**
- * UNA FILA POR PERMISO, en columna: tildado, nombre, para qué es (si hay ayuda) y si está en desarrollo.
+ * UNA FILA POR PERMISO, en columna: tildado, nombre y para qué es (si hay ayuda).
  *
- * «En desarrollo» deja el permiso a la vista pero sin poder tildarlo ni destildarlo, para que nadie
- * habilite algo que todavía no está terminado. Qué permisos lo están se decide UNA vez, para toda la
- * plataforma, en Configuración → Permisos (`PermisosPage`), no rol por rol. `exento` es el SuperAdmin:
- * para él el check sigue funcionando, así puede probar lo que desarrolla.
+ * Que un permiso esté inactivo (Configuración → Permisos) NO cambia nada acá: se asigna igual. Lo que
+ * se apaga es la función donde se usa —el ítem del menú de la plataforma, la tarjeta del móvil—.
  */
 const FilaPermiso: React.FC<{
   label: string;
@@ -370,25 +368,15 @@ const FilaPermiso: React.FC<{
   checked: boolean;
   onToggle: () => void;
   color: keyof typeof COLOR_CHECK;
-  enDesarrollo: boolean;
-  exento: boolean;
-}> = ({ label, ayuda, checked, onToggle, color, enDesarrollo, exento }) => {
-  const bloqueado = enDesarrollo && !exento;
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <label className={`group flex min-w-0 items-start gap-2 ${bloqueado ? "cursor-not-allowed" : "cursor-pointer"}`} title={bloqueado ? "En desarrollo: todavía no se puede asignar" : undefined}>
-        <input type="checkbox" checked={checked} disabled={bloqueado} onChange={onToggle} className={`mt-0.5 rounded border-gray-300 focus:ring-offset-0 ${COLOR_CHECK[color]} ${bloqueado ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} />
-        <span className="min-w-0">
-          <span className={`flex flex-wrap items-center gap-1.5 text-sm transition-colors ${bloqueado ? "text-gray-400 dark:text-gray-500" : "text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100"}`}>
-            {label}
-            {enDesarrollo && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">En desarrollo</span>}
-          </span>
-          {ayuda && <span className="block text-xs text-gray-500 dark:text-gray-400">{ayuda}</span>}
-        </span>
-      </label>
-    </div>
-  );
-};
+}> = ({ label, ayuda, checked, onToggle, color }) => (
+  <label className="group flex min-w-0 cursor-pointer items-start gap-2">
+    <input type="checkbox" checked={checked} onChange={onToggle} className={`mt-0.5 cursor-pointer rounded border-gray-300 focus:ring-offset-0 ${COLOR_CHECK[color]}`} />
+    <span className="min-w-0">
+      <span className="block text-sm text-gray-700 transition-colors group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100">{label}</span>
+      {ayuda && <span className="block text-xs text-gray-500 dark:text-gray-400">{ayuda}</span>}
+    </span>
+  </label>
+);
 
 interface RoleFormData {
   name: string;
@@ -681,27 +669,9 @@ export const RolesPage: React.FC = () => {
     cuarenta y ocho—, y tampoco servía para vaciar un grupo. Ahora cada sección y cada grupo tienen el
     suyo, y nada de lo que está fuera de ese alcance se toca.
   */
-  /*
-    PERMISOS EN DESARROLLO: a la vista, pero nadie los tilda ni los destilda (salvo el SuperAdmin, que
-    es quien los prende y apaga). Es de plataforma y lo guarda el server, que además rechaza cualquier
-    cambio sobre ellos: esto es la pantalla, no la única puerta.
-  */
-  const [enDesarrollo, setEnDesarrollo] = useState<Set<string>>(new Set());
-  useEffect(() => {
-    rolesAPI
-      .getPermisosEnDesarrollo()
-      .then((ps) => setEnDesarrollo(new Set(ps)))
-      .catch(() => {
-        /* sin la lista, nada queda bloqueado en pantalla; el server igual valida al guardar */
-      });
-  }, []);
-  // Qué está en desarrollo se cambia en Configuración → Permisos, para toda la plataforma de una vez.
-  const bloqueado = (permiso: string) => !isSuperAdmin && enDesarrollo.has(permiso);
+  const marcarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: Array.from(new Set([...prev.permissions, ...permisos])) }));
 
-  // «Todos» y «Limpiar» saltean los bloqueados: quedan como estaban.
-  const marcarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: Array.from(new Set([...prev.permissions, ...permisos.filter((p) => !bloqueado(p))])) }));
-
-  const limpiarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: prev.permissions.filter((p) => !permisos.includes(p) || bloqueado(p)) }));
+  const limpiarPermisos = (permisos: string[]) => setFormData((prev) => ({ ...prev, permissions: prev.permissions.filter((p) => !permisos.includes(p)) }));
 
   /**
    * Una plantilla es un punto de partida: reemplaza lo de App Mobile y Proyectos por lo recomendado y
@@ -713,13 +683,11 @@ export const RolesPage: React.FC = () => {
       const r = await sweetAlert.confirm(`Empezar desde «${plantilla.nombre}»`, "Reemplaza lo tildado en App Mobile y Proyectos por lo recomendado. Lo de Plataforma no se toca, y después podés ajustar a mano.", "Aplicar");
       if (!r.isConfirmed) return;
     }
-    // Los bloqueados quedan como estaban: la plantilla no los agrega ni los saca.
-    setFormData((prev) => ({ ...prev, permissions: Array.from(new Set([...prev.permissions.filter((p) => !esDeLaApp(p) || bloqueado(p)), ...plantilla.permisos.filter((p) => !bloqueado(p))])) }));
+    setFormData((prev) => ({ ...prev, permissions: [...prev.permissions.filter((p) => !esDeLaApp(p)), ...plantilla.permisos] }));
     setSeccionMobile(true);
   };
 
   const togglePermission = (permission: string) => {
-    if (bloqueado(permission)) return;
     setFormData((prev) => {
       const yaEstaba = prev.permissions.includes(permission);
       return {
@@ -754,8 +722,7 @@ export const RolesPage: React.FC = () => {
 
     // Apagar una sección se lleva SÓLO sus permisos: las capacidades de Proyectos no son de ninguna de
     // las dos y quedan como estaban.
-    // Los bloqueados (en desarrollo) tampoco se van al apagar la sección.
-    const esDeLaSeccion = (p: string) => (esPlataforma ? esPermisoPlataforma(p) : esPermisoMobile(p)) && !bloqueado(p);
+    const esDeLaSeccion = (p: string) => (esPlataforma ? esPermisoPlataforma(p) : esPermisoMobile(p));
     const tildados = formData.permissions.filter(esDeLaSeccion);
     if (tildados.length > 0) {
       const result = await sweetAlert.confirm(`Apagar ${nombre}`, `Se van a destildar los ${tildados.length} permiso/s de ${nombre} que tiene este rol. ¿Continuar?`);
@@ -1086,9 +1053,7 @@ export const RolesPage: React.FC = () => {
                                     label={MODULE_LABELS[permission] || permission}
                                     checked={formData.permissions.includes(permission)}
                                     onToggle={() => togglePermission(permission)}
-                                    color="primary"
-                                    enDesarrollo={enDesarrollo.has(permission)}
-                                    exento={isSuperAdmin}
+                                    color="primary"
                                   />
                                 ))}
                               </div>
@@ -1122,9 +1087,7 @@ export const RolesPage: React.FC = () => {
                                     label={MODULE_LABELS[permission] || (permission === "*" ? "Acceso Total" : permission)}
                                     checked={formData.permissions.includes(permission)}
                                     onToggle={() => togglePermission(permission)}
-                                    color="blue"
-                                    enDesarrollo={enDesarrollo.has(permission)}
-                                    exento={isSuperAdmin}
+                                    color="blue"
                                   />
                                 ))}
                               </div>
@@ -1166,9 +1129,7 @@ export const RolesPage: React.FC = () => {
                                   ayuda={item.ayuda}
                                   checked={formData.permissions.includes(item.permiso)}
                                   onToggle={() => togglePermission(item.permiso)}
-                                  color="indigo"
-                                  enDesarrollo={enDesarrollo.has(item.permiso)}
-                                  exento={isSuperAdmin}
+                                  color="indigo"
                                 />
                               ))}
                             </div>
@@ -1206,9 +1167,7 @@ export const RolesPage: React.FC = () => {
                               label={MODULE_LABELS[permission] || permission}
                               checked={formData.permissions.includes(permission)}
                               onToggle={() => togglePermission(permission)}
-                              color="emerald"
-                              enDesarrollo={enDesarrollo.has(permission)}
-                              exento={isSuperAdmin}
+                              color="emerald"
                             />
                           ))}
                         </div>

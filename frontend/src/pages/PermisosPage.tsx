@@ -8,17 +8,18 @@ import { rolesAPI } from "../api/roles";
 import { sweetAlert } from "../utils/sweetAlert";
 import { AVAILABLE_PERMISSIONS, MODULE_LABELS, SUPERADMIN_ONLY_PERMISSIONS } from "./RolesPage";
 import { MOBILE_GRUPOS, MOBILE_ITEMS } from "../utils/permisosMobile";
+import { usePermisosInactivosStore } from "../stores/permisosInactivosStore";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * PERMISOS: CUÁLES SE PUEDEN ASIGNAR, PARA TODA LA PLATAFORMA
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Un permiso INACTIVO está en desarrollo: se sigue viendo en el editor de cada rol, pero con el check
- * bloqueado y el rótulo «En desarrollo», así nadie habilita algo sin terminar. Es una sola lista para
- * toda la plataforma —lo que no está terminado no lo está para nadie—, y por eso se maneja acá, de una
- * vez, y no rol por rol. Sólo el SuperAdmin la cambia; el server rechaza cualquier otro intento y,
- * al guardar un rol, cualquier cambio sobre un permiso inactivo.
+ * Un permiso INACTIVO está en desarrollo: la función se sigue viendo DONDE SE USA —el ítem del menú de
+ * la plataforma, la tarjeta del inicio del móvil—, pero gris, con «En desarrollo» y sin poder entrar.
+ * En los roles no cambia nada: se asigna igual, así cuando se active ya está dado a quien corresponde.
+ * Es una sola lista para toda la plataforma y se maneja acá, de una vez. Sólo el SuperAdmin la cambia,
+ * y para él las funciones inactivas siguen andando: es quien las prueba.
  *
  * Los grupos y los nombres son los MISMOS del editor de roles (se importan de ahí): si esta pantalla
  * los tuviera propios, se desfasarían y no se sabría qué se está apagando.
@@ -125,7 +126,10 @@ export const PermisosPage: React.FC = () => {
     setInactivos(siguiente);
     setGuardando(true);
     try {
-      setInactivos(new Set(await rolesAPI.setPermisosEnDesarrollo([...siguiente])));
+      const guardados = await rolesAPI.setPermisosEnDesarrollo([...siguiente]);
+      setInactivos(new Set(guardados));
+      // El menú y el móvil leen del store: así el cambio se ve sin recargar.
+      usePermisosInactivosStore.getState().setInactivos(guardados);
     } catch (error: any) {
       setInactivos(anterior);
       sweetAlert.error("No se pudo guardar", error?.response?.data?.error || "Probá de nuevo en un momento.");
@@ -150,7 +154,7 @@ export const PermisosPage: React.FC = () => {
   };
 
   return (
-    <PageLayout title="Permisos" subtitle="Cuáles se pueden asignar en los roles. Inactivo = en desarrollo: se ve, pero nadie lo asigna." faIcon={{ icon: faToggleOn }}>
+    <PageLayout title="Permisos" subtitle="Inactivo = en desarrollo: se ve en el menú y en la app, pero deshabilitado para los usuarios. En los roles se asigna igual." faIcon={{ icon: faToggleOn }}>
       {!esSuperAdmin ? (
         <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
           <FontAwesomeIcon icon={faLock} className="text-gray-400" />
@@ -218,7 +222,7 @@ export const PermisosPage: React.FC = () => {
                               {item.ayuda && <p className="text-xs text-gray-500 dark:text-gray-400">{item.ayuda}</p>}
                               <p className="font-mono text-[10px] text-gray-400">{item.permiso}</p>
                             </div>
-                            <Interruptor activo={activo} disabled={guardando} onClick={() => alternar(item.permiso)} titulo={activo ? "Desactivar: queda visible en los roles pero nadie lo puede asignar" : "Activar: se va a poder asignar en los roles"} />
+                            <Interruptor activo={activo} disabled={guardando} onClick={() => alternar(item.permiso)} titulo={activo ? "Desactivar: se ve en el menú y en la app, pero deshabilitado" : "Activar: los usuarios con este permiso van a poder usarlo"} />
                           </div>
                         );
                       })}
