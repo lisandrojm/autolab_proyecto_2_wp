@@ -402,9 +402,22 @@ const TIME_OPTIONS = (() => {
           Medido contra la base para 83 personas: 1280 ms y 131 KB antes, 224 ms y 16 KB con `picker`.
           Y la diferencia crece con la cantidad de gente del tenant, que es el caso real.
         */
-        const personas = usersAPI
-          .list({ limit: 1000, metadataActivo: "true", picker: true })
-          .then((r) => setPlatformUsers(r.users || []))
+        /*
+          TODAS LAS PERSONAS, NO LAS PRIMERAS MIL.
+
+          Se pedía una sola página de 1000 y la lista se cortaba ahí: con más gente registrada, el
+          resto no aparecía nunca —ni buscándolo por nombre, porque la búsqueda es sobre lo cargado— y
+          el contador decía «1000 personas» justo cuando había más. Ahora se pide la primera página y,
+          si el server dice que hay más, el resto en paralelo.
+        */
+        const POR_PAGINA = 1000;
+        const pedirPagina = (page: number) => usersAPI.list({ page, limit: POR_PAGINA, metadataActivo: "true", picker: true });
+        const personas = pedirPagina(1)
+          .then(async (primera) => {
+            const paginas = primera.pagination?.pages || 1;
+            const resto = paginas > 1 ? await Promise.all(Array.from({ length: paginas - 1 }, (_, i) => pedirPagina(i + 2))) : [];
+            setPlatformUsers([...(primera.users || []), ...resto.flatMap((r) => r.users || [])]);
+          })
           .catch((e) => console.error("Error cargando personas:", e));
 
         /*
