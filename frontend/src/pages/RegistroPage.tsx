@@ -1,5 +1,5 @@
 import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto, faltanDigitosCbu } from "../utils/cbu";
-import { SIN_BANCO, TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo, MOTIVOS_SIN_BANCO, MotivoSinBanco } from "../utils/bancarios";
+import { SIN_BANCO, opcionesTipoEntidad, camposDe, labelTipo, MOTIVOS_SIN_BANCO, MotivoSinBanco, TipoEntidadConfig } from "../utils/bancarios";
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -302,6 +302,8 @@ export const RegistroPage: React.FC = () => {
   // País de NACIMIENTO (solo para nacionalizado/a): catálogo aparte del de nacionalidad.
   const [paises, setPaises] = useState<InfoOption[]>([]);
   const [bancos, setBancos] = useState<BancoOption[]>([]);
+  // Los tipos activos del ABM, con qué datos pide cada uno. `null` = el server no los mandó: se usan los de siempre.
+  const [tiposEntidad, setTiposEntidad] = useState<TipoEntidadConfig[] | null>(null);
   const [rolesFrame, setRolesFrame] = useState<InfoOption[]>([]);
   /**
    * El link mismo: cuántos días le quedan y, si lo compartió un supervisor o coordinador desde el
@@ -348,6 +350,7 @@ export const RegistroPage: React.FC = () => {
         const argentina = opcionArgentina(nacs);
         if (argentina) setForm((prev) => (prev.nacionalidadId ? prev : { ...prev, nacionalidadId: String(argentina.id) }));
         setBancos(data.bancos || []);
+        setTiposEntidad(Array.isArray(data.tiposEntidad) ? data.tiposEntidad : null);
         setRolesFrame(data.rolesFrame || []);
         setLinkInfo(data.link || null);
       } catch {
@@ -570,9 +573,9 @@ export const RegistroPage: React.FC = () => {
       if (form.sinBancoMotivo === "otro" && !form.sinBancoDetalle.trim()) return [{ key: "sinBancoDetalle", label: "Tu situación (Otro)" }];
       return [];
     }
-    const c = camposDe(t);
+    const c = camposDe(t, tiposEntidad);
     const miss: { key: string; label: string }[] = [];
-    if (!form.bancoId) miss.push({ key: "bancoId", label: labelTipo(t) });
+    if (!form.bancoId) miss.push({ key: "bancoId", label: labelTipo(t, tiposEntidad) });
     if (c.tipoCuenta && !form.tipoDeCuentaBancaria) miss.push({ key: "tipoDeCuentaBancaria", label: "Tipo de cuenta" });
     /*
       Vacío e INCOMPLETO se informan distinto, porque son dos problemas distintos.
@@ -1287,7 +1290,7 @@ export const RegistroPage: React.FC = () => {
                       </label>
                       <select className={inputClass("tipoEntidadFinanciera")} value={form.tipoEntidadFinanciera} onChange={(e) => onTipoEntidadChange(e.target.value)}>
                         <option value="">Seleccionar...</option>
-                        {TIPO_ENTIDAD_OPTIONS.map((o) => (
+                        {opcionesTipoEntidad(tiposEntidad, form.tipoEntidadFinanciera).map((o) => (
                           <option key={o.value} value={o.value}>
                             {o.label}
                           </option>
@@ -1351,9 +1354,9 @@ export const RegistroPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>
-                          {labelTipo(form.tipoEntidadFinanciera)} <span className="text-red-500">*</span>
+                          {labelTipo(form.tipoEntidadFinanciera, tiposEntidad)} <span className="text-red-500">*</span>
                         </label>
-                        <SearchableSelect title={labelTipo(form.tipoEntidadFinanciera)} value={form.bancoId} options={bancosFiltrados} onChange={(v) => set("bancoId", v)} invalid={fieldErrors.bancoId} />
+                        <SearchableSelect title={labelTipo(form.tipoEntidadFinanciera, tiposEntidad)} value={form.bancoId} options={bancosFiltrados} onChange={(v) => set("bancoId", v)} invalid={fieldErrors.bancoId} />
                         {bancosFiltrados.length === 0 && <p className="mt-2 text-xs text-amber-400">No hay entidades cargadas de este tipo. Cargalas en el ABM de Entidades Financieras.</p>}
                       </div>
                     </div>
@@ -1363,7 +1366,7 @@ export const RegistroPage: React.FC = () => {
                   {form.tipoEntidadFinanciera !== SIN_BANCO && form.tipoEntidadFinanciera && form.bancoId && (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {camposDe(form.tipoEntidadFinanciera).tipoCuenta && (
+                        {camposDe(form.tipoEntidadFinanciera, tiposEntidad).tipoCuenta && (
                           <div>
                             <label className={labelClass}>
                               Tipo de cuenta <span className="text-red-500">*</span>
@@ -1378,7 +1381,7 @@ export const RegistroPage: React.FC = () => {
                         )}
                         <div>
                           <label className={labelClass}>
-                            {camposDe(form.tipoEntidadFinanciera).cbuLabel} <span className="text-red-500">*</span>
+                            {camposDe(form.tipoEntidadFinanciera, tiposEntidad).cbuLabel} <span className="text-red-500">*</span>
                           </label>
                           {/*
                             SOLO DÍGITOS, Y EXACTAMENTE 22. Misma regla que «Nuevo Usuario» (`utils/cbu.ts`).
@@ -1410,7 +1413,7 @@ export const RegistroPage: React.FC = () => {
                           </label>
                           <input className={inputClass("aliasBancario")} autoComplete="off" placeholder="Ej: LUNES.MALETA.CUNA" value={form.aliasBancario} onChange={(e) => set("aliasBancario", e.target.value)} />
                         </div>
-                        {camposDe(form.tipoEntidadFinanciera).nroCuenta && (
+                        {camposDe(form.tipoEntidadFinanciera, tiposEntidad).nroCuenta && (
                           <div>
                             <label className={labelClass}>
                               Nro. de cuenta <span className="text-red-500">*</span>

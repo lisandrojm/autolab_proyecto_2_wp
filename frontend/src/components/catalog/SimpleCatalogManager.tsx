@@ -31,7 +31,11 @@ export interface CatalogExtraField {
   */
   type?: 'text' | 'select' | 'ref' | 'estado';
   /** Opciones para type "select" y "ref". El value es lo que se persiste; el label lo que se muestra. */
-  options?: Array<{ value: string; label: string }>;
+  /**
+   * `oculta`: la opción existe —la columna y el filtro la muestran con su nombre— pero el formulario
+   * no la ofrece, salvo en el registro que ya la tiene puesta (ej. un tipo de entidad inactivo).
+   */
+  options?: Array<{ value: string; label: string; oculta?: boolean }>;
   /** Solo `ref`: texto de ayuda del buscador. */
   searchPlaceholder?: string;
   required?: boolean;
@@ -322,7 +326,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [saving, setSaving] = useState(false);
 
   // Valor por defecto de un campo extra al crear (primer option del select, o "").
-  const defaultExtra = (f: CatalogExtraField): string => (f.type === 'estado' ? 'true' : f.type === 'select' && f.options && f.options.length > 0 ? f.options[0].value : '');
+  const defaultExtra = (f: CatalogExtraField): string => (f.type === 'estado' ? 'true' : f.type === 'select' && f.options && f.options.length > 0 ? (f.options.find((o) => !o.oculta) || f.options[0]).value : '');
   /** El valor de formulario de un campo del registro. Para `ref` es el id, venga poblado o pelado. */
   const idDeRef = (f: CatalogExtraField, valor: unknown): string => {
     if (f.type === 'estado') return valor === false ? 'false' : 'true';
@@ -981,11 +985,14 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                   {f.type === 'select' ? (
                     <select value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white">
                       {!f.required && <option value="">—</option>}
-                      {(f.options || []).map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
+                      {(f.options || [])
+                        .filter((o) => !o.oculta || o.value === extraValues[f.key])
+                        .map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                            {o.oculta ? ' (inactivo)' : ''}
+                          </option>
+                        ))}
                     </select>
                   ) : f.type === 'estado' ? (
                     <button type="button" onClick={() => setExtraValues((prev) => ({ ...prev, [f.key]: prev[f.key] === 'false' ? 'true' : 'false' }))} className="inline-flex items-center gap-3" aria-pressed={extraValues[f.key] !== 'false'}>

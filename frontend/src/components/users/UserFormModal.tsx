@@ -10,7 +10,8 @@ import { Modal } from "../ui/Modal";
 import { BloqueEstado } from "../ui/BloqueEstado";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto as esCbuIncompleto } from "../../utils/cbu";
-import { TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo, declaraSinBanco, resumenSinBanco } from "../../utils/bancarios";
+import { opcionesTipoEntidad, camposDe, labelTipo, declaraSinBanco, resumenSinBanco } from "../../utils/bancarios";
+import { tiposEntidadAPI, TipoEntidadFinanciera } from "../../api/tiposEntidadFinanciera";
 import { afipAPI } from "../../api/afip";
 import { cuitEsValido } from "../../utils/cuit";
 import { generarPassword } from "../../utils/password";
@@ -397,6 +398,20 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       cancelled = true;
     };
   }, [isOpen, catalogsLoaded]);
+
+  /*
+    Los tipos de entidad del ABM (Entidades Financieras → Tipos): qué se ofrece y qué datos pide cada
+    uno. Aparte del `Promise.all` de arriba, con su propio catch: si el server todavía no tiene la ruta,
+    el formulario sigue con los tipos de siempre en vez de quedarse sin catálogos.
+  */
+  const [tiposEntidad, setTiposEntidad] = useState<TipoEntidadFinanciera[] | null>(null);
+  useEffect(() => {
+    if (!isOpen || tiposEntidad) return;
+    tiposEntidadAPI
+      .list()
+      .then(setTiposEntidad)
+      .catch(() => setTiposEntidad(null));
+  }, [isOpen, tiposEntidad]);
 
   // ─────────── Inicialización del formulario al abrir ───────────
   useEffect(() => {
@@ -1439,7 +1454,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     className="input-field"
                   >
                     <option value="">Seleccionar...</option>
-                    {TIPO_ENTIDAD_OPTIONS.map((o) => (
+                    {opcionesTipoEntidad(tiposEntidad, formData.tipoEntidadFinanciera).map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
                       </option>
@@ -1473,7 +1488,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     «Banco»—, igual que en el registro: pedir «Banco» y listar Mercado Pago confunde. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{labelTipo(formData.tipoEntidadFinanciera || "")}</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{labelTipo(formData.tipoEntidadFinanciera || "", tiposEntidad)}</label>
                     {/* Solo las entidades de ESE tipo: ofrecer los bancos cuando se eligió billetera
                         virtual es ofrecer un error, y el listado es largo.
 
@@ -1506,7 +1521,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 {(formData.bancoId || hayDatosDeCuenta) && (
                 <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(camposDe(formData.tipoEntidadFinanciera || "").tipoCuenta || !!formData.tipoDeCuentaBancaria) && (
+                  {(camposDe(formData.tipoEntidadFinanciera || "", tiposEntidad).tipoCuenta || !!formData.tipoDeCuentaBancaria) && (
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de cuenta</label>
                       <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
@@ -1521,7 +1536,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                       {/* CBU o CVU según la entidad: son los dos 22 dígitos, pero no se llaman igual y
                           rotularlos mal hace dudar de si se está cargando lo correcto. */}
-                      {camposDe(formData.tipoEntidadFinanciera || "").cbuLabel} <span className="normal-case tracking-normal font-medium text-gray-400">(sin guiones)</span>
+                      {camposDe(formData.tipoEntidadFinanciera || "", tiposEntidad).cbuLabel} <span className="normal-case tracking-normal font-medium text-gray-400">(sin guiones)</span>
                     </label>
                     {/*
                       SOLO DÍGITOS, Y EXACTAMENTE 22. La regla vive en `utils/cbu.ts`, con tests.
@@ -1559,7 +1574,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias</label>
                     <input type="text" value={formData.aliasBancario || ""} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
                   </div>
-                  {(camposDe(formData.tipoEntidadFinanciera || "").nroCuenta || !!formData.nroDeCuentaBancaria) && (
+                  {(camposDe(formData.tipoEntidadFinanciera || "", tiposEntidad).nroCuenta || !!formData.nroDeCuentaBancaria) && (
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nro. de cuenta</label>
                       <input type="text" value={formData.nroDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />

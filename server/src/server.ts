@@ -53,6 +53,7 @@ import { categoriasSatRoutes } from "./routes/categoriasSat.js";
 import { arcaCategoriasRoutes } from "./routes/arcaCategorias.js";
 import { paritariasRoutes } from "./routes/paritarias.js";
 import { bancoRoutes } from "./routes/bancos.js";
+import { tiposEntidadFinancieraRoutes } from "./routes/tiposEntidadFinanciera.js";
 import { obraSocialRoutes } from "./routes/obrasSociales.js";
 import { sindicatoRoutes } from "./routes/sindicatos.js";
 // Tablas oficiales de ARCA (Simplificación Registral) usadas para armar el TXT de alta masiva.
@@ -251,6 +252,7 @@ app.use("/api/v1/role-frames", roleFrameRoutes);
 // Lectura plana para los consumidores viejos (TXT, completitud, Funciones FRAME, PDFs).
 app.use("/api/v1/categorias-sat", categoriasSatRoutes);
 app.use("/api/v1/bancos", bancoRoutes);
+app.use("/api/v1/tipos-entidad-financiera", tiposEntidadFinancieraRoutes);
 app.use("/api/v1/obras-sociales", obraSocialRoutes);
 app.use("/api/v1/sindicatos", sindicatoRoutes);
 // ABM de categorías en la forma de ARCA: convenio → grupo (escala) → categoría. Toda la escritura.

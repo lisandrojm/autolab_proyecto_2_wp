@@ -47,10 +47,41 @@ const CAMPOS_POR_TIPO: Record<string, CamposTipo> = {
   otro: { tipoCuenta: false, nroCuenta: false, cbuLabel: "CBU/CVU" },
 };
 
-/** Un tipo desconocido cae en `otro`: pide lo mínimo y no promete un rótulo que no puede garantizar. */
-export const camposDe = (tipo: string): CamposTipo => CAMPOS_POR_TIPO[tipo] || CAMPOS_POR_TIPO.otro;
+/*
+  LOS TIPOS AHORA SE ADMINISTRAN (Entidades Financieras → Tipos) y cada uno dice qué datos pide.
 
-export const labelTipo = (tipo: string): string => TIPO_ENTIDAD_OPTIONS.find((o) => o.value === tipo)?.label || "Entidad";
+  Las pantallas que los tienen cargados se los pasan a `camposDe` / `labelTipo`; sin ellos (todavía
+  cargando, o un server sin la ruta nueva) se usa la lista de arriba, que es la misma configuración con
+  la que se sembraron. Así ninguna pantalla se queda sin cascada mientras tanto.
+*/
+export interface TipoEntidadConfig {
+  clave: string;
+  nombre: string;
+  activo?: boolean;
+  pideTipoCuenta: boolean;
+  pideNroCuenta: boolean;
+  rotuloCbu: string;
+}
+
+/** Un tipo desconocido cae en `otro`: pide lo mínimo y no promete un rótulo que no puede garantizar. */
+export const camposDe = (tipo: string, tipos?: TipoEntidadConfig[] | null): CamposTipo => {
+  const t = tipos?.find((x) => x.clave === tipo);
+  if (t) return { tipoCuenta: t.pideTipoCuenta, nroCuenta: t.pideNroCuenta, cbuLabel: t.rotuloCbu };
+  return CAMPOS_POR_TIPO[tipo] || CAMPOS_POR_TIPO.otro;
+};
+
+export const labelTipo = (tipo: string, tipos?: TipoEntidadConfig[] | null): string => tipos?.find((x) => x.clave === tipo)?.nombre || TIPO_ENTIDAD_OPTIONS.find((o) => o.value === tipo)?.label || "Entidad";
+
+/**
+ * Las opciones del select «Tipo de entidad financiera»: los tipos activos y, al final, «No tengo Banco».
+ * El inactivo que la persona YA tiene se sigue mostrando, marcado: si no, su ficha abriría con el tipo
+ * vacío y los datos bancarios escondidos.
+ */
+export const opcionesTipoEntidad = (tipos: TipoEntidadConfig[] | null | undefined, actual?: string): { value: string; label: string }[] => {
+  if (!tipos) return TIPO_ENTIDAD_OPTIONS;
+  const ofrecidos = tipos.filter((t) => t.activo !== false || t.clave === actual).map((t) => ({ value: t.clave, label: t.activo === false ? `${t.nombre} (inactivo)` : t.nombre }));
+  return [...ofrecidos, { value: SIN_BANCO, label: "No tengo Banco" }];
+};
 
 /** Con «No tengo Banco» no se pide ningún dato de cuenta: no hay ninguno que cargar. */
 export const declaraSinBanco = (tipo: string): boolean => tipo === SIN_BANCO;

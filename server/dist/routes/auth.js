@@ -9,6 +9,7 @@ import { consultarCuitEnArca, ErrorConsultaCuit, usuarioExistenteConCuit } from 
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { Info } from "../models/Info.js";
 import { Banco } from "../models/Banco.js";
+import { listarTipos } from "../utils/tiposEntidadFinanciera.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { RegistroLink, getRegistroLinkExpiry } from "../models/RegistroLink.js";
 import crypto from "crypto";
@@ -600,6 +601,8 @@ router.get("/registro-info", async (req, res) => {
             name: b.name,
             tipoEntidad: b.tipoEntidad || "banco",
         }));
+        // Los tipos activos, con qué datos pide cada uno: arman la cascada de datos bancarios del formulario.
+        const tiposEntidad = (await listarTipos(true)).map((t) => ({ clave: t.clave, nombre: t.nombre, pideTipoCuenta: t.pideTipoCuenta, pideNroCuenta: t.pideNroCuenta, rotuloCbu: t.rotuloCbu }));
         /*
           EL LINK MISMO: cuántos días le quedan y, si lo generó alguien desde el móvil, quién invita y para
           qué proyecto, área y turno. La página lo muestra arriba, así quien se registra sabe hasta cuándo
@@ -639,6 +642,7 @@ router.get("/registro-info", async (req, res) => {
             // le corresponde ante ARCA —se constata en el padrón de la SSS al hacer el contrato—, y eran
             // 496 registros viajando en un endpoint público sin que nadie los usara.
             bancos,
+            tiposEntidad,
             rolesFrame,
         });
     }
