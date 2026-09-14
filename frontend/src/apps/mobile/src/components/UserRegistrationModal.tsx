@@ -59,9 +59,15 @@ interface UserRegistrationModalProps {
   onClose: () => void;
   onSuccess: () => void;
   editingUser?: any | null;
+  /**
+   * RENOVACIÓN de un contrato por vencer (pestaña «Por vencer» de Contratación). Abre el formulario de
+   * ALTA —no de edición— ya completo con los datos del contrato, y la solicitud sale con la etiqueta
+   * «Renovación» y el contrato que renueva, que es lo que lo saca de la lista (ver `routes/users.ts`).
+   */
+  renovacion?: { plantilla: any; userProjectId: string; fechaBajaContrato: string } | null;
 }
 
-export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ isOpen, onClose, onSuccess, editingUser }) => {
+export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ isOpen, onClose, onSuccess, editingUser, renovacion }) => {
   const { profile } = useProfile();
   const [submitting, setSubmitting] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -446,8 +452,10 @@ const TIME_OPTIONS = (() => {
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && editingUser) {
-      const meta = editingUser.metadata || {};
+    // Una renovación se carga igual que una solicitud existente —desde su `metadata`—, pero se CREA.
+    const fuente = editingUser || renovacion?.plantilla;
+    if (isOpen && fuente) {
+      const meta = fuente.metadata || {};
       const [inTime, outTime] = (meta.schedule || " - ").split(" - ");
       /*
         Una solicitud guardada ANTES de esta regla puede traer jornadas que no coinciden con su propio
@@ -457,15 +465,15 @@ const TIME_OPTIONS = (() => {
       const m: any = meta;
       const rotativos = !!m.diasRotativos;
       const guardadas = meta.workdaysCount;
-      const calculadasAlAbrir = rotativos ? null : jornadasDelCalendario(meta.startDate || editingUser.hireDate?.split("T")[0] || "", meta.dueDate || "", Array.isArray(m.diasSemana) ? m.diasSemana : []);
+      const calculadasAlAbrir = rotativos ? null : jornadasDelCalendario(meta.startDate || fuente.hireDate?.split("T")[0] || "", meta.dueDate || "", Array.isArray(m.diasSemana) ? m.diasSemana : []);
       const abreEnAjuste = !rotativos && (!!m.workdaysOverridden || (guardadas != null && calculadasAlAbrir !== null && guardadas !== calculadasAlAbrir));
       setFormData({
-        fullName: meta.fullName || `${editingUser.firstName} ${editingUser.lastName}`,
+        fullName: meta.fullName || `${fuente.firstName} ${fuente.lastName}`,
         projectIds: meta.projectIds || [],
         // Las tres formas en que quedó guardado el rol según quién creó la solicitud.
         roleFrameIds: (meta.rolesFrameIds?.length ? meta.rolesFrameIds : meta.roles_frame?.length ? meta.roles_frame : meta.roleFrameId ? [meta.roleFrameId] : []).map((rf: any) => String(typeof rf === "string" ? rf : rf?._id)).filter(Boolean),
         categoriaSatId: meta.categoriaSatId || "",
-        startDate: meta.startDate || editingUser.hireDate?.split("T")[0] || "",
+        startDate: meta.startDate || fuente.hireDate?.split("T")[0] || "",
         dueDate: meta.dueDate || "",
         workdaysCount: meta.workdaysCount?.toString() || "",
         // Las solicitudes anteriores a este campo no traen días: se abren vacías y hay que
@@ -492,7 +500,7 @@ const TIME_OPTIONS = (() => {
         motivoReemplazoId: meta.motivoReemplazoId ? String(meta.motivoReemplazoId) : "",
         comentarios: meta.comentarios || "",
       });
-    } else if (isOpen && !editingUser) {
+    } else if (isOpen && !fuente) {
       setFormData({
         fullName: "",
         projectIds: [],
@@ -525,7 +533,9 @@ const TIME_OPTIONS = (() => {
       setUserSearchTerm("");
       setSelectedUser(null);
     }
-  }, [isOpen, editingUser]);
+    // La renovación arranca sin persona elegida: la pone el efecto de abajo, desde la lista de usuarios.
+    if (isOpen && renovacion && !editingUser) setSelectedUser(null);
+  }, [isOpen, editingUser, renovacion]);
 
   /*
     AL EDITAR, LA PERSONA ELEGIDA VUELVE A ESTAR ELEGIDA.
@@ -540,6 +550,14 @@ const TIME_OPTIONS = (() => {
     if (persona) setSelectedUser(persona);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editingUser, platformUsers]);
+
+  // RENOVACIÓN: la persona es la del contrato que vence. Se elige cuando llega la lista de usuarios.
+  useEffect(() => {
+    const id = renovacion?.plantilla?.metadata?.solicitudUserId;
+    if (!isOpen || !id || editingUser) return;
+    const persona = platformUsers.find((u) => String(u._id) === String(id));
+    if (persona) setSelectedUser(persona);
+  }, [isOpen, renovacion, editingUser, platformUsers]);
 
   /*
     ARRANCA EN «PEDIDO DE ARCA».
@@ -1175,6 +1193,13 @@ const TIME_OPTIONS = (() => {
           nombre_contrato: contratoElegido?.name || undefined,
           // Siempre: la solicitud no se envía sin área y turno, y es lo que precarga el wizard de aprobación.
           areaShiftAssignments: formData.areaShiftAssignments,
+          /*
+            RENOVACIÓN: la etiqueta y QUÉ contrato renueva. Al crearla, el server anota la decisión y el
+            contrato sale de «Por vencer». Al editar una renovación se conservan: si no, guardarla de
+            nuevo le borraría la etiqueta.
+          */
+          esRenovacion: renovacion ? true : (editingUser?.metadata as any)?.esRenovacion || undefined,
+          renovacionDe: renovacion ? { userProjectId: renovacion.userProjectId, fechaBajaContrato: renovacion.fechaBajaContrato } : (editingUser?.metadata as any)?.renovacionDe || undefined,
           isSolicitud: true,
         },
       };
@@ -1184,7 +1209,8 @@ const TIME_OPTIONS = (() => {
         sweetAlert.success("Solicitud actualizada", "La solicitud de alta ha sido actualizada correctamente.");
       } else {
         await usersAPI.create(submitData as any);
-        sweetAlert.success("Solicitud enviada", "La solicitud de alta ha sido enviada correctamente.");
+        if (renovacion) sweetAlert.success("Renovación enviada", "La solicitud de renovación quedó pendiente de aprobación.");
+        else sweetAlert.success("Solicitud enviada", "La solicitud de alta ha sido enviada correctamente.");
       }
 
       /*
@@ -1249,7 +1275,7 @@ const TIME_OPTIONS = (() => {
       customHeader={
         <div className="flex flex-col flex-shrink-0 sticky top-0 z-50 shadow-sm border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="p-4 flex justify-between items-center ">
-            <h3 className="font-bold text-lg text-slate-900 dark:text-white">{editingUser ? "Editar Solicitud" : "Solicitud de Contratación"}</h3>
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">{editingUser ? "Editar Solicitud" : renovacion ? "Renovación de Contratación" : "Solicitud de Contratación"}</h3>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
               <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
             </button>
@@ -1262,7 +1288,7 @@ const TIME_OPTIONS = (() => {
             Cancelar
           </button>
           <button onClick={handleSubmit} disabled={submitting} className="flex-1 rounded h-12 bg-blue-500 text-white font-medium shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-            {submitting ? "Cargando..." : editingUser ? "Actualizar Solicitud" : "Enviar Solicitud"}
+            {submitting ? "Cargando..." : editingUser ? "Actualizar Solicitud" : renovacion ? "Enviar Renovación" : "Enviar Solicitud"}
             <FontAwesomeIcon icon={faCheck} />
           </button>
         </div>

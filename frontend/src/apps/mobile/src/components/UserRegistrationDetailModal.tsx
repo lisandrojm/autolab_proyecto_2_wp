@@ -291,6 +291,14 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
             </div>
           </div>
 
+          {/* RENOVACIÓN: la solicitud extiende un contrato que estaba por vencer (pestaña «Por vencer»). */}
+          {user.metadata?.esRenovacion && (
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-3 rounded-xl flex items-center gap-3">
+              <FontAwesomeIcon icon={faInfoCircle} className="text-emerald-500" />
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Renovación de contratación: extiende un contrato que estaba por vencer.</p>
+            </div>
+          )}
+
           {/* REPLACEMENT INFO */}
           {user.metadata?.isReplacement && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-xl flex items-center gap-3">

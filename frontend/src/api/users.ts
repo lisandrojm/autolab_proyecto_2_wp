@@ -213,6 +213,8 @@ export interface SolicitudOverviewRow {
   comentarios?: string | null;
   /** Usuario real al que corresponde, si la solicitud es para alguien que ya existe. */
   solicitudUserId?: string | null;
+  /** Renueva un contrato por vencer (etiqueta «Renovación»). */
+  esRenovacion?: boolean;
 }
 
 export interface UserProjectMetadata {
@@ -296,6 +298,9 @@ export interface User {
     solicitudStatus?: "pendiente" | "aprobada" | "rechazada" | "cancelada";
     /** Usuario real al que corresponde la solicitud (vacío si el alta es de alguien que no existe aún). */
     solicitudUserId?: string;
+    /** La solicitud RENUEVA un contrato por vencer: se muestra con la etiqueta «Renovación». */
+    esRenovacion?: boolean;
+    renovacionDe?: { userProjectId?: string; fechaBajaContrato?: string };
     roles_frame?: (string | { _id: string; name: string })[];
     activo?: boolean;
     roleFrameId?: string;

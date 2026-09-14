@@ -104,6 +104,11 @@ const userSchema = new Schema({
         isSolicitud: { type: Boolean, default: false },
         solicitudStatus: { type: String, enum: ["pendiente", "aprobada", "rechazada", "cancelada"] },
         solicitudUserId: { type: Schema.Types.ObjectId, ref: "User" },
+        esRenovacion: { type: Boolean },
+        renovacionDe: {
+            userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },
+            fechaBajaContrato: { type: String },
+        },
         projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
         roles_frame: {
             type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

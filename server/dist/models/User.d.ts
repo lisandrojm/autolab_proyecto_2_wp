@@ -187,6 +187,13 @@ export interface IUserMetadata {
      * generar una tarjeta duplicada. Vacío = alta de alguien que todavía no es usuario.
      */
     solicitudUserId?: Types.ObjectId;
+    /** La solicitud RENUEVA un contrato por vencer (etiqueta «Renovación»). Ver `models/RenovacionContrato.ts`. */
+    esRenovacion?: boolean;
+    /** Qué contrato renueva: (UserProject, fecha de baja), que es como se identifica un contrato. */
+    renovacionDe?: {
+        userProjectId?: Types.ObjectId;
+        fechaBajaContrato?: string;
+    };
     projectIds?: Types.ObjectId[];
     rolesFrameIds?: string[] | Types.ObjectId[];
 }

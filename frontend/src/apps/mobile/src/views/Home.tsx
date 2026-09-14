@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus, faSitemap, faCalendarCheck, faLink } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
@@ -7,6 +8,7 @@ import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { ProfileData } from "../../../../api/personnel";
+import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 
@@ -28,6 +30,22 @@ interface HomeProps {
 export default function Home({ onNavigate }: HomeProps) {
   const { user, logout } = useAuthStore();
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
+  /*
+    CONTRATOS POR VENCER: el aviso de la semana previa. Se muestra en la tarjeta Contratación, que es
+    donde se resuelven (pestaña «Por vencer»). Con su catch: sin el número, la tarjeta sigue igual.
+  */
+  const [porVencer, setPorVencer] = useState(0);
+  useEffect(() => {
+    if (!(user?.permissions || []).includes(MOBILE_USERS)) return;
+    let cancelado = false;
+    contratosPorVencerAPI
+      .contar()
+      .then((n) => !cancelado && setPorVencer(n))
+      .catch(() => undefined);
+    return () => {
+      cancelado = true;
+    };
+  }, [user]);
   const { profile, loading: profileLoading } = useProfile();
 
   /*
@@ -111,7 +129,14 @@ export default function Home({ onNavigate }: HomeProps) {
     // nombre viejo prometía una pantalla de usuarios que esta no es.
     title: "Contratación",
     // «Solicitudes» a secas: «de alta» se confunde con el alta temprana de ARCA, que es otra cosa.
-    description: "Solicitudes",
+    description:
+      porVencer > 0 ? (
+        <>
+          Solicitudes · <span className="font-bold text-amber-500">{porVencer} por vencer</span>
+        </>
+      ) : (
+        "Solicitudes"
+      ),
     view: "user_history" as ViewType,
     disabled: false,
   };

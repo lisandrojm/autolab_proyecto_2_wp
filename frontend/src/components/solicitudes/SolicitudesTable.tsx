@@ -66,6 +66,8 @@ export interface SolicitudVista {
   schedule?: string | null;
   dailyRate?: number | null;
   comentarios?: string | null;
+  /** Renueva un contrato por vencer: etiqueta «Renovación». */
+  esRenovacion?: boolean;
 }
 
 /** Adapta un `User` con `metadata.isSolicitud` a la forma de la tabla. */
@@ -87,6 +89,7 @@ export const solicitudDesdeUser = (u: any): SolicitudVista => {
     schedule: m.schedule ?? null,
     dailyRate: m.dailyRate ?? null,
     comentarios: m.comentarios ?? null,
+    esRenovacion: !!m.esRenovacion,
   };
 };
 
@@ -194,7 +197,11 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-xs shrink-0">{s.nombre.charAt(0).toUpperCase()}</div>
                       <div className="min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{s.nombre}</p>
+                        <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                          {s.nombre}
+                          {/* Extiende un contrato que estaba por vencer: no es un ingreso nuevo. */}
+                          {s.esRenovacion && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
+                        </p>
                         <p className="text-xs text-gray-500 truncate">{formatFechaSolicitud(s.creadaEl)}</p>
                         {/*
                           EL COMENTARIO DE QUIEN PIDIÓ EL ALTA.

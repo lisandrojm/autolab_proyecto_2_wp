@@ -194,6 +194,10 @@ export interface IUserMetadata {
    * generar una tarjeta duplicada. Vacío = alta de alguien que todavía no es usuario.
    */
   solicitudUserId?: Types.ObjectId;
+  /** La solicitud RENUEVA un contrato por vencer (etiqueta «Renovación»). Ver `models/RenovacionContrato.ts`. */
+  esRenovacion?: boolean;
+  /** Qué contrato renueva: (UserProject, fecha de baja), que es como se identifica un contrato. */
+  renovacionDe?: { userProjectId?: Types.ObjectId; fechaBajaContrato?: string };
   projectIds?: Types.ObjectId[];
   rolesFrameIds?: string[] | Types.ObjectId[];
 }
@@ -333,6 +337,11 @@ const userSchema = new Schema<IUser>(
       isSolicitud: { type: Boolean, default: false },
       solicitudStatus: { type: String, enum: ["pendiente", "aprobada", "rechazada", "cancelada"] },
       solicitudUserId: { type: Schema.Types.ObjectId, ref: "User" },
+      esRenovacion: { type: Boolean },
+      renovacionDe: {
+        userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },
+        fechaBajaContrato: { type: String },
+      },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
       roles_frame: {
         type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

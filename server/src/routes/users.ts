@@ -12,6 +12,7 @@ import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
+import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
@@ -1117,6 +1118,8 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         dailyRate: m.dailyRate ?? null,
         comentarios: m.comentarios ?? null,
         solicitudUserId: m.solicitudUserId ? String(m.solicitudUserId) : null,
+        // Renueva un contrato por vencer: la tabla la muestra con la etiqueta «Renovación».
+        esRenovacion: !!m.esRenovacion,
       };
     });
 
@@ -1311,6 +1314,39 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
     });
 
     await user.save();
+
+    /*
+      RENOVACIÓN DE UN CONTRATO POR VENCER: se anota la decisión, y con eso el contrato sale de «Por
+      vencer» (ver `services/contratosPorVencer.ts`). Va DESPUÉS de guardar la solicitud: anotada antes,
+      un guardado fallido sacaría el contrato de la lista sin que nadie lo haya renovado. Con su propio
+      catch: la solicitud ya existe, y eso es lo que no se puede perder.
+    */
+    const renovacionDe: any = (user.metadata as any)?.esRenovacion ? (user.metadata as any)?.renovacionDe : null;
+    if (renovacionDe?.userProjectId && renovacionDe?.fechaBajaContrato) {
+      try {
+        const up: any = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId").lean();
+        if (up) {
+          const quien: any = await User.findById(req.user!.userId).select("firstName lastName").lean();
+          await RenovacionContrato.updateOne(
+            { tenantId: req.tenantObjectId, userProjectId: up._id, fechaBajaContrato: String(renovacionDe.fechaBajaContrato) },
+            {
+              $set: {
+                userId: up.userId,
+                projectId: up.projectId,
+                decision: "renovar",
+                solicitudId: user._id,
+                decididoPor: new Types.ObjectId(req.user!.userId),
+                decididoPorNombre: `${quien?.firstName || ""} ${quien?.lastName || ""}`.trim(),
+                decididoEl: new Date(),
+              },
+            },
+            { upsert: true },
+          );
+        }
+      } catch (e) {
+        console.error("[RENOVACION] No se pudo anotar la renovación del contrato:", e);
+      }
+    }
 
     // Sync projects: Add this user to assignedUsers of selected projects
     if (user.projectIds && user.projectIds.length > 0) {
