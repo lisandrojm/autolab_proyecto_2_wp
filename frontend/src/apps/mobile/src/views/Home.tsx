@@ -10,6 +10,16 @@ import { ProfileData } from "../../../../api/personnel";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 
+/** La notificación destacada arriba de las tarjetas, apagada hasta que vivan en la campanita. Ver el render. */
+const MOSTRAR_NOTIFICACION_DESTACADA = false;
+
+/**
+ * EL ORDEN DE LAS TARJETAS. Lo que tiene que ver con la gente a cargo primero; después Contratación y
+ * Cargar novedades, que son lo que se hace todos los días; y al final lo propio —Pedidos y Vacaciones—.
+ * Va por vista y no por el orden en que se agregan abajo, así sumar una tarjeta no reordena las demás.
+ */
+const ORDEN_DE_TARJETAS: ViewType[] = ["my_teams", "activity_compliance", "user_history", "activity_logs", "orders", "vacations"];
+
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
 }
@@ -192,7 +202,13 @@ export default function Home({ onNavigate }: HomeProps) {
     vacations: MOBILE_VACATIONS,
     user_history: MOBILE_USERS,
   };
-  const acciones = quickActions.map((action) => (inactivo(PERMISO_DE_VISTA[action.view as ViewType]) ? { ...action, disabled: true, description: "En desarrollo" } : action));
+  const posicion = (vista: ViewType) => {
+    const i = ORDEN_DE_TARJETAS.indexOf(vista);
+    return i === -1 ? ORDEN_DE_TARJETAS.length : i; // una vista nueva sin lugar asignado va al final
+  };
+  const acciones = quickActions
+    .map((action) => (inactivo(PERMISO_DE_VISTA[action.view as ViewType]) ? { ...action, disabled: true, description: "En desarrollo" } : action))
+    .sort((a, b) => posicion(a.view as ViewType) - posicion(b.view as ViewType));
 
   const handleLogout = () => {
     logout();
@@ -213,8 +229,12 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </div>
 
-      {/* NOTIFICACIÓN DESTACADA */}
-      {!notifLoading && latestNotification && (
+      {/*
+        NOTIFICACIÓN DESTACADA: apagada por ahora. Mostraba la última no leída arriba de las tarjetas, sin
+        contexto ni forma de verla entera, y confundía más de lo que avisaba. Las notificaciones van a
+        vivir en la campanita de la barra de abajo; hasta entonces no se muestran acá.
+      */}
+      {MOSTRAR_NOTIFICACION_DESTACADA && !notifLoading && latestNotification && (
         <div className="p-4">
           <div className="flex items-start gap-3 rounded-xl border border-green-500 bg-green-50 p-4 shadow-sm dark:border-green-400 dark:bg-green-900/40">
             <FontAwesomeIcon icon={faBell} className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
