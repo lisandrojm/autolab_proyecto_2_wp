@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowLeft,
   faCalendar,
   faUmbrellaBeach,
   faChevronLeft,
@@ -21,6 +20,7 @@ import {
   faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
+import SectionHeader from "../components/SectionHeader";
 import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -500,22 +500,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   return (
     <div className="flex-1 pb-24">
       {/* HEADER: Fijo y con el botón principal (SIN CAMBIOS) */}
-      <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-              <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-            </button>
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faUmbrellaBeach} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Vacaciones</h1>
-              <button onClick={() => setShowProfileInfoModal(true)} className="flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-500 transition-colors ml-1">
-                <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* La «i» que ya había abría los datos de vacaciones del perfil: queda como botón dentro del info. */}
+      <SectionHeader
+        icon={faUmbrellaBeach}
+        titulo="Mis Vacaciones"
+        onBack={() => onNavigate("home")}
+        info={"Pedí tus vacaciones y seguí en qué estado está cada pedido: pendiente, aprobado o entregado."}
+        extra={{ label: "Ver mis datos de vacaciones", onClick: () => setShowProfileInfoModal(true) }}
+      />
 
       <div className="px-4 pt-4 flex flex-col gap-4">
         {/* ALERTA VACACIONES ENTREGADAS (Activas) */}

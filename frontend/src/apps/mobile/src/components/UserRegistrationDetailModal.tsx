@@ -95,10 +95,6 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
     }
   };
 
-  const getInitials = (name: string) => {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-  };
-
   /**
    * Cancela (elimina) la solicitud de alta. Solo se ofrece mientras está PENDIENTE:
    * una vez aprobada ya es un usuario real y no debe borrarse desde acá.
@@ -163,9 +159,6 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
 
         {/* PROFILE HEADER */}
         <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-xl font-bold ${isSolicitud ? 'bg-blue-600 text-white' : 'bg-primary text-white'}`}>
-            {getInitials(displayName)}
-          </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{isSolicitud ? "Usuario Invitado" : user.email}</p>

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCamera, faImage, faTimes, faShoppingCart, faPlus, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faCamera, faImage, faTimes, faShoppingCart, faPlus, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
+import SectionHeader from "../components/SectionHeader";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
 import { OrderConfig } from "../../../../api/orderConfig";
@@ -712,23 +713,12 @@ export default function Orders({ onNavigate, initialCategoryType, onIntentConsum
 
   return (
     <div className="flex-1 pb-24">
-      <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-              <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                <FontAwesomeIcon icon={faShoppingCart} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Pedidos</h1>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SectionHeader
+        icon={faShoppingCart}
+        titulo="Mis Pedidos"
+        onBack={() => onNavigate("home")}
+        info={"Hacé tus pedidos y seguí en qué estado está cada uno. Con el + cargás uno nuevo; tocá un pedido para ver el detalle."}
+      />
 
       <div className="px-4 pt-4">
         {showForm && (

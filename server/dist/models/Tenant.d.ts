@@ -34,6 +34,8 @@ export interface ITenant extends Document {
         currency: string;
         language: string;
         features: string[];
+        /** Cuántos días dura un link de registro generado desde la app móvil (sección Registro). Ver `routes/registroLinks.ts`. */
+        registroDiasLinkMovil?: number;
     };
     integrations?: {
         dropbox?: {

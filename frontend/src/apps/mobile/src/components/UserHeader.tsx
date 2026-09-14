@@ -1,4 +1,3 @@
-import UserAvatar from "./UserAvatar";
 import { PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../../../../utils/permisosMobile";
 
 interface User {
@@ -43,8 +42,8 @@ export default function UserHeader({ user, className = "" }: UserHeaderProps) {
   const firstName = getFirstName(user);
 
   return (
+    // Sin avatar: las iniciales no dicen nada que no diga el nombre y la pantalla tiene que quedar limpia.
     <div className={`flex items-center gap-3 ${className}`}>
-      <UserAvatar firstName={user?.firstName} lastName={user?.lastName} photoUrl={user?.photoUrl} size="md" />
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">Hola {firstName}!</h2>
         {badgesDeJerarquia(user).map((b) => (

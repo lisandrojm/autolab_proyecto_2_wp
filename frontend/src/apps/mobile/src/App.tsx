@@ -6,6 +6,7 @@ import Home from "./views/Home";
 import Calendar from "./views/Calendar";
 import Documents from "./views/Documents";
 import Profile from "./views/Profile";
+import Asignacion from "./views/Asignacion";
 import Vacations from "./views/Vacations";
 import Orders from "./views/Orders";
 import Requests from "./views/Requests";
@@ -89,6 +90,8 @@ function App() {
             }}
           />
         );
+      case "asignacion":
+        return <Asignacion />;
       case "vacations":
         return puede(MOBILE_VACATIONS) ? <Vacations onNavigate={setCurrentView} /> : inicio;
       case "orders":

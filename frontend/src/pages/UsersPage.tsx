@@ -5,7 +5,7 @@ import { afipAPI } from '../api/afip';
 import { motivoCuitInvalido, cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
 import { esperaCuentaBancaria } from '../utils/bancarios';
-import { registroLinksAPI, RegistroLink, buildRegistroUrl, registroLinkDaysLeft, isRegistroLinkExpired, registroLinkExpiry } from '../api/registroLinks';
+import { RegistroModal } from '../components/users/RegistroModal';
 import { rolesAPI, Role } from '../api/roles';
 import { areasAPI, Area } from '../api/areas';
 import { clientsAPI, Client } from '../api/clients';
@@ -26,7 +26,7 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faCheck, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
@@ -163,14 +163,6 @@ export const UsersPage: React.FC = () => {
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [registroLinks, setRegistroLinks] = useState<RegistroLink[]>([]);
-  const [linksLoading, setLinksLoading] = useState(false);
-  const [generatingLink, setGeneratingLink] = useState(false);
-  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
-  // Duración (en días) del link a generar. "custom" habilita el input libre. Default 30.
-  const [linkDurationSel, setLinkDurationSel] = useState<string>('30');
-  const [linkDurationCustom, setLinkDurationCustom] = useState<string>('30');
-  const [, forceLinkTick] = useState(0); // refresca el contador de días de los links
   const [modalMode, setModalMode] = useState<ModalMode>('edit');
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -698,85 +690,8 @@ export const UsersPage: React.FC = () => {
     setShowModal(true);
   };
 
-  // Cargar la lista de links de registro del tenant
-  const loadRegistroLinks = async () => {
-    setLinksLoading(true);
-    try {
-      const links = await registroLinksAPI.list();
-      setRegistroLinks(links);
-    } catch (error) {
-      sweetAlert.error('Error', 'No se pudieron cargar los links de registro');
-    } finally {
-      setLinksLoading(false);
-    }
-  };
-
-  // Mientras el modal de links está abierto, refrescar los días restantes cada minuto
-  useEffect(() => {
-    if (!showLinkModal) return;
-    const id = setInterval(() => forceLinkTick((n) => n + 1), 60_000);
-    return () => clearInterval(id);
-  }, [showLinkModal]);
-
-  // Abrir el modal de links de registro (carga la lista, no genera automáticamente)
-  const handleOpenLinkModal = async () => {
-    setCopiedLinkId(null);
-    setShowLinkModal(true);
-    await loadRegistroLinks();
-  };
-
-  // Generar un nuevo link persistente
-  const handleGenerateLink = async () => {
-    const days = Number(linkDurationSel === 'custom' ? linkDurationCustom : linkDurationSel);
-    if (!Number.isInteger(days) || days < 1 || days > 365) {
-      sweetAlert.error('Duración inválida', 'La duración debe ser un número entero entre 1 y 365 días.');
-      return;
-    }
-    setGeneratingLink(true);
-    try {
-      await registroLinksAPI.generate(clientId, days);
-      await loadRegistroLinks();
-    } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo generar el link de registro');
-    } finally {
-      setGeneratingLink(false);
-    }
-  };
-
-  // Copiar un link al portapapeles
-  const copyRegistroLink = async (link: RegistroLink) => {
-    try {
-      await navigator.clipboard.writeText(buildRegistroUrl(link.token));
-      setCopiedLinkId(link._id);
-      setTimeout(() => setCopiedLinkId((prev) => (prev === link._id ? null : prev)), 2000);
-    } catch {
-      /* el usuario puede copiarlo manualmente */
-    }
-  };
-
-  // Revocar un link (deja de funcionar al instante)
-  const handleRevokeLink = async (link: RegistroLink) => {
-    const result = await sweetAlert.confirm('¿Revocar link?', 'El link dejará de funcionar de inmediato. Las personas que ya se registraron no se ven afectadas.', 'Sí, revocar');
-    if (!result.isConfirmed) return;
-    try {
-      await registroLinksAPI.revoke(link._id);
-      await loadRegistroLinks();
-    } catch (error) {
-      sweetAlert.error('Error', 'No se pudo revocar el link');
-    }
-  };
-
-  // Eliminar un link definitivamente
-  const handleDeleteLink = async (link: RegistroLink) => {
-    const result = await sweetAlert.confirm('¿Eliminar link?', 'Se eliminará el link de forma permanente.', 'Sí, eliminar');
-    if (!result.isConfirmed) return;
-    try {
-      await registroLinksAPI.remove(link._id);
-      await loadRegistroLinks();
-    } catch (error) {
-      sweetAlert.error('Error', 'No se pudo eliminar el link');
-    }
-  };
+  // Links de registro y registrados: todo vive en <RegistroModal/>.
+  const handleOpenLinkModal = () => setShowLinkModal(true);
 
   const openEdit = (user: User) => {
     setEditingUser(user);
@@ -2330,102 +2245,8 @@ export const UsersPage: React.FC = () => {
         }}
       />
 
-      <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar Usuario" size="lg">
-        <div className="flex flex-col gap-4 py-1">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <p className="text-sm text-gray-600 dark:text-gray-300 flex-1">
-              Comparta un link con la persona que desee registrar. Elegí cuántos días dura; <strong>la duración no se puede cambiar una vez creado</strong>. También puede revocarlos cuando quiera.
-            </p>
-            <div className="flex items-end gap-2 shrink-0">
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Duración</label>
-                <select value={linkDurationSel} onChange={(e) => setLinkDurationSel(e.target.value)} className="px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white text-sm">
-                  <option value="7">7 días</option>
-                  <option value="15">15 días</option>
-                  <option value="30">30 días</option>
-                  <option value="60">60 días</option>
-                  <option value="90">90 días</option>
-                  <option value="custom">Personalizado…</option>
-                </select>
-              </div>
-              {linkDurationSel === 'custom' && (
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Días (1-365)</label>
-                  <input type="number" min={1} max={365} value={linkDurationCustom} onChange={(e) => setLinkDurationCustom(e.target.value)} className="w-24 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white text-sm" />
-                </div>
-              )}
-              <button type="button" onClick={handleGenerateLink} disabled={generatingLink} className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-60">
-                <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
-                {generatingLink ? 'Generando...' : 'Generar nuevo link'}
-              </button>
-            </div>
-          </div>
-
-          {linksLoading ? (
-            <p className="text-sm text-gray-500 text-center py-6">Cargando links...</p>
-          ) : registroLinks.length === 0 ? (
-            <div className="flex flex-col items-center text-center gap-3 py-6">
-              <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <FontAwesomeIcon icon={faUserPlus} className="text-blue-600 dark:text-blue-400 text-xl" />
-              </div>
-              <p className="text-sm text-gray-500">Todavía no hay links. Genere uno para empezar.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2 max-h-[55vh] overflow-y-auto">
-              {registroLinks.map((link) => {
-                const expired = isRegistroLinkExpired(link);
-                const usable = link.active && !expired;
-                const daysLeft = registroLinkDaysLeft(link);
-                const expiryMs = registroLinkExpiry(link);
-                return (
-                  <div key={link._id} className={`rounded-lg border px-3 py-2.5 ${usable ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40' : 'border-gray-200 dark:border-gray-800 bg-gray-100/60 dark:bg-gray-900/20 opacity-70'}`}>
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {!link.active ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Revocado</span> : expired ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Vencido</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Activo</span>}
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{link.clientName || 'General'}</span>
-                        {/* Los del móvil dicen para dónde son: proyecto · área · turno. Quién lo generó va abajo, en «Por». */}
-                        {link.origen === 'mobile' && <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">Móvil</span>}
-                        {link.projectName && <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{[link.projectName, link.areaName, link.shiftName].filter(Boolean).join(' · ')}</span>}
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {link.usageCount} {link.usageCount === 1 ? 'registro' : 'registros'}
-                        </span>
-                        {usable && daysLeft !== null && <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${daysLeft <= 5 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{daysLeft === 0 ? 'Vence hoy' : `Vence en ${daysLeft} ${daysLeft === 1 ? 'día' : 'días'}`}</span>}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {usable && (
-                          <button type="button" onClick={() => copyRegistroLink(link)} title="Copiar link" className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-                            <FontAwesomeIcon icon={copiedLinkId === link._id ? faCheck : faCopy} className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        {usable && (
-                          <button type="button" onClick={() => handleRevokeLink(link)} title="Revocar link" className="p-2 rounded text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors">
-                            <FontAwesomeIcon icon={faBan} className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        <button type="button" onClick={() => handleDeleteLink(link)} title="Eliminar link" className="p-2 rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                          <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    {usable && (
-                      <div className="mt-2 flex items-center gap-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/60 px-2 py-1">
-                        <FontAwesomeIcon icon={faLink} className="h-3 w-3 text-gray-400 shrink-0" />
-                        <input readOnly value={buildRegistroUrl(link.token)} onFocus={(e) => e.currentTarget.select()} className="flex-1 bg-transparent text-xs text-gray-600 dark:text-gray-300 outline-none truncate" />
-                      </div>
-                    )}
-                    <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
-                      <span>Creado: {new Date(link.createdAt).toLocaleDateString()}</span>
-                      {expiryMs !== null && <span>Vence: {new Date(expiryMs).toLocaleDateString()}</span>}
-                      {link.lastUsedAt && <span>Último uso: {new Date(link.lastUsedAt).toLocaleDateString()}</span>}
-                      {link.createdByName && <span>Por: {link.createdByName}</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </InfoModal>
+      {/* Links de registro y quiénes se registraron con ellos. Ver el componente. */}
+      <RegistroModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} clientId={clientId} onAbrirUsuario={openEdit} />
     </PageLayout>
   );
 };

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCalendarCheck, faChevronLeft, faChevronRight, faBell, faSpinner, faChevronDown, faChevronUp, faCircleCheck, faXmark, faUser, faUsers, faMagnifyingGlass, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCalendarCheck, faChevronLeft, faChevronRight, faBell, faSpinner, faChevronDown, faChevronUp, faCircleCheck, faXmark, faUsers, faMagnifyingGlass, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
+import SectionHeader from "../components/SectionHeader";
 import { complianceAPI, ComplianceResponse, CoordinatorCompliance } from "../../../../api/compliance";
 import { sweetAlert } from "../../../../utils/sweetAlert";
 
@@ -240,22 +241,38 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
   return (
     <div className="flex-1 pb-24">
       {/* HEADER */}
-      <div className="sticky top-0 z-30 border-b border-slate-800 bg-slate-50/90 px-4 py-4 backdrop-blur-sm dark:bg-slate-900/90">
-        <div className="flex items-center gap-3">
-          <button onClick={() => onNavigate("home")} className="flex h-10 w-10 items-center justify-center rounded transition-colors hover:bg-slate-200 dark:hover:bg-slate-800">
-            <FontAwesomeIcon icon={faArrowLeft} className="h-5 w-5 text-slate-900 dark:text-slate-100" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-100">
-              <FontAwesomeIcon icon={faCalendarCheck} className="h-5 w-5" />
-              Cumplimiento
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Cumplimiento de tus coordinadores</p>
-          </div>
-        </div>
-      </div>
+      <SectionHeader
+        icon={faCalendarCheck}
+        titulo="Cumplimiento"
+        subtitulo="Cumplimiento de tus coordinadores"
+        onBack={() => onNavigate("home")}
+        info={"Seguí si tus coordinadores cargan las novedades de su gente. El calendario muestra, día por día, quién las envió y a quién le falta.\n\nElegí un coordinador para ver su detalle y usá «Recordar» para avisarle a quien esté atrasado."}
+      />
 
       <div className="space-y-4 px-4 pt-4">
+        {/*
+          A QUIÉN SE REVISA, ARRIBA DE TODO: todo lo de abajo —mes, resumen, calendario— es de esa
+          persona, así que primero se lee de quién es. Un botón que dice quién es y abre el menú para cambiarlo.
+        */}
+        {coordinadores.length > 0 && (
+          <button
+            onClick={() => {
+              setBusqueda("");
+              setSelectorAbierto(true);
+            }}
+            className="flex w-full items-center gap-3 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2.5 text-left dark:border-blue-800 dark:bg-blue-950/30"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Revisando</span>
+              <span className="block truncate text-base font-bold text-slate-900 dark:text-slate-100">{elegido ? elegido.name : `Todos los coordinadores (${coordinadores.length})`}</span>
+            </span>
+            {elegido && conteos(elegido).vencidas > 0 && <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">{conteos(elegido).vencidas} vencidas</span>}
+            <span className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400">
+              Cambiar <FontAwesomeIcon icon={faChevronDown} className="ml-0.5 h-3 w-3" />
+            </span>
+          </button>
+        )}
+
         {/* PROYECTO: sólo si supervisa más de uno */}
         {proyectos.size > 1 && (
           <select value={proyectoId} onChange={(e) => setProyectoId(e.target.value)} className="w-full rounded border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white">
@@ -305,30 +322,7 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
               </p>
             )}
 
-            {/* 2. A QUIÉN SE REVISA: un botón que dice quién es, y abre el menú para cambiarlo */}
-            {coordinadores.length > 0 && (
-              <button
-                onClick={() => {
-                  setBusqueda("");
-                  setSelectorAbierto(true);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2.5 text-left dark:border-blue-800 dark:bg-blue-950/30"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
-                  <FontAwesomeIcon icon={elegido ? faUser : faUsers} className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Revisando</span>
-                  <span className="block truncate text-sm font-bold text-slate-900 dark:text-slate-100">{elegido ? elegido.name : `Todos los coordinadores (${coordinadores.length})`}</span>
-                </span>
-                {elegido && conteos(elegido).vencidas > 0 && <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">{conteos(elegido).vencidas} vencidas</span>}
-                <span className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                  Cambiar <FontAwesomeIcon icon={faChevronDown} className="ml-0.5 h-3 w-3" />
-                </span>
-              </button>
-            )}
-
-            {/* 3. CALENDARIO */}
+            {/* 2. CALENDARIO */}
             <div className="relative rounded-xl border border-slate-200 p-3 dark:border-slate-700">
               {cargando && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/60 dark:bg-slate-900/60">
@@ -502,8 +496,8 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
         los más atrasados van primero. Con muchos coordinadores, el buscador evita recorrer la lista.
       */}
       {selectorAbierto && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setSelectorAbierto(false)}>
-          <div className="flex max-h-[80vh] w-full flex-col rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 xl:w-1/2" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setSelectorAbierto(false)}>
+          <div className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
               <p className="text-base font-bold text-slate-900 dark:text-slate-100">¿A quién querés revisar?</p>
               <button onClick={() => setSelectorAbierto(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">

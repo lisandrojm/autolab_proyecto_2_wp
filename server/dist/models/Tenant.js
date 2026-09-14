@@ -34,6 +34,7 @@ const tenantSchema = new Schema({
         currency: { type: String, default: "USD" },
         language: { type: String, default: "en" },
         features: [{ type: String }],
+        registroDiasLinkMovil: { type: Number, default: 7, min: 1, max: 365 },
     },
     integrations: {
         dropbox: {

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faPlus, faUsers, faUserPlus, faEnvelope, faBriefcase, faBuilding, faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faUsers, faUserPlus, faEnvelope, faBriefcase, faBuilding, faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
 import { UserRegistrationDetailModal } from "../components/UserRegistrationDetailModal";
 import { User } from "../../../../api/users";
+import SectionHeader from "../components/SectionHeader";
 
 interface UserHistoryProps {
   onNavigate: (view: ViewType) => void;
@@ -18,11 +19,6 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // Helper to get initials
-  const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase() || "U";
-  };
-
   const handleEdit = (user: User) => {
     setEditingUser(user);
     setShowDetailModal(false);
@@ -32,17 +28,12 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   return (
     <div className="flex-1 pb-24">
       {/* HEADER */}
-      <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
-        <div className="flex items-center gap-3">
-          <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-            <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-          </button>
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faUsers} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Solicitud de Contratación</h1>
-          </div>
-        </div>
-      </div>
+      <SectionHeader
+        icon={faUsers}
+        titulo="Solicitud de Contratación"
+        onBack={() => onNavigate("home")}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. Abajo ves el historial de las que pediste y en qué estado está cada una; tocá una para ver el detalle."}
+      />
 
       <div className="px-4 pt-4">
         <h3 className="text-lg font-bold mb-4">Historial de Solicitudes de Contratación</h3>
@@ -52,7 +43,6 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm border dark:border-slate-800">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 bg-slate-200 dark:bg-slate-700 rounded-full" />
                   <div className="flex-1">
                     <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded-md mb-2" />
                     <div className="h-3 w-48 bg-slate-200 dark:bg-slate-700 rounded-md" />
@@ -67,7 +57,6 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
             {users.map((user) => {
               const isSolicitud = user.metadata?.isSolicitud;
               const displayName = isSolicitud ? user.metadata?.fullName || `${user.firstName} ${user.lastName}` : `${user.firstName} ${user.lastName}`;
-              const initials = isSolicitud ? user.metadata?.fullName?.charAt(0) || "S" : getInitials(user.firstName, user.lastName);
 
               return (
                 <div
@@ -79,7 +68,6 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                   className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
                 >
                   <div className="flex items-start gap-3 mb-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-sm ${isSolicitud ? "bg-blue-100 text-blue-600" : "bg-primary/10 text-primary"}`}>{initials}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</h4>

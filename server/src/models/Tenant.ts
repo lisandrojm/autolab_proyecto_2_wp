@@ -30,7 +30,14 @@ export interface ITenant extends Document {
     position?: string;
     department?: string;
   };
-  settings: { timezone: string; currency: string; language: string; features: string[] };
+  settings: {
+    timezone: string;
+    currency: string;
+    language: string;
+    features: string[];
+    /** Cuántos días dura un link de registro generado desde la app móvil (sección Registro). Ver `routes/registroLinks.ts`. */
+    registroDiasLinkMovil?: number;
+  };
   integrations?: {
     dropbox?: {
       appKey?: string;
@@ -259,6 +266,7 @@ const tenantSchema = new Schema<ITenant>(
       currency: { type: String, default: "USD" },
       language: { type: String, default: "en" },
       features: [{ type: String }],
+      registroDiasLinkMovil: { type: Number, default: 7, min: 1, max: 365 },
     },
 
     integrations: {

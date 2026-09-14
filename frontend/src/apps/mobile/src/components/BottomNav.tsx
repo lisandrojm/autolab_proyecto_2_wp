@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHome, faCalendar, faFolderOpen, faUser, faBell } from "@fortawesome/free-solid-svg-icons";
+import { faHome, faFolderOpen, faUser, faBell, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 
 interface BottomNavProps {
@@ -10,9 +10,11 @@ interface BottomNavProps {
 export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
   const navItems = [
     { id: "home" as ViewType, icon: faHome, label: "Inicio", disabled: false },
-    { id: "calendar" as ViewType, icon: faCalendar, label: "Calendario", disabled: true },
-    { id: "documents" as ViewType, icon: faFolderOpen, label: "Documentos", disabled: true },
+    // El Calendario salió de la barra (estaba apagado): su lugar lo toma el Perfil.
     { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: false },
+    { id: "documents" as ViewType, icon: faFolderOpen, label: "Documentos", disabled: true },
+    // Proyecto, contrato y áreas/turnos: antes era el final del Perfil y lo alargaba de más.
+    { id: "asignacion" as ViewType, icon: faBriefcase, label: "Asignación", disabled: false },
     { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: true, notifications: true },
   ];
 

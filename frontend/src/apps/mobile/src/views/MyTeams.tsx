@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faSitemap, faLayerGroup, faClock, faChevronDown, faChevronRight, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { faSitemap, faLayerGroup, faClock, faChevronDown, faChevronRight, faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
+import SectionHeader from "../components/SectionHeader";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useProfile } from "../hooks/useProfile";
 import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects";
@@ -209,17 +210,12 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   return (
     <div className="flex-1 pb-24">
       {/* HEADER */}
-      <div className="sticky top-0 z-30 border-b border-slate-800 bg-slate-50/90 px-4 py-4 backdrop-blur-sm dark:bg-slate-900/90">
-        <div className="flex items-center gap-3">
-          <button onClick={() => onNavigate("home")} className="flex h-10 w-10 items-center justify-center rounded transition-colors hover:bg-slate-200 dark:hover:bg-slate-800">
-            <FontAwesomeIcon icon={faArrowLeft} className="h-5 w-5 text-slate-900 dark:text-slate-100" />
-          </button>
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faSitemap} className="h-5 w-5 text-slate-900 dark:text-slate-100" />
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Mis equipos</h1>
-          </div>
-        </div>
-      </div>
+      <SectionHeader
+        icon={faSitemap}
+        titulo="Mis equipos"
+        onBack={() => onNavigate("home")}
+        info={"Las áreas y turnos que tenés a cargo, con la gente de cada uno.\n\nSi estás en más de un proyecto, elegí cuál ver. Tocá un área o un turno para desplegar quiénes lo integran."}
+      />
 
       <div className="space-y-4 px-4 pt-4">
         {error ? (

@@ -41,6 +41,24 @@ export interface Registrado {
   turno: string | null;
 }
 
+/** Panel: alguien que se registró con un link, con qué link y quién se lo compartió. */
+export interface RegistradoAdmin {
+  _id: string;
+  nombre: string;
+  email: string;
+  cuit: string | null;
+  registradoAt: string;
+  activo: boolean;
+  validadoEnArca: boolean;
+  linkId: string;
+  origen: "web" | "mobile";
+  /** El link ya no existe: se sabe quién lo compartió, pero no se puede filtrar por él en la lista de links. */
+  linkBorrado: boolean;
+  compartidoPorId: string | null;
+  compartidoPor: string | null;
+  clientName: string | null;
+}
+
 /** Cómo se registró: sólo lectura. Los datos bancarios vienen resumidos. */
 export interface DetalleRegistrado {
   _id: string;
@@ -112,6 +130,24 @@ class RegistroLinksAPI {
   /** Móvil: cómo se registró una persona que invité (sólo lectura). */
   async detalleRegistrado(userId: string): Promise<DetalleRegistrado> {
     const { data } = await axios.get(`/registro-links/mis-registrados/${userId}`);
+    return data;
+  }
+
+  /** Panel: todos los que se registraron con un link. */
+  async registrados(): Promise<RegistradoAdmin[]> {
+    const { data } = await axios.get(`/registro-links/registrados`);
+    return data.registrados || [];
+  }
+
+  /** Panel: cuántos días duran los links que se generan desde el móvil. */
+  async config(): Promise<{ diasLinkMovil: number }> {
+    const { data } = await axios.get(`/registro-links/config`);
+    return data;
+  }
+
+  /** Panel: cambia la duración de los links del móvil. Aplica a los que se generen desde ahora. */
+  async guardarConfig(diasLinkMovil: number): Promise<{ diasLinkMovil: number }> {
+    const { data } = await axios.put(`/registro-links/config`, { diasLinkMovil });
     return data;
   }
 

@@ -17,9 +17,22 @@ import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
 import { MOBILE_REGISTRO } from "../utils/permisosMobile.js";
 const router = Router();
-/** Los links del móvil duran 7 días. Vencido, el próximo pedido genera uno nuevo (ver `POST /mio`). */
-const DIAS_LINK_MOVIL = 7;
+/*
+  CUÁNTO DURAN LOS LINKS DEL MÓVIL: lo decide cada tenant (Usuarios → Link → Links), 7 días si nunca se tocó.
+
+  Vive en `settings` del Tenant y no en una colección propia: el cluster de Atlas está en su tope de
+  colecciones. Cambiarlo afecta sólo a los links que se generen después: los vigentes conservan su
+  vencimiento, igual que los del panel, cuya duración tampoco se cambia una vez creados. Si hace falta
+  cortar uno antes, se revoca.
+*/
+const DIAS_LINK_MOVIL_DEFAULT = 7;
+const DIAS_LINK_MIN = 1;
+const DIAS_LINK_MAX = 365;
 const DIA_MS = 24 * 60 * 60 * 1000;
+const diasLinkMovilDe = (tenant) => {
+    const n = Number(tenant?.settings?.registroDiasLinkMovil);
+    return Number.isInteger(n) && n >= DIAS_LINK_MIN && n <= DIAS_LINK_MAX ? n : DIAS_LINK_MOVIL_DEFAULT;
+};
 const nombreDe = (u) => [u?.firstName, u?.lastName].filter(Boolean).join(" ").trim() || u?.email || "";
 // GET /registro-links - Listar links de registro del tenant (activos y revocados)
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
@@ -68,6 +81,111 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// GET /registro-links/config - Cuántos días duran los links del móvil.
+router.get("/config", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const tenant = await Tenant.findById(req.tenantObjectId).select("settings.registroDiasLinkMovil").lean();
+        if (!tenant) {
+            res.status(404).json({ error: "Tenant not found" });
+            return;
+        }
+        res.json({ diasLinkMovil: diasLinkMovilDe(tenant) });
+    }
+    catch (error) {
+        console.error("Get registro config error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PUT /registro-links/config { diasLinkMovil } - Aplica a los links que se generen desde ahora.
+router.put("/config", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const n = Number(req.body?.diasLinkMovil);
+        if (!Number.isInteger(n) || n < DIAS_LINK_MIN || n > DIAS_LINK_MAX) {
+            res.status(400).json({ error: `La duración debe ser un número entero entre ${DIAS_LINK_MIN} y ${DIAS_LINK_MAX} días` });
+            return;
+        }
+        const r = await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: { "settings.registroDiasLinkMovil": n } });
+        if (!r.matchedCount) {
+            res.status(404).json({ error: "Tenant not found" });
+            return;
+        }
+        res.json({ diasLinkMovil: n });
+    }
+    catch (error) {
+        console.error("Put registro config error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  GET /registro-links/registrados - Todos los que se registraron con un link: cuándo, con cuál y quién se
+  lo compartió.
+
+  «Quién lo compartió» es quien generó el link —un supervisor o coordinador desde el móvil, o alguien del
+  panel—. Se guarda en la persona al registrarse (`metadata.registro`) y no se deduce después, porque un
+  link se puede borrar. Los registros anteriores a que se guardara ese dato no aparecen: no hay forma
+  confiable de saber con qué link vinieron.
+*/
+router.get("/registrados", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const tenantId = toObjectIdOrNull(req.tenantObjectId);
+        if (!tenantId) {
+            res.status(400).json({ error: "Invalid tenant ID" });
+            return;
+        }
+        const usuarios = await User.find({ tenantId, "metadata.registro.linkId": { $exists: true } })
+            .select("firstName lastName email createdAt metadata.activo metadata.cuit metadata.registro metadata.nombreValidadoArcaAt")
+            .sort({ createdAt: -1 })
+            .limit(2000)
+            .lean();
+        const linkIds = [...new Set(usuarios.map((u) => String(u.metadata.registro.linkId)))];
+        const links = linkIds.length ? await RegistroLink.find({ _id: { $in: linkIds }, tenantId }).select("origen createdBy clientId createdAt").lean() : [];
+        const linkMap = new Map(links.map((l) => [String(l._id), l]));
+        // Quien invitó quedó guardado en la persona; si no (registros viejos de links del panel), el creador del link.
+        const compartidoPorDe = (u) => {
+            const r = u.metadata.registro;
+            if (r.invitadoPor)
+                return String(r.invitadoPor);
+            const creador = linkMap.get(String(r.linkId))?.createdBy;
+            return creador ? String(creador) : null;
+        };
+        const personaIds = [...new Set(usuarios.map(compartidoPorDe).filter(Boolean))];
+        const clientIds = [...new Set(links.filter((l) => l.clientId).map((l) => String(l.clientId)))];
+        const [personas, clientes] = await Promise.all([
+            personaIds.length ? User.find({ _id: { $in: personaIds } }).select("firstName lastName email").lean() : Promise.resolve([]),
+            clientIds.length ? Client.find({ _id: { $in: clientIds } }).select("name").lean() : Promise.resolve([]),
+        ]);
+        const personaMap = new Map(personas.map((p) => [String(p._id), nombreDe(p)]));
+        const clienteMap = new Map(clientes.map((c) => [String(c._id), c.name]));
+        const registrados = usuarios
+            .map((u) => {
+            const r = u.metadata.registro;
+            const link = linkMap.get(String(r.linkId));
+            const compartidoPorId = compartidoPorDe(u);
+            return {
+                _id: String(u._id),
+                nombre: nombreDe(u),
+                email: u.email,
+                cuit: u.metadata?.cuit || null,
+                registradoAt: r.registradoAt || u.createdAt,
+                activo: u.metadata?.activo !== false,
+                validadoEnArca: !!u.metadata?.nombreValidadoArcaAt,
+                linkId: String(r.linkId),
+                // Sin el link (se borró) no se sabe el origen: se muestra como del panel, que es lo que eran todos antes del móvil.
+                origen: link?.origen === "mobile" ? "mobile" : "web",
+                linkBorrado: !link,
+                compartidoPorId,
+                compartidoPor: compartidoPorId ? personaMap.get(compartidoPorId) || null : null,
+                clientName: link?.clientId ? clienteMap.get(String(link.clientId)) || null : null,
+            };
+        })
+            .sort((a, b) => new Date(b.registradoAt).getTime() - new Date(a.registradoAt).getTime());
+        res.json({ registrados });
+    }
+    catch (error) {
+        console.error("Get registrados error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 /*
   ═══════════════════════════════════════════════════════════════════════
   SECCIÓN «REGISTRO» DEL MÓVIL
@@ -75,7 +193,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
 
   Un supervisor o coordinador comparte un link (por WhatsApp, por ejemplo) para que la gente se registre
   sola. El link SÓLO registra al usuario: no lo asigna a ningún proyecto, área ni turno —eso se decide
-  después, como con cualquier alta—. Dura 7 días; vencido, el próximo pedido genera uno nuevo, así nunca
+  después, como con cualquier alta—. Dura lo que configure el tenant (7 días por defecto); vencido, el próximo pedido genera uno nuevo, así nunca
   hay que ir a renovarlo a mano. Quien se registra queda asociado a quien lo invitó y aparece en la
   lista «Registrados» de esa persona, que la ve pero no la edita.
 */
@@ -83,7 +201,7 @@ const resumenLink = (l) => {
     const vence = getRegistroLinkExpiry(l);
     return { _id: String(l._id), token: l.token, expiresAt: new Date(vence).toISOString(), diasRestantes: Math.max(0, Math.ceil((vence - Date.now()) / DIA_MS)), usageCount: l.usageCount || 0 };
 };
-// POST /registro-links/mio - Mi link de registro vigente; si no hay o venció, uno nuevo de 7 días.
+// POST /registro-links/mio - Mi link de registro vigente; si no hay o venció, uno nuevo con la duración del tenant.
 router.post("/mio", requireTenant, authenticateToken, requirePermission(MOBILE_REGISTRO), async (req, res) => {
     try {
         const tenantId = toObjectIdOrNull(req.tenantObjectId);
@@ -98,7 +216,7 @@ router.post("/mio", requireTenant, authenticateToken, requirePermission(MOBILE_R
             .sort({ expiresAt: -1 })
             .lean();
         if (!link) {
-            const tenant = await Tenant.findById(tenantId).select("slug").lean();
+            const tenant = await Tenant.findById(tenantId).select("slug settings.registroDiasLinkMovil").lean();
             const creado = await RegistroLink.create({
                 tenantId,
                 tenantSlug: tenant?.slug || "",
@@ -106,7 +224,7 @@ router.post("/mio", requireTenant, authenticateToken, requirePermission(MOBILE_R
                 createdBy: creador,
                 origen: "mobile",
                 active: true,
-                expiresAt: new Date(Date.now() + DIAS_LINK_MOVIL * DIA_MS),
+                expiresAt: new Date(Date.now() + diasLinkMovilDe(tenant) * DIA_MS),
             });
             link = creado.toObject();
         }

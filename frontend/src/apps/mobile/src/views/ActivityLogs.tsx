@@ -10,9 +10,10 @@ import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { vacationsAPI } from "../../../../api/vacations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
+import SectionHeader from "../components/SectionHeader";
 import { sweetAlert } from "../utils/sweetAlert";
 import { Modal } from "../components/Modal";
 import AdditionalStaffFiltersModal, { AdditionalStaffFilterValues } from "../components/AdditionalStaffFiltersModal";
@@ -2502,23 +2503,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   return (
     <div className="flex-1 pb-24">
-      <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-              <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Novedades</h1>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SectionHeader
+        icon={faCalendar}
+        titulo="Mis Novedades"
+        onBack={() => onNavigate("home")}
+        info={"Cargá las novedades de la gente de tus áreas y turnos: quién vino, ausencias, reemplazos, horas extra y bajas.\n\nElegí el día, completá lo que pasó y envialo. Cada día tiene que quedar enviado: si no, tu supervisor lo ve como pendiente."}
+      />
 
       <div className="px-4 pt-4">
         {/* User Info Header */}
