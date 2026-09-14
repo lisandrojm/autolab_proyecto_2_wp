@@ -476,7 +476,11 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       : picker
         ? User.find(filter)
             .select("firstName lastName email metadata.id metadata.activo metadata.documento metadata.fullName metadata.projects metadata.roles_frame")
-            .populate({ path: "metadata.projects", model: UserProject, select: "projectId nombre_rol_frame nombre_sede" })
+            /*
+              Del contrato sólo las FECHAS: con alta, baja y carga se sabe cuál rige y si está vigente, que
+              es lo que muestra cada fila del buscador. El contrato entero (firmas, documentación) no.
+            */
+            .populate({ path: "metadata.projects", model: UserProject, select: "projectId nombre_rol_frame nombre_sede contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga" })
             .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
       : User.find(filter)
           .select("-password")

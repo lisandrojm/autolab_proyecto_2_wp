@@ -21,6 +21,7 @@ import { infoAPI, InfoItem } from "../../../../api/info";
 import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
 import { fuzzyMatch } from "../../../../utils/searchHelpers";
 import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeContrato } from "../../../../utils/tramiteImpositivo";
+import { esContratoVigente, fechaISO, getContratoActivo } from "../../../../utils/contratoVigencia";
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
 import { EstadoBadge } from "../../../../components/EstadoSelect";
@@ -597,6 +598,29 @@ const TIME_OPTIONS = (() => {
       return coincideTexto && coincideRol;
     });
   }, [platformUsers, userSearchTerm, selectedRoleFilters]);
+
+  /*
+    EL CONTRATO QUE RIGE DE CADA PERSONA, para decirlo en su fila.
+
+    La lista trae a TODAS las personas registradas, tengan o no contrato vigente. Sin decirlo, alguien
+    que trabaja hace años y alguien que hizo una jornada el año pasado se veían iguales, y parecía que
+    el listado filtraba algo. Misma regla que el resto de la plataforma (`getContratoActivo`), sobre
+    los contratos de todos sus proyectos.
+  */
+  const contratoDePersona = useMemo(() => {
+    const ddmmaaaa = (iso: string) => {
+      const [y, m, d] = iso.split("-");
+      return y && m && d ? `${d}/${m}/${y}` : "—";
+    };
+    const mapa = new Map<string, { vigente: boolean; alta: string; baja: string } | null>();
+    for (const u of personasFiltradas) {
+      const contratos = (u.metadata?.projects || []).flatMap((up: any) => (up && Array.isArray(up.contracts) ? up.contracts : []));
+      const c = getContratoActivo(contratos);
+      mapa.set(String(u._id), c ? { vigente: esContratoVigente(c), alta: ddmmaaaa(fechaISO(c.fecha_alta_contrato)), baja: ddmmaaaa(fechaISO(c.fecha_baja_contrato)) } : null);
+    }
+    return mapa;
+  }, [personasFiltradas]);
+  const conContratoVigente = useMemo(() => [...contratoDePersona.values()].filter((c) => c?.vigente).length, [contratoDePersona]);
 
   /*
     CUÁNTA GENTE TIENE CADA ROL, para el filtro de la ventana de personas.
@@ -2068,6 +2092,13 @@ const TIME_OPTIONS = (() => {
               </div>
             )}
 
+            {/* La lista no filtra por contrato: se dice, y cuántos tienen uno vigente. */}
+            {personasFiltradas.length > 0 && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {personasFiltradas.length} {personasFiltradas.length === 1 ? "persona" : "personas"} · <span className="font-semibold text-green-600 dark:text-green-400">{conContratoVigente} con contrato vigente</span>. Aparecen todas, tengan contrato o no.
+              </p>
+            )}
+
             <div className="max-h-[45vh] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
               {personasFiltradas.length === 0 ? (
                 /* NO APARECE: lo más probable es que no se haya registrado. Se dice eso, y se le da la
@@ -2090,10 +2121,26 @@ const TIME_OPTIONS = (() => {
                 personasFiltradas.slice(0, 50).map((u) => {
                   const nombre = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email;
                   const elegida = selectedUser && String(selectedUser._id) === String(u._id);
+                  const contrato = contratoDePersona.get(String(u._id));
                   return (
-                    <button key={u._id} type="button" onClick={() => elegirPersona(u)} className={`w-full text-left px-4 py-3 transition-colors flex flex-col ${elegida ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-blue-50 dark:hover:bg-blue-900/20"}`}>
-                      <span className="font-bold text-sm text-slate-900 dark:text-white">{nombre}</span>
-                      <span className="text-xs text-slate-500">{u.email}</span>
+                    <button key={u._id} type="button" onClick={() => elegirPersona(u)} className={`w-full text-left px-4 py-3 transition-colors flex items-center gap-3 ${elegida ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-blue-50 dark:hover:bg-blue-900/20"}`}>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate font-bold text-sm text-slate-900 dark:text-white">{nombre}</span>
+                        <span className="truncate text-xs text-slate-500">{u.email}</span>
+                      </span>
+                      {/* Mismo badge y mismas fechas que la columna de contratos del panel. */}
+                      <span className="flex shrink-0 flex-col items-end gap-0.5">
+                        {contrato ? (
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${contrato.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{contrato.vigente ? "Vigente" : "No vigente"}</span>
+                        ) : (
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">Sin contrato</span>
+                        )}
+                        {contrato && (
+                          <span className="whitespace-nowrap text-[10px] text-slate-400">
+                            Alta {contrato.alta} · Baja {contrato.baja}
+                          </span>
+                        )}
+                      </span>
                     </button>
                   );
                 })
