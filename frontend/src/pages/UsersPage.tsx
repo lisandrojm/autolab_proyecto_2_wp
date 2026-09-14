@@ -1675,7 +1675,7 @@ export const UsersPage: React.FC = () => {
                                   const coordGroups: { [key: string]: { areaName: string; shiftNames: string[] } } = {};
                                   myCoordinated.forEach((asm: any) => {
                                     const aId = typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId;
-                                    const aName = typeof asm.areaId === 'object' ? asm.areaId?.name : areas.find((a) => String(a._id) === String(aId))?.name || 'Área Coordinada';
+                                    const aName = typeof asm.areaId === 'object' ? asm.areaId?.name : areas.find((a) => String(a._id) === String(aId))?.name || 'Área Supervisada';
                                     const sId = typeof asm.shiftId === 'object' ? asm.shiftId?._id : asm.shiftId;
                                     const shift = allShifts.find((s) => String(s._id) === String(sId));
                                     const sName = shift ? `${shift.name}${shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : ''}` : typeof asm.shiftId === 'object' ? asm.shiftId?.name : undefined;
@@ -1742,7 +1742,7 @@ export const UsersPage: React.FC = () => {
 
                                         {coordinatedAssignments.length > 0 && (
                                           <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/50">
-                                            <label className="text-[9px] font-black text-amber-500 uppercase tracking-widest block mb-1">Área / Turno Coordinado</label>
+                                            <label className="text-[9px] font-black text-amber-500 uppercase tracking-widest block mb-1">Área / Turno Supervisado</label>
                                             <div className="flex flex-wrap gap-1.5 items-center">
                                               <FontAwesomeIcon icon={faGrip} className="text-amber-500 text-[10px] shrink-0" />
                                               {coordinatedAssignments.map((ca, idx) => (

@@ -32,7 +32,7 @@ export default function TopBar({ title, hasNotifications = false, onNotification
 
   const roleConfig = {
     coordinator: {
-      label: "Coordinador",
+      label: "Supervisor",
       bgColor: "bg-gradient-to-r from-blue-500 to-indigo-600",
       textColor: "text-white",
       icon: "👔",

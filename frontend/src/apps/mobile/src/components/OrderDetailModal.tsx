@@ -83,7 +83,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
   const handleNotifySignature = async () => {
     if (!order) return;
 
-    const result = await sweetAlert.confirm("¿Avisar al supervisor?", "¿Ya completaste la firma del documento? Esto enviará una notificación al supervisor para que verifique.", "Sí, avisar", "Todavía no");
+    const result = await sweetAlert.confirm("¿Avisar al coordinador?", "¿Ya completaste la firma del documento? Esto enviará una notificación al coordinador para que verifique.", "Sí, avisar", "Todavía no");
 
     if (!result.isConfirmed) return;
 
@@ -91,7 +91,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       setNotifyingSignature(true);
       const response = await personnelAPI.notifySignatureCompleted(order._id);
       const notifiedCount = (response as any)?.notifiedCount || 0;
-      const message = notifiedCount > 0 ? `Se ha notificado a ${notifiedCount} supervisor(es). Esperá que verifiquen la firma del documento.` : "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.";
+      const message = notifiedCount > 0 ? `Se ha notificado a ${notifiedCount} coordinador(es). Esperá que verifiquen la firma del documento.` : "Se ha registrado tu notificación. Esperá que el coordinador verifique la firma del documento.";
 
       setNotifyingSignature(false);
       await sweetAlert.success("Notificación enviada", message);
@@ -109,7 +109,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       setNotifyingSignature(false);
 
       if (errorMessage.includes("Ya notificaste") || errorMessage.includes("ya notificaste")) {
-        await sweetAlert.info("Ya notificado", "Ya notificaste anteriormente que completaste la firma. El supervisor está revisando.");
+        await sweetAlert.info("Ya notificado", "Ya notificaste anteriormente que completaste la firma. El coordinador está revisando.");
         if (onRefresh) {
           await onRefresh();
         }
@@ -618,7 +618,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   <div className="flex-1">
                     <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Enviado para Firma</h4>
                     <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">Se te ha enviado un email con el documento para firmar.</p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">Una vez que hayas completado la firma, avisá al supervisor presionando el botón de abajo.</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">Una vez que hayas completado la firma, avisá al coordinador presionando el botón de abajo.</p>
                   </div>
                 </div>
                 <button onClick={handleNotifySignature} disabled={notifyingSignature} className="w-full flex items-center justify-center gap-2 rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">

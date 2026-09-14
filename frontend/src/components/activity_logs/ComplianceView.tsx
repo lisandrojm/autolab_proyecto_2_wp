@@ -180,8 +180,8 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const remind = async (coordinatorIds?: string[]) => {
     try {
       const res = await complianceAPI.remind({ from, to, projectId: params.projectId, coordinatorIds });
-      if (res.count > 0) sweetAlert.success('Recordatorios enviados', `Se notificó a ${res.count} coordinador(es).`);
-      else sweetAlert.info?.('Sin envíos', 'No había coordinadores pendientes por notificar (o ya tenían un recordatorio hoy).') ?? sweetAlert.success('Listo', 'Sin recordatorios nuevos que enviar.');
+      if (res.count > 0) sweetAlert.success('Recordatorios enviados', `Se notificó a ${res.count} supervisor(es).`);
+      else sweetAlert.info?.('Sin envíos', 'No había supervisores pendientes por notificar (o ya tenían un recordatorio hoy).') ?? sweetAlert.success('Listo', 'Sin recordatorios nuevos que enviar.');
     } catch (err: any) {
       sweetAlert.error('Error', err?.response?.data?.error || 'No se pudieron enviar los recordatorios.');
     }
@@ -200,7 +200,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const remindAll = async () => {
     const behind = data?.coordinators.filter((c) => c.missingCount > 0) || [];
     if (behind.length === 0) return;
-    const r = await sweetAlert.confirm('¿Recordar a los que faltan?', `Se notificará a ${behind.length} coordinador(es) con novedades pendientes.`, 'Sí, notificar');
+    const r = await sweetAlert.confirm('¿Recordar a los que faltan?', `Se notificará a ${behind.length} supervisor(es) con novedades pendientes.`, 'Sí, notificar');
     if (!r.isConfirmed) return;
     setRemindingAll(true);
     await remind();
@@ -211,12 +211,12 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     if (!data) return;
     const wb = XLSX.utils.book_new();
     // Resumen por coordinador
-    const summary = [['Coordinador', 'Esperadas', 'Enviadas', 'Faltantes', 'Cumplimiento %'], ...data.coordinators.map((c) => [c.name, c.expectedCount, c.submittedCount, c.missingCount, c.expectedCount ? Math.round((c.submittedCount / c.expectedCount) * 100) : 0])];
+    const summary = [['Supervisor', 'Esperadas', 'Enviadas', 'Faltantes', 'Cumplimiento %'], ...data.coordinators.map((c) => [c.name, c.expectedCount, c.submittedCount, c.missingCount, c.expectedCount ? Math.round((c.submittedCount / c.expectedCount) * 100) : 0])];
     const wsS = XLSX.utils.aoa_to_sheet(summary);
     wsS['!cols'] = [{ wch: 32 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsS, 'Resumen');
     // Detalle de faltantes
-    const detail: (string | number)[][] = [['Coordinador', 'Proyecto', 'Área', 'Turnos del día', 'Día', 'Fecha faltante']];
+    const detail: (string | number)[][] = [['Supervisor', 'Proyecto', 'Área', 'Turnos del día', 'Día', 'Fecha faltante']];
     data.coordinators.forEach((c) =>
       c.projects.forEach((a) =>
         a.missingDates.forEach((d) => {
@@ -244,16 +244,16 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
             no había forma de saber qué estabas mirando salvo acordarte.
           */}
           {selectedCoordinator ? (
-            <button onClick={() => setSelectedCoordinatorId(null)} title="Ver todos los coordinadores" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40">
+            <button onClick={() => setSelectedCoordinatorId(null)} title="Ver todos los supervisores" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40">
               <FontAwesomeIcon icon={faUser} />
               {selectedCoordinator.name}
               <FontAwesomeIcon icon={faXmark} className="opacity-70" />
             </button>
           ) : (
             // Sin ✕: no hay filtro que sacar, esto ya es el estado sin filtrar.
-            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold" title="Estás viendo el calendario combinado de todos los coordinadores">
+            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold" title="Estás viendo el calendario combinado de todos los supervisores">
               <FontAwesomeIcon icon={faUsers} />
-              Todos los coordinadores
+              Todos los supervisores
               <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-500/15">{(data?.coordinators || []).length}</span>
             </span>
           )}
@@ -314,9 +314,9 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
         {/* Panel de coordinadores */}
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 flex flex-col">
           <div className="flex items-center justify-between gap-2 mb-2 px-1">
-            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200">Coordinadores</h4>
+            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200">Supervisores</h4>
             {selectedCoordinatorId ? (
-              <button onClick={() => setSelectedCoordinatorId(null)} title="Volver al calendario de todos los coordinadores" className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+              <button onClick={() => setSelectedCoordinatorId(null)} title="Volver al calendario de todos los supervisores" className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                 <FontAwesomeIcon icon={faUsers} /> Ver todos
               </button>
             ) : (
@@ -331,7 +331,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
             del modal, que mide 96svh.
           */}
           <div className="space-y-1.5 flex-1 min-h-0 max-h-[calc(96svh-260px)] overflow-y-auto pr-1">
-            {(data?.coordinators || []).length === 0 && !loading && <p className="text-xs text-gray-400 px-1 py-4 text-center">Sin coordinadores con asignaciones en este período/filtro.</p>}
+            {(data?.coordinators || []).length === 0 && !loading && <p className="text-xs text-gray-400 px-1 py-4 text-center">Sin supervisores con asignaciones en este período/filtro.</p>}
             {(data?.coordinators || []).map((c) => (
               <CoordinatorRow key={c.userId} c={c} selected={selectedCoordinatorId === c.userId} onSelect={() => setSelectedCoordinatorId((cur) => (cur === c.userId ? null : c.userId))} reminding={remindingIds.has(c.userId)} onRemind={() => remindOne(c.userId)} />
             ))}
@@ -349,7 +349,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
               Novedades que le faltan a {selectedCoordinator.name}
             </span>
           }
-          subtitle={`${selectedCoordinator.missingCount} en ${fmtDate(from)} – ${fmtDate(to)} · Cada novedad cubre el día completo del coordinador en el proyecto (incluye los turnos que corren ese día).`}
+          subtitle={`${selectedCoordinator.missingCount} en ${fmtDate(from)} – ${fmtDate(to)} · Cada novedad cubre el día completo del supervisor en el proyecto (incluye los turnos que corren ese día).`}
           size="md"
           zIndex={60}
         >
@@ -411,7 +411,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
       {/* Confirmación de informe */}
       <Modal isOpen={showReport} onClose={() => setShowReport(false)} title="Exportar informe de cumplimiento" size="sm">
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          Se exporta un Excel con el resumen por coordinador y el detalle de novedades faltantes del período {fmtDate(from)} al {fmtDate(to)}.
+          Se exporta un Excel con el resumen por supervisor y el detalle de novedades faltantes del período {fmtDate(from)} al {fmtDate(to)}.
         </p>
         <div className="flex justify-end gap-2">
           <button onClick={() => setShowReport(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
@@ -434,7 +434,7 @@ const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; on
   const hasMissing = c.missingCount > 0;
   const border = selected ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-400/40' : isLate ? 'border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10' : 'border-gray-200 dark:border-gray-600';
   return (
-    <div onClick={onSelect} title="Ver el calendario de este coordinador" className={`cursor-pointer transition-all rounded-lg border px-3 py-2 hover:shadow-sm ${border}`}>
+    <div onClick={onSelect} title="Ver el calendario de este supervisor" className={`cursor-pointer transition-all rounded-lg border px-3 py-2 hover:shadow-sm ${border}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{c.name}</p>

@@ -1273,7 +1273,7 @@ router.post("/:id/notify-signature-completed", async (req, res) => {
         console.log(`Found ${supervisorRoles.length} supervisor roles:`, supervisorRoles.map((r) => r.name));
         if (supervisorRoles.length === 0) {
             console.warn("No supervisor roles found in database for signature notification");
-            return res.json({ success: true, message: "Notificación registrada (sin supervisores configurados)" });
+            return res.json({ success: true, message: "Notificación registrada (sin coordinadores configurados)" });
         }
         const supervisorRoleIds = supervisorRoles.map((r) => r._id);
         console.log(`Supervisor role IDs:`, supervisorRoleIds);
@@ -1285,7 +1285,7 @@ router.post("/:id/notify-signature-completed", async (req, res) => {
         console.log(`Found ${supervisors.length} active supervisors to notify`);
         if (supervisors.length === 0) {
             console.warn("No active supervisors found to notify about signature completion");
-            return res.json({ success: true, message: "Notificación registrada (sin supervisores activos)" });
+            return res.json({ success: true, message: "Notificación registrada (sin coordinadores activos)" });
         }
         const notificationPromises = supervisors.map((supervisor) => Notification.create({
             tenantId: req.tenantObjectId,
@@ -1303,7 +1303,7 @@ router.post("/:id/notify-signature-completed", async (req, res) => {
         console.log(`Created ${successCount}/${supervisors.length} notifications successfully`);
         res.json({
             success: true,
-            message: `Notificación enviada a ${successCount} supervisor(es) correctamente`,
+            message: `Notificación enviada a ${successCount} coordinador(es) correctamente`,
             notifiedCount: successCount,
         });
     }

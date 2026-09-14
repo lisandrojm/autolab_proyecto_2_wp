@@ -375,8 +375,8 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
     const areasQueCoordina = (project.coordinatorAssignments || []).filter((a: any) => idDe(a.userId) === String(persona._id));
     if (!zona.startsWith("coord::") && areasQueCoordina.length > 0) {
       const r = await sweetAlert.confirm(
-        `${nombreDe(persona)} coordina ${areasQueCoordina.length === 1 ? "un área" : `${areasQueCoordina.length} áreas`}`,
-        "Al moverlo deja de tenerlas a cargo. Se puede volver a asignar arrastrándolo al lugar del coordinador.",
+        `${nombreDe(persona)} supervisa ${areasQueCoordina.length === 1 ? "un área" : `${areasQueCoordina.length} áreas`}`,
+        "Al moverlo deja de tenerlas a cargo. Se puede volver a asignar arrastrándolo al lugar del supervisor.",
         "Sí, moverlo",
       );
       if (!r.isConfirmed) return;
@@ -445,7 +445,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-900/20">
           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
             <FontAwesomeIcon icon={faUserShield} />
-            Supervisor del proyecto
+            Coordinador del proyecto
           </p>
           <p className="mt-1 text-sm font-bold text-emerald-900 dark:text-emerald-200">
             {supervisor ? nombreDe(supervisor) : <span className="font-normal italic text-emerald-700/70 dark:text-emerald-400/70">Sin responsable asignado. Se elige en la ficha del proyecto.</span>}
@@ -528,7 +528,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                           user={c.coordinador}
                           arrastrable={false}
                           idArrastre={`${c.coordinador._id}::en-turno::${c.clave}`}
-                          etiqueta="Coordinador"
+                          etiqueta="Supervisor"
                           estado={estadoCoord}
                         />
                       ) : null;
@@ -560,7 +560,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                             <div className="flex flex-wrap items-center gap-1.5 pl-5 text-[10px] font-semibold">
                               <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                                 <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
-                                {c.coordinador ? nombreDe(c.coordinador) : "Sin coordinador"}
+                                {c.coordinador ? nombreDe(c.coordinador) : "Sin supervisor"}
                               </span>
                               {detalle ? (
                                 <>
@@ -590,7 +590,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                         <ZonaSoltar id={`coord::${c.areaId}::${c.shiftId}`} activa={zonaAcepta(`coord::${c.areaId}::${c.shiftId}`)}>
                           <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
                             <FontAwesomeIcon icon={faUserTie} />
-                            Coordinador
+                            Supervisor
                           </p>
                           {c.coordinador ? (
                             <>
@@ -599,7 +599,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                             </>
                           ) : (
                             <p className="rounded-lg border border-dashed border-amber-300 px-2.5 py-2 text-xs italic text-amber-600 dark:border-amber-800 dark:text-amber-500">
-                              Arrastrá acá a alguien con el rol Coordinador
+                              Arrastrá acá a alguien con un rol que incluya «Supervisa áreas y turnos»
                             </p>
                           )}
                         </ZonaSoltar>
@@ -608,12 +608,12 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                         <ZonaSoltar id={c.clave} activa className="flex-1">
                           <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
                             <FontAwesomeIcon icon={faUsers} />
-                            Colaboradores ({c.colaboradores.length}){tarjetaCoordEnTurno && " + coordinador"}
+                            Colaboradores ({c.colaboradores.length}){tarjetaCoordEnTurno && " + supervisor"}
                           </p>
                           {detalle && detalle.total > 0 && (
                             <p
                               className="mb-2 rounded-lg border border-green-200 bg-green-50 px-2 py-1.5 text-[11px] text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
-                              title="El número de la columna Área/Turno Coordinada es el primero."
+                              title="El número de la columna Área/Turno Supervisada es el primero."
                             >
                               <strong>{detalle.cuentan}</strong> persona
                               {detalle.cuentan === 1 ? "" : "s"} activa

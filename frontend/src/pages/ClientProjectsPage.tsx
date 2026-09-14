@@ -511,7 +511,7 @@ export const ClientProjectsPage: React.FC = () => {
 
                     <div className="pt-2">
                       <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        Supervisor del Proyecto
+                        Coordinador del Proyecto
                         <button type="button" onClick={() => setShowResponsableInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
                           <FontAwesomeIcon icon={faInfoCircle} />
                         </button>
@@ -1147,7 +1147,7 @@ export const ClientProjectsPage: React.FC = () => {
         </div>
       )}
       {/* Modal Informativo Responsable */}
-      <InfoModal isOpen={showResponsableInfo} onClose={() => setShowResponsableInfo(false)} title="Supervisor del Proyecto" subtitle="Información sobre la selección de supervisores" size="sm" zIndex={100} actions={[{ label: 'Entendido', onClick: () => setShowResponsableInfo(false), variant: 'primary' }]}>
+      <InfoModal isOpen={showResponsableInfo} onClose={() => setShowResponsableInfo(false)} title="Coordinador del Proyecto" subtitle="Información sobre la selección de coordinadores" size="sm" zIndex={100} actions={[{ label: 'Entendido', onClick: () => setShowResponsableInfo(false), variant: 'primary' }]}>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Para que un usuario aparezca en esta lista, debe cumplir con los siguientes requisitos de sistema:</p>
           <ul className="space-y-3">
@@ -1160,7 +1160,7 @@ export const ClientProjectsPage: React.FC = () => {
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                <strong>Supervisor del Proyecto:</strong> hay que tildarlo en su ficha, pestaña Sistema, bloque Proyectos. No depende de sus roles.
+                <strong>Coordinador del Proyecto:</strong> hay que tildarlo en su ficha, pestaña Sistema, bloque Proyectos. No depende de sus roles.
               </span>
             </li>
           </ul>

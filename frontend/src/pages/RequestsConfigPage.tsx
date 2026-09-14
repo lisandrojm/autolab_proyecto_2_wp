@@ -498,7 +498,7 @@ export const RequestsConfigPage: React.FC = () => {
                             <div>
                               <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Personal Adicional</h4>
                               <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1">
-                                Cuando está <strong className="text-green-600 dark:text-green-400">activado</strong>, al finalizar el wizard de novedades se mostrará una pantalla adicional donde el coordinador puede incluir colaboradores que <em>no están asignados</em> al proyecto. Útil para registrar personal prestado de otros equipos o reemplazos temporales.
+                                Cuando está <strong className="text-green-600 dark:text-green-400">activado</strong>, al finalizar el wizard de novedades se mostrará una pantalla adicional donde el supervisor puede incluir colaboradores que <em>no están asignados</em> al proyecto. Útil para registrar personal prestado de otros equipos o reemplazos temporales.
                               </p>
                               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                 Si está <strong>desactivado</strong>, solo se podrá reportar sobre el personal asignado al proyecto.

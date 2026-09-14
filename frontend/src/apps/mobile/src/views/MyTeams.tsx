@@ -278,7 +278,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{nombreDe(m)}</p>
-          {esCoordinador && <span className="shrink-0 rounded border border-amber-300 bg-amber-100 px-1 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Coordinador</span>}
+          {esCoordinador && <span className="shrink-0 rounded border border-amber-300 bg-amber-100 px-1 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Supervisor</span>}
         </div>
         <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
           Alta: {fechaContrato(m.fechaAlta)} · Baja: {m.fechaBaja ? fechaContrato(m.fechaBaja) : "—"}
@@ -346,13 +346,13 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
                   <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
                     <FontAwesomeIcon icon={faUserShield} />
-                    Supervisor del proyecto
+                    Coordinador del proyecto
                   </p>
                   <p className="mt-1 text-sm font-bold text-emerald-900 dark:text-emerald-200">
                     {equipo.supervisorNombre || <span className="font-normal italic text-emerald-700/70 dark:text-emerald-400/70">Sin responsable asignado</span>}
                     {equipo.supervisa && <span className="ml-1.5 text-xs font-semibold text-emerald-700/80 dark:text-emerald-400/80">(vos)</span>}
                   </p>
-                  {!equipo.supervisa && <p className="mt-1 text-[11px] text-emerald-800/80 dark:text-emerald-300/70">Abajo están las áreas y turnos que coordinás.</p>}
+                  {!equipo.supervisa && <p className="mt-1 text-[11px] text-emerald-800/80 dark:text-emerald-300/70">Abajo están las áreas y turnos que supervisás.</p>}
                 </div>
 
                 {/* Abrir o cerrar todo de una vez. */}
@@ -432,7 +432,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                                     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
                                       <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                                         <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
-                                        {t.coordinadorNombre || "Sin coordinador"}
+                                        {t.coordinadorNombre || "Sin supervisor"}
                                       </span>
                                       {personas === null ? (
                                         <span className="text-slate-400">Cargando…</span>

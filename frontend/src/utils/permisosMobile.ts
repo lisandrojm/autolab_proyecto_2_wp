@@ -40,9 +40,9 @@ export const MOBILE_REGISTRO = "mobile_registro:view"; // Registro: link de regi
  * y `ayuda` dice para quién es, que es lo que hace falta saber al tildar.
  */
 export const MOBILE_ITEMS = [
-  { permiso: MOBILE_ACTIVITY_LOGS, label: "Cargar novedades", grupo: "Novedades", ayuda: "Carga la asistencia de las personas de sus áreas y turnos. Es del coordinador." },
+  { permiso: MOBILE_ACTIVITY_LOGS, label: "Cargar novedades", grupo: "Novedades", ayuda: "Carga la asistencia de las personas de sus áreas y turnos. Es del supervisor." },
   // Mismo nombre que su tarjeta del móvil («Cumplimiento»): con dos nombres para lo mismo no se sabía qué tarjeta daba cada permiso.
-  { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Cumplimiento de novedades", grupo: "Novedades", ayuda: "Calendario de cumplimiento de sus coordinadores: quién envió y a quién le falta. Es del supervisor." },
+  { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Cumplimiento de novedades", grupo: "Novedades", ayuda: "Calendario de cumplimiento de sus supervisores: quién envió y a quién le falta. Es del coordinador." },
   { permiso: MOBILE_TEAMS, label: "Mis equipos", grupo: "Equipo", ayuda: "Las áreas y turnos que tiene a cargo, con su gente." },
   { permiso: MOBILE_USERS, label: "Contratación", grupo: "Contratación", ayuda: "Pedir altas de personal." },
   { permiso: MOBILE_REGISTRO, label: "Registro", grupo: "Contratación", ayuda: "Compartir el link para que la gente se registre (vence según lo configurado en Usuarios → Link y se renueva solo) y ver, sin editar, quiénes se registraron." },
@@ -67,8 +67,8 @@ export const PROJECT_SUPERVISOR = "project_supervisor:eligible";
 export const PROJECT_COORDINATOR = "project_coordinator:eligible";
 
 export const CAPACIDAD_ITEMS = [
-  { permiso: PROJECT_SUPERVISOR, label: "Supervisor del Proyecto" },
-  { permiso: PROJECT_COORDINATOR, label: "Coordina áreas y turnos" },
+  { permiso: PROJECT_SUPERVISOR, label: "Coordinador del Proyecto" },
+  { permiso: PROJECT_COORDINATOR, label: "Supervisa áreas y turnos" },
 ];
 
 export const CAPACIDAD_PERMISSIONS = CAPACIDAD_ITEMS.map((i) => i.permiso);
@@ -82,8 +82,8 @@ export const CAPACIDAD_PERMISSIONS = CAPACIDAD_ITEMS.map((i) => i.permiso);
  */
 export const PLANTILLAS_ROL = [
   { nombre: "Colaborador", descripcion: "Carga lo suyo: pedidos y vacaciones.", permisos: [MOBILE_ORDERS, MOBILE_VACATIONS] },
-  { nombre: "Coordinador", descripcion: "Coordina áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
-  { nombre: "Supervisor", descripcion: "Supervisa a los coordinadores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, PROJECT_SUPERVISOR] },
+  { nombre: "Supervisor", descripcion: "Supervisa áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
+  { nombre: "Coordinador", descripcion: "Coordina a los supervisores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, PROJECT_SUPERVISOR] },
 ];
 
 /**
@@ -93,10 +93,10 @@ export const PLANTILLAS_ROL = [
 export const avisosDeRol = (permisos: string[]): string[] => {
   const p = new Set(permisos);
   const avisos: string[] = [];
-  if (p.has(MOBILE_ACTIVITY_LOGS) && !p.has(PROJECT_COORDINATOR)) avisos.push("«Cargar novedades» sin «Coordina áreas y turnos»: no va a tener áreas ni turnos donde cargarlas.");
-  if (p.has(PROJECT_COORDINATOR) && !p.has(MOBILE_ACTIVITY_LOGS)) avisos.push("«Coordina áreas y turnos» sin «Cargar novedades»: puede quedar a cargo de turnos pero no va a poder cargar sus novedades, y aparecerán vencidas.");
-  if (p.has(MOBILE_ACTIVITY_COMPLIANCE) && !p.has(PROJECT_SUPERVISOR)) avisos.push("«Seguimiento de novedades» sin «Supervisor del Proyecto»: no va a tener coordinadores que seguir.");
-  if (p.has(MOBILE_TEAMS) && !p.has(PROJECT_COORDINATOR) && !p.has(PROJECT_SUPERVISOR)) avisos.push("«Mis equipos» sin «Coordina áreas y turnos» ni «Supervisor del Proyecto»: la pantalla va a estar vacía.");
+  if (p.has(MOBILE_ACTIVITY_LOGS) && !p.has(PROJECT_COORDINATOR)) avisos.push("«Cargar novedades» sin «Supervisa áreas y turnos»: no va a tener áreas ni turnos donde cargarlas.");
+  if (p.has(PROJECT_COORDINATOR) && !p.has(MOBILE_ACTIVITY_LOGS)) avisos.push("«Supervisa áreas y turnos» sin «Cargar novedades»: puede quedar a cargo de turnos pero no va a poder cargar sus novedades, y aparecerán vencidas.");
+  if (p.has(MOBILE_ACTIVITY_COMPLIANCE) && !p.has(PROJECT_SUPERVISOR)) avisos.push("«Seguimiento de novedades» sin «Coordinador del Proyecto»: no va a tener supervisores que seguir.");
+  if (p.has(MOBILE_TEAMS) && !p.has(PROJECT_COORDINATOR) && !p.has(PROJECT_SUPERVISOR)) avisos.push("«Mis equipos» sin «Supervisa áreas y turnos» ni «Coordinador del Proyecto»: la pantalla va a estar vacía.");
   return avisos;
 };
 

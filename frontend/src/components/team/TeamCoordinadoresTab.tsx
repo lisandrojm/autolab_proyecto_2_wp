@@ -177,7 +177,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
         coordinatorAssignments: newAssignments
       });
       
-      sweetAlert.success("Guardado", "Los coordinadores se han actualizado correctamente.");
+      sweetAlert.success("Guardado", "Los supervisores se han actualizado correctamente.");
       onUpdated();
     } catch (err) {
       console.error(err);
@@ -243,11 +243,11 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                       <tr className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700/50 text-xs text-gray-400 uppercase tracking-wider">
                         <th className="px-6 py-2.5 font-semibold w-[40%]">Turno</th>
                         <th className="px-6 py-2.5 font-semibold w-[60%] flex items-center gap-2">
-                          Coordinador Asignado
+                          Supervisor Asignado
                           <button
                             onClick={() => setShowInfoModal(true)}
                             className="text-gray-400 hover:text-blue-500 transition-colors"
-                            title="Información sobre coordinadores"
+                            title="Información sobre supervisores"
                           >
                             <FontAwesomeIcon icon={faInfoCircle} />
                           </button>
@@ -275,7 +275,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                                     value={currentUserId}
                                     onChange={(e) => handleAssignmentChange(area._id, shift._id, e.target.value)}
                                   >
-                                    <option value="">Sin coordinador</option>
+                                    <option value="">Sin supervisor</option>
                                     {eligibleCoordinators.map((u) => (
                                       <option key={u._id} value={u._id}>
                                         {u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}
@@ -304,7 +304,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50">
               <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <FontAwesomeIcon icon={faInfoCircle} className="text-blue-500" />
-                Coordinadores Disponibles
+                Supervisores Disponibles
               </h3>
               <button 
                 onClick={() => setShowInfoModal(false)}
@@ -321,10 +321,10 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                     Asignación requerida
                   </p>
                   <p className="text-amber-700 dark:text-amber-500 leading-normal">
-                    Hay que sumar al equipo a alguien con el rol <strong>Coordinador</strong> —o cualquier rol que incluya <strong>«Coordina áreas y turnos»</strong>—: es quien puede tener un área a cargo.
+                    Hay que sumar al equipo a alguien con un rol que incluya <strong>«Supervisa áreas y turnos»</strong>: es quien puede tener un área a cargo.
                   </p>
                   <p className="text-[11px] text-amber-600 dark:text-amber-600 italic">
-                    Volvé a la pestaña "Equipo" y agregá un miembro con un rol que lo incluya antes de configurar los coordinadores acá.
+                    Volvé a la pestaña "Equipo" y agregá un miembro con un rol que lo incluya antes de configurar los supervisores acá.
                   </p>
                 </div>
               ) : (
@@ -334,7 +334,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   </p>
                   <ul className="list-disc pl-5 space-y-1.5 marker:text-blue-500">
                     <li>Son miembros activos del <strong>equipo del proyecto</strong>.</li>
-                    <li>Alguno de sus roles incluye <strong>Proyectos → Coordina áreas y turnos</strong>, que es lo que habilita tener un área a cargo.</li>
+                    <li>Alguno de sus roles incluye <strong>Proyectos → Supervisa áreas y turnos</strong>, que es lo que habilita tener un área a cargo.</li>
                   </ul>
                 </>
               )}
@@ -343,7 +343,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
                 <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2">Ejemplo de visualización:</p>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">Nombre del Coordinador</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Nombre del Supervisor</span>
                   <div className="flex items-center gap-1.5">
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 whitespace-nowrap">
                       Carga novedades

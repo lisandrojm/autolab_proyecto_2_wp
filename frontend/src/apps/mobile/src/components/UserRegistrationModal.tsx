@@ -1747,7 +1747,7 @@ const TIME_OPTIONS = (() => {
               </div>
             ) : (
               <>
-                <p className="text-[11px] text-slate-400">{coordinaEnElProyecto ? "Las áreas y turnos que coordinás en este proyecto." : "Elegí en qué área y turno va a trabajar."}</p>
+                <p className="text-[11px] text-slate-400">{coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."}</p>
                 <div className="space-y-2">
                   {areasAgrupadas.map((area) => (
                     <div key={area.areaId} className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
@@ -2040,7 +2040,7 @@ const TIME_OPTIONS = (() => {
                   <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{userSearchTerm.trim() ? `No encontramos a «${userSearchTerm.trim()}»` : "No hay personas para mostrar"}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Solo aparecen las personas registradas en la plataforma.{" "}
-                    {puedeCompartirLink ? "Si todavía no se registró, mandale tu link: cuando se registre, vas a poder elegirla acá." : "Si todavía no se registró, pedile a tu supervisor o a administración el link de registro para mandarle."}
+                    {puedeCompartirLink ? "Si todavía no se registró, mandale tu link: cuando se registre, vas a poder elegirla acá." : "Si todavía no se registró, pedile a tu coordinador o a administración el link de registro para mandarle."}
                     {selectedRoleFilters.length > 0 && " También podés probar quitando el filtro de rol."}
                   </p>
                   {puedeCompartirLink && (
@@ -2115,7 +2115,7 @@ const TIME_OPTIONS = (() => {
                 </button>
               </>
             ) : (
-              <p className="text-sm text-slate-600 dark:text-slate-300">Pedile el link de registro a tu supervisor o a administración para mandárselo. Cuando se registre, va a aparecer en esta lista.</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Pedile el link de registro a tu coordinador o a administración para mandárselo. Cuando se registre, va a aparecer en esta lista.</p>
             )}
           </div>
         </Modal>

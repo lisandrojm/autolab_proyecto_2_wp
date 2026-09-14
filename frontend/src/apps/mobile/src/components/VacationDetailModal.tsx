@@ -35,7 +35,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
   const handleNotifySignature = async () => {
     if (!vacation) return;
 
-    const result = await sweetAlert.confirm("¿Avisar al supervisor?", "¿Ya completaste la firma del documento? Esto enviará una notificación al supervisor para que verifique.", "Sí, avisar", "Todavía no");
+    const result = await sweetAlert.confirm("¿Avisar al coordinador?", "¿Ya completaste la firma del documento? Esto enviará una notificación al coordinador para que verifique.", "Sí, avisar", "Todavía no");
 
     if (!result.isConfirmed) return;
 
@@ -44,7 +44,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
       await vacationsAPI.notifySignature(vacation._id);
 
       setNotifyingSignature(false);
-      await sweetAlert.success("Notificación enviada", "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.");
+      await sweetAlert.success("Notificación enviada", "Se ha registrado tu notificación. Esperá que el coordinador verifique la firma del documento.");
 
       if (onRefresh) {
         await onRefresh();
@@ -289,7 +289,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
                     <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-500 mt-0.5" />
                     <div className="flex-1">
                       <h4 className="font-semibold text-amber-500 mb-1">Esperando Verificación</h4>
-                      <p className="text-sm text-amber-500/80 mb-2">Ya notificaste al supervisor que completaste la firma. Estamos esperando que verifique el documento.</p>
+                      <p className="text-sm text-amber-500/80 mb-2">Ya notificaste al coordinador que completaste la firma. Estamos esperando que verifique el documento.</p>
 
                       <p className="text-xs text-amber-500/60 font-medium">
                         Notificado el: {formatDateShort(vacation.signatureNotifiedAt)}
@@ -313,7 +313,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
                   <div className="flex-1">
                     <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Enviado para Firma</h4>
                     <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">Se te ha enviado un email con el documento para firmar.</p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">Una vez que hayas completado la firma, avisá al supervisor presionando el botón de abajo.</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">Una vez que hayas completado la firma, avisá al coordinador presionando el botón de abajo.</p>
                   </div>
                 </div>
                 <button onClick={handleNotifySignature} disabled={notifyingSignature} className="w-full flex items-center justify-center gap-2 rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">

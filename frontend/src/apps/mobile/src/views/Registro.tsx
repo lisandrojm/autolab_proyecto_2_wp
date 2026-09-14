@@ -92,12 +92,12 @@ export default function Registro({ onNavigate }: RegistroProps) {
         icon={faLink}
         titulo="Registro"
         onBack={() => onNavigate("home")}
-        info={"Con el + copiás tu link de registro para compartirlo, por ejemplo en un grupo de WhatsApp. Quien lo abre carga sus datos y queda registrado.\n\nEl link tiene vencimiento y, cuando vence, se renueva solo la próxima vez que tocás el +. Abajo ves quiénes se registraron con tu link y, si supervisás, también con los links de tus coordinadores. Podés ver sus datos, pero no editarlos."}
+        info={"Con el + copiás tu link de registro para compartirlo, por ejemplo en un grupo de WhatsApp. Quien lo abre carga sus datos y queda registrado.\n\nEl link tiene vencimiento y, cuando vence, se renueva solo la próxima vez que tocás el +. Abajo ves quiénes se registraron con tu link y, si coordinás, también con los links de tus supervisores. Podés ver sus datos, pero no editarlos."}
       />
 
       <div className="px-4 pt-4">
         <h3 className="mb-1 text-lg font-bold">Registrados</h3>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">{hayDeEquipo ? "Personas que se registraron con tu link o con los de tus coordinadores." : "Personas que se registraron con tu link."} Tocá una para ver cómo se registró. Con el + copiás el link para compartir.</p>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">{hayDeEquipo ? "Personas que se registraron con tu link o con los de tus supervisores." : "Personas que se registraron con tu link."} Tocá una para ver cómo se registró. Con el + copiás el link para compartir.</p>
 
         {hayDeEquipo && (
           <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl border border-slate-200 p-1 dark:border-slate-700">
@@ -105,7 +105,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
               [
                 ["todos", "Todos"],
                 ["mios", "Míos"],
-                ["equipo", "Coordinadores"],
+                ["equipo", "Supervisores"],
               ] as const
             ).map(([id, label]) => (
               <button key={id} onClick={() => setFiltro(id)} className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors ${filtro === id ? "bg-blue-600 text-white" : "text-slate-600 dark:text-slate-300"}`}>
@@ -129,7 +129,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
             <p className="text-sm text-slate-500 dark:text-slate-400">Todavía nadie se registró con tu link. Tocá el + para copiarlo.</p>
           </div>
         ) : visibles.length === 0 ? (
-          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">{filtro === "mios" ? "Todavía nadie se registró con tu link." : "Todavía nadie se registró con los links de tus coordinadores."}</p>
+          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">{filtro === "mios" ? "Todavía nadie se registró con tu link." : "Todavía nadie se registró con los links de tus supervisores."}</p>
         ) : (
           <div className="space-y-3">
             {visibles.map((r) => (
@@ -153,7 +153,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
                     <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 opacity-70" /> {fecha(r.registradoAt)}
                   </span>
                   <span className={`flex items-center gap-1.5 ${r.esMio ? "" : "font-semibold text-amber-600 dark:text-amber-400"}`}>
-                    <FontAwesomeIcon icon={faLink} className="h-3 w-3 opacity-70" /> {r.esMio ? "Tu link" : `Link de ${r.compartidoPor || "un coordinador"}`}
+                    <FontAwesomeIcon icon={faLink} className="h-3 w-3 opacity-70" /> {r.esMio ? "Tu link" : `Link de ${r.compartidoPor || "un supervisor"}`}
                   </span>
                   {/* Sólo registros de links viejos, de cuando el link llevaba proyecto/área/turno. */}
                   {r.proyecto && (

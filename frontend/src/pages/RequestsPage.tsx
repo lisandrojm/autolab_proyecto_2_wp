@@ -1075,7 +1075,7 @@ export const RequestsPage: React.FC = () => {
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Resumen de Novedades">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
-          <button onClick={() => setShowCompliance((v) => !v)} className={`p-2 rounded transition-colors flex items-center gap-2 text-sm ${showCompliance ? "bg-blue-700 text-white ring-2 ring-blue-300 dark:ring-blue-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} aria-label="Cumplimiento de coordinadores" title="Cumplimiento de coordinadores">
+          <button onClick={() => setShowCompliance((v) => !v)} className={`p-2 rounded transition-colors flex items-center gap-2 text-sm ${showCompliance ? "bg-blue-700 text-white ring-2 ring-blue-300 dark:ring-blue-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} aria-label="Cumplimiento de supervisores" title="Cumplimiento de supervisores">
             <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
           </button>
           {/*
@@ -1096,7 +1096,7 @@ export const RequestsPage: React.FC = () => {
         <SearchAndFilters
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar por proyecto, coordinador o número..."
+          searchPlaceholder="Buscar por proyecto, supervisor o número..."
           /*
             Los tres filtros son EN CASCADA: el proyecto define qué áreas existen, y el área define
             qué turnos. Por eso cada `onChange` limpia los de abajo — si no, quedaba un turno elegido
@@ -1208,7 +1208,7 @@ export const RequestsPage: React.FC = () => {
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas con horas extras">
                     Horas Extras
                   </th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Comentarios del coordinador">
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Comentarios del supervisor">
                     Comentarios
                   </th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
@@ -1403,7 +1403,7 @@ export const RequestsPage: React.FC = () => {
           contenido y el modal cambiaba de tamaño al elegir un coordinador o cambiar de mes. El padding
           va acá porque los tamaños fullscreen/full no aplican el del modal, y los chips y los botones
           quedaban pegados a los bordes. */}
-      <Modal isOpen={showCompliance} onClose={() => setShowCompliance(false)} title="Cumplimiento de coordinadores" subtitle="Qué novedades se esperaban de cada coordinador y cuáles faltan." size="full">
+      <Modal isOpen={showCompliance} onClose={() => setShowCompliance(false)} title="Cumplimiento de supervisores" subtitle="Qué novedades se esperaban de cada supervisor y cuáles faltan." size="full">
         <div className="p-4 sm:p-6">
         <ComplianceView
           projectFilter={projectFilter}

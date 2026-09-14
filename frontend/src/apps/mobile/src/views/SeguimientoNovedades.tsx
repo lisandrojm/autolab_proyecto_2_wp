@@ -188,7 +188,7 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
   const recordar = async (ids?: string[]) => {
     try {
       const res = await complianceAPI.remind({ from: desde, to: hasta, projectId: proyectoId || undefined, coordinatorIds: ids });
-      await sweetAlert.success(res.count > 0 ? "Recordatorio enviado" : "Sin envíos", res.count > 0 ? `Se notificó a ${res.count} coordinador(es).` : "No había a quién recordarle, o ya recibió un recordatorio hoy.");
+      await sweetAlert.success(res.count > 0 ? "Recordatorio enviado" : "Sin envíos", res.count > 0 ? `Se notificó a ${res.count} supervisor(es).` : "No había a quién recordarle, o ya recibió un recordatorio hoy.");
     } catch (err: any) {
       sweetAlert.error("No se pudo enviar", err?.response?.data?.error || "Probá de nuevo en un momento.");
     }
@@ -207,7 +207,7 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
   const recordarATodos = async () => {
     const atrasados = coordinadores.filter((c) => c.missingCount > 0);
     if (atrasados.length === 0) return;
-    const r = await sweetAlert.confirm("¿Recordar a los que les falta?", `Se va a notificar a ${atrasados.length} coordinador(es) con novedades pendientes.`, "Sí, recordar");
+    const r = await sweetAlert.confirm("¿Recordar a los que les falta?", `Se va a notificar a ${atrasados.length} supervisor(es) con novedades pendientes.`, "Sí, recordar");
     if (!r.isConfirmed) return;
     setRecordando((s) => new Set(s).add("__todos__"));
     await recordar();
@@ -244,9 +244,9 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
       <SectionHeader
         icon={faCalendarCheck}
         titulo="Cumplimiento"
-        subtitulo="Cumplimiento de tus coordinadores"
+        subtitulo="Cumplimiento de tus supervisores"
         onBack={() => onNavigate("home")}
-        info={"Seguí si tus coordinadores cargan las novedades de su gente. El calendario muestra, día por día, quién las envió y a quién le falta.\n\nElegí un coordinador para ver su detalle y usá «Recordar» para avisarle a quien esté atrasado."}
+        info={"Seguí si tus supervisores cargan las novedades de su gente. El calendario muestra, día por día, quién las envió y a quién le falta.\n\nElegí un supervisor para ver su detalle y usá «Recordar» para avisarle a quien esté atrasado."}
       />
 
       <div className="space-y-4 px-4 pt-4">
@@ -264,7 +264,7 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
           >
             <span className="min-w-0 flex-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Revisando</span>
-              <span className="block truncate text-base font-bold text-slate-900 dark:text-slate-100">{elegido ? elegido.name : `Todos los coordinadores (${coordinadores.length})`}</span>
+              <span className="block truncate text-base font-bold text-slate-900 dark:text-slate-100">{elegido ? elegido.name : `Todos los supervisores (${coordinadores.length})`}</span>
             </span>
             {elegido && conteos(elegido).vencidas > 0 && <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">{conteos(elegido).vencidas} vencidas</span>}
             <span className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400">
@@ -449,14 +449,14 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
             {!elegido && data && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Coordinadores</h2>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Supervisores</h2>
                   {coordinadores.some((c) => c.missingCount > 0) && (
                     <button onClick={recordarATodos} disabled={recordando.has("__todos__")} className="inline-flex items-center gap-1.5 rounded bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
                       <FontAwesomeIcon icon={recordando.has("__todos__") ? faSpinner : faBell} className={recordando.has("__todos__") ? "animate-spin" : ""} /> Recordar a todos
                     </button>
                   )}
                 </div>
-                {coordinadores.length === 0 && <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">No hay coordinadores con áreas y turnos asignados en tus proyectos.</p>}
+                {coordinadores.length === 0 && <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">No hay supervisores con áreas y turnos asignados en tus proyectos.</p>}
                 {coordinadores.map((c) => {
                   const { vencidas, aTiempo } = conteos(c);
                   return (
@@ -509,7 +509,7 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
               <div className="border-b border-slate-200 px-4 py-2 dark:border-slate-700">
                 <div className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-600">
                   <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3.5 w-3.5 text-slate-400" />
-                  <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar coordinador…" className="w-full bg-transparent text-sm text-slate-900 outline-none dark:text-slate-100" />
+                  <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar supervisor…" className="w-full bg-transparent text-sm text-slate-900 outline-none dark:text-slate-100" />
                 </div>
               </div>
             )}
@@ -525,7 +525,7 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
                 >
                   <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-blue-500" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-slate-900 dark:text-slate-100">Todos los coordinadores</span>
+                    <span className="block text-sm font-bold text-slate-900 dark:text-slate-100">Todos los supervisores</span>
                     <span className="block text-xs text-slate-500 dark:text-slate-400">El calendario combinado de los {coordinadores.length}</span>
                   </span>
                   {!elegido && <FontAwesomeIcon icon={faCheck} className="text-blue-600" />}

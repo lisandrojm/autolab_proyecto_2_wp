@@ -604,7 +604,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       perder el trabajo por algo que se sabía desde que se destildó el rol.
     */
     if (sinNovedadesCoordinando) {
-      sweetAlert.error("Se queda sin Novedades", `Coordina turnos en ${coordinaEn.join(", ")} y con estos roles no tiene el permiso "APP MOBILE | Novedades": no va a tener dónde cargarlas. Dale un rol que lo incluya, o liberá la coordinación desde el equipo del proyecto.`);
+      sweetAlert.error("Se queda sin Novedades", `Supervisa turnos en ${coordinaEn.join(", ")} y con estos roles no tiene el permiso "APP MOBILE | Novedades": no va a tener dónde cargarlas. Dale un rol que lo incluya, o liberá la supervisión desde el equipo del proyecto.`);
       setModalActiveTab("sistema");
       return;
     }
@@ -1817,11 +1817,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         <p className={`mt-2 text-[11px] ${sinNovedadesCoordinando ? "text-red-600 dark:text-red-400 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
                           {sinNovedadesCoordinando ? (
                             <>
-                              Coordina turnos en <strong>{coordinaEn.join(", ")}</strong> y así no le queda <strong>Novedades</strong>: no va a tener dónde cargarlas. Dale un rol que incluya ese permiso, o liberá la coordinación desde el equipo del proyecto.
+                              Supervisa turnos en <strong>{coordinaEn.join(", ")}</strong> y así no le queda <strong>Novedades</strong>: no va a tener dónde cargarlas. Dale un rol que incluya ese permiso, o liberá la supervisión desde el equipo del proyecto.
                             </>
                           ) : (
                             <>
-                              Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que necesita conservar <strong>Novedades</strong>.
+                              Supervisa turnos en <strong>{coordinaEn.join(", ")}</strong>, así que necesita conservar <strong>Novedades</strong>.
                             </>
                           )}
                         </p>
@@ -2058,7 +2058,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           </p>
           <ul className="space-y-1 list-disc pl-5">
             <li>
-              <strong>Novedades</strong>: carga las novedades de sus áreas y turnos. Es lo que antes hacía el rol Coordinador.
+              <strong>Novedades</strong>: carga las novedades de sus áreas y turnos. Es lo que antes hacía el rol Supervisor.
             </li>
             <li>
               <strong>Pedidos</strong> y <strong>Vacaciones</strong>: los suyos. Es lo que traen las altas por defecto.
@@ -2068,12 +2068,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             </li>
           </ul>
           <p>
-            Se combinan como se quiera, y se arman en <strong>Usuarios → Roles</strong>, sección App Mobile. Antes eran dos roles cerrados —Colaborador y Coordinador— y lo que cada uno
+            Se combinan como se quiera, y se arman en <strong>Usuarios → Roles</strong>, sección App Mobile. Antes eran dos roles cerrados —Colaborador y Supervisor— y lo que cada uno
             mostraba estaba escrito en el código: no había manera de dar Pedidos sin dar Vacaciones.
           </p>
           <p className="text-xs text-gray-500">
             Quien tiene turnos a cargo no puede quedarse sin <strong>Novedades</strong>: no las cargaría nadie y aparecerían vencidas en Cumplimiento sin ninguna señal de por qué. Para
-            eso hay que liberarle la coordinación desde el equipo del proyecto.
+            eso hay que liberarle la supervisión desde el equipo del proyecto.
           </p>
         </div>
       </InfoModal>

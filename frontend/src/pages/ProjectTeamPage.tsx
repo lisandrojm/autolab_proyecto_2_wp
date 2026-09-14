@@ -72,8 +72,8 @@ function formatContractDate(d?: string): string {
   equipo, y eso es un permiso.
 */
 const MOBILE_ROLE_OPTIONS = [
-  { value: "con", label: "Coordina áreas" },
-  { value: "sin", label: "No coordina" },
+  { value: "con", label: "Supervisa áreas" },
+  { value: "sin", label: "No supervisa" },
 ];
 
 function numeroALetras(num: number): string {
@@ -2031,7 +2031,7 @@ export const ProjectTeamPage: React.FC = () => {
                   const isReallyResponsable = projectRespId && userMetaId && Number(projectRespId) === Number(userMetaId);
 
                   if (isReallyResponsable) {
-                    return <span className="w-fit text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">Supervisor del Proyecto</span>;
+                    return <span className="w-fit text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">Coordinador del Proyecto</span>;
                   }
                   return null;
                 })()}
@@ -2238,7 +2238,7 @@ export const ProjectTeamPage: React.FC = () => {
                             handleOpenAreaShiftDetail(ad.id, ad.name, null, shifts);
                           }}
                           className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer"
-                          title={`Ver las personas de ${ad.name} en los horarios que coordina: ${totalArea} activa${totalArea === 1 ? "" : "s"} con contrato vigente (cada persona una sola vez)`}
+                          title={`Ver las personas de ${ad.name} en los horarios que supervisa: ${totalArea} activa${totalArea === 1 ? "" : "s"} con contrato vigente (cada persona una sola vez)`}
                         >
                           {ad.name} ({totalArea})
                         </button>
@@ -2249,7 +2249,7 @@ export const ProjectTeamPage: React.FC = () => {
                             setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: "coordinated" });
                           }}
                           className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black"
-                          title="Ver turnos coordinados"
+                          title="Ver turnos supervisados"
                         >
                           +
                         </button>
@@ -2304,7 +2304,7 @@ export const ProjectTeamPage: React.FC = () => {
               if (!areasPorCoordinador.has(String(uid))) areasPorCoordinador.set(String(uid), new Map());
               areasPorCoordinador.get(String(uid))!.set(String(aid), nombreArea);
             }
-            if (areasPorCoordinador.size === 0) return <span className="text-xs italic text-gray-400">Sin coordinadores</span>;
+            if (areasPorCoordinador.size === 0) return <span className="text-xs italic text-gray-400">Sin supervisores</span>;
 
             return (
               <div className="flex flex-col gap-2">
@@ -2312,7 +2312,7 @@ export const ProjectTeamPage: React.FC = () => {
                   const coord = allUsers.find((x) => String(x._id) === uid);
                   return (
                     <div key={uid} className="flex flex-col gap-1">
-                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{coord ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() || coord.email : "Coordinador"}</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{coord ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() || coord.email : "Supervisor"}</span>
                       <div className="flex flex-wrap gap-1">
                         {[...areas].map(([aid, nombre]) => (
                           <span key={aid} className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
@@ -2531,8 +2531,8 @@ export const ProjectTeamPage: React.FC = () => {
           ? {
               isOpen: true,
               onClose: () => setOpenCoordinadoresInfo(false),
-              title: "Asignación de Coordinadores",
-              content: <p className="text-gray-600 dark:text-gray-300">Asigna un coordinador designado para cada combinación de Área y Turno del proyecto. Todas las combinaciones deben estar cubiertas.</p>,
+              title: "Asignación de Supervisores",
+              content: <p className="text-gray-600 dark:text-gray-300">Asigna un supervisor designado para cada combinación de Área y Turno del proyecto. Todas las combinaciones deben estar cubiertas.</p>,
             }
           : undefined
       }
@@ -2565,7 +2565,7 @@ export const ProjectTeamPage: React.FC = () => {
               </button>
               <button onClick={() => setActiveTab("coordinadores")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "coordinadores" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                 <FontAwesomeIcon icon={faUserTie} className="text-xs" />
-                Coordinadores ({coordinadoresCount})
+                Supervisores ({coordinadoresCount})
                 <span
                   role="button"
                   onClick={(e) => {
@@ -2706,7 +2706,7 @@ export const ProjectTeamPage: React.FC = () => {
                       Asignación requerida
                     </p>
                     <p className="text-amber-700 dark:text-amber-500 text-xs leading-normal">
-                      Para asignar áreas y turnos hace falta que el equipo tenga a alguien con el rol <strong>Coordinador</strong>, o con cualquier rol que incluya <strong>«Coordina áreas y turnos»</strong>.
+                      Para asignar áreas y turnos hace falta que el equipo tenga a alguien con un rol que incluya <strong>«Supervisa áreas y turnos»</strong>.
                     </p>
                   </div>
                 )}
@@ -2772,13 +2772,13 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold">Área / Turno</th>
                               <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">
                                 <span className="inline-flex items-center gap-1.5">
-                                  Área/Turno Coordinada
-                                  <button type="button" onClick={() => setOpenCoordCountInfo(true)} className="text-amber-500/70 hover:text-amber-500 transition-colors" title="Qué significa el número entre paréntesis" aria-label="Información del número de personas coordinadas">
+                                  Área/Turno Supervisada
+                                  <button type="button" onClick={() => setOpenCoordCountInfo(true)} className="text-amber-500/70 hover:text-amber-500 transition-colors" title="Qué significa el número entre paréntesis" aria-label="Información del número de personas supervisadas">
                                     <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                                   </button>
                                 </span>
                               </th>
-                              <th className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Coordinadores supervisados</th>
+                              <th className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Supervisores coordinados</th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
@@ -3215,7 +3215,7 @@ export const ProjectTeamPage: React.FC = () => {
           <Modal
             isOpen={!!viewingShiftsData}
             onClose={() => setViewingShiftsData(null)}
-            title={`Turnos ${viewingShiftsData?.assignmentType === "coordinated" ? "Coordinados" : "Asignados"} - ${viewingShiftsData?.areaName}`}
+            title={`Turnos ${viewingShiftsData?.assignmentType === "coordinated" ? "Supervisados" : "Asignados"} - ${viewingShiftsData?.areaName}`}
             subtitle={
               viewingShiftsData ? (
                 <p className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight">
@@ -3437,7 +3437,7 @@ export const ProjectTeamPage: React.FC = () => {
                             · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? "" : "s"} en total
                           </>
                         ) : null}
-                        {mostrarTurnos ? " en los horarios que coordina de esta área." : ". El número de la columna Área/Turno Coordinada es el primero."}
+                        {mostrarTurnos ? " en los horarios que supervisa de esta área." : ". El número de la columna Área/Turno Supervisada es el primero."}
                       </p>
                     </div>
 
@@ -4144,7 +4144,7 @@ export const ProjectTeamPage: React.FC = () => {
                                   <div className="flex items-center gap-2">
                                     <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
                                     <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
-                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Coordinador</span>}
+                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Supervisor</span>}
                                   </div>
                                   {isAreaActive && (
                                     <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
@@ -4154,7 +4154,7 @@ export const ProjectTeamPage: React.FC = () => {
                                 </div>
                                 {isAreaRestricted && (
                                   <div className="px-4 pb-3">
-                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Coordina áreas y turnos». Dale el rol Coordinador desde su ficha.</p>
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Supervisa áreas y turnos». Dale un rol que lo incluya desde su ficha.</p>
                                   </div>
                                 )}
                                 <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
@@ -4434,7 +4434,7 @@ export const ProjectTeamPage: React.FC = () => {
             </li>
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Sin áreas, además, los usuarios no pueden cargar su área y los coordinadores no pueden informar novedades sobre ellos.</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Sin áreas, además, los usuarios no pueden cargar su área y los supervisores no pueden informar novedades sobre ellos.</span>
             </li>
           </ul>
         </div>
@@ -4457,10 +4457,10 @@ export const ProjectTeamPage: React.FC = () => {
       </InfoModal>
 
       {/* Info: qué significa el número entre paréntesis en Área/Turno Coordinada */}
-      <InfoModal isOpen={openCoordCountInfo} onClose={() => setOpenCoordCountInfo(false)} title="Personas coordinadas por área y turno" subtitle="Qué significa el número entre paréntesis" size="sm" zIndex={100} actions={[{ label: "Entendido", onClick: () => setOpenCoordCountInfo(false), variant: "primary" }]}>
+      <InfoModal isOpen={openCoordCountInfo} onClose={() => setOpenCoordCountInfo(false)} title="Personas supervisadas por área y turno" subtitle="Qué significa el número entre paréntesis" size="sm" zIndex={100} actions={[{ label: "Entendido", onClick: () => setOpenCoordCountInfo(false), variant: "primary" }]}>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong> asignados a esa combinación exacta de área y turno, o sea a quiénes coordina esa persona en ese horario.
+            El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong> asignados a esa combinación exacta de área y turno, o sea a quiénes supervisa esa persona en ese horario.
           </p>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
@@ -4484,7 +4484,7 @@ export const ProjectTeamPage: React.FC = () => {
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                El <strong>coordinador se incluye a sí mismo</strong> si además pertenece a esa área y turno.
+                El <strong>supervisor se incluye a sí mismo</strong> si además pertenece a esa área y turno.
               </span>
             </li>
             <li className="flex items-start gap-3">

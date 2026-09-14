@@ -172,7 +172,7 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push({
       icon: faCalendarCheck,
       title: "Cumplimiento",
-      description: "De tus coordinadores",
+      description: "De tus supervisores",
       view: "activity_compliance" as ViewType,
       disabled: false,
     });

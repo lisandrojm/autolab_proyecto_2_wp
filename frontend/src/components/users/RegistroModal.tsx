@@ -290,7 +290,7 @@ export const RegistroModal: React.FC<Props> = ({ isOpen, onClose, clientId, onAb
           <FontAwesomeIcon icon={faMobileScreen} className="mt-1 h-4 w-4 text-purple-600 dark:text-purple-300" />
           <div>
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Links de la app móvil</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Los generan supervisores y coordinadores desde Registro y se renuevan solos al vencer. El cambio aplica a los próximos links: los vigentes conservan su vencimiento.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Los generan coordinadores y supervisores desde Registro y se renuevan solos al vencer. El cambio aplica a los próximos links: los vigentes conservan su vencimiento.</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">

@@ -32,8 +32,8 @@ function getFirstName(user: User | null): string {
 function badgesDeJerarquia(user: User | null): { texto: string; clase: string }[] {
   const permisos = user?.permissions || [];
   const badges: { texto: string; clase: string }[] = [];
-  if (permisos.includes(PROJECT_SUPERVISOR)) badges.push({ texto: "Supervisor", clase: "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" });
-  if (permisos.includes(PROJECT_COORDINATOR)) badges.push({ texto: "Coordinador", clase: "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300" });
+  if (permisos.includes(PROJECT_SUPERVISOR)) badges.push({ texto: "Coordinador", clase: "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" });
+  if (permisos.includes(PROJECT_COORDINATOR)) badges.push({ texto: "Supervisor", clase: "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300" });
   if (badges.length === 0) badges.push({ texto: "Colaborador", clase: "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300" });
   return badges;
 }

@@ -385,7 +385,7 @@ export default function Proyectos() {
     <SectionHeader
       icon={faBriefcase}
       titulo="Proyectos"
-      info={"Los proyectos en los que estás: los que tenés con contrato y los que supervisás o coordinás.\n\nTocá uno para ver sede, contrato, vigencia, horario y las áreas y turnos que tenés asignados o coordinás."}
+      info={"Los proyectos en los que estás: los que tenés con contrato y los que coordinás o supervisás.\n\nTocá uno para ver sede, contrato, vigencia, horario y las áreas y turnos que tenés asignados o supervisás."}
     />
   );
 
@@ -433,13 +433,13 @@ export default function Proyectos() {
                       {info.isResponsable && (
                         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500 text-white text-[8px] font-black uppercase tracking-wider shadow-sm">
                           <FontAwesomeIcon icon={faUserShield} size="xs" />
-                          Supervisor del proyecto
+                          Coordinador del proyecto
                         </span>
                       )}
                       {coordina && !info.isResponsable && (
                         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[8px] font-black uppercase tracking-wider">
                           <FontAwesomeIcon icon={faUserTie} size="xs" />
-                          Coordinador
+                          Supervisor
                         </span>
                       )}
                       {tieneContrato && !info.isResponsable && (
@@ -493,7 +493,7 @@ export default function Proyectos() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">No tenés contrato en este proyecto: aparece porque lo {info.isResponsable ? 'supervisás' : 'coordinás'}.</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">No tenés contrato en este proyecto: aparece porque lo {info.isResponsable ? 'coordinás' : 'supervisás'}.</p>
                     )}
 
                     {/* Área / turno propios. Sin contrato y sin turnos no hay nada que decir: se omite. */}
@@ -539,7 +539,7 @@ export default function Proyectos() {
 
                     {coordina && (
                       <div className="space-y-2">
-                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno Coordinada</p>
+                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno Supervisada</p>
                         <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
                           <div className="space-y-3">
                             {info.coordinatedShifts.map((group: any, gidx: number) => (

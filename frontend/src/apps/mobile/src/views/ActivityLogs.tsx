@@ -2507,7 +2507,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         icon={faCalendar}
         titulo="Mis Novedades"
         onBack={() => onNavigate("home")}
-        info={"Cargá las novedades de la gente de tus áreas y turnos: quién vino, ausencias, reemplazos, horas extra y bajas.\n\nElegí el día, completá lo que pasó y envialo. Cada día tiene que quedar enviado: si no, tu supervisor lo ve como pendiente."}
+        info={"Cargá las novedades de la gente de tus áreas y turnos: quién vino, ausencias, reemplazos, horas extra y bajas.\n\nElegí el día, completá lo que pasó y envialo. Cada día tiene que quedar enviado: si no, tu coordinador lo ve como pendiente."}
       />
 
       <div className="px-4 pt-4">
@@ -5211,7 +5211,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                       );
                                     })()}
                                   </div>
-                                  <p className="text-[10px] text-slate-400 font-medium truncate uppercase tracking-tighter">{u.positionName || (title === "COORDINADORES" ? "COORDINADOR" : "COLABORADOR")}</p>
+                                  <p className="text-[10px] text-slate-400 font-medium truncate uppercase tracking-tighter">{u.positionName || (title === "SUPERVISORES" ? "SUPERVISOR" : "COLABORADOR")}</p>
                                 </div>
                               </div>
                             ))
@@ -5233,7 +5233,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                     return (
                       <div className="space-y-6">
-                        {renderUserList(coordinators, "COORDINADORES", faUserTie)}
+                        {renderUserList(coordinators, "SUPERVISORES", faUserTie)}
                         {renderUserList(collaborators, "COLABORADORES", faUsers)}
                       </div>
                     );
