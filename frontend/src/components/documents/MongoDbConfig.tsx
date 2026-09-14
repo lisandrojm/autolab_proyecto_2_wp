@@ -81,6 +81,9 @@ export const MongoDbConfig: React.FC = () => {
           {config?.ultimoError &&
             (() => {
               const soloMongo = /^Mongo de backup:/.test(config.ultimoError) && !/Dropbox:/.test(config.ultimoError);
+              // El clon dentro de Mongo está apagado: un error que es SÓLO de él quedó guardado de una
+              // corrida anterior y ya no dice nada de la copia actual. No se muestra.
+              if (soloMongo) return null;
               return (
                 <div className={`flex items-start gap-2 rounded border p-3 ${soloMongo ? "border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300" : "border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"}`}>
                   <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5" />

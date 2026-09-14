@@ -1,11 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt, faLayerGroup, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
-import { useAuthStore } from "../../../../stores/authStore";
-import { useProfile } from "../hooks/useProfile";
-import { projectsAPI, Project } from "../../../../api/projects";
-import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { registroLinksAPI, buildRegistroUrl, DetalleRegistrado, Registrado } from "../../../../api/registroLinks";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -18,28 +14,15 @@ interface RegistroProps {
  * REGISTRO: EL LINK PARA QUE LA GENTE SE REGISTRE SOLA, Y QUIÉNES LO HICIERON
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Parecida a Contratación, pero el «+» no abre un formulario: copia al portapapeles el link de registro
- * de un área y turno, con su vencimiento, listo para pegar en un grupo de WhatsApp. El link dura 7 días
- * y, vencido, el server genera uno nuevo la próxima vez que se pide: no hay que renovarlo a mano.
+ * Parecida a Contratación, pero el «+» no abre un formulario: copia al portapapeles el link de registro,
+ * con su vencimiento, listo para pegar en un grupo de WhatsApp. El link SÓLO registra al usuario —no lo
+ * asigna a ningún proyecto, área ni turno—, dura 7 días y, vencido, el server genera uno nuevo la
+ * próxima vez que se pide: no hay que renovarlo a mano.
  *
- * Quien se registra queda asociado a ese proyecto, área y turno y a quien lo invitó, y aparece abajo en
- * «Registrados». Se puede ver cómo se registró, pero no editarlo: los datos son de esa persona.
- *
- * Qué combinaciones se ofrecen: las que coordina, o todas las de los proyectos que supervisa (mismo
- * criterio que Mis equipos). El server vuelve a validarlo al generar el link.
+ * Quien se registra queda asociado a quien compartió el link y aparece abajo en «Registrados». Se puede
+ * ver cómo se registró, pero no editarlo: los datos son de esa persona.
  */
 
-interface Combinacion {
-  projectId: string;
-  proyecto: string;
-  areaId: string;
-  area: string;
-  shiftId: string;
-  turno: string;
-  orden: string;
-}
-
-const idDe = (x: any): string => (x && typeof x === "object" ? String(x._id || x.id || "") : String(x || ""));
 const fecha = (d?: string) => (d ? new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—");
 
 /** Copia al portapapeles con respaldo para navegadores sin `navigator.clipboard` (http, webviews viejos). */
@@ -68,88 +51,39 @@ const copiar = async (texto: string): Promise<boolean> => {
 };
 
 export default function Registro({ onNavigate }: RegistroProps) {
-  const { user } = useAuthStore();
-  const { profile } = useProfile();
-
-  const [proyectos, setProyectos] = useState<Project[] | null>(null);
-  const [turnos, setTurnos] = useState<Shift[]>([]);
   const [registrados, setRegistrados] = useState<Registrado[] | null>(null);
   const [error, setError] = useState("");
-  const [selectorAbierto, setSelectorAbierto] = useState(false);
-  const [generando, setGenerando] = useState<string | null>(null);
+  const [generando, setGenerando] = useState(false);
   const [detalle, setDetalle] = useState<DetalleRegistrado | null>(null);
   const [cargandoDetalle, setCargandoDetalle] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
-    Promise.all([projectsAPI.listAll(), shiftsAPI.getAll(), registroLinksAPI.misRegistrados()])
-      .then(([ps, ss, rs]) => {
-        if (cancelado) return;
-        setProyectos(ps);
-        setTurnos(ss);
-        setRegistrados(rs);
-      })
+    registroLinksAPI
+      .misRegistrados()
+      .then((rs) => !cancelado && setRegistrados(rs))
       .catch((e) => !cancelado && setError(e?.response?.data?.error || "No se pudo cargar. Probá de nuevo en un momento."));
     return () => {
       cancelado = true;
     };
   }, []);
 
-  // Quién soy, para reconocer mis coordinaciones y los proyectos que superviso (igual que Mis equipos).
-  const misIds = useMemo(() => new Set([(user as any)?.id, (user as any)?._id, profile?.userId, profile?._id].filter(Boolean).map(String)), [user, profile]);
-  const miIdFrame = (profile as any)?.metadata?.id ?? (user as any)?.metadata?.id;
-
-  const combinaciones = useMemo<Combinacion[]>(() => {
-    if (!proyectos) return [];
-    const turnoPorId = new Map(turnos.map((s) => [String(s._id), s]));
-    const res: Combinacion[] = [];
-    for (const p of proyectos) {
-      const supervisa = miIdFrame != null && p.metadata?.responsableId != null && String(p.metadata.responsableId) === String(miIdFrame);
-      const pares = supervisa
-        ? (p.areasConfig || []).flatMap((ac: any) => (ac.shiftIds || []).map((s: any) => ({ area: ac.areaId, turno: s })))
-        : (p.coordinatorAssignments || []).filter((a: any) => misIds.has(idDe(a.userId))).map((a: any) => ({ area: a.areaId, turno: a.shiftId }));
-      for (const { area, turno } of pares) {
-        const areaId = idDe(area);
-        const shiftId = idDe(turno);
-        if (!areaId || !shiftId || res.some((c) => c.projectId === p._id && c.areaId === areaId && c.shiftId === shiftId)) continue;
-        const t = turnoPorId.get(shiftId);
-        res.push({
-          projectId: p._id,
-          proyecto: p.name,
-          areaId,
-          area: (area && typeof area === "object" && area.name) || "Área",
-          shiftId,
-          turno: t?.name || (turno && typeof turno === "object" && turno.name) || "Turno",
-          orden: t?.startTime || "99:99",
-        });
-      }
-    }
-    return res.sort((a, b) => a.proyecto.localeCompare(b.proyecto) || a.area.localeCompare(b.area) || a.orden.localeCompare(b.orden));
-  }, [proyectos, turnos, misIds, miIdFrame]);
-
-  /** Pide (o genera) el link de esa combinación y lo copia listo para pegar. */
-  const compartir = async (c: Combinacion) => {
-    const clave = `${c.projectId}::${c.areaId}::${c.shiftId}`;
-    setGenerando(clave);
+  /** Pide (o genera) mi link de registro y lo copia listo para pegar. */
+  const compartir = async () => {
+    setGenerando(true);
     try {
-      const link = await registroLinksAPI.miLink(c.projectId, c.areaId, c.shiftId);
+      const link = await registroLinksAPI.miLink();
       const url = buildRegistroUrl(link.token);
       const dias = link.diasRestantes === 1 ? "1 día" : `${link.diasRestantes} días`;
-      const mensaje = `Hola! Para trabajar en ${c.proyecto} (${c.area} · ${c.turno}) registrate acá:\n${url}\n\nEl link vence el ${fecha(link.expiresAt)} (quedan ${dias}).`;
+      const mensaje = `Hola! Registrate acá:\n${url}\n\nEl link vence el ${fecha(link.expiresAt)} (quedan ${dias}).`;
       const ok = await copiar(mensaje);
-      setSelectorAbierto(false);
-      if (ok) await sweetAlert.success("Link copiado", `Pegalo en el grupo de WhatsApp o donde corresponda.\n\n${c.area} · ${c.turno} — vence el ${fecha(link.expiresAt)} (quedan ${dias}).`);
+      if (ok) await sweetAlert.success("Link copiado", `Pegalo en el grupo de WhatsApp o donde corresponda.\n\nVence el ${fecha(link.expiresAt)} (quedan ${dias}).`);
       else await sweetAlert.warning("No se pudo copiar", `Copialo a mano:\n\n${url}`);
     } catch (e: any) {
       sweetAlert.error("No se pudo generar el link", e?.response?.data?.error || "Probá de nuevo en un momento.");
     } finally {
-      setGenerando(null);
+      setGenerando(false);
     }
-  };
-
-  const abrirMas = () => {
-    if (combinaciones.length === 1) compartir(combinaciones[0]);
-    else setSelectorAbierto(true);
   };
 
   const verDetalle = async (id: string) => {
@@ -188,7 +122,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
 
       <div className="px-4 pt-4">
         <h3 className="mb-1 text-lg font-bold">Registrados</h3>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Personas que se registraron con tus links. Tocá una para ver cómo se registró. Con el + copiás un link nuevo.</p>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Personas que se registraron con tu link. Tocá una para ver cómo se registró. Con el + copiás el link para compartir.</p>
 
         {error ? (
           <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</p>
@@ -201,7 +135,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
         ) : registrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:border-slate-700 dark:bg-slate-800/50">
             <FontAwesomeIcon icon={faLink} className="mb-3 h-10 w-10 text-slate-300" />
-            <p className="text-sm text-slate-500 dark:text-slate-400">Todavía nadie se registró con tus links. Tocá el + para copiar uno.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Todavía nadie se registró con tu link. Tocá el + para copiarlo.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -225,6 +159,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
                   <span className="flex items-center gap-1.5">
                     <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 opacity-70" /> {fecha(r.registradoAt)}
                   </span>
+                  {/* Sólo registros de links viejos, de cuando el link llevaba proyecto/área/turno. */}
                   {r.proyecto && (
                     <span className="flex items-center gap-1.5">
                       <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 opacity-70" /> {[r.proyecto, r.area, r.turno].filter(Boolean).join(" · ")}
@@ -237,51 +172,17 @@ export default function Registro({ onNavigate }: RegistroProps) {
         )}
       </div>
 
-      {/* + : copiar un link */}
+      {/* + : copiar el link */}
       <div className="pointer-events-none fixed bottom-24 left-1/2 z-10 flex w-full -translate-x-1/2 justify-end px-6 xl:w-1/2">
         <button
-          onClick={abrirMas}
-          disabled={proyectos === null || combinaciones.length === 0 || !!generando}
+          onClick={compartir}
+          disabled={generando}
           className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50"
-          title={combinaciones.length === 0 && proyectos !== null ? "No tenés áreas y turnos a cargo para invitar" : "Copiar link de registro"}
+          title="Copiar link de registro"
         >
           <FontAwesomeIcon icon={generando ? faSpinner : faPlus} className={`h-6 w-6 ${generando ? "animate-spin" : ""}`} />
         </button>
       </div>
-      {proyectos !== null && combinaciones.length === 0 && !error && <p className="px-4 pt-4 text-center text-xs text-amber-600 dark:text-amber-400">No tenés áreas y turnos a cargo: el link se genera para un área y turno que coordinás o para un proyecto que supervisás.</p>}
-
-      {/* ELEGIR PARA DÓNDE ES EL LINK */}
-      {selectorAbierto && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setSelectorAbierto(false)}>
-          <div className="flex max-h-[80vh] w-full flex-col rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 xl:w-1/2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <div>
-                <p className="text-base font-bold text-slate-900 dark:text-slate-100">¿Para dónde es el link?</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Quien se registre queda en ese proyecto, área y turno. Vence a los 7 días.</p>
-              </div>
-              <button onClick={() => setSelectorAbierto(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
-                <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
-              {combinaciones.map((c) => {
-                const clave = `${c.projectId}::${c.areaId}::${c.shiftId}`;
-                return (
-                  <button key={clave} onClick={() => compartir(c)} disabled={!!generando} className="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 text-left disabled:opacity-60 dark:border-slate-700">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-slate-900 dark:text-slate-100">
-                        {c.area} · {c.turno}
-                      </span>
-                      <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{c.proyecto}</span>
-                    </span>
-                    <FontAwesomeIcon icon={generando === clave ? faSpinner : faCopy} className={`text-blue-600 ${generando === clave ? "animate-spin" : ""}`} />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* CÓMO SE REGISTRÓ: sólo lectura */}
       {detalle && (
@@ -292,10 +193,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
                 <p className="truncate text-base font-bold text-slate-900 dark:text-slate-100">
                   {detalle.personales.nombre} {detalle.personales.apellido}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Se registró el {fecha(detalle.registradoAt)}
-                  {detalle.proyecto ? ` · ${[detalle.proyecto, detalle.area, detalle.turno].filter(Boolean).join(" · ")}` : ""}
-                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Se registró el {fecha(detalle.registradoAt)}</p>
               </div>
               <button onClick={() => setDetalle(null)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
                 <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />

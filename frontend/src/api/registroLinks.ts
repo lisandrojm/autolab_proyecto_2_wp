@@ -97,9 +97,9 @@ class RegistroLinksAPI {
     return data.token;
   }
 
-  /** Móvil: mi link vigente para esa combinación; si no hay o venció, el server genera uno de 7 días. */
-  async miLink(projectId: string, areaId: string, shiftId: string): Promise<MiRegistroLink> {
-    const { data } = await axios.post(`/registro-links/mio`, { projectId, areaId, shiftId });
+  /** Móvil: mi link de registro vigente (sólo registra al usuario); si no hay o venció, el server genera uno de 7 días. */
+  async miLink(): Promise<MiRegistroLink> {
+    const { data } = await axios.post(`/registro-links/mio`, {});
     return data.link;
   }
 

@@ -20,7 +20,6 @@ const router = Router();
 /** Los links del móvil duran 7 días. Vencido, el próximo pedido genera uno nuevo (ver `POST /mio`). */
 const DIAS_LINK_MOVIL = 7;
 const DIA_MS = 24 * 60 * 60 * 1000;
-const idDe = (x) => (x && typeof x === "object" && x._id ? String(x._id) : String(x || ""));
 const nombreDe = (u) => [u?.firstName, u?.lastName].filter(Boolean).join(" ").trim() || u?.email || "";
 // GET /registro-links - Listar links de registro del tenant (activos y revocados)
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
@@ -74,56 +73,28 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
   SECCIÓN «REGISTRO» DEL MÓVIL
   ═══════════════════════════════════════════════════════════════════════
 
-  Un supervisor o coordinador comparte un link (por WhatsApp, por ejemplo) para que la gente de su área
-  y turno se registre sola. El link dura 7 días; vencido, el próximo pedido genera uno nuevo — así nunca
-  hay que ir a renovarlo a mano. Quien se registra queda asociado a ese proyecto, área y turno y a quien
-  lo invitó, y aparece en la lista «Registrados» de esa persona, que la ve pero no la edita.
-
-  Se genera sólo para lo que uno tiene a cargo: una combinación área/turno que coordina, o cualquiera del
-  proyecto que supervisa. Si no, cualquiera con el permiso podría meter gente en equipos ajenos.
+  Un supervisor o coordinador comparte un link (por WhatsApp, por ejemplo) para que la gente se registre
+  sola. El link SÓLO registra al usuario: no lo asigna a ningún proyecto, área ni turno —eso se decide
+  después, como con cualquier alta—. Dura 7 días; vencido, el próximo pedido genera uno nuevo, así nunca
+  hay que ir a renovarlo a mano. Quien se registra queda asociado a quien lo invitó y aparece en la
+  lista «Registrados» de esa persona, que la ve pero no la edita.
 */
-/** ¿Puede quien pide generar un link para ese proyecto, área y turno? */
-async function puedeInvitarA(req, proyecto, areaId, shiftId) {
-    const roles = (req.user?.roles || []).map((r) => r.toLowerCase());
-    if (roles.includes("admin") || roles.includes("superadmin"))
-        return true;
-    const yo = String(req.user.userId);
-    const coordina = (proyecto.coordinatorAssignments || []).some((a) => idDe(a.userId) === yo && idDe(a.areaId) === areaId && idDe(a.shiftId) === shiftId);
-    if (coordina)
-        return true;
-    const miFicha = await User.findById(yo).select("metadata.id").lean();
-    const idFrame = miFicha?.metadata?.id;
-    return idFrame != null && proyecto.metadata?.responsableId != null && String(proyecto.metadata.responsableId) === String(idFrame);
-}
 const resumenLink = (l) => {
     const vence = getRegistroLinkExpiry(l);
     return { _id: String(l._id), token: l.token, expiresAt: new Date(vence).toISOString(), diasRestantes: Math.max(0, Math.ceil((vence - Date.now()) / DIA_MS)), usageCount: l.usageCount || 0 };
 };
-// POST /registro-links/mio { projectId, areaId, shiftId } - Mi link vigente para esa combinación; si no hay o venció, uno nuevo.
+// POST /registro-links/mio - Mi link de registro vigente; si no hay o venció, uno nuevo de 7 días.
 router.post("/mio", requireTenant, authenticateToken, requirePermission(MOBILE_REGISTRO), async (req, res) => {
     try {
         const tenantId = toObjectIdOrNull(req.tenantObjectId);
-        const { projectId, areaId, shiftId } = req.body || {};
-        if (!tenantId || ![projectId, areaId, shiftId].every((id) => Types.ObjectId.isValid(String(id || "")))) {
-            res.status(400).json({ error: "Elegí el proyecto, el área y el turno del link." });
+        if (!tenantId) {
+            res.status(400).json({ error: "Invalid tenant ID" });
             return;
         }
-        const proyecto = await Project.findOne({ _id: projectId, tenantId }).select("name areasConfig coordinatorAssignments metadata.responsableId").lean();
-        if (!proyecto) {
-            res.status(404).json({ error: "Proyecto no encontrado" });
-            return;
-        }
-        const combinacionExiste = (proyecto.areasConfig || []).some((ac) => idDe(ac.areaId) === String(areaId) && (ac.shiftIds || []).some((s) => idDe(s) === String(shiftId)));
-        if (!combinacionExiste) {
-            res.status(400).json({ error: "Esa área y turno no son de este proyecto." });
-            return;
-        }
-        if (!(await puedeInvitarA(req, proyecto, String(areaId), String(shiftId)))) {
-            res.status(403).json({ error: "Sólo podés generar links para las áreas y turnos que tenés a cargo." });
-            return;
-        }
+        // Uno por persona: el link general de quien lo comparte. Los links viejos con proyecto/área/turno
+        // (de antes de que el link fuera sólo para registrarse) no se reusan.
         const creador = new Types.ObjectId(String(req.user.userId));
-        let link = await RegistroLink.findOne({ tenantId, createdBy: creador, projectId, areaId, shiftId, origen: "mobile", active: true, expiresAt: { $gt: new Date() } })
+        let link = await RegistroLink.findOne({ tenantId, createdBy: creador, origen: "mobile", projectId: { $exists: false }, active: true, expiresAt: { $gt: new Date() } })
             .sort({ expiresAt: -1 })
             .lean();
         if (!link) {
@@ -133,9 +104,6 @@ router.post("/mio", requireTenant, authenticateToken, requirePermission(MOBILE_R
                 tenantSlug: tenant?.slug || "",
                 token: crypto.randomBytes(32).toString("base64url"),
                 createdBy: creador,
-                projectId,
-                areaId,
-                shiftId,
                 origen: "mobile",
                 active: true,
                 expiresAt: new Date(Date.now() + DIAS_LINK_MOVIL * DIA_MS),
