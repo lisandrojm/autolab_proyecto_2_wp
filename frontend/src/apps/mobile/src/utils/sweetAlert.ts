@@ -107,6 +107,49 @@ export const sweetAlert = {
     });
   },
 
+  /**
+   * Un aviso que NO se va solo: para cuando lo que se dice hay que leerlo, no alcanza con verlo pasar.
+   *
+   * Los `success`/`warning` de arriba son toasts de 2-3 segundos, bien para "listo" y mal para
+   * explicar algo: con un link de registro el mensaje incluye qué es, cuánto dura y qué hacer con él, y
+   * en 3 segundos no se llega a leer. Acá hay que tocar un botón para cerrarlo, y tocar afuera no lo
+   * cierra —con un dedo en el celular es muy fácil hacerlo sin querer—.
+   *
+   * `onDeny` es un segundo botón que hace algo SIN cerrar el aviso (por ejemplo, volver a copiar):
+   * devuelve si salió bien, y el botón lo dice por un momento.
+   */
+  persistente: (opts: { icon: "success" | "warning" | "info"; title: string; html: string; confirmButtonText?: string; denyButtonText?: string; onDeny?: () => Promise<boolean> | boolean }) => {
+    return Swal.fire({
+      icon: opts.icon,
+      title: opts.title,
+      html: opts.html,
+      confirmButtonText: opts.confirmButtonText || "Entendido",
+      confirmButtonColor: "#3b82f6",
+      showDenyButton: !!opts.onDeny,
+      denyButtonText: opts.denyButtonText,
+      denyButtonColor: "#64748b",
+      allowOutsideClick: false,
+      preDeny: opts.onDeny
+        ? async () => {
+            const ok = await opts.onDeny!();
+            const boton = Swal.getDenyButton();
+            if (boton) {
+              const original = opts.denyButtonText || "";
+              boton.textContent = ok ? "¡Copiado!" : "No se pudo";
+              setTimeout(() => {
+                boton.textContent = original;
+              }, 1500);
+            }
+            return false; // no cierra el aviso
+          }
+        : undefined,
+      customClass: {
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
+      },
+    });
+  },
+
   loading: (title: string, text?: string) => {
     return Swal.fire({
       title,

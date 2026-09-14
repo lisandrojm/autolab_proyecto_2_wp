@@ -1,6 +1,9 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHome, faFolderOpen, faUser, faBell, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faHome, faSitemap, faUser, faBell, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
+import { useAuthStore } from "../../../../stores/authStore";
+import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
+import { MOBILE_TEAMS } from "../../../../utils/permisosMobile";
 
 interface BottomNavProps {
   currentView: ViewType;
@@ -8,11 +11,23 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
+  /*
+    «Mis equipos» vive también en la barra, donde antes estaba Documentos (apagado, sin pantalla).
+
+    Es lo que un supervisor o un coordinador necesita tener a un toque: qué áreas y turnos tiene a cargo.
+    Se habilita con el MISMO permiso que su tarjeta del inicio y que la vista en `App.tsx`, leyendo los
+    permisos crudos: una sola regla para las tres puertas. Sin el permiso —o con el permiso en
+    desarrollo— el ícono queda en gris, igual que quedaba Documentos.
+  */
+  const { user } = useAuthStore();
+  const inactivo = usePermisoInactivo();
+  const puedeEquipos = (user?.permissions || []).includes(MOBILE_TEAMS) && !inactivo(MOBILE_TEAMS);
+
   const navItems = [
     { id: "home" as ViewType, icon: faHome, label: "Inicio", disabled: false },
     // El Calendario salió de la barra (estaba apagado): su lugar lo toma el Perfil.
     { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: false },
-    { id: "documents" as ViewType, icon: faFolderOpen, label: "Documentos", disabled: true },
+    { id: "my_teams" as ViewType, icon: faSitemap, label: "Mis equipos", disabled: !puedeEquipos },
     // Proyecto, contrato y áreas/turnos: antes era el final del Perfil y lo alargaba de más.
     { id: "asignacion" as ViewType, icon: faBriefcase, label: "Asignación", disabled: false },
     { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: true, notifications: true },
@@ -34,6 +49,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
                   onClick={isClickable ? () => onNavigate(id) : undefined}
                   disabled={disabled}
                   aria-disabled={disabled}
+                  aria-label={label}
                   className={`group relative inline-flex flex-col items-center justify-center px-5
                     ${disabled ? "text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60" : isActive ? "text-primary" : "text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary"}`}
                 >
@@ -48,7 +64,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
                       </span>
                     )}
                   </div>
-                  {isActive && <span className="text-xs font-bold mt-1">{label}</span>}
+                  {isActive && <span className="text-xs font-bold mt-1 whitespace-nowrap">{label}</span>}
                 </button>
               );
             })}

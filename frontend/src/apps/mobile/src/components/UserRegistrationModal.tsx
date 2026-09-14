@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "./JornadasSolicitud";
@@ -284,6 +284,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const permisoInactivo = usePermisoInactivo();
   const puedeCompartirLink = (yo?.permissions || []).includes(MOBILE_REGISTRO) && !permisoInactivo(MOBILE_REGISTRO);
   const [copiandoLink, setCopiandoLink] = useState(false);
+  /** «¿No aparece?»: la explicación y el link, en su propia ventana en vez de apretados al pie de la lista. */
+  const [noApareceOpen, setNoApareceOpen] = useState(false);
   const copiarLinkDeRegistro = async () => {
     setCopiandoLink(true);
     try {
@@ -2036,19 +2038,58 @@ const TIME_OPTIONS = (() => {
               )}
             </div>
             {personasFiltradas.length > 50 && <p className="text-[11px] text-slate-400">Se muestran las primeras 50 de {personasFiltradas.length}. Afiná la búsqueda o filtrá por rol.</p>}
-            {/* Siempre a la vista, no sólo con la lista vacía: quien no encuentra a alguien entre 50 nombres parecidos también tiene que saber por qué. */}
+            {/*
+              Siempre a la vista, no sólo con la lista vacía: quien no encuentra a alguien entre 50 nombres
+              parecidos también tiene que saber por qué.
+
+              Es UN botón que abre su propia ventana, y no el texto con el link al lado. Apretados en un
+              renglón de 11px, la explicación y el "Copiar link" se leían como una sola cosa y el link no se
+              encontraba. Ahora se ve de lejos y, al abrirlo, primero se explica y después se ofrece el link.
+            */}
             {personasFiltradas.length > 0 && (
-              <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">¿No aparece? Solo se ven personas registradas.</p>
-                {puedeCompartirLink ? (
-                  <button type="button" onClick={copiarLinkDeRegistro} disabled={copiandoLink} className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold text-blue-600 disabled:opacity-60 dark:text-blue-400">
-                    <FontAwesomeIcon icon={copiandoLink ? faSpinner : faLink} className={copiandoLink ? "animate-spin" : ""} />
-                    Copiar link de registro
-                  </button>
-                ) : (
-                  <span className="shrink-0 text-[11px] text-slate-400">Pedí el link de registro</span>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setNoApareceOpen(true)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left transition-colors hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+              >
+                <span className="flex items-center gap-2.5">
+                  <FontAwesomeIcon icon={faCircleQuestion} className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">¿No aparece? Solo se ven personas registradas</span>
+                </span>
+                <FontAwesomeIcon icon={faArrowRight} className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+              </button>
+            )}
+          </div>
+        </Modal>
+
+        {/* ¿NO APARECE?: por qué, y la salida. Va por encima de la ventana de Persona (zIndex 80). */}
+        <Modal isOpen={noApareceOpen} onClose={() => setNoApareceOpen(false)} title="¿No aparece la persona?" size="sm" zIndex={90}>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              En esta lista <strong>solo están las personas que ya se registraron</strong> en la plataforma. Si alguien no aparece, lo más probable es que todavía no lo haya hecho.
+            </p>
+            {selectedRoleFilters.length > 0 && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Tenés un filtro de rol puesto: probá quitándolo antes, puede estar escondiéndola.</p>
+            )}
+            {puedeCompartirLink ? (
+              <>
+                <p className="text-sm text-slate-600 dark:text-slate-300">Mandale tu link de registro. Cuando se registre, va a aparecer en esta lista y vas a poder elegirla.</p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await copiarLinkDeRegistro();
+                    // El aviso con el link queda abierto por encima: esta ventana ya cumplió.
+                    setNoApareceOpen(false);
+                  }}
+                  disabled={copiandoLink}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-60"
+                >
+                  <FontAwesomeIcon icon={copiandoLink ? faSpinner : faLink} className={copiandoLink ? "animate-spin" : ""} />
+                  Copiar link de registro
+                </button>
+              </>
+            ) : (
+              <p className="text-sm text-slate-600 dark:text-slate-300">Pedile el link de registro a tu supervisor o a administración para mandárselo. Cuando se registre, va a aparecer en esta lista.</p>
             )}
           </div>
         </Modal>
