@@ -19,6 +19,8 @@ import { checkEmailAvailability } from "../controllers/authController.js";
 import { signJwt } from "../utils/jwt.js";
 import { addUserToClientUsuarios } from "../services/clientUsuariosService.js";
 import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile.js";
+import { celularValido } from "../utils/telefono.js";
+import { PaisResidencia } from "../models/PaisResidencia.js";
 import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
 import { z } from "zod";
@@ -592,6 +594,14 @@ router.get("/registro-info", async (req, res) => {
         // País de NACIMIENTO: catálogo aparte, para quien se declara nacionalizado/a. Antes `pick("pais")`
         // se pedía solo como fallback de `nacionalidades` y nunca viajaba al front por su cuenta.
         const paises = pick("pais");
+        /*
+          País del DOMICILIO: sale del ABM de Países de residencia, sólo los activos. Es otra lista que la de
+          arriba (nacimiento/nacionalidad, de FRAME). Si el catálogo todavía no tiene nada —un server recién
+          desplegado antes de su primera carga—, se ofrecen los de FRAME para que el formulario no quede sin
+          opciones: comparten ids, así que lo elegido sigue siendo válido.
+        */
+        const residenciaDocs = await PaisResidencia.find({ activo: { $ne: false } }).sort({ name: 1 }).lean();
+        const paisesResidencia = residenciaDocs.length > 0 ? residenciaDocs.filter((d) => d.data?.id != null).map((d) => ({ id: d.data.id, name: d.name })) : paises;
         const rolesFrame = (await RoleFrame.find().select("name").sort({ name: 1 }).lean()).map((r) => ({ id: String(r._id), name: r.name }));
         // Entidades financieras desde el catálogo del ABM (colección `bancos`), con su tipoEntidad
         // para permitir el filtrado en cascada del formulario de registro. Sólo las activas: las
@@ -638,6 +648,7 @@ router.get("/registro-info", async (req, res) => {
             nivelesEstudio: pick("nivel-estudio"),
             nacionalidades,
             paises,
+            paisesResidencia,
             // Sin `obrasSociales`: el registro dejó de pedirla. Quien se registra no puede saber qué RNOS
             // le corresponde ante ARCA —se constata en el padrón de la SSS al hacer el contrato—, y eran
             // 496 registros viajando en un endpoint público sin que nadie los usara.
@@ -715,6 +726,29 @@ router.post("/registro", async (req, res) => {
             res.status(400).json({ error: "Faltan campos obligatorios" });
             return;
         }
+        /*
+          EL CELULAR SE VALIDA ACÁ TAMBIÉN, no sólo en el formulario.
+    
+          Este alta es pública —alcanza con tener el link— y el formulario es sólo la primera puerta: antes
+          se guardaba lo que llegara, letras y dígitos de más incluidos, y el número roto aparecía recién
+          cuando alguien intentaba llamar. La regla es la misma que la del formulario (`utils/telefono.ts`).
+    
+          Si NO vino, no se exige: un link abierto con un formulario viejo tiene que seguir andando, igual
+          que con la contraseña de arriba.
+        */
+        if (body.telefono && !celularValido(String(body.telefono))) {
+            res.status(400).json({ error: "El teléfono no es un celular válido: tienen que ser 10 dígitos, con el código de área sin 0 y el número sin 15 (ej: 11 1234-5678)." });
+            return;
+        }
+        // Altura y código postal, sólo números: mismo criterio que el formulario, por el mismo motivo que el celular.
+        if (body.altura && !/^\d+$/.test(String(body.altura).trim())) {
+            res.status(400).json({ error: "La altura tiene que ser sólo números." });
+            return;
+        }
+        if (body.codigoPostal && !/^\d+$/.test(String(body.codigoPostal).trim())) {
+            res.status(400).json({ error: "El código postal tiene que ser sólo números." });
+            return;
+        }
         const existingUser = await User.findOne({ email, tenantId });
         if (existingUser) {
             res.status(409).json({ error: "El email ya se encuentra registrado" });
@@ -765,6 +799,20 @@ router.post("/registro", async (req, res) => {
         */
         const MOTIVOS_SIN_BANCO = ["crear_cuenta", "proveera_cuenta", "otro"];
         const motivoSinBanco = body.tipoEntidadFinanciera === "sin_banco" && MOTIVOS_SIN_BANCO.includes(String(body.sinBancoMotivo)) ? String(body.sinBancoMotivo) : undefined;
+        /*
+          EL PAÍS DEL DOMICILIO: se guarda su id en el ABM de Países de residencia Y su nombre.
+    
+          El id es lo que usan los formularios (ficha del usuario, Mi Perfil, la app). El nombre es lo que ya
+          leían el perfil del móvil y el detalle de registrados, que se armaron cuando esto era texto libre.
+          Se resuelve ACÁ contra el catálogo y no se toma del body: el nombre lo pone el catálogo, no el
+          cliente. Un formulario viejo que todavía mande `pais` como texto sigue andando.
+        */
+        const paisIdNum = num(body.paisId);
+        const paisResidencia = paisIdNum !== undefined ? await PaisResidencia.findOne({ "data.id": paisIdNum }).select("name").lean() : null;
+        if (paisIdNum !== undefined && !paisResidencia) {
+            res.status(400).json({ error: "El país elegido no está en la lista de países de residencia. Recargá la página y elegilo de nuevo." });
+            return;
+        }
         const metadata = {
             activo: true,
             cuit: body.cuit || undefined,
@@ -786,7 +834,8 @@ router.post("/registro", async (req, res) => {
             roles_frame: rolesFrameIds,
             rolesFrameIds,
             // Domicilio
-            pais: body.pais || undefined,
+            pais: paisResidencia?.name || body.pais || undefined,
+            paisId: paisResidencia ? paisIdNum : undefined,
             localidad: body.localidad || undefined,
             calle: body.calle || undefined,
             altura: body.altura || undefined,

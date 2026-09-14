@@ -55,6 +55,7 @@ import { ArcaCategoriasPage } from "./pages/ArcaCategoriasPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { SindicatosPage } from "./pages/SindicatosPage";
+import { PaisesResidenciaPage } from "./pages/PaisesResidenciaPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
 import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
 import { GuiaObrasSocialesPage } from "./pages/GuiaObrasSocialesPage";
@@ -586,6 +587,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SindicatosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/paises-residencia"
+                element={
+                  <ProtectedRoute>
+                    <PaisesResidenciaPage />
                   </ProtectedRoute>
                 }
               />

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import { useAuthStore } from "../../../../stores/authStore";
@@ -48,6 +48,9 @@ const fechaContrato = (d?: string): string => {
 
 const chip = (ok: boolean) => `rounded px-1 py-0.5 text-[9px] font-bold uppercase ${ok ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`;
 
+/** Para buscar sin que importen tildes ni mayúsculas: «agustin» encuentra a «Agustín». */
+const normalizar = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
 interface TurnoACargo {
   clave: string;
   shiftId: string;
@@ -89,6 +92,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   const [proyectoId, setProyectoId] = useState("");
   const [personas, setPersonas] = useState<AreaShiftMember[] | null>(null);
   const [abiertos, setAbiertosEstado] = useState<Set<string>>(new Set());
+  const [buscaSinArea, setBuscaSinArea] = useState("");
 
   useEffect(() => {
     let cancelado = false;
@@ -186,6 +190,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   useEffect(() => {
     if (!proyectoId) return;
     setAbiertosEstado(leerAbiertos(proyectoId));
+    setBuscaSinArea("");
     let cancelado = false;
     setPersonas(null);
     projectsAPI
@@ -247,6 +252,21 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       return (m.claves || []).length === 0 && !coordinadores.has(id) && id !== equipo.supervisorId && !misIds.has(id);
     });
   }, [equipo, personas, misIds]);
+
+  /**
+   * El buscador de «Sin área asignada»: con más de cien personas la lista no se puede recorrer a ojo.
+   * Por nombre o email, sin importar tildes ni mayúsculas, y tiene que aparecer CADA palabra: «agus
+   * dell» encuentra a Agustín Dell'Orto aunque no se escriba el nombre completo.
+   */
+  const sinAsignarFiltrados = useMemo(() => {
+    if (!sinAsignar) return [];
+    const palabras = normalizar(buscaSinArea).split(/\s+/).filter(Boolean);
+    if (palabras.length === 0) return sinAsignar;
+    return sinAsignar.filter((m) => {
+      const texto = normalizar(`${m.firstName || ""} ${m.lastName || ""} ${m.email || ""}`);
+      return palabras.every((palabra) => texto.includes(palabra));
+    });
+  }, [sinAsignar, buscaSinArea]);
 
   const nombreDe = (m: AreaShiftMember) => `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.email;
 
@@ -472,7 +492,36 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                       (sinAsignar.length === 0 ? (
                         <p className="mt-2 text-xs italic text-slate-400">Todo el equipo está ubicado.</p>
                       ) : (
-                        <div className="mt-2 space-y-1.5">{sinAsignar.map((m) => tarjeta(m, false))}</div>
+                        <div className="mt-2 space-y-2">
+                          {/* Texto y no `search`: algunos navegadores le agregan su propia cruz y quedaban dos. */}
+                          <div className="relative">
+                            <FontAwesomeIcon icon={faSearch} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              enterKeyHint="search"
+                              autoComplete="off"
+                              value={buscaSinArea}
+                              onChange={(e) => setBuscaSinArea(e.target.value)}
+                              placeholder="Buscar por nombre o email"
+                              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            />
+                            {buscaSinArea && (
+                              <button type="button" onClick={() => setBuscaSinArea("")} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          {buscaSinArea.trim() && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {sinAsignarFiltrados.length} de {sinAsignar.length}
+                            </p>
+                          )}
+                          {sinAsignarFiltrados.length === 0 ? (
+                            <p className="py-3 text-center text-xs italic text-slate-400">Nadie coincide con «{buscaSinArea.trim()}».</p>
+                          ) : (
+                            <div className="space-y-1.5">{sinAsignarFiltrados.map((m) => tarjeta(m, false))}</div>
+                          )}
+                        </div>
                       ))}
                   </div>
                 )}

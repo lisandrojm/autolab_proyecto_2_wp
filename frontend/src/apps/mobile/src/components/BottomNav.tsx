@@ -1,9 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHome, faSitemap, faUser, faBell, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faHome, faUser, faBell, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
-import { useAuthStore } from "../../../../stores/authStore";
-import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
-import { MOBILE_TEAMS } from "../../../../utils/permisosMobile";
 
 interface BottomNavProps {
   currentView: ViewType;
@@ -12,22 +9,14 @@ interface BottomNavProps {
 
 export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
   /*
-    «Mis equipos» vive también en la barra, donde antes estaba Documentos (apagado, sin pantalla).
-
-    Es lo que un supervisor o un coordinador necesita tener a un toque: qué áreas y turnos tiene a cargo.
-    Se habilita con el MISMO permiso que su tarjeta del inicio y que la vista en `App.tsx`, leyendo los
-    permisos crudos: una sola regla para las tres puertas. Sin el permiso —o con el permiso en
-    desarrollo— el ícono queda en gris, igual que quedaba Documentos.
+    Cuatro lugares. «Mis equipos» estuvo acá un tiempo y se sacó: se entra desde su tarjeta del inicio.
+    Antes el tercer lugar era Documentos, apagado y sin pantalla detrás; no se repuso, porque un botón
+    que no lleva a ningún lado sólo ocupa espacio.
   */
-  const { user } = useAuthStore();
-  const inactivo = usePermisoInactivo();
-  const puedeEquipos = (user?.permissions || []).includes(MOBILE_TEAMS) && !inactivo(MOBILE_TEAMS);
-
   const navItems = [
     { id: "home" as ViewType, icon: faHome, label: "Inicio", disabled: false },
     // El Calendario salió de la barra (estaba apagado): su lugar lo toma el Perfil.
     { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: false },
-    { id: "my_teams" as ViewType, icon: faSitemap, label: "Mis equipos", disabled: !puedeEquipos },
     // Proyecto, contrato y áreas/turnos: antes era el final del Perfil y lo alargaba de más.
     { id: "asignacion" as ViewType, icon: faBriefcase, label: "Asignación", disabled: false },
     { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: true, notifications: true },
@@ -37,7 +26,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
     <nav>
       <div className="fixed bottom-0 left-0 z-30 w-full flex justify-center">
         <div className="z-10 w-full xl:w-1/2 border-t border-slate-800 py-1 sticky top-0 border-b bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm">
-          <div className="mx-auto grid h-16 max-w-md grid-cols-5 px-2">
+          <div className="mx-auto grid h-16 max-w-md grid-cols-4 px-2">
             {navItems.map(({ id, icon, label, disabled, notifications }) => {
               const isActive = currentView === id;
               const isClickable = !disabled;

@@ -7,6 +7,7 @@ import { useProfile } from '../hooks/useProfile';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { infoAPI, InfoItem } from '../../../../api/info';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../../../../api/simpleCatalog';
 import { MOBILE_ACTIVITY_LOGS } from '../../../../utils/permisosMobile';
 import { resumenSinBanco } from '../../../../utils/bancarios';
 
@@ -31,6 +32,8 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [countries, setCountries] = useState<InfoItem[]>([]);
+  // País del DOMICILIO: ABM de Países de residencia (la nacionalidad sigue con los países de FRAME).
+  const [paisesResidencia, setPaisesResidencia] = useState<SimpleCatalogItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
 
   useEffect(() => {
@@ -45,6 +48,11 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
         setNationalities(n);
         setCountries(c);
         setBanks(b);
+        // Aparte y con su catch: es nuevo, y si no responde el país se resuelve con los de FRAME (mismos ids).
+        void createSimpleCatalogApi('/paises-residencia')
+          .list()
+          .then((pr) => !cancelled && setPaisesResidencia(Array.isArray(pr) ? pr : []))
+          .catch(() => undefined);
       } catch {
         /* catálogos opcionales: si fallan, se muestran los valores crudos o "—" */
       }
@@ -265,7 +273,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
 
           {activeInfoTab === 'domicilio' && (
             <div className="animate-in fade-in duration-300">
-              <InfoRow label="País" value={md.pais || nameFromInfo(countries, md.paisId)} />
+              <InfoRow label="País" value={paisesResidencia.find((p) => String(p.data?.id) === String(md.paisId))?.name || md.pais || nameFromInfo(countries, md.paisId)} />
               <InfoRow label="Localidad" value={md.localidad} />
               <InfoRow label="Calle" value={md.calle} />
               <InfoRow label="Altura" value={md.altura} />

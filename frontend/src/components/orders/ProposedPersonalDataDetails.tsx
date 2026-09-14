@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { infoAPI, InfoItem } from "../../api/info";
 import { roleFrameAPI } from "../../api/roleFrames";
-import { PERSONAL_DATA_FIELDS, CATALOG_TO_INFO_TYPE, PERSONAL_DATA_SECTION_LABELS, PersonalDataSection } from "../../config/personalDataFields";
+import { PERSONAL_DATA_FIELDS, CATALOG_TO_INFO_TYPE, PERSONAL_DATA_SECTION_LABELS, PersonalDataSection, PAIS_RESIDENCIA_CATALOG } from "../../config/personalDataFields";
+import { listarPaisesResidenciaComoInfo } from "../../api/paisesResidencia";
 
 interface ProposedPersonalDataDetailsProps {
   proposedUserData: Record<string, any>;
@@ -29,7 +30,7 @@ export const ProposedPersonalDataDetails: React.FC<ProposedPersonalDataDetailsPr
       await Promise.all(
         uniqueTypes.map(async (type) => {
           try {
-            results[type] = await infoAPI.listByType(type);
+            results[type] = type === PAIS_RESIDENCIA_CATALOG ? await listarPaisesResidenciaComoInfo() : await infoAPI.listByType(type);
           } catch {
             results[type] = [];
           }

@@ -12,6 +12,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { generarPassword } from "../utils/password";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { mensajeErrorArca } from "../utils/errorArca";
+import { soloCaracteresDeTelefono, motivoCelularInvalido } from "../utils/telefono";
+import { CustomDatePicker } from "../apps/mobile/src/components/CustomDatePicker";
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida, tipoDocumentoDeArca } from "../utils/nacionalidadDocumento";
 
 type Tab = "general" | "domicilio" | "bancarios";
@@ -44,7 +46,8 @@ interface RegistroForm {
   password: string;
   rolesFrameIds: string[];
   // Domicilio
-  pais: string;
+  /** País del DOMICILIO: su id en el ABM de Países de residencia (no es la nacionalidad ni el país de nacimiento). */
+  paisId: string;
   localidad: string;
   calle: string;
   altura: string;
@@ -80,7 +83,7 @@ const emptyForm: RegistroForm = {
   estadoCivil: "",
   password: "",
   rolesFrameIds: [],
-  pais: "",
+  paisId: "",
   localidad: "",
   calle: "",
   altura: "",
@@ -117,6 +120,20 @@ const isValidEmail = (email: string): boolean => EMAIL_RE.test((email || "").tri
 */
 const labelClass = "block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2";
 const fieldClass = "input-field";
+
+/** Las opciones fijas que antes vivían adentro de cada desplegable: ahora las usa el mismo selector en modal que el resto. */
+const ESTADOS_CIVILES: InfoOption[] = [
+  { id: "Soltero", name: "Soltero/a" },
+  { id: "Casado", name: "Casado/a" },
+  { id: "Divorciado", name: "Divorciado/a" },
+  { id: "Viudo", name: "Viudo/a" },
+  { id: "Concubino", name: "Concubino/a" },
+];
+const TIPOS_CUENTA: InfoOption[] = [
+  { id: "Caja de ahorro $", name: "Caja de ahorro $" },
+  { id: "Cuenta Corriente $", name: "Cuenta Corriente $" },
+  { id: "Caja de ahorro u$s", name: "Caja de ahorro u$s" },
+];
 
 // La cascada de datos bancarios vive en utils/bancarios.ts: la comparten esta pantalla y el
 // modal de Nuevo/Editar Usuario. Ver el comentario de ese archivo.
@@ -220,17 +237,32 @@ const InfoSinCuit: React.FC = () => {
 };
 
 /** Selector con modal y buscador, para listas largas (Nacionalidad, Rol frame). */
+/*
+  TODOS LOS SELECTS DEL REGISTRO SON ESTE MODAL CENTRADO, no un desplegable nativo.
+
+  El registro se completa desde el celular, y ahí el desplegable nativo abre la rueda del sistema: chica,
+  distinta en cada teléfono y con opciones largas cortadas. Este modal ya lo usaban nacionalidad, país y
+  entidad; ahora lo usan también tipo de documento, nivel de estudio, género, estado civil, tipo de
+  entidad y tipo de cuenta, así todo el formulario elige de la misma forma.
+*/
 const SearchableSelect: React.FC<{
   title: string;
   value: string;
   options: InfoOption[];
   onChange: (id: string) => void;
   invalid?: boolean;
-}> = ({ title, value, options, onChange, invalid }) => {
+  disabled?: boolean;
+  /** El `title` del botón (se llama distinto porque `title` ya es el del modal). */
+  tooltip?: string;
+  /** Clase del botón, para los campos que se ven distinto (los bloqueados por ARCA). */
+  className?: string;
+}> = ({ title, value, options, onChange, invalid, disabled, tooltip, className }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const selected = options.find((o) => String(o.id) === String(value));
+  // Con pocas opciones (género, estado civil, tipo de cuenta) el buscador es ruido, y en el celular abre el teclado tapando la lista.
+  const conBuscador = options.length > 8;
   const term = search.trim().toLowerCase();
   const filtered = term ? options.filter((o) => o.name.toLowerCase().includes(term)) : options;
 
@@ -243,11 +275,13 @@ const SearchableSelect: React.FC<{
     <>
       <button
         type="button"
+        disabled={disabled}
+        title={tooltip}
         onClick={() => {
           setSearch("");
           setOpen(true);
         }}
-        className={`${fieldClass}${invalid ? " !border-red-500 ring-2 ring-red-500/40" : ""} flex items-center justify-between text-left`}
+        className={`${className || fieldClass}${invalid ? " !border-red-500 ring-2 ring-red-500/40" : ""} flex items-center justify-between text-left disabled:cursor-not-allowed`}
       >
         <span className={selected ? "text-gray-100" : "text-gray-400"}>{selected ? selected.name : "Seleccionar..."}</span>
         <svg className="h-4 w-4 text-gray-400 shrink-0 ml-2" viewBox="0 0 20 20" fill="currentColor">
@@ -265,9 +299,11 @@ const SearchableSelect: React.FC<{
                   ✕
                 </button>
               </div>
-              <div className="p-3 border-b border-gray-700">
-                <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-              </div>
+              {conBuscador && (
+                <div className="p-3 border-b border-gray-700">
+                  <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                </div>
+              )}
               <div className="overflow-y-auto">
                 <button type="button" onClick={() => pick("")} className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-700/50">
                   Seleccionar...
@@ -301,6 +337,8 @@ export const RegistroPage: React.FC = () => {
   const [nacionalidades, setNacionalidades] = useState<InfoOption[]>([]);
   // País de NACIMIENTO (solo para nacionalizado/a): catálogo aparte del de nacionalidad.
   const [paises, setPaises] = useState<InfoOption[]>([]);
+  // País del DOMICILIO: ABM propio (Configuración → Países de residencia), distinto del de nacimiento.
+  const [paisesResidencia, setPaisesResidencia] = useState<InfoOption[]>([]);
   const [bancos, setBancos] = useState<BancoOption[]>([]);
   // Los tipos activos del ABM, con qué datos pide cada uno. `null` = el server no los mandó: se usan los de siempre.
   const [tiposEntidad, setTiposEntidad] = useState<TipoEntidadConfig[] | null>(null);
@@ -344,6 +382,8 @@ export const RegistroPage: React.FC = () => {
         const nacs: InfoOption[] = data.nacionalidades || [];
         setNacionalidades(nacs);
         setPaises(data.paises || []);
+        // Un server que todavía no manda el catálogo nuevo cae a los países de siempre: el formulario no se queda sin opciones.
+        setPaisesResidencia(data.paisesResidencia || data.paises || []);
         // Argentina viene preseleccionada: es la nacionalidad de casi todas las altas, y hasta que se
         // elegía una, los campos que dependen de ella —documento y CUIL— quedaban apagados. Sigue
         // siendo un default: cambiarla reajusta los tipos de documento y muestra el switch del CUIL.
@@ -556,7 +596,7 @@ export const RegistroPage: React.FC = () => {
   const REQUIRED_BY_STEP: Record<"general" | "domicilio", { key: keyof RegistroForm; label: string }[]> = {
     general: [{ key: "firstName", label: "Nombre" }, { key: "lastName", label: "Apellido" }, { key: "email", label: "Email" }, { key: "nacionalidadId", label: "Nacionalidad" }, ...(cuilObligatorio ? [{ key: "cuit" as keyof RegistroForm, label: "CUIT / CUIL" }] : []), ...(form.nacionalizado ? [{ key: "paisNacimientoId" as keyof RegistroForm, label: "País de nacimiento" }] : []), { key: "documento", label: "Documento" }, { key: "password", label: "Contraseña" }, { key: "fechaNac", label: "Fecha de nacimiento" }, { key: "telefono", label: "Teléfono" }, { key: "rolesFrameIds", label: "Rol/es Empresa" }],
     domicilio: [
-      { key: "pais", label: "País" },
+      { key: "paisId", label: "País" },
       { key: "localidad", label: "Localidad" },
       { key: "calle", label: "Calle" },
       { key: "altura", label: "Altura" },
@@ -595,7 +635,7 @@ export const RegistroPage: React.FC = () => {
   // Faltantes de un paso: devuelve [{key,label}] de los obligatorios vacíos.
   const getMissingForStep = (step: Tab): { key: string; label: string }[] => {
     if (step === "bancarios") return getMissingBancarios();
-    return (REQUIRED_BY_STEP[step] || [])
+    const faltantes = (REQUIRED_BY_STEP[step] || [])
       .filter((r) => {
         /*
           Los obligatorios no son todos texto: Rol/es Empresa es una lista.
@@ -608,6 +648,13 @@ export const RegistroPage: React.FC = () => {
         return Array.isArray(v) ? v.length === 0 : !String(v ?? "").trim();
       })
       .map((r) => ({ key: r.key as string, label: r.label }));
+    /*
+      Vacío e INVÁLIDO se informan distinto, como el CBU: el campo TIENE algo, así que "falta el
+      teléfono" no se entendería. El mensaje dice qué le pasa (le faltan o le sobran dígitos).
+    */
+    const motivoTelefono = step === "general" ? motivoCelularInvalido(form.telefono) : null;
+    if (motivoTelefono) faltantes.push({ key: "telefono", label: `Teléfono (${motivoTelefono})` });
+    return faltantes;
   };
 
   // Marca los faltantes en rojo y arma el mensaje de error del paso.
@@ -724,7 +771,7 @@ export const RegistroPage: React.FC = () => {
         nacionalidadId: form.nacionalidadId,
         estadoCivil: form.estadoCivil,
         rolesFrameIds: form.rolesFrameIds,
-        pais: form.pais,
+        paisId: form.paisId,
         localidad: form.localidad,
         calle: form.calle,
         altura: form.altura,
@@ -968,14 +1015,7 @@ export const RegistroPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>Tipo de Documento</label>
-                        <select className={claseArca} value={form.tipoDocumentoId} onChange={(e) => set("tipoDocumentoId", e.target.value)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca}>
-                          <option value="">Seleccionar...</option>
-                          {tiposDocumentoDisponibles.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name}
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect title="Tipo de documento" className={claseArca} value={form.tipoDocumentoId} options={tiposDocumentoDisponibles} onChange={(v) => set("tipoDocumentoId", v)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} tooltip={tituloArca} />
                       </div>
                       <div>
                         <label className={labelClass}>
@@ -1037,7 +1077,17 @@ export const RegistroPage: React.FC = () => {
                         <label className={labelClass}>
                           Telefono <span className="text-red-500">*</span>
                         </label>
-                        <input className={inputClass("telefono")} autoComplete="off" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set("telefono", e.target.value)} />
+                        {/*
+                          SÓLO LO QUE PUEDE IR EN UN TELÉFONO, Y 10 DÍGITOS. Era texto libre: aceptaba letras y
+                          cualquier cantidad de números. La regla vive en `utils/telefono.ts` y es la misma que
+                          aplica el server. `inputMode="tel"` abre el teclado numérico del celular.
+                        */}
+                        <input className={inputClass("telefono")} autoComplete="off" inputMode="tel" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set("telefono", soloCaracteresDeTelefono(e.target.value))} />
+                        {motivoCelularInvalido(form.telefono) && (
+                          <p className="mt-1 text-[11px] text-amber-400">
+                            {motivoCelularInvalido(form.telefono)!.charAt(0).toUpperCase() + motivoCelularInvalido(form.telefono)!.slice(1)}.
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1045,42 +1095,25 @@ export const RegistroPage: React.FC = () => {
                         <label className={labelClass}>
                           Fecha de Nacimiento <span className="text-red-500">*</span>
                         </label>
-                        <input type="date" className={inputClass("fechaNac")} value={form.fechaNac} onChange={(e) => set("fechaNac", e.target.value)} />
+                        {/*
+                          EL CALENDARIO DE LA APP, no el nativo del navegador. Abre eligiendo el AÑO: para una fecha
+                          de nacimiento, ir mes a mes hasta 1976 son cientos de toques. No deja elegir fechas futuras.
+                        */}
+                        <CustomDatePicker value={form.fechaNac} onChange={(d) => set("fechaNac", d)} maxDate={new Date().toLocaleDateString("en-CA")} triggerClassName={inputClass("fechaNac")} abrirEnAnios />
                       </div>
                       <div>
                         <label className={labelClass}>Nivel de Estudio</label>
-                        <select className={fieldClass} value={form.nivelEstudioId} onChange={(e) => set("nivelEstudioId", e.target.value)}>
-                          <option value="">Seleccionar...</option>
-                          {nivelesEstudio.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name}
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect title="Nivel de estudio" value={form.nivelEstudioId} options={nivelesEstudio} onChange={(v) => set("nivelEstudioId", v)} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>Género</label>
-                        <select className={fieldClass} value={form.generoId} onChange={(e) => set("generoId", e.target.value)}>
-                          <option value="">Seleccionar...</option>
-                          {generos.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name}
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect title="Género" value={form.generoId} options={generos} onChange={(v) => set("generoId", v)} />
                       </div>
                       <div>
                         <label className={labelClass}>Estado civil</label>
-                        <select className={fieldClass} value={form.estadoCivil} onChange={(e) => set("estadoCivil", e.target.value)}>
-                          <option value="">Seleccionar...</option>
-                          <option value="Soltero">Soltero/a</option>
-                          <option value="Casado">Casado/a</option>
-                          <option value="Divorciado">Divorciado/a</option>
-                          <option value="Viudo">Viudo/a</option>
-                          <option value="Concubino">Concubino/a</option>
-                        </select>
+                        <SearchableSelect title="Estado civil" value={form.estadoCivil} options={ESTADOS_CIVILES} onChange={(v) => set("estadoCivil", v)} />
                       </div>
                     </div>
                     {/*
@@ -1237,9 +1270,10 @@ export const RegistroPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>
-                        Pais <span className="text-red-500">*</span>
+                        País <span className="text-red-500">*</span>
                       </label>
-                      <input className={inputClass("pais")} autoComplete="off" placeholder="Ej: Argentina" value={form.pais} onChange={(e) => set("pais", e.target.value)} />
+                      {/* Un selector, como la nacionalidad, y de su propia lista: la de Países de residencia. Antes era texto libre. */}
+                      <SearchableSelect title="País de residencia" value={form.paisId} options={paisesResidencia} onChange={(v) => set("paisId", v)} invalid={!!fieldErrors.paisId} />
                     </div>
                     <div>
                       <label className={labelClass}>
@@ -1259,7 +1293,8 @@ export const RegistroPage: React.FC = () => {
                       <label className={labelClass}>
                         Altura <span className="text-red-500">*</span>
                       </label>
-                      <input className={inputClass("altura")} autoComplete="off" placeholder="Ej: 1234" value={form.altura} onChange={(e) => set("altura", e.target.value)} />
+                      {/* Sólo números: la altura de una calle no lleva letras. Abre el teclado numérico del celular. */}
+                      <input className={inputClass("altura")} autoComplete="off" inputMode="numeric" placeholder="Ej: 1234" value={form.altura} onChange={(e) => set("altura", e.target.value.replace(/\D/g, "").slice(0, 6))} />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1273,7 +1308,8 @@ export const RegistroPage: React.FC = () => {
                       <label className={labelClass}>
                         Código postal <span className="text-red-500">*</span>
                       </label>
-                      <input className={inputClass("codigoPostal")} autoComplete="off" placeholder="Ej: 1425" value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)} />
+                      {/* Sólo números, como el código postal de 4 dígitos (1425). Abre el teclado numérico del celular. */}
+                      <input className={inputClass("codigoPostal")} autoComplete="off" inputMode="numeric" placeholder="Ej: 1425" value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value.replace(/\D/g, "").slice(0, 8))} />
                     </div>
                   </div>
                 </div>
@@ -1288,14 +1324,13 @@ export const RegistroPage: React.FC = () => {
                       <label className={labelClass}>
                         Tipo de Entidad Financiera <span className="text-red-500">*</span>
                       </label>
-                      <select className={inputClass("tipoEntidadFinanciera")} value={form.tipoEntidadFinanciera} onChange={(e) => onTipoEntidadChange(e.target.value)}>
-                        <option value="">Seleccionar...</option>
-                        {opcionesTipoEntidad(tiposEntidad, form.tipoEntidadFinanciera).map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                      <SearchableSelect
+                        title="Tipo de entidad financiera"
+                        value={form.tipoEntidadFinanciera}
+                        options={opcionesTipoEntidad(tiposEntidad, form.tipoEntidadFinanciera).map((o) => ({ id: o.value, name: o.label }))}
+                        onChange={onTipoEntidadChange}
+                        invalid={!!fieldErrors.tipoEntidadFinanciera}
+                      />
                     </div>
                   </div>
 
@@ -1371,12 +1406,7 @@ export const RegistroPage: React.FC = () => {
                             <label className={labelClass}>
                               Tipo de cuenta <span className="text-red-500">*</span>
                             </label>
-                            <select className={inputClass("tipoDeCuentaBancaria")} value={form.tipoDeCuentaBancaria} onChange={(e) => set("tipoDeCuentaBancaria", e.target.value)}>
-                              <option value="">Seleccionar...</option>
-                              <option value="Caja de ahorro $">Caja de ahorro $</option>
-                              <option value="Cuenta Corriente $">Cuenta Corriente $</option>
-                              <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
-                            </select>
+                            <SearchableSelect title="Tipo de cuenta" value={form.tipoDeCuentaBancaria} options={TIPOS_CUENTA} onChange={(v) => set("tipoDeCuentaBancaria", v)} invalid={!!fieldErrors.tipoDeCuentaBancaria} />
                           </div>
                         )}
                         <div>

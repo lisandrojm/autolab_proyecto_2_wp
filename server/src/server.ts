@@ -18,6 +18,7 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
+import { sembrarPaisesResidenciaUnaVez } from "./services/paisesResidenciaSeed.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
@@ -56,6 +57,7 @@ import { bancoRoutes } from "./routes/bancos.js";
 import { tiposEntidadFinancieraRoutes } from "./routes/tiposEntidadFinanciera.js";
 import { obraSocialRoutes } from "./routes/obrasSociales.js";
 import { sindicatoRoutes } from "./routes/sindicatos.js";
+import { paisResidenciaRoutes } from "./routes/paisesResidencia.js";
 // Tablas oficiales de ARCA (Simplificación Registral) usadas para armar el TXT de alta masiva.
 import { arcaSucursalRoutes } from "./routes/arcaSucursales.js";
 import { arcaModalidadContratacionRoutes } from "./routes/arcaModalidadesContratacion.js";
@@ -255,6 +257,7 @@ app.use("/api/v1/bancos", bancoRoutes);
 app.use("/api/v1/tipos-entidad-financiera", tiposEntidadFinancieraRoutes);
 app.use("/api/v1/obras-sociales", obraSocialRoutes);
 app.use("/api/v1/sindicatos", sindicatoRoutes);
+app.use("/api/v1/paises-residencia", paisResidenciaRoutes);
 // ABM de categorías en la forma de ARCA: convenio → grupo (escala) → categoría. Toda la escritura.
 app.use("/api/v1/arca/categorias", arcaCategoriasRoutes);
 app.use("/api/v1/paritarias", paritariasRoutes);
@@ -336,6 +339,13 @@ connectDB()
       console.log("✅ Shift verification completed successfully");
     } catch (error) {
       console.error("❌ Shift verification failed:", error);
+    }
+
+    // El ABM de Países de residencia arranca con los países de FRAME, UNA sola vez (ver el servicio).
+    try {
+      await sembrarPaisesResidenciaUnaVez();
+    } catch (error) {
+      console.error("❌ No se pudo cargar el catálogo de Países de residencia:", error);
     }
 
     // Initialize the Import Users Background Scheduler

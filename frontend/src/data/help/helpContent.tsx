@@ -9,7 +9,7 @@ import React from 'react';
  * referenciaba. La comprobación es que ningún archivo las nombre — TypeScript no avisa de una clave
  * de más, solo de una que falte.
  */
-export type HelpKey = 'fichas' | 'clients' | 'users' | 'roles' | 'tenants' | 'clientDetail' | 'clientProjects' | 'orders' | 'orderCategories' | 'positions' | 'levels' | 'pdfTemplates' | 'vacations' | 'vacationsRules' | 'activityLogs' | 'projectTeam' | 'projects' | 'sedes' | 'contracts' | 'solicitudes' | 'categoriasSat' | 'centrosCosto' | 'contratosFrame' | 'empresas' | 'membretes' | 'bancos' | 'holidays' | 'funcionesFrame' | 'miPerfil' | 'requestsConfig' | 'obrasSociales' | 'convenios' | 'areas' | 'documents' | 'empresaFicha' | 'empresaObrasSociales' | 'empresaConvenios' | 'empresaDomicilios' | 'empresaCategorias' | 'empresaDefaults' | 'empresaGruposTipoServicio' | 'empresaContratos' | 'orderTypes' | 'releases' | 'importUsersWp' | 'arcaSucursales' | 'arcaActividades' | 'arcaModalidadContratacion' | 'arcaTipoServicio' | 'arcaGrupoTipoServicio' | 'arcaModalidadLiquidacion' | 'fuentesParitaria';
+export type HelpKey = 'fichas' | 'clients' | 'users' | 'roles' | 'tenants' | 'clientDetail' | 'clientProjects' | 'orders' | 'orderCategories' | 'positions' | 'levels' | 'pdfTemplates' | 'vacations' | 'vacationsRules' | 'activityLogs' | 'projectTeam' | 'projects' | 'sedes' | 'contracts' | 'solicitudes' | 'categoriasSat' | 'centrosCosto' | 'contratosFrame' | 'empresas' | 'membretes' | 'bancos' | 'paisesResidencia' | 'holidays' | 'funcionesFrame' | 'miPerfil' | 'requestsConfig' | 'obrasSociales' | 'convenios' | 'areas' | 'documents' | 'empresaFicha' | 'empresaObrasSociales' | 'empresaConvenios' | 'empresaDomicilios' | 'empresaCategorias' | 'empresaDefaults' | 'empresaGruposTipoServicio' | 'empresaContratos' | 'orderTypes' | 'releases' | 'importUsersWp' | 'arcaSucursales' | 'arcaActividades' | 'arcaModalidadContratacion' | 'arcaTipoServicio' | 'arcaGrupoTipoServicio' | 'arcaModalidadLiquidacion' | 'fuentesParitaria';
 
 export type HelpEntry = {
   title: string;
@@ -154,6 +154,11 @@ const helpResources = {
       'bancos.title': 'Información de Entidades Financieras',
       'bancos.description': 'Catálogo de bancos y entidades financieras para los datos bancarios del personal.',
       'bancos.items': ['**Entidad financiera**: Banco o entidad donde el personal cobra sus haberes.', '**Uso**: Se selecciona al cargar los datos bancarios (CBU/alias) de cada usuario.', '**Gestión**: Crear, editar y eliminar entidades, o importarlas desde un Excel.'],
+
+      // Países de residencia
+      'paisesResidencia.title': 'Información de Países de residencia',
+      'paisesResidencia.description': 'Países que se ofrecen para el domicilio de una persona. No es la nacionalidad ni el país de nacimiento, que siguen usando los países de FRAME.',
+      'paisesResidencia.items': ['**Dónde se usa**: En el registro, en la ficha del usuario (Nuevo usuario / editar), en Mi Perfil y en la app, al elegir el país del domicilio.', '**ID**: Es lo que queda guardado en cada persona. Si lo dejás vacío al crear, se asigna solo. Cambiarle el ID a un país que ya se usa hace que esas personas dejen de verlo.', '**Estado**: Un país inactivo no se ofrece más, pero quien ya lo tiene cargado lo conserva y lo sigue viendo.', '**Origen**: La lista arrancó como copia de los países de FRAME, una sola vez. Desde entonces se administra acá: reiniciar el servidor no la vuelve a tocar.'],
 
       // Feriados
       'holidays.title': 'Información de Feriados',
@@ -450,6 +455,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   contratosFrame: { title: 'Información de Contratos', size: 'sm', content: buildHelpContent('contratosFrame') },
   empresas: { title: 'Información de Empresas', size: 'sm', content: buildHelpContent('empresas') },
   bancos: { title: 'Información de Entidades Financieras', size: 'sm', content: buildHelpContent('bancos') },
+  paisesResidencia: { title: 'Información de Países de residencia', size: 'sm', content: buildHelpContent('paisesResidencia') },
   holidays: { title: 'Información de Feriados', size: 'sm', content: buildHelpContent('holidays') },
   funcionesFrame: { title: 'Información de Roles Empresa', size: 'sm', content: buildHelpContent('funcionesFrame') },
   miPerfil: { title: 'Información de Mi Perfil', size: 'sm', content: buildHelpContent('miPerfil') },

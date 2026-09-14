@@ -105,6 +105,7 @@ export const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
       "config_holidays:view",
       "config_profile:view",
       "config_activity_logs:view",
+      "config_paises_residencia:view",
       "config_orders:view",
       // Plantillas (subgrupo): el membrete va primero, igual que en el menú
       "config_membretes:view",
@@ -183,6 +184,7 @@ export const MODULE_LABELS: Record<string, string> = {
   "config_empresas:view": "Empresas (y la ficha de Empresa)",
   "config_bancos:view": "Entidades Financieras",
   "config_sindicatos:view": "Sindicatos",
+  "config_paises_residencia:view": "Países de residencia",
   "config_holidays:view": "Feriados",
   "config_profile:view": "Mi Perfil",
   "config_activity_logs:view": "Novedades",
@@ -1053,7 +1055,9 @@ export const RolesPage: React.FC = () => {
                                     label={MODULE_LABELS[permission] || permission}
                                     checked={formData.permissions.includes(permission)}
                                     onToggle={() => togglePermission(permission)}
-                                    color="primary"
+                                    color="primary"
+
+
                                   />
                                 ))}
                               </div>
@@ -1087,7 +1091,9 @@ export const RolesPage: React.FC = () => {
                                     label={MODULE_LABELS[permission] || (permission === "*" ? "Acceso Total" : permission)}
                                     checked={formData.permissions.includes(permission)}
                                     onToggle={() => togglePermission(permission)}
-                                    color="blue"
+                                    color="blue"
+
+
                                   />
                                 ))}
                               </div>
@@ -1129,7 +1135,9 @@ export const RolesPage: React.FC = () => {
                                   ayuda={item.ayuda}
                                   checked={formData.permissions.includes(item.permiso)}
                                   onToggle={() => togglePermission(item.permiso)}
-                                  color="indigo"
+                                  color="indigo"
+
+
                                 />
                               ))}
                             </div>
@@ -1167,7 +1175,9 @@ export const RolesPage: React.FC = () => {
                               label={MODULE_LABELS[permission] || permission}
                               checked={formData.permissions.includes(permission)}
                               onToggle={() => togglePermission(permission)}
-                              color="emerald"
+                              color="emerald"
+
+
                             />
                           ))}
                         </div>

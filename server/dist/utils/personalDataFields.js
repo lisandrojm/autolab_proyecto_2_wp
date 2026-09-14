@@ -5,6 +5,7 @@
 // aprueba un pedido con categoryType === "datos_personales".
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
+import { PaisResidencia } from "../models/PaisResidencia.js";
 // Metadata de presentación (labels + tipo de catálogo Info).
 export const PERSONAL_DATA_FIELD_META = [
     { key: "nombre", label: "Nombre", section: "General", type: "text" },
@@ -21,7 +22,8 @@ export const PERSONAL_DATA_FIELD_META = [
     // pedido viejo que la traiga se filtra solo, acá y en `PERSONAL_DATA_FIELD_KEYS`.
     { key: "osPrepaga", label: "Prepaga", section: "General", type: "text" },
     { key: "rolesFrameIds", label: "Rol Frame", section: "General", type: "catalog", catalogType: "__roleFrame" },
-    { key: "paisId", label: "País", section: "Domicilio", type: "catalog", catalogType: "pais" },
+    // El país del DOMICILIO sale del ABM de Países de residencia, no de los países de FRAME (ver `models/PaisResidencia.ts`).
+    { key: "paisId", label: "País", section: "Domicilio", type: "catalog", catalogType: "__paisResidencia" },
     { key: "localidad", label: "Localidad", section: "Domicilio", type: "text" },
     { key: "calle", label: "Calle", section: "Domicilio", type: "text" },
     { key: "altura", label: "Altura", section: "Domicilio", type: "text" },
@@ -50,7 +52,7 @@ export async function buildDatosModificadosHtml(proposed, tenantId) {
         return "-";
     const metas = PERSONAL_DATA_FIELD_META.filter((m) => keys.includes(m.key));
     // Cargar catálogos Info necesarios (una consulta por tipo).
-    const catalogTypes = Array.from(new Set(metas.filter((m) => m.type === "catalog" && m.catalogType && m.catalogType !== "__roleFrame").map((m) => m.catalogType)));
+    const catalogTypes = Array.from(new Set(metas.filter((m) => m.type === "catalog" && m.catalogType && !m.catalogType.startsWith("__")).map((m) => m.catalogType)));
     const infoMaps = {};
     await Promise.all(catalogTypes.map(async (type) => {
         const filter = { type };
@@ -62,6 +64,15 @@ export async function buildDatosModificadosHtml(proposed, tenantId) {
             map.set(String(it.data?.id), it.data?.nombre || it.name);
         infoMaps[type] = map;
     }));
+    // País del domicilio: el ABM de Países de residencia, global (sin tenant). Incluye los inactivos: un
+    // país apagado no se ofrece más, pero el que ya lo tenía tiene que seguir viendo su nombre.
+    if (metas.some((m) => m.catalogType === "__paisResidencia")) {
+        const paises = await PaisResidencia.find({}).select("name data").lean();
+        const map = new Map();
+        for (const it of paises)
+            map.set(String(it.data?.id), it.name || it.data?.nombre);
+        infoMaps.__paisResidencia = map;
+    }
     // Roles frame (si aplica).
     let roleFrameMap = null;
     if (metas.some((m) => m.key === "rolesFrameIds")) {

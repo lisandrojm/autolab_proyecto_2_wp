@@ -75,11 +75,15 @@ export function getPersonalDataField(key: string): PersonalDataField | undefined
   return PERSONAL_DATA_FIELDS.find((f) => f.key === key);
 }
 
-// Mapa catálogo (config) -> tipo de Info (backend infoAPI).
+// El país del DOMICILIO no es un tipo de Info: sale del ABM de Países de residencia. Quien carga los
+// catálogos lo reconoce por esta clave y lo pide con `listarPaisesResidenciaComoInfo` (api/paisesResidencia).
+export const PAIS_RESIDENCIA_CATALOG = "__paisResidencia";
+
+// Mapa catálogo (config) -> tipo de Info (backend infoAPI), salvo PAIS_RESIDENCIA_CATALOG (ver arriba).
 export const CATALOG_TO_INFO_TYPE: Record<string, string> = {
   generos: "genero",
   tiposDocumento: "tipo-documento",
-  paises: "pais",
+  paises: PAIS_RESIDENCIA_CATALOG,
   nacionalidades: "nacionalidad",
   nivelesEstudio: "nivel-estudio",
   bancos: "banco",

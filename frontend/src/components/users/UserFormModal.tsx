@@ -50,6 +50,8 @@ const sindicatosApi = createSimpleCatalogApi("/sindicatos");
  * que lo usa mirando lugares distintos.
  */
 const bancosApi = createSimpleCatalogApi("/bancos");
+// País del DOMICILIO: ABM propio, distinto de los países de FRAME que usan nacimiento y nacionalidad.
+const paisesResidenciaApi = createSimpleCatalogApi("/paises-residencia");
 
 /**
  * El [+] que abre el selector de un campo de elección múltiple.
@@ -324,6 +326,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [genders, setGenders] = useState<InfoItem[]>([]);
   const [documentTypes, setDocumentTypes] = useState<InfoItem[]>([]);
   const [countries, setCountries] = useState<InfoItem[]>([]);
+  const [paisesResidencia, setPaisesResidencia] = useState<SimpleCatalogItem[]>([]);
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<SimpleCatalogItem[]>([]);
@@ -377,7 +380,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           dist commiteado—. Sin el catch, un 404 suyo dejaría el formulario entero sin nacionalidades,
           sin bancos y sin tipos de documento. Que falte la lista de gremios vacía un solo select.
         */
-        const [rolesRes, rf, g, dt, c, n, el, b, sind] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType("genero"), infoAPI.listByType("tipo-documento"), infoAPI.listByType("pais"), infoAPI.listByType("nacionalidad"), infoAPI.listByType("nivel-estudio"), bancosApi.list(), sindicatosApi.list().catch(() => [] as SimpleCatalogItem[])]);
+        const [rolesRes, rf, g, dt, c, n, el, b, sind, pr] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType("genero"), infoAPI.listByType("tipo-documento"), infoAPI.listByType("pais"), infoAPI.listByType("nacionalidad"), infoAPI.listByType("nivel-estudio"), bancosApi.list(), sindicatosApi.list().catch(() => [] as SimpleCatalogItem[]), paisesResidenciaApi.list().catch(() => [] as SimpleCatalogItem[])]);
         if (cancelled) return;
         setRoles(rolesRes.roles);
         const rfArray = Array.isArray(rf) ? rf : rf && Array.isArray((rf as any).data) ? (rf as any).data : [];
@@ -388,6 +391,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         setNationalities(n);
         setEducationLevels(el);
         setSindicatos(Array.isArray(sind) ? sind : []);
+        // Mismo criterio que los gremios: el catálogo es nuevo, y si no responde se cae a los países de FRAME.
+        setPaisesResidencia(Array.isArray(pr) ? pr : []);
         setBanks(b);
         setCatalogsLoaded(true);
       } catch (error) {
@@ -774,6 +779,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   // --- Nacionalidad → Tipo de documento / CUIL (ver utils/nacionalidadDocumento.ts) ---
   // El catálogo de nacionalidades es el de países (no existe un `nacionalidad` propio).
   const nationalityOptions = nationalities.length > 0 ? nationalities : countries;
+
+  /*
+    PAÍS DEL DOMICILIO: las opciones del ABM de Países de residencia, sólo las activas, más la que la
+    persona ya tiene aunque se haya apagado —si no, abrir la ficha y guardarla le borraría el país—.
+    Si el catálogo no respondió, se ofrecen los de FRAME: comparten ids, así que lo elegido vale igual.
+  */
+  const paisesDomicilio: Array<{ _id: string; name: string; id?: number }> =
+    paisesResidencia.length > 0
+      ? paisesResidencia.filter((p) => p.activo !== false || p.data?.id === formData.paisId).map((p) => ({ _id: p._id, name: p.name, id: p.data?.id }))
+      : countries.map((c) => ({ _id: c._id, name: c.name, id: c.data.id }));
   const opcionesNacionalidad = nationalityOptions.map((it) => ({ id: it.data.id, name: it.name }));
   // Para dibujar el desplegable. Las reglas siguen mirando el catálogo crudo, sin la sintética.
   const opcionesNacionalidadSelect = opcionesDeNacionalidad(opcionesNacionalidad);
@@ -1380,8 +1395,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">País</label>
                     <select value={formData.paisId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, paisId: parseInt(e.target.value) || undefined }))} className="input-field">
                       <option value="">Seleccionar...</option>
-                      {countries.map((it) => (
-                        <option key={it._id} value={it.data.id}>
+                      {paisesDomicilio.map((it) => (
+                        <option key={it._id} value={it.id}>
                           {it.name}
                         </option>
                       ))}

@@ -7,6 +7,7 @@
 import { Types } from "mongoose";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
+import { PaisResidencia } from "../models/PaisResidencia.js";
 
 type PersonalDataSection = "General" | "Domicilio" | "Datos bancarios";
 
@@ -15,7 +16,8 @@ interface PersonalDataFieldMeta {
   label: string;
   section: PersonalDataSection;
   type: "text" | "date" | "boolean" | "catalog";
-  // Tipo de catálogo Info (cuando type === "catalog").
+  // Tipo de catálogo Info (cuando type === "catalog"). Los que empiezan con "__" no son de Info y se
+  // cargan aparte: `__roleFrame` (RoleFrame) y `__paisResidencia` (el ABM de Países de residencia).
   catalogType?: string;
 }
 
@@ -35,7 +37,8 @@ export const PERSONAL_DATA_FIELD_META: PersonalDataFieldMeta[] = [
   // pedido viejo que la traiga se filtra solo, acá y en `PERSONAL_DATA_FIELD_KEYS`.
   { key: "osPrepaga", label: "Prepaga", section: "General", type: "text" },
   { key: "rolesFrameIds", label: "Rol Frame", section: "General", type: "catalog", catalogType: "__roleFrame" },
-  { key: "paisId", label: "País", section: "Domicilio", type: "catalog", catalogType: "pais" },
+  // El país del DOMICILIO sale del ABM de Países de residencia, no de los países de FRAME (ver `models/PaisResidencia.ts`).
+  { key: "paisId", label: "País", section: "Domicilio", type: "catalog", catalogType: "__paisResidencia" },
   { key: "localidad", label: "Localidad", section: "Domicilio", type: "text" },
   { key: "calle", label: "Calle", section: "Domicilio", type: "text" },
   { key: "altura", label: "Altura", section: "Domicilio", type: "text" },
@@ -66,7 +69,7 @@ export async function buildDatosModificadosHtml(proposed: Record<string, any> | 
   const metas = PERSONAL_DATA_FIELD_META.filter((m) => keys.includes(m.key));
 
   // Cargar catálogos Info necesarios (una consulta por tipo).
-  const catalogTypes = Array.from(new Set(metas.filter((m) => m.type === "catalog" && m.catalogType && m.catalogType !== "__roleFrame").map((m) => m.catalogType!)));
+  const catalogTypes = Array.from(new Set(metas.filter((m) => m.type === "catalog" && m.catalogType && !m.catalogType.startsWith("__")).map((m) => m.catalogType!)));
   const infoMaps: Record<string, Map<string, string>> = {};
   await Promise.all(
     catalogTypes.map(async (type) => {
@@ -78,6 +81,15 @@ export async function buildDatosModificadosHtml(proposed: Record<string, any> | 
       infoMaps[type] = map;
     }),
   );
+
+  // País del domicilio: el ABM de Países de residencia, global (sin tenant). Incluye los inactivos: un
+  // país apagado no se ofrece más, pero el que ya lo tenía tiene que seguir viendo su nombre.
+  if (metas.some((m) => m.catalogType === "__paisResidencia")) {
+    const paises = await PaisResidencia.find({}).select("name data").lean();
+    const map = new Map<string, string>();
+    for (const it of paises as any[]) map.set(String(it.data?.id), it.name || it.data?.nombre);
+    infoMaps.__paisResidencia = map;
+  }
 
   // Roles frame (si aplica).
   let roleFrameMap: Map<string, string> | null = null;

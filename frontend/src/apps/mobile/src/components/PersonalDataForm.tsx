@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { infoAPI, InfoItem } from "../../../../api/info";
 import { roleFrameAPI } from "../../../../api/roleFrames";
 import { useProfile } from "../hooks/useProfile";
-import { PERSONAL_DATA_FIELDS, PERSONAL_DATA_SECTION_LABELS, PersonalDataSection, PersonalDataField, CATALOG_TO_INFO_TYPE, ESTADO_CIVIL_OPTIONS } from "../../../../config/personalDataFields";
+import { PERSONAL_DATA_FIELDS, PERSONAL_DATA_SECTION_LABELS, PersonalDataSection, PersonalDataField, CATALOG_TO_INFO_TYPE, ESTADO_CIVIL_OPTIONS, PAIS_RESIDENCIA_CATALOG } from "../../../../config/personalDataFields";
+import { listarPaisesResidenciaComoInfo } from "../../../../api/paisesResidencia";
 
 interface PersonalDataFormProps {
   enabledKeys: string[];
@@ -56,15 +57,16 @@ export const PersonalDataForm: React.FC<PersonalDataFormProps> = ({ enabledKeys,
       await Promise.all(
         uniqueTypes.map(async (type) => {
           try {
-            results[type] = await infoAPI.listByType(type);
+            results[type] = type === PAIS_RESIDENCIA_CATALOG ? await listarPaisesResidenciaComoInfo() : await infoAPI.listByType(type);
           } catch {
             results[type] = [];
           }
         }),
       );
-      // Nacionalidad: si no hay catálogo propio, usar países como fallback.
-      if (results["nacionalidad"] && results["nacionalidad"].length === 0 && results["pais"]) {
-        results["nacionalidad"] = results["pais"];
+      // Nacionalidad: si no hay catálogo propio, se ofrecen los países de FRAME. Se piden acá porque ya no
+      // vienen cargados: el país del domicilio, que era quien los traía, ahora sale de Países de residencia.
+      if (results["nacionalidad"] && results["nacionalidad"].length === 0) {
+        results["nacionalidad"] = await infoAPI.listByType("pais").catch(() => []);
       }
       if (fields.some((f) => f.key === "rolesFrameIds")) {
         try {
@@ -165,7 +167,8 @@ export const PersonalDataForm: React.FC<PersonalDataFormProps> = ({ enabledKeys,
       }
 
       const infoType = field.catalog ? CATALOG_TO_INFO_TYPE[field.catalog] : undefined;
-      const options = infoType ? catalogs[infoType] || [] : [];
+      // Un país de residencia apagado no se ofrece, salvo que sea el que la persona ya tiene.
+      const options = (infoType ? catalogs[infoType] || [] : []).filter((it) => (it as { activo?: boolean }).activo !== false || String(it.data?.id) === String(val ?? ""));
       return (
         <div>
           <label className="block text-xs font-medium mb-1 text-slate-500 dark:text-slate-400">{field.label}</label>

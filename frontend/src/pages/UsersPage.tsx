@@ -170,6 +170,8 @@ export const UsersPage: React.FC = () => {
   const [genders, setGenders] = useState<InfoItem[]>([]);
   const [documentTypes, setDocumentTypes] = useState<InfoItem[]>([]);
   const [countries, setCountries] = useState<InfoItem[]>([]);
+  // País del DOMICILIO: ABM de Países de residencia (nacimiento y nacionalidad siguen con los de FRAME).
+  const [paisesResidencia, setPaisesResidencia] = useState<SimpleCatalogItem[]>([]);
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
@@ -287,6 +289,11 @@ export const UsersPage: React.FC = () => {
         .list()
         .then((sind) => setSindicatos(Array.isArray(sind) ? sind : []))
         .catch(() => setSindicatos([]));
+      // Igual que los gremios: si no responde, el país se resuelve con los de FRAME, que comparten ids.
+      void createSimpleCatalogApi('/paises-residencia')
+        .list()
+        .then((pr) => setPaisesResidencia(Array.isArray(pr) ? pr : []))
+        .catch(() => setPaisesResidencia([]));
       setContractTypes(ct);
       setEmployeeStatuses(es);
     } catch (error) {
@@ -1145,7 +1152,7 @@ export const UsersPage: React.FC = () => {
                           <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
                           País
                         </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{countries.find((c) => c.data.id === viewUser.metadata?.paisId)?.name || '—'}</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{paisesResidencia.find((p) => p.data?.id === viewUser.metadata?.paisId)?.name || countries.find((c) => c.data.id === viewUser.metadata?.paisId)?.name || '—'}</p>
                       </div>
                     )}
 

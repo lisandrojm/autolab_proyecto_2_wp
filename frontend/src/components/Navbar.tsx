@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn } from '@fortawesome/free-solid-svg-icons';
 import { usePermisoInactivo } from '../stores/permisosInactivosStore';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
@@ -420,6 +420,10 @@ export const MobileNavbar: React.FC = () => {
       // Queda SUELTO en Configuración, no adentro del subgrupo ARCA: Convenios está ahí por ser un
       // nomenclador del organismo, y este catálogo es propio de la plataforma. Ver `configPaths`.
       if (hasPermission('config_sindicatos:view') || hasPermission('config_convenios:view')) base.push({ path: '/sindicatos', icon: faPeopleGroup, label: 'Sindicatos', scope: 'global' });
+      // `config_paises_residencia:view` es nuevo y los roles están congelados en la base: hasta que se
+      // tilde, se muestra a quien ya administra Entidades Financieras, el otro catálogo propio que
+      // alimenta los datos de la persona (registro y ficha). Suelto en Configuración, como Sindicatos.
+      if (hasPermission('config_paises_residencia:view') || hasPermission('config_bancos:view')) base.push({ path: '/paises-residencia', icon: faEarthAmericas, label: 'Países de residencia', scope: 'global' });
       if (hasPermission('config_centros_costo:view')) base.push({ permiso: 'config_centros_costo:view', path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ permiso: 'config_contratos_frame:view', path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
       // `config_contratos:view` y `config_estados:view` son nuevos: hasta que se tilden en los roles,
@@ -578,7 +582,7 @@ export const MobileNavbar: React.FC = () => {
     // Ojo: los paths de los grupos (Plantillas, ARCA, Documentos, Usuarios) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
     // «/clients» y «/centros-costo» ya NO están acá: se mudaron a Admin GENERAL (ver `generalAlFinal`).
-    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/bancos', '/sindicatos', '/contratos', '/releases-tipos', '/admin/sedes'];
+    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/bancos', '/sindicatos', '/paises-residencia', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const, permiso: 'config_profile:view' };

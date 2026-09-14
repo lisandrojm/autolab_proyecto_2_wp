@@ -3,6 +3,7 @@ import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { infoAPI, InfoItem } from "../api/info";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -53,6 +54,8 @@ export const MiPerfilPage: React.FC = () => {
   const [genders, setGenders] = useState<InfoItem[]>([]);
   const [documentTypes, setDocumentTypes] = useState<InfoItem[]>([]);
   const [countries, setCountries] = useState<InfoItem[]>([]);
+  // País del DOMICILIO: ABM de Países de residencia (nacimiento y nacionalidad siguen con los de FRAME).
+  const [paisesResidencia, setPaisesResidencia] = useState<SimpleCatalogItem[]>([]);
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
@@ -87,6 +90,11 @@ export const MiPerfilPage: React.FC = () => {
         setNationalities(n);
         setEducationLevels(el);
         setBanks(b);
+        // Aparte y con su catch: es nuevo, y si no responde el país se resuelve con los de FRAME (mismos ids).
+        void createSimpleCatalogApi("/paises-residencia")
+          .list()
+          .then((pr) => !cancelled && setPaisesResidencia(Array.isArray(pr) ? pr : []))
+          .catch(() => undefined);
       } catch (error: any) {
         if (!cancelled) {
           const message = error.response?.data?.error || "No se pudo cargar tu perfil.";
@@ -240,7 +248,7 @@ export const MiPerfilPage: React.FC = () => {
 
           {activeTab === "domicilio" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
-              <Field label="País" value={nameFromInfo(countries, md?.paisId)} />
+              <Field label="País" value={paisesResidencia.find((p) => p.data?.id === md?.paisId)?.name || nameFromInfo(countries, md?.paisId)} />
               <Field label="Localidad" value={md?.localidad} />
               <Field label="Calle" value={md?.calle} />
               <Field label="Altura" value={md?.altura} />
