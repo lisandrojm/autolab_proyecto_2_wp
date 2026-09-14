@@ -303,7 +303,8 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(""); // nombre_estado_empleado (client-side sobre la página)
   const [filterRolMobile, setFilterRolMobile] = useState<string>(""); // "" | "colaborador" | "coordinador" (server-side, paginado)
   const [filterReemplazo, setFilterReemplazo] = useState<string>(""); // "" | "con" | "sin" (server-side, paginado)
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+  // Dos pasos: Contrato y Sueldo. «Extras» (sede y observaciones) se sacó: la sede sale del proyecto.
+  const [wizardStep, setWizardStep] = useState<1 | 2>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   const [showEstadoInfo, setShowEstadoInfo] = useState(false);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
@@ -1502,7 +1503,11 @@ export const ProjectTeamPage: React.FC = () => {
     }
     console.log("[Wizard] FINAL initialEstadoId:", initialEstadoId);
 
-    let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : project?.metadata?.sedeId ? String(project.metadata.sedeId) : "";
+    /*
+      LA SEDE ES LA DEL PROYECTO. Se configura ahí y el alta ya no la pregunta (el paso «Extras» se
+      sacó). Sólo si el proyecto no tiene sede se cae a la del último contrato, para no borrarla.
+    */
+    let initialSedeId = project?.metadata?.sedeId ? String(project.metadata.sedeId) : lastContract?.sede_id ? String(lastContract.sede_id) : "";
     if (!initialSedeId && lastContract?.nombre_sede) {
       const foundSede = allSedes.find((s) => s.name === lastContract.nombre_sede);
       if (foundSede) initialSedeId = String(foundSede.data.id);
@@ -3527,7 +3532,7 @@ export const ProjectTeamPage: React.FC = () => {
                     ANTERIOR
                   </button>
                 )}
-                {wizardStep < 3 ? (
+                {wizardStep < 2 ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -3544,11 +3549,11 @@ export const ProjectTeamPage: React.FC = () => {
                       UNA SOLA ACCIÓN PRIMARIA EN EL PIE.
 
                       Guardar es azul, como en toda la plataforma. Pero en EDICIÓN los dos botones
-                      conviven —se puede guardar sin recorrer los tres pasos—, y dos azules idénticos
+                      conviven —se puede guardar sin recorrer los dos pasos—, y dos azules idénticos
                       obligan a leerlos para saber cuál cierra el trámite. Ahí «Siguiente» pasa a
                       secundario: sigue disponible, pero deja de competir.
 
-                      En un alta nueva es el único botón hasta el paso 3, así que ahí es el primario.
+                      En un alta nueva es el único botón hasta el último paso, así que ahí es el primario.
                     */
                     className={`flex-1 py-3 rounded-xl font-bold transition-all active:scale-95 uppercase tracking-wider ${
                       esEdicionMiembro
@@ -3559,9 +3564,9 @@ export const ProjectTeamPage: React.FC = () => {
                     SIGUIENTE
                   </button>
                 ) : null}
-                {/* En edición se puede guardar sin recorrer los tres pasos: los datos ya vienen
+                {/* En edición se puede guardar sin recorrer los dos pasos: los datos ya vienen
                     cargados del contrato, así que lo que no se tocó queda como estaba. */}
-                {(wizardStep === 3 || esEdicionMiembro) && (
+                {(wizardStep === 2 || esEdicionMiembro) && (
                   <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
                     GUARDAR
                   </button>
@@ -3576,7 +3581,6 @@ export const ProjectTeamPage: React.FC = () => {
                   {[
                     { step: 1, label: "Contrato" },
                     { step: 2, label: "Sueldo" },
-                    { step: 3, label: "Extras" },
                   ].map((s) => (
                     <button
                       key={s.step}
@@ -3599,7 +3603,7 @@ export const ProjectTeamPage: React.FC = () => {
                   ))}
                 </div>
                 {/* Va acá arriba, fuera del contenido que scrollea, para que se lea desde cualquiera
-                    de los tres pasos. */}
+                    de los pasos. */}
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 ml-1">
                   Los campos marcados con <span className="text-red-500 font-bold">*</span> son obligatorios.
                 </p>
@@ -4301,29 +4305,11 @@ export const ProjectTeamPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Step 3: Extras */}
-                {wizardStep === 3 && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Sede <span className="text-red-500">*</span>
-                      </label>
-                      <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))}>
-                        <option value="">Selecciona sede...</option>
-                        {allSedes.map((s) => (
-                          <option key={s._id} value={s.data.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Observaciones</label>
-                      <textarea className="input-field w-full min-h-[100px] py-3" placeholder="Notas adicionales..." value={wizardData.observaciones} onChange={(e) => setWizardData((prev) => ({ ...prev, observaciones: e.target.value }))} />
-                    </div>
-                  </div>
-                )}
+                {/*
+                  Acá estaba el paso «Extras»: sede y observaciones. Se sacó. La sede se configura en el
+                  proyecto y se toma de ahí (ver `initialSedeId`); las observaciones no se piden más. Las
+                  que ya tenga un contrato no se borran: viajan tal cual en `wizardData`.
+                */}
               </div>
             </div>
           </Modal>

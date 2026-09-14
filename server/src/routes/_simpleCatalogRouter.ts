@@ -50,6 +50,14 @@ export interface SimpleCatalogConfig {
    */
   extraRefFields?: Array<{ key: string }>;
   /**
+   * Campos sí/no a persistir en create/update/bulk (ej. Bancos → `activo`).
+   *
+   * Aparte de los de texto porque el cliente puede mandarlos como `true`, `"true"` o `"false"`, y
+   * guardar el string `"false"` lo haría verdadero en cualquier `if`. No participan del import de
+   * Excel: una planilla no es donde se decide si algo se ofrece o no.
+   */
+  extraBooleanFields?: Array<{ key: string }>;
+  /**
    * Qué popular en el listado, para que el front no resuelva las refs con un pedido por fila.
    * Ej. Convenios → `{ path: "sindicatoId", select: "_id name sigla" }`.
    */
@@ -96,6 +104,9 @@ const aNumeroOpcional = (v: unknown): number | undefined => {
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
 };
+
+/** `true`/`"true"` → true, `false`/`"false"` → false; cualquier otra cosa → undefined (no se toca). */
+const aBooleanoOpcional = (v: unknown): boolean | undefined => (v === true || v === "true" ? true : v === false || v === "false" ? false : undefined);
 
 /**
  * Una referencia parseada desde el body, o el motivo por el que no se pudo.
@@ -157,6 +168,7 @@ export function createSimpleCatalogRouter(
     ...(config.extraStringFields || []).map((f) => f.key),
     ...(config.extraNumberFields || []).map((f) => f.key),
     ...(config.extraRefFields || []).map((f) => f.key),
+    ...(config.extraBooleanFields || []).map((f) => f.key),
   ]);
 
   /** Las claves del body que este catálogo no sabe guardar. Vacío = todo bien. */
@@ -379,6 +391,10 @@ export function createSimpleCatalogRouter(
           }
           if (ref.valor !== undefined) extras[f.key] = ref.valor;
         }
+        for (const f of config.extraBooleanFields || []) {
+          const b = aBooleanoOpcional(item[f.key]);
+          if (b !== undefined) extras[f.key] = b;
+        }
         parsed.push({ externalId: config.sanitizeExternalId ? config.sanitizeExternalId(rawExternalId) : rawExternalId, nombre, extras });
       });
 
@@ -437,6 +453,10 @@ export function createSimpleCatalogRouter(
         }
         if (ref.valor !== undefined) newItem[f.key] = ref.valor;
       }
+      for (const f of config.extraBooleanFields || []) {
+        const b = aBooleanoOpcional((req.body as Record<string, unknown>)[f.key]);
+        if (b !== undefined) newItem[f.key] = b;
+      }
       const created = await model.create(newItem);
       res.status(201).json(created);
     } catch (error) {
@@ -490,6 +510,10 @@ export function createSimpleCatalogRouter(
           return;
         }
         if (ref.valor !== undefined) item[f.key] = ref.valor;
+      }
+      for (const f of config.extraBooleanFields || []) {
+        const b = aBooleanoOpcional((req.body as Record<string, unknown>)[f.key]);
+        if (b !== undefined) item[f.key] = b;
       }
 
       await item.save();

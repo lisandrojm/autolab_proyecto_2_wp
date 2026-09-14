@@ -16,6 +16,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
 import { MOBILE_REGISTRO } from "../utils/permisosMobile.js";
+import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 const router = Router();
 /*
   CUÁNTO DURAN LOS LINKS DEL MÓVIL: lo decide cada tenant (Usuarios → Link → Links), 7 días si nunca se tocó.
@@ -197,6 +198,27 @@ router.get("/registrados", requireTenant, authenticateToken, requirePermission("
   hay que ir a renovarlo a mano. Quien se registra queda asociado a quien lo invitó y aparece en la
   lista «Registrados» de esa persona, que la ve pero no la edita.
 */
+/*
+  DE QUIÉNES VE LOS REGISTRADOS CADA UNO.
+
+  El coordinador, sólo los de su link. El supervisor, además, los de los coordinadores de los proyectos
+  que tiene a cargo: responde por lo que ellos suman al equipo, y sin esto no tenía forma de saber quién
+  entró por dónde. «A cargo» es lo mismo que usa el resto del sistema (`metadata.responsableId` del
+  proyecto, ver `alcanceDeResponsable`), no un permiso: el permiso dice qué ve, no de quién.
+*/
+async function invitadoresVisibles(tenantId, userId) {
+    const ids = new Set([String(userId)]);
+    const { proyectos } = await alcanceDeResponsable(tenantId, userId);
+    if (proyectos.length) {
+        const ps = await Project.find({ _id: { $in: proyectos }, tenantId }).select("coordinatorAssignments.userId").lean();
+        ps.forEach((p) => (p.coordinatorAssignments || []).forEach((a) => {
+            const id = a?.userId && typeof a.userId === "object" && a.userId._id ? String(a.userId._id) : String(a?.userId || "");
+            if (Types.ObjectId.isValid(id))
+                ids.add(id);
+        }));
+    }
+    return [...ids].map((id) => new Types.ObjectId(id));
+}
 const resumenLink = (l) => {
     const vence = getRegistroLinkExpiry(l);
     return { _id: String(l._id), token: l.token, expiresAt: new Date(vence).toISOString(), diasRestantes: Math.max(0, Math.ceil((vence - Date.now()) / DIA_MS)), usageCount: l.usageCount || 0 };
@@ -235,7 +257,7 @@ router.post("/mio", requireTenant, authenticateToken, requirePermission(MOBILE_R
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /registro-links/mis-registrados - Quiénes se registraron con mis links.
+// GET /registro-links/mis-registrados - Quiénes se registraron con mi link y, si superviso, con los de mis coordinadores.
 router.get("/mis-registrados", requireTenant, authenticateToken, requirePermission(MOBILE_REGISTRO), async (req, res) => {
     try {
         const tenantId = toObjectIdOrNull(req.tenantObjectId);
@@ -243,19 +265,22 @@ router.get("/mis-registrados", requireTenant, authenticateToken, requirePermissi
             res.status(400).json({ error: "Invalid tenant ID" });
             return;
         }
-        const yo = new Types.ObjectId(String(req.user.userId));
-        const usuarios = await User.find({ tenantId, "metadata.registro.invitadoPor": yo })
+        const yo = String(req.user.userId);
+        const visibles = await invitadoresVisibles(tenantId, yo);
+        const usuarios = await User.find({ tenantId, "metadata.registro.invitadoPor": { $in: visibles } })
             .select("firstName lastName email createdAt metadata.activo metadata.registro metadata.nombreValidadoArcaAt")
             .sort({ createdAt: -1 })
             .limit(500)
             .lean();
         const unicos = (campo) => [...new Set(usuarios.map((u) => u.metadata?.registro?.[campo]).filter(Boolean).map(String))];
-        const [projects, areas, shifts] = await Promise.all([
+        const [projects, areas, shifts, invitadores] = await Promise.all([
             Project.find({ _id: { $in: unicos("projectId") } }).select("name").lean(),
             Area.find({ _id: { $in: unicos("areaId") } }).select("name").lean(),
             Shift.find({ _id: { $in: unicos("shiftId") } }).select("name").lean(),
+            User.find({ _id: { $in: unicos("invitadoPor") } }).select("firstName lastName email").lean(),
         ]);
         const nombre = new Map([...projects, ...areas, ...shifts].map((x) => [String(x._id), x.name]));
+        const nombreInvitador = new Map(invitadores.map((x) => [String(x._id), nombreDe(x)]));
         res.json({
             registrados: usuarios.map((u) => {
                 const r = u.metadata?.registro || {};
@@ -269,6 +294,8 @@ router.get("/mis-registrados", requireTenant, authenticateToken, requirePermissi
                     proyecto: r.projectId ? nombre.get(String(r.projectId)) || null : null,
                     area: r.areaId ? nombre.get(String(r.areaId)) || null : null,
                     turno: r.shiftId ? nombre.get(String(r.shiftId)) || null : null,
+                    esMio: String(r.invitadoPor) === yo,
+                    compartidoPor: r.invitadoPor ? nombreInvitador.get(String(r.invitadoPor)) || null : null,
                 };
             }),
         });
@@ -278,7 +305,7 @@ router.get("/mis-registrados", requireTenant, authenticateToken, requirePermissi
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /registro-links/mis-registrados/:userId - Cómo se registró (sólo lectura, sólo si lo invité yo).
+// GET /registro-links/mis-registrados/:userId - Cómo se registró (sólo lectura, sólo si está entre los que puedo ver).
 router.get("/mis-registrados/:userId", requireTenant, authenticateToken, requirePermission(MOBILE_REGISTRO), async (req, res) => {
     try {
         const tenantId = toObjectIdOrNull(req.tenantObjectId);
@@ -287,8 +314,8 @@ router.get("/mis-registrados/:userId", requireTenant, authenticateToken, require
             res.status(400).json({ error: "Datos inválidos" });
             return;
         }
-        const yo = new Types.ObjectId(String(req.user.userId));
-        const u = await User.findOne({ _id: userId, tenantId, "metadata.registro.invitadoPor": yo }).select("firstName lastName email createdAt metadata").lean();
+        const visibles = await invitadoresVisibles(tenantId, String(req.user.userId));
+        const u = await User.findOne({ _id: userId, tenantId, "metadata.registro.invitadoPor": { $in: visibles } }).select("firstName lastName email createdAt metadata").lean();
         if (!u) {
             res.status(404).json({ error: "No encontré ese registro entre los tuyos." });
             return;
@@ -335,6 +362,8 @@ router.get("/mis-registrados/:userId", requireTenant, authenticateToken, require
             domicilio: { pais: m.pais || null, localidad: m.localidad || null, calle: m.calle || null, altura: m.altura || null, pisoDepto: m.pisoDepto || null, codigoPostal: m.codigoPostal || null },
             bancarios: {
                 solicitaCreacionCuenta: !!m.solicitaCreacionCuenta,
+                sinBancoMotivo: m.sinBancoMotivo || null,
+                sinBancoDetalle: m.sinBancoDetalle || null,
                 tipoEntidad: m.tipoEntidadFinanciera || null,
                 banco: banco?.name || null,
                 tipoDeCuenta: m.tipoDeCuentaBancaria || null,

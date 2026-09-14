@@ -39,6 +39,9 @@ export interface Registrado {
   proyecto: string | null;
   area: string | null;
   turno: string | null;
+  /** Se registró con MI link. Si no, con el de uno de los coordinadores que superviso. */
+  esMio: boolean;
+  compartidoPor: string | null;
 }
 
 /** Panel: alguien que se registró con un link, con qué link y quién se lo compartió. */

@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { infoAPI, InfoItem } from '../../../../api/info';
 import { MOBILE_ACTIVITY_LOGS } from '../../../../utils/permisosMobile';
+import { resumenSinBanco } from '../../../../utils/bancarios';
 
 type RegistroInfoTab = 'general' | 'domicilio' | 'bancarios';
 
@@ -276,7 +277,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
 
           {activeInfoTab === 'bancarios' && (
             <div className="animate-in fade-in duration-300">
-              <InfoRow label="Banco" value={nameFromInfo(banks, md.bancoId) || (md.tipoEntidadFinanciera === 'sin_banco' ? 'No tiene banco' : '')} />
+              <InfoRow label="Banco" value={nameFromInfo(banks, md.bancoId) || (md.tipoEntidadFinanciera === 'sin_banco' ? resumenSinBanco(md) || 'No tiene banco' : '')} />
               <InfoRow label="CBU / CVU" value={md.cbu} />
               <InfoRow label="Tipo de cuenta" value={md.tipoDeCuentaBancaria} />
               <InfoRow label="Nro. de cuenta" value={md.nroDeCuentaBancaria} />

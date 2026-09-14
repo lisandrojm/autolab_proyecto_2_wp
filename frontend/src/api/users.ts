@@ -364,6 +364,9 @@ export interface User {
     // Bancarios
     tipoEntidadFinanciera?: string;
     solicitaCreacionCuenta?: boolean;
+    /** Con «No tengo Banco»: cuál de las situaciones es. Ver `MOTIVOS_SIN_BANCO` en utils/bancarios. */
+    sinBancoMotivo?: "crear_cuenta" | "proveera_cuenta" | "otro" | null;
+    sinBancoDetalle?: string | null;
     cuentaBancariaConfirmada?: boolean;
     cuentaBancariaConfirmadaAt?: string;
     solicitaCambioCuenta?: boolean;

@@ -10,7 +10,7 @@ import { Modal } from "../ui/Modal";
 import { BloqueEstado } from "../ui/BloqueEstado";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto as esCbuIncompleto } from "../../utils/cbu";
-import { TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo, declaraSinBanco } from "../../utils/bancarios";
+import { TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo, declaraSinBanco, resumenSinBanco } from "../../utils/bancarios";
 import { afipAPI } from "../../api/afip";
 import { cuitEsValido } from "../../utils/cuit";
 import { generarPassword } from "../../utils/password";
@@ -261,15 +261,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         LO QUE SE SELLA Y LO QUE SE PRELLENA SON DOS COSAS DISTINTAS.
 
         Nombre y apellido llevan el sello y se pisan siempre: son lo que ARCA tiene registrado y por
-        eso el formulario los bloquea después. El resto —fecha de nacimiento, domicilio, tipo de
-        documento— viene en la MISMA respuesta y hasta acá se tiraba, así que la persona lo volvía a
-        tipear. Ahora se ofrece completado, pero SOLO sobre campos vacíos y sin bloquear nada:
+        eso el formulario los bloquea después. Fecha de nacimiento y tipo de documento vienen en la
+        MISMA respuesta y se ofrecen completados, pero SOLO sobre campos vacíos y sin bloquear nada:
+        editando una ficha, pisar lo cargado sería borrar el trabajo de alguien por apretar un botón.
 
-         - Editando una ficha, pisar lo cargado sería borrar el trabajo de alguien por apretar un botón.
-         - El domicilio del padrón es el que la persona declaró ante el organismo, y puede no ser donde
-           vive. Se ofrece; se corrige.
+        EL DOMICILIO NO SE TRAE. El del padrón es el declarado ante el organismo —muchas veces viejo, o el
+        fiscal y no donde vive— y aparecía completado como si fuera el real: confundía más de lo que ahorraba.
       */
-      const dom = r.domicilio;
       const tipoDeArca = tipoDocumentoDeArca(tiposDocumentoDisponibles as any[], r.tipoDocumento);
       setFormData((prev) => ({
         ...prev,
@@ -279,10 +277,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         // El tipo que dice ARCA; si su sigla no existe en el catálogo (TRAM, ACTA, CERT…), lo que ya estaba.
         tipoDocumentoId: tipoDeArca ? (tipoDeArca as any).data.id : (prev.tipoDocumentoId ?? tipoDni?.data.id),
         fechaNac: prev.fechaNac || r.fechaNacimiento || "",
-        calle: prev.calle || dom?.calle || "",
-        altura: prev.altura || dom?.numero || "",
-        localidad: prev.localidad || dom?.localidad || "",
-        codigoPostal: prev.codigoPostal || dom?.codigoPostal || "",
       }));
       setValidadoEnArca(true);
       sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · ${r.tipoDocumento || "DNI"} ${r.documento}` : ""}`);
@@ -561,7 +555,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
    *
    * Por eso todo paso condicionado lleva un «…o ya hay algo cargado».
    */
-  const bancariosFiltrados = banks.filter((it) => !formData.tipoEntidadFinanciera || String((it as { tipoEntidad?: string }).tipoEntidad || "banco") === formData.tipoEntidadFinanciera);
+  // Sólo las activas (ver Entidades Financieras → Estado), salvo la que la persona YA tiene: apagar una
+  // entidad no puede dejar una ficha con su banco invisible y el select mostrando «Seleccionar...».
+  const bancariosFiltrados = banks.filter((it) => (!formData.tipoEntidadFinanciera || String((it as { tipoEntidad?: string }).tipoEntidad || "banco") === formData.tipoEntidadFinanciera) && ((it as { activo?: boolean }).activo !== false || it.data?.id === formData.bancoId));
   const hayDatosDeCuenta = !!(formData.cbu || formData.bancoId || formData.nroDeCuentaBancaria || formData.tipoDeCuentaBancaria || formData.aliasBancario);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1468,7 +1464,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 */}
                 {declaraSinBanco(formData.tipoEntidadFinanciera || "") && !hayDatosDeCuenta ? (
                   <p className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2.5 text-[12.5px] text-blue-800 dark:text-blue-300">
-                    Declarado <strong>sin banco</strong>: no hay datos de cuenta para cargar. Si la persona autorizó que se le abra una, el pedido se ve en su ficha del listado.
+                    Declarado <strong>sin banco</strong>: no hay datos de cuenta para cargar.{" "}
+                    {resumenSinBanco(user?.metadata) || "Si la persona autorizó que se le abra una, el pedido se ve en su ficha del listado."}
                   </p>
                 ) : (
                   <>
@@ -1487,6 +1484,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       {bancariosFiltrados.map((it) => (
                         <option key={it._id} value={it.data?.id}>
                           {it.name}
+                          {(it as { activo?: boolean }).activo === false ? " (inactiva)" : ""}
                         </option>
                       ))}
                     </select>

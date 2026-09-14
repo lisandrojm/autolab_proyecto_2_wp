@@ -55,6 +55,43 @@ export const labelTipo = (tipo: string): string => TIPO_ENTIDAD_OPTIONS.find((o)
 /** Con «No tengo Banco» no se pide ningún dato de cuenta: no hay ninguno que cargar. */
 export const declaraSinBanco = (tipo: string): boolean => tipo === SIN_BANCO;
 
+/*
+  «NO TENGO BANCO» NO ES UNA SOLA SITUACIÓN.
+
+  Era una sola casilla —«Autorizo a que se cree una cuenta»—, obligatoria para seguir. Así, quien iba a
+  abrir su propia cuenta o cobraba de otra forma (un proveedor con billetera virtual) tenía que
+  autorizar algo que no quería para poder terminar el registro, y del lado de adentro se le abría una
+  cuenta que no hacía falta. Ahora se dice cuál de las tres es. Tiene que coincidir con el server
+  (`routes/auth.ts`, `models/User.ts`).
+*/
+export type MotivoSinBanco = "crear_cuenta" | "proveera_cuenta" | "otro";
+
+export const MOTIVOS_SIN_BANCO: { value: MotivoSinBanco; label: string; ayuda: string }[] = [
+  { value: "crear_cuenta", label: "Autorizo a que se cree una cuenta bancaria a mi nombre", ayuda: "La plataforma se encarga del alta de la cuenta. Cuando esté lista, te avisamos con una notificación en la app." },
+  { value: "proveera_cuenta", label: "Voy a proveer una cuenta y me comprometo a enviar los datos", ayuda: "Cuando la tengas, pedí el cambio de datos bancarios desde la app (Perfil → Cambiar datos)." },
+  { value: "otro", label: "Otro", ayuda: "Contanos tu situación y la productora se comunica con vos." },
+];
+
+type MetadataSinBanco = { tipoEntidadFinanciera?: string | null; solicitaCreacionCuenta?: boolean | null; sinBancoMotivo?: string | null; sinBancoDetalle?: string | null; cbu?: string | null } | null | undefined;
+
+/** Cuál eligió. Los registros anteriores al motivo sólo tienen la casilla: esos son «crear cuenta». */
+export const motivoSinBancoDe = (m: MetadataSinBanco): MotivoSinBanco | null => {
+  const motivo = MOTIVOS_SIN_BANCO.find((o) => o.value === m?.sinBancoMotivo)?.value;
+  return motivo || (m?.solicitaCreacionCuenta ? "crear_cuenta" : null);
+};
+
+/** Lo que declaró, en una línea, para quien lo lee del lado de adentro. */
+export const resumenSinBanco = (m: MetadataSinBanco): string | null => {
+  const motivo = motivoSinBancoDe(m);
+  if (motivo === "crear_cuenta") return "Autorizó que se le cree una cuenta bancaria a su nombre.";
+  if (motivo === "proveera_cuenta") return "Se comprometió a proveer una cuenta y enviar los datos.";
+  if (motivo === "otro") return `Otro: ${m?.sinBancoDetalle?.trim() || "sin detalle"}`;
+  return null;
+};
+
+/** Se comprometió a mandar los datos de una cuenta y todavía no hay CBU: pendiente de su lado. */
+export const esperaDatosDeCuenta = (m: MetadataSinBanco): boolean => motivoSinBancoDe(m) === "proveera_cuenta" && !m?.cbu;
+
 /**
  * ¿Hay que crearle la cuenta a esta persona?
  *

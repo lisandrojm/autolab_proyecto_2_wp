@@ -1,5 +1,5 @@
 import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto, faltanDigitosCbu } from "../utils/cbu";
-import { SIN_BANCO, TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo } from "../utils/bancarios";
+import { SIN_BANCO, TIPO_ENTIDAD_OPTIONS, camposDe, labelTipo, MOTIVOS_SIN_BANCO, MotivoSinBanco } from "../utils/bancarios";
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -59,6 +59,9 @@ interface RegistroForm {
   aliasBancario: string;
   nroDeCuentaBancaria: string;
   solicitaCreacionCuenta: boolean;
+  /** Con «No tengo Banco»: cuál de las tres situaciones es (ver `MOTIVOS_SIN_BANCO`). */
+  sinBancoMotivo: MotivoSinBanco | "";
+  sinBancoDetalle: string;
 }
 
 const emptyForm: RegistroForm = {
@@ -91,6 +94,8 @@ const emptyForm: RegistroForm = {
   aliasBancario: "",
   nroDeCuentaBancaria: "",
   solicitaCreacionCuenta: false,
+  sinBancoMotivo: "",
+  sinBancoDetalle: "",
 };
 
 // Valor especial: el usuario no tiene banco y pide que le creen una cuenta.
@@ -365,8 +370,8 @@ export const RegistroPage: React.FC = () => {
   // Al cambiar el tipo de entidad, reseteamos la entidad y los datos de cuenta
   // (evita arrastrar una entidad o valores de otro tipo).
   const onTipoEntidadChange = (value: string) => {
-    setForm((prev) => ({ ...prev, tipoEntidadFinanciera: value, bancoId: "", tipoDeCuentaBancaria: "", cbu: "", aliasBancario: "", nroDeCuentaBancaria: "", solicitaCreacionCuenta: false }));
-    setFieldErrors((prev) => ({ ...prev, tipoEntidadFinanciera: false, bancoId: false, tipoDeCuentaBancaria: false, cbu: false, aliasBancario: false, nroDeCuentaBancaria: false, solicitaCreacionCuenta: false }));
+    setForm((prev) => ({ ...prev, tipoEntidadFinanciera: value, bancoId: "", tipoDeCuentaBancaria: "", cbu: "", aliasBancario: "", nroDeCuentaBancaria: "", solicitaCreacionCuenta: false, sinBancoMotivo: "", sinBancoDetalle: "" }));
+    setFieldErrors((prev) => ({ ...prev, tipoEntidadFinanciera: false, bancoId: false, tipoDeCuentaBancaria: false, cbu: false, aliasBancario: false, nroDeCuentaBancaria: false, solicitaCreacionCuenta: false, sinBancoMotivo: false, sinBancoDetalle: false }));
     setError(null);
   };
 
@@ -464,17 +469,12 @@ export const RegistroPage: React.FC = () => {
         return;
       }
       /*
-        SE PRELLENA LO QUE ARCA YA MANDÓ EN ESTA MISMA RESPUESTA.
+        SE PRELLENA LO QUE ARCA YA MANDÓ EN ESTA MISMA RESPUESTA: nombre, documento y fecha de nacimiento.
 
-        Acá pesa más que en el alta interna: del otro lado del link hay una persona sola, muchas veces
-        desde el teléfono, y `REQUIRED_BY_STEP` le pide localidad, calle, altura y código postal antes
-        de dejarla seguir. Cuatro de esos cinco campos ya vinieron en la consulta que acaba de hacer.
-
-        Solo campos vacíos, y ninguno queda bloqueado: el domicilio del padrón es el declarado ante el
-        organismo y puede no ser donde vive. Se ofrece completado para que lo confirme o lo corrija,
-        que es bastante más rápido que tipearlo de cero.
+        EL DOMICILIO NO. Se traía el del padrón, que es el declarado ante el organismo —muchas veces
+        viejo, o el fiscal y no donde vive—, y aparecía completado en la pestaña Domicilio como si ya
+        estuviera bien: la persona lo daba por bueno sin leerlo o no entendía de dónde salía. Lo carga ella.
       */
-      const dom = data.domicilio as { calle?: string; numero?: string; localidad?: string; codigoPostal?: string } | undefined;
       const tipoDeArca = tipoDocumentoDeArca(tiposDocumentoDisponibles as any[], data.tipoDocumento);
       setForm((prev) => ({
         ...prev,
@@ -484,10 +484,6 @@ export const RegistroPage: React.FC = () => {
         // El tipo que dice ARCA; si su sigla no está en el catálogo (TRAM, ACTA, CERT…), lo que ya estaba.
         tipoDocumentoId: tipoDeArca ? String((tipoDeArca as any).id) : prev.tipoDocumentoId || (tipoDni ? String(tipoDni.id) : prev.tipoDocumentoId),
         fechaNac: prev.fechaNac || data.fechaNacimiento || "",
-        calle: prev.calle || dom?.calle || "",
-        altura: prev.altura || dom?.numero || "",
-        localidad: prev.localidad || dom?.localidad || "",
-        codigoPostal: prev.codigoPostal || dom?.codigoPostal || "",
       }));
       setFieldErrors((prev) => ({ ...prev, firstName: false, lastName: false, documento: false, cuit: false }));
       setValidadoEnArca(true);
@@ -570,7 +566,9 @@ export const RegistroPage: React.FC = () => {
     const t = form.tipoEntidadFinanciera;
     if (!t) return [{ key: "tipoEntidadFinanciera", label: "Tipo de entidad financiera" }];
     if (t === SIN_BANCO) {
-      return form.solicitaCreacionCuenta ? [] : [{ key: "solicitaCreacionCuenta", label: "Autorización de creación de cuenta" }];
+      if (!form.sinBancoMotivo) return [{ key: "sinBancoMotivo", label: "Cómo vas a cobrar" }];
+      if (form.sinBancoMotivo === "otro" && !form.sinBancoDetalle.trim()) return [{ key: "sinBancoDetalle", label: "Tu situación (Otro)" }];
+      return [];
     }
     const c = camposDe(t);
     const miss: { key: string; label: string }[] = [];
@@ -612,8 +610,8 @@ export const RegistroPage: React.FC = () => {
   // Marca los faltantes en rojo y arma el mensaje de error del paso.
   const flagMissing = (step: Tab, missing: { key: string; label: string }[]) => {
     setFieldErrors(Object.fromEntries(missing.map((m) => [m.key, true])));
-    if (step === "bancarios" && form.tipoEntidadFinanciera === SIN_BANCO && !form.solicitaCreacionCuenta) {
-      setError("Para continuar, necesitás autorizar la creación de la cuenta.");
+    if (step === "bancarios" && form.tipoEntidadFinanciera === SIN_BANCO) {
+      setError(!form.sinBancoMotivo ? "Elegí una opción: cómo vas a cobrar sin cuenta bancaria." : "Contanos tu situación en «Otro».");
     } else {
       setError(`Completá los campos obligatorios: ${missing.map((m) => m.label).join(", ")}.`);
     }
@@ -732,6 +730,8 @@ export const RegistroPage: React.FC = () => {
         telefono: form.telefono,
         tipoEntidadFinanciera: form.tipoEntidadFinanciera,
         solicitaCreacionCuenta: form.solicitaCreacionCuenta,
+        sinBancoMotivo: form.sinBancoMotivo,
+        sinBancoDetalle: form.sinBancoDetalle,
         bancoId: form.bancoId,
         tipoDeCuentaBancaria: form.tipoDeCuentaBancaria,
         cbu: form.cbu,
@@ -1303,14 +1303,46 @@ export const RegistroPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* "No tengo Banco": pedido de creación de cuenta + leyenda (sin entidad ni CBU) */}
+                  {/* "No tengo Banco": cuál de las tres situaciones es (ver `MOTIVOS_SIN_BANCO`). Sin entidad ni CBU. */}
                   {form.tipoEntidadFinanciera === SIN_BANCO && (
-                    <div className={`rounded-lg border bg-gray-800/50 p-5 space-y-3 ${fieldErrors.solicitaCreacionCuenta ? "border-red-500 ring-2 ring-red-500/40" : "border-gray-700"}`}>
-                      <label className="flex items-center gap-3 cursor-pointer text-gray-100">
-                        <input type="checkbox" className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500" checked={form.solicitaCreacionCuenta} onChange={(e) => set("solicitaCreacionCuenta", e.target.checked)} />
-                        <span className="font-medium">Autorizo a que se cree una cuenta bancaria a mi nombre</span>
-                      </label>
-                      <p className="text-xs text-gray-400 leading-relaxed">La plataforma se encarga del alta de la cuenta. Cuando esté lista, te avisamos con una notificación en la app.</p>
+                    <div role="radiogroup" aria-label="Cómo vas a cobrar" className={`rounded-lg border bg-gray-800/50 p-3 space-y-1 ${fieldErrors.sinBancoMotivo ? "border-red-500 ring-2 ring-red-500/40" : "border-gray-700"}`}>
+                      <p className="px-2 pt-1 pb-1 text-sm font-semibold text-gray-200">
+                        ¿Cómo vas a cobrar? <span className="text-red-500">*</span>
+                      </p>
+                      {MOTIVOS_SIN_BANCO.map((m) => {
+                        const elegido = form.sinBancoMotivo === m.value;
+                        return (
+                          <label key={m.value} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${elegido ? "border-blue-500 bg-blue-500/10" : "border-transparent hover:bg-gray-700/40"}`}>
+                            <input
+                              type="radio"
+                              name="sinBancoMotivo"
+                              className="mt-1 h-4 w-4 border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                              checked={elegido}
+                              onChange={() => {
+                                // `solicitaCreacionCuenta` se sigue guardando: de ahí cuelga el aviso de «hay que abrirle la cuenta».
+                                setForm((prev) => ({ ...prev, sinBancoMotivo: m.value, sinBancoDetalle: m.value === "otro" ? prev.sinBancoDetalle : "", solicitaCreacionCuenta: m.value === "crear_cuenta" }));
+                                setFieldErrors((prev) => ({ ...prev, sinBancoMotivo: false, sinBancoDetalle: false }));
+                                setError("");
+                              }}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block font-medium text-gray-100">{m.label}</span>
+                              <span className="mt-0.5 block text-xs leading-relaxed text-gray-400">{m.ayuda}</span>
+                              {m.value === "otro" && elegido && (
+                                <textarea
+                                  autoFocus
+                                  rows={2}
+                                  maxLength={300}
+                                  value={form.sinBancoDetalle}
+                                  onChange={(e) => set("sinBancoDetalle", e.target.value)}
+                                  placeholder="Ej: soy proveedor de un servicio y tengo billetera virtual"
+                                  className={`mt-2 w-full rounded-lg border bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500 ${fieldErrors.sinBancoDetalle ? "border-red-500 ring-2 ring-red-500/40" : "border-gray-600"}`}
+                                />
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
 

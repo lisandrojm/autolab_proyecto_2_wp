@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "./JornadasSolicitud";
@@ -24,6 +24,10 @@ import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeC
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
 import { EstadoBadge } from "../../../../components/EstadoSelect";
+import { useAuthStore } from "../../../../stores/authStore";
+import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
+import { MOBILE_REGISTRO } from "../../../../utils/permisosMobile";
+import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
 
 /** Un área y turno que se puede asignar en la solicitud, ya con los nombres para mostrarlo. */
 interface OpcionAreaTurno {
@@ -261,7 +265,33 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     Se hace con un <fieldset disabled>, que el navegador propaga a TODOS los controles de adentro: no
     hay que acordarse de deshabilitar cada uno, ni se escapa el que se agregue mañana.
   */
-  const sinPersona = !formData.fullName;
+  /*
+    LA SOLICITUD ES PARA ALGUIEN REGISTRADO.
+
+    Antes se podía escribir el nombre a mano y la solicitud creaba una ficha nueva, vacía: sin CUIT, sin
+    domicilio ni cuenta, que alguien tenía que completar después preguntando. Ahora la persona se
+    registra sola con el link —carga ella sus datos— y recién ahí se la elige acá.
+
+    `nombreLegado`: una solicitud que se cargó con el nombre a mano ANTES de esta regla. Se deja editar
+    tal cual para no trabarla; si la persona ya se registró, conviene elegirla.
+  */
+  const personaRegistrada = !!selectedUser || !!(editingUser?.metadata as any)?.solicitudUserId;
+  const nombreLegado = !!editingUser && !personaRegistrada && !!formData.fullName;
+  const sinPersona = !personaRegistrada && !nombreLegado;
+
+  // Quien tiene «Registro» puede mandarle su link a la persona que no encuentra, sin salir de acá.
+  const { user: yo } = useAuthStore();
+  const permisoInactivo = usePermisoInactivo();
+  const puedeCompartirLink = (yo?.permissions || []).includes(MOBILE_REGISTRO) && !permisoInactivo(MOBILE_REGISTRO);
+  const [copiandoLink, setCopiandoLink] = useState(false);
+  const copiarLinkDeRegistro = async () => {
+    setCopiandoLink(true);
+    try {
+      await copiarMiLinkDeRegistro("Mandáselo a la persona. Cuando se registre, va a aparecer en esta lista y vas a poder elegirla.");
+    } finally {
+      setCopiandoLink(false);
+    }
+  };
 
   /** La categoría elegida, resuelta al catálogo: de ahí salen su código de ARCA y su escala. */
   const categoriaElegida = useMemo(() => categoriasSat.find((c) => c._id === formData.categoriaSatId) || null, [categoriasSat, formData.categoriaSatId]);
@@ -494,6 +524,20 @@ const TIME_OPTIONS = (() => {
       setSelectedUser(null);
     }
   }, [isOpen, editingUser]);
+
+  /*
+    AL EDITAR, LA PERSONA ELEGIDA VUELVE A ESTAR ELEGIDA.
+
+    La solicitud guarda a quién es (`solicitudUserId`), pero al abrirla sólo se recuperaba el nombre:
+    la persona quedaba como si no estuviera elegida. Va DESPUÉS del efecto de arriba, que la limpia al abrir.
+  */
+  useEffect(() => {
+    const id = (editingUser?.metadata as any)?.solicitudUserId;
+    if (!isOpen || !id || selectedUser) return;
+    const persona = platformUsers.find((u) => String(u._id) === String(id));
+    if (persona) setSelectedUser(persona);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editingUser, platformUsers]);
 
   /*
     ARRANCA EN «PEDIDO DE ARCA».
@@ -984,7 +1028,11 @@ const TIME_OPTIONS = (() => {
   const erroresJornadas = erroresDeJornadas(datosJornadas);
 
   const handleSubmit = async () => {
-    if (!formData.fullName || !formData.projectIds.length || formData.roleFrameIds.length === 0 || !formData.categoriaSatId) {
+    if (sinPersona) {
+      sweetAlert.warning("Falta la persona", puedeCompartirLink ? "Elegí a una persona registrada. Si todavía no se registró, mandale tu link de registro desde el buscador." : "Elegí a una persona registrada. Si todavía no se registró, pedí el link de registro para mandarle.");
+      return;
+    }
+    if (!formData.fullName ||!formData.projectIds.length || formData.roleFrameIds.length === 0 || !formData.categoriaSatId) {
       sweetAlert.warning("Campos incompletos", "Por favor completa los campos obligatorios.");
       return;
     }
@@ -1318,10 +1366,9 @@ const TIME_OPTIONS = (() => {
               <span className="text-slate-400 truncate">Buscar por nombre o apellidos…</span>
             </button>
           )}
-          {/* El nombre escrito a mano —alguien que todavía no es usuario de la plataforma— se marca,
-              porque el resto del formulario se comporta distinto: no hereda rol ni categoría. */}
-          {formData.fullName && !selectedUser && <p className="text-[11px] text-amber-600 dark:text-amber-400">Nombre escrito a mano: todavía no es usuario de la plataforma.</p>}
-          {sinPersona && <p className="text-[11px] text-slate-400">Elegila para completar el resto: lo que sigue habla de ella.</p>}
+          {/* Ver `nombreLegado`: sólo solicitudes viejas, cargadas con el nombre a mano. */}
+          {nombreLegado && <p className="text-[11px] text-amber-600 dark:text-amber-400">Esta solicitud se cargó con el nombre escrito a mano. Si la persona ya se registró, elegila de la lista.</p>}
+          {sinPersona && <p className="text-[11px] text-slate-400">Elegí a una persona registrada para completar el resto: lo que sigue habla de ella.</p>}
         </div>
 
         {/* Ver `sinPersona`: el navegador propaga el `disabled` a todos los controles de adentro. */}
@@ -1862,7 +1909,7 @@ const TIME_OPTIONS = (() => {
           isOpen={personaModalOpen}
           onClose={() => setPersonaModalOpen(false)}
           title="Persona"
-          subtitle={formData.fullName ? formData.fullName : "Buscá por nombre, apellido o email"}
+          subtitle={formData.fullName ? formData.fullName : "Personas registradas: buscá por nombre, apellido o email"}
           size="lg"
           zIndex={80}
           footer={
@@ -1915,15 +1962,10 @@ const TIME_OPTIONS = (() => {
                   type="text"
                   autoFocus
                   value={userSearchTerm}
-                  onChange={(e) => {
-                    /* Tipear también sirve para dar de alta a alguien que TODAVÍA NO ES USUARIO: el
-                       nombre queda como texto libre y la ficha se crea nueva. Por eso escribir
-                       limpia la persona elegida, en vez de dejar las dos cosas a la vez. */
-                    const val = e.target.value;
-                    setUserSearchTerm(val);
-                    setFormData((prev) => ({ ...prev, fullName: val }));
-                    setSelectedUser(null);
-                  }}
+                  /* Tipear SÓLO filtra. Antes el texto quedaba como nombre de una ficha nueva; ahora la
+                     solicitud es para alguien registrado (ver `personaRegistrada`), y quien no aparece
+                     recibe el link de registro. */
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
                   autoComplete="off"
                   className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white"
                   placeholder="Nombre, apellido o email"
@@ -1964,7 +2006,22 @@ const TIME_OPTIONS = (() => {
 
             <div className="max-h-[45vh] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
               {personasFiltradas.length === 0 ? (
-                <div className="px-4 py-6 text-center text-xs text-slate-400 italic">Sin coincidencias. Podés dejar el nombre escrito: se va a crear una ficha nueva.</div>
+                /* NO APARECE: lo más probable es que no se haya registrado. Se dice eso, y se le da la
+                   salida ahí mismo, en vez de dejarlo buscando variantes del nombre. */
+                <div className="space-y-3 px-4 py-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{userSearchTerm.trim() ? `No encontramos a «${userSearchTerm.trim()}»` : "No hay personas para mostrar"}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Solo aparecen las personas registradas en la plataforma.{" "}
+                    {puedeCompartirLink ? "Si todavía no se registró, mandale tu link: cuando se registre, vas a poder elegirla acá." : "Si todavía no se registró, pedile a tu supervisor o a administración el link de registro para mandarle."}
+                    {selectedRoleFilters.length > 0 && " También podés probar quitando el filtro de rol."}
+                  </p>
+                  {puedeCompartirLink && (
+                    <button type="button" onClick={copiarLinkDeRegistro} disabled={copiandoLink} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+                      <FontAwesomeIcon icon={copiandoLink ? faSpinner : faLink} className={copiandoLink ? "animate-spin" : ""} />
+                      Copiar link de registro
+                    </button>
+                  )}
+                </div>
               ) : (
                 personasFiltradas.slice(0, 50).map((u) => {
                   const nombre = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email;
@@ -1979,6 +2036,20 @@ const TIME_OPTIONS = (() => {
               )}
             </div>
             {personasFiltradas.length > 50 && <p className="text-[11px] text-slate-400">Se muestran las primeras 50 de {personasFiltradas.length}. Afiná la búsqueda o filtrá por rol.</p>}
+            {/* Siempre a la vista, no sólo con la lista vacía: quien no encuentra a alguien entre 50 nombres parecidos también tiene que saber por qué. */}
+            {personasFiltradas.length > 0 && (
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">¿No aparece? Solo se ven personas registradas.</p>
+                {puedeCompartirLink ? (
+                  <button type="button" onClick={copiarLinkDeRegistro} disabled={copiandoLink} className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold text-blue-600 disabled:opacity-60 dark:text-blue-400">
+                    <FontAwesomeIcon icon={copiandoLink ? faSpinner : faLink} className={copiandoLink ? "animate-spin" : ""} />
+                    Copiar link de registro
+                  </button>
+                ) : (
+                  <span className="shrink-0 text-[11px] text-slate-400">Pedí el link de registro</span>
+                )}
+              </div>
+            )}
           </div>
         </Modal>
 

@@ -246,6 +246,8 @@ export const USER_FRAME_WHITELIST: readonly string[] = [
   "metadata.activo",
   "metadata.tipoEntidadFinanciera",
   "metadata.solicitaCreacionCuenta",
+  "metadata.sinBancoMotivo",
+  "metadata.sinBancoDetalle",
   "metadata.cuentaBancariaConfirmada",
   "metadata.cuentaBancariaConfirmadaAt",
   "metadata.solicitaCambioCuenta",

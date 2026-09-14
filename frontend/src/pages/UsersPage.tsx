@@ -4,7 +4,7 @@ import { usersAPI, User } from '../api/users';
 import { afipAPI } from '../api/afip';
 import { motivoCuitInvalido, cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
-import { esperaCuentaBancaria } from '../utils/bancarios';
+import { esperaCuentaBancaria, esperaDatosDeCuenta, motivoSinBancoDe, resumenSinBanco } from '../utils/bancarios';
 import { RegistroModal } from '../components/users/RegistroModal';
 import { rolesAPI, Role } from '../api/roles';
 import { areasAPI, Area } from '../api/areas';
@@ -1226,6 +1226,17 @@ export const UsersPage: React.FC = () => {
                           </button>
                         );
                       })()}
+                    </div>
+                  )}
+
+                  {/* Sin banco, pero NO pidió que le abran una: trae la suya u otra situación. Se dice cuál. */}
+                  {viewUser.metadata?.tipoEntidadFinanciera === 'sin_banco' && motivoSinBancoDe(viewUser.metadata) && motivoSinBancoDe(viewUser.metadata) !== 'crear_cuenta' && (
+                    <div className={`flex items-start gap-3 rounded-lg border p-4 ${esperaDatosDeCuenta(viewUser.metadata) ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20' : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'}`}>
+                      <FontAwesomeIcon icon={esperaDatosDeCuenta(viewUser.metadata) ? faBell : faInfoCircle} className={`mt-0.5 shrink-0 ${esperaDatosDeCuenta(viewUser.metadata) ? 'text-amber-500' : 'text-blue-500'}`} />
+                      <div>
+                        <p className={`text-sm font-bold ${esperaDatosDeCuenta(viewUser.metadata) ? 'text-amber-800 dark:text-amber-300' : 'text-blue-800 dark:text-blue-300'}`}>{esperaDatosDeCuenta(viewUser.metadata) ? 'Pendiente: datos de su cuenta' : 'Declaró no tener banco'}</p>
+                        <p className={`text-xs mt-0.5 ${esperaDatosDeCuenta(viewUser.metadata) ? 'text-amber-700 dark:text-amber-400/90' : 'text-blue-700 dark:text-blue-400/90'}`}>{resumenSinBanco(viewUser.metadata)}</p>
+                      </div>
                     </div>
                   )}
 

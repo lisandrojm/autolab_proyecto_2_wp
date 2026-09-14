@@ -4,7 +4,7 @@ import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate,
 import { formatCuit } from "../../utils/cuit";
 import { noPoseeCuit } from "../contratos/ConstanciaBulk";
 import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
-import { esperaCuentaBancaria } from "../../utils/bancarios";
+import { esperaCuentaBancaria, esperaDatosDeCuenta, motivoSinBancoDe, resumenSinBanco } from "../../utils/bancarios";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -382,6 +382,15 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <span className="text-[11.5px] text-amber-800 dark:text-amber-300 leading-snug">
               <strong>Falta abrirle la cuenta bancaria.</strong> Declaró no tener banco y autorizó que se le cree una a su nombre.
+            </span>
+          </div>
+        )}
+        {/* Las otras dos situaciones de «No tengo Banco»: trae su cuenta (pendiente hasta que haya CBU) u otra. */}
+        {user.metadata?.tipoEntidadFinanciera === "sin_banco" && !user.metadata?.cbu && motivoSinBancoDe(user.metadata) && motivoSinBancoDe(user.metadata) !== "crear_cuenta" && (
+          <div className={`flex items-start gap-2 rounded-md border px-2.5 py-2 ${esperaDatosDeCuenta(user.metadata) ? "border-amber-300 dark:border-amber-800/70 bg-amber-50 dark:bg-amber-900/20" : "border-blue-200 dark:border-blue-800/70 bg-blue-50 dark:bg-blue-900/20"}`}>
+            <FontAwesomeIcon icon={faTriangleExclamation} className={`h-3 w-3 mt-0.5 shrink-0 ${esperaDatosDeCuenta(user.metadata) ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} />
+            <span className={`text-[11.5px] leading-snug ${esperaDatosDeCuenta(user.metadata) ? "text-amber-800 dark:text-amber-300" : "text-blue-800 dark:text-blue-300"}`}>
+              <strong>{esperaDatosDeCuenta(user.metadata) ? "Falta que envíe los datos de su cuenta." : "Sin banco."}</strong> {resumenSinBanco(user.metadata)}
             </span>
           </div>
         )}

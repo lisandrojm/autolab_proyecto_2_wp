@@ -593,8 +593,9 @@ router.get("/registro-info", async (req, res) => {
         const paises = pick("pais");
         const rolesFrame = (await RoleFrame.find().select("name").sort({ name: 1 }).lean()).map((r) => ({ id: String(r._id), name: r.name }));
         // Entidades financieras desde el catálogo del ABM (colección `bancos`), con su tipoEntidad
-        // para permitir el filtrado en cascada del formulario de registro.
-        const bancos = (await Banco.find().sort({ name: 1 }).lean()).map((b) => ({
+        // para permitir el filtrado en cascada del formulario de registro. Sólo las activas: las
+        // inactivas se apagan en el ABM justamente para que nadie nuevo las elija.
+        const bancos = (await Banco.find({ activo: { $ne: false } }).sort({ name: 1 }).lean()).map((b) => ({
             id: b.data?.id,
             name: b.name,
             tipoEntidad: b.tipoEntidad || "banco",
@@ -753,6 +754,13 @@ router.post("/registro", async (req, res) => {
             : body.rolFrameId && Types.ObjectId.isValid(body.rolFrameId)
                 ? [String(body.rolFrameId)]
                 : [];
+        /*
+          «NO TENGO BANCO» TRAE CUÁL DE LAS TRES SITUACIONES ES: le abren una cuenta, trae la suya, u otra
+          cosa (con su detalle). `solicitaCreacionCuenta` se sigue guardando porque de él cuelga el aviso
+          de «hay que abrirle la cuenta»; un formulario viejo abierto que sólo mande la casilla sigue andando.
+        */
+        const MOTIVOS_SIN_BANCO = ["crear_cuenta", "proveera_cuenta", "otro"];
+        const motivoSinBanco = body.tipoEntidadFinanciera === "sin_banco" && MOTIVOS_SIN_BANCO.includes(String(body.sinBancoMotivo)) ? String(body.sinBancoMotivo) : undefined;
         const metadata = {
             activo: true,
             cuit: body.cuit || undefined,
@@ -783,7 +791,9 @@ router.post("/registro", async (req, res) => {
             telefono: body.telefono || undefined,
             // Datos bancarios
             tipoEntidadFinanciera: body.tipoEntidadFinanciera || undefined,
-            solicitaCreacionCuenta: !!body.solicitaCreacionCuenta,
+            solicitaCreacionCuenta: motivoSinBanco ? motivoSinBanco === "crear_cuenta" : !!body.solicitaCreacionCuenta,
+            sinBancoMotivo: motivoSinBanco,
+            sinBancoDetalle: motivoSinBanco === "otro" ? String(body.sinBancoDetalle || "").trim().slice(0, 300) || undefined : undefined,
             bancoId: num(body.bancoId),
             tipoDeCuentaBancaria: body.tipoDeCuentaBancaria || undefined,
             cbu: body.cbu || undefined,

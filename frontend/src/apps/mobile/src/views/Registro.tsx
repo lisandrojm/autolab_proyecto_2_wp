@@ -3,8 +3,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
-import { registroLinksAPI, buildRegistroUrl, DetalleRegistrado, Registrado } from "../../../../api/registroLinks";
+import { registroLinksAPI, DetalleRegistrado, Registrado } from "../../../../api/registroLinks";
 import { sweetAlert } from "../utils/sweetAlert";
+import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
+import { resumenSinBanco } from "../../../../utils/bancarios";
 
 interface RegistroProps {
   onNavigate: (view: ViewType) => void;
@@ -16,40 +18,19 @@ interface RegistroProps {
  * ═══════════════════════════════════════════════════════════════════════
  *
  * Parecida a Contratación, pero el «+» no abre un formulario: copia al portapapeles el link de registro,
- * con su vencimiento, listo para pegar en un grupo de WhatsApp. El link SÓLO registra al usuario —no lo
- * asigna a ningún proyecto, área ni turno—, dura 7 días y, vencido, el server genera uno nuevo la
- * próxima vez que se pide: no hay que renovarlo a mano.
+ * listo para pegar en un grupo de WhatsApp. El link SÓLO registra al usuario —no lo asigna a ningún
+ * proyecto, área ni turno—, dura lo que configure la administración y, vencido, el server genera uno
+ * nuevo la próxima vez que se pide: no hay que renovarlo a mano.
  *
- * Quien se registra queda asociado a quien compartió el link y aparece abajo en «Registrados». Se puede
- * ver cómo se registró, pero no editarlo: los datos son de esa persona.
+ * Quien se registra queda asociado a quien compartió el link y aparece abajo en «Registrados». El
+ * coordinador ve los de su link; el supervisor, además, los de sus coordinadores, para tener el control
+ * de quién entra por cada uno. Se puede ver cómo se registró, pero no editarlo: los datos son de esa persona.
  */
+
+type FiltroRegistrados = "todos" | "mios" | "equipo";
 
 const fecha = (d?: string) => (d ? new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—");
 
-/** Copia al portapapeles con respaldo para navegadores sin `navigator.clipboard` (http, webviews viejos). */
-const copiar = async (texto: string): Promise<boolean> => {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(texto);
-      return true;
-    }
-  } catch {
-    /* sigue con el respaldo */
-  }
-  try {
-    const area = document.createElement("textarea");
-    area.value = texto;
-    area.style.position = "fixed";
-    area.style.opacity = "0";
-    document.body.appendChild(area);
-    area.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(area);
-    return ok;
-  } catch {
-    return false;
-  }
-};
 
 export default function Registro({ onNavigate }: RegistroProps) {
   const [registrados, setRegistrados] = useState<Registrado[] | null>(null);
@@ -57,6 +38,12 @@ export default function Registro({ onNavigate }: RegistroProps) {
   const [generando, setGenerando] = useState(false);
   const [detalle, setDetalle] = useState<DetalleRegistrado | null>(null);
   const [cargandoDetalle, setCargandoDetalle] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<FiltroRegistrados>("todos");
+
+  // Sólo un supervisor recibe registrados de otros links: al coordinador no se le muestra el filtro.
+  const cuentas = { todos: registrados?.length || 0, mios: (registrados || []).filter((r) => r.esMio).length, equipo: (registrados || []).filter((r) => !r.esMio).length };
+  const hayDeEquipo = cuentas.equipo > 0;
+  const visibles = (registrados || []).filter((r) => filtro === "todos" || (filtro === "mios" ? r.esMio : !r.esMio));
 
   useEffect(() => {
     let cancelado = false;
@@ -73,15 +60,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
   const compartir = async () => {
     setGenerando(true);
     try {
-      const link = await registroLinksAPI.miLink();
-      const url = buildRegistroUrl(link.token);
-      const dias = link.diasRestantes === 1 ? "1 día" : `${link.diasRestantes} días`;
-      // Sólo el link: el texto que acompaña lo escribe quien lo comparte.
-      const ok = await copiar(url);
-      if (ok) await sweetAlert.success("Link copiado", `Pegalo en el grupo de WhatsApp o donde corresponda.\n\nVence el ${fecha(link.expiresAt)} (quedan ${dias}).`);
-      else await sweetAlert.warning("No se pudo copiar", `Copialo a mano:\n\n${url}`);
-    } catch (e: any) {
-      sweetAlert.error("No se pudo generar el link", e?.response?.data?.error || "Probá de nuevo en un momento.");
+      await copiarMiLinkDeRegistro();
     } finally {
       setGenerando(false);
     }
@@ -113,12 +92,28 @@ export default function Registro({ onNavigate }: RegistroProps) {
         icon={faLink}
         titulo="Registro"
         onBack={() => onNavigate("home")}
-        info={"Con el + copiás tu link de registro para compartirlo, por ejemplo en un grupo de WhatsApp. Quien lo abre carga sus datos y queda registrado.\n\nEl link tiene vencimiento y, cuando vence, se renueva solo la próxima vez que tocás el +. Abajo ves quiénes se registraron con tu link; podés ver sus datos, pero no editarlos."}
+        info={"Con el + copiás tu link de registro para compartirlo, por ejemplo en un grupo de WhatsApp. Quien lo abre carga sus datos y queda registrado.\n\nEl link tiene vencimiento y, cuando vence, se renueva solo la próxima vez que tocás el +. Abajo ves quiénes se registraron con tu link y, si supervisás, también con los links de tus coordinadores. Podés ver sus datos, pero no editarlos."}
       />
 
       <div className="px-4 pt-4">
         <h3 className="mb-1 text-lg font-bold">Registrados</h3>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Personas que se registraron con tu link. Tocá una para ver cómo se registró. Con el + copiás el link para compartir.</p>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">{hayDeEquipo ? "Personas que se registraron con tu link o con los de tus coordinadores." : "Personas que se registraron con tu link."} Tocá una para ver cómo se registró. Con el + copiás el link para compartir.</p>
+
+        {hayDeEquipo && (
+          <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl border border-slate-200 p-1 dark:border-slate-700">
+            {(
+              [
+                ["todos", "Todos"],
+                ["mios", "Míos"],
+                ["equipo", "Coordinadores"],
+              ] as const
+            ).map(([id, label]) => (
+              <button key={id} onClick={() => setFiltro(id)} className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors ${filtro === id ? "bg-blue-600 text-white" : "text-slate-600 dark:text-slate-300"}`}>
+                {label} <span className="opacity-70">{cuentas[id]}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {error ? (
           <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</p>
@@ -133,9 +128,11 @@ export default function Registro({ onNavigate }: RegistroProps) {
             <FontAwesomeIcon icon={faLink} className="mb-3 h-10 w-10 text-slate-300" />
             <p className="text-sm text-slate-500 dark:text-slate-400">Todavía nadie se registró con tu link. Tocá el + para copiarlo.</p>
           </div>
+        ) : visibles.length === 0 ? (
+          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">{filtro === "mios" ? "Todavía nadie se registró con tu link." : "Todavía nadie se registró con los links de tus coordinadores."}</p>
         ) : (
           <div className="space-y-3">
-            {registrados.map((r) => (
+            {visibles.map((r) => (
               <button key={r._id} onClick={() => verDetalle(r._id)} className="w-full rounded-xl border bg-white p-4 text-left shadow-sm transition-colors active:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 dark:active:bg-slate-800">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -154,6 +151,9 @@ export default function Registro({ onNavigate }: RegistroProps) {
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   <span className="flex items-center gap-1.5">
                     <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 opacity-70" /> {fecha(r.registradoAt)}
+                  </span>
+                  <span className={`flex items-center gap-1.5 ${r.esMio ? "" : "font-semibold text-amber-600 dark:text-amber-400"}`}>
+                    <FontAwesomeIcon icon={faLink} className="h-3 w-3 opacity-70" /> {r.esMio ? "Tu link" : `Link de ${r.compartidoPor || "un coordinador"}`}
                   </span>
                   {/* Sólo registros de links viejos, de cuando el link llevaba proyecto/área/turno. */}
                   {r.proyecto && (
@@ -225,8 +225,8 @@ export default function Registro({ onNavigate }: RegistroProps) {
               </section>
               <section>
                 <h4 className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">Bancarios</h4>
-                {detalle.bancarios.solicitaCreacionCuenta ? (
-                  <p className="py-1.5 text-sm text-slate-700 dark:text-slate-300">No tiene cuenta: pidió que se la abran.</p>
+                {detalle.bancarios.tipoEntidad === "sin_banco" || detalle.bancarios.solicitaCreacionCuenta ? (
+                  <p className="py-1.5 text-sm text-slate-700 dark:text-slate-300">No tiene banco. {resumenSinBanco(detalle.bancarios) || ""}</p>
                 ) : (
                   <>
                     {dato("Entidad", detalle.bancarios.banco)}

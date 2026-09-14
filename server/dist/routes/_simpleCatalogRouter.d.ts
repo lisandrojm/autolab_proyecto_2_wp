@@ -54,6 +54,16 @@ export interface SimpleCatalogConfig {
         key: string;
     }>;
     /**
+     * Campos sí/no a persistir en create/update/bulk (ej. Bancos → `activo`).
+     *
+     * Aparte de los de texto porque el cliente puede mandarlos como `true`, `"true"` o `"false"`, y
+     * guardar el string `"false"` lo haría verdadero en cualquier `if`. No participan del import de
+     * Excel: una planilla no es donde se decide si algo se ofrece o no.
+     */
+    extraBooleanFields?: Array<{
+        key: string;
+    }>;
+    /**
      * Qué popular en el listado, para que el front no resuelva las refs con un pedido por fila.
      * Ej. Convenios → `{ path: "sindicatoId", select: "_id name sigla" }`.
      */

@@ -98,6 +98,13 @@ export interface IUserMetadata {
     tipoEntidadFinanciera?: string | null;
     /** Si eligió "No tengo Banco" y pidió que le creen una cuenta. */
     solicitaCreacionCuenta?: boolean | null;
+    /**
+     * Con "No tengo Banco", cuál de las situaciones es: le abren una cuenta (`crear_cuenta`, que además
+     * prende `solicitaCreacionCuenta`), trae la suya y manda los datos (`proveera_cuenta`) u otra (`otro`,
+     * con `sinBancoDetalle`). Ausente en los registros anteriores a esto.
+     */
+    sinBancoMotivo?: "crear_cuenta" | "proveera_cuenta" | "otro" | null;
+    sinBancoDetalle?: string | null;
     /** Confirmación de que la cuenta fue creada y los datos cargados (plataforma + banco). */
     cuentaBancariaConfirmada?: boolean | null;
     cuentaBancariaConfirmadaAt?: Date | null;

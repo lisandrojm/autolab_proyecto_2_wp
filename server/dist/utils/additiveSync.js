@@ -207,6 +207,8 @@ export const USER_FRAME_WHITELIST = [
     "metadata.activo",
     "metadata.tipoEntidadFinanciera",
     "metadata.solicitaCreacionCuenta",
+    "metadata.sinBancoMotivo",
+    "metadata.sinBancoDetalle",
     "metadata.cuentaBancariaConfirmada",
     "metadata.cuentaBancariaConfirmadaAt",
     "metadata.solicitaCambioCuenta",

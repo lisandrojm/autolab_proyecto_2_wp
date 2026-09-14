@@ -22,6 +22,9 @@ export const BancosPage: React.FC = () => (
         required: true,
         showColumn: true,
         columnLabel: "Tipo",
+        filtrable: true,
+        // Sin tipo cargado se ofrece como banco en el registro y en la ficha: filtrar por «Banco» la trae.
+        valorPorDefecto: "banco",
         options: [
           { value: "banco", label: "Banco" },
           { value: "billetera_virtual", label: "Billetera Virtual" },
@@ -29,6 +32,22 @@ export const BancosPage: React.FC = () => (
           { value: "caja_credito", label: "Caja de Crédito" },
           { value: "otro", label: "Otro" },
         ],
+      },
+      {
+        /*
+          ACTIVA O INACTIVA: si se ofrece en los selectores (registro y datos bancarios del usuario).
+          Apagar no borra: quien ya la tiene cargada la conserva, pero nadie nuevo la puede elegir.
+        */
+        key: "activo",
+        label: "Estado",
+        type: "estado",
+        showColumn: true,
+        filtrable: true,
+        options: [
+          { value: "true", label: "Activa" },
+          { value: "false", label: "Inactiva" },
+        ],
+        ayuda: "Las inactivas no se ofrecen al registrarse ni al cargar datos bancarios. Quien ya la tiene cargada la conserva.",
       },
     ]}
   />

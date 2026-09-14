@@ -14,6 +14,8 @@ const aNumeroOpcional = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : undefined;
 };
+/** `true`/`"true"` → true, `false`/`"false"` → false; cualquier otra cosa → undefined (no se toca). */
+const aBooleanoOpcional = (v) => (v === true || v === "true" ? true : v === false || v === "false" ? false : undefined);
 /**
  * Tres resultados y no dos:
  *   `undefined` → no vino en el body: el campo no se toca.
@@ -58,6 +60,7 @@ model, config) {
         ...(config.extraStringFields || []).map((f) => f.key),
         ...(config.extraNumberFields || []).map((f) => f.key),
         ...(config.extraRefFields || []).map((f) => f.key),
+        ...(config.extraBooleanFields || []).map((f) => f.key),
     ]);
     /** Las claves del body que este catálogo no sabe guardar. Vacío = todo bien. */
     const clavesDeMas = (body) => (body && typeof body === "object" ? Object.keys(body).filter((k) => !CLAVES_ACEPTADAS.has(k)) : []);
@@ -266,6 +269,11 @@ model, config) {
                     if (ref.valor !== undefined)
                         extras[f.key] = ref.valor;
                 }
+                for (const f of config.extraBooleanFields || []) {
+                    const b = aBooleanoOpcional(item[f.key]);
+                    if (b !== undefined)
+                        extras[f.key] = b;
+                }
                 parsed.push({ externalId: config.sanitizeExternalId ? config.sanitizeExternalId(rawExternalId) : rawExternalId, nombre, extras });
             });
             if (errores.length > 0) {
@@ -325,6 +333,11 @@ model, config) {
                 if (ref.valor !== undefined)
                     newItem[f.key] = ref.valor;
             }
+            for (const f of config.extraBooleanFields || []) {
+                const b = aBooleanoOpcional(req.body[f.key]);
+                if (b !== undefined)
+                    newItem[f.key] = b;
+            }
             const created = await model.create(newItem);
             res.status(201).json(created);
         }
@@ -379,6 +392,11 @@ model, config) {
                 }
                 if (ref.valor !== undefined)
                     item[f.key] = ref.valor;
+            }
+            for (const f of config.extraBooleanFields || []) {
+                const b = aBooleanoOpcional(req.body[f.key]);
+                if (b !== undefined)
+                    item[f.key] = b;
             }
             await item.save();
             res.json(item);
