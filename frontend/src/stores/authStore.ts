@@ -284,3 +284,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return null;
   },
 }));
+
+/*
+  AL VOLVER A LA APP SE RELEEN LOS PERMISOS.
+
+  `refreshSession` corría una sola vez, al cargar la página. Si a alguien le cambiaban el rol mientras
+  tenía la app abierta —en el teléfono pasa todo el tiempo: la app no se recarga, se vuelve a ella—,
+  seguía viendo las tarjetas y el badge del rol viejo hasta cerrar sesión. Ahora se relee cada vez que
+  la pestaña o la app vuelve a estar a la vista, como mucho una vez cada 30 segundos.
+*/
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  let ultimoRefresco = 0;
+  const refrescarAlVolver = () => {
+    if (document.visibilityState !== "visible") return;
+    const ahora = Date.now();
+    if (ahora - ultimoRefresco < 30000) return;
+    ultimoRefresco = ahora;
+    void useAuthStore.getState().refreshSession();
+  };
+  document.addEventListener("visibilitychange", refrescarAlVolver);
+  window.addEventListener("focus", refrescarAlVolver);
+}

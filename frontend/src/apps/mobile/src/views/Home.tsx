@@ -65,8 +65,9 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const novedadesAction = {
     icon: faFileAlt,
-    title: "Novedades",
-    description: "Gestión de novedades",
+    // Se llama como su permiso («Cargar novedades»): así se sabe qué tarjeta da cada tilde del rol.
+    title: "Cargar novedades",
+    description: "La asistencia de tu gente",
     view: "activity_logs" as ViewType,
     disabled: false,
   };
@@ -122,9 +123,10 @@ export default function Home({ onNavigate }: HomeProps) {
   /*
     NOVEDADES: CARGAR O SEGUIR.
 
-    El coordinador carga las de su gente; el supervisor sigue el cumplimiento de sus coordinadores. A
-    quien sólo sigue, la tarjeta se llama «Novedades» igual —es donde las busca—; a quien hace las dos
-    cosas se le muestran separadas, para que no tenga que adivinar cuál abre qué.
+    El coordinador carga las de su gente («Cargar novedades»); el supervisor sigue el cumplimiento de sus
+    coordinadores («Cumplimiento»). Cada tarjeta se llama SIEMPRE como su permiso en el editor de roles,
+    y no cambia de nombre según qué más tenga la persona: quien tiene dos roles (Supervisor y
+    Coordinador) ve las dos, y tiene que poder saber de cuál de sus roles sale cada una.
   */
   const cargaNovedades = puede(MOBILE_ACTIVITY_LOGS);
   if (cargaNovedades) {
@@ -133,8 +135,8 @@ export default function Home({ onNavigate }: HomeProps) {
   if (puede(MOBILE_ACTIVITY_COMPLIANCE)) {
     quickActions.push({
       icon: faCalendarCheck,
-      title: cargaNovedades ? "Cumplimiento" : "Novedades",
-      description: "Cumplimiento de tus coordinadores",
+      title: "Cumplimiento",
+      description: "De tus coordinadores",
       view: "activity_compliance" as ViewType,
       disabled: false,
     });

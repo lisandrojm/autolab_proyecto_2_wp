@@ -248,7 +248,7 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-100">
               <FontAwesomeIcon icon={faCalendarCheck} className="h-5 w-5" />
-              Novedades
+              Cumplimiento
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">Cumplimiento de tus coordinadores</p>
           </div>

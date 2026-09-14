@@ -23,6 +23,8 @@ interface PermisosInactivosState {
   /** La usa Configuración → Permisos al guardar, para que el menú y el móvil se actualicen sin recargar. */
   setInactivos: (permisos: string[]) => void;
   ensureLoaded: () => void;
+  /** Vuelve a pedir la lista aunque ya esté cargada (al volver a la app: ver abajo). */
+  recargar: () => void;
 }
 
 export const usePermisosInactivosStore = create<PermisosInactivosState>((set, get) => ({
@@ -30,7 +32,11 @@ export const usePermisosInactivosStore = create<PermisosInactivosState>((set, ge
   cargado: false,
   setInactivos: (inactivos) => set({ inactivos, cargado: true }),
   ensureLoaded: () => {
-    if (get().cargado || enVuelo) return;
+    if (get().cargado) return;
+    get().recargar();
+  },
+  recargar: () => {
+    if (enVuelo) return;
     enVuelo = rolesAPI
       .getPermisosEnDesarrollo()
       .then((inactivos) => set({ inactivos, cargado: true }))
@@ -63,3 +69,21 @@ export const usePermisoInactivo = () => {
   const exento = esSuperAdmin(user);
   return useCallback((permiso?: string | null) => !!permiso && !exento && inactivos.includes(permiso), [inactivos, exento]);
 };
+
+/*
+  AL VOLVER A LA APP SE RELEE LA LISTA. Si el SuperAdmin apaga o prende una función mientras alguien
+  tiene la app abierta, se aplica cuando esa persona vuelve a ella, sin cerrar sesión. Como mucho una
+  vez cada 30 segundos, y sólo con sesión abierta (el endpoint pide estar logueado).
+*/
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  let ultimaRecarga = 0;
+  const recargarAlVolver = () => {
+    if (document.visibilityState !== "visible" || !useAuthStore.getState().token) return;
+    const ahora = Date.now();
+    if (ahora - ultimaRecarga < 30000) return;
+    ultimaRecarga = ahora;
+    usePermisosInactivosStore.getState().recargar();
+  };
+  document.addEventListener("visibilitychange", recargarAlVolver);
+  window.addEventListener("focus", recargarAlVolver);
+}

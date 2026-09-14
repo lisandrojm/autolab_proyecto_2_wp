@@ -40,7 +40,8 @@ export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes d
  */
 export const MOBILE_ITEMS = [
   { permiso: MOBILE_ACTIVITY_LOGS, label: "Cargar novedades", grupo: "Novedades", ayuda: "Carga la asistencia de las personas de sus áreas y turnos. Es del coordinador." },
-  { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Seguimiento de novedades", grupo: "Novedades", ayuda: "Calendario de cumplimiento de sus coordinadores: quién envió y a quién le falta. Es del supervisor." },
+  // Mismo nombre que su tarjeta del móvil («Cumplimiento»): con dos nombres para lo mismo no se sabía qué tarjeta daba cada permiso.
+  { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Cumplimiento de novedades", grupo: "Novedades", ayuda: "Calendario de cumplimiento de sus coordinadores: quién envió y a quién le falta. Es del supervisor." },
   { permiso: MOBILE_TEAMS, label: "Mis equipos", grupo: "Equipo", ayuda: "Las áreas y turnos que tiene a cargo, con su gente." },
   { permiso: MOBILE_USERS, label: "Contratación", grupo: "Contratación", ayuda: "Pedir altas de personal." },
   { permiso: MOBILE_ORDERS, label: "Pedidos", grupo: "Personal", ayuda: "Sus propios pedidos." },
