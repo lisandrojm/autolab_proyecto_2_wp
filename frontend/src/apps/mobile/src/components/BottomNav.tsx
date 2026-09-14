@@ -17,8 +17,9 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
     { id: "home" as ViewType, icon: faHome, label: "Inicio", disabled: false },
     // El Calendario salió de la barra (estaba apagado): su lugar lo toma el Perfil.
     { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: false },
-    // Proyecto, contrato y áreas/turnos: antes era el final del Perfil y lo alargaba de más.
-    { id: "asignacion" as ViewType, icon: faBriefcase, label: "Asignación", disabled: false },
+    // Los proyectos de la persona, cada uno con su contrato y sus áreas/turnos. Antes se llamaba
+    // «Asignación» y mostraba uno solo; nació como el final del Perfil, que alargaba de más.
+    { id: "proyectos" as ViewType, icon: faBriefcase, label: "Proyectos", disabled: false },
     { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: true, notifications: true },
   ];
 
