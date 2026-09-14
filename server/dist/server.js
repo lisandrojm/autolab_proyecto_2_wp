@@ -33,6 +33,7 @@ import { roleRoutes } from "./routes/roles.js";
 import { userRoutes } from "./routes/users.js";
 import { registroLinkRoutes } from "./routes/registroLinks.js";
 import { projectRoutes } from "./routes/projects.js";
+import { contratoMiembroRoutes } from "./routes/contratoMiembro.js";
 import { nomenclaturaRoutes } from "./routes/nomenclaturas.js";
 import { tenantRoutes } from "./routes/tenants.js";
 import { clientAssetsRoutes } from "./routes/clientAssets.js";
@@ -214,6 +215,8 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/registro-links", registroLinkRoutes);
 app.use("/api/v1/tenants", tenantRoutes);
 app.use("/api/v1/nomenclaturas", nomenclaturaRoutes);
+// Antes que `projectRoutes`: comparten el prefijo `/projects/:projectId/...`.
+app.use("/api/v1", contratoMiembroRoutes);
 app.use("/api/v1", projectRoutes);
 app.use("/api/v1/client-assets", clientAssetsRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);

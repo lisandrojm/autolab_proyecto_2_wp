@@ -134,6 +134,52 @@ export interface AreaShiftMembersResponse {
   cuentan: number;
 }
 
+/**
+ * El contrato que RIGE de un miembro, en sólo lectura y con los nombres ya resueltos: lo que muestra
+ * «Configurar Miembro» en el panel, para verlo desde la app (Mis equipos → ícono de contrato).
+ * Lo arma `GET /projects/:projectId/miembros/:userId/contrato` (ver `routes/contratoMiembro.ts`).
+ */
+export interface DetalleContratoMiembro {
+  empleado: string;
+  email: string;
+  cuil: string;
+  proyecto: string;
+  rolFrame: string;
+  empresaContrato: string;
+  empresaRelease: string;
+  convenio: string;
+  categoria: string;
+  tipoContrato: string;
+  estado: string;
+  /** "YYYY-MM-DD" */
+  fechaAlta: string;
+  /** "YYYY-MM-DD"; vacío = tiempo indeterminado. */
+  fechaBaja: string;
+  vigente: boolean;
+  horario: string;
+  sede: string;
+  diasSemana: number[];
+  diasPorSemana: number | null;
+  diasRotativos: boolean;
+  reemplazo: boolean;
+  reemplazado: string;
+  areasTurnos: { area: string; turnos: string[] }[];
+  sucursalArca: string;
+  actividadArca: string;
+  obraSocial: string;
+  observaciones: string;
+  sueldo: {
+    jornadas: number | null;
+    porJornada: number | null;
+    enMano: number | null;
+    enManoTexto: string;
+    diarioNeto: number | null;
+    diferenciaDiariaNeto: number | null;
+    neto: number | null;
+    bruto: number | null;
+  };
+}
+
 export interface ProjectsListResponse {
   projects: Project[];
   pagination: {
@@ -378,6 +424,14 @@ class ProjectsAPI {
       headers: this.getHeaders(),
     });
     return resp.data?.members || [];
+  }
+
+  /** El contrato que rige de un miembro, en sólo lectura. `null` si la persona no tiene contrato en el proyecto. */
+  async getContratoDeMiembro(projectId: string, userId: string): Promise<DetalleContratoMiembro | null> {
+    const resp = await axios.get(`/projects/${projectId}/miembros/${userId}/contrato`, {
+      headers: this.getHeaders(),
+    });
+    return resp.data?.contrato || null;
   }
 
   async updateProject(

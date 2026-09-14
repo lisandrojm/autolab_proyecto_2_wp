@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
+import ContratoMiembroModal from "../components/ContratoMiembroModal";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useProfile } from "../hooks/useProfile";
 import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects";
@@ -93,6 +94,8 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   const [personas, setPersonas] = useState<AreaShiftMember[] | null>(null);
   const [abiertos, setAbiertosEstado] = useState<Set<string>>(new Set());
   const [buscaSinArea, setBuscaSinArea] = useState("");
+  /** La persona cuyo contrato se está viendo (sólo el coordinador del proyecto; ver `tarjeta`). */
+  const [contratoDe, setContratoDe] = useState<{ userId: string; nombre: string } | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -285,6 +288,21 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
           {m.estadoContrato ? ` · ${m.estadoContrato}` : ""}
         </p>
       </div>
+      {/*
+        EL CONTRATO, en sólo lectura. Sólo para el coordinador del proyecto (el responsable): trae sueldos,
+        y quien supervisa áreas y turnos no lo ve. El server lo vuelve a controlar.
+      */}
+      {equipo?.supervisa && (
+        <button
+          type="button"
+          onClick={() => setContratoDe({ userId: m._id, nombre: nombreDe(m) })}
+          title="Ver contrato"
+          aria-label={`Ver el contrato de ${nombreDe(m)}`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 active:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:active:bg-slate-800"
+        >
+          <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
+        </button>
+      )}
       <div className="flex shrink-0 flex-col items-end gap-1">
         <span className={chip(m.activo)}>{m.activo ? "Activo" : "Inactivo"}</span>
         <span className={chip(m.vigente)}>{m.vigente ? "Vigente" : "No vigente"}</span>
@@ -530,6 +548,8 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
           </>
         )}
       </div>
+
+      <ContratoMiembroModal isOpen={!!contratoDe && !!equipo} onClose={() => setContratoDe(null)} projectId={equipo?.proyecto._id || ""} userId={contratoDe?.userId || ""} nombre={contratoDe?.nombre || ""} />
     </div>
   );
 }
