@@ -24,4 +24,10 @@ export interface ContratoPorVencer {
         metadata: Record<string, any>;
     };
 }
+/**
+ * Cómo puede estar escrita, en día/mes/año, una fecha de la ventana: con "/" o "-", y con o sin cero
+ * adelante en el día y el mes. Son las formas que `fechaISO` acepta además de la ISO.
+ */
+export declare const variantesDMY: (desde: string, dias: number) => string[];
+export declare function olvidarContratosPorVencer(): void;
 export declare function listarContratosPorVencer(tenantId: Types.ObjectId | string, userId: string, hoy?: string): Promise<ContratoPorVencer[]>;

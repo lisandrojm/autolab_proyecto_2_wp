@@ -4,7 +4,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { User } from "../models/User.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
-import { listarContratosPorVencer } from "../services/contratosPorVencer.js";
+import { listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 
 /*
   «Por vencer» de Contratación (móvil). Qué contratos entran y quién los ve está en
@@ -68,6 +68,8 @@ router.post("/dejar-vencer", requireTenant, authenticateToken, async (req: Authe
       },
       { upsert: true },
     );
+    // La decisión cambia la lista de todos los que ven ese contrato, no sólo la de quien decidió.
+    olvidarContratosPorVencer();
     res.json({ ok: true });
   } catch (error) {
     console.error("Dejar vencer contrato error:", error);

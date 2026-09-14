@@ -111,4 +111,7 @@ projectSchema.index({ tenantId: 1, clientId: 1, createdAt: -1 });
 // `alcanceDeResponsable` corre en CADA request de alguien que no es admin (proyectos y clientes)
 // y busca por este campo; sin el índice, cada una escanea todos los proyectos del tenant.
 projectSchema.index({ tenantId: 1, "metadata.responsableId": 1 });
+// Los proyectos que alguien COORDINA (Contratos por vencer, alcance del coordinador en Usuarios). Sin
+// esto la consulta recorre la colección entera, y los proyectos son documentos pesados.
+projectSchema.index({ tenantId: 1, "coordinatorAssignments.userId": 1 });
 export const Project = mongoose.model("Project", projectSchema);

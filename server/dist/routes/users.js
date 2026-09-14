@@ -12,6 +12,7 @@ import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
+import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
 import { Company } from "../models/Company.js";
@@ -1246,6 +1247,7 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
                             decididoEl: new Date(),
                         },
                     }, { upsert: true });
+                    olvidarContratosPorVencer();
                 }
             }
             catch (e) {

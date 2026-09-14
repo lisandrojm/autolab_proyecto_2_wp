@@ -374,6 +374,9 @@ const userProjectSchema = new Schema<IUserProject>(
 // Index to ensure one document per project per employee (internal IDs)
 userProjectSchema.index({ projectId: 1, userId: 1 }, { unique: true });
 
+// Contratos por vencer: busca por fecha de baja en vez de leer todas las asignaciones de un proyecto.
+userProjectSchema.index({ "contracts.fecha_baja_contrato": 1 });
+
 // Optional index for legacy IDs if they exist
 userProjectSchema.index(
   { externalProjectId: 1, externalEmployeeId: 1 },

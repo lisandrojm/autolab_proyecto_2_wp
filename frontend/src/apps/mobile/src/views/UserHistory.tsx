@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faUsers, faUserPlus, faEnvelope, faBriefcase, faBuilding, faCalendarAlt, faLayerGroup, faIdCard, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faUsers, faUserPlus, faEnvelope, faBriefcase, faBuilding, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
@@ -81,7 +81,13 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
     if (porVencer.length === 0)
       return (
         <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:bg-slate-800/50">
-          <FontAwesomeIcon icon={faHourglassHalf} className="w-10 h-10 text-slate-300 mb-3" />
+          {/* Contrato con reloj: lo que se muestra acá son contratos a los que se les acaba el tiempo. */}
+          <div className="relative mb-3">
+            <FontAwesomeIcon icon={faFileContract} className="w-10 h-10 text-slate-300" />
+            <span className="absolute -bottom-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+              <FontAwesomeIcon icon={faClock} className="w-3.5 h-3.5 text-amber-500" />
+            </span>
+          </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">No hay contratos por vencer</p>
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Acá aparecen, una semana antes, los contratos de tu gente que terminan.</p>
         </div>
