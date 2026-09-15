@@ -216,6 +216,21 @@ function CampoHora({ valor, onCambio, placeholder, listId }: { valor: string; on
   );
 }
 
+/** Duración de un horario en horas, contando que la salida puede ser del día siguiente (22:00 a 06:00 = 8). */
+const horasDelHorario = (entrada: string, salida: string): number | null => {
+  const e = aMinutos(entrada);
+  const s = aMinutos(salida);
+  if (e === null || s === null) return null;
+  return ((s - e + 1440) % 1440 || 1440) / 60;
+};
+/** "HH:MM" + minutos, dando la vuelta a medianoche. */
+const sumarMinutos = (hhmm: string, minutos: number): string => {
+  const base = aMinutos(hhmm);
+  if (base === null) return "";
+  const total = (((base + Math.round(minutos)) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+
 interface UserRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -831,6 +846,29 @@ const TIME_OPTIONS = (() => {
 
   const contratoElegido = useMemo(() => contratos.find((c) => c._id === formData.contratoId) || null, [contratos, formData.contratoId]);
 
+  /*
+    LOS LÍMITES DEL TIPO DE CONTRATO: horas por jornada y días por semana (se cargan en Contratos).
+
+    Un «5x7» no se puede pedir con 6 días ni con un horario de 9 horas. Los días se acotan en el
+    momento —el campo no pasa del tope y, si ya había más, se recortan—; las horas se avisan debajo
+    del horario y frenan el envío, porque cuál de las dos puntas corregir lo decide quien carga.
+    Sin límite cargado en el contrato, no se acota nada.
+  */
+  const limiteHoras = contratoElegido?.data?.horasPorJornada ?? null;
+  const limiteDias = contratoElegido?.data?.diasPorSemana ?? null;
+  const duracionHorario = horasDelHorario(formData.inTime, formData.outTime);
+  const horarioExcedido = limiteHoras != null && duracionHorario != null && duracionHorario > limiteHoras;
+  useEffect(() => {
+    if (limiteDias == null) return;
+    setFormData((p) => {
+      if ((Number(p.diasPorSemana) || 0) <= limiteDias) return p;
+      // Con días fijos se quedan los primeros de la semana (lunes primero); con rotativos, el conjunto entre los que rota no cambia.
+      const lunesPrimero = [1, 2, 3, 4, 5, 6, 0];
+      const dias = p.diasRotativos ? p.diasSemana : lunesPrimero.filter((d) => p.diasSemana.includes(d)).slice(0, limiteDias).sort((a, b) => a - b);
+      return { ...p, diasPorSemana: String(limiteDias), diasSemana: dias };
+    });
+  }, [limiteDias]);
+
   /** El trámite que declara cada tipo de contrato, por sus plantillas. Es lo que pinta el badge. */
   const tramitePorContrato = useMemo(() => {
     const m = new Map<string, TipoImpositivo>();
@@ -1445,6 +1483,10 @@ const TIME_OPTIONS = (() => {
       sweetAlert.warning("Falta el tipo de contrato", "Elegí qué tipo de contrato se le va a hacer a esta persona.");
       return;
     }
+    if (horarioExcedido) {
+      sweetAlert.warning("El horario supera el del contrato", `«${contratoElegido?.name}» admite hasta ${limiteHoras} h por jornada y el horario elegido suma ${duracionHorario?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h.`);
+      return;
+    }
     // Un servicio no tiene categoría que proponga el importe: si no se carga, la solicitud no dice cuánto se paga.
     if (esServicios && !(Number(formData.dailyRate) > 0)) {
       sweetAlert.warning("Falta el importe por jornada", "Es un servicio: no sale de ninguna categoría, así que hay que cargarlo a mano.");
@@ -1894,6 +1936,21 @@ const TIME_OPTIONS = (() => {
               )}
             </button>
           )}
+          {contratoElegido && (limiteHoras != null || limiteDias != null) && (
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
+              {limiteHoras != null && (
+                <span>
+                  <strong className="text-slate-900 dark:text-white">{limiteHoras}</strong> h por jornada
+                </span>
+              )}
+              {limiteDias != null && (
+                <span>
+                  <strong className="text-slate-900 dark:text-white">{limiteDias}</strong> días por semana
+                </span>
+              )}
+              <span className="text-[11px] text-slate-400">Limitan el horario y los días de abajo.</span>
+            </p>
+          )}
         </div>
 
         {/*
@@ -1926,7 +1983,7 @@ const TIME_OPTIONS = (() => {
             <DiasDeTrabajo
               variante="mobile"
               jornadas={Number(formData.diasPorSemana) || 0}
-              onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))}
+              onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(limiteDias != null ? Math.min(n, limiteDias) : n) : "" }))}
               rotativos={formData.diasRotativos}
               onRotativos={cambiarRotativos}
               dias={formData.diasSemana}
@@ -1934,6 +1991,7 @@ const TIME_OPTIONS = (() => {
               errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
               errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
             />
+            {limiteDias != null && <p className="mt-1 text-[11px] text-slate-400">El tipo de contrato admite hasta {limiteDias} {limiteDias === 1 ? "día" : "días"} por semana.</p>}
           </div>
 
           {/* Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada. */}
@@ -1969,7 +2027,7 @@ const TIME_OPTIONS = (() => {
             </label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h }))} placeholder="Entrada" listId="horas-enteras" />
+                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} placeholder="Entrada" listId="horas-enteras" />
               </div>
               <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
               {/* Las sugerencias de los dos campos: horas enteras. */}
@@ -1982,6 +2040,13 @@ const TIME_OPTIONS = (() => {
                 <CampoHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} placeholder="Salida" listId="horas-enteras" />
               </div>
             </div>
+            {horarioExcedido ? (
+              <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
+                El tipo de contrato admite hasta {limiteHoras} h por jornada y el horario suma {duracionHorario?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
+              </p>
+            ) : (
+              limiteHoras != null && <p className="text-[11px] text-slate-400">Hasta {limiteHoras} h por jornada, según el tipo de contrato.</p>
+            )}
           </div>
         </div>
 
