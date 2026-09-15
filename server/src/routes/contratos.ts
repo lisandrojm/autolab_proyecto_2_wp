@@ -79,10 +79,31 @@ router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Respo
   }
 });
 
+/*
+  LÍMITES DE LA JORNADA DEL TIPO DE CONTRATO: horas por jornada y días por semana.
+
+  Opcionales —vacío es «sin límite»—, y son la base para acotar la solicitud de contratación: un tipo
+  «5x7» no debería poder pedirse con 6 días. Se validan acá para que no entre un 30 horas o un 9 días.
+  Las horas admiten decimales (7,5); los días, no.
+*/
+const leerLimitesDeJornada = (horas: unknown, dias: unknown): { horasPorJornada: number | null; diasPorSemana: number | null; error?: string } => {
+  const vacio = (v: unknown) => v === undefined || v === null || String(v).trim() === "";
+  const h = vacio(horas) ? null : Number(String(horas).replace(",", "."));
+  const d = vacio(dias) ? null : Number(dias);
+  if (h !== null && (!Number.isFinite(h) || h < 1 || h > 24)) return { horasPorJornada: null, diasPorSemana: null, error: "Las horas por jornada tienen que estar entre 1 y 24." };
+  if (d !== null && (!Number.isInteger(d) || d < 1 || d > 7)) return { horasPorJornada: null, diasPorSemana: null, error: "Los días por semana tienen que ser un número entero entre 1 y 7." };
+  return { horasPorJornada: h, diasPorSemana: d };
+};
+
 // POST / - crear
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+    const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+    const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
+    if (limites.error) {
+      res.status(400).json({ error: limites.error });
+      return;
+    }
     const name = String(nombre ?? "").trim();
     if (!name) {
       res.status(400).json({ error: "El nombre es obligatorio" });
@@ -100,6 +121,8 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       data: {
         cantidadJornadas: parseNum(cantidadJornadas),
         multiplicadorDiario: parseNum(multiplicadorDiario),
+        horasPorJornada: limites.horasPorJornada,
+        diasPorSemana: limites.diasPorSemana,
         esTiempoIndeterminado: esTiempoIndeterminado === "true" || esTiempoIndeterminado === true,
         requiereFirma: requiereFirma === undefined ? true : requiereFirma === "true" || requiereFirma === true,
         afipModalidadContrato: afipModalidadContrato != null ? String(afipModalidadContrato).trim() : undefined,
@@ -125,7 +148,12 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+    const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+    const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
+    if (limites.error) {
+      res.status(400).json({ error: limites.error });
+      return;
+    }
     const item = await Contrato.findById(req.params.id);
     if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
@@ -147,6 +175,8 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     }
     if (cantidadJornadas !== undefined) item.data.cantidadJornadas = parseNum(cantidadJornadas);
     if (multiplicadorDiario !== undefined) item.data.multiplicadorDiario = parseNum(multiplicadorDiario);
+    if (horasPorJornada !== undefined) item.data.horasPorJornada = limites.horasPorJornada;
+    if (diasPorSemana !== undefined) item.data.diasPorSemana = limites.diasPorSemana;
     if (esTiempoIndeterminado !== undefined) item.data.esTiempoIndeterminado = esTiempoIndeterminado === "true" || esTiempoIndeterminado === true;
     if (requiereFirma !== undefined) item.data.requiereFirma = requiereFirma === "true" || requiereFirma === true;
     if (generaAlta !== undefined) item.data.generaAlta = generaAlta === "true" || generaAlta === true;

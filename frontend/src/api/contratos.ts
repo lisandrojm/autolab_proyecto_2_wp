@@ -12,6 +12,9 @@ export interface ContratoItem {
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
+    /** Límites de la jornada del tipo de contrato. `null`/ausente = sin límite. */
+    horasPorJornada?: number | null;
+    diasPorSemana?: number | null;
     requiereFirma: boolean;
     /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad). */
     afipModalidadContrato?: string;
@@ -31,6 +34,8 @@ export interface ContratoInput {
   cantidadJornadas?: string | number;
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;
+  horasPorJornada?: string | number;
+  diasPorSemana?: string | number;
   requiereFirma?: boolean;
   isActive?: boolean;
   afipModalidadContrato?: string;

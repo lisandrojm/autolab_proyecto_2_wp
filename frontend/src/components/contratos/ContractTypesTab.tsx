@@ -44,6 +44,9 @@ interface FormState {
   name: string;
   cantidadJornadas: string;
   multiplicadorDiario: string;
+  /** Límites de la jornada: vacío = sin límite. */
+  horasPorJornada: string;
+  diasPorSemana: string;
   esTiempoIndeterminado: boolean;
   requiereFirma: boolean;
   isActive: boolean;
@@ -56,7 +59,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -454,6 +457,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       name: contrato.name,
       cantidadJornadas: String(contrato.data?.cantidadJornadas ?? ''),
       multiplicadorDiario: String(contrato.data?.multiplicadorDiario ?? ''),
+      horasPorJornada: contrato.data?.horasPorJornada != null ? String(contrato.data.horasPorJornada) : '',
+      diasPorSemana: contrato.data?.diasPorSemana != null ? String(contrato.data.diasPorSemana) : '',
       esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
       requiereFirma: contrato.data?.requiereFirma !== false,
       isActive: contrato.isActive !== false,
@@ -571,6 +576,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       nombre: name,
       cantidadJornadas: form.cantidadJornadas,
       multiplicadorDiario: form.multiplicadorDiario,
+      horasPorJornada: form.horasPorJornada,
+      diasPorSemana: form.diasPorSemana,
       esTiempoIndeterminado: form.esTiempoIndeterminado,
       requiereFirma: form.requiereFirma,
       isActive: form.isActive,
@@ -669,6 +676,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   <th className="px-4 py-3 font-semibold">Nombre</th>
                   <th className="px-4 py-3 font-semibold">Jornadas</th>
                   <th className="px-4 py-3 font-semibold">Mult. Diario</th>
+                  <th className="px-4 py-3 font-semibold">Horas</th>
+                  <th className="px-4 py-3 font-semibold">Días/sem.</th>
                   <th className="px-4 py-3 font-semibold">Tiempo Indet.</th>
                   <th className="px-4 py-3 font-semibold">Firma</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
@@ -686,6 +695,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                       <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{contrato.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.cantidadJornadas ?? '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.multiplicadorDiario ?? '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.horasPorJornada ?? '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.diasPorSemana ?? '—'}</td>
                       <td className="px-4 py-3">{contrato.data?.esTiempoIndeterminado ? <BadgeTiempoIndeterminado /> : <span className="text-xs text-gray-400">—</span>}</td>
                       <td className="px-4 py-3">
                         <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
@@ -758,6 +769,16 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   <span>
                     Multiplicador <strong>{contrato.data?.multiplicadorDiario ?? 0}</strong>
                   </span>
+                  {contrato.data?.horasPorJornada != null && (
+                    <span>
+                      <strong>{contrato.data.horasPorJornada}</strong> h por jornada
+                    </span>
+                  )}
+                  {contrato.data?.diasPorSemana != null && (
+                    <span>
+                      <strong>{contrato.data.diasPorSemana}</strong> días por semana
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -896,6 +917,23 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                 <input type="number" className="input-field w-full" value={form.multiplicadorDiario} onChange={(e) => setForm((p) => ({ ...p, multiplicadorDiario: e.target.value }))} />
               </div>
             </div>
+
+            {/*
+              LÍMITES DE LA JORNADA: cuántas horas por jornada y cuántos días por semana admite este tipo
+              (un «6x6»). Opcionales —vacío es «sin límite»— y son la base para acotar la solicitud de
+              contratación. El server valida los rangos.
+            */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Horas por jornada</label>
+                <input type="number" min={1} max={24} step="0.5" className="input-field w-full" value={form.horasPorJornada} onChange={(e) => setForm((p) => ({ ...p, horasPorJornada: e.target.value }))} placeholder="Sin límite" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Días por semana</label>
+                <input type="number" min={1} max={7} step={1} className="input-field w-full" value={form.diasPorSemana} onChange={(e) => setForm((p) => ({ ...p, diasPorSemana: e.target.value }))} placeholder="Sin límite" />
+              </div>
+            </div>
+            <p className="-mt-2 ml-1 text-[11px] text-gray-500 dark:text-gray-400">Vacío = sin límite. Sirven para acotar la solicitud de contratación de este tipo de contrato.</p>
 
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 text-sm cursor-pointer">

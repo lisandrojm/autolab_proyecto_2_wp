@@ -302,7 +302,8 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
         */
         if (req.query.slim === "true") {
             const proyectos = await Project.find(filter)
-                .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments")
+                // `metadata.responsableId`: la solicitud del móvil deja elegir TODAS las áreas y turnos al coordinador del proyecto.
+                .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId")
                 .populate("clientId", "name")
                 .populate("coordinatorAssignments.areaId", "name")
                 .populate("coordinatorAssignments.shiftId", "name startTime endTime order days")

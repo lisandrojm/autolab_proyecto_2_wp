@@ -14,6 +14,12 @@ export interface IContrato extends Document {
         cantidadJornadas: number;
         multiplicadorDiario: number;
         esTiempoIndeterminado: boolean;
+        /**
+         * Límites de la jornada de este tipo de contrato (un «6x6»: 6 días por semana, 6 horas por jornada).
+         * Opcionales: `null` = sin límite. Son la base para acotar la solicitud de contratación.
+         */
+        horasPorJornada?: number | null;
+        diasPorSemana?: number | null;
         /** Si al firmar el contrato el documento se envía a firmar (p. ej. por Dropbox Sign). */
         requiereFirma: boolean;
         /**

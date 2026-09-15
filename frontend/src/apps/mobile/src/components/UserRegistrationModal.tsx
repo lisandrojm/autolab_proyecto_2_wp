@@ -28,7 +28,7 @@ import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFr
 import { EstadoBadge } from "../../../../components/EstadoSelect";
 import { useAuthStore } from "../../../../stores/authStore";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
-import { MOBILE_REGISTRO } from "../../../../utils/permisosMobile";
+import { MOBILE_REGISTRO, PROJECT_SUPERVISOR } from "../../../../utils/permisosMobile";
 import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
 
 /** Un área y turno que se puede asignar en la solicitud, ya con los nombres para mostrarlo. */
@@ -861,7 +861,21 @@ const TIME_OPTIONS = (() => {
   }, [proyectoElegido]);
 
   /*
-    Y SI QUIEN PIDE NO COORDINA NADA ACÁ —un supervisor, un admin—, TODAS LAS DEL PROYECTO.
+    QUIÉN ELIGE ENTRE TODAS LAS ÁREAS Y TURNOS DEL PROYECTO, aunque además supervise algunas.
+
+    El coordinador del proyecto (el responsable, `metadata.responsableId` = su id de FRAME) contrata
+    para cualquier área, y lo mismo quien tiene la capacidad de serlo (`PROJECT_SUPERVISOR`). Antes
+    alcanzaba con tener UNA área/turno a cargo en el proyecto para que la lista se redujera a esas:
+    quien es las dos cosas —responsable y a cargo de un turno— no podía pedir un alta para otra área.
+    Sólo quien supervisa áreas y turnos, sin nada más, sigue viendo únicamente las suyas.
+  */
+  const idFrameMio = (profile as any)?.metadata?.id ?? (yo as any)?.metadata?.id;
+  const esResponsableDelProyecto = idFrameMio != null && (proyectoElegido as any)?.metadata?.responsableId != null && String((proyectoElegido as any).metadata.responsableId) === String(idFrameMio);
+  const veTodoElProyecto = esResponsableDelProyecto || (yo?.permissions || []).includes(PROJECT_SUPERVISOR);
+  const coordinaEnElProyecto = !veTodoElProyecto && coordinacionesEnProyecto.length > 0;
+
+  /*
+    Y SI QUIEN PIDE NO SUPERVISA NADA ACÁ, O ES COORDINADOR DEL PROYECTO (ver `veTodoElProyecto`), TODAS LAS DEL PROYECTO.
 
     El área y turno es obligatorio: es lo que precarga el wizard de aprobación. El listado de proyectos
     del móvil es liviano y no trae las áreas, así que se pide el proyecto con `team: "ids"` (sin el
@@ -871,7 +885,7 @@ const TIME_OPTIONS = (() => {
   useEffect(() => {
     const id = proyectoElegido?._id;
     setAreasDelProyecto(null);
-    if (!id || coordinacionesEnProyecto.length > 0) return;
+    if (!id || coordinaEnElProyecto) return;
     let cancelado = false;
     projectsAPI
       .getProject(id, { team: "ids" })
@@ -883,9 +897,8 @@ const TIME_OPTIONS = (() => {
     return () => {
       cancelado = true;
     };
-  }, [proyectoElegido?._id, coordinacionesEnProyecto.length]);
+  }, [proyectoElegido?._id, coordinaEnElProyecto]);
 
-  const coordinaEnElProyecto = coordinacionesEnProyecto.length > 0;
   /** Lo que se puede elegir. `null` = todavía cargando las áreas del proyecto. */
   const opcionesDelProyecto: OpcionAreaTurno[] | null = coordinaEnElProyecto ? coordinacionesEnProyecto : areasDelProyecto;
   /*
@@ -903,13 +916,13 @@ const TIME_OPTIONS = (() => {
   /** Por área, con sus turnos en el orden del día: con muchas combinaciones, una lista plana no se lee. */
   const areasAgrupadas = useMemo(() => {
     const porArea = new Map<string, { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }>();
-    for (const o of opcionesAreaTurno || []) {
+    for (const o of (horarioCompleto ? opcionesAreaTurno : opcionesDelProyecto) || []) {
       const area = porArea.get(o.areaId) || { areaId: o.areaId, nombre: o.areaNombre, turnos: [] };
       if (!area.turnos.some((t) => t.shiftId === o.shiftId)) area.turnos.push(o);
       porArea.set(o.areaId, area);
     }
     return [...porArea.values()].map((a) => ({ ...a, turnos: a.turnos.sort((x, y) => x.orden.localeCompare(y.orden)) })).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [opcionesAreaTurno]);
+  }, [opcionesAreaTurno, opcionesDelProyecto, horarioCompleto]);
 
   /** La combinación elegida, si es una de las ofrecidas. Sin esto la solicitud no se envía. */
   const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId))) || null;
@@ -1947,6 +1960,31 @@ const TIME_OPTIONS = (() => {
           </div>
         </div>
 
+        {/* El horario va con el período: después de días y jornadas, antes de convenio e importes. */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-1 md:col-span-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
+              Horario (Entrada - Salida)*
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h }))} placeholder="Entrada" listId="horas-enteras" />
+              </div>
+              <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
+              {/* Las sugerencias de los dos campos: horas enteras. */}
+              <datalist id="horas-enteras">
+                {TIME_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} />
+                ))}
+              </datalist>
+              <div className="relative flex-1">
+                <CampoHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} placeholder="Salida" listId="horas-enteras" />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/*
           LA CADENA, EN ORDEN: convenio → categoría, y abajo el importe por jornada y por semana. Con un
           tipo de contrato de Servicios quedan sólo los importes, libres (ver `esServicios`).
@@ -2102,30 +2140,6 @@ const TIME_OPTIONS = (() => {
           </div>
         </div>
 
-        {/* El horario no depende de nada de lo de arriba: va después de los importes. */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
-              Horario (Entrada - Salida)*
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h }))} placeholder="Entrada" listId="horas-enteras" />
-              </div>
-              <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
-              {/* Las sugerencias de los dos campos: horas enteras. */}
-              <datalist id="horas-enteras">
-                {TIME_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} />
-                ))}
-              </datalist>
-              <div className="relative flex-1">
-                <CampoHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} placeholder="Salida" listId="horas-enteras" />
-              </div>
-            </div>
-          </div>
-        </div>
         {/*
           EL ÁREA Y TURNO DE LA PERSONA: OBLIGATORIO, y es lo que precarga el wizard de aprobación.
 
@@ -2144,15 +2158,13 @@ const TIME_OPTIONS = (() => {
             </label>
             {opcionesAreaTurno === null ? (
               <p className="text-xs text-slate-400">Cargando las áreas y turnos del proyecto…</p>
-            ) : !horarioCompleto && (opcionesDelProyecto?.length ?? 0) > 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-300 p-3 text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">Elegí primero el horario (entrada y salida): se muestran sólo los turnos que le corresponden.</p>
-            ) : opcionesAreaTurno.length === 0 ? (
+            ) : opcionesAreaTurno.length === 0 && (horarioCompleto || (opcionesDelProyecto?.length ?? 0) === 0) ? (
               <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                 {opcionesDelProyecto && opcionesDelProyecto.length > 0
                   ? `Ningún turno de este proyecto coincide con el horario ${[formData.inTime, formData.outTime].filter(Boolean).join(" a ")}. Cambiá el horario para ver sus turnos.`
                   : "Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona."}
               </p>
-            ) : opcionesAreaTurno.length === 1 ? (
+            ) : horarioCompleto && opcionesAreaTurno.length === 1 ? (
               <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
                 <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
                 <span className="min-w-0">
@@ -2165,7 +2177,11 @@ const TIME_OPTIONS = (() => {
             ) : (
               <>
                 <p className="text-[11px] text-slate-400">
-                  {coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."} Se muestran los turnos del horario {formData.inTime} a {formData.outTime}.
+                  {coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."} {horarioCompleto ? (
+                    <>Se muestran los turnos del horario {formData.inTime} a {formData.outTime}.</>
+                  ) : (
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">Elegí primero el horario (entrada y salida) para habilitarlos: después quedan sólo los que le corresponden.</span>
+                  )}
                 </p>
                 <div className="space-y-2">
                   {areasAgrupadas.map((area) => (
@@ -2190,8 +2206,9 @@ const TIME_OPTIONS = (() => {
                               key={`${t.areaId}-${t.shiftId}`}
                               type="button"
                               onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: t.areaId, shiftIds: [t.shiftId] }] }))}
+                              disabled={!horarioCompleto}
                               aria-pressed={elegido}
-                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
                             >
                               <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
                               <span className="min-w-0">
