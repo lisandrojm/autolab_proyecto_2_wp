@@ -123,3 +123,91 @@ export const erroresDeJornadas = (d: DatosJornadas): ErroresJornadas => {
   }
   return e;
 };
+
+/**
+ * MESES EQUIVALENTES DEL PERÍODO: cuánto dura el contrato medido en meses, prorrateando cada mes que
+ * toca por sus días hábiles.
+ *
+ *     Σ  jornadas del período en ese mes ÷ días hábiles de ese mes
+ *
+ * «Hábiles» son los días de la semana MARCADOS en el formulario, no un valor fijo: con Lu–Vi,
+ * septiembre 2026 tiene 22 y febrero 2026 tiene 20. Por eso un mes calendario completo aporta
+ * exactamente 1 y medio mes ~0,5, tenga los hábiles que tenga. Es lo que hace que un mes completo
+ * totalice justo el importe mensual (ver `derivarImportes`).
+ *
+ * 0 si falta el período o no hay días marcados.
+ */
+export const mesesEquivalentes = (desde: string | undefined, hasta: string | undefined, dias: number[]): number => {
+  const d1 = utc(desde);
+  const d2 = utc(hasta);
+  if (d1 === null || d2 === null || d2 < d1 || dias.length === 0) return 0;
+  const marcados = new Set(dias);
+
+  // Jornadas del período por mes. Un mes tocado sin jornadas en el período aporta 0: no se recorre.
+  const enPeriodo = new Map<string, { anio: number; mes: number; jornadas: number }>();
+  for (let t = d1; t <= d2; t += DIA_MS) {
+    const d = new Date(t);
+    if (!marcados.has(d.getUTCDay())) continue;
+    const clave = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+    const actual = enPeriodo.get(clave) || { anio: d.getUTCFullYear(), mes: d.getUTCMonth(), jornadas: 0 };
+    actual.jornadas++;
+    enPeriodo.set(clave, actual);
+  }
+
+  let meses = 0;
+  for (const { anio, mes, jornadas } of enPeriodo.values()) {
+    const diasDelMes = new Date(Date.UTC(anio, mes + 1, 0)).getUTCDate();
+    let habiles = 0;
+    for (let dia = 1; dia <= diasDelMes; dia++) if (marcados.has(new Date(Date.UTC(anio, mes, dia)).getUTCDay())) habiles++;
+    if (habiles > 0) meses += jornadas / habiles;
+  }
+  return meses;
+};
+
+/** Qué importe quedó fijo: el último que se cargó entre mensual y total. Ver `derivarImportes`. */
+export type AnclaImporte = { unidad: "mensual" | "total"; valor: number };
+
+export interface Importes {
+  jornada: number | null;
+  semana: number | null;
+  mensual: number | null;
+  total: number | null;
+}
+
+/**
+ * LOS CUATRO IMPORTES A PARTIR DEL ANCLA. El mensual (o el total, si fue lo último que se editó) es lo
+ * fijo; la jornada es la DERIVADA y varía según los días hábiles del período, que es lo correcto:
+ *
+ *     total   = mensual × mesesEquivalentes        (o mensual = total ÷ mesesEquivalentes)
+ *     jornada = total ÷ jornadas del contrato
+ *     semana  = jornada × días por semana
+ *
+ * Sin ancla (todavía no hay con qué calcular el mensual) se parte de la jornada. Nunca divide por 0:
+ * lo que no se puede calcular queda en `null`. Todo con precisión completa; se redondea al mostrar.
+ */
+export const derivarImportes = (p: { ancla: AnclaImporte | null; jornada: number | null; mesesEq: number; jornadas: number; diasSemana: number }): Importes => {
+  const { ancla, mesesEq, jornadas, diasSemana } = p;
+  let mensual: number | null = null;
+  let total: number | null = null;
+  let jornada: number | null = null;
+  if (ancla) {
+    if (ancla.unidad === "mensual") {
+      mensual = ancla.valor;
+      total = mesesEq > 0 ? ancla.valor * mesesEq : null;
+    } else {
+      total = ancla.valor;
+      mensual = mesesEq > 0 ? ancla.valor / mesesEq : null;
+    }
+    jornada = total !== null && jornadas > 0 ? total / jornadas : null;
+  } else if (p.jornada !== null && Number.isFinite(p.jornada)) {
+    jornada = p.jornada;
+    total = jornadas > 0 ? jornada * jornadas : null;
+    mensual = total !== null && mesesEq > 0 ? total / mesesEq : null;
+  }
+  const semana = jornada !== null && diasSemana > 0 ? jornada * diasSemana : null;
+  return { jornada, semana, mensual, total };
+};
+
+/** Editar la jornada deja como ancla el mensual que le corresponde. `null` si todavía no se puede calcular. */
+export const anclaDesdeJornada = (jornada: number, jornadas: number, mesesEq: number): AnclaImporte | null =>
+  jornadas > 0 && mesesEq > 0 ? { unidad: "mensual", valor: (jornada * jornadas) / mesesEq } : null;

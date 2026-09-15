@@ -5,7 +5,7 @@ import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt,
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "./JornadasSolicitud";
-import { erroresDeJornadas, hayAjuste, jornadasDelCalendario } from "../../../../utils/jornadas";
+import { erroresDeJornadas, hayAjuste, jornadasDelCalendario, anclaDesdeJornada, derivarImportes, mesesEquivalentes, type AnclaImporte } from "../../../../utils/jornadas";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
@@ -150,6 +150,71 @@ const turnoCubreHorario = (inicio: string, fin: string, entrada: string, salida:
   const hora = (e ?? s0) as number;
   return corrimientos.some((d) => desde + d <= hora && hora < hasta + d);
 };
+
+/*
+  HORA DE ENTRADA / SALIDA: se elige de la lista (de a una hora) o se escribe.
+
+  La lista cubre el caso común; lo que no es hora entera («08:30») se tipea. Al salir del campo se
+  completa el formato: «8» → 08:00, «830» → 08:30, «8.30» → 08:30. Lo que no es una hora válida queda
+  marcado y no se guarda, en vez de mandar un horario que nadie puede leer.
+*/
+const normalizarHora = (texto: string): string | null => {
+  const t = texto.trim();
+  if (!t) return "";
+  let h: number;
+  let m: number;
+  const conSeparador = /^(\d{1,2})[:.h](\d{0,2})$/i.exec(t);
+  const soloNumeros = /^(\d{1,4})$/.exec(t);
+  if (conSeparador) {
+    h = Number(conSeparador[1]);
+    m = conSeparador[2] ? Number(conSeparador[2].padEnd(2, "0")) : 0;
+  } else if (soloNumeros) {
+    const d = soloNumeros[1];
+    h = Number(d.length <= 2 ? d : d.slice(0, -2));
+    m = d.length <= 2 ? 0 : Number(d.slice(-2));
+  } else return null;
+  if (h > 23 || m > 59) return null;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+function CampoHora({ valor, onCambio, placeholder, listId }: { valor: string; onCambio: (hora: string) => void; placeholder: string; listId: string }) {
+  const [texto, setTexto] = useState(valor);
+  const [invalida, setInvalida] = useState(false);
+  useEffect(() => {
+    setTexto(valor);
+    setInvalida(false);
+  }, [valor]);
+  const confirmar = (t: string) => {
+    const hora = normalizarHora(t);
+    if (hora === null) {
+      setInvalida(true);
+      return;
+    }
+    setInvalida(false);
+    setTexto(hora);
+    if (hora !== valor) onCambio(hora);
+  };
+  return (
+    <>
+      <input
+        type="text"
+        list={listId}
+        inputMode="numeric"
+        value={texto}
+        placeholder={placeholder}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          // Elegida de la lista (o tipeada completa) llega entera: se toma en el acto, sin esperar a salir.
+          if (/^\d{2}:\d{2}$/.test(e.target.value)) confirmar(e.target.value);
+        }}
+        onBlur={() => confirmar(texto)}
+        aria-invalid={invalida}
+        className={`w-full h-12 bg-slate-50 dark:bg-slate-900 border rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white ${invalida ? "border-red-400 dark:border-red-700" : "border-slate-200 dark:border-slate-700"}`}
+      />
+      {invalida && <p className="mt-1 text-[11px] font-medium text-red-600 dark:text-red-400">Hora inválida: usá HH:MM, por ejemplo 08:00.</p>}
+    </>
+  );
+}
 
 interface UserRegistrationModalProps {
   isOpen: boolean;
@@ -459,7 +524,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 const TIME_OPTIONS = (() => {
     const options = [];
     for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 15) {
+      // De a una hora: los horarios se pactan en horas enteras. Otro valor se escribe a mano.
+      for (let m = 0; m < 60; m += 60) {
         const hh = h.toString().padStart(2, "0");
         const mm = m.toString().padStart(2, "0");
         const val = `${hh}:${mm}`;
@@ -1235,36 +1301,89 @@ const TIME_OPTIONS = (() => {
   const erroresJornadas = erroresDeJornadas(datosJornadas);
 
   /*
-    LOS IMPORTES, EN CUATRO UNIDADES: jornada, semana, mes y total del contrato.
+    LOS IMPORTES: jornada, semana, mensual y total del contrato.
 
-    Se pacta en cualquiera de ellas, y pasar de una a otra a mano es donde aparecen los errores. Lo que
-    se GUARDA es el importe por jornada; los otros tres son otras formas de cargarlo: editar cualquiera
-    recalcula la jornada (redondeada a centavos) y, con ella, todos los demás.
+    EL MENSUAL ES EL ANCLA, no la jornada. Un mes calendario completo tiene que totalizar exactamente
+    el mensual, tenga 20 o 23 días hábiles. Antes todo salía de un promedio (21,67 jornadas por mes), y
+    septiembre 2026, con 22 hábiles, daba 1.015.384,70 de total por un mensual de 1.000.000. Ahora la
+    jornada es la derivada y cambia según los días hábiles de cada mes, que es lo correcto.
 
-      · Semana: jornada × días por semana.
-      · Mes:    semana × 52/12 (≈ 4,33). Con 4 semanas justas cada año «perdería» un mes entero.
-      · Total:  jornada × cantidad de jornadas del contrato (calculadas o ajustadas a mano). Es el
-                mismo número que el panel calcula como sueldo en mano al aprobar.
+    Las cuentas están en `utils/jornadas.ts` (`mesesEquivalentes`, `derivarImportes`). Acá se decide
+    qué queda fijo:
+      · Se edita el mensual o el total → ese valor es el ancla.
+      · Se edita la jornada o la semana → el ancla pasa a ser el mensual que les corresponde.
+      · Cambian las fechas o los días → el ancla no se mueve y se recalcula el resto.
+      · La jornada cambia por fuera (la propone la categoría, se abre una solicitud, se limpia) → se
+        toma como si se hubiera editado la jornada.
 
-    Mientras se escribe en uno se muestra lo tipeado y no el recalculado: si no, el redondeo de la
-    jornada reescribiría el número debajo del dedo en cada tecla.
+    Se calcula con precisión completa y se redondea sólo al mostrar. Lo que viaja sigue siendo
+    `dailyRate` (la jornada): `mesesEquivalentes` no se guarda, sale de las fechas y los días.
   */
-  const SEMANAS_POR_MES = 52 / 12;
-  const diasSemanaNum = Number(formData.diasPorSemana) || 0;
-  const jornadasDelContrato = Number(formData.workdaysCount) || jornadasCalculadas || 0;
-  const jornadaNum = Number(formData.dailyRate);
-  const hayJornada = formData.dailyRate !== "" && Number.isFinite(jornadaNum);
-  /** Por cuánto se multiplica la jornada para llegar a cada unidad. 0 = falta el dato para calcularla. */
-  const factorDe = { semana: diasSemanaNum, mes: diasSemanaNum * SEMANAS_POR_MES, total: jornadasDelContrato };
-  type UnidadImporte = keyof typeof factorDe;
+  const diasSemanaNum = formData.diasRotativos ? Number(formData.diasPorSemana) || 0 : formData.diasSemana.length;
+  // Las jornadas que se pagan: las cargadas a mano si se ajustaron (o con días rotativos); si no, las del calendario.
+  const jornadasDelContrato = (formData.workdaysOverridden || formData.diasRotativos ? Number(formData.workdaysCount) : jornadasCalculadas) || 0;
+  // Cuánto dura el contrato en meses: siempre desde las fechas reales, aunque las jornadas se hayan ajustado.
+  const mesesEq = useMemo(() => mesesEquivalentes(formData.startDate, formData.dueDate, formData.diasSemana), [formData.startDate, formData.dueDate, formData.diasSemana]);
+  const [ancla, setAncla] = useState<AnclaImporte | null>(null);
+  /** La última jornada que escribió el ancla en `dailyRate`: cualquier otro valor vino de afuera. */
+  const jornadaEscrita = useRef<string>("");
+  const jornadaActual = formData.dailyRate !== "" && Number.isFinite(Number(formData.dailyRate)) ? Number(formData.dailyRate) : null;
+  const importes = derivarImportes({ ancla, jornada: jornadaActual, mesesEq, jornadas: jornadasDelContrato, diasSemana: diasSemanaNum });
+
+  // Cada vez que se abre, sin ancla: se toma de la jornada que traiga el formulario.
+  useEffect(() => {
+    setAncla(null);
+    jornadaEscrita.current = "\u0000";
+  }, [isOpen]);
+
+  // La jornada cambió por fuera del ancla, o recién ahora hay con qué calcular el mensual: se ancla en el mensual.
+  useEffect(() => {
+    if (formData.dailyRate !== jornadaEscrita.current) {
+      jornadaEscrita.current = formData.dailyRate;
+      setAncla(jornadaActual === null ? null : anclaDesdeJornada(jornadaActual, jornadasDelContrato, mesesEq));
+      return;
+    }
+    if (!ancla && jornadaActual !== null) {
+      const nueva = anclaDesdeJornada(jornadaActual, jornadasDelContrato, mesesEq);
+      if (nueva) setAncla(nueva);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.dailyRate, jornadasDelContrato, mesesEq]);
+
+  // Con ancla, la jornada sale de ella y se escribe en `dailyRate`, que es lo que se guarda.
+  useEffect(() => {
+    if (!ancla) return;
+    const jornada = importes.jornada;
+    if (jornada !== null && jornadaActual !== null && Math.abs(jornada - jornadaActual) < 1e-6) return;
+    const texto = jornada === null ? "" : String(jornada);
+    if (texto === formData.dailyRate) return;
+    jornadaEscrita.current = texto;
+    setFormData((prev) => ({ ...prev, dailyRate: texto }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ancla, jornadasDelContrato, mesesEq]);
+
+  type UnidadImporte = "jornada" | "semana" | "mes" | "total";
+  /** El campo que se está escribiendo muestra lo tipeado: si no, el recálculo lo reescribiría en cada tecla. */
   const [importeEnEdicion, setImporteEnEdicion] = useState<{ unidad: UnidadImporte; texto: string } | null>(null);
-  const importeEn = (unidad: UnidadImporte) => (importeEnEdicion?.unidad === unidad ? importeEnEdicion.texto : hayJornada && factorDe[unidad] > 0 ? String(Number((jornadaNum * factorDe[unidad]).toFixed(2))) : "");
+  const valorDe: Record<UnidadImporte, number | null> = { jornada: importes.jornada, semana: importes.semana, mes: importes.mensual, total: importes.total };
+  // Dos decimales siempre, y sólo al mostrar.
+  const importeEn = (unidad: UnidadImporte) => (importeEnEdicion?.unidad === unidad ? importeEnEdicion.texto : valorDe[unidad] === null || !Number.isFinite(valorDe[unidad] as number) ? "" : (valorDe[unidad] as number).toFixed(2));
   const cambiarImporte = (unidad: UnidadImporte, texto: string) => {
     setImporteEnEdicion({ unidad, texto });
-    const factor = factorDe[unidad];
-    if (factor <= 0) return;
     const valor = Number(texto);
-    setFormData((p) => ({ ...p, dailyRate: texto === "" || !Number.isFinite(valor) ? "" : String(Number((valor / factor).toFixed(2))) }));
+    const vacio = texto === "" || !Number.isFinite(valor);
+    if (unidad === "mes" || unidad === "total") {
+      setAncla(vacio ? null : { unidad: unidad === "mes" ? "mensual" : "total", valor });
+      if (vacio) {
+        jornadaEscrita.current = "";
+        setFormData((prev) => ({ ...prev, dailyRate: "" }));
+      }
+      return;
+    }
+    if (unidad === "semana" && !vacio && diasSemanaNum <= 0) return;
+    // Jornada o semana: se escribe la jornada y el efecto de arriba la toma como nueva, anclando en su mensual.
+    const jornada = vacio ? "" : unidad === "semana" ? String(valor / diasSemanaNum) : texto;
+    setFormData((prev) => ({ ...prev, dailyRate: jornada }));
   };
   const soltarImporte = () => setImporteEnEdicion(null);
   /*
@@ -1925,10 +2044,11 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <CampoImporte valor={formData.dailyRate} onCambio={(v) => setFormData((p) => ({ ...p, dailyRate: v }))} disabled={importesBloqueados} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
+              <CampoImporte valor={importeEn("jornada")} onCambio={(v) => cambiarImporte("jornada", v)} onBlur={soltarImporte} disabled={importesBloqueados} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
             </div>
             {importesBloqueados && <p className="text-[11px] text-slate-400">Se habilita al elegir la categoría: el importe sale de su escala.</p>}
             {esServicios && <p className="text-[11px] text-slate-400">Es un servicio: no hay convenio ni categoría, así que el importe se carga a mano.</p>}
+            {!importesBloqueados && <p className="text-[11px] text-slate-400">Total ÷ jornadas del contrato. Varía según los días hábiles de cada mes.</p>}
             {/* De dónde salió el número, y cuánto se apartó de él si alguien lo cambió. */}
             {categoriaElegida && !diferenciaContraEscala && <p className="text-[11px] text-slate-400">De la escala de {categoriaElegida.name}{convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.</p>}
             {diferenciaContraEscala && (
@@ -1948,9 +2068,9 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <CampoImporte valor={importeEn("semana")} onCambio={(v) => cambiarImporte("semana", v)} onBlur={soltarImporte} disabled={importesBloqueados || factorDe.semana <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
+              <CampoImporte valor={importeEn("semana")} onCambio={(v) => cambiarImporte("semana", v)} onBlur={soltarImporte} disabled={importesBloqueados || diasSemanaNum <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
             </div>
-            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : diasSemanaNum > 0 ? `Jornada × ${diasSemanaNum} ${diasSemanaNum === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Cargá los días por semana (más arriba) para calcularlo."}</p>
+            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : diasSemanaNum > 0 ? `Jornada × ${diasSemanaNum} ${diasSemanaNum === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Marcá los días que trabaja (más arriba) para calcularlo."}</p>
           </div>
 
           <div className="space-y-1">
@@ -1962,9 +2082,9 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <CampoImporte valor={importeEn("mes")} onCambio={(v) => cambiarImporte("mes", v)} onBlur={soltarImporte} disabled={importesBloqueados || factorDe.mes <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
+              <CampoImporte valor={importeEn("mes")} onCambio={(v) => cambiarImporte("mes", v)} onBlur={soltarImporte} disabled={importesBloqueados || mesesEq <= 0 || jornadasDelContrato <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
             </div>
-            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : factorDe.mes > 0 ? "Semana × 4,33 (52 semanas ÷ 12 meses). Si lo cambiás, se recalculan los demás." : "Cargá los días por semana (más arriba) para calcularlo."}</p>
+            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : mesesEq > 0 && jornadasDelContrato > 0 ? "Se prorratea según los días hábiles reales de cada mes del período. Si lo cambiás, se recalculan los demás." : "Cargá desde, hasta y los días que trabaja para calcularlo."}</p>
           </div>
 
           <div className="space-y-1">
@@ -1976,9 +2096,9 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <CampoImporte valor={importeEn("total")} onCambio={(v) => cambiarImporte("total", v)} onBlur={soltarImporte} disabled={importesBloqueados || factorDe.total <= 0} className="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300" />
+              <CampoImporte valor={importeEn("total")} onCambio={(v) => cambiarImporte("total", v)} onBlur={soltarImporte} disabled={importesBloqueados || jornadasDelContrato <= 0} className="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300" />
             </div>
-            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : factorDe.total > 0 ? `Jornada × ${jornadasDelContrato} ${jornadasDelContrato === 1 ? "jornada" : "jornadas"} del contrato. Si lo cambiás, se recalculan los demás.` : "Completá desde, hasta y los días para calcularlo."}</p>
+            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : jornadasDelContrato > 0 ? `Mensual × meses del contrato (${mesesEq.toLocaleString("es-AR", { maximumFractionDigits: 2 })}). Si lo cambiás, se recalculan los demás.` : "Cargá desde, hasta y los días que trabaja para calcularlo."}</p>
           </div>
         </div>
 
@@ -1991,25 +2111,17 @@ const TIME_OPTIONS = (() => {
             </label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <select name="inTime" value={formData.inTime} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
-                  <option value="">Entrada</option>
-                  {TIME_OPTIONS.map((opt) => (
-                    <option key={`in-${opt.value}`} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h }))} placeholder="Entrada" listId="horas-enteras" />
               </div>
               <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
+              {/* Las sugerencias de los dos campos: horas enteras. */}
+              <datalist id="horas-enteras">
+                {TIME_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} />
+                ))}
+              </datalist>
               <div className="relative flex-1">
-                <select name="outTime" value={formData.outTime} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
-                  <option value="">Salida</option>
-                  {TIME_OPTIONS.map((opt) => (
-                    <option key={`out-${opt.value}`} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <CampoHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} placeholder="Salida" listId="horas-enteras" />
               </div>
             </div>
           </div>
