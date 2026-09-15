@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "./JornadasSolicitud";
@@ -332,6 +332,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     const delta = Number((cargado - escala).toFixed(2));
     return delta === 0 ? null : { escala, delta };
   }, [categoriaElegida, formData.dailyRate]);
+
   /*
     CUANDO HAY UNA SOLA OPCIÓN, SE ELIGE SOLA.
 
@@ -741,6 +742,24 @@ const TIME_OPTIONS = (() => {
   const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId))) || null;
 
   /*
+    LAS ÁREAS SE COLAPSAN.
+
+    Un proyecto grande son muchas áreas con tres turnos cada una: abiertas todas, la lista empujaba el
+    resto del formulario fuera de la pantalla. Arrancan cerradas, salvo la del turno ya elegido —para
+    verlo sin buscarlo— o la única, si hay una sola. Cerrada, el encabezado dice el turno elegido ahí.
+    `null` = nadie tocó nada todavía: manda ese default. Cambiar de proyecto vuelve a empezar.
+  */
+  const [areasTocadas, setAreasTocadas] = useState<Set<string> | null>(null);
+  useEffect(() => setAreasTocadas(null), [isOpen, proyectoElegido?._id]);
+  const areasAbiertas: Set<string> = areasTocadas ?? new Set(areasAgrupadas.length === 1 ? [areasAgrupadas[0].areaId] : areaTurnoElegido ? [areaTurnoElegido.areaId] : []);
+  const alternarArea = (areaId: string) => {
+    const next = new Set(areasAbiertas);
+    if (next.has(areaId)) next.delete(areaId);
+    else next.add(areaId);
+    setAreasTocadas(next);
+  };
+
+  /*
     El trámite se DEDUCE del tipo de contrato elegido y se guarda con la solicitud.
 
     Antes se elegía a mano, con «Pedido de ARCA» preseleccionado. Ahora el tipo de contrato lo
@@ -1107,6 +1126,41 @@ const TIME_OPTIONS = (() => {
     nota: formData.workdaysOverrideNote,
   };
   const erroresJornadas = erroresDeJornadas(datosJornadas);
+
+  /*
+    LOS IMPORTES, EN CUATRO UNIDADES: jornada, semana, mes y total del contrato.
+
+    Se pacta en cualquiera de ellas, y pasar de una a otra a mano es donde aparecen los errores. Lo que
+    se GUARDA es el importe por jornada; los otros tres son otras formas de cargarlo: editar cualquiera
+    recalcula la jornada (redondeada a centavos) y, con ella, todos los demás.
+
+      · Semana: jornada × días por semana.
+      · Mes:    semana × 52/12 (≈ 4,33). Con 4 semanas justas cada año «perdería» un mes entero.
+      · Total:  jornada × cantidad de jornadas del contrato (calculadas o ajustadas a mano). Es el
+                mismo número que el panel calcula como sueldo en mano al aprobar.
+
+    Mientras se escribe en uno se muestra lo tipeado y no el recalculado: si no, el redondeo de la
+    jornada reescribiría el número debajo del dedo en cada tecla.
+  */
+  const SEMANAS_POR_MES = 52 / 12;
+  const diasSemanaNum = Number(formData.diasPorSemana) || 0;
+  const jornadasDelContrato = Number(formData.workdaysCount) || jornadasCalculadas || 0;
+  const jornadaNum = Number(formData.dailyRate);
+  const hayJornada = formData.dailyRate !== "" && Number.isFinite(jornadaNum);
+  /** Por cuánto se multiplica la jornada para llegar a cada unidad. 0 = falta el dato para calcularla. */
+  const factorDe = { semana: diasSemanaNum, mes: diasSemanaNum * SEMANAS_POR_MES, total: jornadasDelContrato };
+  type UnidadImporte = keyof typeof factorDe;
+  const [importeEnEdicion, setImporteEnEdicion] = useState<{ unidad: UnidadImporte; texto: string } | null>(null);
+  const importeEn = (unidad: UnidadImporte) => (importeEnEdicion?.unidad === unidad ? importeEnEdicion.texto : hayJornada && factorDe[unidad] > 0 ? String(Number((jornadaNum * factorDe[unidad]).toFixed(2))) : "");
+  const cambiarImporte = (unidad: UnidadImporte, texto: string) => {
+    setImporteEnEdicion({ unidad, texto });
+    const factor = factorDe[unidad];
+    if (factor <= 0) return;
+    const valor = Number(texto);
+    setFormData((p) => ({ ...p, dailyRate: texto === "" || !Number.isFinite(valor) ? "" : String(Number((valor / factor).toFixed(2))) }));
+  };
+  const soltarImporte = () => setImporteEnEdicion(null);
+
 
   const handleSubmit = async () => {
     if (sinPersona) {
@@ -1595,15 +1649,74 @@ const TIME_OPTIONS = (() => {
           )}
         </div>
 
+        <div id="bloque-fechas" className="space-y-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <CustomDatePicker label="Desde" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
+            </div>
+            <div className="space-y-1">
+              <CustomDatePicker label="Hasta" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
+            </div>
+          </div>
+          {/* Se dice apenas pasa, no al enviar: con el fin antes del inicio no hay jornadas que calcular. */}
+          {erroresJornadas.fechas && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{erroresJornadas.fechas}</p>}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/*
+            PRIMERO LOS DÍAS DE LA SEMANA, DESPUÉS LAS JORNADAS: de las fechas y los días salen las
+            jornadas, así que van en el orden en que se deducen. Mismo componente que el escritorio.
+          */}
+          <div id="bloque-dias" className="md:col-span-3">
+            <DiasDeTrabajo
+              variante="mobile"
+              jornadas={Number(formData.diasPorSemana) || 0}
+              onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))}
+              rotativos={formData.diasRotativos}
+              onRotativos={cambiarRotativos}
+              dias={formData.diasSemana}
+              onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
+              errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
+              errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
+            />
+          </div>
+
+          {/* Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada. */}
+          <div className="md:col-span-3">
+            <JornadasSolicitud
+              desde={formData.startDate}
+              hasta={formData.dueDate}
+              rotativos={formData.diasRotativos}
+              calculadas={jornadasCalculadas}
+              valor={formData.workdaysCount}
+              onValor={(v) => setFormData((p) => ({ ...p, workdaysCount: v }))}
+              ajustado={formData.workdaysOverridden}
+              motivo={formData.workdaysOverrideReason}
+              nota={formData.workdaysOverrideNote}
+              onEditarManual={editarJornadasAMano}
+              onCancelarAjuste={volverAlCalculado}
+              onMotivo={(m) => setFormData((p) => ({ ...p, workdaysOverrideReason: m }))}
+              onNota={(n) => setFormData((p) => ({ ...p, workdaysOverrideNote: n }))}
+              errores={erroresJornadas}
+              mostrarErrores={intentoEnviar}
+              aviso={avisoJornadas}
+            />
+          </div>
+        </div>
+
         {/*
-          LA CADENA, EN UNA FILA Y EN ORDEN: convenio → categoría → importe. Con un tipo de contrato de
-          Servicios queda sólo el importe, libre (ver `esServicios`).
+          LA CADENA, EN ORDEN: convenio → categoría, y abajo el importe por jornada y por semana. Con un
+          tipo de contrato de Servicios quedan sólo los importes, libres (ver `esServicios`).
+
+          Va DESPUÉS de fechas, días y jornadas: el formulario sigue el orden de las dependencias —desde
+          y hasta, días por semana, qué días, cantidad de jornadas— y el importe por semana necesita los
+          días por semana ya cargados. Así se completa de arriba hacia abajo sin volver.
 
           Estaban repartidos por el formulario —el convenio abajo de todo, la categoría arriba— y esa
           distancia escondía que uno depende del otro. Puestos en fila y en el orden en que se
           completan, la dependencia se ve sin que nadie la explique.
         */}
-        <div className={`grid grid-cols-1 gap-4 ${esServicios ? "" : "md:grid-cols-3"}`}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {!esServicios && (
           <>
           <div className="space-y-1">
@@ -1700,61 +1813,76 @@ const TIME_OPTIONS = (() => {
               </p>
             )}
           </div>
-        </div>
 
-        <div id="bloque-fechas" className="space-y-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <CustomDatePicker label="Start Date" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
+              Importe por Semana
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <FontAwesomeIcon icon={faMoneyBillWave} />
+              </span>
+              <input
+                type="number"
+                value={importeEn("semana")}
+                onChange={(e) => cambiarImporte("semana", e.target.value)}
+                onBlur={soltarImporte}
+                disabled={factorDe.semana <= 0}
+                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                placeholder="0"
+              />
             </div>
-            <div className="space-y-1">
-              <CustomDatePicker label="Due Date" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
-            </div>
+            <p className="text-[11px] text-slate-400">{diasSemanaNum > 0 ? `Jornada × ${diasSemanaNum} ${diasSemanaNum === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Cargá los días por semana (más arriba) para calcularlo."}</p>
           </div>
-          {/* Se dice apenas pasa, no al enviar: con el fin antes del inicio no hay jornadas que calcular. */}
-          {erroresJornadas.fechas && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{erroresJornadas.fechas}</p>}
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
+              Importe mensual
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <FontAwesomeIcon icon={faMoneyBillWave} />
+              </span>
+              <input
+                type="number"
+                value={importeEn("mes")}
+                onChange={(e) => cambiarImporte("mes", e.target.value)}
+                onBlur={soltarImporte}
+                disabled={factorDe.mes <= 0}
+                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                placeholder="0"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400">{factorDe.mes > 0 ? "Semana × 4,33 (52 semanas ÷ 12 meses). Si lo cambiás, se recalculan los demás." : "Cargá los días por semana (más arriba) para calcularlo."}</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
+              Importe total del contrato
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <FontAwesomeIcon icon={faMoneyBillWave} />
+              </span>
+              <input
+                type="number"
+                value={importeEn("total")}
+                onChange={(e) => cambiarImporte("total", e.target.value)}
+                onBlur={soltarImporte}
+                disabled={factorDe.total <= 0}
+                className="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                placeholder="0"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400">{factorDe.total > 0 ? `Jornada × ${jornadasDelContrato} ${jornadasDelContrato === 1 ? "jornada" : "jornadas"} del contrato. Si lo cambiás, se recalculan los demás.` : "Completá desde, hasta y los días para calcularlo."}</p>
+          </div>
         </div>
 
+        {/* El horario no depende de nada de lo de arriba: va después de los importes. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/*
-            PRIMERO LOS DÍAS DE LA SEMANA, DESPUÉS LAS JORNADAS: de las fechas y los días salen las
-            jornadas, así que van en el orden en que se deducen. Mismo componente que el escritorio.
-          */}
-          <div id="bloque-dias" className="md:col-span-3">
-            <DiasDeTrabajo
-              variante="mobile"
-              jornadas={Number(formData.diasPorSemana) || 0}
-              onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))}
-              rotativos={formData.diasRotativos}
-              onRotativos={cambiarRotativos}
-              dias={formData.diasSemana}
-              onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
-              errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
-              errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
-            />
-          </div>
-
-          {/* Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada. */}
-          <div className="md:col-span-3">
-            <JornadasSolicitud
-              desde={formData.startDate}
-              hasta={formData.dueDate}
-              rotativos={formData.diasRotativos}
-              calculadas={jornadasCalculadas}
-              valor={formData.workdaysCount}
-              onValor={(v) => setFormData((p) => ({ ...p, workdaysCount: v }))}
-              ajustado={formData.workdaysOverridden}
-              motivo={formData.workdaysOverrideReason}
-              nota={formData.workdaysOverrideNote}
-              onEditarManual={editarJornadasAMano}
-              onCancelarAjuste={volverAlCalculado}
-              onMotivo={(m) => setFormData((p) => ({ ...p, workdaysOverrideReason: m }))}
-              onNota={(n) => setFormData((p) => ({ ...p, workdaysOverrideNote: n }))}
-              errores={erroresJornadas}
-              mostrarErrores={intentoEnviar}
-              aviso={avisoJornadas}
-            />
-          </div>
           <div className="space-y-1 md:col-span-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
@@ -1784,7 +1912,6 @@ const TIME_OPTIONS = (() => {
               </div>
             </div>
           </div>
-
         </div>
         {/*
           EL ÁREA Y TURNO DE LA PERSONA: OBLIGATORIO, y es lo que precarga el wizard de aprobación.
@@ -1823,9 +1950,20 @@ const TIME_OPTIONS = (() => {
                 <p className="text-[11px] text-slate-400">{coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."}</p>
                 <div className="space-y-2">
                   {areasAgrupadas.map((area) => (
-                    <div key={area.areaId} className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{area.nombre}</p>
-                      <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                    <div key={area.areaId} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button type="button" onClick={() => alternarArea(area.areaId)} aria-expanded={areasAbiertas.has(area.areaId)} className="flex w-full items-center gap-2 p-2.5 text-left">
+                        <FontAwesomeIcon icon={areasAbiertas.has(area.areaId) ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{area.nombre}</span>
+                        {areaTurnoElegido?.areaId === area.areaId ? (
+                          <span className="shrink-0 truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{areaTurnoElegido.turnoNombre}</span>
+                        ) : (
+                          <span className="shrink-0 text-[10px] text-slate-400">
+                            {area.turnos.length} {area.turnos.length === 1 ? "turno" : "turnos"}
+                          </span>
+                        )}
+                      </button>
+                      {areasAbiertas.has(area.areaId) && (
+                      <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
                         {area.turnos.map((t) => {
                           const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId;
                           return (
@@ -1845,6 +1983,7 @@ const TIME_OPTIONS = (() => {
                           );
                         })}
                       </div>
+                      )}
                     </div>
                   ))}
                 </div>
