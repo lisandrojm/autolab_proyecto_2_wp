@@ -177,6 +177,25 @@ const normalizarHora = (texto: string): string | null => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+/*
+  FORMATO DE HORA MIENTRAS SE TIPEA: los dos puntos aparecen solos.
+
+    «0830» → 08:30 · «8:30» → 08:30 · «9» → 09: (no hay hora 9x) · «14» → 14:
+
+  Al BORRAR no se agregan: si no, borrar los dos puntos los volvería a poner y no se podría corregir
+  la hora. Lo que queda incompleto lo termina `normalizarHora` al salir del campo.
+*/
+const mascaraHora = (nuevo: string, anterior: string): string => {
+  const borrando = nuevo.length < anterior.length;
+  const conSeparador = /^(\d{1,2})\s*[:.hH]\s*(\d{0,2})/.exec(nuevo);
+  if (conSeparador) return `${conSeparador[1].padStart(2, "0")}:${conSeparador[2]}`;
+  let d = nuevo.replace(/\D/g, "").slice(0, 4);
+  if (d.length === 1 && Number(d) > 2 && !borrando) d = `0${d}`;
+  if (d.length > 2) return `${d.slice(0, 2)}:${d.slice(2)}`;
+  if (d.length === 2 && !borrando) return `${d}:`;
+  return d;
+};
+
 function CampoHora({ valor, onCambio, placeholder, listId }: { valor: string; onCambio: (hora: string) => void; placeholder: string; listId: string }) {
   const [texto, setTexto] = useState(valor);
   const [invalida, setInvalida] = useState(false);
@@ -200,12 +219,14 @@ function CampoHora({ valor, onCambio, placeholder, listId }: { valor: string; on
         type="text"
         list={listId}
         inputMode="numeric"
+        maxLength={5}
         value={texto}
         placeholder={placeholder}
         onChange={(e) => {
-          setTexto(e.target.value);
+          const formateada = mascaraHora(e.target.value, texto);
+          setTexto(formateada);
           // Elegida de la lista (o tipeada completa) llega entera: se toma en el acto, sin esperar a salir.
-          if (/^\d{2}:\d{2}$/.test(e.target.value)) confirmar(e.target.value);
+          if (/^\d{2}:\d{2}$/.test(formateada)) confirmar(formateada);
         }}
         onBlur={() => confirmar(texto)}
         aria-invalid={invalida}
