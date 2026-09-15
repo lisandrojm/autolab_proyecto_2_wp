@@ -21,6 +21,7 @@ import { infoAPI, InfoItem } from "../../../../api/info";
 import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
 import { fuzzyMatch } from "../../../../utils/searchHelpers";
 import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeContrato } from "../../../../utils/tramiteImpositivo";
+import { claveOrdenTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
 import { esContratoVigente, fechaISO, getContratoActivo } from "../../../../utils/contratoVigencia";
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
@@ -37,7 +38,12 @@ interface OpcionAreaTurno {
   shiftId: string;
   turnoNombre: string;
   horario: string;
-  /** Para ordenar los turnos como transcurre el día. Sin horario, al final. */
+  /** Hora de inicio y de fin del turno ("HH:MM"), para cruzarlas con el horario elegido. */
+  inicio: string;
+  fin: string;
+  /** Los días en que corre el turno, en texto («Lun a Vie»). Vacío si el turno no los trae. */
+  dias: string;
+  /** Para ordenar los turnos como en el admin (ver `claveOrdenTurno`). */
   orden: string;
 }
 
@@ -51,8 +57,98 @@ const opcionAreaTurno = (area: any, turno: any): OpcionAreaTurno => {
     shiftId: idDe(turno),
     turnoNombre: t?.name || "Turno",
     horario: t?.startTime && t?.endTime ? `${t.startTime} a ${t.endTime}` : "",
-    orden: t?.startTime || "99:99",
+    inicio: t?.startTime || "",
+    fin: t?.endTime || "",
+    dias: Array.isArray(t?.days) && t.days.length > 0 ? textoDeDias(t.days) : "",
+    orden: claveOrdenTurno(t),
   };
+};
+
+/*
+  UNA SOLICITUD NUEVA ARRANCA CON LA SEMANA LABORAL TÍPICA: 5 días, de lunes a viernes (1 = lunes …
+  5 = viernes; 0 es domingo). Es el caso más común, y así sólo se toca cuando es otra cosa: se agregan
+  o se sacan días, o se cambia cuántos por semana. Al EDITAR una solicitud no se usa: se leen los días
+  que se guardaron (y una vieja sin días se abre vacía, en vez de inventarle una semana).
+*/
+const SEMANA_POR_DEFECTO = { diasPorSemana: "5", diasSemana: [1, 2, 3, 4, 5] };
+
+/*
+  IMPORTES CON SEPARADOR DE MILES.
+
+  Un <input type="number"> no admite separadores, y «753587,99» se lee mal: es fácil errarle a un cero.
+  Este campo muestra el número a la argentina —punto de miles, coma decimal— y lo formatea mientras se
+  escribe, pero lo que ENTREGA es el número limpio («753587.99»): el resto del formulario sigue
+  haciendo las cuentas con eso, y es lo que se guarda.
+*/
+const aImporteArgentino = (canonico: string): string => {
+  if (!canonico) return "";
+  const [entero, decimales] = canonico.split(".");
+  const miles = (entero || "0").replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return decimales !== undefined ? `${miles},${decimales}` : miles;
+};
+const deImporteArgentino = (texto: string): string => {
+  const limpio = texto.replace(/[^\d,]/g, "");
+  if (!limpio) return "";
+  const [entero, ...resto] = limpio.split(",");
+  return limpio.includes(",") ? `${entero || "0"}.${resto.join("").slice(0, 2)}` : entero;
+};
+
+function CampoImporte({ valor, onCambio, onBlur, disabled, className }: { valor: string; onCambio: (valor: string) => void; onBlur?: () => void; disabled?: boolean; className: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <input
+      ref={ref}
+      type="text"
+      inputMode="decimal"
+      value={aImporteArgentino(valor)}
+      onChange={(e) => {
+        // El cursor se repone contando cifras, no posiciones: al aparecer un punto de miles, la posición se corre.
+        const antes = e.target.value.slice(0, e.target.selectionStart ?? e.target.value.length).replace(/[^\d,]/g, "").length;
+        onCambio(deImporteArgentino(e.target.value));
+        requestAnimationFrame(() => {
+          const nodo = ref.current;
+          if (!nodo || document.activeElement !== nodo) return;
+          let i = 0;
+          for (let vistas = 0; i < nodo.value.length && vistas < antes; i++) if (/[\d,]/.test(nodo.value[i])) vistas++;
+          nodo.setSelectionRange(i, i);
+        });
+      }}
+      onBlur={onBlur}
+      disabled={disabled}
+      className={className}
+      placeholder="0"
+    />
+  );
+}
+
+/*
+  ¿EL TURNO CORRESPONDE AL HORARIO ELEGIDO?
+
+  Con entrada y salida: se SUPERPONEN. Quien entra a las 10 y sale a las 18 puede ir a Mañana o a
+  Tarde, y pedir que un solo turno lo contenga entero dejaría la lista vacía justo en esos casos. Con
+  una sola de las dos horas: el turno tiene que incluirla. Los turnos que cruzan la medianoche (18 a 00,
+  00 a 06) se miden como tales, igual que un horario de 22 a 02. Un turno sin horas cargadas no se
+  esconde: no hay con qué descartarlo.
+*/
+const aMinutos = (hhmm: string): number | null => {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm || "");
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+const turnoCubreHorario = (inicio: string, fin: string, entrada: string, salida: string): boolean => {
+  const desde = aMinutos(inicio);
+  const hasta0 = aMinutos(fin);
+  if (desde === null || hasta0 === null) return true;
+  const hasta = hasta0 <= desde ? hasta0 + 1440 : hasta0;
+  const e = aMinutos(entrada);
+  const s0 = aMinutos(salida);
+  if (e === null && s0 === null) return true;
+  const corrimientos = [-1440, 0, 1440];
+  if (e !== null && s0 !== null) {
+    const s = s0 <= e ? s0 + 1440 : s0;
+    return corrimientos.some((d) => Math.max(e, desde + d) < Math.min(s, hasta + d));
+  }
+  const hora = (e ?? s0) as number;
+  return corrimientos.some((d) => desde + d <= hora && hora < hasta + d);
 };
 
 interface UserRegistrationModalProps {
@@ -159,8 +255,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     startDate: "",
     dueDate: "",
     workdaysCount: "",
-    diasPorSemana: "",
-    diasSemana: [] as number[],
+    diasPorSemana: SEMANA_POR_DEFECTO.diasPorSemana,
+    diasSemana: [...SEMANA_POR_DEFECTO.diasSemana],
     diasRotativos: false,
     /** Jornadas cargadas a mano distintas del calendario, y por qué. Ver `utils/jornadas.ts`. */
     workdaysOverridden: false,
@@ -367,9 +463,9 @@ const TIME_OPTIONS = (() => {
         const hh = h.toString().padStart(2, "0");
         const mm = m.toString().padStart(2, "0");
         const val = `${hh}:${mm}`;
-        const ampm = h >= 12 ? "PM" : "AM";
-        const h12 = h % 12 || 12;
-        options.push({ value: val, label: `${h12}:${mm} ${ampm}` });
+        // En 24 h, como se habla acá: con AM/PM, «12:00 AM» (medianoche) se leía como mediodía y los
+        // turnos que aparecían eran los de la madrugada.
+        options.push({ value: val, label: val });
       }
     }
     return options;
@@ -535,8 +631,8 @@ const TIME_OPTIONS = (() => {
         startDate: "",
         dueDate: "",
         workdaysCount: "",
-        diasPorSemana: "",
-        diasSemana: [],
+        diasPorSemana: SEMANA_POR_DEFECTO.diasPorSemana,
+        diasSemana: [...SEMANA_POR_DEFECTO.diasSemana],
         diasRotativos: false,
         workdaysOverridden: false,
         workdaysOverrideReason: "",
@@ -725,7 +821,18 @@ const TIME_OPTIONS = (() => {
 
   const coordinaEnElProyecto = coordinacionesEnProyecto.length > 0;
   /** Lo que se puede elegir. `null` = todavía cargando las áreas del proyecto. */
-  const opcionesAreaTurno: OpcionAreaTurno[] | null = coordinaEnElProyecto ? coordinacionesEnProyecto : areasDelProyecto;
+  const opcionesDelProyecto: OpcionAreaTurno[] | null = coordinaEnElProyecto ? coordinacionesEnProyecto : areasDelProyecto;
+  /*
+    Y DE ESAS, LAS DEL HORARIO ELEGIDO (ver `turnoCubreHorario`). Hasta tener entrada Y salida no se
+    ofrece ninguna: el turno se elige después del horario, no antes. Todo lo de abajo
+    —la lista, la que queda puesta sola, la que se limpia— trabaja sobre esta lista: cambiar el horario
+    suelta un turno que ya no corresponde.
+  */
+  const horarioCompleto = !!formData.inTime && !!formData.outTime;
+  const opcionesAreaTurno: OpcionAreaTurno[] | null = useMemo(
+    () => (opcionesDelProyecto ? (horarioCompleto ? opcionesDelProyecto.filter((o) => turnoCubreHorario(o.inicio, o.fin, formData.inTime, formData.outTime)) : []) : null),
+    [opcionesDelProyecto, horarioCompleto, formData.inTime, formData.outTime],
+  );
 
   /** Por área, con sus turnos en el orden del día: con muchas combinaciones, una lista plana no se lee. */
   const areasAgrupadas = useMemo(() => {
@@ -1160,6 +1267,14 @@ const TIME_OPTIONS = (() => {
     setFormData((p) => ({ ...p, dailyRate: texto === "" || !Number.isFinite(valor) ? "" : String(Number((valor / factor).toFixed(2))) }));
   };
   const soltarImporte = () => setImporteEnEdicion(null);
+  /*
+    SIN CATEGORÍA, LOS IMPORTES ESTÁN BLOQUEADOS.
+
+    El importe sale de la escala de la categoría: cargarlo antes es escribir un número que la
+    categoría va a pisar apenas se elija (y que, si no, viaja sin encuadre). Todos, incluido el total,
+    porque editar cualquiera cambia la jornada. Un servicio no tiene categoría: ahí van libres.
+  */
+  const importesBloqueados = !esServicios && !formData.categoriaSatId;
 
 
   const handleSubmit = async () => {
@@ -1357,8 +1472,8 @@ const TIME_OPTIONS = (() => {
         startDate: "",
         dueDate: "",
         workdaysCount: "",
-        diasPorSemana: "",
-        diasSemana: [],
+        diasPorSemana: SEMANA_POR_DEFECTO.diasPorSemana,
+        diasSemana: [...SEMANA_POR_DEFECTO.diasSemana],
         diasRotativos: false,
         workdaysOverridden: false,
         workdaysOverrideReason: "",
@@ -1649,7 +1764,15 @@ const TIME_OPTIONS = (() => {
           )}
         </div>
 
-        <div id="bloque-fechas" className="space-y-1">
+        {/*
+          DESDE / HASTA, SIEMPRE A LA VISTA. Todo lo de abajo —días, jornadas, importes— depende de estas
+          fechas: queda pegado debajo del título al bajar, para no perder de vista de qué período se habla.
+          Los márgenes negativos compensan el padding del cuerpo del Modal, así el fondo tapa de lado a lado.
+          Y `-top-6` (no `top-0`) por lo mismo arriba: el navegador pega un sticky al borde del CONTENIDO del
+          contenedor que scrollea, o sea 24 px más abajo por el `p-6`, y en ese hueco se veía pasar el
+          formulario entre el título y las fechas.
+        */}
+        <div id="bloque-fechas" className="sticky -top-6 z-20 -mx-6 space-y-1 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-slate-700 dark:bg-gray-800">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <CustomDatePicker label="Desde" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
@@ -1688,6 +1811,7 @@ const TIME_OPTIONS = (() => {
               hasta={formData.dueDate}
               rotativos={formData.diasRotativos}
               calculadas={jornadasCalculadas}
+              dias={formData.diasSemana}
               valor={formData.workdaysCount}
               onValor={(v) => setFormData((p) => ({ ...p, workdaysCount: v }))}
               ajustado={formData.workdaysOverridden}
@@ -1801,8 +1925,9 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <input type="number" name="dailyRate" value={formData.dailyRate} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="0" />
+              <CampoImporte valor={formData.dailyRate} onCambio={(v) => setFormData((p) => ({ ...p, dailyRate: v }))} disabled={importesBloqueados} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
             </div>
+            {importesBloqueados && <p className="text-[11px] text-slate-400">Se habilita al elegir la categoría: el importe sale de su escala.</p>}
             {esServicios && <p className="text-[11px] text-slate-400">Es un servicio: no hay convenio ni categoría, así que el importe se carga a mano.</p>}
             {/* De dónde salió el número, y cuánto se apartó de él si alguien lo cambió. */}
             {categoriaElegida && !diferenciaContraEscala && <p className="text-[11px] text-slate-400">De la escala de {categoriaElegida.name}{convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.</p>}
@@ -1823,17 +1948,9 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <input
-                type="number"
-                value={importeEn("semana")}
-                onChange={(e) => cambiarImporte("semana", e.target.value)}
-                onBlur={soltarImporte}
-                disabled={factorDe.semana <= 0}
-                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                placeholder="0"
-              />
+              <CampoImporte valor={importeEn("semana")} onCambio={(v) => cambiarImporte("semana", v)} onBlur={soltarImporte} disabled={importesBloqueados || factorDe.semana <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
             </div>
-            <p className="text-[11px] text-slate-400">{diasSemanaNum > 0 ? `Jornada × ${diasSemanaNum} ${diasSemanaNum === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Cargá los días por semana (más arriba) para calcularlo."}</p>
+            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : diasSemanaNum > 0 ? `Jornada × ${diasSemanaNum} ${diasSemanaNum === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Cargá los días por semana (más arriba) para calcularlo."}</p>
           </div>
 
           <div className="space-y-1">
@@ -1845,17 +1962,9 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <input
-                type="number"
-                value={importeEn("mes")}
-                onChange={(e) => cambiarImporte("mes", e.target.value)}
-                onBlur={soltarImporte}
-                disabled={factorDe.mes <= 0}
-                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                placeholder="0"
-              />
+              <CampoImporte valor={importeEn("mes")} onCambio={(v) => cambiarImporte("mes", v)} onBlur={soltarImporte} disabled={importesBloqueados || factorDe.mes <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
             </div>
-            <p className="text-[11px] text-slate-400">{factorDe.mes > 0 ? "Semana × 4,33 (52 semanas ÷ 12 meses). Si lo cambiás, se recalculan los demás." : "Cargá los días por semana (más arriba) para calcularlo."}</p>
+            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : factorDe.mes > 0 ? "Semana × 4,33 (52 semanas ÷ 12 meses). Si lo cambiás, se recalculan los demás." : "Cargá los días por semana (más arriba) para calcularlo."}</p>
           </div>
 
           <div className="space-y-1">
@@ -1867,17 +1976,9 @@ const TIME_OPTIONS = (() => {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <input
-                type="number"
-                value={importeEn("total")}
-                onChange={(e) => cambiarImporte("total", e.target.value)}
-                onBlur={soltarImporte}
-                disabled={factorDe.total <= 0}
-                className="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
-                placeholder="0"
-              />
+              <CampoImporte valor={importeEn("total")} onCambio={(v) => cambiarImporte("total", v)} onBlur={soltarImporte} disabled={importesBloqueados || factorDe.total <= 0} className="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300" />
             </div>
-            <p className="text-[11px] text-slate-400">{factorDe.total > 0 ? `Jornada × ${jornadasDelContrato} ${jornadasDelContrato === 1 ? "jornada" : "jornadas"} del contrato. Si lo cambiás, se recalculan los demás.` : "Completá desde, hasta y los días para calcularlo."}</p>
+            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : factorDe.total > 0 ? `Jornada × ${jornadasDelContrato} ${jornadasDelContrato === 1 ? "jornada" : "jornadas"} del contrato. Si lo cambiás, se recalculan los demás.` : "Completá desde, hasta y los días para calcularlo."}</p>
           </div>
         </div>
 
@@ -1931,9 +2032,13 @@ const TIME_OPTIONS = (() => {
             </label>
             {opcionesAreaTurno === null ? (
               <p className="text-xs text-slate-400">Cargando las áreas y turnos del proyecto…</p>
+            ) : !horarioCompleto && (opcionesDelProyecto?.length ?? 0) > 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-300 p-3 text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">Elegí primero el horario (entrada y salida): se muestran sólo los turnos que le corresponden.</p>
             ) : opcionesAreaTurno.length === 0 ? (
               <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona.
+                {opcionesDelProyecto && opcionesDelProyecto.length > 0
+                  ? `Ningún turno de este proyecto coincide con el horario ${[formData.inTime, formData.outTime].filter(Boolean).join(" a ")}. Cambiá el horario para ver sus turnos.`
+                  : "Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona."}
               </p>
             ) : opcionesAreaTurno.length === 1 ? (
               <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
@@ -1942,12 +2047,14 @@ const TIME_OPTIONS = (() => {
                   <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                     {opcionesAreaTurno[0].areaNombre} · {opcionesAreaTurno[0].turnoNombre}
                   </span>
-                  {opcionesAreaTurno[0].horario && <span className="block text-[11px] text-slate-400">{opcionesAreaTurno[0].horario}</span>}
+                  {(opcionesAreaTurno[0].horario || opcionesAreaTurno[0].dias) && <span className="block text-[11px] text-slate-400">{[opcionesAreaTurno[0].horario, opcionesAreaTurno[0].dias].filter(Boolean).join(" · ")}</span>}
                 </span>
               </div>
             ) : (
               <>
-                <p className="text-[11px] text-slate-400">{coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."}</p>
+                <p className="text-[11px] text-slate-400">
+                  {coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."} Se muestran los turnos del horario {formData.inTime} a {formData.outTime}.
+                </p>
                 <div className="space-y-2">
                   {areasAgrupadas.map((area) => (
                     <div key={area.areaId} className="rounded-lg border border-slate-200 dark:border-slate-700">
@@ -1977,7 +2084,8 @@ const TIME_OPTIONS = (() => {
                               <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
                               <span className="min-w-0">
                                 <span className="block truncate text-sm font-medium">{t.turnoNombre}</span>
-                                {t.horario && <span className="block text-[10px] text-slate-400">{t.horario}</span>}
+                                {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
+                                {(t.horario || t.dias) && <span className="block text-[10px] text-slate-400">{[t.horario, t.dias].filter(Boolean).join(" · ")}</span>}
                               </span>
                             </button>
                           );

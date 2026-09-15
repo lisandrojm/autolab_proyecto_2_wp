@@ -43,3 +43,17 @@ export const etiquetaDeTurno = (nombre: string): string => {
   const sinRango = sinDias.replace(/\s+\d{1,2}([:.]\d{2})?\s*(a|-|–)\s*\d{1,2}([:.]\d{2})?\s*(hs?)?\.?$/i, "").trim();
   return sinRango || sinDias;
 };
+
+/**
+ * CÓMO SE ORDENAN LOS TURNOS: con el orden que se fijó en el admin (Turnos → Ordenar, `Shift.order`) y,
+ * a igual orden, por horario.
+ *
+ * Antes se ordenaba sólo por la hora de inicio, así que «Trasnoche 00 a 06» salía primero aunque en el
+ * admin estuviera último: la pantalla contradecía el orden que alguien eligió a propósito. Los turnos
+ * que nunca se ordenaron tienen `order` 0 y quedan por horario, como antes. Devuelve una clave de texto
+ * para usarla con `localeCompare`.
+ */
+export const claveOrdenTurno = (turno?: { order?: number | null; startTime?: string | null } | null): string => {
+  const orden = Number.isFinite(Number(turno?.order)) && turno?.order != null ? Math.max(0, Math.round(Number(turno.order))) : 99999;
+  return `${String(orden).padStart(6, "0")}|${turno?.startTime || "99:99"}`;
+};

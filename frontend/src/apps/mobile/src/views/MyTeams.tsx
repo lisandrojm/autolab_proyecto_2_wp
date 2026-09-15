@@ -9,7 +9,7 @@ import { useProfile } from "../hooks/useProfile";
 import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects";
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
-import { etiquetaDeTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
+import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
 
 interface MyTeamsProps {
   onNavigate: (view: ViewType) => void;
@@ -159,8 +159,8 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
             nombre: etiquetaDeTurno(turno?.name || "Turno"),
             horario: turno?.startTime && turno?.endTime ? `${turno.startTime} a ${turno.endTime}` : "",
             dias: textoDeDias(turno?.days),
-            // Mañana, tarde, noche: el orden en que transcurre el día. Sin horario, al final.
-            orden: turno?.startTime || "99:99",
+            // El orden que se fijó en el admin (Turnos → Ordenar); a igual orden, por horario.
+            orden: claveOrdenTurno(turno),
             coordinadorId: idDe(coord),
             coordinadorNombre: coord && typeof coord === "object" ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() : "",
           });

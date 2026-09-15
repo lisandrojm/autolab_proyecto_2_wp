@@ -305,7 +305,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
                 .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments")
                 .populate("clientId", "name")
                 .populate("coordinatorAssignments.areaId", "name")
-                .populate("coordinatorAssignments.shiftId", "name startTime endTime")
+                .populate("coordinatorAssignments.shiftId", "name startTime endTime order days")
                 .sort({ name: 1 })
                 .lean();
             /*
@@ -335,9 +335,9 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
                 .populate("clientId", "name")
                 .populate("turnos", "name")
                 .populate("areasConfig.areaId", "name")
-                .populate("areasConfig.shiftIds", "name")
+                .populate("areasConfig.shiftIds", "name order startTime endTime days")
                 .populate("coordinatorAssignments.areaId", "name")
-                .populate("coordinatorAssignments.shiftId", "name")
+                .populate("coordinatorAssignments.shiftId", "name order startTime endTime days")
                 .populate("coordinatorAssignments.userId", "firstName lastName email")
                 .select("-objectives -workSchedule -teamConfig") // Exclude heavy/unused fields in list
                 .lean(),
@@ -661,7 +661,7 @@ async (req, res) => {
                 .populate("clientId", "name")
                 .populate("turnos", "name")
                 .populate("areasConfig.areaId", "name")
-                .populate("areasConfig.shiftIds", "name")
+                .populate("areasConfig.shiftIds", "name order startTime endTime days")
                 .select("-objectives -workSchedule -teamConfig")
                 .lean(),
             Project.countDocuments(filter),

@@ -9,7 +9,7 @@ import { Area } from "../../api/areas";
 import { Shift } from "../../api/shifts";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { coordinaAreas } from "../../utils/permisosMobile";
-import { etiquetaDeTurno, textoDeDias } from "../../utils/jerarquiaTurnos";
+import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../utils/jerarquiaTurnos";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -250,7 +250,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
           horario: turno?.startTime && turno?.endTime ? turno.startTime + " a " + turno.endTime : "",
           dias: textoDeDias(turno?.days),
           // Un turno sin horario cargado se va al final en vez de colarse primero como "".
-          orden: turno?.startTime || "99:99",
+          orden: claveOrdenTurno(turno),
           coordinador: coordAsig ? porId.get(idDe(coordAsig.userId)) || null : null,
           colaboradores: teamMembers.filter((u) => {
             if (coordAsig && idDe(coordAsig.userId) === String(u._id)) return false;
