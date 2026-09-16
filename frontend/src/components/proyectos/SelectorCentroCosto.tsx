@@ -59,7 +59,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
   const filtradas = useMemo(() => {
     const q = busqueda.trim();
     if (!q) return opciones;
-    return opciones.filter((o) => fuzzyMatch(`${o.etiqueta} ${o.descripcion}`, q));
+    return opciones.filter((o) => fuzzyMatch(`${o.etiqueta} ${o.descripcion} ${o.empresa}`, q));
   }, [opciones, busqueda]);
 
   const elegir = (id: number) => {
@@ -74,6 +74,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
           <span className="min-w-0 flex-1 truncate">
             <span className="font-mono font-bold">{elegida.etiqueta}</span>
             {elegida.descripcion && <span className="ml-2 text-gray-500 dark:text-gray-400">{elegida.descripcion}</span>}
+            {elegida.empresa && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">{elegida.empresa}</span>}
           </span>
         ) : (
           <span className="flex-1 text-gray-400 dark:text-gray-500">Seleccionar centro de costo...</span>
@@ -85,7 +86,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
         isOpen={abierto}
         onClose={() => setAbierto(false)}
         title="Centro de costo"
-        subtitle={`${opciones.length} centros del catálogo de Tango. Buscá por código o por descripción.`}
+        subtitle={`${opciones.length} centros del catálogo de Tango. Buscá por código, descripción o empresa.`}
         size="lg"
         zIndex={zIndex}
         footer={
@@ -145,13 +146,15 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
                 const esLaElegida = o.id === Number(valor);
                 return (
                   <button
-                    key={o.id}
+                    key={o.clave}
                     type="button"
                     onClick={() => elegir(o.id)}
                     className={`flex w-full items-center gap-3 border-b border-gray-100 px-4 py-2.5 text-left last:border-0 dark:border-gray-700/60 ${esLaElegida ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-900/40"}`}
                   >
                     <span className="w-24 shrink-0 font-mono text-sm font-bold text-gray-900 dark:text-white">{o.etiqueta}</span>
                     <span className={`min-w-0 flex-1 truncate text-sm ${o.inhabilitado ? "text-gray-400 line-through" : "text-gray-600 dark:text-gray-300"}`}>{o.descripcion || "—"}</span>
+                    {/* La empresa: el mismo código existe en las tres y no es el mismo centro. */}
+                    {o.empresa && <span className="shrink-0 rounded bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{o.empresa}</span>}
                     {esLaElegida && <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />}
                   </button>
                 );

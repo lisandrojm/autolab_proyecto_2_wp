@@ -11,6 +11,7 @@
   del remapeo.
 */
 import { construirRemapeo, decidirRemapeo, validarPayload } from "./centrosCostoImport.js";
+import { leerRegistroAuxiliares } from "./centrosCostoTango.js";
 let fallos = 0;
 const ok = (condicion, titulo, detalle) => {
     if (condicion) {
@@ -155,6 +156,69 @@ const remapeo = construirRemapeo([
     const despues = primera.cambios.map((c) => ({ _id: c.projectId, nombre: c.nombre, centroCostoId: c.despues, centroCostoOrigen: "tango" }));
     const segunda = decidirRemapeo(despues, remapeo);
     ok(primera.cambios.length === 2 && segunda.cambios.length === 0, "dos pasadas seguidas: la segunda no cambia nada", { primera, segunda });
+}
+/* ------------------------- leerRegistroAuxiliares (respuesta de Tango) ------------------------- */
+const sobreOk = (extra = {}, auxiliares) => ({
+    succeeded: true,
+    message: null,
+    value: {
+        AUXILIAR: auxiliares ?? [
+            { ID_AUXILIAR: 1, ID_TIPO_AUXILIAR: 1, COD_AUXILIAR: "99", DESC_AUXILIAR: "99-PRODUCTORA", HABILITADO: "S" },
+            { ID_AUXILIAR: 2, ID_TIPO_AUXILIAR: 1, COD_AUXILIAR: "SinAsignar", DESC_AUXILIAR: "Sin asignar", HABILITADO: "S" },
+        ],
+        ID_TIPO_AUXILIAR: 1,
+        COD_TIPO_AUXILIAR: "CC",
+        DESC_TIPO_AUXILIAR: "CENTRO DE COSTOS",
+        ...extra,
+    },
+});
+{
+    const r = leerRegistroAuxiliares(sobreOk());
+    ok(r.ok && r.items.length === 2 && r.items[0].codAuxiliar === "99" && r.items[1].codAuxiliar === "SinAsignar", "Tango: la respuesta del proceso 1656 se lee como centros de costo", r.errores);
+}
+{
+    // El export que se usó para la primera carga viene con las claves así: se leen igual.
+    const r = leerRegistroAuxiliares({
+        succeeded: true,
+        value: { auxiliar: [{ iD_AUXILIAR: 863, coD_AUXILIAR: "682", desC_AUXILIAR: "682_PEGSA", habilitado: "S" }], coD_TIPO_AUXILIAR: "CC", desC_TIPO_AUXILIAR: "CENTRO DE COSTOS" },
+    });
+    ok(r.ok && r.items[0].idAuxiliar === 863 && r.items[0].codAuxiliar === "682", "Tango: lee las claves sin distinguir mayúsculas (iD_AUXILIAR / ID_AUXILIAR)", r.errores);
+}
+{
+    const r = leerRegistroAuxiliares(sobreOk({ COD_TIPO_AUXILIAR: "VD", DESC_TIPO_AUXILIAR: "VENDEDORES" }));
+    ok(!r.ok && r.errores[0].includes("no es el catálogo de centros de costo"), "Tango: otro tipo de auxiliar se RECHAZA (no se importan los vendedores)", r.errores);
+}
+{
+    const r = leerRegistroAuxiliares(sobreOk({ COD_TIPO_AUXILIAR: "CCO", DESC_TIPO_AUXILIAR: "Centros de Costo" }));
+    ok(r.ok, "Tango: acepta la descripción escrita distinto entre empresas", r.errores);
+}
+{
+    const r = leerRegistroAuxiliares(sobreOk({ COD_TIPO_AUXILIAR: "cc", DESC_TIPO_AUXILIAR: "Lo que sea" }));
+    ok(r.ok, "Tango: acepta por código «cc» aunque la descripción no diga nada", r.errores);
+}
+{
+    const r = leerRegistroAuxiliares({ succeeded: false, message: "Proceso inexistente", value: null });
+    ok(!r.ok && r.errores[0].includes("Proceso inexistente"), "Tango: `succeeded: false` se informa con el motivo", r.errores);
+}
+{
+    const r = leerRegistroAuxiliares(sobreOk({}, []));
+    ok(!r.ok && r.errores[0].includes("vacío"), "Tango: catálogo vacío no se acepta (borraría todo)", r.errores);
+}
+{
+    const r = leerRegistroAuxiliares(sobreOk({}, [
+        { ID_AUXILIAR: 1, COD_AUXILIAR: "99", DESC_AUXILIAR: "99-PRODUCTORA", HABILITADO: "S" },
+        { ID_AUXILIAR: null, COD_AUXILIAR: "X", DESC_AUXILIAR: "roto", HABILITADO: "S" },
+        { ID_AUXILIAR: 3, COD_AUXILIAR: "", DESC_AUXILIAR: "sin código", HABILITADO: "S" },
+    ]));
+    ok(r.ok && r.items.length === 1 && r.errores.length === 2, "Tango: un auxiliar roto se omite e informa, sin voltear a los demás", r);
+}
+{
+    const r = leerRegistroAuxiliares(sobreOk({}, [{ ID_AUXILIAR: 5, COD_AUXILIAR: "500", DESC_AUXILIAR: "", HABILITADO: "N" }]));
+    ok(r.ok && r.items[0].descAuxiliar === "500" && r.items[0].habilitado === "N", "Tango: sin descripción usa el código, y respeta HABILITADO N", r.errores);
+}
+{
+    const r = leerRegistroAuxiliares(sobreOk({}, [{ ID_AUXILIAR: 5, COD_AUXILIAR: "500", DESC_AUXILIAR: "X" }]));
+    ok(r.ok && r.items[0].habilitado === "S", "Tango: sin HABILITADO cuenta como habilitado", r.errores);
 }
 console.log(fallos === 0 ? `\nTODO OK` : `\n${fallos} CASOS FALLAN`);
 process.exit(fallos === 0 ? 0 : 1);

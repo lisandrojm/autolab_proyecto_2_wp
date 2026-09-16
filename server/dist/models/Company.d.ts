@@ -173,5 +173,12 @@ export interface ICompany extends Document {
     };
     createdAt: Date;
     updatedAt: Date;
+    /**
+     * EL ID DE ESTA EMPRESA EN TANGO, que es con lo que se le pide su catálogo a la API.
+     *
+     * Cada empresa tiene su propio Tango: sin este id no se sabe a cuál preguntarle, y la empresa
+     * queda afuera de la sincronización de centros de costo (se informa, no se adivina).
+     */
+    tangoId?: string;
 }
 export declare const Company: Model<ICompany>;

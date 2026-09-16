@@ -19,6 +19,10 @@ export const sincronizarCamposDerivados = (doc) => {
     return doc;
 };
 const centroCostoSchema = new Schema({
+    empresaId: { type: Schema.Types.ObjectId, ref: "Company", index: true },
+    empresaNombre: { type: String, trim: true },
+    origen: { type: String, enum: ["tango", "import", "manual"], default: "manual" },
+    sincronizadoEl: { type: Date },
     idAuxiliar: { type: Number },
     codAuxiliar: { type: String, trim: true },
     descAuxiliar: { type: String, trim: true },
@@ -35,15 +39,21 @@ const centroCostoSchema = new Schema({
     collection: "centros-costo",
 });
 /*
-  Índices únicos PARCIALES: sólo sobre los documentos que tienen el campo.
+  ÚNICOS POR EMPRESA, NO GLOBALES.
 
-  Un único a secas trataría a todos los centros viejos —que no tienen `idAuxiliar`— como repetidos del
-  mismo valor `null` y haría fallar el segundo. Con `partialFilterExpression` el único rige recién
-  cuando el campo existe, que es lo que hace que el catálogo importado no pueda tener duplicados sin
-  bloquear a los registros anteriores al cambio.
+  Empezaron siendo únicos a secas, cuando el catálogo era uno solo. Con tres empresas eso rechaza el
+  segundo «1» y el segundo «99» —los ids y los códigos de Tango arrancan igual en cada empresa— y la
+  sincronización de la segunda empresa fallaría entera. Lo que no puede repetirse es el mismo código
+  DENTRO de una empresa.
+
+  Son PARCIALES: rigen sólo donde el campo existe. Sin eso, todos los centros viejos —sin `idAuxiliar`—
+  contarían como repetidos del mismo `null` y el segundo no entraría.
+
+  OJO AL DEPLOY: los únicos globales ya están creados en la base. Los reemplaza `CentroCosto.syncIndexes()`,
+  que corre al sincronizar (ver `services/centrosCostoSync.ts`); sin eso, Mongo sigue aplicando el viejo.
 */
-centroCostoSchema.index({ idAuxiliar: 1 }, { unique: true, partialFilterExpression: { idAuxiliar: { $type: "number" } } });
-centroCostoSchema.index({ codAuxiliar: 1 }, { unique: true, partialFilterExpression: { codAuxiliar: { $type: "string" } } });
+centroCostoSchema.index({ empresaId: 1, idAuxiliar: 1 }, { unique: true, partialFilterExpression: { idAuxiliar: { $type: "number" } } });
+centroCostoSchema.index({ empresaId: 1, codAuxiliar: 1 }, { unique: true, partialFilterExpression: { codAuxiliar: { $type: "string" } } });
 centroCostoSchema.pre("validate", function (next) {
     sincronizarCamposDerivados(this);
     next();

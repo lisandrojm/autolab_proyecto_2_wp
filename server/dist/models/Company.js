@@ -8,6 +8,7 @@ const companySchema = new Schema({
     localidad: { type: String },
     provincia: { type: String },
     codigoPostal: { type: String },
+    tangoId: { type: String, trim: true },
     firmanteNombre: { type: String },
     firmanteDni: { type: String },
     firmanteCargo: { type: String },

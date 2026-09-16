@@ -13,7 +13,41 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from "./simpleCatalog";
   todavía los lee.
 */
 
+export interface ResultadoEmpresaSync {
+  empresaId: string;
+  empresa: string;
+  ok: boolean;
+  /** Cómo llama Tango a este tipo de auxiliar en esa empresa («CC — CENTRO DE COSTOS»). */
+  tipo?: string;
+  creados: number;
+  actualizados: number;
+  inhabilitados: number;
+  total: number;
+  errores: string[];
+}
+
+export interface ResultadoSyncTango {
+  ok: boolean;
+  message: string;
+  empresas: ResultadoEmpresaSync[];
+  totalCatalogo: number;
+  sincronizadoEl: string;
+}
+
+export interface EstadoSyncCentrosCosto {
+  sincronizadoEl: string | null;
+  total: number;
+  porEmpresa: Array<{ empresa: string; total: number }>;
+  /** `false` = falta `TANGO_API_URL` en el server: el botón no tiene a quién preguntarle. */
+  tangoConfigurado: boolean;
+}
+
 export interface CentroCosto extends SimpleCatalogItem {
+  /** De qué empresa vino: cada una tiene su Tango y sus códigos, que se repiten entre empresas. */
+  empresaId?: string;
+  empresaNombre?: string;
+  origen?: "tango" | "import" | "manual";
+  sincronizadoEl?: string;
   /** El id del auxiliar en Tango. Es lo que guarda `Project.metadata.centroCostoId`. */
   idAuxiliar?: number;
   /** El número real del centro («682», «99», «SinAsignar»). Es lo que se muestra. */
@@ -61,6 +95,22 @@ export const centrosCostoApi = createSimpleCatalogApi("/centros-costo");
  * proyecto que decía «682» siga diciendo «682»—. Valida todo el archivo antes de escribir: si algo
  * falla contesta 400 con la lista de errores y no toca nada.
  */
+/**
+ * Trae el catálogo de las tres empresas desde Tango (proceso 1656, registro 1 de cada una).
+ *
+ * Es el camino oficial; el import del JSON quedó como respaldo para cuando Tango no responde. El
+ * server contesta el detalle por empresa: con tres Tango distintos, «salió bien» no alcanza.
+ */
+export const sincronizarCentrosCostoTango = async (): Promise<ResultadoSyncTango> => {
+  const { data } = await axios.post("/centros-costo/sincronizar-tango", {});
+  return data;
+};
+
+export const estadoSyncCentrosCosto = async (): Promise<EstadoSyncCentrosCosto> => {
+  const { data } = await axios.get("/centros-costo/estado-sync");
+  return data;
+};
+
 export const importarCentrosCostoJson = async (payload: PayloadImportCentrosCosto): Promise<ResultadoImportCentrosCosto> => {
   const { data } = await axios.post("/centros-costo/import-json", payload);
   return data;

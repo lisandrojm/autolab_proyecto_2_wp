@@ -1,9 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPiggyBank, faFileImport, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faPiggyBank, faFileImport, faTriangleExclamation, faRotate, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { Modal } from "../components/ui/Modal";
-import { centrosCostoApi, importarCentrosCostoJson, type CentroCosto, type ResultadoImportCentrosCosto } from "../api/centrosCosto";
+import { centrosCostoApi, estadoSyncCentrosCosto, importarCentrosCostoJson, sincronizarCentrosCostoTango, type CentroCosto, type EstadoSyncCentrosCosto, type ResultadoImportCentrosCosto } from "../api/centrosCosto";
 import { validarArchivoCentrosCosto, type ResumenArchivoCentrosCosto } from "../utils/centrosCostoImport";
 import { sweetAlert } from "../utils/sweetAlert";
 import { etiquetaCentroCosto } from "../utils/centroCosto";
@@ -19,9 +19,13 @@ import { etiquetaCentroCosto } from "../utils/centroCosto";
   campo «Nombre» era en realidad el código—. El id de Tango sigue existiendo en el registro, porque es
   lo que cada proyecto guarda para apuntar a su centro, pero lo trae el import y no se edita a mano.
 
-  El catálogo no se carga a mano: son 806 registros que se importan del JSON que exporta Tango (botón
-  «Importar JSON»). El alta manual queda para el caso puntual —un centro nuevo que todavía no está en
-  el export—, y por eso el formulario sigue existiendo.
+  EL CATÁLOGO SE TRAE DE TANGO, no se carga a mano: cada empresa tiene su propio Tango y sus centros
+  viven en el proceso 1656, registro 1. El botón «Sincronizar con Tango» los trae de las tres, y además
+  hay una corrida automática diaria. El import del JSON quedó como respaldo para cuando Tango no está
+  disponible, y el alta manual para un centro que todavía no existe allá.
+
+  LOS CÓDIGOS SE REPITEN ENTRE EMPRESAS —las tres tienen un «1» y un «99»—, así que cada fila muestra
+  de qué empresa vino. Es una sola lista, pero no son el mismo centro.
 */
 
 const HABILITADO_OPCIONES = [
@@ -235,10 +239,59 @@ const ImportarJsonModal: React.FC<{ abierto: boolean; onCerrar: () => void; onLi
   );
 };
 
+/** Cuándo fue la última sincronización y cuántos centros tiene cada empresa. */
+const EstadoSync: React.FC<{ estado: EstadoSyncCentrosCosto }> = ({ estado }) => (
+  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[12px] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+    <span>
+      Última sincronización con Tango:{" "}
+      <span className="font-semibold text-gray-900 dark:text-white">{estado.sincronizadoEl ? new Date(estado.sincronizadoEl).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "nunca"}</span>
+    </span>
+    <span className="text-gray-300 dark:text-gray-600">·</span>
+    <span>{estado.total} centros</span>
+    {estado.porEmpresa.map((e) => (
+      <span key={e.empresa} className="rounded bg-gray-100 px-2 py-0.5 dark:bg-gray-700/60">
+        {e.empresa}: <span className="font-semibold">{e.total}</span>
+      </span>
+    ))}
+    {/* Sin la URL de Tango el botón no tiene a quién preguntarle: se dice, en vez de fallar al tocarlo. */}
+    {!estado.tangoConfigurado && <span className="font-semibold text-amber-600 dark:text-amber-400">Falta configurar la conexión con Tango: por ahora sólo se puede importar el JSON.</span>}
+  </div>
+);
+
 export const CentrosCostoPage: React.FC = () => {
   const [importAbierto, setImportAbierto] = useState(false);
   /** Se incrementa al terminar un import para que el manager vuelva a pedir la lista. */
   const [recarga, setRecarga] = useState(0);
+  const [estado, setEstado] = useState<EstadoSyncCentrosCosto | null>(null);
+  const [sincronizando, setSincronizando] = useState(false);
+
+  const leerEstado = () => {
+    estadoSyncCentrosCosto()
+      .then(setEstado)
+      .catch(() => setEstado(null));
+  };
+  useEffect(leerEstado, [recarga]);
+
+  /*
+    Sincronizar con Tango.
+
+    El resultado se muestra POR EMPRESA: con tres Tango distintos, que una falle y dos anden es el
+    caso normal, y «salió bien» a secas escondería justo eso.
+  */
+  const sincronizar = async () => {
+    setSincronizando(true);
+    try {
+      const r = await sincronizarCentrosCostoTango();
+      const detalle = r.empresas.map((e) => `${e.empresa}: ${e.ok ? `${e.total} centros` : `no se pudo — ${e.errores[0] || "sin detalle"}`}`).join("\n");
+      if (r.ok) sweetAlert.success("Catálogo sincronizado", `${r.message}\n\n${detalle}`);
+      else sweetAlert.error("No se pudo sincronizar", `${r.message}\n\n${detalle}`);
+      setRecarga((n) => n + 1);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo sincronizar", e?.response?.data?.error || "Probá de nuevo en un momento.");
+    } finally {
+      setSincronizando(false);
+    }
+  };
 
   return (
     <>
@@ -272,11 +325,19 @@ export const CentrosCostoPage: React.FC = () => {
         */
         permiteImportExcel={false}
         accionesEncabezado={
-          <button onClick={() => setImportAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30">
-            <FontAwesomeIcon icon={faFileImport} className="h-3.5 w-3.5" />
-            Importar JSON
-          </button>
+          <>
+            {/* El camino oficial. El JSON queda al lado, en gris, para cuando Tango no contesta. */}
+            <button onClick={() => void sincronizar()} disabled={sincronizando} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              <FontAwesomeIcon icon={sincronizando ? faSpinner : faRotate} className={`h-3.5 w-3.5 ${sincronizando ? "animate-spin" : ""}`} />
+              {sincronizando ? "Sincronizando..." : "Sincronizar con Tango"}
+            </button>
+            <button onClick={() => setImportAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800">
+              <FontAwesomeIcon icon={faFileImport} className="h-3.5 w-3.5" />
+              Importar JSON
+            </button>
+          </>
         }
+        extraSuperior={estado ? <EstadoSync estado={estado} /> : undefined}
         tablaPropia={({ items, renderAcciones }) => (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div className="overflow-x-auto">
@@ -285,6 +346,7 @@ export const CentrosCostoPage: React.FC = () => {
                   <tr className="border-b border-gray-200 text-xs font-bold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                     <th className="px-5 py-3">Código</th>
                     <th className="px-5 py-3">Descripción</th>
+                    <th className="px-5 py-3">Empresa</th>
                     <th className="px-5 py-3 text-center">Habilitado</th>
                     <th className="px-5 py-3 text-right">Acciones</th>
                   </tr>
@@ -297,6 +359,10 @@ export const CentrosCostoPage: React.FC = () => {
                         {/* El código, en mono y negrita: es el dato con el que se nombra al centro. */}
                         <td className="whitespace-nowrap px-5 py-3 font-mono text-sm font-bold text-gray-900 dark:text-white">{etiquetaCentroCosto(cc) || "—"}</td>
                         <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{cc.descAuxiliar || <span className="text-gray-400">—</span>}</td>
+                        {/* De qué Tango vino: el mismo código puede existir en las tres empresas. */}
+                        <td className="whitespace-nowrap px-5 py-3 text-xs">
+                          {cc.empresaNombre ? <span className="rounded bg-blue-50 px-2 py-0.5 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{cc.empresaNombre}</span> : <span className="text-gray-400">—</span>}
+                        </td>
                         <td className="px-5 py-3 text-center">
                           <BadgeHabilitado valor={cc.habilitado} />
                         </td>
@@ -306,8 +372,8 @@ export const CentrosCostoPage: React.FC = () => {
                   })}
                   {items.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-5 py-10 text-center text-sm text-gray-500">
-                        No hay centros de costo cargados. Importá el JSON de Tango.
+                      <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500">
+                        No hay centros de costo cargados. Tocá «Sincronizar con Tango».
                       </td>
                     </tr>
                   )}

@@ -33,15 +33,19 @@ export const centroCostoInhabilitado = (cc: any): boolean => String(cc?.habilita
  * centro, y guardar cualquier otro cambio de la ficha se lo borraría sin que nadie lo pidiera. Ése se
  * muestra con «(inhabilitado)» para que se vea por qué conviene cambiarlo.
  */
-export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): Array<{ id: number; etiqueta: string; descripcion: string; inhabilitado: boolean }> =>
+export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): Array<{ clave: string; id: number; etiqueta: string; descripcion: string; empresa: string; inhabilitado: boolean }> =>
   (catalogo || [])
     .map((cc) => ({ cc, id: idCentroCosto(cc) }))
     .filter((x): x is { cc: any; id: number } => x.id !== null)
     .filter((x) => !centroCostoInhabilitado(x.cc) || Number(idActual) === x.id)
     .map((x) => ({
+      // El `_id` y no el id de Tango: con tres empresas el id se repite y React necesita una clave única.
+      clave: String(x.cc?._id || `${x.cc?.empresaNombre || ""}-${x.id}`),
       id: x.id,
       etiqueta: etiquetaCentroCosto(x.cc) + (centroCostoInhabilitado(x.cc) ? " (inhabilitado)" : ""),
       descripcion: String(x.cc?.descAuxiliar || x.cc?.data?.descripcion || "").trim(),
+      // De qué empresa vino: los códigos se repiten entre las tres, así que sin esto «682» es ambiguo.
+      empresa: String(x.cc?.empresaNombre || "").trim(),
       inhabilitado: centroCostoInhabilitado(x.cc),
     }));
 
@@ -129,20 +133,23 @@ export const cargarCentrosCosto = async (apiUrl: string, headers: Record<string,
     }
   };
   const delAbm = await traer("/centros-costo");
-  const porId = new Map<number, any>();
-  for (const c of delAbm) {
-    /*
-      Sin id no entra. Es lo que queda cuando alguien carga un centro sin el ID de Tango: se comporta
-      como «vacío» en cada chequeo por verdadero de la aplicación —la ficha del proyecto lo muestra con
-      `centroCostoId ? … : '—'`—, así que aparecería en el select y no se podría guardar.
-    */
-    const id = idCentroCosto(c);
-    if (id !== null) porId.set(id, c);
-  }
+  /*
+    SIN ID NO ENTRA, PERO NO SE DEDUPLICA POR ID.
+
+    Antes se indexaban en un `Map` por id, que servía cuando había dos catálogos con los mismos ids
+    (uno pisaba al otro). Con el catálogo de Tango por empresa eso BORRA datos: las tres empresas
+    tienen un centro con id 1, y el `Map` dejaría uno solo. Se conservan todos y cada uno muestra de
+    qué empresa vino.
+
+    Lo que sí se descarta es el que no tiene id: se comporta como «vacío» en cada chequeo por verdadero
+    de la aplicación —la ficha lo muestra con `centroCostoId ? … : '—'`—, así que aparecería en el
+    selector y no se podría guardar.
+  */
+  const conId = delAbm.filter((c: any) => idCentroCosto(c) !== null);
   /*
     Ordenado por código y con `numeric`: son números guardados como texto, y sin eso «100» va antes de
     «99» y «1000» antes de «682». Con 806 centros, encontrar el propio en una lista mal ordenada es el
     trabajo que este orden ahorra.
   */
-  return [...porId.values()].sort((a, b) => etiquetaCentroCosto(a).localeCompare(etiquetaCentroCosto(b), "es", { numeric: true }));
+  return conId.sort((a: any, b: any) => etiquetaCentroCosto(a).localeCompare(etiquetaCentroCosto(b), "es", { numeric: true }) || String(a?.empresaNombre || "").localeCompare(String(b?.empresaNombre || "")));
 };

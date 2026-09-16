@@ -137,13 +137,15 @@ const helpResources = {
 
       // Centros de Costos
       'centrosCosto.title': 'Información de Centros de Costos',
-      'centrosCosto.description': 'El catálogo de centros de costo, tal como está en Tango. Se importa; no se carga a mano.',
+      'centrosCosto.description': 'El catálogo de centros de costo, traído de Tango. Cada empresa tiene el suyo.',
       'centrosCosto.items': [
         '**Código**: El número real del centro («682», «99»). Es lo que se muestra en toda la plataforma —el listado de proyectos, la ficha, el selector— y es como lo nombra producción.',
         '**Descripción**: Como figura en Tango. Suele empezar con el mismo código.',
         '**Habilitado**: Un centro en «N» está dado de baja en Tango: no se ofrece para elegir en un proyecto. Los proyectos que ya lo tenían lo conservan, y ahí se muestra como «(inhabilitado)» para que se vea que conviene cambiarlo.',
-        '**Importar JSON**: El catálogo completo son 806 centros y viene del export de Tango. «Reemplazar todo» borra lo que hay y lo deja igual al archivo, y con «Remapear proyectos» corrige a qué centro apunta cada proyecto —cruzando por código— para que uno que decía «682» siga diciendo «682». Antes de escribir valida el archivo entero: si algo está mal, no toca nada.',
-        '**Alta a mano**: Queda para el caso puntual de un centro que todavía no está en el export. El id interno lo trae el import, no se edita en esta pantalla.',
+        '**Empresa**: De cuál de los tres Tango vino. Los códigos SE REPITEN entre empresas —las tres tienen un «1» y un «99»— y no son el mismo centro, así que la columna dice de cuál se trata.',
+        '**Sincronizar con Tango**: Trae el catálogo de las tres empresas (proceso 1656, registro 1 de cada una). Además corre solo una vez por día, temprano. Si una empresa no responde, las otras se sincronizan igual y se informa cuál falló. Lo que dejó de estar en Tango no se borra: queda inhabilitado, porque puede haber proyectos apuntándole.',
+        '**Importar JSON**: El respaldo para cuando Tango no está disponible. «Reemplazar todo» deja el catálogo igual al archivo y, con «Remapear proyectos», corrige a qué centro apunta cada proyecto cruzando por código. Valida el archivo entero antes de escribir: si algo está mal, no toca nada.',
+        '**Alta a mano**: Para un centro que todavía no existe en Tango. La sincronización no lo toca: administra sólo lo que trae de cada empresa.',
       ],
 
       // Contratos (config / contratos-frame)

@@ -10,6 +10,8 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
 import { construirRemapeo, decidirRemapeo, validarPayload, type ItemCentroCosto } from "../services/centrosCostoImport.js";
+import { estadoSincronizacion, sincronizarCentrosCostoDesdeTango } from "../services/centrosCostoSync.js";
+import { TangoApi } from "../services/tangoApi.js";
 
 /*
   CENTROS DE COSTO: EL AUXILIAR DE TANGO, CON SU PROPIO ABM.
@@ -338,6 +340,46 @@ router.post("/import-json", requireTenant, authenticateToken, requirePermission(
   } catch (error) {
     console.error("Import JSON centros de costo error:", error);
     res.status(500).json({ error: "No se pudo importar el catálogo. No se guardó nada a medias: revisá el log del servidor." });
+  }
+});
+
+/*
+  POST /sincronizar-tango — traer el catálogo de las tres empresas, en vivo.
+
+  Es el camino oficial desde que los centros de costo se leen de Tango: el archivo JSON quedó como
+  respaldo para cuando Tango no está disponible. Contesta el detalle POR EMPRESA —cuántos trajo cada
+  una, cuál falló y por qué—: con tres Tangos distintos, «salió bien» a secas no dice nada.
+
+  No borra nada: cada empresa reemplaza lo suyo y lo que dejó de estar en Tango queda inhabilitado
+  (ver `services/centrosCostoSync.ts`).
+*/
+router.post("/sincronizar-tango", requireTenant, authenticateToken, requirePermission(PERMISO), async (_req: AuthenticatedRequest & TenantRequest, res: Response) => {
+  try {
+    if (!TangoApi.configurada()) {
+      res.status(503).json({ error: "Falta configurar la conexión con Tango (TANGO_API_URL). Mientras tanto se puede importar el JSON." });
+      return;
+    }
+    const r = await sincronizarCentrosCostoDesdeTango();
+    const conError = r.empresas.filter((e) => !e.ok);
+    res.json({
+      ...r,
+      message: r.ok
+        ? `Catálogo sincronizado: ${r.totalCatalogo} centros${conError.length > 0 ? ` · ${conError.length} empresa(s) con problema` : ""}.`
+        : "Ninguna empresa pudo sincronizarse. El catálogo quedó como estaba.",
+    });
+  } catch (error: any) {
+    console.error("Sincronizar centros de costo error:", error);
+    res.status(500).json({ error: error?.message || "No se pudo sincronizar con Tango." });
+  }
+});
+
+/** GET /estado-sync — cuándo fue la última sincronización y cuántos centros tiene cada empresa. */
+router.get("/estado-sync", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    res.json({ ...(await estadoSincronizacion()), tangoConfigurado: TangoApi.configurada() });
+  } catch (error) {
+    console.error("Estado de sincronización error:", error);
+    res.status(500).json({ error: "No se pudo leer el estado de la sincronización." });
   }
 });
 

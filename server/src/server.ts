@@ -25,6 +25,7 @@ import { initCronScheduler } from "./services/cronService.js";
 import { initBackupScheduler } from "./services/backupService.js";
 import { initEstadoDropboxScheduler } from "./services/estadoDropboxCronService.js";
 import { initParitariasScheduler } from "./services/paritariasCronService.js";
+import { initCentrosCostoScheduler } from "./services/centrosCostoCronService.js";
 import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
 
 
@@ -374,6 +375,8 @@ connectDB()
     try {
       initEstadoDropboxScheduler();
       initParitariasScheduler();
+      // El catálogo de centros de costo, de los Tango de las tres empresas.
+      initCentrosCostoScheduler();
     } catch (error) {
       console.error("❌ Failed to initialize estado-dropbox scheduler:", error);
     }

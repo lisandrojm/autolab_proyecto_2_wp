@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 /*
   EL CENTRO DE COSTO ES EL AUXILIAR DE TANGO (iD_TIPO_AUXILIAR 1).
@@ -19,7 +19,23 @@ import mongoose, { Schema, Document, Model } from "mongoose";
   imports no puedan quedar cada uno con su propia versión de la verdad.
 */
 export interface ICentroCosto extends Document {
-  /** El id del auxiliar en Tango. Único: es la identidad del centro. */
+  /**
+   * DE QUÉ EMPRESA VINO. Cada una tiene su propio Tango y su propio catálogo.
+   *
+   * La lista es una sola —así se decidió—, pero los códigos SE REPITEN entre empresas: las tres
+   * tienen un «1» y un «99», y no son el mismo centro. Por eso la identidad de un centro es
+   * (empresa, idAuxiliar) y no `idAuxiliar` solo, y por eso cada fila muestra de dónde vino.
+   *
+   * Vacío = cargado a mano o traído del export antes de que el catálogo fuera por empresa.
+   */
+  empresaId?: Types.ObjectId;
+  /** El nombre de la empresa, copiado: la lista lo muestra en cada fila y sin esto serían 806 lookups. */
+  empresaNombre?: string;
+  /** De dónde salió: "tango" (sincronización), "import" (archivo) o "manual". */
+  origen?: "tango" | "import" | "manual";
+  /** Cuándo lo trajo la última sincronización. */
+  sincronizadoEl?: Date;
+  /** El id del auxiliar en Tango. Único DENTRO de su empresa. */
   idAuxiliar?: number;
   /** El código con el que se lo nombra («682»). Único. Es lo que se muestra. */
   codAuxiliar?: string;
@@ -58,6 +74,10 @@ export const sincronizarCamposDerivados = <T extends Partial<ICentroCosto>>(doc:
 
 const centroCostoSchema = new Schema<ICentroCosto>(
   {
+    empresaId: { type: Schema.Types.ObjectId, ref: "Company", index: true },
+    empresaNombre: { type: String, trim: true },
+    origen: { type: String, enum: ["tango", "import", "manual"], default: "manual" },
+    sincronizadoEl: { type: Date },
     idAuxiliar: { type: Number },
     codAuxiliar: { type: String, trim: true },
     descAuxiliar: { type: String, trim: true },
@@ -77,15 +97,21 @@ const centroCostoSchema = new Schema<ICentroCosto>(
 );
 
 /*
-  Índices únicos PARCIALES: sólo sobre los documentos que tienen el campo.
+  ÚNICOS POR EMPRESA, NO GLOBALES.
 
-  Un único a secas trataría a todos los centros viejos —que no tienen `idAuxiliar`— como repetidos del
-  mismo valor `null` y haría fallar el segundo. Con `partialFilterExpression` el único rige recién
-  cuando el campo existe, que es lo que hace que el catálogo importado no pueda tener duplicados sin
-  bloquear a los registros anteriores al cambio.
+  Empezaron siendo únicos a secas, cuando el catálogo era uno solo. Con tres empresas eso rechaza el
+  segundo «1» y el segundo «99» —los ids y los códigos de Tango arrancan igual en cada empresa— y la
+  sincronización de la segunda empresa fallaría entera. Lo que no puede repetirse es el mismo código
+  DENTRO de una empresa.
+
+  Son PARCIALES: rigen sólo donde el campo existe. Sin eso, todos los centros viejos —sin `idAuxiliar`—
+  contarían como repetidos del mismo `null` y el segundo no entraría.
+
+  OJO AL DEPLOY: los únicos globales ya están creados en la base. Los reemplaza `CentroCosto.syncIndexes()`,
+  que corre al sincronizar (ver `services/centrosCostoSync.ts`); sin eso, Mongo sigue aplicando el viejo.
 */
-centroCostoSchema.index({ idAuxiliar: 1 }, { unique: true, partialFilterExpression: { idAuxiliar: { $type: "number" } } });
-centroCostoSchema.index({ codAuxiliar: 1 }, { unique: true, partialFilterExpression: { codAuxiliar: { $type: "string" } } });
+centroCostoSchema.index({ empresaId: 1, idAuxiliar: 1 }, { unique: true, partialFilterExpression: { idAuxiliar: { $type: "number" } } });
+centroCostoSchema.index({ empresaId: 1, codAuxiliar: 1 }, { unique: true, partialFilterExpression: { codAuxiliar: { $type: "string" } } });
 
 centroCostoSchema.pre("validate", function (next) {
   sincronizarCamposDerivados(this as any);
