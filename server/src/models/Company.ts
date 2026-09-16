@@ -184,6 +184,20 @@ export interface ICompany extends Document {
    * queda afuera de la sincronización de centros de costo (se informa, no se adivina).
    */
   tangoId?: string;
+  /**
+   * El token de ESTA empresa para la API de Tango, si tiene uno propio.
+   *
+   * Así lo modela el proyecto de Tango (cada empresa con su `authToken`). Vacío = se usa el de la
+   * variable de entorno, que es el caso cuando las tres comparten token.
+   */
+  tangoToken?: string;
+  /**
+   * La base de la API de ESTA empresa, si su Tango está detrás de otro túnel.
+   *
+   * Lo normal es una sola base para el tenant y el header `Company` eligiendo la empresa. Esto cubre
+   * el otro caso —tres oficinas, tres túneles— sin tener que rehacer nada: vacío usa `TANGO_API_URL`.
+   */
+  tangoApiUrl?: string;
 }
 
 const companySchema = new Schema<ICompany>(
@@ -197,6 +211,8 @@ const companySchema = new Schema<ICompany>(
     provincia: { type: String },
     codigoPostal: { type: String },
     tangoId: { type: String, trim: true },
+    tangoToken: { type: String, trim: true },
+    tangoApiUrl: { type: String, trim: true },
     firmanteNombre: { type: String },
     firmanteDni: { type: String },
     firmanteCargo: { type: String },

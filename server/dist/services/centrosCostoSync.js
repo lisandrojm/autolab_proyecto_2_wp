@@ -39,7 +39,7 @@ export async function sincronizarEmpresa(empresa) {
     }
     let sobre;
     try {
-        sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, empresa.tangoId);
+        sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, empresa.tangoId, empresa.tangoToken, empresa.tangoApiUrl);
     }
     catch (e) {
         return { ...base, errores: [`No se pudo consultar Tango: ${e?.response?.status ? `HTTP ${e.response.status}` : e?.message || "error de red"}.`] };
@@ -116,7 +116,7 @@ export async function sincronizarCentrosCostoDesdeTango() {
         console.warn("[CENTROS-COSTO-SYNC] No se pudieron actualizar los índices:", e?.message || e);
     }
     const empresas = await Company.find({ tangoId: { $exists: true, $nin: [null, ""] } })
-        .select("razonSocial tangoId")
+        .select("razonSocial tangoId tangoToken tangoApiUrl")
         .lean();
     const resultados = [];
     for (const e of empresas) {
@@ -126,6 +126,52 @@ export async function sincronizarCentrosCostoDesdeTango() {
     }
     const totalCatalogo = await CentroCosto.countDocuments({});
     return { ok: resultados.some((r) => r.ok), empresas: resultados, totalCatalogo, sincronizadoEl: new Date() };
+}
+/**
+ * PROBAR LA CONEXIÓN, SIN TOCAR EL CATÁLOGO.
+ *
+ * Existe porque el Tango de cada empresa se alcanza por un túnel que termina en el VPS: desde una
+ * máquina de desarrollo no se llega, así que la única forma de saber si la URL y el token están bien
+ * es preguntárselo AL SERVER. Devuelve, por empresa, qué contestó Tango —el estado HTTP, o el tipo de
+ * auxiliar que trajo— y cuántos centros vendrían, sin escribir una sola fila.
+ */
+export async function probarTango() {
+    const empresas = await Company.find({}).select("razonSocial tangoId tangoToken tangoApiUrl").lean();
+    const salida = [];
+    for (const e of empresas) {
+        const base = TangoApi.baseDe(e);
+        if (!e.tangoId) {
+            salida.push({ empresa: e.razonSocial, tangoId: undefined, base, ok: false, detalle: "No tiene cargado el ID de Tango." });
+            continue;
+        }
+        if (!base) {
+            salida.push({ empresa: e.razonSocial, tangoId: e.tangoId, base, ok: false, detalle: "Falta TANGO_API_URL (y la empresa no tiene una propia)." });
+            continue;
+        }
+        try {
+            const sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, e.tangoId, e.tangoToken, e.tangoApiUrl);
+            const leido = leerRegistroAuxiliares(sobre);
+            salida.push({
+                empresa: e.razonSocial,
+                tangoId: e.tangoId,
+                base,
+                ok: leido.ok,
+                tipo: leido.tipo.codigo || leido.tipo.descripcion ? `${leido.tipo.codigo} — ${leido.tipo.descripcion}` : undefined,
+                centros: leido.items.length,
+                detalle: leido.ok ? `Respondió con ${leido.items.length} centros de costo.` : leido.errores[0] || "No se pudo leer la respuesta.",
+            });
+        }
+        catch (err) {
+            salida.push({
+                empresa: e.razonSocial,
+                tangoId: e.tangoId,
+                base,
+                ok: false,
+                detalle: err?.response?.status ? `HTTP ${err.response.status} de Tango.` : `No se pudo conectar: ${err?.code || err?.message || "error de red"}.`,
+            });
+        }
+    }
+    return salida;
 }
 /** Cuándo se sincronizó por última vez y cuántos centros tiene cada empresa. Para mostrarlo. */
 export async function estadoSincronizacion() {

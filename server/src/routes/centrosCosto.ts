@@ -10,7 +10,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
 import { construirRemapeo, decidirRemapeo, validarPayload, type ItemCentroCosto } from "../services/centrosCostoImport.js";
-import { estadoSincronizacion, sincronizarCentrosCostoDesdeTango } from "../services/centrosCostoSync.js";
+import { estadoSincronizacion, probarTango, sincronizarCentrosCostoDesdeTango } from "../services/centrosCostoSync.js";
 import { TangoApi } from "../services/tangoApi.js";
 
 /*
@@ -370,6 +370,23 @@ router.post("/sincronizar-tango", requireTenant, authenticateToken, requirePermi
   } catch (error: any) {
     console.error("Sincronizar centros de costo error:", error);
     res.status(500).json({ error: error?.message || "No se pudo sincronizar con Tango." });
+  }
+});
+
+/*
+  GET /probar-tango — ¿se llega a Tango? Consulta y NO escribe nada.
+
+  El túnel a cada Tango termina en el VPS, así que desde afuera no se puede comprobar: esto lo pregunta
+  desde el server, que es el único que está del lado correcto. Contesta por empresa qué pasó —el estado
+  HTTP, o el tipo de auxiliar que trajo y cuántos centros vendrían—, que es lo que hace falta para
+  saber si la URL del túnel y el token están bien antes de reemplazar el catálogo.
+*/
+router.get("/probar-tango", requireTenant, authenticateToken, requirePermission(PERMISO), async (_req: AuthenticatedRequest & TenantRequest, res: Response) => {
+  try {
+    res.json({ tangoConfigurado: TangoApi.configurada(), empresas: await probarTango() });
+  } catch (error: any) {
+    console.error("Probar Tango error:", error);
+    res.status(500).json({ error: error?.message || "No se pudo probar la conexión con Tango." });
   }
 });
 

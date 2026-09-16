@@ -9,6 +9,8 @@ const companySchema = new Schema({
     provincia: { type: String },
     codigoPostal: { type: String },
     tangoId: { type: String, trim: true },
+    tangoToken: { type: String, trim: true },
+    tangoApiUrl: { type: String, trim: true },
     firmanteNombre: { type: String },
     firmanteDni: { type: String },
     firmanteCargo: { type: String },
