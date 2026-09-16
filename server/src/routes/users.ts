@@ -1195,6 +1195,43 @@ const permisoParaCrearUsuario = (req: AuthenticatedRequest, res: Response, next:
   return middleware(req, res, next);
 };
 
+/*
+  CORREGIR O CANCELAR UNA SOLICITUD PROPIA, DESDE LA APP.
+
+  Pedir un alta desde el móvil ya funcionaba con el permiso de Contratación (ver
+  `permisoParaCrearUsuario`): una solicitud no es un usuario. Lo que faltaba era lo obvio —la misma
+  persona no podía corregir ni cancelar lo que acababa de pedir: el endpoint exigía permiso de
+  administración y contestaba «Insufficient permissions»—, así que para dar de baja un pedido propio
+  había que pedirle a administración que lo hiciera.
+
+  SE RELAJA SÓLO PARA ESO, y con tres condiciones:
+    · el documento es una solicitud PENDIENTE (aprobada ya es una persona con contrato: ahí manda el panel);
+    · es SUYA (`solicitudCreadaPor`), o tan vieja que no guardó quién la pidió y no hay a quién atribuirla;
+    · al cambiar el estado, sólo puede CANCELAR. Rechazar es la decisión de quien aprueba, no de quien pide.
+
+  Cualquier otro caso sigue pidiendo `admin_users:view`, como antes.
+*/
+const permisoSobreSolicitudPropia = (soloCancelar: boolean) => async (req: AuthenticatedRequest & TenantRequest, res: Response, next: NextFunction) => {
+  const admin = requirePermission("admin_users:view");
+  try {
+    if (!Types.ObjectId.isValid(String(req.params.id))) return admin(req, res, next);
+    const objetivo: any = await User.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).select("metadata.isSolicitud metadata.solicitudStatus metadata.solicitudCreadaPor").lean();
+    const m = objetivo?.metadata || {};
+    const pendiente = m.isSolicitud === true && (m.solicitudStatus || "pendiente") === "pendiente";
+    const propia = !m.solicitudCreadaPor || String(m.solicitudCreadaPor) === String(req.user!.userId);
+    const accionPermitida = !soloCancelar || String((req.body || {}).status || "") === "cancelada";
+    if (pendiente && propia && accionPermitida) {
+      // Marca para el handler: con el permiso del móvil, la solicitud NO puede dejar de ser una solicitud.
+      (req as any).solicitudPropiaDelMovil = true;
+      return requireAnyPermission("admin_users:view", MOBILE_USERS)(req, res, next);
+    }
+    return admin(req, res, next);
+  } catch (e) {
+    console.error("[SOLICITUD] No se pudo evaluar el permiso sobre la solicitud:", e);
+    return admin(req, res, next);
+  }
+};
+
 // POST /users - Crear usuario
 router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -1638,7 +1675,7 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
 });
 
 // PATCH /users/:id - Actualizar usuario
-router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudPropia(false), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = updateUserSchema.parse(req.body);
     normalizarRolesFrame((data as any).metadata);
@@ -1755,6 +1792,27 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
           // Sin sello: la edición sigue igual y la persona queda como estaba.
         }
       }
+    }
+
+    /*
+      EDITADA DESDE LA APP: SIGUE SIENDO UNA SOLICITUD.
+
+      Cuando lo que habilitó esta edición fue el permiso del móvil (ver `permisoSobreSolicitudPropia`),
+      lo único que se puede tocar son los datos del pedido. Sin esto, quien puede pedir un alta podría
+      editarla para dejarla con `isSolicitud: false`, su propia contraseña y el rol que quisiera: se
+      habría dado de alta un usuario activo sin que nadie lo apruebe.
+    */
+    if ((req as any).solicitudPropiaDelMovil) {
+      delete (data as any).roles;
+      delete (data as any).password;
+      delete (data as any).isActive;
+      const meta = ((data as any).metadata || {}) as any;
+      delete meta.activo;
+      // El estado, quién la pidió y el motivo de un rechazo los conserva el bloque de abajo.
+      delete meta.solicitudStatus;
+      delete meta.solicitudCreadaPor;
+      meta.isSolicitud = true;
+      (data as any).metadata = meta;
     }
 
     /*
@@ -1974,7 +2032,7 @@ router.patch("/:id/confirmar-cambio-cuenta", requireTenant, authenticateToken, r
 
 // PATCH /users/:id/solicitud-status - Cambiar el estado de una solicitud SIN borrarla. Se permite
 // volver a "pendiente" para deshacer un rechazo/cancelación hecho por error.
-router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoSobreSolicitudPropia(true), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { status, motivo } = req.body || {};
     if (!["rechazada", "cancelada", "pendiente"].includes(String(status))) {
