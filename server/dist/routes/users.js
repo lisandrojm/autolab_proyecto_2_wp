@@ -1279,6 +1279,7 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
                 destinatarios: await responsablesDeProyectos(req.tenantObjectId, proyectos),
                 type: NOVEDAD_SOLICITUD,
                 title: user.metadata?.esRenovacion ? "Renovación de contrato pedida" : "Nueva solicitud de contratación",
+                refId: user._id,
                 message: `${nombreDePersona(user)} · pedida por ${nombreDePersona(await User.findById(req.user.userId).select("firstName lastName metadata.fullName").lean())}`,
                 excepto: req.user.userId,
             });
@@ -1858,6 +1859,7 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requireP
                 destinatarios: [user.metadata?.solicitudCreadaPor],
                 type: NOVEDAD_SOLICITUD_RECHAZADA,
                 title: "Solicitud rechazada",
+                refId: user._id,
                 message: `${nombreDePersona(user)}${texto ? `: ${texto}` : ""}`,
                 excepto: req.user.userId,
             });

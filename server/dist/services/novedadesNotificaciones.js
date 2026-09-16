@@ -26,13 +26,13 @@ export const NOVEDAD_SOLICITUD_RECHAZADA = "solicitud_rechazada";
 export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA];
 const idValido = (x) => !!x && Types.ObjectId.isValid(String(x));
 /** Manda el aviso a cada destinatario. No lanza: un aviso perdido no puede tumbar la operación. */
-export async function notificar({ tenantId, destinatarios, type, title, message, linkUrl, excepto }) {
+export async function notificar({ tenantId, destinatarios, type, title, message, linkUrl, refId, excepto }) {
     try {
         const fuera = excepto ? String(excepto) : "";
         const ids = [...new Set(destinatarios.filter(idValido).map(String))].filter((id) => id !== fuera);
         if (ids.length === 0)
             return;
-        await Notification.insertMany(ids.map((userId) => ({ tenantId: new Types.ObjectId(String(tenantId)), userId: new Types.ObjectId(userId), type, title, message, linkUrl, isRead: false })), { ordered: false });
+        await Notification.insertMany(ids.map((userId) => ({ tenantId: new Types.ObjectId(String(tenantId)), userId: new Types.ObjectId(userId), type, title, message, linkUrl, refId: idValido(refId) ? new Types.ObjectId(String(refId)) : undefined, isRead: false })), { ordered: false });
     }
     catch (e) {
         console.error("[NOVEDADES] No se pudo crear la notificación:", e);

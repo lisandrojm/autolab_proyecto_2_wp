@@ -6,6 +6,14 @@ export interface INotification extends Document {
     title: string;
     message: string;
     linkUrl?: string;
+    /**
+     * DE QUÉ HABLA EL AVISO: la persona que se registró, la solicitud que entró.
+     *
+     * Sin esto un aviso era sólo un texto: se podían marcar todos como leídos o ninguno, porque no había
+     * forma de saber qué fila de la lista le corresponde. Con la referencia, la fila puede mostrarse como
+     * nueva y marcarse leída sola.
+     */
+    refId?: Types.ObjectId;
     isRead: boolean;
     readAt?: Date;
     createdAt: Date;

@@ -39,18 +39,20 @@ interface Aviso {
   message: string;
   /** Qué pantalla de la app abre. La app traduce `type`; esto es para el escritorio. */
   linkUrl?: string;
+  /** De qué habla: la persona registrada, la solicitud. Es lo que permite marcar leída UNA fila. */
+  refId?: string | Types.ObjectId | null;
   /** Quien hizo la acción: no se avisa a sí mismo lo que acaba de hacer. */
   excepto?: string | Types.ObjectId | null;
 }
 
 /** Manda el aviso a cada destinatario. No lanza: un aviso perdido no puede tumbar la operación. */
-export async function notificar({ tenantId, destinatarios, type, title, message, linkUrl, excepto }: Aviso): Promise<void> {
+export async function notificar({ tenantId, destinatarios, type, title, message, linkUrl, refId, excepto }: Aviso): Promise<void> {
   try {
     const fuera = excepto ? String(excepto) : "";
     const ids = [...new Set(destinatarios.filter(idValido).map(String))].filter((id) => id !== fuera);
     if (ids.length === 0) return;
     await Notification.insertMany(
-      ids.map((userId) => ({ tenantId: new Types.ObjectId(String(tenantId)), userId: new Types.ObjectId(userId), type, title, message, linkUrl, isRead: false })),
+      ids.map((userId) => ({ tenantId: new Types.ObjectId(String(tenantId)), userId: new Types.ObjectId(userId), type, title, message, linkUrl, refId: idValido(refId) ? new Types.ObjectId(String(refId)) : undefined, isRead: false })),
       { ordered: false },
     );
   } catch (e) {

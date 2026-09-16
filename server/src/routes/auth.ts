@@ -1052,6 +1052,7 @@ router.post("/registro", async (req, res) => {
         type: NOVEDAD_REGISTRO,
         title: "Nuevo registro",
         message: `${nombre} se registró con tu link.`,
+        refId: user._id as Types.ObjectId,
       });
       const responsables = await responsablesDeQuienSupervisa(tenantId, String(payload.createdBy));
       await notificar({
@@ -1060,6 +1061,7 @@ router.post("/registro", async (req, res) => {
         type: NOVEDAD_REGISTRO,
         title: "Nuevo registro",
         message: `${nombre} se registró con el link de ${nombreDePersona(invitador)}.`,
+        refId: user._id as Types.ObjectId,
         excepto: payload.createdBy,
       });
     }

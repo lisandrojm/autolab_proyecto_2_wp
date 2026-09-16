@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faCheckDouble } from "@fortawesome/free-solid-svg-icons";
-import { useNotifications } from "../hooks/useNotifications";
+import { useNovedades } from "../hooks/useNovedades";
 
 /*
   «HAY N NUEVOS», ARRIBA DE LA PANTALLA DONDE SE RESUELVEN.
@@ -8,6 +8,9 @@ import { useNotifications } from "../hooks/useNotifications";
   El número de la tarjeta del inicio no se borra solo al entrar, a propósito: tocar una tarjeta sin
   tiempo de mirar nada no puede hacer desaparecer el aviso. Pero el lugar natural para decir «ya los
   vi» es esta pantalla, no la campanita: acá está la lista que se acaba de mirar.
+
+  Esto marca TODO lo nuevo de la pantalla. De a uno se marca en su fila, que se muestra como nueva
+  hasta que se la mira (ver `useNovedades`).
 
   Si no hay nada sin leer no se dibuja: un cartel que dice «0 nuevos» sólo corre el contenido para abajo.
 */
@@ -20,8 +23,7 @@ interface AvisoNovedadesProps {
 }
 
 export default function AvisoNovedades({ tipos, texto }: AvisoNovedadesProps) {
-  const { porTipo, markAllAsRead } = useNotifications();
-  const cantidad = tipos.reduce((total, tipo) => total + (porTipo[tipo] || 0), 0);
+  const { cantidad, marcarTodos } = useNovedades(tipos);
   if (cantidad === 0) return null;
 
   return (
@@ -30,7 +32,7 @@ export default function AvisoNovedades({ tipos, texto }: AvisoNovedadesProps) {
         <FontAwesomeIcon icon={faBell} className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{texto(cantidad)}</span>
       </p>
-      <button type="button" onClick={() => void markAllAsRead(tipos)} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-orange-300 px-2 py-1 text-[11px] font-bold text-orange-700 active:scale-95 dark:border-orange-800 dark:text-orange-300">
+      <button type="button" onClick={() => void marcarTodos()} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-orange-300 px-2 py-1 text-[11px] font-bold text-orange-700 active:scale-95 dark:border-orange-800 dark:text-orange-300">
         <FontAwesomeIcon icon={faCheckDouble} className="h-3 w-3" />
         Marcar leídos
       </button>

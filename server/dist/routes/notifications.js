@@ -122,18 +122,26 @@ router.put("/read-all", async (req, res) => {
     try {
         const userId = req.user.userId;
         /*
-          Con `type` (o `types`) marca sólo esa familia: «leí los registros nuevos» no es «leí todo».
-          Varios tipos en una sola llamada porque una tarjeta de la app puede juntar más de uno: en
-          Contratación entran las solicitudes nuevas y las decisiones sobre las propias, y para quien
-          mira son todas «lo nuevo de contratación»: marcarlas de a una dejaría el número a medio bajar.
+          MARCAR LEÍDO: TODO, UNA FAMILIA, O LO DE UNA FILA.
+    
+          `types` limita a una familia —«leí los registros nuevos» no es «leí todo»—, y varios tipos entran
+          en una sola llamada porque una tarjeta de la app puede juntar más de uno: en Contratación van las
+          solicitudes nuevas y las decisiones sobre las propias, y marcarlas de a una dejaría el número a
+          medio bajar.
+    
+          `refIds` limita a de quién habla el aviso: es «marcar leído ESTE registro» desde su fila de la
+          lista, sin tocar los demás. Los dos filtros se combinan; sin ninguno, marca todo lo no leído.
         */
         const cuerpo = req.body || {};
-        const tipos = [...new Set([cuerpo.type, ...(Array.isArray(cuerpo.types) ? cuerpo.types : [])].map((t) => String(t || "").trim()).filter(Boolean))];
+        const lista = (uno, varios) => [...new Set([uno, ...(Array.isArray(varios) ? varios : [])].map((x) => String(x || "").trim()).filter(Boolean))];
+        const tipos = lista(cuerpo.type, cuerpo.types);
+        const refs = lista(cuerpo.refId, cuerpo.refIds).filter((id) => Types.ObjectId.isValid(id));
         const result = await Notification.updateMany({
             tenantId: req.tenantObjectId,
             userId,
             isRead: false,
             ...(tipos.length > 0 ? { type: { $in: tipos } } : {}),
+            ...(refs.length > 0 ? { refId: { $in: refs.map((id) => new Types.ObjectId(id)) } } : {}),
         }, {
             $set: {
                 isRead: true,

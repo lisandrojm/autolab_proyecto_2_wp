@@ -10,6 +10,7 @@ import SectionHeader from "../components/SectionHeader";
 import { contratosPorVencerAPI, ContratoPorVencer } from "../../../../api/contratosPorVencer";
 import { sweetAlert } from "../utils/sweetAlert";
 import AvisoNovedades from "../components/AvisoNovedades";
+import { useNovedades } from "../hooks/useNovedades";
 import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA } from "../../../../api/personnel";
 
 /*
@@ -35,6 +36,8 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  /** Qué solicitudes son nuevas (aviso sin leer) y cómo marcarlas leídas, de a una o todas. */
+  const novedades = useNovedades([NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA]);
 
   /*
     POR VENCER: los contratos de la gente a cargo que terminan en la próxima semana, para renovarlos o
@@ -224,6 +227,8 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                   onClick={() => {
                     setSelectedUser(user);
                     setShowDetailModal(true);
+                    // Abrirla ES mirarla: queda leído su aviso y no el de las otras.
+                    void novedades.marcarLeido(user._id);
                   }}
                   className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
                 >
@@ -232,6 +237,8 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                       <div className="flex items-center justify-between gap-2">
                         <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</h4>
                         <div className="flex shrink-0 items-center gap-1">
+                          {/* Sin mirar todavía. Se marca leída al abrirla, o todas desde el banner. */}
+                          {novedades.esNuevo(user._id) && <span className="rounded bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">Nueva</span>}
                           {/* Renueva un contrato que vencía: no es un ingreso nuevo. */}
                           {meta.esRenovacion && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${estado.cls}`}>{estado.label}</span>

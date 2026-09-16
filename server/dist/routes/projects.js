@@ -1558,6 +1558,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 destinatarios: [solicitudAprobada.metadata?.solicitudCreadaPor],
                 type: NOVEDAD_SOLICITUD_APROBADA,
                 title: "Solicitud aprobada",
+                refId: solicitudAprobada._id,
                 message: `${nombreDePersona(solicitudAprobada)} ya tiene contrato en ${project.name}.`,
                 excepto: req.user.userId,
             });

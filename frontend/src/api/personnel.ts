@@ -134,6 +134,8 @@ export interface Notification {
   title: string;
   message: string;
   linkUrl?: string;
+  /** De qué habla el aviso: la persona registrada, la solicitud. Permite marcar leída UNA fila. */
+  refId?: string | null;
   isRead: boolean;
   readAt?: string;
   createdAt: string;
@@ -405,10 +407,15 @@ export const personnelAPI = {
     return data;
   },
 
-  /** Con uno o varios tipos marca leída sólo esa familia (el número de una tarjeta), no todo lo que haya. */
-  markAllNotificationsRead: async (type?: string | string[]): Promise<{ message: string; count: number }> => {
+  /**
+   * Marca leído: todo, una familia de tipos, o lo que habla de ciertas filas (`refIds`).
+   *
+   * Los dos filtros se combinan en el server. Sin ninguno marca todo lo no leído.
+   */
+  markAllNotificationsRead: async (type?: string | string[], refIds?: string | string[]): Promise<{ message: string; count: number }> => {
     const tipos = Array.isArray(type) ? type : type ? [type] : [];
-    const { data } = await axios.put("/notifications/read-all", tipos.length > 0 ? { types: tipos } : {});
+    const refs = Array.isArray(refIds) ? refIds : refIds ? [refIds] : [];
+    const { data } = await axios.put("/notifications/read-all", { ...(tipos.length > 0 ? { types: tipos } : {}), ...(refs.length > 0 ? { refIds: refs } : {}) });
     return data;
   },
 

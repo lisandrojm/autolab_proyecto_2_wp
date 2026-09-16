@@ -29,7 +29,7 @@ interface EstadoNotificaciones {
   ensureLoaded: () => void;
   markAsRead: (id: string) => Promise<void>;
   markAsUnread: (id: string) => Promise<void>;
-  markAllAsRead: (type?: string | string[]) => Promise<void>;
+  markAllAsRead: (type?: string | string[], refIds?: string | string[]) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
 }
 
@@ -92,13 +92,18 @@ export const useNotifications = create<EstadoNotificaciones>((set, get) => ({
     }
   },
 
-  /** Sin tipos, todas. Con uno o varios, sólo esas familias: «leí los registros nuevos». */
-  markAllAsRead: async (type) => {
+  /**
+   * Sin nada, todas. Con tipos, sólo esas familias («leí los registros nuevos»). Con `refIds`, sólo lo
+   * que habla de esas filas («leí este registro»). Los dos filtros se combinan.
+   */
+  markAllAsRead: async (type, refIds) => {
     set({ error: null });
     try {
       const tipos = Array.isArray(type) ? type : type ? [type] : [];
-      await personnelAPI.markAllNotificationsRead(tipos);
-      set({ notifications: get().notifications.map((n) => (tipos.length === 0 || tipos.includes(n.type) ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)) });
+      const refs = (Array.isArray(refIds) ? refIds : refIds ? [refIds] : []).map(String);
+      await personnelAPI.markAllNotificationsRead(tipos, refs);
+      const alcanza = (n: { type: string; refId?: string | null }) => (tipos.length === 0 || tipos.includes(n.type)) && (refs.length === 0 || refs.includes(String(n.refId || "")));
+      set({ notifications: get().notifications.map((n) => (alcanza(n) ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)) });
       await recontar(set);
     } catch (err: any) {
       set({ error: err?.response?.data?.error || "Error al marcar todas las notificaciones" });

@@ -4,6 +4,7 @@ import { faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt,
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import AvisoNovedades from "../components/AvisoNovedades";
+import { useNovedades } from "../hooks/useNovedades";
 import { NOVEDAD_REGISTRO } from "../../../../api/personnel";
 import { registroLinksAPI, DetalleRegistrado, Registrado } from "../../../../api/registroLinks";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -43,6 +44,8 @@ export default function Registro({ onNavigate }: RegistroProps) {
   const [filtro, setFiltro] = useState<FiltroRegistrados>("todos");
   /** Qué registro se está borrando: la fila se apaga mientras el server contesta. */
   const [borrando, setBorrando] = useState<string | null>(null);
+  /** Cuáles son nuevos (hay un aviso sin leer que habla de ellos) y cómo marcarlos leídos. */
+  const novedades = useNovedades([NOVEDAD_REGISTRO]);
 
   // Sólo un supervisor recibe registrados de otros links: al coordinador no se le muestra el filtro.
   const cuentas = { todos: registrados?.length || 0, mios: (registrados || []).filter((r) => r.esMio).length, equipo: (registrados || []).filter((r) => !r.esMio).length };
@@ -74,6 +77,8 @@ export default function Registro({ onNavigate }: RegistroProps) {
     setCargandoDetalle(id);
     try {
       setDetalle(await registroLinksAPI.detalleRegistrado(id));
+      // Abrir el detalle ES mirarlo: el aviso de ESE registro queda leído, los demás no se tocan.
+      void novedades.marcarLeido(id);
     } catch (e: any) {
       sweetAlert.error("No se pudo abrir", e?.response?.data?.error || "Probá de nuevo en un momento.");
     } finally {
@@ -174,7 +179,9 @@ export default function Registro({ onNavigate }: RegistroProps) {
                   {cargandoDetalle === r._id ? (
                     <FontAwesomeIcon icon={faSpinner} className="animate-spin text-slate-400" />
                   ) : (
-                    r.validadoEnArca && <span className="shrink-0 rounded bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:bg-green-900/30 dark:text-green-400">Validado ARCA</span>
+                    <span className="flex shrink-0 items-center gap-1">
+                      {r.validadoEnArca && <span className="rounded bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:bg-green-900/30 dark:text-green-400">Validado ARCA</span>}
+                    </span>
                   )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pr-10 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
@@ -200,6 +207,19 @@ export default function Registro({ onNavigate }: RegistroProps) {
                 siempre: sacarlos era tarea de administración. El server sólo lo deja mientras la
                 persona no tenga contrato, proyecto ni una solicitud en curso, y si no, dice por qué.
               */}
+              {/*
+                «NUEVO», y el botón para marcar leído SÓLO este.
+
+                El banner de arriba marca todo; acá se marca de a uno, que es lo que hace falta cuando
+                entraron tres registros y uno se revisa ahora y los otros después.
+              */}
+              {novedades.esNuevo(r._id) && (
+                <button type="button" onClick={() => void novedades.marcarLeido(r._id)} title="Marcar este registro como leído" className="absolute bottom-3 right-12 flex items-center gap-1.5 rounded-lg border border-orange-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-700 active:scale-95 dark:border-orange-800 dark:text-orange-300">
+                  <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />
+                  Nuevo
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => void borrarRegistro(r)}

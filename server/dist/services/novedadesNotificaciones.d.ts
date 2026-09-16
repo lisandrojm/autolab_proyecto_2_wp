@@ -14,11 +14,13 @@ interface Aviso {
     message: string;
     /** Qué pantalla de la app abre. La app traduce `type`; esto es para el escritorio. */
     linkUrl?: string;
+    /** De qué habla: la persona registrada, la solicitud. Es lo que permite marcar leída UNA fila. */
+    refId?: string | Types.ObjectId | null;
     /** Quien hizo la acción: no se avisa a sí mismo lo que acaba de hacer. */
     excepto?: string | Types.ObjectId | null;
 }
 /** Manda el aviso a cada destinatario. No lanza: un aviso perdido no puede tumbar la operación. */
-export declare function notificar({ tenantId, destinatarios, type, title, message, linkUrl, excepto }: Aviso): Promise<void>;
+export declare function notificar({ tenantId, destinatarios, type, title, message, linkUrl, refId, excepto }: Aviso): Promise<void>;
 /**
  * QUIÉN ES EL COORDINADOR DEL PROYECTO (el responsable) de cada proyecto, como `_id` de usuario.
  *
