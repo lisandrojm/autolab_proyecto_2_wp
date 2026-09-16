@@ -3,6 +3,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
+import AvisoNovedades from "../components/AvisoNovedades";
+import { NOVEDAD_REGISTRO } from "../../../../api/personnel";
 import { registroLinksAPI, DetalleRegistrado, Registrado } from "../../../../api/registroLinks";
 import { sweetAlert } from "../utils/sweetAlert";
 import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
@@ -96,6 +98,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
       />
 
       <div className="px-4 pt-4">
+        <AvisoNovedades tipos={[NOVEDAD_REGISTRO]} texto={(n) => (n === 1 ? "1 registro nuevo" : `${n} registros nuevos`)} />
         <h3 className="mb-1 text-lg font-bold">Registrados</h3>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">{hayDeEquipo ? "Personas que se registraron con tu link o con los de tus supervisores." : "Personas que se registraron con tu link."} Tocá una para ver cómo se registró. Con el + copiás el link para compartir.</p>
 

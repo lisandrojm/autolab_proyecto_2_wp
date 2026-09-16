@@ -5,6 +5,7 @@ import { usersAPI, User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { SolicitudVista, SolicitudesTable, solicitudDesdeUser, useCatalogosDeSolicitudes } from "../solicitudes/SolicitudesTable";
+import { SolicitudDetalleModal } from "../solicitudes/SolicitudDetalleModal";
 
 interface TeamSolicitudesTabProps {
   projectId: string;
@@ -23,10 +24,12 @@ interface TeamSolicitudesTabProps {
  * Solicitudes. Acá solo queda lo propio de la pestaña: traer las solicitudes, quedarse con las de
  * este proyecto y entregar el `User` completo al wizard que las aprueba.
  */
-export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectId, onApprove, refreshSignal }) => {
+export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectId, project, onApprove, refreshSignal }) => {
   const [solicitudes, setSolicitudes] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  /** La solicitud que se está revisando: se decide desde su detalle, no desde la fila. */
+  const [revisando, setRevisando] = useState<SolicitudVista | null>(null);
   const catalogos = useCatalogosDeSolicitudes();
 
   const fetchSolicitudes = async () => {
@@ -61,18 +64,42 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
       .map(solicitudDesdeUser);
   }, [solicitudes, projectId, searchTerm]);
 
-  const cambiarEstado = async (s: SolicitudVista, status: "rechazada" | "pendiente", confirmar?: { titulo: string; texto: string; ok: string }) => {
-    if (confirmar) {
-      const r = await sweetAlert.confirm(confirmar.titulo, confirmar.texto, confirmar.ok);
-      if (!r.isConfirmed) return;
-    }
+  const cambiarEstado = async (s: SolicitudVista, status: "rechazada" | "pendiente", motivo?: string) => {
     try {
-      await usersAPI.setSolicitudStatus(s._id, status);
+      await usersAPI.setSolicitudStatus(s._id, status, motivo);
+      setRevisando(null);
       sweetAlert.success(status === "rechazada" ? "Solicitud Rechazada" : "Solicitud reabierta", status === "rechazada" ? "La solicitud quedó marcada como rechazada." : "Volvió a quedar pendiente de aprobación.");
       fetchSolicitudes();
     } catch (error: any) {
       sweetAlert.error("Error", error.response?.data?.error || "Error al cambiar el estado de la solicitud");
     }
+  };
+
+  /*
+    RECHAZAR PIDE EL MOTIVO, y es obligatorio.
+
+    Una solicitud rechazada vuelve a quien la cargó, que tiene que saber qué corregir: sin el motivo,
+    la pregunta se termina haciendo por teléfono y la solicitud se vuelve a mandar igual. Queda
+    guardado en la solicitud y se ve en la tabla y en el detalle.
+  */
+  const pedirMotivoYRechazar = async (s: SolicitudVista) => {
+    const r = await sweetAlert.prompt("¿Rechazar solicitud?", {
+      text: `Contale a quien pidió el alta de ${s.nombre} por qué no se aprueba.`,
+      placeholder: "Ej.: falta el CUIT, o la categoría no corresponde al rol",
+      multilinea: true,
+      confirmText: "Rechazar",
+      mensajeVacio: "Escribí el motivo del rechazo.",
+    });
+    if (!r.isConfirmed) return;
+    await cambiarEstado(s, "rechazada", String(r.value || "").trim());
+  };
+
+  /** Aprobar abre el alta ya cargada con lo que pidió la solicitud; el contrato se guarda ahí. */
+  const aprobar = (s: SolicitudVista) => {
+    const original = porId.get(s._id);
+    if (!original) return;
+    setRevisando(null);
+    onApprove(original);
   };
 
   /** Borrado definitivo: solo desde el admin, para depurar el listado. */
@@ -127,15 +154,15 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
         <SolicitudesTable
           solicitudes={filtradas}
           catalogos={catalogos}
-          onAprobar={(s) => {
-            const original = porId.get(s._id);
-            if (original) onApprove(original);
-          }}
-          onRechazar={(s) => cambiarEstado(s, "rechazada", { titulo: "¿Rechazar solicitud?", texto: `La solicitud de ${s.nombre} quedará registrada como rechazada.`, ok: "Sí, rechazar" })}
+          onVerDetalle={setRevisando}
+          onAprobar={aprobar}
+          onRechazar={pedirMotivoYRechazar}
           onReabrir={(s) => cambiarEstado(s, "pendiente")}
           onEliminar={handleDelete}
         />
       )}
+
+      <SolicitudDetalleModal isOpen={!!revisando} onClose={() => setRevisando(null)} solicitud={revisando} catalogos={catalogos} proyectos={project ? [{ _id: String(project._id), name: project.name }] : []} onAprobar={aprobar} onRechazar={pedirMotivoYRechazar} />
     </div>
   );
 };

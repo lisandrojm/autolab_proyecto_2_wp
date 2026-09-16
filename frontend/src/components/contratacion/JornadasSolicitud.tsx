@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalculator, faCircleInfo, faPen, faRotateLeft, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
-import { diasCorridos, ErroresJornadas, MOTIVOS_AJUSTE_JORNADAS, NOTA_MINIMA_OTRO } from "../../../../utils/jornadas";
-import { textoDeDias } from "../../../../utils/jerarquiaTurnos";
+import { diasCorridos, ErroresJornadas, MOTIVOS_AJUSTE_JORNADAS, NOTA_MINIMA_OTRO } from "../../utils/jornadas";
+import { textoDeDias } from "../../utils/jerarquiaTurnos";
 
 /**
- * LA CANTIDAD DE JORNADAS DE LA SOLICITUD. La regla vive en `utils/jornadas.ts`; esto la muestra.
+ * LA CANTIDAD DE JORNADAS DEL CONTRATO. La usan la solicitud de la app y el alta del panel: es la misma
+ * cuenta y la misma explicación, así que vive una sola vez. La regla vive en `utils/jornadas.ts`; esto la muestra.
  *
  *   Días fijos, sin ajuste   el número calculado, de sólo lectura. No parece un input a propósito:
  *                            no se escribe, se deduce.

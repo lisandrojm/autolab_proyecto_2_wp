@@ -157,6 +157,19 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
           </div>
         </div>
 
+        {/*
+          POR QUÉ SE RECHAZÓ, para quien pidió el alta.
+
+          Es el único lugar donde esta persona se entera: el motivo lo escribe quien la rechaza desde el
+          panel, y sin verlo acá la solicitud se vuelve a mandar igual y se rechaza igual.
+        */}
+        {status === "rechazada" && (user.metadata as any)?.solicitudMotivoRechazo && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-red-500">Motivo del rechazo</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-red-700 dark:text-red-300">{(user.metadata as any).solicitudMotivoRechazo}</p>
+          </div>
+        )}
+
         {/* PROFILE HEADER */}
         <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
           <div className="flex-1 min-w-0">

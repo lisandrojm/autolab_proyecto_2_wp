@@ -15,9 +15,11 @@ import UserHistory from "./views/UserHistory";
 import MyTeams from "./views/MyTeams";
 import SeguimientoNovedades from "./views/SeguimientoNovedades";
 import Registro from "./views/Registro";
+import Notificaciones from "./views/Notificaciones";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { usePermisoInactivo } from "../../../stores/permisosInactivosStore";
+import { useNotifications } from "./hooks/useNotifications";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
 
@@ -27,6 +29,15 @@ function App() {
   const [ordersInitialType, setOrdersInitialType] = useState<string | null>(null);
   const { user, tenantId, setTenantId } = useAuthStore();
   const { theme } = useThemeStore();
+  /*
+    Los avisos se piden UNA vez al abrir la app, no al entrar a la campanita: el número tiene que estar
+    en la barra de abajo y en las tarjetas del inicio desde el primer momento, que es de lo que sirve.
+  */
+  const { unreadCount, ensureLoaded } = useNotifications();
+  useEffect(() => {
+    ensureLoaded();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (theme === "dark") {
@@ -108,6 +119,9 @@ function App() {
         return puede(MOBILE_ACTIVITY_COMPLIANCE) ? <SeguimientoNovedades onNavigate={setCurrentView} /> : inicio;
       case "registro":
         return puede(MOBILE_REGISTRO) ? <Registro onNavigate={setCurrentView} /> : inicio;
+      // Las notificaciones son de cualquiera que entre a la app: avisan sobre lo que ya puede ver.
+      case "notifications":
+        return <Notificaciones onNavigate={setCurrentView} />;
       default:
         return inicio;
     }
@@ -151,7 +165,7 @@ function App() {
     <div className="w-full dark:bg-gray-900 flex justify-center">
       <div className="relative flex min-h-screen flex-col bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-display w-full xl:w-1/2">
         {renderView()}
-        <BottomNav currentView={currentView} onNavigate={setCurrentView} />
+        <BottomNav currentView={currentView} onNavigate={setCurrentView} sinLeer={unreadCount} />
       </div>
     </div>
   );

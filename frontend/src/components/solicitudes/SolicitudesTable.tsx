@@ -68,6 +68,8 @@ export interface SolicitudVista {
   comentarios?: string | null;
   /** Renueva un contrato por vencer: etiqueta «Renovación». */
   esRenovacion?: boolean;
+  /** Por qué se rechazó. Se muestra en la fila: es lo que hay que corregir para volver a pedirla. */
+  motivoRechazo?: string | null;
 }
 
 /** Adapta un `User` con `metadata.isSolicitud` a la forma de la tabla. */
@@ -89,6 +91,8 @@ export const solicitudDesdeUser = (u: any): SolicitudVista => {
     schedule: m.schedule ?? null,
     dailyRate: m.dailyRate ?? null,
     comentarios: m.comentarios ?? null,
+    solicitudUserId: m.solicitudUserId ? String(m.solicitudUserId) : null,
+    motivoRechazo: m.solicitudMotivoRechazo ?? null,
     esRenovacion: !!m.esRenovacion,
   };
 };
@@ -162,9 +166,11 @@ interface SolicitudesTableProps {
   onEliminar: (s: SolicitudVista) => void;
   /** Texto del botón de aprobar; en la vista global dice a qué proyecto lleva. */
   tituloAprobar?: (s: SolicitudVista) => string;
+  /** Abre el detalle completo de la solicitud. Sin esto la fila no es clickeable. */
+  onVerDetalle?: (s: SolicitudVista) => void;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, tituloAprobar }) => {
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, tituloAprobar, onVerDetalle }) => {
   const { resolverRolFrame, resolverCategoria, resolverTramite } = catalogos;
 
   return (
@@ -192,7 +198,14 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               const filaApagada = s.estado === "rechazada" || s.estado === "cancelada";
 
               return (
-                <tr key={s._id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""}`}>
+                /*
+                  LA FILA ENTERA ABRE EL DETALLE.
+
+                  En las columnas entran siete datos y la solicitud tiene treinta: quien aprueba
+                  necesita leerlos antes de decidir, no después. Los botones de la última columna
+                  siguen funcionando como atajo, cortando la propagación del click.
+                */
+                <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-xs shrink-0">{s.nombre.charAt(0).toUpperCase()}</div>
@@ -263,8 +276,10 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
                       {ESTADO_SOLICITUD[s.estado].texto}
                     </span>
+                    {/* Por qué se rechazó, debajo del estado: es el dato que se busca al ver una rechazada. */}
+                    {s.motivoRechazo && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 max-w-[220px] mx-auto break-words" title={s.motivoRechazo}>{s.motivoRechazo}</p>}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                         así queda explícito que se está deshaciendo la decisión. */}
                     <div className="flex items-center justify-end gap-1.5">

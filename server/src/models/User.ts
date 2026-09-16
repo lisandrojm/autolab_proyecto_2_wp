@@ -183,6 +183,23 @@ export interface IUserMetadata {
   diasRotativos?: boolean;
   schedule?: string;
   dailyRate?: number;
+  /*
+    LO QUE DECLARA LA SOLICITUD DE CONTRATACIÓN ADEMÁS DE LO DE ARRIBA.
+
+    Mongoose descarta lo que el esquema no declara: sin estas líneas, todo esto viajaba desde la app y
+    NO se guardaba, así que la aprobación en el panel abría el alta sin tipo de contrato, sin área y
+    turno, sin empresa y sin el comentario de quien la pidió.
+  */
+  tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+  contratoId?: Types.ObjectId;
+  nombre_contrato?: string;
+  areaShiftAssignments?: { areaId?: Types.ObjectId; shiftIds?: Types.ObjectId[] }[];
+  empresaContratoId?: Types.ObjectId;
+  convenioId?: Types.ObjectId;
+  empleado_id_reemplezado?: string | number;
+  replacedUserId?: Types.ObjectId;
+  motivoReemplazoId?: Types.ObjectId;
+  comentarios?: string;
   isReplacement?: boolean;
   /** true mientras el registro NO es un usuario real (pendiente/rechazada/cancelada). */
   isSolicitud?: boolean;
@@ -194,6 +211,21 @@ export interface IUserMetadata {
    * generar una tarjeta duplicada. Vacío = alta de alguien que todavía no es usuario.
    */
   solicitudUserId?: Types.ObjectId;
+  /**
+   * QUIÉN PIDIÓ EL ALTA. Es a quien hay que avisarle cuando se aprueba o se rechaza: sin esto, quien
+   * cargó la solicitud desde la app no se enteraba nunca de en qué terminó.
+   */
+  solicitudCreadaPor?: Types.ObjectId;
+  /**
+   * POR QUÉ SE RECHAZÓ, quién lo decidió y cuándo.
+   *
+   * Un rechazo sin motivo obliga a quien pidió el alta a preguntar por afuera qué faltaba, y a volver
+   * a cargar la solicitud a ciegas. Queda guardado en la solicitud —que no se borra— para que se lea
+   * en la pantalla y para poder reabrirla sabiendo qué se había objetado.
+   */
+  solicitudMotivoRechazo?: string;
+  solicitudRechazadaPor?: Types.ObjectId;
+  solicitudRechazadaEl?: Date;
   /** La solicitud RENUEVA un contrato por vencer (etiqueta «Renovación»). Ver `models/RenovacionContrato.ts`. */
   esRenovacion?: boolean;
   /** Qué contrato renueva: (UserProject, fecha de baja), que es como se identifica un contrato. */
@@ -334,9 +366,31 @@ const userSchema = new Schema<IUser>(
       schedule: String,
       dailyRate: Number,
       isReplacement: Boolean,
+      // Ver el comentario de la interfaz: esto viajaba desde la app y se perdía al guardar.
+      tipoImpositivo: { type: String, enum: ["alta_temprana_afip", "constancia_cuit"] },
+      contratoId: { type: Schema.Types.ObjectId, ref: "Contrato" },
+      nombre_contrato: String,
+      areaShiftAssignments: [
+        {
+          _id: false,
+          areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+          shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+        },
+      ],
+      empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+      convenioId: { type: Schema.Types.ObjectId, ref: "Convenio" },
+      // El id de FRAME de la persona reemplazada: puede venir como número o como texto.
+      empleado_id_reemplezado: Schema.Types.Mixed,
+      replacedUserId: { type: Schema.Types.ObjectId, ref: "User" },
+      motivoReemplazoId: { type: Schema.Types.ObjectId, ref: "RequestConfig" },
+      comentarios: String,
       isSolicitud: { type: Boolean, default: false },
       solicitudStatus: { type: String, enum: ["pendiente", "aprobada", "rechazada", "cancelada"] },
       solicitudUserId: { type: Schema.Types.ObjectId, ref: "User" },
+      solicitudCreadaPor: { type: Schema.Types.ObjectId, ref: "User" },
+      solicitudMotivoRechazo: { type: String },
+      solicitudRechazadaPor: { type: Schema.Types.ObjectId, ref: "User" },
+      solicitudRechazadaEl: { type: Date },
       esRenovacion: { type: Boolean },
       renovacionDe: {
         userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },

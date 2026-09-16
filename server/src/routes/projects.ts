@@ -73,6 +73,7 @@ function sumarAlFiltro(filter: any, condicion: Record<string, unknown>): void {
   Object.assign(filter, condicion);
 }
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
+import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../services/novedadesNotificaciones.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 
@@ -1668,16 +1669,48 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         "metadata.projects": userProject._id,
       },
     };
-    // Si el alta viene de aprobar una solicitud (desde el wizard), marcamos la solicitud como aprobada
-    // y activamos al usuario (ya tiene login). Así deja de aparecer en la pestaña Solicitudes.
-    if (approveSolicitud) {
-      userUpdate.$set = {
-        "metadata.isSolicitud": false,
-        "metadata.solicitudStatus": "aprobada",
-        "metadata.activo": true,
-      };
+    /*
+      APROBAR UNA SOLICITUD: la solicitud y quien recibe el contrato pueden ser DOS documentos.
+
+      Una solicitud cargada desde la app es un usuario de paso (`solicitud_…@pending.com`) que apunta a
+      la persona real en `metadata.solicitudUserId`; el contrato va en la ficha de ESA persona. Por eso
+      `approveSolicitud` llega como el id de la solicitud: dando por sentado que era el mismo usuario,
+      el contrato terminaba en el usuario de paso y la persona seguía sin contrato.
+
+      Se sigue aceptando `true` para las solicitudes que no apuntan a nadie —el alta crea a la persona,
+      así que solicitud y usuario son el mismo documento— y para un front que todavía no se actualizó.
+    */
+    const idSolicitud = typeof approveSolicitud === "string" && Types.ObjectId.isValid(approveSolicitud) ? String(approveSolicitud) : approveSolicitud ? String(userId) : "";
+    let solicitudAprobada: any = null;
+    if (idSolicitud) {
+      // Quien recibe el contrato queda activo: ya está contratado y tiene que poder entrar.
+      userUpdate.$set = { "metadata.activo": true };
+      if (idSolicitud === String(userId)) {
+        userUpdate.$set["metadata.isSolicitud"] = false;
+        userUpdate.$set["metadata.solicitudStatus"] = "aprobada";
+        solicitudAprobada = user;
+      } else {
+        solicitudAprobada = await User.findOneAndUpdate({ _id: idSolicitud, tenantId: req.tenantObjectId }, { $set: { "metadata.isSolicitud": false, "metadata.solicitudStatus": "aprobada" } });
+      }
     }
     await User.findByIdAndUpdate(userId, userUpdate);
+
+    /*
+      AVISARLE A QUIEN PIDIÓ EL ALTA que se aprobó.
+
+      Cierra el circuito que abre la solicitud: quien la cargó desde la app se enteraba sólo si volvía
+      a mirar la pantalla. Va después de guardar todo, porque lo que se avisa es un contrato que ya está.
+    */
+    if (solicitudAprobada) {
+      await notificar({
+        tenantId: req.tenantObjectId!,
+        destinatarios: [(solicitudAprobada.metadata as any)?.solicitudCreadaPor],
+        type: NOVEDAD_SOLICITUD_APROBADA,
+        title: "Solicitud aprobada",
+        message: `${nombreDePersona(solicitudAprobada)} ya tiene contrato en ${project.name}.`,
+        excepto: req.user!.userId,
+      });
+    }
 
     res.json({ message: isUpdate ? "Member updated successfully" : "Member assigned successfully", userProject });
   } catch (error: any) {

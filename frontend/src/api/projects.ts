@@ -556,7 +556,8 @@ class ProjectsAPI {
     return resp.data as Client;
   }
 
-  async assignMember(projectId: string, data: { userId: string; contract: any; isUpdate?: boolean; contractIndex?: number; approveSolicitud?: boolean }): Promise<void> {
+  /** `approveSolicitud`: el id de la solicitud que se está aprobando (el contrato va en `userId`, que es la persona real). */
+  async assignMember(projectId: string, data: { userId: string; contract: any; isUpdate?: boolean; contractIndex?: number; approveSolicitud?: string | boolean }): Promise<void> {
     await axios.post(`/projects/${projectId}/assign-member`, data, {
       headers: this.getHeaders(),
     });

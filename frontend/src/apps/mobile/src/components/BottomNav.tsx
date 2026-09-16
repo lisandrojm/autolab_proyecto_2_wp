@@ -5,9 +5,11 @@ import { ViewType } from "../types";
 interface BottomNavProps {
   currentView: ViewType;
   onNavigate: (view: ViewType) => void;
+  /** Cuántos avisos sin leer. En 0 la campanita no muestra nada: avisar de nada es ruido. */
+  sinLeer?: number;
 }
 
-export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
+export default function BottomNav({ currentView, onNavigate, sinLeer = 0 }: BottomNavProps) {
   /*
     Cuatro lugares. «Mis equipos» estuvo acá un tiempo y se sacó: se entra desde su tarjeta del inicio.
     Antes el tercer lugar era Documentos, apagado y sin pantalla detrás; no se repuso, porque un botón
@@ -20,7 +22,9 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
     // Los proyectos de la persona, cada uno con su contrato y sus áreas/turnos. Antes se llamaba
     // «Asignación» y mostraba uno solo; nació como el final del Perfil, que alargaba de más.
     { id: "proyectos" as ViewType, icon: faBriefcase, label: "Proyectos", disabled: false },
-    { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: true, notifications: true },
+    // La campanita ya lleva a su pantalla. Antes estaba apagada y con un puntito rojo fijo: avisaba
+    // siempre, hubiera algo o no, y no se podía entrar a ver qué era.
+    { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: false, notifications: true },
   ];
 
   return (
@@ -46,12 +50,9 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
                   <div className="relative">
                     <FontAwesomeIcon icon={icon} className="w-5 h-5" />
 
-                    {/* 🔥 Puntito rojo de notificaciones */}
-                    {notifications && (
-                      <span className="absolute right-0 top-0 flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded bg-orange-400 opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded bg-orange-500" />
-                      </span>
+                    {/* El número de avisos sin leer. Hasta 9; más que eso no cambia lo que hay que hacer. */}
+                    {notifications && sinLeer > 0 && (
+                      <span className="absolute -right-2.5 -top-1.5 flex min-w-[18px] items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold leading-[18px] text-white">{sinLeer > 9 ? "9+" : sinLeer}</span>
                     )}
                   </div>
                   {isActive && <span className="text-xs font-bold mt-1 whitespace-nowrap">{label}</span>}

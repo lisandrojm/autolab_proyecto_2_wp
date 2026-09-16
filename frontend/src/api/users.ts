@@ -213,6 +213,8 @@ export interface SolicitudOverviewRow {
   comentarios?: string | null;
   /** Usuario real al que corresponde, si la solicitud es para alguien que ya existe. */
   solicitudUserId?: string | null;
+  /** Por qué se rechazó, para no tener que preguntarlo por afuera. */
+  motivoRechazo?: string | null;
   /** Renueva un contrato por vencer (etiqueta «Renovación»). */
   esRenovacion?: boolean;
 }
@@ -537,6 +539,8 @@ class UsersAPI {
       projectId?: string;
       metadataActivo?: string;
       isSolicitud?: string;
+      /** Sólo solicitudes de alta, en CUALQUIER estado (pendiente/aprobada/rechazada/cancelada). */
+      solicitudAny?: string;
       /** Nombre del rol (separadores flexibles), ej. "Administración". Filtra server-side. */
       roleName?: string;
       /*
@@ -578,6 +582,7 @@ class UsersAPI {
     if (params.projectId) searchParams.append("projectId", params.projectId);
     if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
     if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
+    if (params.solicitudAny) searchParams.append("solicitudAny", params.solicitudAny);
     if (params.roleName) searchParams.append("roleName", params.roleName);
     if (params.vigencia) searchParams.append("vigencia", params.vigencia);
     if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);
@@ -785,9 +790,14 @@ class UsersAPI {
     };
   }
 
-  /** Cambia el estado de una solicitud SIN borrarla. "pendiente" deshace un rechazo/cancelación. */
-  async setSolicitudStatus(id: string, status: "rechazada" | "cancelada" | "pendiente"): Promise<User> {
-    const { data } = await axios.patch(`/users/${id}/solicitud-status`, { status }, { headers: this.getHeaders() });
+  /**
+   * Cambia el estado de una solicitud SIN borrarla. "pendiente" deshace un rechazo/cancelación.
+   *
+   * El `motivo` es el del rechazo: se guarda con la solicitud para que quien la pidió sepa qué
+   * corregir. Volver a "pendiente" lo borra, así no queda colgada una objeción que ya no rige.
+   */
+  async setSolicitudStatus(id: string, status: "rechazada" | "cancelada" | "pendiente", motivo?: string): Promise<User> {
+    const { data } = await axios.patch(`/users/${id}/solicitud-status`, { status, motivo }, { headers: this.getHeaders() });
     const user = normalizeUser(data);
     emitUsersChanged("update", id);
     return user;

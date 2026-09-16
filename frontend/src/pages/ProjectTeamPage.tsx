@@ -24,6 +24,11 @@ import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { TeamJerarquiaTab } from "../components/team/TeamJerarquiaTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
 import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from "../components/contratos/DiasDeTrabajo";
+import { JornadasSolicitud } from "../components/contratacion/JornadasSolicitud";
+import { ImportesDelContrato } from "../components/contratacion/ImportesDelContrato";
+import { CampoHora } from "../components/contratacion/CampoHora";
+import { HORAS_DEL_DIA, horasDelHorario, sumarMinutos } from "../utils/horario";
+import { erroresDeJornadas, jornadasDelCalendario, mesesEquivalentes } from "../utils/jornadas";
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
@@ -304,7 +309,8 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterRolMobile, setFilterRolMobile] = useState<string>(""); // "" | "colaborador" | "coordinador" (server-side, paginado)
   const [filterReemplazo, setFilterReemplazo] = useState<string>(""); // "" | "con" | "sin" (server-side, paginado)
   // Dos pasos: Contrato y Sueldo. «Extras» (sede y observaciones) se sacó: la sede sale del proyecto.
-  const [wizardStep, setWizardStep] = useState<1 | 2>(1);
+  // Un solo formulario, como la solicitud de la app: el paso quedó sólo para resetear al abrir.
+  const [, setWizardStep] = useState<1 | 2>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   const [showEstadoInfo, setShowEstadoInfo] = useState(false);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
@@ -897,6 +903,57 @@ export const ProjectTeamPage: React.FC = () => {
     bruto, diario) queda en 0, como ya pasaba sin categoría. Es la misma regla que la solicitud del móvil.
   */
   const esServicios = !!wizardData.contrato_id && tramitePorContrato.get(wizardData.contrato_id) === "constancia_cuit";
+
+  /*
+    LAS MISMAS CUENTAS QUE LA SOLICITUD DE LA APP (ver `utils/jornadas.ts` e `ImportesDelContrato`).
+
+    El alta del panel y la solicitud del móvil describen el mismo contrato, así que las jornadas, los
+    meses del período y los importes salen de las mismas funciones: si no, el mismo período daba un
+    número acá y otro allá, y quien aprobaba tenía que rehacer la cuenta a mano.
+  */
+  const diasSemanaWizard = wizardData.dias_rotativos ? Number(wizardData.dias_por_semana) || 0 : wizardData.dias_semana.length;
+  const jornadasCalculadasWizard = jornadasDelCalendario(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, wizardData.dias_semana);
+  const mesesEqWizard = mesesEquivalentes(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, wizardData.dias_semana);
+  /** El ajuste manual de las jornadas es de la pantalla: al contrato va el número final. */
+  const [ajusteJornadas, setAjusteJornadas] = useState<{ ajustado: boolean; motivo: string; nota: string }>({ ajustado: false, motivo: "", nota: "" });
+  const datosJornadasWizard = {
+    desde: wizardData.fecha_alta_contrato,
+    hasta: wizardData.fecha_baja_contrato,
+    diasPorSemana: String(wizardData.dias_por_semana || ""),
+    dias: wizardData.dias_semana,
+    rotativos: wizardData.dias_rotativos,
+    jornadas: String(wizardData.cantidad_jornadas_laborales || ""),
+    calculadas: jornadasCalculadasWizard,
+    ajustado: ajusteJornadas.ajustado,
+    motivo: ajusteJornadas.motivo,
+    nota: ajusteJornadas.nota,
+  };
+  const erroresJornadasWizard = erroresDeJornadas(datosJornadasWizard);
+  useEffect(() => {
+    if (ajusteJornadas.ajustado || jornadasCalculadasWizard === null) return;
+    setWizardData((prev) => (prev.cantidad_jornadas_laborales === jornadasCalculadasWizard ? prev : { ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
+  }, [jornadasCalculadasWizard, ajusteJornadas.ajustado]);
+
+  /*
+    LÍMITES DEL TIPO DE CONTRATO: horas por jornada y días por semana (se cargan en Contratos).
+
+    Mismo criterio que la solicitud: los días se acotan en el momento y las horas se avisan y frenan el
+    guardado, porque cuál de las dos puntas corregir lo decide quien carga.
+  */
+  const contratoDelWizard = contratos.find((c) => c._id === wizardData.contrato_id) || null;
+  const limiteHorasWizard = contratoDelWizard?.data?.horasPorJornada ?? null;
+  const limiteDiasWizard = contratoDelWizard?.data?.diasPorSemana ?? null;
+  const duracionHorarioWizard = horasDelHorario(wizardData.hora_inicio, wizardData.hora_fin);
+  const horarioExcedidoWizard = limiteHorasWizard != null && duracionHorarioWizard != null && duracionHorarioWizard > limiteHorasWizard;
+  useEffect(() => {
+    if (limiteDiasWizard == null) return;
+    setWizardData((prev) => {
+      if ((Number(prev.dias_por_semana) || 0) <= limiteDiasWizard) return prev;
+      const lunesPrimero = [1, 2, 3, 4, 5, 6, 0];
+      const dias = prev.dias_rotativos ? prev.dias_semana : lunesPrimero.filter((d) => prev.dias_semana.includes(d)).slice(0, limiteDiasWizard).sort((a, b) => a - b);
+      return { ...prev, dias_por_semana: limiteDiasWizard, dias_semana: dias };
+    });
+  }, [limiteDiasWizard]);
   useEffect(() => {
     if (!esServicios || !wizardData.categoria_sat_id) return;
     setWizardData((prev) => ({ ...prev, categoria_sat_id: "" }));
@@ -1361,6 +1418,31 @@ export const ProjectTeamPage: React.FC = () => {
     }
     if (!user) return;
 
+    /*
+      EL CONTRATO VA A LA FICHA DE LA PERSONA REAL, no a la de la solicitud.
+
+      Una solicitud cargada desde la app es un usuario de paso (`solicitud_…@pending.com`) que guarda a
+      quién se pidió contratar en `metadata.solicitudUserId`. Si el contrato quedaba en ese usuario de
+      paso, la persona real seguía sin contrato: no aparecía en el equipo, ni en Mis equipos, ni en «Por
+      vencer». Se cambia acá a la persona real; la solicitud sólo queda marcada como aprobada al guardar.
+
+      Además, así el historial precargado (el contrato anterior, el proyecto, la categoría) es el de
+      quien va a firmar y no el de un usuario recién creado que nunca tuvo ninguno.
+    */
+    let solicitud: User | null = null;
+    if (approveSolicitudId) {
+      solicitud = user;
+      const idPersonaReal = String((user.metadata as any)?.solicitudUserId || "");
+      if (idPersonaReal && idPersonaReal !== String(user._id)) {
+        try {
+          const real = await usersAPI.get(idPersonaReal);
+          if (real) user = real;
+        } catch (e) {
+          console.error("No se pudo traer a la persona de la solicitud; sigo con la solicitud:", e);
+        }
+      }
+    }
+
     // Attempt to find existing data to pre-fill from user history
     const metadataProjects = user.metadata?.projects || [];
 
@@ -1373,9 +1455,15 @@ export const ProjectTeamPage: React.FC = () => {
     const contratoQueRige = getContratoActivo(lastProject?.contracts as any[]);
     const lastContract = contractOverride || (typeof contractIndex === "number" && lastProject?.contracts?.[contractIndex] != null ? lastProject.contracts[contractIndex] : contratoQueRige);
 
-    // Sin índice explícito el backend actualiza el ÚLTIMO contrato del array. Como acá se precargó el
-    // que rige, se fija su índice para que se guarde sobre ese mismo y no sobre otro.
-    if (typeof contractIndex !== "number" && !contractOverride && contratoQueRige && Array.isArray(lastProject?.contracts)) {
+    /*
+      Sin índice explícito el backend actualiza el ÚLTIMO contrato del array. Como acá se precargó el
+      que rige, se fija su índice para que se guarde sobre ese mismo y no sobre otro.
+
+      Aprobar es la excepción: ahí el contrato precargado es SÓLO el punto de partida y lo que se pidió
+      es una contratación nueva —típicamente una renovación de quien ya está—. Fijar el índice haría
+      que aprobar pisara el contrato vigente en vez de agregarle el nuevo, y se perdería el anterior.
+    */
+    if (!approveSolicitudId && typeof contractIndex !== "number" && !contractOverride && contratoQueRige && Array.isArray(lastProject?.contracts)) {
       const idxQueRige = (lastProject!.contracts as any[]).indexOf(contratoQueRige);
       if (idxQueRige >= 0) setEditingContractIndex(idxQueRige);
     }
@@ -1550,15 +1638,18 @@ export const ProjectTeamPage: React.FC = () => {
     }
 
     /*
-      Tercera fuente: el área y turno que declaró la SOLICITUD.
+      El área y turno que declaró la SOLICITUD.
+
+      Al aprobar va PRIMERO, por encima del equipo y del contrato anterior: es lo que se pidió, y para
+      alguien que ya está en el proyecto (una renovación) las otras dos fuentes traen el área vieja,
+      que es justamente lo que la solicitud puede venir a cambiar.
 
       Para un alta nueva las dos de arriba están vacías —la persona todavía no es del equipo ni tiene
       contratos—, así que el wizard abría sin área y había que elegirla de nuevo. La solicitud la trae
       desde el móvil: es el área que coordina quien pidió el alta.
     */
-    if (existingAssignments.length === 0 && Array.isArray((user.metadata as any)?.areaShiftAssignments)) {
-      existingAssignments = (user.metadata as any).areaShiftAssignments;
-    }
+    const areasDeLaSolicitud = Array.isArray((solicitud?.metadata as any)?.areaShiftAssignments) ? (solicitud!.metadata as any).areaShiftAssignments : [];
+    if (areasDeLaSolicitud.length > 0) existingAssignments = areasDeLaSolicitud;
 
     // Map existing assignments to the wizard format, ensuring we use string IDs
     const areaShiftAssignments = (existingAssignments || []).map((a: any) => ({
@@ -1619,20 +1710,64 @@ export const ProjectTeamPage: React.FC = () => {
       Sin categoría todavía, queda en «todos»: no hay nada de dónde deducirlo.
     */
     /*
-      El filtro de trámite arranca en el que ya está declarado, mirando dos lugares en este orden:
+      El filtro de trámite arranca en el que ya está declarado, mirando en este orden:
 
-        1. el tipo de contrato que se precargó (viene de un contrato anterior: ese ya lo decidió);
-        2. lo que declaró la solicitud desde mobile.
+        1. el tipo de contrato que PIDE la solicitud que se está aprobando;
+        2. el trámite que la solicitud declaró;
+        3. el tipo de contrato que se precargó de un contrato anterior (ese ya lo decidió).
 
-      El contrato pesa más que la solicitud porque es un hecho consumado y la solicitud es un pedido.
-      Si no hay ninguno de los dos, queda sin filtrar: no se inventa una vía.
+      Al aprobar manda la solicitud: es el contrato que el formulario va a tener elegido, y arrancar
+      filtrando por el trámite del contrato VIEJO dejaría el filtro contradiciendo al tipo elegido.
+      Fuera de una aprobación no hay solicitud y queda el contrato anterior, que es un hecho consumado.
+      Si no hay ninguno, queda sin filtrar: no se inventa una vía.
     */
+    const metaParaTramite: any = (solicitud?.metadata as any) || (user.metadata as any) || {};
     const tramiteDelContrato = tipoImpositivoDeContrato(initialContratoId, contratoFrames, allEstados);
-    const tramiteDeLaSolicitud = esTipoImpositivo((user.metadata as any)?.tipoImpositivo) ? ((user.metadata as any).tipoImpositivo as TipoImpositivo) : null;
-    setFiltroTramite(tramiteDelContrato || tramiteDeLaSolicitud || "");
+    const tramitePedido = solicitud && metaParaTramite.contratoId ? tipoImpositivoDeContrato(String(metaParaTramite.contratoId), contratoFrames, allEstados) : null;
+    const tramiteDeclarado = esTipoImpositivo(metaParaTramite.tipoImpositivo) ? (metaParaTramite.tipoImpositivo as TipoImpositivo) : null;
+    setFiltroTramite(tramitePedido || (solicitud ? tramiteDeclarado || tramiteDelContrato : tramiteDelContrato || tramiteDeclarado) || "");
+
+    /*
+      LO QUE PIDIÓ QUIEN CARGÓ LA SOLICITUD MANDA.
+
+      La solicitud ya trae el contrato entero —tipo, período, días, jornadas, horario, categoría,
+      importe, empresa y reemplazo—, así que aprobar es revisar y guardar, no volver a cargarlo todo
+      mirando otra pantalla. Va al final del `setWizardData`, pisando lo que se dedujo de un contrato
+      anterior (en un alta nueva no hay ninguno).
+
+      La categoría viaja como `_id` del catálogo y el formulario trabaja con el id numérico: se traduce
+      acá. Sin esa traducción quedaba sin elegir, y con ella en 0 quedaban el neto, el bruto y el resto.
+    */
+    const metaSolicitud: any = solicitud ? (solicitud.metadata as any) || {} : null;
+    const catDeSolicitud = metaSolicitud?.categoriaSatId ? allCategoriasSat.find((c) => String(c._id) === String(metaSolicitud.categoriaSatId) || String(c.data?.id) === String(metaSolicitud.categoriaSatId)) : undefined;
+    const rolDeSolicitud = (() => {
+      const rf = metaSolicitud?.roles_frame?.[0] ?? metaSolicitud?.rolesFrameIds?.[0];
+      const id = rf && typeof rf === "object" ? rf._id : rf;
+      return id ? allRoleFrames.find((r) => String(r._id) === String(id)) : undefined;
+    })();
+    const plantillasDeSolicitud = metaSolicitud?.contratoId ? contratoFrames.filter((cf) => String(typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === String(metaSolicitud.contratoId)) : [];
+    const unicaPlantillaSolicitud = plantillasDeSolicitud.length === 1 ? plantillasDeSolicitud[0] : undefined;
+    const deLaSolicitud: Record<string, any> = !metaSolicitud
+      ? {}
+      : {
+          ...(rolDeSolicitud?.data?.rol?.id != null ? { rol_frame_id: String(rolDeSolicitud.data.rol.id) } : {}),
+          ...(catDeSolicitud?.data?.id != null ? { categoria_sat_id: String(catDeSolicitud.data.id) } : {}),
+          ...(metaSolicitud.contratoId ? { contrato_id: String(metaSolicitud.contratoId) } : {}),
+          ...(unicaPlantillaSolicitud ? { contrato_frame_id: unicaPlantillaSolicitud._id, nombre_contrato: unicaPlantillaSolicitud.name, tipo_contrato_id: unicaPlantillaSolicitud.data?.id != null ? String(unicaPlantillaSolicitud.data.id) : "" } : {}),
+          ...(metaSolicitud.empresaContratoId ? { empresaContratoId: String(metaSolicitud.empresaContratoId) } : {}),
+          ...(metaSolicitud.startDate ? { fecha_alta_contrato: String(metaSolicitud.startDate).slice(0, 10) } : {}),
+          ...(metaSolicitud.dueDate ? { fecha_baja_contrato: String(metaSolicitud.dueDate).slice(0, 10) } : {}),
+          ...(Number(metaSolicitud.diasPorSemana) ? { dias_por_semana: Number(metaSolicitud.diasPorSemana) } : {}),
+          ...(Array.isArray(metaSolicitud.diasSemana) && metaSolicitud.diasSemana.length > 0 ? { dias_semana: metaSolicitud.diasSemana as number[] } : {}),
+          ...(metaSolicitud.diasRotativos !== undefined ? { dias_rotativos: !!metaSolicitud.diasRotativos } : {}),
+          ...(Number(metaSolicitud.workdaysCount) ? { cantidad_jornadas_laborales: Number(metaSolicitud.workdaysCount) } : {}),
+          ...(Number(metaSolicitud.dailyRate) ? { sueldo_jornada: Number(metaSolicitud.dailyRate) } : {}),
+          ...(metaSolicitud.isReplacement !== undefined ? { reemplazo: !!metaSolicitud.isReplacement } : {}),
+          ...(metaSolicitud.empleado_id_reemplezado ? { empleado_id_reemplezado: String(metaSolicitud.empleado_id_reemplezado) } : {}),
+        };
 
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
-    setConvenioFiltro(String(catInicial?.data?.convenio || "").trim());
+    setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || "").trim());
     setVerTodasDelConvenio(false);
     setAvisoConvenio("");
 
@@ -1669,6 +1804,8 @@ export const ProjectTeamPage: React.FC = () => {
       empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || "",
       observaciones: lastContract?.observaciones || "",
       areaShiftAssignments: areaShiftAssignments,
+      // Lo de la solicitud, último: es lo que pidió quien la cargó.
+      ...deLaSolicitud,
     });
   };
 
@@ -1706,6 +1843,10 @@ export const ProjectTeamPage: React.FC = () => {
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
     if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push("Fecha baja contrato");
     if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push("Área y turno (al menos uno)");
+    if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push("Horario (entrada y salida)");
+    if (horarioExcedidoWizard) faltan.push(`Horario dentro de las ${limiteHorasWizard} h por jornada del contrato`);
+    if (erroresJornadasWizard.jornadas) faltan.push("Cantidad de jornadas");
+    if (erroresJornadasWizard.motivo || erroresJornadasWizard.nota) faltan.push("Motivo del ajuste de jornadas");
     /*
       LOS DÍAS QUE TRABAJA SON OBLIGATORIOS, no una sugerencia.
 
@@ -1756,11 +1897,14 @@ export const ProjectTeamPage: React.FC = () => {
 
       await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
-        isUpdate: isExistingMember,
+        // Aprobar SIEMPRE agrega un contrato, aunque la persona ya esté en el equipo: una renovación
+        // es un contrato nuevo y el anterior tiene que seguir estando (es el historial de la persona).
+        isUpdate: approvingSolicitudId ? false : isExistingMember,
         // Si se está editando un contrato puntual, el backend actualiza ESE índice (no el último).
-        contractIndex: editingContractIndex ?? undefined,
+        contractIndex: approvingSolicitudId ? undefined : editingContractIndex ?? undefined,
         // Si el wizard se abrió para aprobar una solicitud, el backend la marca aprobada.
-        approveSolicitud: approvingSolicitudId ? true : undefined,
+        // Qué solicitud se está aprobando: el contrato va en la persona real, así que hay que decir cuál.
+        approveSolicitud: approvingSolicitudId || undefined,
         contract: {
           ...wizardData,
           fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
@@ -3541,92 +3685,17 @@ export const ProjectTeamPage: React.FC = () => {
             size="xl"
             footer={
               <div className="flex gap-3 w-full">
-                {wizardStep > 1 && (
-                  <button type="button" onClick={() => setWizardStep((wizardStep - 1) as any)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all uppercase tracking-wider">
-                    ANTERIOR
-                  </button>
-                )}
-                {wizardStep < 2 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (wizardStep === 1) {
-                        const faltan = faltantesPaso1();
-                        if (faltan.length > 0) {
-                          sweetAlert.error("Faltan campos obligatorios", `Completá: ${faltan.join(", ")}.`);
-                          return;
-                        }
-                      }
-                      setWizardStep((wizardStep + 1) as any);
-                    }}
-                    /*
-                      UNA SOLA ACCIÓN PRIMARIA EN EL PIE.
-
-                      Guardar es azul, como en toda la plataforma. Pero en EDICIÓN los dos botones
-                      conviven —se puede guardar sin recorrer los dos pasos—, y dos azules idénticos
-                      obligan a leerlos para saber cuál cierra el trámite. Ahí «Siguiente» pasa a
-                      secundario: sigue disponible, pero deja de competir.
-
-                      En un alta nueva es el único botón hasta el último paso, así que ahí es el primario.
-                    */
-                    className={`flex-1 py-3 rounded-xl font-bold transition-all active:scale-95 uppercase tracking-wider ${
-                      esEdicionMiembro
-                        ? "border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20"
-                    }`}
-                  >
-                    SIGUIENTE
-                  </button>
-                ) : null}
-                {/* En edición se puede guardar sin recorrer los dos pasos: los datos ya vienen
-                    cargados del contrato, así que lo que no se tocó queda como estaba. */}
-                {(wizardStep === 2 || esEdicionMiembro) && (
-                  <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
-                    GUARDAR
-                  </button>
-                )}
+                {/* Una sola acción: el formulario es uno solo y se guarda desde cualquier punto. */}
+                <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
+                  GUARDAR
+                </button>
               </div>
             }
           >
             <div className="flex flex-col h-[520px]">
-              {/* Stepper Header (Fixed/Sticky at the top of the flex container) */}
-              <div className="bg-white dark:bg-gray-800 pb-4 border-b border-gray-100 dark:border-gray-700 shrink-0 mb-4">
-                <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
-                  {[
-                    { step: 1, label: "Contrato" },
-                    { step: 2, label: "Sueldo" },
-                  ].map((s) => (
-                    <button
-                      key={s.step}
-                      type="button"
-                      onClick={() => {
-                        // Mismo criterio que el botón SIGUIENTE: no se sale del paso 1 sin completarlo.
-                        if (wizardStep === 1 && s.step > 1) {
-                          const faltan = faltantesPaso1();
-                          if (faltan.length > 0) {
-                            sweetAlert.error("Faltan campos obligatorios", `Completá: ${faltan.join(", ")}.`);
-                            return;
-                          }
-                        }
-                        setWizardStep(s.step as any);
-                      }}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${wizardStep === s.step ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-                {/* Va acá arriba, fuera del contenido que scrollea, para que se lea desde cualquiera
-                    de los pasos. */}
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 ml-1">
-                  Los campos marcados con <span className="text-red-500 font-bold">*</span> son obligatorios.
-                </p>
-              </div>
-
-              {/* Step Content (Scrollable) */}
-              <div className="flex-1 overflow-y-auto pr-1 space-y-6">
-                {/* Step 1: Contrato */}
-                {wizardStep === 1 && (
+              {/* Un solo formulario, en una sola columna con scroll: el orden va de arriba hacia abajo. */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
+                {(
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/*
                       EMPLEADO OCUPA MEDIA FILA, no la entera.
@@ -3716,95 +3785,6 @@ export const ProjectTeamPage: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}
-                    {!esServicios && (
-                    <>
-                    {/*
-                      CONVENIO — es un FILTRO, no un dato del contrato.
-
-                      Replica el flujo de ARCA (convenio → categoría) sin cambiar el modelo: no se
-                      guarda, no viaja en el payload y no toca el TXT. Está acá porque el encuadre lo
-                      terminaba decidiendo quien cargó las categorías de la función Frame, y así había
-                      convenios habilitados por ARCA que no se podían usar.
-                    */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
-                      <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
-                        <option value="">Todos los convenios de la empleadora</option>
-                        {conveniosDisponibles.map((c) => (
-                          <option key={c.externalId} value={c.externalId}>
-                            {c.externalId}
-                            {c.name ? ` — ${c.name}` : ""} ({c.cantidadCategorias}){c.registrado ? "" : " · no registrado en ARCA"}
-                          </option>
-                        ))}
-                      </select>
-                      {!wizardData.empresaContratoId ? <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p> : conveniosDisponibles.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p> : <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {/* Alto fijo, igual que el rótulo de «Tipo de contrato»: es lo que mantiene
-                          los dos desplegables alineados aunque el de al lado muestre un badge. */}
-                      <div className="h-6 flex items-center ml-1">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                          Categoría <span className="text-red-500">*</span>
-                        </label>
-                      </div>
-                      <select
-                        className="input-field w-full"
-                        value={wizardData.categoria_sat_id}
-                        onChange={(e) => {
-                          setAvisoConvenio("");
-                          setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
-                        }}
-                        required
-                      >
-                        <option value="">Selecciona categoria...</option>
-                        {availableCategoriasSat.map((c: any) => (
-                          <option key={c.id} value={c.id}>
-                            {c.codigoArca ? `${c.codigoArca} — ` : ""}
-                            {c.nombre}
-                          </option>
-                        ))}
-                      </select>
-                      {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
-                      {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
-
-                      {/*
-                        El escape hatch del filtro por función Frame.
-
-                        Solo aparece con un convenio elegido, porque sin convenio «todas las del
-                        convenio» no quiere decir nada. Cuando la función no tiene NINGUNA categoría de
-                        ese convenio se prende solo y queda fijo: apagarlo dejaría el select vacío, que
-                        es el estado sin explicación que esto viene a sacar.
-                      */}
-                      {convenioFiltro && wizardData.rol_frame_id && (
-                        <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                          <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
-                          <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
-                        </label>
-                      )}
-                      {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
-
-                      {/*
-                        El filtro se dice, no se aplica en silencio: si una categoría que el operador
-                        esperaba ver no está, tiene que saber por qué y qué la destraba.
-
-                        Las dos causas van separadas porque llevan a acciones distintas: lo que oculta
-                        ARCA no se puede destrabar desde acá (hay que registrar el convenio en la
-                        empleadora); lo que oculta el filtro se destraba cambiando el select de arriba.
-                      */}
-                      {conveniosDeLaEmpleadora && (
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(", ")}).`}
-                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ""}
-                          {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ""}
-                        </p>
-                      )}
-                    </div>
-
-                    </>
-                    )}
-
                     <div className="space-y-1.5">
                       {/*
                         RÓTULO, FILTRO Y BADGE, TODO EN UNA FILA DE ALTO FIJO.
@@ -3878,6 +3858,21 @@ export const ProjectTeamPage: React.FC = () => {
 
                       {filtroTramite && contratosFiltradosPorTramite.length === 0 && (
                         <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún tipo de contrato está configurado para este trámite. Vinculalo desde el ABM de Estados, o mirá todos.</p>
+                      )}
+                      {contratoDelWizard && (limiteHorasWizard != null || limiteDiasWizard != null) && (
+                        <p className="ml-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 dark:text-gray-400">
+                          {limiteHorasWizard != null && (
+                            <span>
+                              <strong className="text-gray-900 dark:text-white">{limiteHorasWizard}</strong> h por jornada
+                            </span>
+                          )}
+                          {limiteDiasWizard != null && (
+                            <span>
+                              <strong className="text-gray-900 dark:text-white">{limiteDiasWizard}</strong> días por semana
+                            </span>
+                          )}
+                          <span className="text-gray-400">Limitan el horario y los días.</span>
+                        </p>
                       )}
                     </div>
 
@@ -3996,22 +3991,6 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     {/*
-                      El horario, junto: son inicio y fin de lo mismo, y separados se leen como dos
-                      datos sin relación. La aclaración va una sola vez, debajo del par.
-                    */}
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
-                        <input type="time" className="input-field w-full" value={wizardData.hora_inicio} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_inicio: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
-                        <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
-                      </div>
-                      <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">Horario del contrato de este miembro (independiente de los turnos).</p>
-                    </div>
-
-                    {/*
                       Los días de la semana. EL MISMO componente que la Solicitud de Contratación de mobile.
 
                       Va debajo del horario porque es la otra mitad del mismo dato: el horario dice a
@@ -4019,72 +3998,32 @@ export const ProjectTeamPage: React.FC = () => {
                       mobile— y el escritorio guardaba 5 jornadas fijas sin que nadie lo eligiera.
                     */}
                     <div className="md:col-span-2">
-                      <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
+                      <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
                     </div>
 
-                    {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
-                    <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
-                        <input
-                          type="checkbox"
-                          id="esReemplazo"
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          checked={wizardData.reemplazo}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : "" }));
-                            if (!checked) setHerenciaReemplazo(null);
-                          }}
-                        />
-                        <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Es reemplazo
-                        </label>
-                      </div>
-
-                      {wizardData.reemplazo && (
-                        <div className="space-y-1.5">
-                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
-                          <select
-                            className="input-field w-full"
-                            value={wizardData.empleado_id_reemplezado}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: value }));
-                              // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
-                              if (value) applyReplacedMemberAssignments(value);
-                              else setHerenciaReemplazo(null);
-                            }}
-                          >
-                            <option value="">Selecciona empleado...</option>
-                            {teamMembers
-                              .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
-                              .map((m) => (
-                                <option key={m._id} value={(m.metadata as any)?.id}>
-                                  {m.firstName} {m.lastName}
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Aviso de la herencia: qué se copió (o por qué no se pudo) antes de mostrar las áreas. */}
-                      {herenciaReemplazo && (
-                        <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"}`}>
-                          <p className="font-bold flex items-center gap-2">
-                            <FontAwesomeIcon icon={herenciaReemplazo.ok ? faInfoCircle : faTriangleExclamation} />
-                            {herenciaReemplazo.ok ? `Área y turno heredados de ${herenciaReemplazo.replacedName}` : `No se pudo heredar el área de ${herenciaReemplazo.replacedName}`}
-                          </p>
-                          <p className="mt-1 leading-normal">
-                            {herenciaReemplazo.ok ? (
-                              <>
-                                Se preseleccionó <strong>{herenciaReemplazo.detalle}</strong>. Si necesitás otra cosa, cambiala abajo.
-                              </>
-                            ) : (
-                              herenciaReemplazo.detalle
-                            )}
-                          </p>
-                        </div>
-                      )}
+                    {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo. */}
+                    <div className="md:col-span-2">
+                      <JornadasSolicitud
+                        desde={wizardData.fecha_alta_contrato}
+                        hasta={wizardData.fecha_baja_contrato}
+                        rotativos={wizardData.dias_rotativos}
+                        calculadas={jornadasCalculadasWizard}
+                        dias={wizardData.dias_semana}
+                        valor={String(wizardData.cantidad_jornadas_laborales || "")}
+                        onValor={(v) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(v) || 0 }))}
+                        ajustado={ajusteJornadas.ajustado}
+                        motivo={ajusteJornadas.motivo}
+                        nota={ajusteJornadas.nota}
+                        onEditarManual={() => setAjusteJornadas((a) => ({ ...a, ajustado: true }))}
+                        onCancelarAjuste={() => {
+                          setAjusteJornadas({ ajustado: false, motivo: "", nota: "" });
+                          if (jornadasCalculadasWizard !== null) setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
+                        }}
+                        onMotivo={(m) => setAjusteJornadas((a) => ({ ...a, motivo: m }))}
+                        onNota={(n) => setAjusteJornadas((a) => ({ ...a, nota: n }))}
+                        errores={erroresJornadasWizard}
+                        mostrarErrores
+                      />
                     </div>
 
                     {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
@@ -4093,7 +4032,9 @@ export const ProjectTeamPage: React.FC = () => {
                         <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
                         Asignación por Área y Turno <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente.</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">
+                        Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente. El horario de entrada y salida se completa con el del turno que elijas; más abajo se puede modificar.
+                      </p>
 
                       {(project?.areasConfig || []).length === 0 && (
                         // Sin áreas en el proyecto no se puede completar este paso (es obligatorio) → link a Editar Proyecto.
@@ -4231,11 +4172,20 @@ export const ProjectTeamPage: React.FC = () => {
                                               }
                                             }
 
-                                            // Los turnos NO tocan la hora del contrato: son entidades independientes.
-                                            // hora_inicio/hora_fin reflejan únicamente el contrato del empleado (DB).
+                                            /*
+                                              ACTIVAR UN TURNO COMPLETA EL HORARIO DEL CONTRATO con el de ese turno.
+
+                                              Antes eran independientes y el horario se cargaba a mano, con los turnos
+                                              filtrados por él: había que saber a qué hora entra cada turno para que
+                                              apareciera. Ahora manda el turno, que es el dato que se conoce, y el
+                                              horario queda editable abajo para cuando esta persona entra o sale a otra
+                                              hora. Al DESACTIVARLO no se toca: borrar el horario de un contrato porque
+                                              se destildó un turno sería perder un dato que nadie pidió cambiar.
+                                            */
                                             return {
                                               ...prev,
                                               areaShiftAssignments: assignments,
+                                              ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
                                             };
                                           });
                                         }}
@@ -4268,27 +4218,163 @@ export const ProjectTeamPage: React.FC = () => {
 
                       {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Debes seleccionar al menos un área y turno.</p>}
                     </div>
-                  </div>
-                )}
 
-                {/* Step 2: Sueldo */}
-                {wizardStep === 2 && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/*
+                      EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
+
+                      Se llama «Modificar» porque es lo que se hace acá: el turno elegido arriba lo
+                      completa, y esto es para cuando esta persona entra o sale a otra hora que el turno.
+                      Inicio y fin van juntos —son las dos puntas de lo mismo— con una sola aclaración
+                      debajo del par.
+                    */}
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label className="md:col-span-2 block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 -mb-2">
+                        <FontAwesomeIcon icon={faClock} className="mr-1" />
+                        Modificar Horario (Entrada - Salida) <span className="text-red-500">*</span>
+                      </label>
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                          Cantidad de jornadas laborales <span className="text-red-500">*</span>
-                        </label>
-                        <input type="number" className="input-field w-full" value={wizardData.cantidad_jornadas_laborales} onChange={(e) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(e.target.value) }))} />
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Entrada</label>
+                        <CampoHora
+                          valor={wizardData.hora_inicio}
+                          onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))}
+                          placeholder="Entrada"
+                          listId="horas-enteras-wizard"
+                          className="input-field w-full"
+                        />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                          Sueldo por jornada <span className="text-red-500">*</span>
-                        </label>
-                        <input type="number" className="input-field w-full" value={wizardData.sueldo_jornada} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(e.target.value) }))} />
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Salida</label>
+                        <CampoHora valor={wizardData.hora_fin} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_fin: h }))} placeholder="Salida" listId="horas-enteras-wizard" className="input-field w-full" />
                       </div>
+                      {/* Las sugerencias de los dos campos: horas enteras. Lo que no lo es se escribe. */}
+                      <datalist id="horas-enteras-wizard">
+                        {HORAS_DEL_DIA.map((h) => (
+                          <option key={h} value={h} />
+                        ))}
+                      </datalist>
+                      {horarioExcedidoWizard ? (
+                        <p className="md:col-span-2 text-[11px] font-medium text-red-600 dark:text-red-400 ml-1 -mt-2">
+                          El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
+                        </p>
+                      ) : (
+                        <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">
+                          Se completa con el horario del turno elegido arriba; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ""}
+                        </p>
+                      )}
                     </div>
 
+                    {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}
+                    {!esServicios && (
+                    <>
+                    {/*
+                      CONVENIO — es un FILTRO, no un dato del contrato.
+
+                      Replica el flujo de ARCA (convenio → categoría) sin cambiar el modelo: no se
+                      guarda, no viaja en el payload y no toca el TXT. Está acá porque el encuadre lo
+                      terminaba decidiendo quien cargó las categorías de la función Frame, y así había
+                      convenios habilitados por ARCA que no se podían usar.
+                    */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
+                      <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
+                        <option value="">Todos los convenios de la empleadora</option>
+                        {conveniosDisponibles.map((c) => (
+                          <option key={c.externalId} value={c.externalId}>
+                            {c.externalId}
+                            {c.name ? ` — ${c.name}` : ""} ({c.cantidadCategorias}){c.registrado ? "" : " · no registrado en ARCA"}
+                          </option>
+                        ))}
+                      </select>
+                      {!wizardData.empresaContratoId ? <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p> : conveniosDisponibles.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p> : <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {/* Alto fijo, igual que el rótulo de «Tipo de contrato»: es lo que mantiene
+                          los dos desplegables alineados aunque el de al lado muestre un badge. */}
+                      <div className="h-6 flex items-center ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Categoría <span className="text-red-500">*</span>
+                        </label>
+                      </div>
+                      <select
+                        className="input-field w-full"
+                        value={wizardData.categoria_sat_id}
+                        onChange={(e) => {
+                          setAvisoConvenio("");
+                          setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
+                        }}
+                        required
+                      >
+                        <option value="">Selecciona categoria...</option>
+                        {availableCategoriasSat.map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            {c.codigoArca ? `${c.codigoArca} — ` : ""}
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </select>
+                      {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
+                      {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
+
+                      {/*
+                        El escape hatch del filtro por función Frame.
+
+                        Solo aparece con un convenio elegido, porque sin convenio «todas las del
+                        convenio» no quiere decir nada. Cuando la función no tiene NINGUNA categoría de
+                        ese convenio se prende solo y queda fijo: apagarlo dejaría el select vacío, que
+                        es el estado sin explicación que esto viene a sacar.
+                      */}
+                      {convenioFiltro && wizardData.rol_frame_id && (
+                        <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+                          <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
+                          <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
+                        </label>
+                      )}
+                      {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
+
+                      {/*
+                        El filtro se dice, no se aplica en silencio: si una categoría que el operador
+                        esperaba ver no está, tiene que saber por qué y qué la destraba.
+
+                        Las dos causas van separadas porque llevan a acciones distintas: lo que oculta
+                        ARCA no se puede destrabar desde acá (hay que registrar el convenio en la
+                        empleadora); lo que oculta el filtro se destraba cambiando el select de arriba.
+                      */}
+                      {conveniosDeLaEmpleadora && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(", ")}).`}
+                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ""}
+                          {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ""}
+                        </p>
+                      )}
+                    </div>
+
+                    </>
+                    )}
+
+                    {/*
+                      LOS IMPORTES: los mismos cuatro que la solicitud de la app, enlazados entre sí. Se
+                      carga cualquiera —jornada, semana, mes o total— y los otros se recalculan; el
+                      mensual es el ancla, así que un mes completo totaliza exactamente el mensual.
+                      Lo que se guarda sigue siendo el sueldo por jornada.
+                    */}
+                    <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
+                      <ImportesDelContrato
+                        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                        valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ""}
+                        onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))}
+                        mesesEq={mesesEqWizard}
+                        jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0}
+                        diasSemana={diasSemanaWizard}
+                        bloqueado={!esServicios && !wizardData.categoria_sat_id}
+                        textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala."
+                        claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1"
+                        claseCampo="input-field w-full"
+                        claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300"
+                        claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1"
+                      />
+
+                      {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
                     <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
                       <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
@@ -4322,8 +4408,77 @@ export const ProjectTeamPage: React.FC = () => {
                         <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
                       </div>
                     </div>
+                    </div>
+
+                    {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
+                    <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <input
+                          type="checkbox"
+                          id="esReemplazo"
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          checked={wizardData.reemplazo}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : "" }));
+                            if (!checked) setHerenciaReemplazo(null);
+                          }}
+                        />
+                        <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Es reemplazo
+                        </label>
+                      </div>
+
+                      {wizardData.reemplazo && (
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
+                          <select
+                            className="input-field w-full"
+                            value={wizardData.empleado_id_reemplezado}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: value }));
+                              // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
+                              if (value) applyReplacedMemberAssignments(value);
+                              else setHerenciaReemplazo(null);
+                            }}
+                          >
+                            <option value="">Selecciona empleado...</option>
+                            {teamMembers
+                              .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
+                              .map((m) => (
+                                <option key={m._id} value={(m.metadata as any)?.id}>
+                                  {m.firstName} {m.lastName}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Aviso de la herencia: qué se copió (o por qué no se pudo) antes de mostrar las áreas. */}
+                      {herenciaReemplazo && (
+                        <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"}`}>
+                          <p className="font-bold flex items-center gap-2">
+                            <FontAwesomeIcon icon={herenciaReemplazo.ok ? faInfoCircle : faTriangleExclamation} />
+                            {herenciaReemplazo.ok ? `Área y turno heredados de ${herenciaReemplazo.replacedName}` : `No se pudo heredar el área de ${herenciaReemplazo.replacedName}`}
+                          </p>
+                          <p className="mt-1 leading-normal">
+                            {herenciaReemplazo.ok ? (
+                              <>
+                                Se preseleccionó <strong>{herenciaReemplazo.detalle}</strong>. Si necesitás otra cosa, cambiala más arriba, en Asignación por Área y Turno.
+                              </>
+                            ) : (
+                              herenciaReemplazo.detalle
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                 )}
+
+                {/* Step 2: Sueldo */}
 
                 {/*
                   Acá estaba el paso «Extras»: sede y observaciones. Se sacó. La sede se configura en el

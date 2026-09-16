@@ -11,14 +11,26 @@ interface User {
 
 interface UserHeaderProps {
   user: User | null;
+  /** La ficha de la persona. Es de donde sale el nombre: el token puede traerlo viejo o incompleto. */
+  perfil?: { firstName?: string; lastName?: string; metadata?: { fullName?: string } } | null;
   className?: string;
 }
 
-function getFirstName(user: User | null): string {
-  if (!user) return "Usuario";
+/*
+  NOMBRE Y APELLIDO, como figura en la ficha.
 
-  const firstName = user.firstName || "";
-  return firstName || "Usuario";
+  Decía «Hola Leandro!» con el nombre de pila del token. El apellido importa: la app la usan equipos
+  donde se repiten los nombres, y el saludo tapaba el dato con una cortesía.
+
+  `metadata.fullName` va primero porque es el nombre tal cual se cargó (y el que escribe ARCA cuando se
+  valida el CUIT); si no está, se arma con nombre y apellido de la ficha, y recién al final se cae al
+  del token, que es lo único que hay mientras el perfil viaja.
+*/
+function nombreCompleto(user: User | null, perfil?: UserHeaderProps["perfil"]): string {
+  const deLaFicha = perfil?.metadata?.fullName?.trim() || `${perfil?.firstName || ""} ${perfil?.lastName || ""}`.trim();
+  if (deLaFicha) return deLaFicha;
+  const delToken = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+  return delToken || "Usuario";
 }
 
 /**
@@ -38,14 +50,14 @@ function badgesDeJerarquia(user: User | null): { texto: string; clase: string }[
   return badges;
 }
 
-export default function UserHeader({ user, className = "" }: UserHeaderProps) {
-  const firstName = getFirstName(user);
+export default function UserHeader({ user, perfil, className = "" }: UserHeaderProps) {
+  const nombre = nombreCompleto(user, perfil);
 
   return (
     // Sin avatar: las iniciales no dicen nada que no diga el nombre y la pantalla tiene que quedar limpia.
     <div className={`flex items-center gap-3 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">Hola {firstName}!</h2>
+        <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">{nombre}</h2>
         {badgesDeJerarquia(user).map((b) => (
           <span key={b.texto} className={`rounded border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${b.clase}`}>
             {b.texto}

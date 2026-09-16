@@ -26,6 +26,7 @@ import { env } from "../config/env.js";
 import { z } from "zod";
 import { Types } from "mongoose";
 import { authenticateToken } from "../middleware/auth.js";
+import { NOVEDAD_REGISTRO, nombreDePersona, notificar, responsablesDeQuienSupervisa } from "../services/novedadesNotificaciones.js";
 const registerClientSchema = z.object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email format"),
@@ -926,6 +927,36 @@ router.post("/registro", async (req, res) => {
             catch (e) {
                 console.warn("registro: no se pudo actualizar el uso del link:", e);
             }
+        }
+        /*
+          AVISAR QUE SE REGISTRÓ ALGUIEN.
+    
+          Le llega a quien compartió el link —es su gente— y al coordinador del proyecto donde esa persona
+          supervisa áreas o turnos, que es quien responde por lo que se suma al equipo. Es el mismo criterio
+          con el que la app decide de quiénes ve los registrados, así que nadie recibe un aviso de alguien
+          que después no puede mirar.
+    
+          Sin `linkId` no se avisa: ese registro no vino de un link de nadie y no hay a quién avisarle.
+        */
+        if (payload.linkId && payload.createdBy) {
+            const nombre = nombreDePersona({ firstName: nombreArca.firstName, lastName: nombreArca.lastName });
+            const invitador = await User.findById(payload.createdBy).select("firstName lastName metadata.fullName").lean();
+            await notificar({
+                tenantId,
+                destinatarios: [payload.createdBy],
+                type: NOVEDAD_REGISTRO,
+                title: "Nuevo registro",
+                message: `${nombre} se registró con tu link.`,
+            });
+            const responsables = await responsablesDeQuienSupervisa(tenantId, String(payload.createdBy));
+            await notificar({
+                tenantId,
+                destinatarios: responsables,
+                type: NOVEDAD_REGISTRO,
+                title: "Nuevo registro",
+                message: `${nombre} se registró con el link de ${nombreDePersona(invitador)}.`,
+                excepto: payload.createdBy,
+            });
         }
         res.status(201).json({ success: true, message: "Registro completado correctamente" });
     }

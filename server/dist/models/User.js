@@ -101,9 +101,31 @@ const userSchema = new Schema({
         schedule: String,
         dailyRate: Number,
         isReplacement: Boolean,
+        // Ver el comentario de la interfaz: esto viajaba desde la app y se perdía al guardar.
+        tipoImpositivo: { type: String, enum: ["alta_temprana_afip", "constancia_cuit"] },
+        contratoId: { type: Schema.Types.ObjectId, ref: "Contrato" },
+        nombre_contrato: String,
+        areaShiftAssignments: [
+            {
+                _id: false,
+                areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+                shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+            },
+        ],
+        empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+        convenioId: { type: Schema.Types.ObjectId, ref: "Convenio" },
+        // El id de FRAME de la persona reemplazada: puede venir como número o como texto.
+        empleado_id_reemplezado: Schema.Types.Mixed,
+        replacedUserId: { type: Schema.Types.ObjectId, ref: "User" },
+        motivoReemplazoId: { type: Schema.Types.ObjectId, ref: "RequestConfig" },
+        comentarios: String,
         isSolicitud: { type: Boolean, default: false },
         solicitudStatus: { type: String, enum: ["pendiente", "aprobada", "rechazada", "cancelada"] },
         solicitudUserId: { type: Schema.Types.ObjectId, ref: "User" },
+        solicitudCreadaPor: { type: Schema.Types.ObjectId, ref: "User" },
+        solicitudMotivoRechazo: { type: String },
+        solicitudRechazadaPor: { type: Schema.Types.ObjectId, ref: "User" },
+        solicitudRechazadaEl: { type: Date },
         esRenovacion: { type: Boolean },
         renovacionDe: {
             userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },

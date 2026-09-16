@@ -43,6 +43,8 @@ export interface ProfileData {
   };
   metadata?: {
     projects?: any[];
+    /** El nombre tal cual se cargó en la ficha (y el que escribe ARCA al validar el CUIT). */
+    fullName?: string;
   };
   vacationsEnabled?: boolean;
   createdAt: string;
@@ -112,11 +114,23 @@ export interface Calendar {
   updatedAt: string;
 }
 
+/*
+  LOS TIPOS DE NOVEDAD QUE LA APP CUENTA POR TARJETA.
+
+  Tienen que decir lo mismo que `services/novedadesNotificaciones.ts` en el server: es el `type` el que
+  decide en qué tarjeta del inicio se cuenta cada aviso.
+*/
+export const NOVEDAD_REGISTRO = "registro_nuevo";
+export const NOVEDAD_SOLICITUD = "solicitud_nueva";
+export const NOVEDAD_SOLICITUD_APROBADA = "solicitud_aprobada";
+export const NOVEDAD_SOLICITUD_RECHAZADA = "solicitud_rechazada";
+
 export interface Notification {
   _id: string;
   tenantId: string;
   userId: string;
-  type: "vacation" | "order" | "calendar" | "document" | "info";
+  /** Abierto a propósito: el server suma tipos nuevos sin que la app deje de mostrarlos. */
+  type: string;
   title: string;
   message: string;
   linkUrl?: string;
@@ -369,6 +383,18 @@ export const personnelAPI = {
     return data;
   },
 
+  /** Las no leídas agrupadas por tipo: un número por tarjeta del inicio, en una sola consulta. */
+  getNotificationCounts: async (): Promise<{ total: number; porTipo: Record<string, number> }> => {
+    const { data } = await axios.get("/notifications/counts");
+    return { total: Number(data?.total || 0), porTipo: data?.porTipo || {} };
+  },
+
+  /** Vuelve a dejarla pendiente. La contraparte de marcarla leída, para lo que no se resolvió todavía. */
+  markNotificationUnread: async (id: string): Promise<Notification> => {
+    const { data } = await axios.put(`/notifications/${id}/unread`);
+    return data;
+  },
+
   getNotificationCount: async (): Promise<{ count: number }> => {
     const { data } = await axios.get("/notifications/count");
     return data;
@@ -379,8 +405,10 @@ export const personnelAPI = {
     return data;
   },
 
-  markAllNotificationsRead: async (): Promise<{ message: string; count: number }> => {
-    const { data } = await axios.put("/notifications/read-all");
+  /** Con uno o varios tipos marca leída sólo esa familia (el número de una tarjeta), no todo lo que haya. */
+  markAllNotificationsRead: async (type?: string | string[]): Promise<{ message: string; count: number }> => {
+    const tipos = Array.isArray(type) ? type : type ? [type] : [];
+    const { data } = await axios.put("/notifications/read-all", tipos.length > 0 ? { types: tipos } : {});
     return data;
   },
 

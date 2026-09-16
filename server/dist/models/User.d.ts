@@ -176,6 +176,19 @@ export interface IUserMetadata {
     diasRotativos?: boolean;
     schedule?: string;
     dailyRate?: number;
+    tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+    contratoId?: Types.ObjectId;
+    nombre_contrato?: string;
+    areaShiftAssignments?: {
+        areaId?: Types.ObjectId;
+        shiftIds?: Types.ObjectId[];
+    }[];
+    empresaContratoId?: Types.ObjectId;
+    convenioId?: Types.ObjectId;
+    empleado_id_reemplezado?: string | number;
+    replacedUserId?: Types.ObjectId;
+    motivoReemplazoId?: Types.ObjectId;
+    comentarios?: string;
     isReplacement?: boolean;
     /** true mientras el registro NO es un usuario real (pendiente/rechazada/cancelada). */
     isSolicitud?: boolean;
@@ -187,6 +200,21 @@ export interface IUserMetadata {
      * generar una tarjeta duplicada. Vacío = alta de alguien que todavía no es usuario.
      */
     solicitudUserId?: Types.ObjectId;
+    /**
+     * QUIÉN PIDIÓ EL ALTA. Es a quien hay que avisarle cuando se aprueba o se rechaza: sin esto, quien
+     * cargó la solicitud desde la app no se enteraba nunca de en qué terminó.
+     */
+    solicitudCreadaPor?: Types.ObjectId;
+    /**
+     * POR QUÉ SE RECHAZÓ, quién lo decidió y cuándo.
+     *
+     * Un rechazo sin motivo obliga a quien pidió el alta a preguntar por afuera qué faltaba, y a volver
+     * a cargar la solicitud a ciegas. Queda guardado en la solicitud —que no se borra— para que se lea
+     * en la pantalla y para poder reabrirla sabiendo qué se había objetado.
+     */
+    solicitudMotivoRechazo?: string;
+    solicitudRechazadaPor?: Types.ObjectId;
+    solicitudRechazadaEl?: Date;
     /** La solicitud RENUEVA un contrato por vencer (etiqueta «Renovación»). Ver `models/RenovacionContrato.ts`. */
     esRenovacion?: boolean;
     /** Qué contrato renueva: (UserProject, fecha de baja), que es como se identifica un contrato. */

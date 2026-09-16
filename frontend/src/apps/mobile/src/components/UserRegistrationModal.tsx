@@ -4,8 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
-import { JornadasSolicitud } from "./JornadasSolicitud";
-import { erroresDeJornadas, hayAjuste, jornadasDelCalendario, anclaDesdeJornada, derivarImportes, mesesEquivalentes, type AnclaImporte } from "../../../../utils/jornadas";
+import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
+import { erroresDeJornadas, hayAjuste, jornadasDelCalendario, mesesEquivalentes } from "../../../../utils/jornadas";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
@@ -22,6 +22,9 @@ import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfi
 import { fuzzyMatch } from "../../../../utils/searchHelpers";
 import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeContrato } from "../../../../utils/tramiteImpositivo";
 import { claveOrdenTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
+import { CampoHora } from "../../../../components/contratacion/CampoHora";
+import { ImportesDelContrato } from "../../../../components/contratacion/ImportesDelContrato";
+import { horasDelHorario, HORAS_DEL_DIA, sumarMinutos } from "../../../../utils/horario";
 import { esContratoVigente, fechaISO, getContratoActivo } from "../../../../utils/contratoVigencia";
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
@@ -72,185 +75,8 @@ const opcionAreaTurno = (area: any, turno: any): OpcionAreaTurno => {
 */
 const SEMANA_POR_DEFECTO = { diasPorSemana: "5", diasSemana: [1, 2, 3, 4, 5] };
 
-/*
-  IMPORTES CON SEPARADOR DE MILES.
-
-  Un <input type="number"> no admite separadores, y «753587,99» se lee mal: es fácil errarle a un cero.
-  Este campo muestra el número a la argentina —punto de miles, coma decimal— y lo formatea mientras se
-  escribe, pero lo que ENTREGA es el número limpio («753587.99»): el resto del formulario sigue
-  haciendo las cuentas con eso, y es lo que se guarda.
-*/
-const aImporteArgentino = (canonico: string): string => {
-  if (!canonico) return "";
-  const [entero, decimales] = canonico.split(".");
-  const miles = (entero || "0").replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return decimales !== undefined ? `${miles},${decimales}` : miles;
-};
-const deImporteArgentino = (texto: string): string => {
-  const limpio = texto.replace(/[^\d,]/g, "");
-  if (!limpio) return "";
-  const [entero, ...resto] = limpio.split(",");
-  return limpio.includes(",") ? `${entero || "0"}.${resto.join("").slice(0, 2)}` : entero;
-};
-
-function CampoImporte({ valor, onCambio, onBlur, disabled, className }: { valor: string; onCambio: (valor: string) => void; onBlur?: () => void; disabled?: boolean; className: string }) {
-  const ref = useRef<HTMLInputElement>(null);
-  return (
-    <input
-      ref={ref}
-      type="text"
-      inputMode="decimal"
-      value={aImporteArgentino(valor)}
-      onChange={(e) => {
-        // El cursor se repone contando cifras, no posiciones: al aparecer un punto de miles, la posición se corre.
-        const antes = e.target.value.slice(0, e.target.selectionStart ?? e.target.value.length).replace(/[^\d,]/g, "").length;
-        onCambio(deImporteArgentino(e.target.value));
-        requestAnimationFrame(() => {
-          const nodo = ref.current;
-          if (!nodo || document.activeElement !== nodo) return;
-          let i = 0;
-          for (let vistas = 0; i < nodo.value.length && vistas < antes; i++) if (/[\d,]/.test(nodo.value[i])) vistas++;
-          nodo.setSelectionRange(i, i);
-        });
-      }}
-      onBlur={onBlur}
-      disabled={disabled}
-      className={className}
-      placeholder="0"
-    />
-  );
-}
-
-/*
-  ¿EL TURNO CORRESPONDE AL HORARIO ELEGIDO?
-
-  Con entrada y salida: se SUPERPONEN. Quien entra a las 10 y sale a las 18 puede ir a Mañana o a
-  Tarde, y pedir que un solo turno lo contenga entero dejaría la lista vacía justo en esos casos. Con
-  una sola de las dos horas: el turno tiene que incluirla. Los turnos que cruzan la medianoche (18 a 00,
-  00 a 06) se miden como tales, igual que un horario de 22 a 02. Un turno sin horas cargadas no se
-  esconde: no hay con qué descartarlo.
-*/
-const aMinutos = (hhmm: string): number | null => {
-  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm || "");
-  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
-};
-const turnoCubreHorario = (inicio: string, fin: string, entrada: string, salida: string): boolean => {
-  const desde = aMinutos(inicio);
-  const hasta0 = aMinutos(fin);
-  if (desde === null || hasta0 === null) return true;
-  const hasta = hasta0 <= desde ? hasta0 + 1440 : hasta0;
-  const e = aMinutos(entrada);
-  const s0 = aMinutos(salida);
-  if (e === null && s0 === null) return true;
-  const corrimientos = [-1440, 0, 1440];
-  if (e !== null && s0 !== null) {
-    const s = s0 <= e ? s0 + 1440 : s0;
-    return corrimientos.some((d) => Math.max(e, desde + d) < Math.min(s, hasta + d));
-  }
-  const hora = (e ?? s0) as number;
-  return corrimientos.some((d) => desde + d <= hora && hora < hasta + d);
-};
-
-/*
-  HORA DE ENTRADA / SALIDA: se elige de la lista (de a una hora) o se escribe.
-
-  La lista cubre el caso común; lo que no es hora entera («08:30») se tipea. Al salir del campo se
-  completa el formato: «8» → 08:00, «830» → 08:30, «8.30» → 08:30. Lo que no es una hora válida queda
-  marcado y no se guarda, en vez de mandar un horario que nadie puede leer.
-*/
-const normalizarHora = (texto: string): string | null => {
-  const t = texto.trim();
-  if (!t) return "";
-  let h: number;
-  let m: number;
-  const conSeparador = /^(\d{1,2})[:.h](\d{0,2})$/i.exec(t);
-  const soloNumeros = /^(\d{1,4})$/.exec(t);
-  if (conSeparador) {
-    h = Number(conSeparador[1]);
-    m = conSeparador[2] ? Number(conSeparador[2].padEnd(2, "0")) : 0;
-  } else if (soloNumeros) {
-    const d = soloNumeros[1];
-    h = Number(d.length <= 2 ? d : d.slice(0, -2));
-    m = d.length <= 2 ? 0 : Number(d.slice(-2));
-  } else return null;
-  if (h > 23 || m > 59) return null;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-};
-
-/*
-  FORMATO DE HORA MIENTRAS SE TIPEA: los dos puntos aparecen solos.
-
-    «0830» → 08:30 · «8:30» → 08:30 · «9» → 09: (no hay hora 9x) · «14» → 14:
-
-  Al BORRAR no se agregan: si no, borrar los dos puntos los volvería a poner y no se podría corregir
-  la hora. Lo que queda incompleto lo termina `normalizarHora` al salir del campo.
-*/
-const mascaraHora = (nuevo: string, anterior: string): string => {
-  const borrando = nuevo.length < anterior.length;
-  const conSeparador = /^(\d{1,2})\s*[:.hH]\s*(\d{0,2})/.exec(nuevo);
-  if (conSeparador) return `${conSeparador[1].padStart(2, "0")}:${conSeparador[2]}`;
-  let d = nuevo.replace(/\D/g, "").slice(0, 4);
-  if (d.length === 1 && Number(d) > 2 && !borrando) d = `0${d}`;
-  if (d.length > 2) return `${d.slice(0, 2)}:${d.slice(2)}`;
-  if (d.length === 2 && !borrando) return `${d}:`;
-  return d;
-};
-
-function CampoHora({ valor, onCambio, placeholder, listId }: { valor: string; onCambio: (hora: string) => void; placeholder: string; listId: string }) {
-  const [texto, setTexto] = useState(valor);
-  const [invalida, setInvalida] = useState(false);
-  useEffect(() => {
-    setTexto(valor);
-    setInvalida(false);
-  }, [valor]);
-  const confirmar = (t: string) => {
-    const hora = normalizarHora(t);
-    if (hora === null) {
-      setInvalida(true);
-      return;
-    }
-    setInvalida(false);
-    setTexto(hora);
-    if (hora !== valor) onCambio(hora);
-  };
-  return (
-    <>
-      <input
-        type="text"
-        list={listId}
-        inputMode="numeric"
-        maxLength={5}
-        value={texto}
-        placeholder={placeholder}
-        onChange={(e) => {
-          const formateada = mascaraHora(e.target.value, texto);
-          setTexto(formateada);
-          // Elegida de la lista (o tipeada completa) llega entera: se toma en el acto, sin esperar a salir.
-          if (/^\d{2}:\d{2}$/.test(formateada)) confirmar(formateada);
-        }}
-        onBlur={() => confirmar(texto)}
-        aria-invalid={invalida}
-        className={`w-full h-12 bg-slate-50 dark:bg-slate-900 border rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white ${invalida ? "border-red-400 dark:border-red-700" : "border-slate-200 dark:border-slate-700"}`}
-      />
-      {invalida && <p className="mt-1 text-[11px] font-medium text-red-600 dark:text-red-400">Hora inválida: usá HH:MM, por ejemplo 08:00.</p>}
-    </>
-  );
-}
-
-/** Duración de un horario en horas, contando que la salida puede ser del día siguiente (22:00 a 06:00 = 8). */
-const horasDelHorario = (entrada: string, salida: string): number | null => {
-  const e = aMinutos(entrada);
-  const s = aMinutos(salida);
-  if (e === null || s === null) return null;
-  return ((s - e + 1440) % 1440 || 1440) / 60;
-};
-/** "HH:MM" + minutos, dando la vuelta a medianoche. */
-const sumarMinutos = (hhmm: string, minutos: number): string => {
-  const base = aMinutos(hhmm);
-  if (base === null) return "";
-  const total = (((base + Math.round(minutos)) % 1440) + 1440) % 1440;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-};
+/** Las clases del campo de hora en la app; en el panel son otras. */
+const CLASE_HORA = "w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white";
 
 interface UserRegistrationModalProps {
   isOpen: boolean;
@@ -557,21 +383,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
   const conveniosApi = createSimpleCatalogApi("/convenios");
 
-const TIME_OPTIONS = (() => {
-    const options = [];
-    for (let h = 0; h < 24; h++) {
-      // De a una hora: los horarios se pactan en horas enteras. Otro valor se escribe a mano.
-      for (let m = 0; m < 60; m += 60) {
-        const hh = h.toString().padStart(2, "0");
-        const mm = m.toString().padStart(2, "0");
-        const val = `${hh}:${mm}`;
-        // En 24 h, como se habla acá: con AM/PM, «12:00 AM» (medianoche) se leía como mediodía y los
-        // turnos que aparecían eran los de la madrugada.
-        options.push({ value: val, label: val });
-      }
-    }
-    return options;
-  })();
 
   useEffect(() => {
     if (isOpen) {
@@ -961,27 +772,27 @@ const TIME_OPTIONS = (() => {
   /** Lo que se puede elegir. `null` = todavía cargando las áreas del proyecto. */
   const opcionesDelProyecto: OpcionAreaTurno[] | null = coordinaEnElProyecto ? coordinacionesEnProyecto : areasDelProyecto;
   /*
-    Y DE ESAS, LAS DEL HORARIO ELEGIDO (ver `turnoCubreHorario`). Hasta tener entrada Y salida no se
-    ofrece ninguna: el turno se elige después del horario, no antes. Todo lo de abajo
-    —la lista, la que queda puesta sola, la que se limpia— trabaja sobre esta lista: cambiar el horario
-    suelta un turno que ya no corresponde.
+    EL TURNO VA PRIMERO Y EL HORARIO SALE DE ÉL.
+
+    Antes era al revés: se cargaba el horario y de los turnos quedaban sólo los que lo cubrían. Había
+    que saber de memoria a qué hora entra cada turno para que apareciera el que se quería, y hasta
+    entonces la lista estaba deshabilitada. Ahora se elige el área y el turno —que es el dato que quien
+    pide el alta tiene— y el horario queda puesto con el del turno, modificable abajo.
+
+    Así que acá no se filtra nada: se ofrecen todos los turnos que le corresponden a la persona.
   */
-  const horarioCompleto = !!formData.inTime && !!formData.outTime;
-  const opcionesAreaTurno: OpcionAreaTurno[] | null = useMemo(
-    () => (opcionesDelProyecto ? (horarioCompleto ? opcionesDelProyecto.filter((o) => turnoCubreHorario(o.inicio, o.fin, formData.inTime, formData.outTime)) : []) : null),
-    [opcionesDelProyecto, horarioCompleto, formData.inTime, formData.outTime],
-  );
+  const opcionesAreaTurno: OpcionAreaTurno[] | null = opcionesDelProyecto;
 
   /** Por área, con sus turnos en el orden del día: con muchas combinaciones, una lista plana no se lee. */
   const areasAgrupadas = useMemo(() => {
     const porArea = new Map<string, { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }>();
-    for (const o of (horarioCompleto ? opcionesAreaTurno : opcionesDelProyecto) || []) {
+    for (const o of opcionesAreaTurno || []) {
       const area = porArea.get(o.areaId) || { areaId: o.areaId, nombre: o.areaNombre, turnos: [] };
       if (!area.turnos.some((t) => t.shiftId === o.shiftId)) area.turnos.push(o);
       porArea.set(o.areaId, area);
     }
     return [...porArea.values()].map((a) => ({ ...a, turnos: a.turnos.sort((x, y) => x.orden.localeCompare(y.orden)) })).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [opcionesAreaTurno, opcionesDelProyecto, horarioCompleto]);
+  }, [opcionesAreaTurno]);
 
   /** La combinación elegida, si es una de las ofrecidas. Sin esto la solicitud no se envía. */
   const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId))) || null;
@@ -1034,6 +845,29 @@ const TIME_OPTIONS = (() => {
       return sigueValida || p.areaShiftAssignments.length === 0 ? p : { ...p, areaShiftAssignments: [] };
     });
   }, [opcionesAreaTurno]);
+
+  /*
+    EL HORARIO DEL TURNO ELEGIDO, COPIADO AL FORMULARIO.
+
+    Se aplica cuando CAMBIA el turno y no en cada render: si se reescribiera siempre, no se podría
+    modificar la entrada ni la salida, que es justo para lo que está el campo («Modificar horario»).
+
+    El primer turno que se ve con un horario ya cargado NO se pisa: es una solicitud que se está
+    editando, o una renovación precargada del contrato anterior, y ahí el horario guardado manda —puede
+    diferir del del turno a propósito—. Recién un cambio posterior de turno trae su horario.
+  */
+  const turnoAplicado = useRef<string>("");
+  useEffect(() => {
+    const clave = areaTurnoElegido ? `${areaTurnoElegido.areaId}::${areaTurnoElegido.shiftId}` : "";
+    if (clave === turnoAplicado.current) return;
+    const yaTeniaHorario = turnoAplicado.current === "" && !!formData.inTime && !!formData.outTime;
+    turnoAplicado.current = clave;
+    if (!clave || yaTeniaHorario) return;
+    const { inicio, fin } = areaTurnoElegido!;
+    if (!inicio || !fin) return;
+    setFormData((p) => (p.inTime === inicio && p.outTime === fin ? p : { ...p, inTime: inicio, outTime: fin }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaTurnoElegido]);
 
   const candidatosAReemplazar = useMemo(() => {
     if (formData.projectIds.length === 0) return [];
@@ -1373,91 +1207,14 @@ const TIME_OPTIONS = (() => {
   const erroresJornadas = erroresDeJornadas(datosJornadas);
 
   /*
-    LOS IMPORTES: jornada, semana, mensual y total del contrato.
-
-    EL MENSUAL ES EL ANCLA, no la jornada. Un mes calendario completo tiene que totalizar exactamente
-    el mensual, tenga 20 o 23 días hábiles. Antes todo salía de un promedio (21,67 jornadas por mes), y
-    septiembre 2026, con 22 hábiles, daba 1.015.384,70 de total por un mensual de 1.000.000. Ahora la
-    jornada es la derivada y cambia según los días hábiles de cada mes, que es lo correcto.
-
-    Las cuentas están en `utils/jornadas.ts` (`mesesEquivalentes`, `derivarImportes`). Acá se decide
-    qué queda fijo:
-      · Se edita el mensual o el total → ese valor es el ancla.
-      · Se edita la jornada o la semana → el ancla pasa a ser el mensual que les corresponde.
-      · Cambian las fechas o los días → el ancla no se mueve y se recalcula el resto.
-      · La jornada cambia por fuera (la propone la categoría, se abre una solicitud, se limpia) → se
-        toma como si se hubiera editado la jornada.
-
-    Se calcula con precisión completa y se redondea sólo al mostrar. Lo que viaja sigue siendo
-    `dailyRate` (la jornada): `mesesEquivalentes` no se guarda, sale de las fechas y los días.
+    CON QUÉ SE CALCULAN LOS IMPORTES. Las cuentas y el ancla viven en `ImportesDelContrato`, que es el
+    mismo componente que usa el alta del panel: así las dos pantallas dan el mismo número.
   */
   const diasSemanaNum = formData.diasRotativos ? Number(formData.diasPorSemana) || 0 : formData.diasSemana.length;
-  // Las jornadas que se pagan: las cargadas a mano si se ajustaron (o con días rotativos); si no, las del calendario.
+  // Las jornadas que se pagan: las ajustadas a mano si se ajustaron (o con días rotativos); si no, las del calendario.
   const jornadasDelContrato = (formData.workdaysOverridden || formData.diasRotativos ? Number(formData.workdaysCount) : jornadasCalculadas) || 0;
   // Cuánto dura el contrato en meses: siempre desde las fechas reales, aunque las jornadas se hayan ajustado.
   const mesesEq = useMemo(() => mesesEquivalentes(formData.startDate, formData.dueDate, formData.diasSemana), [formData.startDate, formData.dueDate, formData.diasSemana]);
-  const [ancla, setAncla] = useState<AnclaImporte | null>(null);
-  /** La última jornada que escribió el ancla en `dailyRate`: cualquier otro valor vino de afuera. */
-  const jornadaEscrita = useRef<string>("");
-  const jornadaActual = formData.dailyRate !== "" && Number.isFinite(Number(formData.dailyRate)) ? Number(formData.dailyRate) : null;
-  const importes = derivarImportes({ ancla, jornada: jornadaActual, mesesEq, jornadas: jornadasDelContrato, diasSemana: diasSemanaNum });
-
-  // Cada vez que se abre, sin ancla: se toma de la jornada que traiga el formulario.
-  useEffect(() => {
-    setAncla(null);
-    jornadaEscrita.current = "\u0000";
-  }, [isOpen]);
-
-  // La jornada cambió por fuera del ancla, o recién ahora hay con qué calcular el mensual: se ancla en el mensual.
-  useEffect(() => {
-    if (formData.dailyRate !== jornadaEscrita.current) {
-      jornadaEscrita.current = formData.dailyRate;
-      setAncla(jornadaActual === null ? null : anclaDesdeJornada(jornadaActual, jornadasDelContrato, mesesEq));
-      return;
-    }
-    if (!ancla && jornadaActual !== null) {
-      const nueva = anclaDesdeJornada(jornadaActual, jornadasDelContrato, mesesEq);
-      if (nueva) setAncla(nueva);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.dailyRate, jornadasDelContrato, mesesEq]);
-
-  // Con ancla, la jornada sale de ella y se escribe en `dailyRate`, que es lo que se guarda.
-  useEffect(() => {
-    if (!ancla) return;
-    const jornada = importes.jornada;
-    if (jornada !== null && jornadaActual !== null && Math.abs(jornada - jornadaActual) < 1e-6) return;
-    const texto = jornada === null ? "" : String(jornada);
-    if (texto === formData.dailyRate) return;
-    jornadaEscrita.current = texto;
-    setFormData((prev) => ({ ...prev, dailyRate: texto }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ancla, jornadasDelContrato, mesesEq]);
-
-  type UnidadImporte = "jornada" | "semana" | "mes" | "total";
-  /** El campo que se está escribiendo muestra lo tipeado: si no, el recálculo lo reescribiría en cada tecla. */
-  const [importeEnEdicion, setImporteEnEdicion] = useState<{ unidad: UnidadImporte; texto: string } | null>(null);
-  const valorDe: Record<UnidadImporte, number | null> = { jornada: importes.jornada, semana: importes.semana, mes: importes.mensual, total: importes.total };
-  // Dos decimales siempre, y sólo al mostrar.
-  const importeEn = (unidad: UnidadImporte) => (importeEnEdicion?.unidad === unidad ? importeEnEdicion.texto : valorDe[unidad] === null || !Number.isFinite(valorDe[unidad] as number) ? "" : (valorDe[unidad] as number).toFixed(2));
-  const cambiarImporte = (unidad: UnidadImporte, texto: string) => {
-    setImporteEnEdicion({ unidad, texto });
-    const valor = Number(texto);
-    const vacio = texto === "" || !Number.isFinite(valor);
-    if (unidad === "mes" || unidad === "total") {
-      setAncla(vacio ? null : { unidad: unidad === "mes" ? "mensual" : "total", valor });
-      if (vacio) {
-        jornadaEscrita.current = "";
-        setFormData((prev) => ({ ...prev, dailyRate: "" }));
-      }
-      return;
-    }
-    if (unidad === "semana" && !vacio && diasSemanaNum <= 0) return;
-    // Jornada o semana: se escribe la jornada y el efecto de arriba la toma como nueva, anclando en su mensual.
-    const jornada = vacio ? "" : unidad === "semana" ? String(valor / diasSemanaNum) : texto;
-    setFormData((prev) => ({ ...prev, dailyRate: jornada }));
-  };
-  const soltarImporte = () => setImporteEnEdicion(null);
   /*
     SIN CATEGORÍA, LOS IMPORTES ESTÁN BLOQUEADOS.
 
@@ -2039,26 +1796,118 @@ const TIME_OPTIONS = (() => {
           </div>
         </div>
 
-        {/* El horario va con el período: después de días y jornadas, antes de convenio e importes. */}
+        {/*
+          EL ÁREA Y TURNO DE LA PERSONA: OBLIGATORIO, y es lo que precarga el wizard de aprobación.
+
+          El coordinador pide el alta para SU área: se le ofrecen sus coordinaciones en el proyecto (el
+          server manda sólo las propias, ver `?slim=true`). Quien no coordina nada ahí —un supervisor, un
+          admin— elige entre todas las del proyecto. Antes, en ese caso la solicitud viajaba sin área y
+          había que elegirla al aprobar, sabiendo menos que quien la pidió.
+
+          Con una sola opción no se pregunta: se informa, ya puesta.
+
+          VA ANTES DEL HORARIO porque lo define: elegir el turno completa la entrada y la salida con las
+          de ese turno (ver el efecto `turnoAplicado`). Estaba al final del formulario y era al revés
+          —primero el horario, y de los turnos quedaban los que lo cubrían—, así que había que adivinar
+          a qué hora entra cada turno para que apareciera el que se quería pedir.
+        */}
+        {proyectoElegido && (
+          <div id="bloque-area-turno" className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
+              Área y turno <span className="text-red-500">*</span>
+            </label>
+            {opcionesAreaTurno === null ? (
+              <p className="text-xs text-slate-400">Cargando las áreas y turnos del proyecto…</p>
+            ) : opcionesAreaTurno.length === 0 ? (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona.</p>
+            ) : opcionesAreaTurno.length === 1 ? (
+              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+                <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    {opcionesAreaTurno[0].areaNombre} · {opcionesAreaTurno[0].turnoNombre}
+                  </span>
+                  {(opcionesAreaTurno[0].horario || opcionesAreaTurno[0].dias) && <span className="block text-[11px] text-slate-400">{[opcionesAreaTurno[0].horario, opcionesAreaTurno[0].dias].filter(Boolean).join(" · ")}</span>}
+                </span>
+              </div>
+            ) : (
+              <>
+                <p className="text-[11px] text-slate-400">
+                  {coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."} El horario de entrada y salida se completa con el del turno; abajo lo podés modificar.
+                </p>
+                <div className="space-y-2">
+                  {areasAgrupadas.map((area) => (
+                    <div key={area.areaId} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button type="button" onClick={() => alternarArea(area.areaId)} aria-expanded={areasAbiertas.has(area.areaId)} className="flex w-full items-center gap-2 p-2.5 text-left">
+                        <FontAwesomeIcon icon={areasAbiertas.has(area.areaId) ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{area.nombre}</span>
+                        {areaTurnoElegido?.areaId === area.areaId ? (
+                          <span className="shrink-0 truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{areaTurnoElegido.turnoNombre}</span>
+                        ) : (
+                          <span className="shrink-0 text-[10px] text-slate-400">
+                            {area.turnos.length} {area.turnos.length === 1 ? "turno" : "turnos"}
+                          </span>
+                        )}
+                      </button>
+                      {areasAbiertas.has(area.areaId) && (
+                      <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
+                        {area.turnos.map((t) => {
+                          const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId;
+                          return (
+                            <button
+                              key={`${t.areaId}-${t.shiftId}`}
+                              type="button"
+                              onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: t.areaId, shiftIds: [t.shiftId] }] }))}
+                              aria-pressed={elegido}
+                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+                            >
+                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-medium">{t.turnoNombre}</span>
+                                {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
+                                {(t.horario || t.dias) && <span className="block text-[10px] text-slate-400">{[t.horario, t.dias].filter(Boolean).join(" · ")}</span>}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {intentoEnviar && !areaTurnoElegido && (opcionesAreaTurno?.length ?? 0) > 0 && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">Elegí el área y el turno donde va a trabajar.</p>}
+          </div>
+        )}
+
+        {/*
+          EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
+
+          Se llama «Modificar» porque es lo que se hace acá: el turno elegido arriba lo completa, y esto
+          es para el caso en que esta persona entra o sale a otra hora que el turno. Por eso va después
+          del área y el turno, y antes de convenio e importes.
+        */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1 md:col-span-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
-              Horario (Entrada - Salida)*
+              Modificar Horario (Entrada - Salida)*
             </label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} placeholder="Entrada" listId="horas-enteras" />
+                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} placeholder="Entrada" listId="horas-enteras" className={CLASE_HORA} />
               </div>
               <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
               {/* Las sugerencias de los dos campos: horas enteras. */}
               <datalist id="horas-enteras">
-                {TIME_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} />
+                {HORAS_DEL_DIA.map((h) => (
+                  <option key={h} value={h} />
                 ))}
               </datalist>
               <div className="relative flex-1">
-                <CampoHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} placeholder="Salida" listId="horas-enteras" />
+                <CampoHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} placeholder="Salida" listId="horas-enteras" className={CLASE_HORA} />
               </div>
             </div>
             {horarioExcedido ? (
@@ -2066,7 +1915,10 @@ const TIME_OPTIONS = (() => {
                 El tipo de contrato admite hasta {limiteHoras} h por jornada y el horario suma {duracionHorario?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
               </p>
             ) : (
-              limiteHoras != null && <p className="text-[11px] text-slate-400">Hasta {limiteHoras} h por jornada, según el tipo de contrato.</p>
+              <p className="text-[11px] text-slate-400">
+                {areaTurnoElegido?.horario ? `Viene del turno ${areaTurnoElegido.turnoNombre} (${areaTurnoElegido.horario}). Cambialo si esta persona entra o sale a otra hora.` : "Se completa con el horario del turno que elijas arriba."}
+                {limiteHoras != null && ` Hasta ${limiteHoras} h por jornada, según el tipo de contrato.`}
+              </p>
             )}
           </div>
         </div>
@@ -2155,166 +2007,47 @@ const TIME_OPTIONS = (() => {
           </>
           )}
 
-          <div className="space-y-1">
-            {/* Mismo rótulo con ícono que «Horario»: sin él, las dos etiquetas tenían alturas
-                distintas y los campos de la fila arrancaban desparejos. La altura de los controles
-                también se fija (`h-12`) en vez de depender del `py-3`, que en un <select> y en un
-                <input> no da lo mismo. */}
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
-              Importe por Jornada
-            </label>
-            <div className="relative">
+          <ImportesDelContrato
+            className="contents"
+            valorJornada={formData.dailyRate}
+            onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
+            mesesEq={mesesEq}
+            jornadas={jornadasDelContrato}
+            diasSemana={diasSemanaNum}
+            bloqueado={importesBloqueados}
+            textoBloqueado="Se habilita al elegir la categoría."
+            ayudaJornada={
+              <>
+                {importesBloqueados && <p className="text-[11px] text-slate-400">Se habilita al elegir la categoría: el importe sale de su escala.</p>}
+                {esServicios && <p className="text-[11px] text-slate-400">Es un servicio: no hay convenio ni categoría, así que el importe se carga a mano.</p>}
+                {!importesBloqueados && <p className="text-[11px] text-slate-400">Total ÷ jornadas del contrato. Varía según los días hábiles de cada mes.</p>}
+                {categoriaElegida && !diferenciaContraEscala && (
+                  <p className="text-[11px] text-slate-400">
+                    De la escala de {categoriaElegida.name}
+                    {convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.
+                  </p>
+                )}
+                {diferenciaContraEscala && (
+                  <p className={`text-[11px] font-medium ${diferenciaContraEscala.delta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                    {diferenciaContraEscala.delta > 0 ? "+" : "−"}
+                    {Math.abs(diferenciaContraEscala.delta).toLocaleString("es-AR", { minimumFractionDigits: 2 })} contra la escala ({diferenciaContraEscala.escala.toLocaleString("es-AR", { minimumFractionDigits: 2 })})
+                  </p>
+                )}
+              </>
+            }
+            claseEtiqueta="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2"
+            claseCampo="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            claseCampoTotal="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+            claseAyuda="text-[11px] text-slate-400"
+            icono={<FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />}
+            adornoCampo={
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <CampoImporte valor={importeEn("jornada")} onCambio={(v) => cambiarImporte("jornada", v)} onBlur={soltarImporte} disabled={importesBloqueados} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
-            </div>
-            {importesBloqueados && <p className="text-[11px] text-slate-400">Se habilita al elegir la categoría: el importe sale de su escala.</p>}
-            {esServicios && <p className="text-[11px] text-slate-400">Es un servicio: no hay convenio ni categoría, así que el importe se carga a mano.</p>}
-            {!importesBloqueados && <p className="text-[11px] text-slate-400">Total ÷ jornadas del contrato. Varía según los días hábiles de cada mes.</p>}
-            {/* De dónde salió el número, y cuánto se apartó de él si alguien lo cambió. */}
-            {categoriaElegida && !diferenciaContraEscala && <p className="text-[11px] text-slate-400">De la escala de {categoriaElegida.name}{convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.</p>}
-            {diferenciaContraEscala && (
-              <p className={`text-[11px] font-medium ${diferenciaContraEscala.delta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                {diferenciaContraEscala.delta > 0 ? "+" : "−"}
-                {Math.abs(diferenciaContraEscala.delta).toLocaleString("es-AR", { minimumFractionDigits: 2 })} contra la escala ({diferenciaContraEscala.escala.toLocaleString("es-AR", { minimumFractionDigits: 2 })})
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
-              Importe por Semana
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-              </span>
-              <CampoImporte valor={importeEn("semana")} onCambio={(v) => cambiarImporte("semana", v)} onBlur={soltarImporte} disabled={importesBloqueados || diasSemanaNum <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
-            </div>
-            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : diasSemanaNum > 0 ? `Jornada × ${diasSemanaNum} ${diasSemanaNum === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Marcá los días que trabaja (más arriba) para calcularlo."}</p>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
-              Importe mensual
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-              </span>
-              <CampoImporte valor={importeEn("mes")} onCambio={(v) => cambiarImporte("mes", v)} onBlur={soltarImporte} disabled={importesBloqueados || mesesEq <= 0 || jornadasDelContrato <= 0} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60" />
-            </div>
-            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : mesesEq > 0 && jornadasDelContrato > 0 ? "Se prorratea según los días hábiles reales de cada mes del período. Si lo cambiás, se recalculan los demás." : "Cargá desde, hasta y los días que trabaja para calcularlo."}</p>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />
-              Importe total del contrato
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-              </span>
-              <CampoImporte valor={importeEn("total")} onCambio={(v) => cambiarImporte("total", v)} onBlur={soltarImporte} disabled={importesBloqueados || jornadasDelContrato <= 0} className="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300" />
-            </div>
-            <p className="text-[11px] text-slate-400">{importesBloqueados ? "Se habilita al elegir la categoría." : jornadasDelContrato > 0 ? `Mensual × meses del contrato (${mesesEq.toLocaleString("es-AR", { maximumFractionDigits: 2 })}). Si lo cambiás, se recalculan los demás.` : "Cargá desde, hasta y los días que trabaja para calcularlo."}</p>
-          </div>
+            }
+          />
         </div>
 
-        {/*
-          EL ÁREA Y TURNO DE LA PERSONA: OBLIGATORIO, y es lo que precarga el wizard de aprobación.
-
-          El coordinador pide el alta para SU área: se le ofrecen sus coordinaciones en el proyecto (el
-          server manda sólo las propias, ver `?slim=true`). Quien no coordina nada ahí —un supervisor, un
-          admin— elige entre todas las del proyecto. Antes, en ese caso la solicitud viajaba sin área y
-          había que elegirla al aprobar, sabiendo menos que quien la pidió.
-
-          Con una sola opción no se pregunta: se informa, ya puesta.
-        */}
-        {proyectoElegido && (
-          <div id="bloque-area-turno" className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-              Área y turno <span className="text-red-500">*</span>
-            </label>
-            {opcionesAreaTurno === null ? (
-              <p className="text-xs text-slate-400">Cargando las áreas y turnos del proyecto…</p>
-            ) : opcionesAreaTurno.length === 0 && (horarioCompleto || (opcionesDelProyecto?.length ?? 0) === 0) ? (
-              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                {opcionesDelProyecto && opcionesDelProyecto.length > 0
-                  ? `Ningún turno de este proyecto coincide con el horario ${[formData.inTime, formData.outTime].filter(Boolean).join(" a ")}. Cambiá el horario para ver sus turnos.`
-                  : "Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona."}
-              </p>
-            ) : horarioCompleto && opcionesAreaTurno.length === 1 ? (
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {opcionesAreaTurno[0].areaNombre} · {opcionesAreaTurno[0].turnoNombre}
-                  </span>
-                  {(opcionesAreaTurno[0].horario || opcionesAreaTurno[0].dias) && <span className="block text-[11px] text-slate-400">{[opcionesAreaTurno[0].horario, opcionesAreaTurno[0].dias].filter(Boolean).join(" · ")}</span>}
-                </span>
-              </div>
-            ) : (
-              <>
-                <p className="text-[11px] text-slate-400">
-                  {coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."} {horarioCompleto ? (
-                    <>Se muestran los turnos del horario {formData.inTime} a {formData.outTime}.</>
-                  ) : (
-                    <span className="font-semibold text-amber-600 dark:text-amber-400">Elegí primero el horario (entrada y salida) para habilitarlos: después quedan sólo los que le corresponden.</span>
-                  )}
-                </p>
-                <div className="space-y-2">
-                  {areasAgrupadas.map((area) => (
-                    <div key={area.areaId} className="rounded-lg border border-slate-200 dark:border-slate-700">
-                      <button type="button" onClick={() => alternarArea(area.areaId)} aria-expanded={areasAbiertas.has(area.areaId)} className="flex w-full items-center gap-2 p-2.5 text-left">
-                        <FontAwesomeIcon icon={areasAbiertas.has(area.areaId) ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
-                        <span className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{area.nombre}</span>
-                        {areaTurnoElegido?.areaId === area.areaId ? (
-                          <span className="shrink-0 truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{areaTurnoElegido.turnoNombre}</span>
-                        ) : (
-                          <span className="shrink-0 text-[10px] text-slate-400">
-                            {area.turnos.length} {area.turnos.length === 1 ? "turno" : "turnos"}
-                          </span>
-                        )}
-                      </button>
-                      {areasAbiertas.has(area.areaId) && (
-                      <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
-                        {area.turnos.map((t) => {
-                          const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId;
-                          return (
-                            <button
-                              key={`${t.areaId}-${t.shiftId}`}
-                              type="button"
-                              onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: t.areaId, shiftIds: [t.shiftId] }] }))}
-                              disabled={!horarioCompleto}
-                              aria-pressed={elegido}
-                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
-                            >
-                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
-                              <span className="min-w-0">
-                                <span className="block truncate text-sm font-medium">{t.turnoNombre}</span>
-                                {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
-                                {(t.horario || t.dias) && <span className="block text-[10px] text-slate-400">{[t.horario, t.dias].filter(Boolean).join(" · ")}</span>}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            {intentoEnviar && !areaTurnoElegido && (opcionesAreaTurno?.length ?? 0) > 0 && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">Elegí el área y el turno donde va a trabajar.</p>}
-          </div>
-        )}
 
         <div className="space-y-3">
           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">

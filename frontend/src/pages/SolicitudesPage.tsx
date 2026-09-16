@@ -11,6 +11,7 @@ import { projectsAPI } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
+import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
 
 /**
  * SOLICITUDES, TODAS, EN UN SOLO LUGAR.
@@ -36,6 +37,8 @@ const CLAVE_AYUDA = "solicitudes" as const;
 export const SolicitudesPage: React.FC = () => {
   const navigate = useNavigate();
   const catalogos = useCatalogosDeSolicitudes();
+  /** La solicitud que se está revisando: el detalle completo, antes de decidir. */
+  const [revisando, setRevisando] = useState<SolicitudVista | null>(null);
   const ayuda = getHelp(CLAVE_AYUDA);
 
   const [rows, setRows] = useState<SolicitudOverviewRow[]>([]);
@@ -108,18 +111,34 @@ export const SolicitudesPage: React.FC = () => {
   }, [cargar, busqueda]);
 
   /** Cambiar de estado no necesita el wizard: es un cambio de status y se resuelve acá mismo. */
-  const cambiarEstado = async (s: SolicitudVista, status: "rechazada" | "pendiente", confirmar?: { titulo: string; texto: string; ok: string }) => {
-    if (confirmar) {
-      const r = await sweetAlert.confirm(confirmar.titulo, confirmar.texto, confirmar.ok);
-      if (!r.isConfirmed) return;
-    }
+  const cambiarEstado = async (s: SolicitudVista, status: "rechazada" | "pendiente", motivo?: string) => {
     try {
-      await usersAPI.setSolicitudStatus(s._id, status);
+      await usersAPI.setSolicitudStatus(s._id, status, motivo);
+      setRevisando(null);
       sweetAlert.success(status === "rechazada" ? "Solicitud rechazada" : "Solicitud reabierta", status === "rechazada" ? "La solicitud quedó marcada como rechazada." : "Volvió a quedar pendiente de aprobación.");
       cargar(page);
     } catch (error: any) {
       sweetAlert.error("Error", error.response?.data?.error || "No se pudo cambiar el estado de la solicitud.");
     }
+  };
+
+  /*
+    RECHAZAR PIDE EL MOTIVO, y es obligatorio.
+
+    Una solicitud rechazada vuelve a quien la cargó, que tiene que saber qué corregir: sin el motivo,
+    la pregunta se termina haciendo por teléfono y la solicitud se vuelve a mandar igual. Queda
+    guardado en la solicitud y se ve en la tabla y en el detalle.
+  */
+  const pedirMotivoYRechazar = async (s: SolicitudVista) => {
+    const r = await sweetAlert.prompt("¿Rechazar solicitud?", {
+      text: `Contale a quien pidió el alta de ${s.nombre} por qué no se aprueba.`,
+      placeholder: "Ej.: falta el CUIT, o la categoría no corresponde al rol",
+      multilinea: true,
+      confirmText: "Rechazar",
+      mensajeVacio: "Escribí el motivo del rechazo.",
+    });
+    if (!r.isConfirmed) return;
+    await cambiarEstado(s, "rechazada", String(r.value || "").trim());
   };
 
   const eliminar = async (s: SolicitudVista) => {
@@ -234,12 +253,16 @@ export const SolicitudesPage: React.FC = () => {
             solicitudes={solicitudes}
             catalogos={catalogos}
             mostrarProyectos
+            onVerDetalle={setRevisando}
             onAprobar={irAAprobar}
             tituloAprobar={(s) => (s.proyectos?.[0] ? `Aprobar en ${s.proyectos[0].name}` : "Sin proyecto asignado")}
-            onRechazar={(s) => cambiarEstado(s, "rechazada", { titulo: "¿Rechazar solicitud?", texto: `La solicitud de ${s.nombre} quedará registrada como rechazada.`, ok: "Sí, rechazar" })}
+            onRechazar={pedirMotivoYRechazar}
             onReabrir={(s) => cambiarEstado(s, "pendiente")}
             onEliminar={eliminar}
           />
+
+          {/* Revisar acá; aprobar sigue llevando al equipo del proyecto, que es donde se carga el contrato. */}
+          <SolicitudDetalleModal isOpen={!!revisando} onClose={() => setRevisando(null)} solicitud={revisando} catalogos={catalogos} proyectos={revisando?.proyectos} onAprobar={irAAprobar} onRechazar={pedirMotivoYRechazar} />
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-1">

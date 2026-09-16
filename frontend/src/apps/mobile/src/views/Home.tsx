@@ -7,7 +7,7 @@ import { useNotifications } from "../hooks/useNotifications";
 import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
-import { ProfileData } from "../../../../api/personnel";
+import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, ProfileData } from "../../../../api/personnel";
 import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
@@ -29,7 +29,17 @@ interface HomeProps {
 
 export default function Home({ onNavigate }: HomeProps) {
   const { user, logout } = useAuthStore();
-  const { notifications, unreadCount, loading: notifLoading } = useNotifications();
+  const { notifications, unreadCount, loading: notifLoading, porTipo } = useNotifications();
+  /*
+    LOS NÚMEROS DE LAS TARJETAS: lo que pasó y todavía no se miró.
+
+    Registro cuenta quiénes se registraron con el link; Contratación, las solicitudes que entraron y
+    las decisiones sobre las que uno pidió —aprobada o rechazada es tan novedad como una nueva—. El
+    número no se borra al entrar a la pantalla: se marca leído desde ahí o desde la campanita, así
+    nadie pierde de vista algo por haber tocado la tarjeta sin tiempo de resolverlo.
+  */
+  const nuevosRegistros = porTipo[NOVEDAD_REGISTRO] || 0;
+  const nuevasContrataciones = (porTipo[NOVEDAD_SOLICITUD] || 0) + (porTipo[NOVEDAD_SOLICITUD_APROBADA] || 0) + (porTipo[NOVEDAD_SOLICITUD_RECHAZADA] || 0);
   /*
     CONTRATOS POR VENCER: el aviso de la semana previa. Se muestra en la tarjeta Contratación, que es
     donde se resuelven (pestaña «Por vencer»). Con su catch: sin el número, la tarjeta sigue igual.
@@ -139,6 +149,7 @@ export default function Home({ onNavigate }: HomeProps) {
       ),
     view: "user_history" as ViewType,
     disabled: false,
+    nuevos: nuevasContrataciones,
   };
 
   // «Mis equipos»: las áreas y turnos que la persona tiene a cargo, con su gente.
@@ -201,7 +212,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
   // Registro: el link para que la gente de su área y turno se registre sola, y quiénes lo hicieron.
   if (puede(MOBILE_REGISTRO)) {
-    quickActions.push({ icon: faLink, title: "Registro", description: "Link de registro y registrados", view: "registro" as ViewType, disabled: false });
+    quickActions.push({ icon: faLink, title: "Registro", description: "Link de registro y registrados", view: "registro" as ViewType, disabled: false, nuevos: nuevosRegistros });
   }
 
   /*
@@ -251,7 +262,7 @@ export default function Home({ onNavigate }: HomeProps) {
     <div className="flex-1 pb-24">
       {/* HEADER */}
       <div className="flex items-center justify-between px-4 pt-4">
-        <UserHeader user={user} />
+        <UserHeader user={user} perfil={profile} />
 
         <div className="flex items-center gap-1">
           {/* El cambio de tema se sacó: la app es siempre oscura (ver `stores/themeStore.ts`). */}
@@ -303,6 +314,8 @@ export default function Home({ onNavigate }: HomeProps) {
             >
               {/* BADGE */}
               <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
+              {/* Cuántas novedades sin mirar tiene esta tarjeta. */}
+              {(action as any).nuevos > 0 && <span className="absolute right-3 top-3 flex min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white">{(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}</span>}
               <div className="flex-col gap-1 items-center space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center">

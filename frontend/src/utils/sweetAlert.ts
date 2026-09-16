@@ -71,14 +71,14 @@ export const sweetAlert = {
   prompt: (
     title: string,
     /** `html` es para cuando el texto necesita un enlace — con `text` el link se ve como texto pelado y no se puede clickear. */
-    opts: { text?: string; html?: string; valorInicial?: string; placeholder?: string; confirmText?: string; cancelText?: string; validar?: (valor: string) => string | null } = {},
+    opts: { text?: string; html?: string; valorInicial?: string; placeholder?: string; confirmText?: string; cancelText?: string; validar?: (valor: string) => string | null; /** Para textos largos (un motivo, una observación): una línea los recorta a la vista. */ multilinea?: boolean; /** Qué decir si lo dejan vacío; por defecto pide un nombre, que es el uso original. */ mensajeVacio?: string } = {},
   ) => {
     return Swal.fire({
       title,
       text: opts.html ? undefined : opts.text,
       html: opts.html,
       icon: "question",
-      input: "text",
+      input: opts.multilinea ? "textarea" : "text",
       inputValue: opts.valorInicial ?? "",
       inputPlaceholder: opts.placeholder,
       showCancelButton: true,
@@ -87,9 +87,9 @@ export const sweetAlert = {
       confirmButtonText: opts.confirmText || "Guardar",
       cancelButtonText: opts.cancelText || "Cancelar",
       reverseButtons: true,
-      inputValidator: (valor) => {
+      inputValidator: (valor: string) => {
         const v = String(valor || "").trim();
-        if (!v) return "Escribí un nombre.";
+        if (!v) return opts.mensajeVacio || "Escribí un nombre.";
         return opts.validar ? opts.validar(v) : null;
       },
     });

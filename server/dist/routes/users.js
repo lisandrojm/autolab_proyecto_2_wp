@@ -9,6 +9,7 @@ import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js
 import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../utils/permisosMobile.js";
+import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
@@ -1052,6 +1053,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
                 dailyRate: m.dailyRate ?? null,
                 comentarios: m.comentarios ?? null,
                 solicitudUserId: m.solicitudUserId ? String(m.solicitudUserId) : null,
+                motivoRechazo: m.solicitudMotivoRechazo || null,
                 // Renueva un contrato por vencer: la tabla la muestra con la etiqueta «Renovación».
                 esRenovacion: !!m.esRenovacion,
             };
@@ -1139,6 +1141,10 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
         }
         if (data.metadata?.isSolicitud === true && !data.metadata.solicitudStatus) {
             data.metadata.solicitudStatus = "pendiente";
+        }
+        // Quién la pidió, puesto por el servidor: es a quien se le avisa cómo terminó. Nunca del body.
+        if (data.metadata?.isSolicitud === true) {
+            data.metadata.solicitudCreadaPor = new Types.ObjectId(String(req.user.userId));
         }
         // Verificar que no existe usuario con el mismo email en el tenant
         const existingUser = await User.findOne({
@@ -1257,6 +1263,25 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
             catch (e) {
                 console.error("[RENOVACION] No se pudo anotar la renovación del contrato:", e);
             }
+        }
+        /*
+          AVISAR QUE ENTRÓ UNA SOLICITUD, a quien la tiene que aprobar.
+    
+          Va al coordinador del proyecto (el responsable): es quien la aprueba desde el escritorio. Antes la
+          solicitud quedaba esperando sin que nadie se enterara, y el que la cargó tenía que avisar aparte.
+          No se avisa a quien la acaba de cargar: ya sabe.
+        */
+        if (user.metadata?.isSolicitud === true) {
+            // Los proyectos de una solicitud vienen en `metadata`; los de un alta normal, en la raíz.
+            const proyectos = [...(user.metadata?.projectIds || []), ...(user.projectIds || [])];
+            await notificar({
+                tenantId: req.tenantObjectId,
+                destinatarios: await responsablesDeProyectos(req.tenantObjectId, proyectos),
+                type: NOVEDAD_SOLICITUD,
+                title: user.metadata?.esRenovacion ? "Renovación de contrato pedida" : "Nueva solicitud de contratación",
+                message: `${nombreDePersona(user)} · pedida por ${nombreDePersona(await User.findById(req.user.userId).select("firstName lastName metadata.fullName").lean())}`,
+                excepto: req.user.userId,
+            });
         }
         // Sync projects: Add this user to assignedUsers of selected projects
         if (user.projectIds && user.projectIds.length > 0) {
@@ -1596,6 +1621,25 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
                 }
             }
         }
+        /*
+          LO QUE NO SE EDITA EN NINGÚN FORMULARIO, SE CONSERVA.
+    
+          Este PATCH reemplaza `metadata` ENTERO por el que manda el cliente, así que todo lo que el
+          formulario no conoce se borra al guardar. Editar una solicitud desde la app le borraba el estado
+          —quedaba leyéndose como pendiente—, quién la pidió y el motivo de un rechazo; editar la ficha de
+          alguien desde el panel le borraba con qué link se había registrado.
+    
+          Son datos de gestión, los pone el servidor y sólo él los cambia (`/solicitud-status`, la
+          aprobación, el registro público): se arrastran del documento actual cuando no vienen en el body.
+        */
+        if (data.metadata && currentUser.metadata) {
+            const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "registro"];
+            deGestion.forEach((campo) => {
+                const actual = currentUser.metadata[campo];
+                if (data.metadata[campo] === undefined && actual !== undefined)
+                    data.metadata[campo] = actual;
+            });
+        }
         // Preparar updateData
         const updateData = { $set: {} };
         const fieldsToUnset = [];
@@ -1763,7 +1807,7 @@ router.patch("/:id/confirmar-cambio-cuenta", requireTenant, authenticateToken, r
 // volver a "pendiente" para deshacer un rechazo/cancelación hecho por error.
 router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {
-        const { status } = req.body || {};
+        const { status, motivo } = req.body || {};
         if (!["rechazada", "cancelada", "pendiente"].includes(String(status))) {
             res.status(400).json({ error: "Estado inválido. Sólo se acepta 'rechazada', 'cancelada' o 'pendiente'." });
             return;
@@ -1778,7 +1822,46 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requireP
             res.status(400).json({ error: "Esta solicitud ya fue aprobada o no es una solicitud." });
             return;
         }
-        const updated = await User.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { $set: { "metadata.solicitudStatus": status } }, { new: true }).select("-password");
+        /*
+          EL MOTIVO DEL RECHAZO VIAJA CON LA DECISIÓN.
+    
+          Sin él, quien pidió el alta tiene que averiguar por afuera qué faltaba y volver a cargarla a
+          ciegas. Se guarda con quién lo decidió y cuándo, y se BORRA al volver la solicitud a pendiente:
+          si no, quedaría un motivo viejo colgado de una solicitud que ya nadie objetó.
+    
+          Es opcional del lado del server a propósito: la app cancela sus propias solicitudes sin motivo,
+          y el panel se despliega aparte —exigirlo acá rompería los rechazos hasta que el front llegue.
+        */
+        const cambio = { "metadata.solicitudStatus": status };
+        const texto = String(motivo || "").trim();
+        if (status === "pendiente") {
+            cambio["metadata.solicitudMotivoRechazo"] = "";
+            cambio["metadata.solicitudRechazadaPor"] = null;
+            cambio["metadata.solicitudRechazadaEl"] = null;
+        }
+        else if (texto) {
+            cambio["metadata.solicitudMotivoRechazo"] = texto.slice(0, 1000);
+            cambio["metadata.solicitudRechazadaPor"] = req.user.userId;
+            cambio["metadata.solicitudRechazadaEl"] = new Date();
+        }
+        const updated = await User.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { $set: cambio }, { new: true }).select("-password");
+        /*
+          AVISARLE A QUIEN LA PIDIÓ que se rechazó, y por qué.
+    
+          Es la única forma de que se entere sin entrar a mirar: el motivo viaja en el aviso para que no
+          tenga que abrir la solicitud para saber qué corregir. Al reabrirla no se avisa nada: no es una
+          decisión sobre el pedido, es deshacer una.
+        */
+        if (status === "rechazada") {
+            await notificar({
+                tenantId: req.tenantObjectId,
+                destinatarios: [user.metadata?.solicitudCreadaPor],
+                type: NOVEDAD_SOLICITUD_RECHAZADA,
+                title: "Solicitud rechazada",
+                message: `${nombreDePersona(user)}${texto ? `: ${texto}` : ""}`,
+                excepto: req.user.userId,
+            });
+        }
         res.json(updated);
     }
     catch (error) {
