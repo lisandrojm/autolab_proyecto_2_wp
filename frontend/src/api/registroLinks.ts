@@ -136,6 +136,16 @@ class RegistroLinksAPI {
     return data;
   }
 
+  /**
+   * Móvil: borra de la lista un registro propio (o de un supervisor que coordino).
+   *
+   * El server sólo lo permite mientras sea NADA MÁS que un registro: con contrato, con proyecto o con
+   * una solicitud en curso responde 409 y explica qué hacer, porque ahí borrarlo se llevaría eso.
+   */
+  async borrarRegistrado(userId: string): Promise<void> {
+    await axios.delete(`/registro-links/mis-registrados/${userId}`);
+  }
+
   /** Panel: todos los que se registraron con un link. */
   async registrados(): Promise<RegistradoAdmin[]> {
     const { data } = await axios.get(`/registro-links/registrados`);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt, faLayerGroup, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import AvisoNovedades from "../components/AvisoNovedades";
@@ -41,6 +41,8 @@ export default function Registro({ onNavigate }: RegistroProps) {
   const [detalle, setDetalle] = useState<DetalleRegistrado | null>(null);
   const [cargandoDetalle, setCargandoDetalle] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<FiltroRegistrados>("todos");
+  /** Qué registro se está borrando: la fila se apaga mientras el server contesta. */
+  const [borrando, setBorrando] = useState<string | null>(null);
 
   // Sólo un supervisor recibe registrados de otros links: al coordinador no se le muestra el filtro.
   const cuentas = { todos: registrados?.length || 0, mios: (registrados || []).filter((r) => r.esMio).length, equipo: (registrados || []).filter((r) => !r.esMio).length };
@@ -76,6 +78,28 @@ export default function Registro({ onNavigate }: RegistroProps) {
       sweetAlert.error("No se pudo abrir", e?.response?.data?.error || "Probá de nuevo en un momento.");
     } finally {
       setCargandoDetalle(null);
+    }
+  };
+
+  /*
+    BORRAR UN REGISTRO, con confirmación y con el nombre adentro.
+
+    Se pide confirmación porque no se puede deshacer: la persona tendría que registrarse de nuevo con
+    el link. Lo que el server no deja borrar —ya tiene contrato, proyecto o una solicitud en curso—
+    vuelve con su explicación, y se muestra tal cual: dice qué hacer antes de poder borrarlo.
+  */
+  const borrarRegistro = async (r: Registrado) => {
+    const c: any = await sweetAlert.confirm("¿Borrar este registro?", `Se borra la ficha de ${r.nombre} y sale de la lista. Si hace falta, tendrá que registrarse de nuevo con el link.`, "Borrar", "Cancelar");
+    if (!(c === true || c?.isConfirmed)) return;
+    setBorrando(r._id);
+    try {
+      await registroLinksAPI.borrarRegistrado(r._id);
+      setRegistrados((prev) => (prev || []).filter((x) => x._id !== r._id));
+      sweetAlert.success("Registro borrado", `${r.nombre} salió de la lista.`);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo borrar", e?.response?.data?.error || "Probá de nuevo en un momento.");
+    } finally {
+      setBorrando(null);
     }
   };
 
@@ -136,7 +160,9 @@ export default function Registro({ onNavigate }: RegistroProps) {
         ) : (
           <div className="space-y-3">
             {visibles.map((r) => (
-              <button key={r._id} onClick={() => verDetalle(r._id)} className="w-full rounded-xl border bg-white p-4 text-left shadow-sm transition-colors active:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 dark:active:bg-slate-800">
+              // Contenedor: el contenido abre el detalle y el tacho borra. Dos botones, no uno adentro del otro.
+              <div key={r._id} className={`relative w-full rounded-xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70 ${borrando === r._id ? "opacity-50" : ""}`}>
+              <button onClick={() => verDetalle(r._id)} disabled={borrando === r._id} className="w-full text-left transition-opacity active:opacity-70">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h4 className="truncate font-bold text-slate-900 dark:text-slate-100">{r.nombre}</h4>
@@ -151,7 +177,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
                     r.validadoEnArca && <span className="shrink-0 rounded bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:bg-green-900/30 dark:text-green-400">Validado ARCA</span>
                   )}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pr-10 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   <span className="flex items-center gap-1.5">
                     <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 opacity-70" /> {fecha(r.registradoAt)}
                   </span>
@@ -166,6 +192,25 @@ export default function Registro({ onNavigate }: RegistroProps) {
                   )}
                 </div>
               </button>
+
+              {/*
+                BORRAR EL REGISTRO.
+
+                Una prueba, un duplicado o alguien que al final no entra quedaban en la lista para
+                siempre: sacarlos era tarea de administración. El server sólo lo deja mientras la
+                persona no tenga contrato, proyecto ni una solicitud en curso, y si no, dice por qué.
+              */}
+              <button
+                type="button"
+                onClick={() => void borrarRegistro(r)}
+                disabled={borrando === r._id}
+                aria-label={`Borrar el registro de ${r.nombre}`}
+                title="Borrar el registro"
+                className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors active:scale-95 disabled:opacity-50 dark:border-slate-700 dark:text-slate-500"
+              >
+                <FontAwesomeIcon icon={borrando === r._id ? faSpinner : faTrash} className={`h-3.5 w-3.5 ${borrando === r._id ? "animate-spin" : ""}`} />
+              </button>
+              </div>
             ))}
           </div>
         )}

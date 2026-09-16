@@ -17,6 +17,7 @@ import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
 import { MOBILE_REGISTRO } from "../utils/permisosMobile.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
+import UserProject from "../models/UserProject.js";
 const router = Router();
 /*
   CUÁNTO DURAN LOS LINKS DEL MÓVIL: lo decide cada tenant (Usuarios → Link → Links), 7 días si nunca se tocó.
@@ -415,6 +416,81 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
     catch (error) {
         console.error("Delete registro-link error:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  BORRAR UN REGISTRO DE LA LISTA.
+
+  Alguien se registra con un link y queda en «Registrados»: una prueba, un duplicado o alguien que al
+  final no entra siguen ahí para siempre, y quien comparte el link no tenía forma de sacarlo —sólo
+  administración, desde el panel—.
+
+  SÓLO MIENTRAS SEA NADA MÁS QUE UN REGISTRO. Si ya tiene contrato, está asignada a un proyecto o tiene
+  una solicitud de contratación en curso, no se borra desde acá y se explica por qué: a esa altura ya no
+  es una ficha de paso, y borrarla se llevaría el contrato, la asignación o una solicitud que otro está
+  esperando aprobar. Para eso está Usuarios en el panel, donde se ve todo lo que cuelga de la persona.
+
+  Y sólo los registros que esta persona PUEDE VER (`invitadoresVisibles`): el suyo, o el de un
+  supervisor de los proyectos que coordina. El mismo alcance con el que se listan.
+*/
+router.delete("/mis-registrados/:userId", requireTenant, authenticateToken, requirePermission(MOBILE_REGISTRO), async (req, res) => {
+    try {
+        const tenantId = toObjectIdOrNull(req.tenantObjectId);
+        const userId = toObjectIdOrNull(req.params.userId);
+        if (!tenantId || !userId) {
+            res.status(400).json({ error: "Datos inválidos" });
+            return;
+        }
+        if (String(userId) === String(req.user.userId)) {
+            res.status(400).json({ error: "No podés borrar tu propio registro." });
+            return;
+        }
+        const visibles = await invitadoresVisibles(tenantId, String(req.user.userId));
+        const persona = await User.findOne({ _id: userId, tenantId, "metadata.registro.invitadoPor": { $in: visibles } }).select("firstName lastName email isSystem clientIds projectIds metadata.fullName metadata.projects");
+        if (!persona) {
+            res.status(404).json({ error: "No encontré ese registro entre los tuyos." });
+            return;
+        }
+        if (persona.isSystem) {
+            res.status(403).json({ error: "No se puede eliminar un usuario del sistema protegido." });
+            return;
+        }
+        const [asignaciones, solicitudes] = await Promise.all([
+            UserProject.find({ userId }).select("contracts").lean(),
+            User.countDocuments({ tenantId, "metadata.solicitudUserId": userId, "metadata.solicitudStatus": { $in: ["pendiente", "aprobada"] } }),
+        ]);
+        const conContrato = asignaciones.some((a) => (a.contracts || []).length > 0);
+        if (conContrato) {
+            res.status(409).json({ error: "Esta persona ya tiene un contrato cargado, así que no es sólo un registro. Pedile a administración que la dé de baja desde el panel." });
+            return;
+        }
+        if (solicitudes > 0) {
+            res.status(409).json({ error: "Hay una solicitud de contratación para esta persona. Cancelá la solicitud y después borrá el registro." });
+            return;
+        }
+        if ((persona.projectIds || []).length > 0 || (persona.metadata?.projects || []).length > 0) {
+            res.status(409).json({ error: "Esta persona está asignada a un proyecto. Sacala del equipo antes de borrar el registro." });
+            return;
+        }
+        /*
+          Se borra la ficha y se deshace lo que el registro había dejado: la asignación vacía, el lugar en
+          el cliente y el conteo del tenant. Sin esto quedan referencias a un usuario que ya no existe, que
+          es lo que después aparece como una fila en blanco en cualquier listado.
+        */
+        await User.deleteOne({ _id: userId, tenantId });
+        await Promise.all([
+            UserProject.deleteMany({ userId }),
+            Client.updateMany({ tenantId, "usuarios.userId": userId }, { $pull: { usuarios: { userId } } }),
+            Project.updateMany({ tenantId, assignedUsers: userId }, { $pull: { assignedUsers: userId } }),
+            Tenant.findByIdAndUpdate(tenantId, { $pull: { userIds: userId }, $inc: { "usage.users.current": -1 } }),
+        ]);
+        const nombre = persona.metadata?.fullName || `${persona.firstName || ""} ${persona.lastName || ""}`.trim() || persona.email;
+        console.log(`[REGISTRO] ${req.user.userId} borró el registro de ${nombre} (${userId})`);
+        res.json({ success: true });
+    }
+    catch (error) {
+        console.error("Delete registrado error:", error);
+        res.status(500).json({ error: "No se pudo borrar el registro." });
     }
 });
 export { router as registroLinkRoutes };
