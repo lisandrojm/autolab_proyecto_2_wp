@@ -58,8 +58,8 @@ export interface ResultadoSync {
  * Exportada aparte para poder correr una sola —cuando una falló y las demás ya están— sin repetir
  * las tres consultas.
  */
-export async function sincronizarEmpresa(empresa: { _id: Types.ObjectId | string; razonSocial?: string; tangoId?: string; tangoToken?: string; tangoApiUrl?: string }): Promise<ResultadoEmpresa> {
-  const base: ResultadoEmpresa = { empresaId: String(empresa._id), empresa: empresa.razonSocial || "(sin nombre)", tangoId: empresa.tangoId, ok: false, creados: 0, actualizados: 0, inhabilitados: 0, total: 0, errores: [] };
+export async function sincronizarEmpresa(empresa: { _id?: Types.ObjectId | string | null; razonSocial?: string; tangoId?: string; tangoToken?: string; tangoApiUrl?: string }): Promise<ResultadoEmpresa> {
+  const base: ResultadoEmpresa = { empresaId: empresa._id ? String(empresa._id) : "", empresa: empresa.razonSocial || "(sin nombre)", tangoId: empresa.tangoId, ok: false, creados: 0, actualizados: 0, inhabilitados: 0, total: 0, errores: [] };
   if (!empresa.tangoId) {
     return { ...base, errores: ["No tiene cargado el ID de Tango: no se le puede pedir el catálogo."] };
   }
@@ -75,7 +75,12 @@ export async function sincronizarEmpresa(empresa: { _id: Types.ObjectId | string
   const tipo = leido.tipo.codigo || leido.tipo.descripcion ? `${leido.tipo.codigo}${leido.tipo.descripcion ? ` — ${leido.tipo.descripcion}` : ""}` : undefined;
   if (!leido.ok) return { ...base, tipo, errores: leido.errores };
 
-  const empresaId = new Types.ObjectId(String(empresa._id));
+  /*
+    `empresaId` es opcional: las empresas de Tango que no son empleadoras de la plataforma no tienen
+    ficha acá (ver `empresaTangoId` en el modelo). La identidad del catálogo es el id de TANGO.
+  */
+  const empresaId = empresa._id ? new Types.ObjectId(String(empresa._id)) : undefined;
+  const empresaTangoId = Number(empresa.tangoId);
   const ahora = new Date();
 
   /*
@@ -87,10 +92,11 @@ export async function sincronizarEmpresa(empresa: { _id: Types.ObjectId | string
     const doc = sincronizarCamposDerivados({ ...i }) as any;
     return {
       updateOne: {
-        filter: { empresaId, idAuxiliar: i.idAuxiliar },
+        filter: { empresaTangoId, idAuxiliar: i.idAuxiliar },
         update: {
           $set: {
-            empresaId,
+            ...(empresaId ? { empresaId } : {}),
+            empresaTangoId,
             empresaNombre: empresa.razonSocial || "",
             origen: "tango",
             sincronizadoEl: ahora,
@@ -116,7 +122,7 @@ export async function sincronizarEmpresa(empresa: { _id: Types.ObjectId | string
     Inhabilitado ya significa exactamente eso: existe, no se ofrece más para elegir.
   */
   const idsQueVinieron = leido.items.map((i) => i.idAuxiliar);
-  const bajas = await CentroCosto.updateMany({ empresaId, idAuxiliar: { $nin: idsQueVinieron }, habilitado: { $ne: "N" } }, { $set: { habilitado: "N", sincronizadoEl: ahora } });
+  const bajas = await CentroCosto.updateMany({ empresaTangoId, idAuxiliar: { $nin: idsQueVinieron }, habilitado: { $ne: "N" } }, { $set: { habilitado: "N", sincronizadoEl: ahora } });
 
   return {
     ...base,
@@ -147,9 +153,26 @@ export async function sincronizarCentrosCostoDesdeTango(): Promise<ResultadoSync
     console.warn("[CENTROS-COSTO-SYNC] No se pudieron actualizar los índices:", e?.message || e);
   }
 
-  const empresas: any[] = await Company.find({ tangoId: { $exists: true, $nin: [null, ""] } })
+  const empleadoras: any[] = await Company.find({ tangoId: { $exists: true, $nin: [null, ""] } })
     .select("razonSocial tangoId tangoToken tangoApiUrl")
     .lean();
+
+  /*
+    EMPRESAS DE TANGO QUE NO SON EMPLEADORAS DE LA PLATAFORMA (`TANGO_EMPRESAS_EXTRA`).
+
+    FZERO CORP —la entidad de Estados Unidos— es el caso: su catálogo se usa, pero darla de alta como
+    empresa acá la pondría a elegir como empleadora en cada contrato, y sin CUIT. Se listan sus ids de
+    Tango, separados por coma, y el NOMBRE se le pregunta a Tango (proceso 1050): copiarlo a mano
+    garantiza que algún día digan cosas distintas.
+  */
+  const extras: any[] = [];
+  for (const id of String(process.env.TANGO_EMPRESAS_EXTRA || "").split(",").map((x) => x.trim()).filter(Boolean)) {
+    if (empleadoras.some((e) => String(e.tangoId) === id)) continue; // ya entra como empleadora
+    const nombre = await tangoApi.getNombreEmpresa(id);
+    extras.push({ _id: null, razonSocial: nombre || `Empresa de Tango ${id}`, tangoId: id });
+  }
+
+  const empresas = [...empleadoras, ...extras];
 
   const resultados: ResultadoEmpresa[] = [];
   for (const e of empresas) {
@@ -171,7 +194,13 @@ export async function sincronizarCentrosCostoDesdeTango(): Promise<ResultadoSync
  * auxiliar que trajo— y cuántos centros vendrían, sin escribir una sola fila.
  */
 export async function probarTango(): Promise<Array<{ empresa: string; tangoId?: string; base: string; ok: boolean; tipo?: string; centros?: number; detalle: string }>> {
-  const empresas: any[] = await Company.find({}).select("razonSocial tangoId tangoToken tangoApiUrl").lean();
+  const empleadoras: any[] = await Company.find({}).select("razonSocial tangoId tangoToken tangoApiUrl").lean();
+  const idsExtra = String(process.env.TANGO_EMPRESAS_EXTRA || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const empresas: any[] = [
+    ...empleadoras,
+    // Las que no son empleadoras (ver `sincronizarCentrosCostoDesdeTango`): también hay que poder probarlas.
+    ...idsExtra.filter((id) => !empleadoras.some((e) => String(e.tangoId) === id)).map((id) => ({ razonSocial: `Empresa de Tango ${id}`, tangoId: id })),
+  ];
   const salida = [];
   for (const e of empresas) {
     const base = TangoApi.baseDe(e);

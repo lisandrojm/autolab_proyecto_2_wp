@@ -10,6 +10,15 @@ export interface ICentroCosto extends Document {
      * Vacío = cargado a mano o traído del export antes de que el catálogo fuera por empresa.
      */
     empresaId?: Types.ObjectId;
+    /**
+     * EL ID DE LA EMPRESA EN TANGO, que es la identidad real del catálogo: (empresaTangoId, idAuxiliar).
+     *
+     * Va aparte de `empresaId` porque NO TODA EMPRESA DE TANGO ES UNA EMPLEADORA DE LA PLATAFORMA.
+     * FZERO CORP es la entidad de Estados Unidos: tiene su catálogo en Tango y sus centros se usan, pero
+     * darla de alta como empresa acá la pondría a elegir como empleadora en cada contrato —y sin CUIT—,
+     * que es justo lo que no corresponde. Con este campo su catálogo entra sin inventar una empleadora.
+     */
+    empresaTangoId?: number;
     /** El nombre de la empresa, copiado: la lista lo muestra en cada fila y sin esto serían 806 lookups. */
     empresaNombre?: string;
     /** De dónde salió: "tango" (sincronización), "import" (archivo) o "manual". */

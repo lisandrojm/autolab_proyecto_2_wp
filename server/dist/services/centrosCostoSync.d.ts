@@ -30,7 +30,7 @@ export interface ResultadoSync {
  * las tres consultas.
  */
 export declare function sincronizarEmpresa(empresa: {
-    _id: Types.ObjectId | string;
+    _id?: Types.ObjectId | string | null;
     razonSocial?: string;
     tangoId?: string;
     tangoToken?: string;

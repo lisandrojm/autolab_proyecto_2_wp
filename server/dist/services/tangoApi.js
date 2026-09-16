@@ -28,6 +28,8 @@ import axios from "axios";
   trae uno propio.
 */
 const sinBarra = (s) => s.replace(/\/+$/, "");
+/** «Datos de la empresa»: de ahí sale el nombre de cada empresa de Tango. */
+export const PROCESO_DATOS_EMPRESA = 1050;
 export class TangoApi {
     api;
     constructor() {
@@ -59,6 +61,23 @@ export class TangoApi {
             headers: { ApiAuthorization: apiToken, Company: empresaTangoId },
         });
         return data;
+    }
+    /**
+     * Cómo se llama una empresa de Tango (proceso 1050, «Datos de la empresa»).
+     *
+     * Se le pregunta a Tango en vez de escribirlo en la configuración: el nombre es de allá, y copiarlo
+     * a mano garantiza que algún día digan cosas distintas. `null` si no se pudo averiguar.
+     */
+    async getNombreEmpresa(empresaTangoId, token, baseUrl) {
+        try {
+            const sobre = await this.getRegistro(PROCESO_DATOS_EMPRESA, 1, empresaTangoId, token, baseUrl);
+            const v = sobre?.value || {};
+            const nombre = v.NOMBRE_LEGAL || v.NOMBRE_COMERCIAL || v.nombrE_LEGAL || v.nombrE_COMERCIAL;
+            return nombre ? String(nombre).trim() : null;
+        }
+        catch {
+            return null;
+        }
     }
     /** La base que se va a usar para una empresa, para poder mostrarla en el diagnóstico. */
     static baseDe(empresa) {

@@ -33,7 +33,7 @@ export const REGISTRO_CENTROS_COSTO = 1;
  * las tres consultas.
  */
 export async function sincronizarEmpresa(empresa) {
-    const base = { empresaId: String(empresa._id), empresa: empresa.razonSocial || "(sin nombre)", tangoId: empresa.tangoId, ok: false, creados: 0, actualizados: 0, inhabilitados: 0, total: 0, errores: [] };
+    const base = { empresaId: empresa._id ? String(empresa._id) : "", empresa: empresa.razonSocial || "(sin nombre)", tangoId: empresa.tangoId, ok: false, creados: 0, actualizados: 0, inhabilitados: 0, total: 0, errores: [] };
     if (!empresa.tangoId) {
         return { ...base, errores: ["No tiene cargado el ID de Tango: no se le puede pedir el catálogo."] };
     }
@@ -48,7 +48,12 @@ export async function sincronizarEmpresa(empresa) {
     const tipo = leido.tipo.codigo || leido.tipo.descripcion ? `${leido.tipo.codigo}${leido.tipo.descripcion ? ` — ${leido.tipo.descripcion}` : ""}` : undefined;
     if (!leido.ok)
         return { ...base, tipo, errores: leido.errores };
-    const empresaId = new Types.ObjectId(String(empresa._id));
+    /*
+      `empresaId` es opcional: las empresas de Tango que no son empleadoras de la plataforma no tienen
+      ficha acá (ver `empresaTangoId` en el modelo). La identidad del catálogo es el id de TANGO.
+    */
+    const empresaId = empresa._id ? new Types.ObjectId(String(empresa._id)) : undefined;
+    const empresaTangoId = Number(empresa.tangoId);
     const ahora = new Date();
     /*
       Upsert por (empresa, idAuxiliar). Los derivados se calculan acá porque `bulkWrite` no pasa por los
@@ -59,10 +64,11 @@ export async function sincronizarEmpresa(empresa) {
         const doc = sincronizarCamposDerivados({ ...i });
         return {
             updateOne: {
-                filter: { empresaId, idAuxiliar: i.idAuxiliar },
+                filter: { empresaTangoId, idAuxiliar: i.idAuxiliar },
                 update: {
                     $set: {
-                        empresaId,
+                        ...(empresaId ? { empresaId } : {}),
+                        empresaTangoId,
                         empresaNombre: empresa.razonSocial || "",
                         origen: "tango",
                         sincronizadoEl: ahora,
@@ -86,7 +92,7 @@ export async function sincronizarEmpresa(empresa) {
       Inhabilitado ya significa exactamente eso: existe, no se ofrece más para elegir.
     */
     const idsQueVinieron = leido.items.map((i) => i.idAuxiliar);
-    const bajas = await CentroCosto.updateMany({ empresaId, idAuxiliar: { $nin: idsQueVinieron }, habilitado: { $ne: "N" } }, { $set: { habilitado: "N", sincronizadoEl: ahora } });
+    const bajas = await CentroCosto.updateMany({ empresaTangoId, idAuxiliar: { $nin: idsQueVinieron }, habilitado: { $ne: "N" } }, { $set: { habilitado: "N", sincronizadoEl: ahora } });
     return {
         ...base,
         ok: true,
@@ -115,9 +121,25 @@ export async function sincronizarCentrosCostoDesdeTango() {
     catch (e) {
         console.warn("[CENTROS-COSTO-SYNC] No se pudieron actualizar los índices:", e?.message || e);
     }
-    const empresas = await Company.find({ tangoId: { $exists: true, $nin: [null, ""] } })
+    const empleadoras = await Company.find({ tangoId: { $exists: true, $nin: [null, ""] } })
         .select("razonSocial tangoId tangoToken tangoApiUrl")
         .lean();
+    /*
+      EMPRESAS DE TANGO QUE NO SON EMPLEADORAS DE LA PLATAFORMA (`TANGO_EMPRESAS_EXTRA`).
+  
+      FZERO CORP —la entidad de Estados Unidos— es el caso: su catálogo se usa, pero darla de alta como
+      empresa acá la pondría a elegir como empleadora en cada contrato, y sin CUIT. Se listan sus ids de
+      Tango, separados por coma, y el NOMBRE se le pregunta a Tango (proceso 1050): copiarlo a mano
+      garantiza que algún día digan cosas distintas.
+    */
+    const extras = [];
+    for (const id of String(process.env.TANGO_EMPRESAS_EXTRA || "").split(",").map((x) => x.trim()).filter(Boolean)) {
+        if (empleadoras.some((e) => String(e.tangoId) === id))
+            continue; // ya entra como empleadora
+        const nombre = await tangoApi.getNombreEmpresa(id);
+        extras.push({ _id: null, razonSocial: nombre || `Empresa de Tango ${id}`, tangoId: id });
+    }
+    const empresas = [...empleadoras, ...extras];
     const resultados = [];
     for (const e of empresas) {
         const r = await sincronizarEmpresa(e);
@@ -136,7 +158,13 @@ export async function sincronizarCentrosCostoDesdeTango() {
  * auxiliar que trajo— y cuántos centros vendrían, sin escribir una sola fila.
  */
 export async function probarTango() {
-    const empresas = await Company.find({}).select("razonSocial tangoId tangoToken tangoApiUrl").lean();
+    const empleadoras = await Company.find({}).select("razonSocial tangoId tangoToken tangoApiUrl").lean();
+    const idsExtra = String(process.env.TANGO_EMPRESAS_EXTRA || "").split(",").map((x) => x.trim()).filter(Boolean);
+    const empresas = [
+        ...empleadoras,
+        // Las que no son empleadoras (ver `sincronizarCentrosCostoDesdeTango`): también hay que poder probarlas.
+        ...idsExtra.filter((id) => !empleadoras.some((e) => String(e.tangoId) === id)).map((id) => ({ razonSocial: `Empresa de Tango ${id}`, tangoId: id })),
+    ];
     const salida = [];
     for (const e of empresas) {
         const base = TangoApi.baseDe(e);

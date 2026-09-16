@@ -20,6 +20,7 @@ export const sincronizarCamposDerivados = (doc) => {
 };
 const centroCostoSchema = new Schema({
     empresaId: { type: Schema.Types.ObjectId, ref: "Company", index: true },
+    empresaTangoId: { type: Number, index: true },
     empresaNombre: { type: String, trim: true },
     origen: { type: String, enum: ["tango", "import", "manual"], default: "manual" },
     sincronizadoEl: { type: Date },
@@ -39,7 +40,11 @@ const centroCostoSchema = new Schema({
     collection: "centros-costo",
 });
 /*
-  ÚNICOS POR EMPRESA, NO GLOBALES.
+  ÚNICOS POR EMPRESA DE TANGO, NO GLOBALES.
+
+  La clave es `empresaTangoId` y no `empresaId`: hay catálogos de empresas de Tango que no son
+  empleadoras de la plataforma (ver el campo), y ésas no tienen `empresaId`. Con `empresaId` todas
+  ellas contarían como el mismo `null` y sólo entraría una.
 
   Empezaron siendo únicos a secas, cuando el catálogo era uno solo. Con tres empresas eso rechaza el
   segundo «1» y el segundo «99» —los ids y los códigos de Tango arrancan igual en cada empresa— y la
@@ -52,8 +57,8 @@ const centroCostoSchema = new Schema({
   OJO AL DEPLOY: los únicos globales ya están creados en la base. Los reemplaza `CentroCosto.syncIndexes()`,
   que corre al sincronizar (ver `services/centrosCostoSync.ts`); sin eso, Mongo sigue aplicando el viejo.
 */
-centroCostoSchema.index({ empresaId: 1, idAuxiliar: 1 }, { unique: true, partialFilterExpression: { idAuxiliar: { $type: "number" } } });
-centroCostoSchema.index({ empresaId: 1, codAuxiliar: 1 }, { unique: true, partialFilterExpression: { codAuxiliar: { $type: "string" } } });
+centroCostoSchema.index({ empresaTangoId: 1, idAuxiliar: 1 }, { unique: true, partialFilterExpression: { idAuxiliar: { $type: "number" } } });
+centroCostoSchema.index({ empresaTangoId: 1, codAuxiliar: 1 }, { unique: true, partialFilterExpression: { codAuxiliar: { $type: "string" } } });
 centroCostoSchema.pre("validate", function (next) {
     sincronizarCamposDerivados(this);
     next();
