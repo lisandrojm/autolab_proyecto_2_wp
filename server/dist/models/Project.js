@@ -90,6 +90,7 @@ const projectSchema = new Schema({
         sedeId: { type: Number },
         activo: { type: Boolean },
         centroCostoId: { type: Number },
+        centroCostoEmpresaTangoId: { type: Number },
         centroCostoOrigen: { type: String },
     },
     turnos: [{ type: Schema.Types.ObjectId, ref: "Shift", index: true }],

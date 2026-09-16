@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faCheck, faTimes, faPiggyBank } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { fuzzyMatch } from "../../utils/searchHelpers";
-import { opcionesCentroCosto } from "../../utils/centroCosto";
+import { empresasDelCentroCosto, opcionesCentroCosto } from "../../utils/centroCosto";
 
 /*
   ELEGIR EL CENTRO DE COSTO DE UN PROYECTO.
@@ -25,7 +25,10 @@ import { opcionesCentroCosto } from "../../utils/centroCosto";
 interface SelectorCentroCostoProps {
   /** El `idAuxiliar` elegido (lo que se guarda en `metadata.centroCostoId`). */
   valor?: number | null;
-  onCambio: (id: number | undefined) => void;
+  /** De qué empresa de Tango es ese centro: sin esto el id es ambiguo (ver `opcionesCentroCosto`). */
+  empresaTangoId?: number | null;
+  /** Devuelve el par: el id y la empresa de Tango a la que pertenece. */
+  onCambio: (id: number | undefined, empresaTangoId?: number) => void;
   /** El catálogo ya cargado por la pantalla (`cargarCentrosCosto`). */
   catalogo: any[];
   /** Sin él, el campo ofrece «Quitar»: no todos los proyectos tienen centro. */
@@ -35,13 +38,21 @@ interface SelectorCentroCostoProps {
   zIndex?: number;
 }
 
-export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor, onCambio, catalogo, required, disabled, zIndex = 100 }) => {
+export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor, empresaTangoId, onCambio, catalogo, required, disabled, zIndex = 100 }) => {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const opciones = useMemo(() => opcionesCentroCosto(catalogo, valor), [catalogo, valor]);
-  const elegida = opciones.find((o) => o.id === Number(valor));
+  /* La opción exacta es el par (empresa, id). Sin empresa guardada, la primera con ese id. */
+  const elegida = (empresaTangoId ? opciones.find((o) => o.id === Number(valor) && o.empresaTangoId === Number(empresaTangoId)) : undefined) || opciones.find((o) => o.id === Number(valor));
+  /*
+    TODAS las empresas donde existe el código elegido, no sólo la de la fila que se eligió.
+
+    El mismo número vive en varias empresas de Tango, y el campo tiene que decirlo: «662» a secas no
+    aclara de qué empresa es, y mostrar una sola haría creer que es exclusivo de ésa.
+  */
+  const empresasDelElegido = useMemo(() => (elegida ? empresasDelCentroCosto(catalogo, elegida.etiqueta.replace(" (inhabilitado)", "")) : []), [catalogo, elegida]);
 
   useEffect(() => {
     if (!abierto) return;
@@ -62,8 +73,8 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
     return opciones.filter((o) => fuzzyMatch(`${o.etiqueta} ${o.descripcion} ${o.empresa}`, q));
   }, [opciones, busqueda]);
 
-  const elegir = (id: number) => {
-    onCambio(id);
+  const elegir = (id: number, empresa?: number) => {
+    onCambio(id, empresa);
     setAbierto(false);
   };
 
@@ -71,10 +82,15 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
     <>
       <button type="button" onClick={() => !disabled && setAbierto(true)} disabled={disabled} aria-haspopup="dialog" className="input-field flex w-full items-center justify-between gap-2 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-60">
         {elegida ? (
-          <span className="min-w-0 flex-1 truncate">
+          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono font-bold">{elegida.etiqueta}</span>
-            {elegida.descripcion && <span className="ml-2 text-gray-500 dark:text-gray-400">{elegida.descripcion}</span>}
-            {elegida.empresa && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">{elegida.empresa}</span>}
+            {elegida.descripcion && <span className="min-w-0 truncate text-gray-500 dark:text-gray-400">{elegida.descripcion}</span>}
+            {/* Las empresas a las que pertenece ese centro, en badges. */}
+            {empresasDelElegido.map((e) => (
+              <span key={e} className="whitespace-nowrap rounded bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                {e}
+              </span>
+            ))}
           </span>
         ) : (
           <span className="flex-1 text-gray-400 dark:text-gray-500">Seleccionar centro de costo...</span>
@@ -96,7 +112,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
               <button
                 type="button"
                 onClick={() => {
-                  onCambio(undefined);
+                  onCambio(undefined, undefined);
                   setAbierto(false);
                 }}
                 className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:underline dark:text-red-400"
@@ -148,7 +164,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
                   <button
                     key={o.clave}
                     type="button"
-                    onClick={() => elegir(o.id)}
+                    onClick={() => elegir(o.id, o.empresaTangoId)}
                     className={`flex w-full items-center gap-3 border-b border-gray-100 px-4 py-2.5 text-left last:border-0 dark:border-gray-700/60 ${esLaElegida ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-900/40"}`}
                   >
                     <span className="w-24 shrink-0 font-mono text-sm font-bold text-gray-900 dark:text-white">{o.etiqueta}</span>

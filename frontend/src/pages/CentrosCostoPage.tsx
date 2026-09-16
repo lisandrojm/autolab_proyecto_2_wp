@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPiggyBank, faFileImport, faTriangleExclamation, faRotate, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faPiggyBank, faFileImport, faTriangleExclamation, faRotate, faSpinner, faChevronDown, faChevronRight, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { Modal } from "../components/ui/Modal";
 import { centrosCostoApi, estadoSyncCentrosCosto, importarCentrosCostoJson, sincronizarCentrosCostoTango, type CentroCosto, type EstadoSyncCentrosCosto, type ResultadoImportCentrosCosto } from "../api/centrosCosto";
@@ -239,6 +239,144 @@ const ImportarJsonModal: React.FC<{ abierto: boolean; onCerrar: () => void; onLi
   );
 };
 
+/** Un centro, agrupado por código: en qué empresas está y con qué datos en cada una. */
+interface GrupoCentro {
+  codigo: string;
+  /** La descripción, cuando todas las empresas dicen lo mismo. */
+  descripcion: string;
+  /** `true` si las empresas NO coinciden en la descripción: ahí el grupo se puede abrir. */
+  difieren: boolean;
+  filas: CentroCosto[];
+}
+
+const agruparPorCodigo = (items: CentroCosto[]): GrupoCentro[] => {
+  const porCodigo = new Map<string, CentroCosto[]>();
+  for (const it of items) {
+    const cod = etiquetaCentroCosto(it) || "—";
+    porCodigo.set(cod, [...(porCodigo.get(cod) || []), it]);
+  }
+  return [...porCodigo.entries()]
+    .map(([codigo, filas]) => {
+      const descripciones = [...new Set(filas.map((f) => String(f.descAuxiliar || "").trim()).filter(Boolean))];
+      return { codigo, descripcion: descripciones[0] || "", difieren: descripciones.length > 1, filas };
+    })
+    .sort((a, b) => a.codigo.localeCompare(b.codigo, "es", { numeric: true }));
+};
+
+const TablaCentrosCosto: React.FC<{ items: CentroCosto[]; renderAcciones: (item: any) => React.ReactNode; onBorrarGrupo: (g: GrupoCentro) => void }> = ({ items, renderAcciones, onBorrarGrupo }) => {
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
+  const grupos = useMemo(() => agruparPorCodigo(items), [items]);
+  const alternar = (codigo: string) =>
+    setAbiertos((prev) => {
+      const next = new Set(prev);
+      next.has(codigo) ? next.delete(codigo) : next.add(codigo);
+      return next;
+    });
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <p className="border-b border-gray-100 px-5 py-2 text-[11px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+        {grupos.length.toLocaleString("es-AR")} {grupos.length === 1 ? "centro" : "centros"} · {items.length.toLocaleString("es-AR")} registros en total (el mismo código puede estar en varias empresas)
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 dark:bg-gray-900/50">
+            <tr className="border-b border-gray-200 text-xs font-bold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              <th className="px-5 py-3">Código</th>
+              <th className="px-5 py-3">Descripción</th>
+              <th className="px-5 py-3">Empresa</th>
+              <th className="px-5 py-3 text-center">Habilitado</th>
+              <th className="px-5 py-3 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {grupos.map((g) => {
+              const abierto = abiertos.has(g.codigo);
+              /*
+                Se abre cuando el código está en más de una empresa: adentro está el registro de cada
+                una, con SUS acciones. Un grupo no se edita ni se borra —son datos de empresas
+                distintas—, así que editar y borrar viven ahí y nunca a nivel de grupo.
+              */
+              const desplegable = g.filas.length > 1;
+              return (
+                <React.Fragment key={g.codigo}>
+                  <tr className={`border-b border-gray-100 dark:border-gray-700/60 ${desplegable ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/40" : ""}`} onClick={desplegable ? () => alternar(g.codigo) : undefined}>
+                    <td className="whitespace-nowrap px-5 py-3 font-mono text-sm font-bold text-gray-900 dark:text-white">
+                      {desplegable && <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="mr-2 h-2.5 w-2.5 text-gray-400" />}
+                      {g.codigo}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {g.descripcion || <span className="text-gray-400">—</span>}
+                      {/* Cuando no coinciden se avisa acá: mostrar una sola sin decirlo sería elegir una a dedo. */}
+                      {g.difieren && <span className="ml-2 text-[11px] font-medium text-amber-600 dark:text-amber-400">· la descripción difiere entre empresas</span>}
+                    </td>
+                    {/* LOS TAGS: todas las empresas de Tango donde existe este código. */}
+                    <td className="px-5 py-3">
+                      <span className="flex flex-wrap gap-1">
+                        {g.filas.map((f) => (
+                          <span key={f._id} className={`whitespace-nowrap rounded px-2 py-0.5 text-[11px] font-medium ${f.habilitado === "N" ? "bg-gray-200 text-gray-500 line-through dark:bg-gray-700 dark:text-gray-400" : "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"}`} title={f.habilitado === "N" ? `Inhabilitado en ${f.empresaNombre}` : f.empresaNombre}>
+                            {f.empresaNombre || `Tango ${f.empresaTangoId ?? "?"}`}
+                          </span>
+                        ))}
+                      </span>
+                    </td>
+                    {/* Habilitado del grupo: si en alguna empresa se puede usar, el centro se puede usar. */}
+                    <td className="px-5 py-3 text-center">
+                      <BadgeHabilitado valor={g.filas.some((f) => f.habilitado !== "N") ? "S" : "N"} />
+                    </td>
+                    {/*
+                      EDITAR Y BORRAR, SIEMPRE.
+
+                      Con una sola empresa actúan sobre ese registro. Con varias, cada empresa tiene su
+                      descripción y su id, así que «editar el grupo» no existe: editar ABRE la fila para
+                      elegir cuál, y borrar pregunta y borra el de todas (que es lo que significa sacar
+                      este centro del catálogo), nombrándolas en la confirmación.
+                    */}
+                    <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      {g.filas.length === 1 ? (
+                        renderAcciones(g.filas[0])
+                      ) : (
+                        <span className="inline-flex items-center justify-end gap-1">
+                          <button type="button" onClick={() => alternar(g.codigo)} title={`Este código está en ${g.filas.length} empresas: abrí la fila y editá el de la que corresponda`} aria-label="Elegir la empresa a editar" className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600 dark:hover:bg-gray-700 dark:hover:text-blue-400">
+                            <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+                          </button>
+                          <button type="button" onClick={() => onBorrarGrupo(g)} title={`Borrar «${g.codigo}» de las ${g.filas.length} empresas`} aria-label="Borrar de todas las empresas" className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400">
+                            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {abierto &&
+                    g.filas.map((f) => (
+                      <tr key={`${g.codigo}-${f._id}`} className="border-b border-gray-100 bg-gray-50/60 text-[13px] dark:border-gray-700/60 dark:bg-gray-900/30">
+                        <td className="px-5 py-2" />
+                        <td className="px-5 py-2 text-gray-600 dark:text-gray-300">{f.descAuxiliar || "—"}</td>
+                        <td className="px-5 py-2 text-gray-500 dark:text-gray-400">{f.empresaNombre || `Tango ${f.empresaTangoId ?? "?"}`}</td>
+                        <td className="px-5 py-2 text-center">
+                          <BadgeHabilitado valor={f.habilitado} />
+                        </td>
+                        <td className="px-5 py-2 text-right">{renderAcciones(f)}</td>
+                      </tr>
+                    ))}
+                </React.Fragment>
+              );
+            })}
+            {grupos.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500">
+                  No hay centros de costo cargados. Tocá «Sincronizar con Tango».
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 /** Cuándo fue la última sincronización y cuántos centros tiene cada empresa. */
 const EstadoSync: React.FC<{ estado: EstadoSyncCentrosCosto }> = ({ estado }) => (
   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[12px] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -271,6 +409,30 @@ export const CentrosCostoPage: React.FC = () => {
       .catch(() => setEstado(null));
   };
   useEffect(leerEstado, [recarga]);
+
+  /*
+    BORRAR UN CÓDIGO DE TODAS LAS EMPRESAS.
+
+    Es lo que significa sacar un centro del catálogo cuando el mismo código existe en varias empresas
+    de Tango. Se confirma nombrándolas, porque son varios registros y no uno, y se avisa lo que
+    cualquiera esperaría saber: si sigue estando en Tango, la próxima sincronización lo vuelve a traer.
+  */
+  const borrarGrupo = async (g: { codigo: string; filas: CentroCosto[] }) => {
+    const empresas = g.filas.map((f) => f.empresaNombre || "sin empresa").join(", ");
+    const r = await sweetAlert.confirm(
+      `¿Borrar el centro «${g.codigo}»?`,
+      `Está en ${g.filas.length} empresas (${empresas}) y se borra de todas. Si sigue existiendo en Tango, la próxima sincronización lo vuelve a traer.`,
+      "Sí, borrar",
+    );
+    if (!r.isConfirmed) return;
+    try {
+      await Promise.all(g.filas.map((f) => centrosCostoApi.remove(f._id)));
+      sweetAlert.success("Borrado", `«${g.codigo}» salió del catálogo.`);
+      setRecarga((n) => n + 1);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo borrar", e?.response?.data?.error || "Probá de nuevo en un momento.");
+    }
+  };
 
   /*
     Sincronizar con Tango.
@@ -338,50 +500,20 @@ export const CentrosCostoPage: React.FC = () => {
           </>
         }
         extraSuperior={estado ? <EstadoSync estado={estado} /> : undefined}
-        tablaPropia={({ items, renderAcciones }) => (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 dark:bg-gray-900/50">
-                  <tr className="border-b border-gray-200 text-xs font-bold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    <th className="px-5 py-3">Código</th>
-                    <th className="px-5 py-3">Descripción</th>
-                    <th className="px-5 py-3">Empresa</th>
-                    <th className="px-5 py-3 text-center">Habilitado</th>
-                    <th className="px-5 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((it) => {
-                    const cc = it as CentroCosto;
-                    return (
-                      <tr key={cc._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-gray-700/60 dark:hover:bg-gray-900/40">
-                        {/* El código, en mono y negrita: es el dato con el que se nombra al centro. */}
-                        <td className="whitespace-nowrap px-5 py-3 font-mono text-sm font-bold text-gray-900 dark:text-white">{etiquetaCentroCosto(cc) || "—"}</td>
-                        <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{cc.descAuxiliar || <span className="text-gray-400">—</span>}</td>
-                        {/* De qué Tango vino: el mismo código puede existir en las tres empresas. */}
-                        <td className="whitespace-nowrap px-5 py-3 text-xs">
-                          {cc.empresaNombre ? <span className="rounded bg-blue-50 px-2 py-0.5 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{cc.empresaNombre}</span> : <span className="text-gray-400">—</span>}
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          <BadgeHabilitado valor={cc.habilitado} />
-                        </td>
-                        <td className="px-5 py-3 text-right">{renderAcciones(it)}</td>
-                      </tr>
-                    );
-                  })}
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500">
-                        No hay centros de costo cargados. Tocá «Sincronizar con Tango».
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        /*
+          UNA FILA POR CÓDIGO, CON LOS TAGS DE TODAS LAS EMPRESAS QUE LO TIENEN.
+
+          El catálogo son 2.204 registros pero no 2.204 centros distintos: el mismo código existe en
+          varias empresas de Tango —«682» está en FZERO, en 2030 y en FZERO CORP— y listarlo una vez
+          por empresa mostraba tres filas iguales que había que comparar a ojo. Agrupado, cada código
+          aparece una vez y los tags dicen en qué empresas está, que es la pregunta real.
+
+          Cuando dentro de un grupo la descripción NO coincide entre empresas, se abre: ahí sí son
+          datos distintos y hay que poder verlos —y editar o borrar el de una empresa sin tocar el de
+          las otras—. Esa es también la única forma honesta de dar las acciones: un grupo no se edita,
+          se edita el registro de una empresa.
+        */
+        tablaPropia={({ items, renderAcciones }) => <TablaCentrosCosto items={items as CentroCosto[]} renderAcciones={renderAcciones} onBorrarGrupo={borrarGrupo} />}
       />
 
       <ImportarJsonModal abierto={importAbierto} onCerrar={() => setImportAbierto(false)} onListo={() => setRecarga((n) => n + 1)} />

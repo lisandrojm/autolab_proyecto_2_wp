@@ -87,6 +87,7 @@ export const ClientProjectsPage: React.FC = () => {
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     metadata: {
       centroCostoId: undefined as number | undefined,
+      centroCostoEmpresaTangoId: undefined as number | undefined,
       sedeId: undefined as number | undefined,
       responsableId: undefined as number | undefined,
       clienteId: undefined as number | undefined,
@@ -220,6 +221,7 @@ export const ClientProjectsPage: React.FC = () => {
       areasConfig: [],
       metadata: {
         centroCostoId: undefined,
+        centroCostoEmpresaTangoId: undefined,
         sedeId: undefined,
         responsableId: undefined,
         clienteId: client?.externalId ? parseInt(client.externalId) : undefined,
@@ -267,6 +269,7 @@ export const ClientProjectsPage: React.FC = () => {
       })),
       metadata: {
         centroCostoId: project.metadata?.centroCostoId,
+        centroCostoEmpresaTangoId: (project.metadata as any)?.centroCostoEmpresaTangoId,
         sedeId: project.metadata?.sedeId,
         responsableId: project.metadata?.responsableId,
         clienteId: project.metadata?.clienteId,
@@ -488,7 +491,7 @@ export const ClientProjectsPage: React.FC = () => {
                       <div>
                         <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo</label>
                         {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                        <SelectorCentroCosto valor={formData.metadata?.centroCostoId} onCambio={(id) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id } }))} catalogo={availableCostCenters} />
+                        <SelectorCentroCosto valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} catalogo={availableCostCenters} />
                       </div>
 
                       <div>

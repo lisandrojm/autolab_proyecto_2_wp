@@ -33,7 +33,7 @@ export const centroCostoInhabilitado = (cc: any): boolean => String(cc?.habilita
  * centro, y guardar cualquier otro cambio de la ficha se lo borraría sin que nadie lo pidiera. Ése se
  * muestra con «(inhabilitado)» para que se vea por qué conviene cambiarlo.
  */
-export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): Array<{ clave: string; id: number; etiqueta: string; descripcion: string; empresa: string; inhabilitado: boolean }> =>
+export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): Array<{ clave: string; id: number; empresaTangoId?: number; etiqueta: string; descripcion: string; empresa: string; inhabilitado: boolean }> =>
   (catalogo || [])
     .map((cc) => ({ cc, id: idCentroCosto(cc) }))
     .filter((x): x is { cc: any; id: number } => x.id !== null)
@@ -42,12 +42,32 @@ export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): 
       // El `_id` y no el id de Tango: con tres empresas el id se repite y React necesita una clave única.
       clave: String(x.cc?._id || `${x.cc?.empresaNombre || ""}-${x.id}`),
       id: x.id,
+      // La empresa viaja con la opción: el proyecto guarda el par (empresa, id), que es lo único que
+      // identifica un centro —el mismo id es otro código en cada empresa de Tango—.
+      empresaTangoId: Number(x.cc?.empresaTangoId) || undefined,
       etiqueta: etiquetaCentroCosto(x.cc) + (centroCostoInhabilitado(x.cc) ? " (inhabilitado)" : ""),
       descripcion: String(x.cc?.descAuxiliar || x.cc?.data?.descripcion || "").trim(),
       // De qué empresa vino: los códigos se repiten entre las tres, así que sin esto «682» es ambiguo.
       empresa: String(x.cc?.empresaNombre || "").trim(),
       inhabilitado: centroCostoInhabilitado(x.cc),
     }));
+
+/**
+ * EN QUÉ EMPRESAS EXISTE ESE CÓDIGO.
+ *
+ * El mismo número está en varias empresas de Tango —«101» aparece en las cuatro— y es lo que hay que
+ * mostrar junto al centro elegido: decir sólo «101» esconde que ese número significa algo en cada
+ * empresa. Se compara el código sin distinguir mayúsculas ni espacios, como en el resto del módulo.
+ */
+export const empresasDelCentroCosto = (catalogo: any[], codigo: string): string[] => {
+  const clave = String(codigo || "").trim().toLowerCase();
+  if (!clave) return [];
+  const nombres = (catalogo || [])
+    .filter((c) => etiquetaCentroCosto(c).trim().toLowerCase() === clave)
+    .map((c) => String(c?.empresaNombre || "").trim())
+    .filter(Boolean);
+  return [...new Set(nombres)];
+};
 
 /**
  * El CÓDIGO del centro de costo de un proyecto.
@@ -69,7 +89,7 @@ export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): 
  * un guion diría «no tiene» cuando lo que pasa es «apunta a uno que falta». Son cosas distintas y la
  * segunda hay que poder verla.
  */
-export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCosto?: any }; metadata?: { centroCostoId?: number } }, catalogo: any[] = []): string => {
+export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCosto?: any }; metadata?: { centroCostoId?: number; centroCostoEmpresaTangoId?: number } }, catalogo: any[] = []): string => {
   const resuelto = proyecto?.metadataResolutions?.centroCosto;
   // `codAuxiliar` primero: es el código de Tango. `name` es su derivado y lo único que traen los viejos.
   const delServer = etiquetaCentroCosto(resuelto);
@@ -87,7 +107,15 @@ export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCost
   */
   if (id == null || Number(id) === 0) return "";
 
-  const delCatalogo = catalogo.find((c) => idCentroCosto(c) === Number(id));
+  /*
+    Con la empresa que guardó el proyecto, el par (empresa, id) es exacto. Sin ella se cae al primero
+    con ese id, que es lo que se hacía antes de guardar la empresa: para esos proyectos no hay más
+    información, y el id 656 puede ser «720» o «662» según la empresa.
+  */
+  const empresa = proyecto?.metadata?.centroCostoEmpresaTangoId;
+  const delCatalogo =
+    (empresa ? catalogo.find((c) => idCentroCosto(c) === Number(id) && Number(c?.empresaTangoId) === Number(empresa)) : undefined) ||
+    catalogo.find((c) => idCentroCosto(c) === Number(id));
   return etiquetaCentroCosto(delCatalogo) || `ID: ${id}`;
 };
 

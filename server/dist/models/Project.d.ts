@@ -12,6 +12,18 @@ export interface IProjectMetadata {
     activo: boolean;
     centroCostoId: number;
     /**
+     * DE QUÉ EMPRESA DE TANGO es ese centro de costo.
+     *
+     * SIN ESTO EL `centroCostoId` ES AMBIGUO, y no en teoría: el catálogo son cuatro empresas de Tango
+     * con numeraciones propias, así que el id 656 es el código «720» en FZERO CORP y el «662» en otra.
+     * Un proyecto que había elegido 720 mostraba 662, porque la resolución tomaba la primera fila con
+     * ese id. Guardando la empresa, el par (empresa, id) identifica un solo centro.
+     *
+     * Es el id de TANGO y no el `_id` de la empresa de la plataforma: FZERO CORP —la entidad de EE.UU.—
+     * tiene catálogo en Tango y no tiene ficha acá (ver `CentroCosto.empresaTangoId`).
+     */
+    centroCostoEmpresaTangoId?: number;
+    /**
      * DE DÓNDE SALIÓ ese `centroCostoId`: "tango" = lo puso la migración del catálogo.
      *
      * Es el resguardo que hace idempotente el remapeo (ver `services/centrosCostoImport.ts`): los ids

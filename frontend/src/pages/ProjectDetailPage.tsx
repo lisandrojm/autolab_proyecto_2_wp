@@ -91,6 +91,7 @@ export const ProjectDetailPage: React.FC = () => {
     },
     metadata: {
       centroCostoId: undefined as number | undefined,
+      centroCostoEmpresaTangoId: undefined as number | undefined,
       sedeId: undefined as number | undefined,
       responsableId: undefined as number | undefined,
       clienteId: undefined as number | undefined,
@@ -137,6 +138,7 @@ export const ProjectDetailPage: React.FC = () => {
         },
         metadata: {
           centroCostoId: data.metadata?.centroCostoId,
+          centroCostoEmpresaTangoId: (data.metadata as any)?.centroCostoEmpresaTangoId,
           sedeId: data.metadata?.sedeId,
           responsableId: data.metadata?.responsableId,
           clienteId: data.metadata?.clienteId,
@@ -439,7 +441,7 @@ export const ProjectDetailPage: React.FC = () => {
                   <div>
                     <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
                     {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} onCambio={(id) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id } }))} catalogo={availableCostCenters} />
+                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} empresaTangoId={projectForm.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} catalogo={availableCostCenters} />
                   </div>
 
                   <div>
