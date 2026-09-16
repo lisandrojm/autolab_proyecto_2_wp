@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 // Si necesitás i18n, usá: import { useTranslation } from "react-i18next";
 import { useAuthStore } from '../stores/authStore';
 import { projectsAPI, Project } from '../api/projects';
-import { nombreCentroCosto, cargarCentrosCosto, idOpcional, opcionesCentroCosto } from '../utils/centroCosto';
+import { nombreCentroCosto, cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
+import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { companiesAPI, Company } from '../api/companies';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { areasAPI, Area } from '../api/areas';
@@ -486,15 +487,8 @@ export const ClientProjectsPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                       <div>
                         <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo</label>
-                        <select className="input-field py-2.5" value={formData.metadata?.centroCostoId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: idOpcional(e.target.value) } }))}>
-                          <option value="">Seleccionar del sistema...</option>
-                          {/* El código de FRAME como etiqueta; los inhabilitados no se ofrecen (ver `opcionesCentroCosto`). */}
-                          {opcionesCentroCosto(availableCostCenters, formData.metadata?.centroCostoId).map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.etiqueta}
-                            </option>
-                          ))}
-                        </select>
+                        {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
+                        <SelectorCentroCosto valor={formData.metadata?.centroCostoId} onCambio={(id) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id } }))} catalogo={availableCostCenters} />
                       </div>
 
                       <div>

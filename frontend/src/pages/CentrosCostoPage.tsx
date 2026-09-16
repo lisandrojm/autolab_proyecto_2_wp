@@ -263,16 +263,19 @@ export const CentrosCostoPage: React.FC = () => {
           { key: "descAuxiliar", label: "Descripción", type: "text", placeholder: "682_PEGSA_FILMATIC_UNREAL_ON11E", ayuda: "Como figura en Tango. Suele empezar con el código." },
           { key: "habilitado", label: "Habilitado", type: "select", options: HABILITADO_OPCIONES, filtrable: true, valorPorDefecto: "S", ayuda: "Un centro inhabilitado no se ofrece para elegir en los proyectos (los que ya lo tienen lo conservan)." },
         ]}
-        extraSuperior={
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <p className="text-[13px] text-gray-600 dark:text-gray-300">
-              El catálogo completo son 806 centros y viene de <span className="font-semibold">Tango</span>. <span className="font-semibold">Importalo del JSON</span>: el alta a mano queda para un centro que todavía no esté en el export.
-            </p>
-            <button onClick={() => setImportAbierto(true)} className="btn-primary inline-flex items-center gap-2 whitespace-nowrap">
-              <FontAwesomeIcon icon={faFileImport} className="h-3.5 w-3.5" />
-              Importar JSON
-            </button>
-          </div>
+        /*
+          NI PLANTILLA NI IMPORTAR EXCEL: este catálogo se carga del JSON de Tango, completo.
+
+          Eran dos botones para un camino que nadie va a usar —y que, ofrecido al lado del que sí
+          corresponde, invita a cargar el catálogo por donde no es—. El «Importar JSON» ocupa ese
+          lugar en el encabezado, que es donde se busca una acción de la pantalla.
+        */
+        permiteImportExcel={false}
+        accionesEncabezado={
+          <button onClick={() => setImportAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30">
+            <FontAwesomeIcon icon={faFileImport} className="h-3.5 w-3.5" />
+            Importar JSON
+          </button>
         }
         tablaPropia={({ items, renderAcciones }) => (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">

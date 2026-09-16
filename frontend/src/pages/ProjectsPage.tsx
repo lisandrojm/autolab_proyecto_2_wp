@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { nombreCentroCosto, cargarCentrosCosto, idOpcional, opcionesCentroCosto } from '../utils/centroCosto';
+import { nombreCentroCosto, cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
+import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { BloqueEstado } from '../components/ui/BloqueEstado';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +22,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { sweetAlert } from '../utils/sweetAlert';
 import { emitProjectsChanged } from '../utils/navbarEvents';
-import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell, faPiggyBank } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -361,6 +362,8 @@ export const ProjectsPage: React.FC = () => {
             // Empresas del proyecto (contrato / release): resolvemos los ObjectIds a razón social.
             const contratoEmpresaNames = (project.contratoEmpresas || []).map((id) => companies.find((c) => String(c._id) === String(id))?.razonSocial).filter((n): n is string => Boolean(n));
             const releaseEmpresaNames = (project.releaseEmpresas || []).map((id) => companies.find((c) => String(c._id) === String(id))?.razonSocial).filter((n): n is string => Boolean(n));
+            // El código del centro de costo, con el mismo helper que la tabla y la ficha.
+            const centroCostoTarjeta = nombreCentroCosto(project, availableCostCenters);
             return (
               <Card
                 key={project._id}
@@ -454,13 +457,37 @@ export const ProjectsPage: React.FC = () => {
                     <span>{project.endDate ? new Date(project.endDate).toLocaleDateString() : '—'}</span>
                   </div>
                 </div>
-                {project.metadataResolutions?.sede && (
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
-                      Sede
-                    </label>
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || 'Sede'}</span>
+                {/*
+                  SEDE Y CENTRO DE COSTO, JUNTOS Y EN LA MISMA FILA.
+
+                  El centro de costo estaba sólo en la vista de tabla, así que en tarjetas —que es como
+                  se abre la pantalla— había que entrar al proyecto para saber a qué centro se imputa.
+                  Va con el mismo badge violeta que la tabla, la ficha y la lista por cliente: es el
+                  mismo dato en las cuatro pantallas y se reconoce por el color.
+                */}
+                {(project.metadataResolutions?.sede || centroCostoTarjeta) && (
+                  <div className="flex flex-wrap gap-x-6 gap-y-3">
+                    {project.metadataResolutions?.sede && (
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
+                          Sede
+                        </label>
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || 'Sede'}</span>
+                      </div>
+                    )}
+                    {centroCostoTarjeta && (
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faPiggyBank} className="h-3 w-3 text-gray-400" />
+                          Centro de costo
+                        </label>
+                        {/* El código, en mono: es un número y se compara de un vistazo entre tarjetas. */}
+                        <span className="inline-flex items-center px-2 py-1 rounded-md font-mono text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit" title={project.metadataResolutions?.centroCosto?.descAuxiliar || undefined}>
+                          {centroCostoTarjeta}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="flex flex-col mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
@@ -659,15 +686,8 @@ export const ProjectsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
               <div>
                 <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
-                <select className="input-field py-2.5" required value={formData.metadata?.centroCostoId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: idOpcional(e.target.value) } }))}>
-                  <option value="">Seleccionar del sistema...</option>
-                  {/* El código de FRAME como etiqueta; los inhabilitados no se ofrecen (ver `opcionesCentroCosto`). */}
-                  {opcionesCentroCosto(availableCostCenters, formData.metadata?.centroCostoId).map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.etiqueta}
-                    </option>
-                  ))}
-                </select>
+                {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
+                <SelectorCentroCosto required valor={formData.metadata?.centroCostoId} onCambio={(id) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id } }))} catalogo={availableCostCenters} />
               </div>
 
               <div>

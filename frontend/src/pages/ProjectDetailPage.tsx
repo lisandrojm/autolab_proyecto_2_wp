@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { cargarCentrosCosto, idOpcional, nombreCentroCosto, opcionesCentroCosto } from '../utils/centroCosto';
+import { cargarCentrosCosto, idOpcional, nombreCentroCosto } from '../utils/centroCosto';
+import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
@@ -437,18 +438,8 @@ export const ProjectDetailPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
-                    <select
-                      className="input-field py-2.5"
-                      required
-                      value={projectForm.metadata?.centroCostoId || ""}
-                      onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: idOpcional(e.target.value) } }))}
-                    >
-                      <option value="">Seleccionar del sistema...</option>
-                      {/* El código de FRAME como etiqueta; los inhabilitados no se ofrecen (ver `opcionesCentroCosto`). */}
-                      {opcionesCentroCosto(availableCostCenters, projectForm.metadata?.centroCostoId).map((o) => (
-                        <option key={o.id} value={o.id}>{o.etiqueta}</option>
-                      ))}
-                    </select>
+                    {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
+                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} onCambio={(id) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id } }))} catalogo={availableCostCenters} />
                   </div>
 
                   <div>
@@ -856,7 +847,7 @@ export const ProjectDetailPage: React.FC = () => {
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Centro de Costo</span>
                       {(() => {
-                        // Un solo lugar decide qué se muestra: el código de FRAME (ver `nombreCentroCosto`).
+                        // Un solo lugar decide qué se muestra: el código de Tango (ver `nombreCentroCosto`).
                         const val = nombreCentroCosto(project, availableCostCenters);
                         return val ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">{val}</span>
