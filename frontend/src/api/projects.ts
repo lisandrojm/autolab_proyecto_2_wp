@@ -1,6 +1,7 @@
 import axios from "./axiosConfig";
 import { useAuthStore } from "../stores/authStore";
 import { emitProjectsChanged } from "../utils/navbarEvents";
+import { CentroCosto } from "./centrosCosto";
 
 /* ------------------------------ Tipos base ------------------------------ */
 type ObjectIdString = string & { readonly __objectIdBrand: unique symbol };
@@ -94,7 +95,11 @@ export interface Project {
     responsable?: any;
     cliente?: any;
     sede?: any;
-    centroCosto?: any;
+    /*
+      El centro de costo resuelto por el server: el documento de `centros-costo`, con el CÓDIGO de
+      FRAME (`codAuxiliar`), que es lo que se muestra. `name` y `data` siguen llegando derivados.
+    */
+    centroCosto?: CentroCosto;
   };
   metadataUserCount?: number;
 }

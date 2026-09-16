@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
@@ -48,6 +48,8 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   /** Los catálogos con los que el detalle resuelve rol empresa, categoría y trámite. */
   const catalogosSolicitudes = useCatalogosDeSolicitudes();
   const [cancelando, setCancelando] = useState(false);
+  /** Qué solicitud se está borrando: la tarjeta se apaga mientras el server contesta. */
+  const [borrando, setBorrando] = useState<string | null>(null);
   /** Qué solicitudes son nuevas (aviso sin leer) y cómo marcarlas leídas, de a una o todas. */
   const novedades = useNovedades([NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA]);
 
@@ -200,6 +202,29 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
     }
   };
 
+  /*
+    BORRAR LA SOLICITUD, que es distinto de cancelarla.
+
+    Cancelar la deja registrada como cancelada —hubo un pedido y se dio de baja—. Borrar es para lo que
+    no aporta historial: una prueba, una cargada dos veces. El server no deja borrar una aprobada y, si
+    era una renovación, al borrarla el contrato vuelve a «Por vencer» para decidirlo de nuevo.
+  */
+  const borrarSolicitud = async (user: User) => {
+    const nombre = user.metadata?.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim();
+    const r: any = await sweetAlert.confirm("¿Borrar la solicitud?", `Se borra la solicitud de ${nombre} y desaparece del historial. Esto no se puede deshacer; si querés que quede registrada, canceliá en vez de borrarla.`, "Borrar", "Cancelar");
+    if (!(r === true || r?.isConfirmed)) return;
+    setBorrando(user._id);
+    try {
+      await usersAPI.eliminarSolicitud(user._id);
+      sweetAlert.success("Solicitud borrada", `${nombre} salió del historial.`);
+      refetch();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo borrar", e?.response?.data?.error || "Probá de nuevo en un momento.");
+    } finally {
+      setBorrando(null);
+    }
+  };
+
   const handleEdit = (user: User) => {
     setEditingUser(user);
     setShowDetailModal(false);
@@ -255,7 +280,8 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
               const meta: any = user.metadata || {};
               const displayName = meta.fullName || `${user.firstName} ${user.lastName}`.trim();
               // Fallback para las solicitudes anteriores al campo `solicitudStatus`, igual que en el detalle.
-              const estado = ESTADOS_SOLICITUD[String(meta.solicitudStatus || (meta.isSolicitud ? "pendiente" : "aprobada"))] || ESTADOS_SOLICITUD.pendiente;
+              const estadoClave = String(meta.solicitudStatus || (meta.isSolicitud ? "pendiente" : "aprobada"));
+              const estado = ESTADOS_SOLICITUD[estadoClave] || ESTADOS_SOLICITUD.pendiente;
               const periodo = [fechaCorta(meta.startDate), meta.dueDate ? fechaCorta(meta.dueDate) : "indeterminado"].join(" → ");
 
               return (
@@ -267,7 +293,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                     // Abrirla ES mirarla: queda leído su aviso y no el de las otras.
                     void novedades.marcarLeido(user._id);
                   }}
-                  className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
+                  className={`relative bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer ${borrando === user._id ? "opacity-50" : ""}`}
                 >
                   <div className="flex items-start gap-3 mb-3">
                     <div className="flex-1 min-w-0">
@@ -289,7 +315,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pr-10 pt-2 dark:border-slate-800">
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                       <FontAwesomeIcon icon={faFileContract} className="w-3 h-3 opacity-70 text-primary" />
                       <span className="truncate">{meta.nombre_contrato || "Sin tipo de contrato"}</span>
@@ -303,6 +329,30 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                       <span>Solicitado: {new Date(user.createdAt).toLocaleDateString("es-ES")}</span>
                     </div>
                   </div>
+
+                  {/*
+                    BORRAR LA SOLICITUD.
+
+                    Para lo que no aporta historial —una prueba, una cargada dos veces—: lo que sí se
+                    pidió y se dio de baja se cancela, y queda registrado como cancelado. El server no
+                    deja borrar una aprobada, que ya es una contratación.
+                  */}
+                  {/* Una aprobada no se borra: ya es una contratación, y el server la rechaza igual. */}
+                  {estadoClave !== "aprobada" && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void borrarSolicitud(user);
+                    }}
+                    disabled={borrando === user._id}
+                    aria-label={`Borrar la solicitud de ${displayName}`}
+                    title="Borrar la solicitud"
+                    className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors active:scale-95 disabled:opacity-50 dark:border-slate-700 dark:text-slate-500"
+                  >
+                    <FontAwesomeIcon icon={borrando === user._id ? faSpinner : faTrash} className={`h-3.5 w-3.5 ${borrando === user._id ? "animate-spin" : ""}`} />
+                  </button>
+                  )}
                 </div>
               );
             })}

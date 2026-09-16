@@ -108,7 +108,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
     if (!result.isConfirmed) return;
 
     try {
-      await usersAPI.rejectSolicitud(s._id);
+      await usersAPI.eliminarSolicitud(s._id);
       sweetAlert.success("Solicitud Eliminada", "La solicitud fue eliminada.");
       fetchSolicitudes();
     } catch (error: any) {

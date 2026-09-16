@@ -136,7 +136,10 @@ app.use((req, res, next) => {
   // Las cargas masivas de catálogo (`/bulk`) mandan el nomenclador entero en un request: 2.350
   // actividades son ~250 KB, pero un catálogo más grande no tiene por qué chocar contra el tope y
   // volver a empujar a cargar de a un registro, que es el problema que `/bulk` viene a resolver.
-  const limite = req.path.endsWith("/bulk") && req.method === "POST" ? "10mb" : "1mb";
+  // `/import-json` manda el catálogo de FRAME entero (806 centros de costo, ~115 KB) por la misma
+  // razón: el archivo se importa de una o no se importa.
+  const cargaMasiva = req.method === "POST" && (req.path.endsWith("/bulk") || req.path.endsWith("/import-json"));
+  const limite = cargaMasiva ? "10mb" : "1mb";
   express.json({
     limit: limite,
     /*

@@ -54,6 +54,14 @@ export interface CatalogExtraField {
   /** Texto de ayuda debajo del campo, en el formulario. */
   ayuda?: string;
   /**
+   * El campo es un NÚMERO: el input descarta todo lo que no sea un dígito.
+   *
+   * Opt-in, como `externalIdNumerico` y por lo mismo: el id de FRAME de un centro de costo se guarda
+   * y se compara como número contra el `centroCostoId` del proyecto, y un «22 » o un «O22» se guarda
+   * sin chistar y después no matchea con nada. El síntoma aparece lejos del error.
+   */
+  soloNumeros?: boolean;
+  /**
    * Qué decir cuando el valor de un registro es una opción `oculta` (ej. una entidad cuyo TIPO está
    * inactivo). La fila puede figurar como activa y aun así no ofrecerse en ningún lado, y eso no se
    * adivina mirando la tabla: se marca con un «i» amarillo que abre esta explicación.
@@ -183,6 +191,13 @@ interface SimpleCatalogManagerProps {
    * con un ícono de alerta, diría lo contrario.
    */
   resumen?: (items: SimpleCatalogItem[]) => React.ReactNode;
+  /**
+   * Cómo se llama el campo obligatorio en ESTE catálogo. Default "Nombre".
+   *
+   * En Centros de Costos es el «Código» (el número real del centro, el de FRAME): pedir «Nombre» en
+   * una pantalla cuya columna dice «Código» hace dudar de si son el mismo campo.
+   */
+  nombreLabel?: string;
   /** Clave de ayuda para el modal de info (i). */
   helpKey?: HelpKey;
   /**
@@ -292,7 +307,7 @@ const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v
   );
 };
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, nombreLabel = 'Nombre', helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [filtroServidorValor, setFiltroServidorValor] = useState(filtroServidor?.valorInicial || '');
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
@@ -1019,7 +1034,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       >
         <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{nombreLabel} *</label>
                 <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
               </div>
               {extraFields.map((f) => (
@@ -1050,7 +1065,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                   ) : f.type === 'ref' ? (
                     <RefField campo={f} valor={extraValues[f.key] ?? ''} onChange={(v) => setExtraValues((prev) => ({ ...prev, [f.key]: v }))} />
                   ) : (
-                    <input type="text" value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
+                    <input type="text" inputMode={f.soloNumeros ? 'numeric' : undefined} value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: f.soloNumeros ? e.target.value.replace(/\D/g, '') : e.target.value }))} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
                   )}
                   {f.ayuda && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{f.ayuda}</p>}
                   {f.type === 'select' && f.avisoOculta && f.options?.find((o) => o.value === extraValues[f.key])?.oculta && (

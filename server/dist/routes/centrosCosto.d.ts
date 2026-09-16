@@ -1,2 +1,2 @@
-declare const router: import("express").Router;
+declare const router: import("express-serve-static-core").Router;
 export { router as centroCostoRoutes };

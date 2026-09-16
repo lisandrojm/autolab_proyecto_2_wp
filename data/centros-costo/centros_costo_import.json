@@ -1,0 +1,4844 @@
+{
+  "tipo": "centros-costo",
+  "modo": "reemplazar",
+  "origen": "TANGO auxiliar (iD_TIPO_AUXILIAR 1)",
+  "total": 806,
+  "items": [
+    {
+      "idAuxiliar": 1,
+      "codAuxiliar": "99",
+      "descAuxiliar": "99-PRODUCTORA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 2,
+      "codAuxiliar": "SinAsignar",
+      "descAuxiliar": "Sin asignar",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 3,
+      "codAuxiliar": "9",
+      "descAuxiliar": "9-LA FLORERIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 4,
+      "codAuxiliar": "4",
+      "descAuxiliar": "COPA DISNEY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 5,
+      "codAuxiliar": "500",
+      "descAuxiliar": "500 - REY LATINOAMERICA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 6,
+      "codAuxiliar": "900",
+      "descAuxiliar": "PAGO TALENTOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 7,
+      "codAuxiliar": "13",
+      "descAuxiliar": "OMEXPO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 8,
+      "codAuxiliar": "1",
+      "descAuxiliar": "HAITI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 9,
+      "codAuxiliar": "2",
+      "descAuxiliar": "CHILE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 10,
+      "codAuxiliar": "3",
+      "descAuxiliar": "DISNEY ECOLOGICO FRIENDS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 11,
+      "codAuxiliar": "5",
+      "descAuxiliar": "ECUADOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 12,
+      "codAuxiliar": "6",
+      "descAuxiliar": "PUERTO RICO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 13,
+      "codAuxiliar": "7",
+      "descAuxiliar": "RECITAL ELENA ROGER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 14,
+      "codAuxiliar": "8",
+      "descAuxiliar": "HERMANOS DAVIDSON SEAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 15,
+      "codAuxiliar": "10",
+      "descAuxiliar": "AMERICA ECONOMICA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 16,
+      "codAuxiliar": "11",
+      "descAuxiliar": "JACK AND BLAKE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 17,
+      "codAuxiliar": "12",
+      "descAuxiliar": "DISCOVERY CHANNEL MEX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 18,
+      "codAuxiliar": "14",
+      "descAuxiliar": "POP UP - STARSTRUCK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 19,
+      "codAuxiliar": "15",
+      "descAuxiliar": "LITTLE PLAYHOUSE / HORA LIBRE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 20,
+      "codAuxiliar": "16",
+      "descAuxiliar": "ROCK 2 -  JONAS BROTHERS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 21,
+      "codAuxiliar": "501",
+      "descAuxiliar": "ALQUILER JIMMY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 22,
+      "codAuxiliar": "100",
+      "descAuxiliar": "PRODUCCIONES ANTERIORES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 23,
+      "codAuxiliar": "17",
+      "descAuxiliar": "BICENTENARIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 24,
+      "codAuxiliar": "18",
+      "descAuxiliar": "URUGUAY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 25,
+      "codAuxiliar": "19",
+      "descAuxiliar": "ZAPPING ZONE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 26,
+      "codAuxiliar": "98",
+      "descAuxiliar": "MILO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 27,
+      "codAuxiliar": "20",
+      "descAuxiliar": "101 - ALEMANIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 28,
+      "codAuxiliar": "21",
+      "descAuxiliar": "PLAY HOUSE DISNEY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 29,
+      "codAuxiliar": "22",
+      "descAuxiliar": "HYUNDAY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 30,
+      "codAuxiliar": "23",
+      "descAuxiliar": "POP UP 2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 31,
+      "codAuxiliar": "24",
+      "descAuxiliar": "DHL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 32,
+      "codAuxiliar": "25",
+      "descAuxiliar": "INSTITUTO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 33,
+      "codAuxiliar": "26",
+      "descAuxiliar": "LG",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 34,
+      "codAuxiliar": "999",
+      "descAuxiliar": "PROYECTOS VARIOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 35,
+      "codAuxiliar": "33",
+      "descAuxiliar": "LG SEOUL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 36,
+      "codAuxiliar": "27",
+      "descAuxiliar": "TESTIMONIO CEO DISNEY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 37,
+      "codAuxiliar": "28",
+      "descAuxiliar": "B4E",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 38,
+      "codAuxiliar": "29",
+      "descAuxiliar": "NEWSWEEK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 39,
+      "codAuxiliar": "30",
+      "descAuxiliar": "TURIS JOBS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 40,
+      "codAuxiliar": "31",
+      "descAuxiliar": "A COCINAR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 41,
+      "codAuxiliar": "32",
+      "descAuxiliar": "PLANETA CNN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 43,
+      "codAuxiliar": "34",
+      "descAuxiliar": "BILLBOARD JOVENES FORD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 44,
+      "codAuxiliar": "35",
+      "descAuxiliar": "BILLBOARD BRAVO MEX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 45,
+      "codAuxiliar": "36",
+      "descAuxiliar": "BILLBOARD LALA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 46,
+      "codAuxiliar": "37",
+      "descAuxiliar": "LATAM (LATINO AMERICA)",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 47,
+      "codAuxiliar": "38",
+      "descAuxiliar": "PATY QUICK FOOD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 48,
+      "codAuxiliar": "39",
+      "descAuxiliar": "GILETTE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 49,
+      "codAuxiliar": "40",
+      "descAuxiliar": "CHROMA DISNEY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 50,
+      "codAuxiliar": "41",
+      "descAuxiliar": "VOLUNTEARS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 51,
+      "codAuxiliar": "42",
+      "descAuxiliar": "SAMSUNG ELFETTES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 52,
+      "codAuxiliar": "43",
+      "descAuxiliar": "LONGINES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 53,
+      "codAuxiliar": "44",
+      "descAuxiliar": "SE SOLICITAN AUTOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 54,
+      "codAuxiliar": "45",
+      "descAuxiliar": "INSTITUCIONAL WDI DISNEY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 55,
+      "codAuxiliar": "46",
+      "descAuxiliar": "BILLBOARD MARRIOT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 56,
+      "codAuxiliar": "47",
+      "descAuxiliar": "EXPRESS RIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 57,
+      "codAuxiliar": "48",
+      "descAuxiliar": "VISA TESTIMONIOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 58,
+      "codAuxiliar": "49",
+      "descAuxiliar": "CIEN RADIOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 59,
+      "codAuxiliar": "50",
+      "descAuxiliar": "MARIO RULLONI PROYECT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 60,
+      "codAuxiliar": "51",
+      "descAuxiliar": "PROMOS DISNEY JUNIORS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 61,
+      "codAuxiliar": "200",
+      "descAuxiliar": "200-MARKETING",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 62,
+      "codAuxiliar": "52",
+      "descAuxiliar": "VINOS LA RIOJA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 63,
+      "codAuxiliar": "53",
+      "descAuxiliar": "MAKE UP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 64,
+      "codAuxiliar": "54",
+      "descAuxiliar": "CUANDO ME SONREIS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 65,
+      "codAuxiliar": "55",
+      "descAuxiliar": "LA VIDA ANTERIOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 66,
+      "codAuxiliar": "56",
+      "descAuxiliar": "POP UP SFA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 67,
+      "codAuxiliar": "57",
+      "descAuxiliar": "SCOTIABANK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 68,
+      "codAuxiliar": "58",
+      "descAuxiliar": "LA CASA DE DISNEY JUNIORS 2011",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 69,
+      "codAuxiliar": "59",
+      "descAuxiliar": "GOLPES A LA PATRIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 70,
+      "codAuxiliar": "300",
+      "descAuxiliar": "GRIP EXTERIOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 71,
+      "codAuxiliar": "901",
+      "descAuxiliar": "COACHING",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 72,
+      "codAuxiliar": "60",
+      "descAuxiliar": "U.V.M.",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 73,
+      "codAuxiliar": "61",
+      "descAuxiliar": "FAMILY TREE DISNEY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 74,
+      "codAuxiliar": "62",
+      "descAuxiliar": "EL CORTE INGLES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 75,
+      "codAuxiliar": "63",
+      "descAuxiliar": "SUPER TORPE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 76,
+      "codAuxiliar": "64",
+      "descAuxiliar": "RUNWAY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 77,
+      "codAuxiliar": "65",
+      "descAuxiliar": "GULLIVER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 78,
+      "codAuxiliar": "66",
+      "descAuxiliar": "EUCERIN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 79,
+      "codAuxiliar": "67",
+      "descAuxiliar": "FESTIN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 80,
+      "codAuxiliar": "68",
+      "descAuxiliar": "AUTO AHORRO VW",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 81,
+      "codAuxiliar": "69",
+      "descAuxiliar": "SOCIAL FUTBOL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 82,
+      "codAuxiliar": "70",
+      "descAuxiliar": "VOD CLAXON",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 83,
+      "codAuxiliar": "71",
+      "descAuxiliar": "TNT - SPLENDA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 84,
+      "codAuxiliar": "72",
+      "descAuxiliar": "NOKIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 85,
+      "codAuxiliar": "73",
+      "descAuxiliar": "ANTROPOLOGIA CULINARIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 86,
+      "codAuxiliar": "74",
+      "descAuxiliar": "GLITZ - CHILE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 87,
+      "codAuxiliar": "201",
+      "descAuxiliar": "VALENTINA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 88,
+      "codAuxiliar": "75",
+      "descAuxiliar": "TNT WEB",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 89,
+      "codAuxiliar": "76",
+      "descAuxiliar": "TNT - NIKE - HSBC - CELEBRITY FACT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 90,
+      "codAuxiliar": "77",
+      "descAuxiliar": "CUANDO TOCA LA CAMPANA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 91,
+      "codAuxiliar": "78",
+      "descAuxiliar": "DORA BALLET",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 92,
+      "codAuxiliar": "79",
+      "descAuxiliar": "TEATRO TOPA Y MUNI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 93,
+      "codAuxiliar": "80",
+      "descAuxiliar": "WARNER COUNT DOWN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 94,
+      "codAuxiliar": "81",
+      "descAuxiliar": "HSBC",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 95,
+      "codAuxiliar": "82",
+      "descAuxiliar": "SAMSUNG COUNT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 97,
+      "codAuxiliar": "84",
+      "descAuxiliar": "FANS CLUB VINI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 98,
+      "codAuxiliar": "83",
+      "descAuxiliar": "HOOK UP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 99,
+      "codAuxiliar": "85",
+      "descAuxiliar": "MIKE & MOLLY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 100,
+      "codAuxiliar": "86",
+      "descAuxiliar": "LITTLE TIKES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 101,
+      "codAuxiliar": "87",
+      "descAuxiliar": "PRENSA DISNEY I",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 102,
+      "codAuxiliar": "88",
+      "descAuxiliar": "BURGER KING COUNT DOWN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 103,
+      "codAuxiliar": "89",
+      "descAuxiliar": "CERVEZA INDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 104,
+      "codAuxiliar": "90",
+      "descAuxiliar": "LANZA PERFUME",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 105,
+      "codAuxiliar": "91",
+      "descAuxiliar": "PROMOS WARNER CHUCK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 106,
+      "codAuxiliar": "92",
+      "descAuxiliar": "TELCEL TNT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 107,
+      "codAuxiliar": "93",
+      "descAuxiliar": "TELCEL MEXICO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 108,
+      "codAuxiliar": "94",
+      "descAuxiliar": "MOVIE MOMENT TELCEL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 109,
+      "codAuxiliar": "95",
+      "descAuxiliar": "WARNER COUNT DOWN TELCEL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 110,
+      "codAuxiliar": "96",
+      "descAuxiliar": "LIRICA LADO B",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 111,
+      "codAuxiliar": "97",
+      "descAuxiliar": "97-EL GOURMET",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 112,
+      "codAuxiliar": "101",
+      "descAuxiliar": "PRAMER - EXTRAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 113,
+      "codAuxiliar": "202",
+      "descAuxiliar": "REFACCIONES TRONADOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 114,
+      "codAuxiliar": "203",
+      "descAuxiliar": "MUDANZA TRONADOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 115,
+      "codAuxiliar": "102",
+      "descAuxiliar": "CHELSEA SETTLES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 116,
+      "codAuxiliar": "103",
+      "descAuxiliar": "ID NAVE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 117,
+      "codAuxiliar": "104",
+      "descAuxiliar": "104-EL GOURMET - EXTRAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 118,
+      "codAuxiliar": "105",
+      "descAuxiliar": "PROMO ARTISTAS MTV",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 119,
+      "codAuxiliar": "106",
+      "descAuxiliar": "106-PRAMER ESCENOGRAFA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 120,
+      "codAuxiliar": "107",
+      "descAuxiliar": "TEC DE MONTERREY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 121,
+      "codAuxiliar": "108",
+      "descAuxiliar": "MTV PUSH",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 122,
+      "codAuxiliar": "109",
+      "descAuxiliar": "TELCEL PLAN AMIGO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 123,
+      "codAuxiliar": "110",
+      "descAuxiliar": "PANTENE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 124,
+      "codAuxiliar": "111",
+      "descAuxiliar": "LITTLE MOMMY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 125,
+      "codAuxiliar": "112",
+      "descAuxiliar": "MOVIE MOMENT SOLERO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 126,
+      "codAuxiliar": "113",
+      "descAuxiliar": "ESTAR EN MOVIMIENTO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 127,
+      "codAuxiliar": "114",
+      "descAuxiliar": "WARNER - SERIES MOMENT VW",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 128,
+      "codAuxiliar": "115",
+      "descAuxiliar": "TNT - Movie Moment VW",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 129,
+      "codAuxiliar": "116",
+      "descAuxiliar": "LA PALOMA - ROSIN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 130,
+      "codAuxiliar": "117",
+      "descAuxiliar": "HIBOU - EN ACCION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 131,
+      "codAuxiliar": "118",
+      "descAuxiliar": "PRAMER - LOS PETERSEN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 132,
+      "codAuxiliar": "119",
+      "descAuxiliar": "EURO CHANNEL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 133,
+      "codAuxiliar": "120",
+      "descAuxiliar": "LA PALOMA - GRACIAS POR VENIR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 134,
+      "codAuxiliar": "121",
+      "descAuxiliar": "TNT - STORYBOARD SAMSUNG SMART TV",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 135,
+      "codAuxiliar": "122",
+      "descAuxiliar": "WARNER - SERIES MOMENT SOLERO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 136,
+      "codAuxiliar": "123",
+      "descAuxiliar": "DISCOVERY - SENSEO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 137,
+      "codAuxiliar": "124",
+      "descAuxiliar": "TNT L.A. - WARNER SEPARADORES HD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 138,
+      "codAuxiliar": "125",
+      "descAuxiliar": "NATIONAL GEOGRAPHIC",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 139,
+      "codAuxiliar": "126",
+      "descAuxiliar": "SUBIDA WEB",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 140,
+      "codAuxiliar": "127",
+      "descAuxiliar": "AVANTI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 141,
+      "codAuxiliar": "128",
+      "descAuxiliar": "HTV - CONCURSO VENEZUELA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 142,
+      "codAuxiliar": "129",
+      "descAuxiliar": "PRAMER - OHNO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 143,
+      "codAuxiliar": "204",
+      "descAuxiliar": "204-PRODUCCIONES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 144,
+      "codAuxiliar": "130",
+      "descAuxiliar": "SAKE - FLY GARAGE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 145,
+      "codAuxiliar": "131",
+      "descAuxiliar": "LTO - DIF",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 146,
+      "codAuxiliar": "132",
+      "descAuxiliar": "DISNEY - EUCERIN SOLAR REFRESH",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 147,
+      "codAuxiliar": "133",
+      "descAuxiliar": "INSTITUCIONAL VOLKSWAGEN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 148,
+      "codAuxiliar": "134",
+      "descAuxiliar": "ESPN - BLACKBERRY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 149,
+      "codAuxiliar": "135",
+      "descAuxiliar": "TURNER MEXICO - VIANA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 150,
+      "codAuxiliar": "136",
+      "descAuxiliar": "136-DISNEY - SING ALONG",
+      "habilitado": "N"
+    },
+    {
+      "idAuxiliar": 151,
+      "codAuxiliar": "137",
+      "descAuxiliar": "DISNEY - TITI LEON DORADO DE BRASIL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 152,
+      "codAuxiliar": "138",
+      "descAuxiliar": "FILM & ARTS - CONCIERTO PARA 4 PIANOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 153,
+      "codAuxiliar": "139",
+      "descAuxiliar": "DISNEY - AMIGOS POR EL MUNDO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 154,
+      "codAuxiliar": "140",
+      "descAuxiliar": "PRAMER - A CASA MIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 155,
+      "codAuxiliar": "141",
+      "descAuxiliar": "TURNER - COUNTDOWN SPACE VW",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 156,
+      "codAuxiliar": "142",
+      "descAuxiliar": "PRAMER NAVIDAD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 157,
+      "codAuxiliar": "143",
+      "descAuxiliar": "PRAMER-F&A-4 PIANOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 158,
+      "codAuxiliar": "144",
+      "descAuxiliar": "MOVIE MOMENT TIGO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 159,
+      "codAuxiliar": "145",
+      "descAuxiliar": "HAWAIIAN TROPIC",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 160,
+      "codAuxiliar": "146",
+      "descAuxiliar": "ESPN-T-MOBILE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 161,
+      "codAuxiliar": "147",
+      "descAuxiliar": "ESPN-MASTERCARD SONY ERICSON",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 162,
+      "codAuxiliar": "148",
+      "descAuxiliar": "SONY - MOVISTAR POLO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 163,
+      "codAuxiliar": "149",
+      "descAuxiliar": "TNT-TIGO MOVIE MOMENT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 164,
+      "codAuxiliar": "150",
+      "descAuxiliar": "TNT-COUNTDOWN MOVISTAR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 165,
+      "codAuxiliar": "151",
+      "descAuxiliar": "VW -INSTITUCIONAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 166,
+      "codAuxiliar": "152",
+      "descAuxiliar": "TNT-STORYBOARD SMSUNG TWINCOOLING",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 167,
+      "codAuxiliar": "153",
+      "descAuxiliar": "WTP - WINNIE THE POOH",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 168,
+      "codAuxiliar": "154",
+      "descAuxiliar": "BVS - INSTITUCIONAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 169,
+      "codAuxiliar": "155",
+      "descAuxiliar": "WARNER-COUNTDOWN SAMSUNG TWINCOOLING",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 170,
+      "codAuxiliar": "156",
+      "descAuxiliar": "Institucional BVS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 171,
+      "codAuxiliar": "157",
+      "descAuxiliar": "DISNEY SHOOTING LATAM",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 172,
+      "codAuxiliar": "158",
+      "descAuxiliar": "EL GOURMET - PINNA EXT./2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 173,
+      "codAuxiliar": "159",
+      "descAuxiliar": "TLMS-TODAS LAS MUJERS SOLAS/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 174,
+      "codAuxiliar": "160",
+      "descAuxiliar": "TNT-NISSAN COUNTDOWN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 175,
+      "codAuxiliar": "161",
+      "descAuxiliar": "DISNEY F4C Puerto Madryn / 2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 176,
+      "codAuxiliar": "162",
+      "descAuxiliar": "FOX - CLIP 80/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 177,
+      "codAuxiliar": "163",
+      "descAuxiliar": "DISNEY VOLUNTEARS/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 178,
+      "codAuxiliar": "165",
+      "descAuxiliar": "ESPN-CHROMA CHAMPIONS/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 179,
+      "codAuxiliar": "164",
+      "descAuxiliar": "DISNEY- Inventario 2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 180,
+      "codAuxiliar": "166",
+      "descAuxiliar": "FOX- \"Italianisimo Donato\"",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 181,
+      "codAuxiliar": "167",
+      "descAuxiliar": "TNT-Samsung Galaxy S4 \"drama shoot\"",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 182,
+      "codAuxiliar": "168",
+      "descAuxiliar": "PRAMER-Hogar Dulce Hogar/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 183,
+      "codAuxiliar": "169",
+      "descAuxiliar": "DISNEY-QHELC-Apertura/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 184,
+      "codAuxiliar": "170",
+      "descAuxiliar": "WAKE UP - 2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 185,
+      "codAuxiliar": "171",
+      "descAuxiliar": "PRAMER - Baja California",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 186,
+      "codAuxiliar": "172",
+      "descAuxiliar": "TNT- Nosotras On Line Countdown /2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 187,
+      "codAuxiliar": "173",
+      "descAuxiliar": "PRAMER - COCINA AL CUBO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 188,
+      "codAuxiliar": "174",
+      "descAuxiliar": "DISNEY-QHELC-Rodaje/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 189,
+      "codAuxiliar": "175",
+      "descAuxiliar": "DISNEY-QHELC-Actores/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 190,
+      "codAuxiliar": "176",
+      "descAuxiliar": "TNT-Nosotras On Line Movie moment /2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 191,
+      "codAuxiliar": "177",
+      "descAuxiliar": "TNT- ICBC  Movie Moment",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 192,
+      "codAuxiliar": "178",
+      "descAuxiliar": "TNT- Nosotras 2 Movie moment /2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 193,
+      "codAuxiliar": "179",
+      "descAuxiliar": "TNT- ICBC  Movie Block",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 194,
+      "codAuxiliar": "180",
+      "descAuxiliar": "BVS - INSTITUCIONAL 2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 195,
+      "codAuxiliar": "181",
+      "descAuxiliar": "TNT- Movie moment Nosotras new version/2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 196,
+      "codAuxiliar": "205",
+      "descAuxiliar": "PRODUCCIONES WU",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 197,
+      "codAuxiliar": "182",
+      "descAuxiliar": "TNT- Countdown Nosotras 2/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 199,
+      "codAuxiliar": "183",
+      "descAuxiliar": "DIA - Asesoramiento",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 200,
+      "codAuxiliar": "184",
+      "descAuxiliar": "DISNEY-Erroresyomisiones*Civil Comprens",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 201,
+      "codAuxiliar": "185",
+      "descAuxiliar": "DISNEY - CLIP FROZEN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 202,
+      "codAuxiliar": "186",
+      "descAuxiliar": "OSTER-3Hemisferios - comercial",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 203,
+      "codAuxiliar": "187",
+      "descAuxiliar": "TURNER - ADES Rally/2013",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 204,
+      "codAuxiliar": "188",
+      "descAuxiliar": "DISNEY-Seguro E&O",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 205,
+      "codAuxiliar": "189",
+      "descAuxiliar": "CEPA- Documental La Guarderia",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 206,
+      "codAuxiliar": "190",
+      "descAuxiliar": "DISNEY - Sing Along Sofia",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 207,
+      "codAuxiliar": "191",
+      "descAuxiliar": "191-PRAMER- Sentirte bien - Casa Club",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 208,
+      "codAuxiliar": "192",
+      "descAuxiliar": "192-CONTRIBUTION-Claxson -Playboy 2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 209,
+      "codAuxiliar": "193",
+      "descAuxiliar": "193-ATUEL - Documentales /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 210,
+      "codAuxiliar": "194",
+      "descAuxiliar": "194-REEL Institucional FRAME ZERO /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 211,
+      "codAuxiliar": "195",
+      "descAuxiliar": "195-Producciones Nacionales",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 212,
+      "codAuxiliar": "196",
+      "descAuxiliar": "196-Producciones Internacionales",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 213,
+      "codAuxiliar": "197",
+      "descAuxiliar": "197-DISNEY- Promo Mundial /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 214,
+      "codAuxiliar": "198",
+      "descAuxiliar": "198-IMAGEN SAT - ID GRAFICO RIO 2 /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 215,
+      "codAuxiliar": "199",
+      "descAuxiliar": "199-TNT- ID GODZILLA /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 216,
+      "codAuxiliar": "302",
+      "descAuxiliar": "302-MTV -  Stand Up 2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 217,
+      "codAuxiliar": "301",
+      "descAuxiliar": "301-PRAMER - Cuerpo en armonia /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 218,
+      "codAuxiliar": "303",
+      "descAuxiliar": "303-DISNEY-QHELC 2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 219,
+      "codAuxiliar": "304",
+      "descAuxiliar": "304-DISCOVERY - Promos 2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 220,
+      "codAuxiliar": "305",
+      "descAuxiliar": "305-TNT-Countdown PATRICH/2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 221,
+      "codAuxiliar": "306",
+      "descAuxiliar": "306-TNT-STAR TREATMENT BNB/2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 222,
+      "codAuxiliar": "307",
+      "descAuxiliar": "307-DISCOVERY  -  Reels 2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 223,
+      "codAuxiliar": "308",
+      "descAuxiliar": "308-TNT SONY 2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 224,
+      "codAuxiliar": "309",
+      "descAuxiliar": "309-DISCOVERY - On Air Budy y Dave /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 225,
+      "codAuxiliar": "310",
+      "descAuxiliar": "310- DISCOVERY  -  Institucional 2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 226,
+      "codAuxiliar": "311",
+      "descAuxiliar": "311-TNT-ARIEL PODS ID /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 227,
+      "codAuxiliar": "312",
+      "descAuxiliar": "312-VOLKSWAGEN–Lanzamiento UP! /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 228,
+      "codAuxiliar": "313",
+      "descAuxiliar": "313- Disney Italia - Clips /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 229,
+      "codAuxiliar": "314",
+      "descAuxiliar": "314-WAKE UP - NETFLIX /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 230,
+      "codAuxiliar": "315",
+      "descAuxiliar": "315-DISCOVERY -  Up Fronts /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 231,
+      "codAuxiliar": "316",
+      "descAuxiliar": "316-DISNEY PLANET /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 232,
+      "codAuxiliar": "317",
+      "descAuxiliar": "317-DISNEY -Dónde está Pluto? /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 233,
+      "codAuxiliar": "318",
+      "descAuxiliar": "318-FOX +  /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 234,
+      "codAuxiliar": "319",
+      "descAuxiliar": "319-NATGEO - Lalo Mir /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 235,
+      "codAuxiliar": "320",
+      "descAuxiliar": "320-DISNEY - Bruno Heder /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 236,
+      "codAuxiliar": "206",
+      "descAuxiliar": "206-MAGOO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 237,
+      "codAuxiliar": "321",
+      "descAuxiliar": "321-MILO /2014",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 238,
+      "codAuxiliar": "322",
+      "descAuxiliar": "322-PRAMER -Blogueros",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 239,
+      "codAuxiliar": "323",
+      "descAuxiliar": "323-TURNER - Exodus Space",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 240,
+      "codAuxiliar": "324",
+      "descAuxiliar": "324-DISNEY - Sing Along Frozen",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 241,
+      "codAuxiliar": "325",
+      "descAuxiliar": "325-DISCOVERY - Cable Vision",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 242,
+      "codAuxiliar": "326",
+      "descAuxiliar": "326-DISCOVERY - Brasil",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 243,
+      "codAuxiliar": "327",
+      "descAuxiliar": "327-DISCOVERY - TLC IN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 244,
+      "codAuxiliar": "328",
+      "descAuxiliar": "328-ROMEO y JULIETA El Divorcio",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 245,
+      "codAuxiliar": "329",
+      "descAuxiliar": "329-DISCOVERY - UPFRONT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 246,
+      "codAuxiliar": "330",
+      "descAuxiliar": "330-Disney - Pijama Party",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 247,
+      "codAuxiliar": "207",
+      "descAuxiliar": "207-TURCO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 248,
+      "codAuxiliar": "331",
+      "descAuxiliar": "331-Disney - Magic Bedtime Stories",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 249,
+      "codAuxiliar": "332",
+      "descAuxiliar": "332-Crepúsuculo",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 250,
+      "codAuxiliar": "333",
+      "descAuxiliar": "333-Artist Proof-Obelisco/2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 251,
+      "codAuxiliar": "208",
+      "descAuxiliar": "208-NORMI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 252,
+      "codAuxiliar": "334",
+      "descAuxiliar": "334-Pramer Blogueros Virginia Sar",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 253,
+      "codAuxiliar": "335",
+      "descAuxiliar": "335-Nativa - NatGeo",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 254,
+      "codAuxiliar": "336",
+      "descAuxiliar": "336-FRAME - Cuentos",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 255,
+      "codAuxiliar": "337",
+      "descAuxiliar": "337-PRANAMEDIA SRL - Coreos Violetta",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 256,
+      "codAuxiliar": "338",
+      "descAuxiliar": "338-PRAMER - Colombia",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 257,
+      "codAuxiliar": "339",
+      "descAuxiliar": "339-TNT- Suave",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 258,
+      "codAuxiliar": "340",
+      "descAuxiliar": "340-Piloto Telefe",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 259,
+      "codAuxiliar": "341",
+      "descAuxiliar": "341-Chinito Chinito",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 260,
+      "codAuxiliar": "342",
+      "descAuxiliar": "342-PRAMER - Blogueros Maquillaje",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 261,
+      "codAuxiliar": "343",
+      "descAuxiliar": "343-DISNEY - Backstage",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 262,
+      "codAuxiliar": "344",
+      "descAuxiliar": "344-FOX - Fantino - Copetes",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 263,
+      "codAuxiliar": "345",
+      "descAuxiliar": "345-PRAMER - Casa Club RTI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 264,
+      "codAuxiliar": "346",
+      "descAuxiliar": "346-DISNEY - Universe",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 265,
+      "codAuxiliar": "347",
+      "descAuxiliar": "347-RQSTV 2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 266,
+      "codAuxiliar": "348",
+      "descAuxiliar": "348-PRAMER - Especiales Casa Club",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 267,
+      "codAuxiliar": "349",
+      "descAuxiliar": "349-FOX - Doblaje sitiados",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 268,
+      "codAuxiliar": "350",
+      "descAuxiliar": "350-FOX - Asombrosamente",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 269,
+      "codAuxiliar": "351",
+      "descAuxiliar": "351-POL-KA - Estudio Luna",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 270,
+      "codAuxiliar": "352",
+      "descAuxiliar": "352-FOX - Reel interno",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 271,
+      "codAuxiliar": "353",
+      "descAuxiliar": "353-DISNEY -  Luna BTS mensual",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 272,
+      "codAuxiliar": "354",
+      "descAuxiliar": "354-DISNEY -  Apertura Luna",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 273,
+      "codAuxiliar": "355",
+      "descAuxiliar": "355-DISCOVERY - Noblex",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 274,
+      "codAuxiliar": "356",
+      "descAuxiliar": "356-PRAMER - Blogueros cocina 07-2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 275,
+      "codAuxiliar": "357",
+      "descAuxiliar": "357-NICKELODEON - Yo soy Franky",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 276,
+      "codAuxiliar": "358",
+      "descAuxiliar": "358-PRAMER - Isla programacion 2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 277,
+      "codAuxiliar": "359",
+      "descAuxiliar": "359-FRAME - Baluns",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 278,
+      "codAuxiliar": "360",
+      "descAuxiliar": "360-FRAME - Roomie",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 279,
+      "codAuxiliar": "361",
+      "descAuxiliar": "361-DISNEY - QHELC 2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 280,
+      "codAuxiliar": "362",
+      "descAuxiliar": "362-DISCOVERY -  Atma",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 281,
+      "codAuxiliar": "363",
+      "descAuxiliar": "363-DISNEY - Wand Id",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 282,
+      "codAuxiliar": "364",
+      "descAuxiliar": "364-Piloto UADE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 283,
+      "codAuxiliar": "365",
+      "descAuxiliar": "365-BVS VIDEOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 284,
+      "codAuxiliar": "209",
+      "descAuxiliar": "209-NICOLAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 285,
+      "codAuxiliar": "366",
+      "descAuxiliar": "366-PRAMER- Las recetas de Felicitas",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 286,
+      "codAuxiliar": "367",
+      "descAuxiliar": "367-Petersen al Mundo",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 287,
+      "codAuxiliar": "368",
+      "descAuxiliar": "368-Disney Tutoriales Patin",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 288,
+      "codAuxiliar": "369",
+      "descAuxiliar": "369-FOX - Los 2000",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 289,
+      "codAuxiliar": "370",
+      "descAuxiliar": "370-FOX - Los 2000 Backstage",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 290,
+      "codAuxiliar": "371",
+      "descAuxiliar": "371-MORIONES- EL MATADERO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 291,
+      "codAuxiliar": "372",
+      "descAuxiliar": "372-FOX LAPTV - Lullaby",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 292,
+      "codAuxiliar": "373",
+      "descAuxiliar": "373-FRAME - BBBAND",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 293,
+      "codAuxiliar": "374",
+      "descAuxiliar": "374-FRAME - Estudio Iturri",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 294,
+      "codAuxiliar": "375",
+      "descAuxiliar": "375-SECONDFRAME- Que Onda Soy Lio",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 295,
+      "codAuxiliar": "376",
+      "descAuxiliar": "376-BVS - INSTITUCIONAL CAPER 2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 296,
+      "codAuxiliar": "377",
+      "descAuxiliar": "377-SECOND FRAME- Reel",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 297,
+      "codAuxiliar": "378",
+      "descAuxiliar": "378-SECOND FRAME-Karol Sevilla- Youtuber",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 298,
+      "codAuxiliar": "379",
+      "descAuxiliar": "379-SECOND FRAME-Michael Ronda-Youtuber",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 299,
+      "codAuxiliar": "380",
+      "descAuxiliar": "380-SECOND FRAME-Focus Group",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 300,
+      "codAuxiliar": "381",
+      "descAuxiliar": "381-REEL Institucional FRAME ZERO /2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 301,
+      "codAuxiliar": "382",
+      "descAuxiliar": "382-FOX CASTING GAMERS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 302,
+      "codAuxiliar": "383",
+      "descAuxiliar": "383-TURNER Piezas Space",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 303,
+      "codAuxiliar": "384",
+      "descAuxiliar": "384-Trailer Framezero OnceLoops 2015",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 304,
+      "codAuxiliar": "385",
+      "descAuxiliar": "385-2ND.FRAME-Agus Bernasconi Youtuber",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 305,
+      "codAuxiliar": "386",
+      "descAuxiliar": "386-DISNEY - Grabación Alas",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 306,
+      "codAuxiliar": "387",
+      "descAuxiliar": "387 - Disney - Video Clip Valiente",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 307,
+      "codAuxiliar": "388",
+      "descAuxiliar": "388 - Fox - La Ciencia de lo Absurdo 3",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 308,
+      "codAuxiliar": "389",
+      "descAuxiliar": "389 - Disney - Mini Voces -Piloto",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 309,
+      "codAuxiliar": "390",
+      "descAuxiliar": "390 - Disney - Soy Luna Quiz - 2016",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 310,
+      "codAuxiliar": "391",
+      "descAuxiliar": "391 - Discovery -  Atma Tips Cocina 2016",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 311,
+      "codAuxiliar": "392",
+      "descAuxiliar": "392 - Disney - Evento StarWars",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 312,
+      "codAuxiliar": "393",
+      "descAuxiliar": "393 - Disney - Promos Tini",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 313,
+      "codAuxiliar": "394",
+      "descAuxiliar": "394 - Fox - Promo Pollo",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 314,
+      "codAuxiliar": "395",
+      "descAuxiliar": "395 - Sabrositos",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 316,
+      "codAuxiliar": "396",
+      "descAuxiliar": "396 - Disney - Grabacion Pilar",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 317,
+      "codAuxiliar": "397",
+      "descAuxiliar": "397 - 2ND.FRAME-Lucas Ian Youtuber",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 318,
+      "codAuxiliar": "398",
+      "descAuxiliar": "398 - Disney - Charla Barrach",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 319,
+      "codAuxiliar": "399",
+      "descAuxiliar": "399 - Disney - Junket Tini",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 320,
+      "codAuxiliar": "400",
+      "descAuxiliar": "400 - Nickelodeon -Yo soy Frankie 2 -Pro",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 321,
+      "codAuxiliar": "401",
+      "descAuxiliar": "401 - Disney -  Luna BTS 2016",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 322,
+      "codAuxiliar": "402",
+      "descAuxiliar": "402 - Disney - Preestreno Tini",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 323,
+      "codAuxiliar": "403",
+      "descAuxiliar": "403 - Disney - Makers Concierto Tini",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 324,
+      "codAuxiliar": "404",
+      "descAuxiliar": "404 - Disney - DC FEST Testimoniales Lun",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 325,
+      "codAuxiliar": "405",
+      "descAuxiliar": "405 - Fox - EPM -Escuela para Maridos",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 326,
+      "codAuxiliar": "406",
+      "descAuxiliar": "406 - Disney - Luna 2 -Gráfica",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 327,
+      "codAuxiliar": "407",
+      "descAuxiliar": "407 - Fox - Promo 2091",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 328,
+      "codAuxiliar": "408",
+      "descAuxiliar": "408 - La Previa",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 329,
+      "codAuxiliar": "409",
+      "descAuxiliar": "409 - Disney Makers Tini Susana",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 330,
+      "codAuxiliar": "410",
+      "descAuxiliar": "410 - Disney - QHELC 2016",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 331,
+      "codAuxiliar": "411",
+      "descAuxiliar": "411 - Discovery Digital",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 332,
+      "codAuxiliar": "412",
+      "descAuxiliar": "412 - Fox  La Ciencia de lo Absurdo3 -B2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 333,
+      "codAuxiliar": "413",
+      "descAuxiliar": "413 - 2ND.FRAME-Maxima-Valentina Youtube",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 334,
+      "codAuxiliar": "414",
+      "descAuxiliar": "414 - Disney - Makers Tini Metro",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 335,
+      "codAuxiliar": "415",
+      "descAuxiliar": "415 - Disney - Expo Snack",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 336,
+      "codAuxiliar": "416",
+      "descAuxiliar": "416 - Nickelodeon -Frankie -Promos Espec",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 337,
+      "codAuxiliar": "417",
+      "descAuxiliar": "417 - Onceloops Dimelo",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 339,
+      "codAuxiliar": "418",
+      "descAuxiliar": "418 - Disney - Spots Marvel",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 340,
+      "codAuxiliar": "419",
+      "descAuxiliar": "419 - Disney - Back Juacas",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 341,
+      "codAuxiliar": "420",
+      "descAuxiliar": "420 - Discovery - Reels 2016",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 342,
+      "codAuxiliar": "421",
+      "descAuxiliar": "421 - Disney - Mini Voces Pre Producción",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 343,
+      "codAuxiliar": "422",
+      "descAuxiliar": "422 - Disney - City Tour Carpenter",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 344,
+      "codAuxiliar": "423",
+      "descAuxiliar": "423 - Disney - Inauguración Cine Pilar",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 345,
+      "codAuxiliar": "424",
+      "descAuxiliar": "424 - Disney - Mini Voces Serie",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 346,
+      "codAuxiliar": "425",
+      "descAuxiliar": "425 - FOX- Asombrosamente -T2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 347,
+      "codAuxiliar": "426",
+      "descAuxiliar": "426 - La Nacion",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 348,
+      "codAuxiliar": "427",
+      "descAuxiliar": "427 - Proyecto Digital -Etapa 1-",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 349,
+      "codAuxiliar": "428",
+      "descAuxiliar": "428 - Nickelodeon - End Tags",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 350,
+      "codAuxiliar": "429",
+      "descAuxiliar": "429 - Disney- Exposncask 2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 351,
+      "codAuxiliar": "430",
+      "descAuxiliar": "430 -Disney - Villalobos Digital-Wand-ID",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 352,
+      "codAuxiliar": "431",
+      "descAuxiliar": "431 -BVS-Tutoriales",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 353,
+      "codAuxiliar": "432",
+      "descAuxiliar": "432 - MAKERS- TINI-CCK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 354,
+      "codAuxiliar": "433",
+      "descAuxiliar": "433 - DISNEY-SL-CARPOOL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 355,
+      "codAuxiliar": "434",
+      "descAuxiliar": "434 - DISNEY-SL-LIPART",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 356,
+      "codAuxiliar": "435",
+      "descAuxiliar": "435 - MAKERS-TINI-NAVIDAD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 357,
+      "codAuxiliar": "436",
+      "descAuxiliar": "436 - DISNEY - SL VACAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 358,
+      "codAuxiliar": "437",
+      "descAuxiliar": "437 - DISNEY - TINI-ROPA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 359,
+      "codAuxiliar": "438",
+      "descAuxiliar": "438 - TOCOPARAVOS-CLIP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 360,
+      "codAuxiliar": "439",
+      "descAuxiliar": "439 - HEIDI - NICKELODEON",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 361,
+      "codAuxiliar": "440",
+      "descAuxiliar": "440 - JAVIER ARMENDARIZ",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 362,
+      "codAuxiliar": "441",
+      "descAuxiliar": "441 - DISNEY-ONCE-WAND-ID",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 363,
+      "codAuxiliar": "442",
+      "descAuxiliar": "442 - Orishinal-influencers",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 364,
+      "codAuxiliar": "443",
+      "descAuxiliar": "443 - Saborsitos2017",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 365,
+      "codAuxiliar": "444",
+      "descAuxiliar": "444 - Video Clip Lio Ferro",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 366,
+      "codAuxiliar": "445",
+      "descAuxiliar": "445 - DISNEY-DC-PROD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 367,
+      "codAuxiliar": "446",
+      "descAuxiliar": "446 - TOCOPARAVOS-CLIP2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 368,
+      "codAuxiliar": "447",
+      "descAuxiliar": "447 - YOUTUBE - SPACE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 369,
+      "codAuxiliar": "448",
+      "descAuxiliar": "448 - Promo Shooting OAP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 370,
+      "codAuxiliar": "449",
+      "descAuxiliar": "449 - VIDEO MALVINAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 371,
+      "codAuxiliar": "450",
+      "descAuxiliar": "450 - ALQUILER ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 372,
+      "codAuxiliar": "451",
+      "descAuxiliar": "451 - ALQUILER EQUIPOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 373,
+      "codAuxiliar": "452",
+      "descAuxiliar": "452 - VIKKI PROMOS - Nickelodeon",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 374,
+      "codAuxiliar": "453",
+      "descAuxiliar": "453 - DISNEY CHALLENGE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 375,
+      "codAuxiliar": "454",
+      "descAuxiliar": "454 - BAILA TU BAILE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 376,
+      "codAuxiliar": "455",
+      "descAuxiliar": "455 - DISNEY-SL-SHOOT-DIGITAL-2017",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 377,
+      "codAuxiliar": "456",
+      "descAuxiliar": "456 - DISNEY-CLIP-SEI-UNICA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 378,
+      "codAuxiliar": "457",
+      "descAuxiliar": "457 - MAKERS-CLIP-TINI-YATRA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 379,
+      "codAuxiliar": "458",
+      "descAuxiliar": "458 - FOX-AFA-PROMOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 380,
+      "codAuxiliar": "459",
+      "descAuxiliar": "459 - SAMSUNG-SHELL-GFX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 381,
+      "codAuxiliar": "460",
+      "descAuxiliar": "460 - PAKAPAKA-NATURAMA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 382,
+      "codAuxiliar": "461",
+      "descAuxiliar": "461 - SHEL-SAMSUNG-PROMOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 383,
+      "codAuxiliar": "462",
+      "descAuxiliar": "462 - NICKELODEON-URGENCIAS-1",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 384,
+      "codAuxiliar": "463",
+      "descAuxiliar": "463 - HP MINI IMPRESORA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 385,
+      "codAuxiliar": "464",
+      "descAuxiliar": "464 - TRINITY-ANIMERICA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 386,
+      "codAuxiliar": "465",
+      "descAuxiliar": "465 - DISNEY-BTS2017",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 387,
+      "codAuxiliar": "466",
+      "descAuxiliar": "466 - Rallys Mash Up - Nickelodeon",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 388,
+      "codAuxiliar": "467",
+      "descAuxiliar": "467 - ESPECIALES NAVIDAD XD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 389,
+      "codAuxiliar": "468",
+      "descAuxiliar": "468 - MERIDIONAL-CHARLA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 390,
+      "codAuxiliar": "469",
+      "descAuxiliar": "469 - MERIDIONAL-ALVEAR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 391,
+      "codAuxiliar": "470",
+      "descAuxiliar": "470 - INCAA-CUENTOS_WOLF",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 392,
+      "codAuxiliar": "471",
+      "descAuxiliar": "471 - LANACION EXTERIORES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 393,
+      "codAuxiliar": "472",
+      "descAuxiliar": "472 - FOX-NG-CUADROS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 394,
+      "codAuxiliar": "473",
+      "descAuxiliar": "473 - DISNEY-SL3-MUSIC_VIDEOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 395,
+      "codAuxiliar": "474",
+      "descAuxiliar": "474 - HP-ONLIVE-KS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 396,
+      "codAuxiliar": "475",
+      "descAuxiliar": "475 - FAN-POWER-Disney",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 397,
+      "codAuxiliar": "476",
+      "descAuxiliar": "476 - MEGAFABRICAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 398,
+      "codAuxiliar": "477",
+      "descAuxiliar": "477 - EL CAMINO DE LAS IDEAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 399,
+      "codAuxiliar": "478",
+      "descAuxiliar": "478 - DISNEY-SL3-SHOOT-2-12",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 400,
+      "codAuxiliar": "479",
+      "descAuxiliar": "479 - DISNEY-ITA-SL3-INTERACT-BTS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 401,
+      "codAuxiliar": "480",
+      "descAuxiliar": "480 - DISNEY-FAN-POWER-SL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 402,
+      "codAuxiliar": "481",
+      "descAuxiliar": "481 - FOX-NG-CDA_PROMO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 403,
+      "codAuxiliar": "482",
+      "descAuxiliar": "482 - GILDA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 404,
+      "codAuxiliar": "483",
+      "descAuxiliar": "483 - DISNEY-SL3-TALENTJ-MUNRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 405,
+      "codAuxiliar": "484",
+      "descAuxiliar": "484 - SMILEHOOD-plinplin-spots",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 406,
+      "codAuxiliar": "485",
+      "descAuxiliar": "485 - JANDINO - YOUTUBER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 407,
+      "codAuxiliar": "486",
+      "descAuxiliar": "486-DISNEY-SL-BTS-22-12",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 408,
+      "codAuxiliar": "487",
+      "descAuxiliar": "487 - PUMPAS 15",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 409,
+      "codAuxiliar": "488",
+      "descAuxiliar": "488 - PMGROUP-GRIMOLDI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 410,
+      "codAuxiliar": "489",
+      "descAuxiliar": "489 - INCAA-BBBAND-TEASER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 411,
+      "codAuxiliar": "99SLD",
+      "descAuxiliar": "99-PRODUCTORA SUELDOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 412,
+      "codAuxiliar": "99GF",
+      "descAuxiliar": "99-PRODUCTORA GASTOS FIJO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 413,
+      "codAuxiliar": "490",
+      "descAuxiliar": "490 - NICK-KALLY-CAMPAÑA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 414,
+      "codAuxiliar": "491",
+      "descAuxiliar": "491 - JUAN_TONELLI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 415,
+      "codAuxiliar": "492",
+      "descAuxiliar": "492 - CHISTIANPLEBTZ",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 416,
+      "codAuxiliar": "493",
+      "descAuxiliar": "493 - CORTOS-SEBA-CORDOBA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 417,
+      "codAuxiliar": "494",
+      "descAuxiliar": "494 - GINASTEROLOGIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 418,
+      "codAuxiliar": "495",
+      "descAuxiliar": "495 - ADDNICE KAROL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 419,
+      "codAuxiliar": "496",
+      "descAuxiliar": "496 - FOXTC_LA_VENTANA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 420,
+      "codAuxiliar": "497",
+      "descAuxiliar": "497 - WE-COMPILADO-HP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 421,
+      "codAuxiliar": "498",
+      "descAuxiliar": "498 - ROMAN-LEJTMAN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 422,
+      "codAuxiliar": "499",
+      "descAuxiliar": "499 - SABROSITOS-20-04-2018",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 423,
+      "codAuxiliar": "502",
+      "descAuxiliar": "502 - Disney_ElenaDeAvalor",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 424,
+      "codAuxiliar": "504",
+      "descAuxiliar": "504 - YOUTUBERS-BLISS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 425,
+      "codAuxiliar": "505",
+      "descAuxiliar": "505 - SECONDF-OHMYGOSH",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 426,
+      "codAuxiliar": "506",
+      "descAuxiliar": "506 -DISNEY-BTS-LUNAPARK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 427,
+      "codAuxiliar": "503",
+      "descAuxiliar": "503 - NICK-NOOBEES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 428,
+      "codAuxiliar": "507",
+      "descAuxiliar": "507 - DISNEY-SHOW-LUNA_PARK.",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 429,
+      "codAuxiliar": "508",
+      "descAuxiliar": "508 - NATIVA-MIRANDOTE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 430,
+      "codAuxiliar": "509",
+      "descAuxiliar": "509 - NICKELODEON_KIDS_CHOICE_AWARDS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 431,
+      "codAuxiliar": "510",
+      "descAuxiliar": "510 - YOUTUBERS-BLISS - BANDA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 432,
+      "codAuxiliar": "511",
+      "descAuxiliar": "511 - BS-AS-ELIJE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 433,
+      "codAuxiliar": "512",
+      "descAuxiliar": "512- TRIUNFO-SEGUROS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 434,
+      "codAuxiliar": "513",
+      "descAuxiliar": "513 - DISNEY-LIKEBIA-TEASER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 435,
+      "codAuxiliar": "514",
+      "descAuxiliar": "514-CASABIERTA PRODUCCIONES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 436,
+      "codAuxiliar": "515",
+      "descAuxiliar": "515 - AMC-ROVIRA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 437,
+      "codAuxiliar": "516",
+      "descAuxiliar": "516 - FOXTC-OPAPOPA-LATAM",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 438,
+      "codAuxiliar": "517",
+      "descAuxiliar": "517-BIA-DISNEY-ANUAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 439,
+      "codAuxiliar": "519",
+      "descAuxiliar": "519 - IMAGINA-US-MEX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 440,
+      "codAuxiliar": "520",
+      "descAuxiliar": "520 - INCAA-CINEAR-ESPECIAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 441,
+      "codAuxiliar": "521",
+      "descAuxiliar": "521 - CASABIERTA-METROGAS-2018",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 442,
+      "codAuxiliar": "518",
+      "descAuxiliar": "518 - LANACION-FLASHES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 443,
+      "codAuxiliar": "522",
+      "descAuxiliar": "522 - FOXTC-OPAPOPADUPA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 444,
+      "codAuxiliar": "523",
+      "descAuxiliar": "523 - METROGAS-MOOD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 445,
+      "codAuxiliar": "524",
+      "descAuxiliar": "524 -DISNEY - NN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 446,
+      "codAuxiliar": "525",
+      "descAuxiliar": "525-KS-SHOW-GARRAHAN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 447,
+      "codAuxiliar": "526",
+      "descAuxiliar": "526-DISNEY-10MM",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 448,
+      "codAuxiliar": "527",
+      "descAuxiliar": "527 - GO- COLOR - KUARZO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 449,
+      "codAuxiliar": "528",
+      "descAuxiliar": "528 - CLUB-57-NICK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 450,
+      "codAuxiliar": "529",
+      "descAuxiliar": "529 - KAROL-MIL-BESOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 451,
+      "codAuxiliar": "5170001",
+      "descAuxiliar": "5170001- DISNEY - BIA - ANUAL - NAIL ART",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 452,
+      "codAuxiliar": "530",
+      "descAuxiliar": "530 - INSTAGRAM - KAROL - LUNAPARK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 453,
+      "codAuxiliar": "531",
+      "descAuxiliar": "531 - DISNEY - BOB IGER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 454,
+      "codAuxiliar": "532",
+      "descAuxiliar": "532 - DISNEY - CUANDO ME BESAS - JANDINO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 455,
+      "codAuxiliar": "533",
+      "descAuxiliar": "533 - DISNEY - SP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 456,
+      "codAuxiliar": "534",
+      "descAuxiliar": "534 - INCAA - CINEAR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 457,
+      "codAuxiliar": "5170002",
+      "descAuxiliar": "5170002 - DISNEY-BIA-ASI_SOY_YO_LYRIC",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 458,
+      "codAuxiliar": "5170003",
+      "descAuxiliar": "5170003 - DISNEY - BIA - CLIP JHON",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 459,
+      "codAuxiliar": "535",
+      "descAuxiliar": "535 - CARLOS GERMAN RUCKAUF",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 460,
+      "codAuxiliar": "5170004",
+      "descAuxiliar": "5170004 -  DISNEY - BIA - ALEX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 461,
+      "codAuxiliar": "5170005",
+      "descAuxiliar": "5170005 - DISNEY - BIA - ALEX - JANDINO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 462,
+      "codAuxiliar": "536",
+      "descAuxiliar": "536 - NICKELODEON - KALLY PROMO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 463,
+      "codAuxiliar": "537",
+      "descAuxiliar": "537 - DISNEY - TOPA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 464,
+      "codAuxiliar": "5170006",
+      "descAuxiliar": "5170006 - DISNEY - BIA - CUENTALES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 465,
+      "codAuxiliar": "5170007",
+      "descAuxiliar": "5170007-DISNEY-BIA-LA-LLAMADA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 466,
+      "codAuxiliar": "5170008",
+      "descAuxiliar": "5170008-DISNEY-BIA-CLIP-FUERZAINTERIOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 467,
+      "codAuxiliar": "539",
+      "descAuxiliar": "539-LAFLIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 468,
+      "codAuxiliar": "538",
+      "descAuxiliar": "538 -VINI DIGITAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 469,
+      "codAuxiliar": "5170009",
+      "descAuxiliar": "5170009-DISNEY-BIA-TUCOLORPARAPINTAR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 470,
+      "codAuxiliar": "5170010",
+      "descAuxiliar": "5170010-DISNEY-BIA-COMMUNITYS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 471,
+      "codAuxiliar": "5170011",
+      "descAuxiliar": "5170011-DISNEY-BIA-VOY-X-MAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 472,
+      "codAuxiliar": "5170012",
+      "descAuxiliar": "5170012-DISNEY-BIA-COMO-ME-VES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 473,
+      "codAuxiliar": "541",
+      "descAuxiliar": "541-DISNEY-PILAR-ABRIL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 474,
+      "codAuxiliar": "5170013",
+      "descAuxiliar": "5170013-BIA-CLIP-BIA-MARS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 475,
+      "codAuxiliar": "001",
+      "descAuxiliar": "PARA ASIGNAR CC",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 476,
+      "codAuxiliar": "4500001",
+      "descAuxiliar": "4500001-PHARMACORE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 477,
+      "codAuxiliar": "5170014",
+      "descAuxiliar": "5170014-BIA-YT-PAUTIPS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 478,
+      "codAuxiliar": "543",
+      "descAuxiliar": "543-DISNEY-MAKING-OFF-NIVIS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 479,
+      "codAuxiliar": "544",
+      "descAuxiliar": "544-DISNEY-REAL-STORIES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 480,
+      "codAuxiliar": "5440001",
+      "descAuxiliar": "5440001-DISNEY-REAL-STORIES-CHANNEL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 481,
+      "codAuxiliar": "5440002",
+      "descAuxiliar": "544 0002-DISNEY-REAL-STORIES-JUNIOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 482,
+      "codAuxiliar": "5440003",
+      "descAuxiliar": "5440003-DISNEY-REAL-STORIES-XD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 483,
+      "codAuxiliar": "545",
+      "descAuxiliar": "545_DISNEY_PILAR_JUNIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 484,
+      "codAuxiliar": "5170015",
+      "descAuxiliar": "5170015-DISNEY-BIA-JUNTO-A-TI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 485,
+      "codAuxiliar": "5170016",
+      "descAuxiliar": "5170016-DISNEY-BIA-POST-EXTRA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 486,
+      "codAuxiliar": "5170017",
+      "descAuxiliar": "5170017-DISNEY-BIA-CLIP-MOONDUST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 487,
+      "codAuxiliar": "5170018",
+      "descAuxiliar": "5170018-DISNEY-BIA-MV-SENTIRSE BIEN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 488,
+      "codAuxiliar": "5170019",
+      "descAuxiliar": "5170019-DISNEY-BIA-LA-ULTIMA-PARADA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 489,
+      "codAuxiliar": "5460001",
+      "descAuxiliar": "5460001-NATIVA-DIA-ESPACIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 490,
+      "codAuxiliar": "5460002",
+      "descAuxiliar": "5460002-NATIVA-DOCU-2019",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 491,
+      "codAuxiliar": "5170020",
+      "descAuxiliar": "5170020-DISNEY-BIA-MV-LYRIC-CUANDO-PASO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 492,
+      "codAuxiliar": "5170021",
+      "descAuxiliar": "5170021-DISNEY-BIA-MV-AQUÍ-ME-ENCONTRE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 493,
+      "codAuxiliar": "5440004",
+      "descAuxiliar": "5440004-DISNEY-REAL-STORIES-APERTURA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 494,
+      "codAuxiliar": "5030001",
+      "descAuxiliar": "5030001-NICK-NOOBEES-2DA-TEMPORADA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 495,
+      "codAuxiliar": "5470001",
+      "descAuxiliar": "5470001_YT_RODRIGO_RUMI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 496,
+      "codAuxiliar": "5460003",
+      "descAuxiliar": "5460003-NATIVA-FUNCIONAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 497,
+      "codAuxiliar": "5460004",
+      "descAuxiliar": "5460004-NATIVA-POPULATION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 498,
+      "codAuxiliar": "4500002",
+      "descAuxiliar": "4500002-ENSAYO TINI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 499,
+      "codAuxiliar": "4500003",
+      "descAuxiliar": "4500003-CORTO-FUC",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 500,
+      "codAuxiliar": "548",
+      "descAuxiliar": "548-CONSIGLIERI-REALITY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 501,
+      "codAuxiliar": "549",
+      "descAuxiliar": "549-AMC-BREAKING-TANGO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 502,
+      "codAuxiliar": "5140001",
+      "descAuxiliar": "5140001-CASABIERTA-CIUDADRETRATOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 503,
+      "codAuxiliar": "4500004",
+      "descAuxiliar": "4500004-GENNOMA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 504,
+      "codAuxiliar": "5030002",
+      "descAuxiliar": "5030002-NOOBEES-2DA TEMP-COLOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 505,
+      "codAuxiliar": "4500006",
+      "descAuxiliar": "4500006-HUINCA-RENTA-ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 506,
+      "codAuxiliar": "550",
+      "descAuxiliar": "550-INCAA-NACIDOS-PARA-MATAR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 507,
+      "codAuxiliar": "5170022",
+      "descAuxiliar": "5170022-DISNEY-BIA-LIVE-TOUR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 508,
+      "codAuxiliar": "551",
+      "descAuxiliar": "551-PERFETA-FENIX-FEDERER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 509,
+      "codAuxiliar": "552",
+      "descAuxiliar": "552-PLUTO-TV",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 510,
+      "codAuxiliar": "4500007",
+      "descAuxiliar": "4500007-KINKY-BOOTS-RENTAL-EST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 511,
+      "codAuxiliar": "5470002",
+      "descAuxiliar": "5470002-AGUSTINA-PALMA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 512,
+      "codAuxiliar": "547003",
+      "descAuxiliar": "547003",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 513,
+      "codAuxiliar": "5470003",
+      "descAuxiliar": "5470003-YT-GABRIELA-DI-GREGO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 514,
+      "codAuxiliar": "553",
+      "descAuxiliar": "553-DISCOVERY-KIDS-IDS-2020",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 515,
+      "codAuxiliar": "5490001",
+      "descAuxiliar": "5490001-AMC-BREAKINGTANGO-BTS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 516,
+      "codAuxiliar": "5520001",
+      "descAuxiliar": "5520001-VIACOM-PLUTOTV02",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 517,
+      "codAuxiliar": "5170023",
+      "descAuxiliar": "5170023-DISNEY-TRANSMEDIA-SEASON-BIA-202",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 518,
+      "codAuxiliar": "5170024",
+      "descAuxiliar": "5170024-DISNEY-AGENCIA-REDES-SOCIALES-DI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 519,
+      "codAuxiliar": "4500008",
+      "descAuxiliar": "4500008-LA-DOBLE-A-RENTA-ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 521,
+      "codAuxiliar": "45000009",
+      "descAuxiliar": "4500009-FRANCA-FILMS-RENTA-ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 522,
+      "codAuxiliar": "4500010",
+      "descAuxiliar": "4500010-FIGHT-FILMS-RENTA-ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 523,
+      "codAuxiliar": "4500009",
+      "descAuxiliar": "4500009-FRANCA-FILMS-RENTA-ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 524,
+      "codAuxiliar": "4500011",
+      "descAuxiliar": "4500011-PROTEINA-PURA-RENTA-ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 525,
+      "codAuxiliar": "4500012",
+      "descAuxiliar": "4500012-VIRGEN-FILMS-RENTA-ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 526,
+      "codAuxiliar": "4500013",
+      "descAuxiliar": "4500013-MP-SCHOOLOFROCK-RENTAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 527,
+      "codAuxiliar": "554",
+      "descAuxiliar": "554-GRUPO-SERMO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 528,
+      "codAuxiliar": "555",
+      "descAuxiliar": "555-NONSTOP-ANIMALIAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 530,
+      "codAuxiliar": "556",
+      "descAuxiliar": "556-HECATOMBE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 531,
+      "codAuxiliar": "557",
+      "descAuxiliar": "557-FOXTC-CIENCIA_S08",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 532,
+      "codAuxiliar": "558",
+      "descAuxiliar": "558_DISNEY_SHOWSL_UC_2020",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 533,
+      "codAuxiliar": "5170025",
+      "descAuxiliar": "5170025_DISNEY_BIA_TRANS_2020",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 534,
+      "codAuxiliar": "560",
+      "descAuxiliar": "560_GTB-FORD-STREAMING",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 535,
+      "codAuxiliar": "559",
+      "descAuxiliar": "559_POWWOW_ALEXYALUX_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 536,
+      "codAuxiliar": "561",
+      "descAuxiliar": "561_WE_POST_PRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 537,
+      "codAuxiliar": "4500014",
+      "descAuxiliar": "4500014_ROWING-ESTUDIO_AGOSTO2020",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 538,
+      "codAuxiliar": "4500015",
+      "descAuxiliar": "4500015_TRESBIEN_PUBLICERVEZAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 539,
+      "codAuxiliar": "5650001",
+      "descAuxiliar": "5650001_CHICOSNET_SOTRYMAKING_DESARROLLO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 540,
+      "codAuxiliar": "566",
+      "descAuxiliar": "566_GAMECONTENT_KOTEX_ELLAPUEDE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 541,
+      "codAuxiliar": "562",
+      "descAuxiliar": "562_GAMECONTENT-SPOT-HUGGIES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 542,
+      "codAuxiliar": "563",
+      "descAuxiliar": "563_INSTAGRAM-GO-REELS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 543,
+      "codAuxiliar": "564",
+      "descAuxiliar": "564_POWWOW-DANCE-ITALIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 544,
+      "codAuxiliar": "5490002",
+      "descAuxiliar": "5490002_AMC_BREAKING_TANGO_PROMOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 545,
+      "codAuxiliar": "5650002",
+      "descAuxiliar": "5650002_CHICOSNET_STORYMAKING_REALIZ",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 546,
+      "codAuxiliar": "540",
+      "descAuxiliar": "540_MOZARTEUM_2019",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 547,
+      "codAuxiliar": "542",
+      "descAuxiliar": "542_DISNEY_ALADDIN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 548,
+      "codAuxiliar": "4500018",
+      "descAuxiliar": "4500018_ESTUDIO_PANTERA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 549,
+      "codAuxiliar": "567",
+      "descAuxiliar": "567_GTB_STREAMING_FORD_DICIEMBRE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 550,
+      "codAuxiliar": "568",
+      "descAuxiliar": "568_FCORP_FOXTC_OPDS02",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 551,
+      "codAuxiliar": "4500019",
+      "descAuxiliar": "4500019_ESTUDIO_STORYLAB",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 552,
+      "codAuxiliar": "569",
+      "descAuxiliar": "569_NICK_CLUB57S02_PROMOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 553,
+      "codAuxiliar": "4510001",
+      "descAuxiliar": "4510001_ALQUILER_EQUIPOS_JULIAN_HERNAND",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 554,
+      "codAuxiliar": "570",
+      "descAuxiliar": "570_GTB_STREAMING_FORD_FEBRERO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 555,
+      "codAuxiliar": "571",
+      "descAuxiliar": "571_FZERO_OLIVIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 556,
+      "codAuxiliar": "4500022",
+      "descAuxiliar": "4500022_ESTUDIO_ 1ST_AVE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 557,
+      "codAuxiliar": "4500021",
+      "descAuxiliar": "4500021_ESTUDIO_CONCRETO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 558,
+      "codAuxiliar": "4500020",
+      "descAuxiliar": "4500020_ESTUDIO_TRUENO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 559,
+      "codAuxiliar": "5700001",
+      "descAuxiliar": "5700001_GTB_STREAMING_FORD_BRONCO_FACEBO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 560,
+      "codAuxiliar": "572",
+      "descAuxiliar": "572_FZERCORP - MEDIAPRO-LVP1",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 561,
+      "codAuxiliar": "5700002",
+      "descAuxiliar": "5700002_GTB_VOD_FORD_BRONCO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 562,
+      "codAuxiliar": "573",
+      "descAuxiliar": "573_FAPIQUIM_CAMPAÑA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 563,
+      "codAuxiliar": "5650003",
+      "descAuxiliar": "5650003_CHICOSNET_STORYMAKING_EXTRA_FOTO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 564,
+      "codAuxiliar": "4500023",
+      "descAuxiliar": "4500023_ESTUDIO_LANDIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 565,
+      "codAuxiliar": "4500024",
+      "descAuxiliar": "4500024_ESTUDIO_PHARMACORE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 566,
+      "codAuxiliar": "4500025",
+      "descAuxiliar": "4500025_ESTUDIO_LANDIA_MAYO_2021",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 567,
+      "codAuxiliar": "5700003",
+      "descAuxiliar": "5700003_GTB_STREAMING_FORD_MAYO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 568,
+      "codAuxiliar": "4500026",
+      "descAuxiliar": "4500026_ESTUDIO_VIRGEN_FILMS_JUNIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 569,
+      "codAuxiliar": "4500027",
+      "descAuxiliar": "4500027_ESTUDIO_POLKA_MARIA_MARTA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 570,
+      "codAuxiliar": "574",
+      "descAuxiliar": "574_ABRAKADABRA_SPANISH_MODEL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 571,
+      "codAuxiliar": "5700004",
+      "descAuxiliar": "5700004_GTB_STREAMING_F150_JUNIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 572,
+      "codAuxiliar": "575",
+      "descAuxiliar": "575_SINAPSIS_PRODUCOM_PILOTO_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 573,
+      "codAuxiliar": "576",
+      "descAuxiliar": "576_ESPN_SPORTCENTER_SDD_PROMO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 574,
+      "codAuxiliar": "5780001",
+      "descAuxiliar": "DISNEY_HEALTHY_LIVING_RECETADOS_ARG",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 575,
+      "codAuxiliar": "5780002",
+      "descAuxiliar": "DISNEY_HEALTHY_LIVING_RECETADOS_BRA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 576,
+      "codAuxiliar": "5780003",
+      "descAuxiliar": "DISNEY_HEALTHY_LIVING_RECETADOS_MEX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 577,
+      "codAuxiliar": "4500028",
+      "descAuxiliar": "4500028_ESTUDIO_POLKA_MARIA_MARTA_EXTENS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 578,
+      "codAuxiliar": "4510002",
+      "descAuxiliar": "4510002_ALQUILER_EQUIPOS_POLKA_MARIA_MAR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 579,
+      "codAuxiliar": "579",
+      "descAuxiliar": "579_ESPN_CLIP_LIBERTADORES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 580,
+      "codAuxiliar": "4500029",
+      "descAuxiliar": "4500029_ESTUDIO_KAPOW",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 581,
+      "codAuxiliar": "580",
+      "descAuxiliar": "580_JUGUETES_RASTI_CAMPAÑA_DIA_DEL_NIÑO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 582,
+      "codAuxiliar": "581",
+      "descAuxiliar": "581_ESPN_VW_TAOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 583,
+      "codAuxiliar": "582",
+      "descAuxiliar": "582_DECOM_CAMPAÑA_INTEGRAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 584,
+      "codAuxiliar": "4500030",
+      "descAuxiliar": "4500030_ESTUDIO_CAPITALINTELECTUAL_ELFIN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 585,
+      "codAuxiliar": "45000031",
+      "descAuxiliar": "4500031_ESTUDIO_VIDEOCUATRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 586,
+      "codAuxiliar": "583",
+      "descAuxiliar": "583_NUSAFILM_INDONESIA_BEST_EVER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 587,
+      "codAuxiliar": "4500032",
+      "descAuxiliar": "4500032_ESTUDIO_KAPOW_1409",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 588,
+      "codAuxiliar": "4500033",
+      "descAuxiliar": "4500033_ESTUDIO_2020_FILMS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 589,
+      "codAuxiliar": "584",
+      "descAuxiliar": "584_FACEBOOK_PROGRAMA_TALENTOS_LATAM",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 590,
+      "codAuxiliar": "4500034",
+      "descAuxiliar": "4500034_ESTUDIO_HIPAUCHA_JOSE_BARCO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 591,
+      "codAuxiliar": "585",
+      "descAuxiliar": "585_OWIFILM_PRIVER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 592,
+      "codAuxiliar": "586",
+      "descAuxiliar": "586_ESPN_SOLO_DEPORTES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 593,
+      "codAuxiliar": "5700005",
+      "descAuxiliar": "5700005_GTB_STREAMING_F150_OCTUBRE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 594,
+      "codAuxiliar": "4500035",
+      "descAuxiliar": "4500035_ESTUDIO_PATAGONIK_FILM_GROUP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 595,
+      "codAuxiliar": "4500036",
+      "descAuxiliar": "4500036_ESTUDIO_REBOLUCION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 596,
+      "codAuxiliar": "587",
+      "descAuxiliar": "587_DISNEY_HACHE_ENTREVISTA_LANATA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 597,
+      "codAuxiliar": "4500037",
+      "descAuxiliar": "4500037_ESTUDIO_PATAGONIK_1511",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 598,
+      "codAuxiliar": "588",
+      "descAuxiliar": "588_DECOM_CAMPAÑA_INTEGRAL_CIERRE_2021",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 599,
+      "codAuxiliar": "589",
+      "descAuxiliar": "589_ANIMA_CARLITOS_M",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 600,
+      "codAuxiliar": "5700006",
+      "descAuxiliar": "570006_GTB_STREAMING_FORD_MAVERIK",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 601,
+      "codAuxiliar": "5700007",
+      "descAuxiliar": "5700007_GTB_STREAMING_FORD_HIBRIDA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 602,
+      "codAuxiliar": "4500038",
+      "descAuxiliar": "4500038_ESTUDIO_ORUGA_FILMS_PHILCO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 603,
+      "codAuxiliar": "590",
+      "descAuxiliar": "590_JUGUETES_RASTI_SPOT_STOP_MOTION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 604,
+      "codAuxiliar": "591",
+      "descAuxiliar": "591_ESPN_VW_TAOS_APP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 605,
+      "codAuxiliar": "592",
+      "descAuxiliar": "592_BVS_TV_DESARROLLO_CAMPAÑA_INTEGRAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 606,
+      "codAuxiliar": "593",
+      "descAuxiliar": "593_KIR_SRL_CAMPAÑA_INSTITUCIONAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 607,
+      "codAuxiliar": "594",
+      "descAuxiliar": "594_KAPOW_ISLAS_PRODUCCION_RENTAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 608,
+      "codAuxiliar": "595",
+      "descAuxiliar": "595_JUGUETES_RASTI_CAMPAÑA_NAVIDAD_REYES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 609,
+      "codAuxiliar": "5770002",
+      "descAuxiliar": "5770002_FIGHTFILMS_JJOO_S02",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 610,
+      "codAuxiliar": "596",
+      "descAuxiliar": "596_FAPIQUIM_DESARROLLO_CAMPAÑA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 611,
+      "codAuxiliar": "4500039",
+      "descAuxiliar": "4500039_ESTUDIO_LIVE_WORLD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 612,
+      "codAuxiliar": "4500040",
+      "descAuxiliar": "4500040_ESTUDIO_VIDEOCUATRO_2611",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 613,
+      "codAuxiliar": "597",
+      "descAuxiliar": "597_LA_FORMULA_DESARROLLO_CAMPAÑA_INTEGR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 614,
+      "codAuxiliar": "598",
+      "descAuxiliar": "598_META_INSTAGRAM_REELS_LATAM_BRA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 615,
+      "codAuxiliar": "4500041",
+      "descAuxiliar": "4500041_ESTUDIO_U_FILMS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 616,
+      "codAuxiliar": "599",
+      "descAuxiliar": "599_STORYLABS_SIN_ETIQUETAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 617,
+      "codAuxiliar": "600",
+      "descAuxiliar": "600_LA_FORMULA_POST_CAMPAÑA_FIN_DE_AÑO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 618,
+      "codAuxiliar": "601",
+      "descAuxiliar": "601_NATIVA_LA_HIJA_DE_DIOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 619,
+      "codAuxiliar": "602",
+      "descAuxiliar": "602_DECOM_STREAMING_FIN_2021",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 620,
+      "codAuxiliar": "5950001",
+      "descAuxiliar": "5950001_JUGUETES_RASTI_CAMPAÑA_ETAPA_2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 621,
+      "codAuxiliar": "5550001",
+      "descAuxiliar": "5550001_NONSTOP_ANIMALIAS_S02-DESARROLLO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 622,
+      "codAuxiliar": "4500042",
+      "descAuxiliar": "4500042_ESTUDIO_EXXIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 623,
+      "codAuxiliar": "603",
+      "descAuxiliar": "603_ART_DEPOT_LHDD_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 624,
+      "codAuxiliar": "5850001",
+      "descAuxiliar": "5850001_OWIFILM_PRIVER_COLOR&DELIVERY_6E",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 625,
+      "codAuxiliar": "604",
+      "descAuxiliar": "604_DANTOINE_DATA_STORAGE_MANAGMENT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 626,
+      "codAuxiliar": "605",
+      "descAuxiliar": "605_DISNEY_EL_CLUB_DE_LOS_GRAVES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 627,
+      "codAuxiliar": "4500043",
+      "descAuxiliar": "4500043_ESTUDIO_T&C_SPORTS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 628,
+      "codAuxiliar": "606",
+      "descAuxiliar": "606_NET_TV_SWITCHER_MASTER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 629,
+      "codAuxiliar": "607",
+      "descAuxiliar": "607_DECOM_CAMPAÑA_DIGITAL_LANZ_2022",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 630,
+      "codAuxiliar": "608",
+      "descAuxiliar": "608_WE_PRODU",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 631,
+      "codAuxiliar": "609",
+      "descAuxiliar": "609_DANTOINE_DATA_STORAGE_&_MANAGEMENT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 632,
+      "codAuxiliar": "610",
+      "descAuxiliar": "610_STORYLAB_CODERS_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 633,
+      "codAuxiliar": "611",
+      "descAuxiliar": "611_PRELUDIO_CNCO_DELIVERY_POST_HDR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 634,
+      "codAuxiliar": "6090001",
+      "descAuxiliar": "6090001_DANTOINE_DATA_STORAGE_2DA_AMPLIA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 635,
+      "codAuxiliar": "4500044",
+      "descAuxiliar": "4500044_ESTUDIO_TRISA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 636,
+      "codAuxiliar": "612",
+      "descAuxiliar": "612_DISNEY_BTO_REALIZACION_INT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 637,
+      "codAuxiliar": "614",
+      "descAuxiliar": "614_DISNEY_BTO_TINI_GRABACION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 638,
+      "codAuxiliar": "613",
+      "descAuxiliar": "613_BE_AWARE_MEDIA_MASTERCHEF_BOLIVIA_PO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 639,
+      "codAuxiliar": "615",
+      "descAuxiliar": "615_DISNEY_MV_SIEMPRE_FUI_YO_KS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 640,
+      "codAuxiliar": "616",
+      "descAuxiliar": "616_REAL_ESTATE_DESARROLLO_CAMP_1QT_22",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 641,
+      "codAuxiliar": "5550002",
+      "descAuxiliar": "5550002_DISNEY_ANIMALIAS_IP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 642,
+      "codAuxiliar": "6090002",
+      "descAuxiliar": "6090002_DANTOINE_DATA_STORAGE_ETAPA_5",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 643,
+      "codAuxiliar": "617",
+      "descAuxiliar": "617_DISNEY_PILAR_MAYO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 644,
+      "codAuxiliar": "618",
+      "descAuxiliar": "618_BANIJAY_LOL_APERTURA_ARG",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 645,
+      "codAuxiliar": "6170001",
+      "descAuxiliar": "6170001_DISNEY_PILAR_30_MAYO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 646,
+      "codAuxiliar": "6010001",
+      "descAuxiliar": "6010001_NATIVA_LA_HIJA_DE_DIOS_POSTPRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 647,
+      "codAuxiliar": "6160001",
+      "descAuxiliar": "6160001_REAL_ESTATE_DESARROLLO_CAMP_SEGU",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 648,
+      "codAuxiliar": "6090003",
+      "descAuxiliar": "6090003_DANTOINE_DATA_STORAGE_JUNIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 649,
+      "codAuxiliar": "6170002",
+      "descAuxiliar": "6170002_DISNEY_PILAR_6_7_JUNIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 650,
+      "codAuxiliar": "620",
+      "descAuxiliar": "620_360POWOW_SYTTD_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 651,
+      "codAuxiliar": "5550003",
+      "descAuxiliar": "5550003_NONSTOP_ANIMALIAS_FEE_COPRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 652,
+      "codAuxiliar": "5550004",
+      "descAuxiliar": "5550004_NONSTOP_ANIMALIAS_PROD_GENERAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 653,
+      "codAuxiliar": "619",
+      "descAuxiliar": "619_BTF_ELLE_POP_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 654,
+      "codAuxiliar": "621",
+      "descAuxiliar": "621_MANDARINA_HACHE_RENTAL_POST_ETAPA_1_",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 655,
+      "codAuxiliar": "622",
+      "descAuxiliar": "622_DISNEY_JUNKET_LIMBO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 656,
+      "codAuxiliar": "4500045",
+      "descAuxiliar": "4500045_ESTUDIO_ORUGA_BIMBO_ARTESANO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 657,
+      "codAuxiliar": "4500046",
+      "descAuxiliar": "4500046_ESTUDIO_ORUGA_BIMBO_JORNADA_MONT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 658,
+      "codAuxiliar": "623",
+      "descAuxiliar": "623_PARAMOUNT_KCA_2022_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 659,
+      "codAuxiliar": "4500047",
+      "descAuxiliar": "4500047_ESTUDIO_VIDEOCUATRO_07_2022",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 660,
+      "codAuxiliar": "6220001",
+      "descAuxiliar": "6220001_DISNEY_JUNKET_SANTA_EVITA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 661,
+      "codAuxiliar": "4500048",
+      "descAuxiliar": "4500048_ESTUDIO_REICINE_EL_SALTO_DE_PAPA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 662,
+      "codAuxiliar": "622001",
+      "descAuxiliar": "JUNKET-SANTA EVITA",
+      "habilitado": "N"
+    },
+    {
+      "idAuxiliar": 663,
+      "codAuxiliar": "4500049",
+      "descAuxiliar": "4500049_ESTUDIO_LOSANO_SMIRNOFF_ICE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 664,
+      "codAuxiliar": "626",
+      "descAuxiliar": "626_CAUDILLO_FILMS_THE_CHALLENGE_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 665,
+      "codAuxiliar": "627",
+      "descAuxiliar": "627_CPSE_GEN_MUNDIAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 666,
+      "codAuxiliar": "4500050",
+      "descAuxiliar": "4500050_ESTUDIO_POST_VIDEOCUATRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 667,
+      "codAuxiliar": "625",
+      "descAuxiliar": "625_DISNEY_PRINCESAS_SALUDOS_ARS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 668,
+      "codAuxiliar": "5850003",
+      "descAuxiliar": "5850003_OWIFILM_PRIVER_POST_ONLINE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 669,
+      "codAuxiliar": "4500051",
+      "descAuxiliar": "4500051_ESTUDIO_ORUGA_WOMEN_IN_GAME",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 670,
+      "codAuxiliar": "628",
+      "descAuxiliar": "628_BTF_STF3_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 671,
+      "codAuxiliar": "6160002",
+      "descAuxiliar": "6160002_REAL_ESTATE_RRSS_CAMP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 672,
+      "codAuxiliar": "4500052",
+      "descAuxiliar": "4500052_ESTUDIO_EXXIA_ADERMICINA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 673,
+      "codAuxiliar": "633",
+      "descAuxiliar": "633_PLANTA_ALTA_GAMER_COPRO_INGESTA_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 674,
+      "codAuxiliar": "6330001",
+      "descAuxiliar": "6330001_PLANTA_ALTA_GAMER_COPRO_EQUIPAMI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 675,
+      "codAuxiliar": "630",
+      "descAuxiliar": "630_BAM_LATINOSENQATAR_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 676,
+      "codAuxiliar": "631",
+      "descAuxiliar": "631_NONSTOP_PGJ_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 677,
+      "codAuxiliar": "4500053",
+      "descAuxiliar": "4500053_ESTUDIO_EXXIA_ADERMICINA_II",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 678,
+      "codAuxiliar": "4500054",
+      "descAuxiliar": "4500054_ESTUDIO_EXXIA_INFLITREX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 679,
+      "codAuxiliar": "634",
+      "descAuxiliar": "634_ANIMA_JUNIOR_POST_COLOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 680,
+      "codAuxiliar": "632",
+      "descAuxiliar": "632_FIFA_QATAR_2022_POST_RENTAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 681,
+      "codAuxiliar": "4500055",
+      "descAuxiliar": "4500055_ESTUDIO_EXXIA_EVAGINA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 682,
+      "codAuxiliar": "636",
+      "descAuxiliar": "636_BVS_COMUNICACION_CIERRE_2022-2023",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 683,
+      "codAuxiliar": "637",
+      "descAuxiliar": "637_MAGMA_NOV_REBELDE_RENTAL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 684,
+      "codAuxiliar": "4500058",
+      "descAuxiliar": "4500058_ESTUDIO_REICINE_PRUEBADECAMARA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 685,
+      "codAuxiliar": "4500057",
+      "descAuxiliar": "4500057_ESTUDIO_PATAGONIA_FILMS_JAQUEMAT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 686,
+      "codAuxiliar": "4500059",
+      "descAuxiliar": "4500059_ESTUDIO_KENYA_DEP",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 736,
+      "codAuxiliar": "639",
+      "descAuxiliar": "639_MAGMA_DOCUMENTAL_EVC_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 737,
+      "codAuxiliar": "4500060",
+      "descAuxiliar": "4500060_ESTUDIO_PRIMO_SNAPCHAT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 738,
+      "codAuxiliar": "4500061",
+      "descAuxiliar": "4500061_ESTUDIO_EXXIA_ALERNIX_160323",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 739,
+      "codAuxiliar": "638",
+      "descAuxiliar": "638_BANIJAY_LOL2_VISITA_PRODUCCION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 740,
+      "codAuxiliar": "007",
+      "descAuxiliar": "007_FEDERICO_LACROZE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 741,
+      "codAuxiliar": "671",
+      "descAuxiliar": "671_ESTUDIO_TRONADOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 742,
+      "codAuxiliar": "4500062",
+      "descAuxiliar": "4500062_ESTUDIO_POST_VIDEOCUATRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 743,
+      "codAuxiliar": "640",
+      "descAuxiliar": "640_MASTER_RED_COMUNICACION_2023",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 744,
+      "codAuxiliar": "4500063",
+      "descAuxiliar": "4500063_ESTUDIO_PATAGONIK_FILM",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 745,
+      "codAuxiliar": "4500064",
+      "descAuxiliar": "4500064_ESTUDIO_LCDA_BIMBO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 746,
+      "codAuxiliar": "641",
+      "descAuxiliar": "641_BILOU_EXPOAGRO_RENTAL_EQUIPAMIENTO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 747,
+      "codAuxiliar": "99HUI",
+      "descAuxiliar": "99 - Huidobro",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 748,
+      "codAuxiliar": "99DIR",
+      "descAuxiliar": "99 - Directores",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 749,
+      "codAuxiliar": "99AYD",
+      "descAuxiliar": "99 - Administracion y diseño",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 750,
+      "codAuxiliar": "99COM",
+      "descAuxiliar": "99 - Comercial",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 751,
+      "codAuxiliar": "99PRO",
+      "descAuxiliar": "99 - Produccion",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 752,
+      "codAuxiliar": "99POST",
+      "descAuxiliar": "99 - Postproduccion",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 753,
+      "codAuxiliar": "99MAN",
+      "descAuxiliar": "99 - Mantenimiento",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 754,
+      "codAuxiliar": "4500065",
+      "descAuxiliar": "4500065_ESTUDIO_ORUGA_ON_OFF",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 756,
+      "codAuxiliar": "643",
+      "descAuxiliar": "643_MANDARINA_RITA_LEE_RENTAL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 757,
+      "codAuxiliar": "99DES",
+      "descAuxiliar": "99 - Desarrollo",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 758,
+      "codAuxiliar": "6010002",
+      "descAuxiliar": "6010002_NATIVA_LHDD_CONFORMADO_MASTER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 759,
+      "codAuxiliar": "4500067",
+      "descAuxiliar": "4500067_ESTUDIO_ONCELOOPS_CHANI",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 760,
+      "codAuxiliar": "642",
+      "descAuxiliar": "642_BAM_MASTERCHEF_BOLIVIA_POST_S02",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 761,
+      "codAuxiliar": "250",
+      "descAuxiliar": "250_EMPLEADOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 762,
+      "codAuxiliar": "647",
+      "descAuxiliar": "647_TWINS_LATIN_FILMS_SALVAJES_ETAPA1_",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 763,
+      "codAuxiliar": "646",
+      "descAuxiliar": "646_FRAME_ENTRE_MUNDOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 764,
+      "codAuxiliar": "644",
+      "descAuxiliar": "644_CASARES_NETFLIX_ENSAYOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 765,
+      "codAuxiliar": "4500056",
+      "descAuxiliar": "4500056_ESTUDIO_VIDEOCUATRO_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 766,
+      "codAuxiliar": "648",
+      "descAuxiliar": "648_PRAGMA_TV_DANTE_RENTAL_EQUIPOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 767,
+      "codAuxiliar": "4500068",
+      "descAuxiliar": "4500068_ESTUDIO_RIOS_HQLM",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 768,
+      "codAuxiliar": "649",
+      "descAuxiliar": "649_STORYLAB_FRAGILES_POST_ONLINE_COPRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 769,
+      "codAuxiliar": "4500069",
+      "descAuxiliar": "4500069_EXXIA_CVP_FLEBO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 770,
+      "codAuxiliar": "650",
+      "descAuxiliar": "650_AMC_BREAKING_MUSIC_02",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 771,
+      "codAuxiliar": "6500001",
+      "descAuxiliar": "6500001_AMC_BREAKING_MUSIC_02_BERLIN",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 772,
+      "codAuxiliar": "651",
+      "descAuxiliar": "651_POWWOW_DOC_ELA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 773,
+      "codAuxiliar": "4500070",
+      "descAuxiliar": "4500070_ESTUDIO_LANDIA_SIDRA_1888",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 774,
+      "codAuxiliar": "652",
+      "descAuxiliar": "652_ANIMA_EBYA_POST_ONLINE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 775,
+      "codAuxiliar": "653",
+      "descAuxiliar": "653_TRONITO_FICCION_FLOW_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 776,
+      "codAuxiliar": "655",
+      "descAuxiliar": "655_MANDARINA_J&J_RENTAL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 777,
+      "codAuxiliar": "4500071",
+      "descAuxiliar": "4500071_ESTUDIO_WALRUS_YOY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 778,
+      "codAuxiliar": "4500072",
+      "descAuxiliar": "4500072_ESTUDIO_BICHO_FILMS_PLATOS_VOLAD",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 779,
+      "codAuxiliar": "657",
+      "descAuxiliar": "657_REYLAT_MACRI_CAMP_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 780,
+      "codAuxiliar": "654",
+      "descAuxiliar": "654_EL_ESTUDIO_SONORO_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 830,
+      "codAuxiliar": "4500073",
+      "descAuxiliar": "4500073_ESTUDIO_RGB_MB_ENSAYOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 831,
+      "codAuxiliar": "658",
+      "descAuxiliar": "658_KUARZO_COMERCIAL_SNL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 832,
+      "codAuxiliar": "660",
+      "descAuxiliar": "660_NATIVA_CRIS_BACKUP_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 833,
+      "codAuxiliar": "656",
+      "descAuxiliar": "656_BTF_MAMITA_ADR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 834,
+      "codAuxiliar": "661",
+      "descAuxiliar": "661_EL_ESTUDIO_AMOR_ES_AMOR_POST_VFX",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 835,
+      "codAuxiliar": "6530001",
+      "descAuxiliar": "6530001_TRONITO_FDD_DOCU_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 836,
+      "codAuxiliar": "6010003",
+      "descAuxiliar": "6010003_NATIVA_LHDD_DELIVERY_ADICIONAL_P",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 837,
+      "codAuxiliar": "659",
+      "descAuxiliar": "659_REDRUM20_BANDIDOS_ADR_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 838,
+      "codAuxiliar": "4500074",
+      "descAuxiliar": "4500074_ESTUDIO_100_BARES_PRUEBA_MAMA_ES",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 839,
+      "codAuxiliar": "662",
+      "descAuxiliar": "662_FRAME_MENGANNO_TRAILER_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 840,
+      "codAuxiliar": "663",
+      "descAuxiliar": "663_TRONITO_DOC_DEPAUL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 841,
+      "codAuxiliar": "664",
+      "descAuxiliar": "664_STORYLAB_ML_RENTAL_ESTUDIO_RRHH",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 842,
+      "codAuxiliar": "6640001",
+      "descAuxiliar": "6640001_STORYLAB_ML_RENTAL_ESTUDIO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 843,
+      "codAuxiliar": "665",
+      "descAuxiliar": "665_GDM_ANTARTIDA_ONLINE_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 844,
+      "codAuxiliar": "667",
+      "descAuxiliar": "667_BANIJAY_LOL_S02",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 845,
+      "codAuxiliar": "668",
+      "descAuxiliar": "668_OTROMUNDO_MARGARITA_POST_DIGITAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 846,
+      "codAuxiliar": "99IT",
+      "descAuxiliar": "99_IT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 847,
+      "codAuxiliar": "669",
+      "descAuxiliar": "669_BIOSEIF_COMUNICACION_INT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 848,
+      "codAuxiliar": "670",
+      "descAuxiliar": "670_MASTERCHEF_URU_POST_EDITORIAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 849,
+      "codAuxiliar": "6670003",
+      "descAuxiliar": "6670003_BANIJAY_LOL_S03",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 850,
+      "codAuxiliar": "6550001",
+      "descAuxiliar": "6550001_MANDARINA_J&J_02_RENTAL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 851,
+      "codAuxiliar": "6670004",
+      "descAuxiliar": "6670004_BANIJAY_LOL_S02-S03_LOG_GUION_TA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 852,
+      "codAuxiliar": "673",
+      "descAuxiliar": "673_EL_ESTUDIO_AL_CHILE_POST_ING_ONLINE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 853,
+      "codAuxiliar": "5850004",
+      "descAuxiliar": "5850004_OWIFILM_PRIVER_MASTER_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 854,
+      "codAuxiliar": "674",
+      "descAuxiliar": "674_AMC_CONCIERTO_CARO_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 855,
+      "codAuxiliar": "675",
+      "descAuxiliar": "675_AMC_GINASTERA_MUS_UNIVER_REAL_INT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 856,
+      "codAuxiliar": "677",
+      "descAuxiliar": "677_IDEASPORROSCA_EL_NIÑO_VIDEOPITCH",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 857,
+      "codAuxiliar": "1000",
+      "descAuxiliar": "1000_SGMO_Guimerans",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 858,
+      "codAuxiliar": "681",
+      "descAuxiliar": "681_FRAME_CHAMPIONS_TRAILER_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 859,
+      "codAuxiliar": "676",
+      "descAuxiliar": "676_GM_COPA_AMERICA_TRAILER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 860,
+      "codAuxiliar": "683",
+      "descAuxiliar": "683_GM_COPA_AMERICA_2024_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 861,
+      "codAuxiliar": "684",
+      "descAuxiliar": "684_GM_YENDO_INGESTA_COPRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 862,
+      "codAuxiliar": "685",
+      "descAuxiliar": "685_GM_QUE_PREFERIS_COPRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 863,
+      "codAuxiliar": "682",
+      "descAuxiliar": "682_PEGSA_FILMATIC_UNREAL_ON11E",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 864,
+      "codAuxiliar": "686",
+      "descAuxiliar": "686_ABRAKADABRA_KO_LA_OG_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 865,
+      "codAuxiliar": "680",
+      "descAuxiliar": "680_YR_ENTERTAINMENT_NOPREGUNT_PELI_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 866,
+      "codAuxiliar": "6430001",
+      "descAuxiliar": "6430001_MANDARINA_RENTAL_POST_EXT_25",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 867,
+      "codAuxiliar": "688",
+      "descAuxiliar": "688_GM_LLQL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 868,
+      "codAuxiliar": "678",
+      "descAuxiliar": "678_ORO_TLM_POST_ONLINE_COPRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 869,
+      "codAuxiliar": "679",
+      "descAuxiliar": "679_BVS_COMUNICACION_2024",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 870,
+      "codAuxiliar": "687",
+      "descAuxiliar": "687_YREARG_PORSCHE_PUBLI_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 871,
+      "codAuxiliar": "689",
+      "descAuxiliar": "689_POWWOW_CODIGO_INV_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 872,
+      "codAuxiliar": "690",
+      "descAuxiliar": "690_SABLANUT_EL_CONQUISTADOR_RRHH_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 873,
+      "codAuxiliar": "6730001",
+      "descAuxiliar": "6730001_EL_ESTUDIO_AL_CHILE_TRAILERS_POS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 874,
+      "codAuxiliar": "691",
+      "descAuxiliar": "691_GM_CONCACAF_CUP_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 875,
+      "codAuxiliar": "6880001",
+      "descAuxiliar": "6880001_GM_LLQL_MOTION_MODELADO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 876,
+      "codAuxiliar": "6880002",
+      "descAuxiliar": "6880002_GM_LLQL_ANIMACION_CAPSULAS_PARTE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 877,
+      "codAuxiliar": "6630001",
+      "descAuxiliar": "6630001_GM_DEPAUL_V2_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 878,
+      "codAuxiliar": "694",
+      "descAuxiliar": "694_GM_TRASCODEO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 879,
+      "codAuxiliar": "692",
+      "descAuxiliar": "692_TRINITY_TELENOVELAS_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 880,
+      "codAuxiliar": "695",
+      "descAuxiliar": "695_KOHIA_SHORT_CONTENT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 881,
+      "codAuxiliar": "696",
+      "descAuxiliar": "696_KAPOW_LIB_RENTAL_OFICINAS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 882,
+      "codAuxiliar": "6890002",
+      "descAuxiliar": "6890002_POWWOW_CODIGO_INV_ESPECIAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 883,
+      "codAuxiliar": "698",
+      "descAuxiliar": "698_FRAME_PRANDI_YTQEM",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 884,
+      "codAuxiliar": "697",
+      "descAuxiliar": "697_FRAME_IA_AUTOMATIZACION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 885,
+      "codAuxiliar": "699",
+      "descAuxiliar": "699_DIRECTV_DNEWS_RENTAL_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 886,
+      "codAuxiliar": "701",
+      "descAuxiliar": "701_CCM_ PRODUCCION_TECNICA_Y_POST_CANAL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 887,
+      "codAuxiliar": "700",
+      "descAuxiliar": "700_REEL_SHORT_CDDUJDF",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 888,
+      "codAuxiliar": "703",
+      "descAuxiliar": "703_TELECOM_JSA_PROD_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 889,
+      "codAuxiliar": "704",
+      "descAuxiliar": "704_GM_UNDIAANTESDEVIAJAR_POST",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 890,
+      "codAuxiliar": "705",
+      "descAuxiliar": "705_TOB_NOVELA_GRAFICA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 891,
+      "codAuxiliar": "702",
+      "descAuxiliar": "702_POWWOW_CDI2",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 892,
+      "codAuxiliar": "706",
+      "descAuxiliar": "706_FILM_HQLM_LUCAS_RIOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 893,
+      "codAuxiliar": "707",
+      "descAuxiliar": "707_DENTSU_SUPERCOPAESP_PAUTA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 894,
+      "codAuxiliar": "708",
+      "descAuxiliar": "708_LIOFERRO_FOOTY",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 895,
+      "codAuxiliar": "7070101",
+      "descAuxiliar": "7070101_DENTSU_BETANO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 896,
+      "codAuxiliar": "7070201",
+      "descAuxiliar": "7070201_PIPULHUB_BETWARRIOR",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 897,
+      "codAuxiliar": "7070001",
+      "descAuxiliar": "7070001_PAX_ASSISTANCE_PAUTA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 898,
+      "codAuxiliar": "710",
+      "descAuxiliar": "710_UNTREF_SHORT_CONTENT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 899,
+      "codAuxiliar": "5850005",
+      "descAuxiliar": "5850005_OWIFILM_PRIVIER_EXPORT",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 900,
+      "codAuxiliar": "711",
+      "descAuxiliar": "711_POWWOW_ARCHIVOS_ABIERTOS",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 901,
+      "codAuxiliar": "712",
+      "descAuxiliar": "712_OMAVA_STOP_VENICE_CONTROL",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 902,
+      "codAuxiliar": "713",
+      "descAuxiliar": "713_ALTERNATIVA_CONTENIDO_EUVAC",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 903,
+      "codAuxiliar": "714",
+      "descAuxiliar": "714_TRUE_VALIDATE_FPE",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 904,
+      "codAuxiliar": "715",
+      "descAuxiliar": "715_BVS_VIDEO_COMUNIC_INTERNO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 905,
+      "codAuxiliar": "717",
+      "descAuxiliar": "717_CASSARA_LAB_VIDEO_IA",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 906,
+      "codAuxiliar": "6830001",
+      "descAuxiliar": "6830001_GM_COPA_AMERICA_2024_REEDICION",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 907,
+      "codAuxiliar": "99BON",
+      "descAuxiliar": "99 - BONPLAND",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 908,
+      "codAuxiliar": "99VAL",
+      "descAuxiliar": "99 - VALDENEGRO",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 909,
+      "codAuxiliar": "719",
+      "descAuxiliar": "719_REELSHORT_2H_2026",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 910,
+      "codAuxiliar": "719H1",
+      "descAuxiliar": "719H1_REELSHORT_SURENDER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 911,
+      "codAuxiliar": "719H2",
+      "descAuxiliar": "719H2_REELSHORT_MYSECRETLOVER",
+      "habilitado": "S"
+    },
+    {
+      "idAuxiliar": 912,
+      "codAuxiliar": "7090001",
+      "descAuxiliar": "7090001_GM_CONCACAF_2026_BUDGET",
+      "habilitado": "S"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { nombreCentroCosto, cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
+import { nombreCentroCosto, cargarCentrosCosto, idOpcional, opcionesCentroCosto } from '../utils/centroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { BloqueEstado } from '../components/ui/BloqueEstado';
 import { useNavigate } from 'react-router-dom';
@@ -661,9 +661,10 @@ export const ProjectsPage: React.FC = () => {
                 <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
                 <select className="input-field py-2.5" required value={formData.metadata?.centroCostoId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: idOpcional(e.target.value) } }))}>
                   <option value="">Seleccionar del sistema...</option>
-                  {availableCostCenters.map((cc) => (
-                    <option key={cc._id} value={cc.data?.id}>
-                      {cc.name || cc.data?.nombre}
+                  {/* El código de FRAME como etiqueta; los inhabilitados no se ofrecen (ver `opcionesCentroCosto`). */}
+                  {opcionesCentroCosto(availableCostCenters, formData.metadata?.centroCostoId).map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.etiqueta}
                     </option>
                   ))}
                 </select>

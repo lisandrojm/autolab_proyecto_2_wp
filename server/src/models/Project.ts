@@ -12,6 +12,18 @@ export interface IProjectMetadata {
   sedeId: number;
   activo: boolean;
   centroCostoId: number;
+  /**
+   * DE DÓNDE SALIÓ ese `centroCostoId`: "tango" = lo puso la migración del catálogo.
+   *
+   * Es el resguardo que hace idempotente el remapeo (ver `services/centrosCostoImport.ts`): los ids
+   * viejos del catálogo (1–46) también son ids válidos del catálogo de Tango, así que sin esta marca
+   * una segunda corrida volvería a mover proyectos que ya estaban bien.
+   *
+   * TIENE QUE ESTAR DECLARADO ACÁ. Mongoose es `strict`: un campo que no está en el schema se
+   * DESCARTA EN SILENCIO y el update contesta OK. La primera corrida de la migración guardó los
+   * `centroCostoId` nuevos y perdió las 38 marcas por exactamente esto.
+   */
+  centroCostoOrigen?: string;
 }
 
 export interface IWorkScheduleDay {
@@ -213,6 +225,7 @@ const projectSchema = new Schema<IProject>(
       sedeId: { type: Number },
       activo: { type: Boolean },
       centroCostoId: { type: Number },
+      centroCostoOrigen: { type: String },
     },
     turnos: [{ type: Schema.Types.ObjectId, ref: "Shift", index: true }],
     areasConfig: [

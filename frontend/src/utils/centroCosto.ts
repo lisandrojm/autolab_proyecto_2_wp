@@ -1,5 +1,52 @@
+/*
+  EL CENTRO DE COSTO DE UN PROYECTO, COMO SE MUESTRA EN TODA LA PLATAFORMA.
+
+  Se muestra el CÓDIGO (`codAuxiliar`): «682», «99», «SinAsignar». Es el número real del centro en
+  Tango y es como lo nombra producción. Antes se mostraba `name`, que resultaba ser el mismo número
+  por casualidad —el ABM guardaba el código en el campo «nombre»—; ahora el código es un campo propio
+  y `name` quedó como su derivado, para el código viejo que todavía lo lee.
+*/
+
 /**
- * El NOMBRE del centro de costo de un proyecto.
+ * La etiqueta de un centro del catálogo. Un solo lugar, para que la tabla del ABM, los selects y la
+ * ficha del proyecto no puedan mostrar cosas distintas del mismo registro.
+ *
+ * El orden es el de la precisión: el código de Tango, después `name`/`data.nombre` —que es lo único
+ * que tienen los centros cargados antes del cambio— y nada si no hay ninguno.
+ */
+export const etiquetaCentroCosto = (cc: any): string => String(cc?.codAuxiliar || cc?.name || cc?.data?.nombre || "").trim();
+
+/** El id con el que el proyecto lo referencia. `idAuxiliar` y `data.id` se mantienen sincronizados. */
+export const idCentroCosto = (cc: any): number | null => {
+  const id = Number(cc?.idAuxiliar ?? cc?.data?.id);
+  return Number.isFinite(id) && id > 0 ? id : null;
+};
+
+/** ¿Está inhabilitado en Tango? Ausente cuenta como habilitado: los viejos no tienen el campo. */
+export const centroCostoInhabilitado = (cc: any): boolean => String(cc?.habilitado ?? "S").toUpperCase() === "N";
+
+/**
+ * Las opciones de un select de centro de costo.
+ *
+ * Los INHABILITADOS no se ofrecen —Tango dice que no se usan más— SALVO el que el proyecto ya tiene
+ * puesto: sacarlo de la lista haría que el select apareciera vacío sobre un proyecto que sí tiene
+ * centro, y guardar cualquier otro cambio de la ficha se lo borraría sin que nadie lo pidiera. Ése se
+ * muestra con «(inhabilitado)» para que se vea por qué conviene cambiarlo.
+ */
+export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): Array<{ id: number; etiqueta: string; descripcion: string; inhabilitado: boolean }> =>
+  (catalogo || [])
+    .map((cc) => ({ cc, id: idCentroCosto(cc) }))
+    .filter((x): x is { cc: any; id: number } => x.id !== null)
+    .filter((x) => !centroCostoInhabilitado(x.cc) || Number(idActual) === x.id)
+    .map((x) => ({
+      id: x.id,
+      etiqueta: etiquetaCentroCosto(x.cc) + (centroCostoInhabilitado(x.cc) ? " (inhabilitado)" : ""),
+      descripcion: String(x.cc?.descAuxiliar || x.cc?.data?.descripcion || "").trim(),
+      inhabilitado: centroCostoInhabilitado(x.cc),
+    }));
+
+/**
+ * El CÓDIGO del centro de costo de un proyecto.
  *
  * DOS FUENTES, Y LAS DOS HACEN FALTA:
  *
@@ -14,14 +61,15 @@
  * pantalla, y la segunda hace que el nombre se vea sin esperar un deploy.
  *
  * `ID: n` COMO ÚLTIMO RECURSO, NO UN GUION. Un proyecto puede apuntar a un centro de costo que no
- * está en el catálogo —hoy hay 12, con ids 33 a 46, creados en FRAME después de la última carga—, y
+ * está en el catálogo —hoy hay 12, con ids 33 a 46, creados en Tango después de la última carga—, y
  * un guion diría «no tiene» cuando lo que pasa es «apunta a uno que falta». Son cosas distintas y la
  * segunda hay que poder verla.
  */
 export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCosto?: any }; metadata?: { centroCostoId?: number } }, catalogo: any[] = []): string => {
   const resuelto = proyecto?.metadataResolutions?.centroCosto;
-  const delServer = resuelto?.name || resuelto?.data?.nombre;
-  if (delServer) return String(delServer);
+  // `codAuxiliar` primero: es el código de Tango. `name` es su derivado y lo único que traen los viejos.
+  const delServer = etiquetaCentroCosto(resuelto);
+  if (delServer) return delServer;
 
   const id = proyecto?.metadata?.centroCostoId;
   /*
@@ -35,28 +83,22 @@ export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCost
   */
   if (id == null || Number(id) === 0) return "";
 
-  const delCatalogo = catalogo.find((c) => Number(c?.data?.id) === Number(id));
-  return String(delCatalogo?.name || delCatalogo?.data?.nombre || `ID: ${id}`);
+  const delCatalogo = catalogo.find((c) => idCentroCosto(c) === Number(id));
+  return etiquetaCentroCosto(delCatalogo) || `ID: ${id}`;
 };
 
 /**
- * TODOS los centros de costo, de los DOS catálogos que existen.
+ * TODOS los centros de costo: SÓLO los de `/centros-costo`, el catálogo que se administra.
  *
- * Hay dos, y no son el mismo: `info?type=centro-costo` (colección `infos`) es de donde salían los
- * selects, y `/centros-costo` (modelo `CentroCosto`) es el que administra Configuración → Centros de
- * Costos, con su alta, su edición y su import de Excel.
+ * ACÁ SE UNÍAN DOS CATÁLOGOS y ya no: `infos` con `type: "centro-costo"` tiene la numeración VIEJA
+ * (ids 1–46) y esos mismos ids existen ahora como `idAuxiliar` de otros centros de Tango. Unirlos
+ * ofrecería dos centros distintos con el mismo id y resolvería el nombre del que quedara último: un
+ * proyecto con el id 1 mostraría «682» o «99» según el orden del `Map`. La unión tenía sentido cuando
+ * las dos colecciones eran la misma lista con distinto dueño; desde el import de Tango es un riesgo
+ * sin beneficio, porque el catálogo del ABM es el completo (806).
  *
- * Mientras tuvieron los mismos 32 registros la diferencia no se veía. En cuanto alguien cargó 15 más
- * desde el ABM, el select del proyecto siguió ofreciendo 32: los nuevos existían, se podían editar, y
- * no se podían elegir. La pantalla que los administra y la que los usa miraban lugares distintos.
- *
- * Se devuelven UNIDOS y no reemplazados: quedarse solo con el del ABM haría desaparecer del select
- * cualquiera que exista únicamente en `infos` y que algún proyecto ya esté usando —y un proyecto no
- * puede perder su centro de costo porque cambiamos de dónde leemos la lista—. Ante el mismo `data.id`
- * gana el del ABM, que es el que una persona puede corregir.
- *
- * Los que no tienen `data.id` se descartan: el proyecto guarda un número, así que uno sin id no se
- * puede elegir ni resolver. Aparece en el ABM con «—» en la columna ID Externo.
+ * Los que no tienen id se descartan: el proyecto guarda un número, así que uno sin id no se puede
+ * elegir ni resolver.
  */
 /**
  * El valor de un `<select>` de id numérico, listo para el payload.
@@ -86,18 +128,21 @@ export const cargarCentrosCosto = async (apiUrl: string, headers: Record<string,
       return [];
     }
   };
-  const [deInfo, delAbm] = await Promise.all([traer("/info?type=centro-costo"), traer("/centros-costo")]);
+  const delAbm = await traer("/centros-costo");
   const porId = new Map<number, any>();
-  for (const c of [...deInfo, ...delAbm]) {
-    const id = Number(c?.data?.id);
+  for (const c of delAbm) {
     /*
-      Se descarta el id 0, que es lo que queda cuando alguien crea un centro de costo SIN ID Externo.
-      No es un id: es el default del campo numérico, y se comporta como «vacío» en cada chequeo por
-      verdadero de la aplicación —el propio proyecto lo muestra con `centroCostoId ? … : '—'`—. Un
-      centro con id 0 aparecería en el select y no se podría guardar; mejor que no aparezca y que se
-      le cargue un ID Externo real.
+      Sin id no entra. Es lo que queda cuando alguien carga un centro sin el ID de Tango: se comporta
+      como «vacío» en cada chequeo por verdadero de la aplicación —la ficha del proyecto lo muestra con
+      `centroCostoId ? … : '—'`—, así que aparecería en el select y no se podría guardar.
     */
-    if (Number.isFinite(id) && id > 0) porId.set(id, c);
+    const id = idCentroCosto(c);
+    if (id !== null) porId.set(id, c);
   }
-  return [...porId.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+  /*
+    Ordenado por código y con `numeric`: son números guardados como texto, y sin eso «100» va antes de
+    «99» y «1000» antes de «682». Con 806 centros, encontrar el propio en una lista mal ordenada es el
+    trabajo que este orden ahorra.
+  */
+  return [...porId.values()].sort((a, b) => etiquetaCentroCosto(a).localeCompare(etiquetaCentroCosto(b), "es", { numeric: true }));
 };

@@ -42,10 +42,12 @@ import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
  */
 async function filtroBusquedaProyecto(q) {
     const regex = { $regex: createFuzzySearchRegex(String(q)), $options: "i" };
-    const centros = await CentroCosto.find({ $or: [{ name: regex }, { "data.nombre": regex }] })
-        .select("data.id")
+    // Por código, por descripción y por los derivados: quien busca escribe «682» o «PEGSA», y las dos
+    // cosas están en el mismo registro desde que el catálogo viene de FRAME.
+    const centros = await CentroCosto.find({ $or: [{ codAuxiliar: regex }, { descAuxiliar: regex }, { name: regex }, { "data.nombre": regex }] })
+        .select("idAuxiliar data.id")
         .lean();
-    const ids = centros.map((c) => c?.data?.id).filter((n) => typeof n === "number");
+    const ids = centros.map((c) => Number(c?.idAuxiliar ?? c?.data?.id)).filter((n) => Number.isFinite(n));
     const comoNumero = Number(String(q).trim());
     if (Number.isFinite(comoNumero) && !ids.includes(comoNumero))
         ids.push(comoNumero);
@@ -415,26 +417,21 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
         });
         if (centroCostoIds.size > 0) {
             /*
-              SE BUSCA EN LOS DOS CATÁLOGOS, y no es una precaución teórica.
+              SÓLO EL CATÁLOGO DEL ABM (`centros-costo`). Antes se mezclaba con `Info type:"centro-costo"`.
       
-              Los centros de costo viven duplicados: `Info` con `type: "centro-costo"` —de donde salía esta
-              resolución— y el modelo `CentroCosto`, colección `centros-costo`, que es el que administra
-              Configuración → Centros de Costos y el que exporta e importa por Excel. Hoy los dos tienen los
-              mismos 32 ids, así que la diferencia no se nota; pero dar de alta uno desde el ABM escribe SOLO
-              en `centros-costo`, y la resolución seguiría sin encontrarlo. El síntoma sería exactamente el
-              de hoy —«ID: 46» en la columna— después de haberlo cargado, que es la peor forma de un bug:
-              hiciste lo correcto y no pasó nada.
+              Esa unión existía porque los dos tenían los mismos ids y el ABM era el único que se podía
+              corregir. Desde que el catálogo se importa de FRAME dejó de ser inofensiva: `infos` conserva la
+              numeración vieja (1–46) y esos mismos ids existen ahora como `idAuxiliar` de otros centros. Un
+              proyecto con el id 1 resolvería contra «682» en `infos` y contra «99» en FRAME: la unión
+              mostraría el centro equivocado, que es peor que no mostrar ninguno.
       
-              Se prefiere el del ABM porque es el que una persona puede corregir.
+              `idAuxiliar` es lo que guarda el proyecto, y `data.id` se mantiene sincronizado con él (ver el
+              modelo), así que se busca por los dos: los centros anteriores al cambio sólo tienen `data.id`.
             */
             const ids = Array.from(centroCostoIds);
-            const [propios, deInfo] = await Promise.all([
-                CentroCosto.find({ "data.id": { $in: ids } }).lean(),
-                Info.find({ type: "centro-costo", "data.id": { $in: ids } }).lean(),
-            ]);
+            const propios = await CentroCosto.find({ $or: [{ idAuxiliar: { $in: ids } }, { "data.id": { $in: ids } }] }).lean();
             const ccMap = new Map();
-            deInfo.forEach((c) => ccMap.set(String(c.data?.id), c));
-            propios.forEach((c) => ccMap.set(String(c.data?.id), c));
+            propios.forEach((c) => ccMap.set(String(c.idAuxiliar ?? c.data?.id), c));
             projects.forEach((p) => {
                 if (p.metadata?.centroCostoId) {
                     const cc = ccMap.get(String(p.metadata.centroCostoId));
@@ -912,10 +909,8 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
                         .lean()
                     : null,
                 sedeId ? Info.findOne({ type: "sede", "data.id": sedeId }).lean() : null,
-                // Los dos catálogos, con la misma preferencia que el listado: ver el comentario de arriba.
-                centroCostoId
-                    ? (async () => (await CentroCosto.findOne({ "data.id": centroCostoId }).lean()) || (await Info.findOne({ type: "centro-costo", "data.id": centroCostoId }).lean()))()
-                    : null,
+                // Sólo el catálogo del ABM, por la misma razón que el listado: ver el comentario de arriba.
+                centroCostoId ? CentroCosto.findOne({ $or: [{ idAuxiliar: centroCostoId }, { "data.id": centroCostoId }] }).lean() : null,
                 // Contar personas desde la colección users_&_projects
                 externalProjId ? UserProject.countDocuments({ externalProjectId: externalProjId }) : null,
             ]);

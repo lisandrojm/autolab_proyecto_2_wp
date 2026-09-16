@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
+import { cargarCentrosCosto, idOpcional, nombreCentroCosto, opcionesCentroCosto } from '../utils/centroCosto';
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
@@ -444,8 +444,9 @@ export const ProjectDetailPage: React.FC = () => {
                       onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: idOpcional(e.target.value) } }))}
                     >
                       <option value="">Seleccionar del sistema...</option>
-                      {availableCostCenters.map(cc => (
-                        <option key={cc._id} value={cc.data?.id}>{cc.name || cc.data?.nombre}</option>
+                      {/* El código de FRAME como etiqueta; los inhabilitados no se ofrecen (ver `opcionesCentroCosto`). */}
+                      {opcionesCentroCosto(availableCostCenters, projectForm.metadata?.centroCostoId).map((o) => (
+                        <option key={o.id} value={o.id}>{o.etiqueta}</option>
                       ))}
                     </select>
                   </div>
@@ -855,7 +856,8 @@ export const ProjectDetailPage: React.FC = () => {
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Centro de Costo</span>
                       {(() => {
-                        const val = project.metadataResolutions?.centroCosto?.name || project.metadataResolutions?.centroCosto?.data?.nombre || (project.metadata?.centroCostoId ? `ID: ${project.metadata.centroCostoId}` : "");
+                        // Un solo lugar decide qué se muestra: el código de FRAME (ver `nombreCentroCosto`).
+                        const val = nombreCentroCosto(project, availableCostCenters);
                         return val ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">{val}</span>
                         ) : (
@@ -1078,7 +1080,7 @@ export const ProjectDetailPage: React.FC = () => {
                     Centro de Costo
                   </label>
                   <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">
-                    {project.metadataResolutions.centroCosto.name || project.metadataResolutions.centroCosto.data?.nombre}
+                    {nombreCentroCosto(project, availableCostCenters)}
                   </span>
                 </div>
               )}

@@ -145,7 +145,7 @@ export const SolicitudesPage: React.FC = () => {
     const r = await sweetAlert.confirm("¿Eliminar solicitud?", `Se eliminará definitivamente la solicitud de ${s.nombre}. Esta acción no se puede deshacer.`, "Sí, eliminar");
     if (!r.isConfirmed) return;
     try {
-      await usersAPI.rejectSolicitud(s._id);
+      await usersAPI.eliminarSolicitud(s._id);
       sweetAlert.success("Solicitud eliminada", "La solicitud fue eliminada.");
       cargar(page);
     } catch (error: any) {

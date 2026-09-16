@@ -13,6 +13,7 @@ import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notifi
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
+import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
@@ -1134,17 +1135,23 @@ const permisoParaCrearUsuario = (req, res, next) => {
 
   Cualquier otro caso sigue pidiendo `admin_users:view`, como antes.
 */
-const permisoSobreSolicitudPropia = (soloCancelar) => async (req, res, next) => {
+const permisoSobreSolicitudPropia = (opciones = {}) => async (req, res, next) => {
     const admin = requirePermission("admin_users:view");
     try {
         if (!Types.ObjectId.isValid(String(req.params.id)))
             return admin(req, res, next);
         const objetivo = await User.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).select("metadata.isSolicitud metadata.solicitudStatus metadata.solicitudCreadaPor").lean();
         const m = objetivo?.metadata || {};
-        const pendiente = m.isSolicitud === true && (m.solicitudStatus || "pendiente") === "pendiente";
+        const estado = String(m.solicitudStatus || (m.isSolicitud ? "pendiente" : ""));
+        /*
+          Editar y cancelar son sobre una PENDIENTE. Borrar (`incluirCerradas`) va también sobre una
+          rechazada o cancelada —es justo lo que hay que poder limpiar del historial—, pero nunca sobre
+          una APROBADA: eso ya es una contratación con contrato y se deshace desde el panel.
+        */
+        const alcanzada = opciones.incluirCerradas ? !!estado && estado !== "aprobada" : m.isSolicitud === true && estado === "pendiente";
         const propia = !m.solicitudCreadaPor || String(m.solicitudCreadaPor) === String(req.user.userId);
-        const accionPermitida = !soloCancelar || String((req.body || {}).status || "") === "cancelada";
-        if (pendiente && propia && accionPermitida) {
+        const accionPermitida = !opciones.soloCancelar || String((req.body || {}).status || "") === "cancelada";
+        if (alcanzada && propia && accionPermitida) {
             // Marca para el handler: con el permiso del móvil, la solicitud NO puede dejar de ser una solicitud.
             req.solicitudPropiaDelMovil = true;
             return requireAnyPermission("admin_users:view", MOBILE_USERS)(req, res, next);
@@ -1556,7 +1563,7 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
     }
 });
 // PATCH /users/:id - Actualizar usuario
-router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudPropia(false), async (req, res) => {
+router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudPropia(), async (req, res) => {
     try {
         const data = updateUserSchema.parse(req.body);
         normalizarRolesFrame(data.metadata);
@@ -1864,7 +1871,7 @@ router.patch("/:id/confirmar-cambio-cuenta", requireTenant, authenticateToken, r
 });
 // PATCH /users/:id/solicitud-status - Cambiar el estado de una solicitud SIN borrarla. Se permite
 // volver a "pendiente" para deshacer un rechazo/cancelación hecho por error.
-router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoSobreSolicitudPropia(true), async (req, res) => {
+router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoSobreSolicitudPropia({ soloCancelar: true }), async (req, res) => {
     try {
         const { status, motivo } = req.body || {};
         if (!["rechazada", "cancelada", "pendiente"].includes(String(status))) {
@@ -1927,6 +1934,61 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoS
     catch (error) {
         console.error("Update solicitud status error:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  BORRAR UNA SOLICITUD DE CONTRATACIÓN (no una persona).
+
+  Cancelar la deja registrada como cancelada, que es lo correcto cuando hubo un pedido real y se dio de
+  baja. Pero una prueba o una solicitud cargada dos veces no aporta historial: ensucia la lista de
+  Contratación para siempre y no había forma de sacarla desde la app —`DELETE /users/:id` pide permiso
+  de administración, porque borra personas—.
+
+  NUNCA UNA APROBADA: eso ya es una contratación con contrato en la ficha de alguien, y deshacerla es
+  darle de baja el contrato desde el panel, no borrar el pedido.
+
+  Se deshace además lo que la solicitud había dejado alrededor:
+    · la decisión de renovación, si era una: sin eso el contrato quedaba fuera de «Por vencer» para
+      siempre, esperando una solicitud que ya no existe. Borrándola, vuelve a aparecer para decidir.
+    · los avisos que hablaban de ella: contarían una novedad que no lleva a ninguna parte.
+    · el lugar en el cliente, el proyecto y el conteo del tenant, que es lo que después se ve como una
+      fila en blanco en cualquier listado.
+*/
+router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSolicitudPropia({ incluirCerradas: true }), async (req, res) => {
+    try {
+        const id = req.params.id;
+        const solicitud = await User.findOne({ _id: id, tenantId: req.tenantObjectId }).select("firstName lastName email metadata.fullName metadata.isSolicitud metadata.solicitudStatus").lean();
+        if (!solicitud) {
+            res.status(404).json({ error: "Solicitud no encontrada" });
+            return;
+        }
+        const m = solicitud.metadata || {};
+        if (m.isSolicitud !== true && !m.solicitudStatus) {
+            res.status(400).json({ error: "Esto no es una solicitud de contratación." });
+            return;
+        }
+        if (m.solicitudStatus === "aprobada") {
+            res.status(409).json({ error: "Esta solicitud ya fue aprobada: es una contratación. Para deshacerla hay que dar de baja el contrato desde el panel." });
+            return;
+        }
+        await User.deleteOne({ _id: id, tenantId: req.tenantObjectId });
+        await Promise.all([
+            Tenant.findByIdAndUpdate(req.tenantObjectId, { $pull: { userIds: id }, $inc: { "usage.users.current": -1 } }),
+            Project.updateMany({ tenantId: req.tenantObjectId, assignedUsers: id }, { $pull: { assignedUsers: id } }),
+            Client.updateMany({ tenantId: req.tenantObjectId, "usuarios.userId": id }, { $pull: { usuarios: { userId: id } } }),
+            UserProject.deleteMany({ userId: id }),
+            RenovacionContrato.deleteMany({ tenantId: req.tenantObjectId, solicitudId: id }),
+            Notification.deleteMany({ tenantId: req.tenantObjectId, refId: id }),
+        ]);
+        // El contrato que esperaba esta renovación vuelve a «Por vencer»: la lista está cacheada.
+        olvidarContratosPorVencer();
+        const nombre = m.fullName || `${solicitud.firstName || ""} ${solicitud.lastName || ""}`.trim() || solicitud.email;
+        console.log(`[SOLICITUD] ${req.user.userId} borró la solicitud de ${nombre} (${id})`);
+        res.json({ success: true });
+    }
+    catch (error) {
+        console.error("Delete solicitud error:", error);
+        res.status(500).json({ error: "No se pudo borrar la solicitud." });
     }
 });
 // PUT /users/:id/approve-solicitud - Aprobar solicitud de alta y convertir en miembro del equipo

@@ -137,8 +137,14 @@ const helpResources = {
 
       // Centros de Costos
       'centrosCosto.title': 'Información de Centros de Costos',
-      'centrosCosto.description': 'Catálogo de centros de costo para imputar proyectos y gastos.',
-      'centrosCosto.items': ['**Centro de costo**: Unidad contable a la que se imputan proyectos, contratos y gastos.', '**Uso**: Se asigna a cada proyecto para agrupar y reportar costos por área o unidad de negocio.', '**Gestión**: Crear, editar y eliminar centros de costo, o importarlos desde un Excel.'],
+      'centrosCosto.description': 'El catálogo de centros de costo, tal como está en Tango. Se importa; no se carga a mano.',
+      'centrosCosto.items': [
+        '**Código**: El número real del centro («682», «99»). Es lo que se muestra en toda la plataforma —el listado de proyectos, la ficha, el selector— y es como lo nombra producción.',
+        '**Descripción**: Como figura en Tango. Suele empezar con el mismo código.',
+        '**Habilitado**: Un centro en «N» está dado de baja en Tango: no se ofrece para elegir en un proyecto. Los proyectos que ya lo tenían lo conservan, y ahí se muestra como «(inhabilitado)» para que se vea que conviene cambiarlo.',
+        '**Importar JSON**: El catálogo completo son 806 centros y viene del export de Tango. «Reemplazar todo» borra lo que hay y lo deja igual al archivo, y con «Remapear proyectos» corrige a qué centro apunta cada proyecto —cruzando por código— para que uno que decía «682» siga diciendo «682». Antes de escribir valida el archivo entero: si algo está mal, no toca nada.',
+        '**Alta a mano**: Queda para el caso puntual de un centro que todavía no está en el export. El id interno lo trae el import, no se edita en esta pantalla.',
+      ],
 
       // Contratos (config / contratos-frame)
       'contratosFrame.title': 'Información de Contratos',

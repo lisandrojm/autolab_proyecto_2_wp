@@ -818,8 +818,16 @@ class UsersAPI {
     return user;
   }
 
-  async rejectSolicitud(id: string): Promise<void> {
-    await axios.delete(`/users/${id}`, { headers: this.getHeaders() });
+  /**
+   * BORRA la solicitud (no la persona). Nunca una aprobada: eso ya es una contratación.
+   *
+   * Va a `/users/:id/solicitud` y no a `/users/:id`: ese borra personas y pide permiso de
+   * administración. Este además deshace lo que la solicitud dejó —la decisión de renovación, que si no
+   * deja el contrato fuera de «Por vencer» esperando un pedido que ya no existe, y sus avisos— y lo
+   * puede usar quien la pidió desde la app.
+   */
+  async eliminarSolicitud(id: string): Promise<void> {
+    await axios.delete(`/users/${id}/solicitud`, { headers: this.getHeaders() });
     emitUsersChanged("delete", id);
   }
 }

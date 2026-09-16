@@ -18,6 +18,7 @@ import { toObjectIdOrNull } from "../utils/mongoIds.js";
 import { MOBILE_REGISTRO } from "../utils/permisosMobile.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import UserProject from "../models/UserProject.js";
+import { Notification } from "../models/Notification.js";
 const router = Router();
 /*
   CUÁNTO DURAN LOS LINKS DEL MÓVIL: lo decide cada tenant (Usuarios → Link → Links), 7 días si nunca se tocó.
@@ -483,6 +484,8 @@ router.delete("/mis-registrados/:userId", requireTenant, authenticateToken, requ
             Client.updateMany({ tenantId, "usuarios.userId": userId }, { $pull: { usuarios: { userId } } }),
             Project.updateMany({ tenantId, assignedUsers: userId }, { $pull: { assignedUsers: userId } }),
             Tenant.findByIdAndUpdate(tenantId, { $pull: { userIds: userId }, $inc: { "usage.users.current": -1 } }),
+            // Y los avisos que hablaban de este registro: contarían una novedad que ya no lleva a ninguna parte.
+            Notification.deleteMany({ tenantId, refId: userId }),
         ]);
         const nombre = persona.metadata?.fullName || `${persona.firstName || ""} ${persona.lastName || ""}`.trim() || persona.email;
         console.log(`[REGISTRO] ${req.user.userId} borró el registro de ${nombre} (${userId})`);
