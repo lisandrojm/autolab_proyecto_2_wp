@@ -26,8 +26,8 @@ import { EmployeeContractsModal } from "../components/team/EmployeeContractsModa
 import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from "../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../components/contratacion/JornadasSolicitud";
 import { ImportesDelContrato } from "../components/contratacion/ImportesDelContrato";
-import { CampoHora } from "../components/contratacion/CampoHora";
-import { HORAS_DEL_DIA, horasDelHorario, sumarMinutos } from "../utils/horario";
+import { SelectorHora } from "../components/contratacion/SelectorHora";
+import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from "../utils/horario";
 import { erroresDeJornadas, jornadasDelCalendario, mesesEquivalentes } from "../utils/jornadas";
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
@@ -945,6 +945,19 @@ export const ProjectTeamPage: React.FC = () => {
   const limiteDiasWizard = contratoDelWizard?.data?.diasPorSemana ?? null;
   const duracionHorarioWizard = horasDelHorario(wizardData.hora_inicio, wizardData.hora_fin);
   const horarioExcedidoWizard = limiteHorasWizard != null && duracionHorarioWizard != null && duracionHorarioWizard > limiteHorasWizard;
+  /*
+    LOS TURNOS ELEGIDOS A LOS QUE EL HORARIO SE LES SALE (ver `horarioDentroDelTurno`).
+
+    Que alguien entre antes o se quede después de su turno es legítimo y hay que poder contratarlo así;
+    lo que no puede pasar es que se guarde sin que nadie lo haya visto. Por eso es un aviso, no un error.
+  */
+  const turnosFueraDeHorario = useMemo(() => {
+    if (!wizardData.hora_inicio || !wizardData.hora_fin) return [];
+    return wizardData.areaShiftAssignments
+      .flatMap((a) => a.shiftIds.map((id) => allShifts.find((s) => String(s._id) === String(id))))
+      .filter((sh): sh is NonNullable<typeof sh> => !!sh && !!sh.startTime && !!sh.endTime)
+      .filter((sh) => !horarioDentroDelTurno(sh.startTime, sh.endTime, wizardData.hora_inicio, wizardData.hora_fin));
+  }, [wizardData.areaShiftAssignments, wizardData.hora_inicio, wizardData.hora_fin, allShifts]);
   useEffect(() => {
     if (limiteDiasWizard == null) return;
     setWizardData((prev) => {
@@ -4234,24 +4247,19 @@ export const ProjectTeamPage: React.FC = () => {
                       </label>
                       <div className="space-y-1.5">
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Entrada</label>
-                        <CampoHora
+                        <SelectorHora
                           valor={wizardData.hora_inicio}
                           onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))}
+                          etiqueta="Entrada"
                           placeholder="Entrada"
-                          listId="horas-enteras-wizard"
                           className="input-field w-full"
                         />
                       </div>
                       <div className="space-y-1.5">
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Salida</label>
-                        <CampoHora valor={wizardData.hora_fin} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_fin: h }))} placeholder="Salida" listId="horas-enteras-wizard" className="input-field w-full" />
+                        {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
+                        <SelectorHora valor={wizardData.hora_fin} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_fin: h }))} etiqueta="Salida" placeholder="Salida" className="input-field w-full" desde={wizardData.hora_inicio} />
                       </div>
-                      {/* Las sugerencias de los dos campos: horas enteras. Lo que no lo es se escribe. */}
-                      <datalist id="horas-enteras-wizard">
-                        {HORAS_DEL_DIA.map((h) => (
-                          <option key={h} value={h} />
-                        ))}
-                      </datalist>
                       {horarioExcedidoWizard ? (
                         <p className="md:col-span-2 text-[11px] font-medium text-red-600 dark:text-red-400 ml-1 -mt-2">
                           El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
@@ -4259,6 +4267,12 @@ export const ProjectTeamPage: React.FC = () => {
                       ) : (
                         <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">
                           Se completa con el horario del turno elegido arriba; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ""}
+                        </p>
+                      )}
+                      {/* Se sale del turno: se avisa y se guarda igual (ver `turnosFueraDeHorario`). */}
+                      {turnosFueraDeHorario.length > 0 && (
+                        <p className="md:col-span-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 ml-1 -mt-1">
+                          Ojo: {wizardData.hora_inicio} a {wizardData.hora_fin} se sale {turnosFueraDeHorario.length === 1 ? "del turno" : "de los turnos"} {turnosFueraDeHorario.map((sh) => `${sh.name} (${sh.startTime} a ${sh.endTime})`).join(", ")}. Se puede guardar igual.
                         </p>
                       )}
                     </div>

@@ -4,8 +4,17 @@ import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, 
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
-import { UserRegistrationDetailModal } from "../components/UserRegistrationDetailModal";
-import { User } from "../../../../api/users";
+/*
+  EL DETALLE ES EL MISMO QUE EN EL PANEL.
+
+  Antes había uno propio de la app («Detalles del Alta») que mostraba otra cosa que lo cargado: el área
+  salía de un campo que una solicitud nunca llena, la categoría aparecía hasta en un servicio —que no
+  la tiene— y faltaban el tipo de contrato, la empresa, los días, las jornadas y los importes. Se
+  reemplazó por el compartido: lo que se ve acá es exactamente lo que se pidió.
+*/
+import { SolicitudDetalleModal } from "../../../../components/solicitudes/SolicitudDetalleModal";
+import { solicitudDesdeUser, useCatalogosDeSolicitudes } from "../../../../components/solicitudes/SolicitudesTable";
+import { User, usersAPI } from "../../../../api/users";
 import SectionHeader from "../components/SectionHeader";
 import { contratosPorVencerAPI, ContratoPorVencer } from "../../../../api/contratosPorVencer";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -36,6 +45,9 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  /** Los catálogos con los que el detalle resuelve rol empresa, categoría y trámite. */
+  const catalogosSolicitudes = useCatalogosDeSolicitudes();
+  const [cancelando, setCancelando] = useState(false);
   /** Qué solicitudes son nuevas (aviso sin leer) y cómo marcarlas leídas, de a una o todas. */
   const novedades = useNovedades([NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA]);
 
@@ -161,6 +173,31 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         })}
       </div>
     );
+  };
+
+  /*
+    CANCELAR LA SOLICITUD: la da de baja quien la pidió, mientras nadie la decidió todavía.
+
+    NO SE BORRA: queda con estado «cancelada», para que el historial diga que se pidió y se dio de baja
+    —y no que nunca existió—.
+  */
+  const cancelarSolicitud = async () => {
+    if (!selectedUser) return;
+    const nombre = selectedUser.metadata?.fullName || `${selectedUser.firstName || ""} ${selectedUser.lastName || ""}`.trim();
+    const r: any = await sweetAlert.confirm("¿Cancelar la solicitud?", `La solicitud de ${nombre} queda cancelada y no se va a aprobar.`, "Sí, cancelar", "No");
+    if (!(r === true || r?.isConfirmed)) return;
+    setCancelando(true);
+    try {
+      await usersAPI.setSolicitudStatus(selectedUser._id, "cancelada");
+      sweetAlert.success("Solicitud cancelada", "Quedó registrada como cancelada.");
+      setShowDetailModal(false);
+      setSelectedUser(null);
+      refetch();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo cancelar", e?.response?.data?.error || "Probá de nuevo en un momento.");
+    } finally {
+      setCancelando(false);
+    }
   };
 
   const handleEdit = (user: User) => {
@@ -312,19 +349,19 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         }}
       />
 
-      <UserRegistrationDetailModal
+      {/* `solicitudCompleta`: la app ya la tiene del listado, y pedirla por id exige permiso de administración. */}
+      <SolicitudDetalleModal
         isOpen={showDetailModal}
         onClose={() => {
           setShowDetailModal(false);
           setSelectedUser(null);
         }}
-        user={selectedUser}
-        onEdit={handleEdit}
-        onCancelled={() => {
-          setShowDetailModal(false);
-          setSelectedUser(null);
-          refetch();
-        }}
+        solicitud={selectedUser ? solicitudDesdeUser(selectedUser) : null}
+        catalogos={catalogosSolicitudes}
+        solicitudCompleta={selectedUser}
+        onEditar={() => selectedUser && handleEdit(selectedUser)}
+        onCancelar={() => void cancelarSolicitud()}
+        cancelando={cancelando}
       />
     </div>
   );

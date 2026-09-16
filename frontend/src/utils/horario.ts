@@ -74,3 +74,26 @@ export const sumarMinutos = (hhmm: string, minutos: number): string => {
  * («08:30») se escribe a mano, y `mascaraHora` lo formatea.
  */
 export const HORAS_DEL_DIA: string[] = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
+
+/*
+  ¿EL HORARIO ENTRA DENTRO DEL TURNO?
+
+  El turno dice de cuándo a cuándo se cubre el puesto; el horario, cuándo entra y sale ESTA persona.
+  Casi siempre coinciden —el horario se completa con el del turno—, pero alguien puede entrar antes o
+  quedarse después, y eso es legítimo: hay que poder pedirlo, avisando que se sale del turno.
+
+  Devuelve `true` cuando el horario está contenido en la ventana del turno (y por lo tanto no hay nada
+  que avisar). Los turnos que cruzan la medianoche (18 a 00, 00 a 06) se miden como tales, igual que un
+  horario de 22 a 02: por eso se prueba la ventana corrida un día para atrás y para adelante. Sin datos
+  suficientes devuelve `true`: no se avisa de algo que no se puede afirmar.
+*/
+export const horarioDentroDelTurno = (inicioTurno: string, finTurno: string, entrada: string, salida: string): boolean => {
+  const d = aMinutos(inicioTurno);
+  const f0 = aMinutos(finTurno);
+  const e = aMinutos(entrada);
+  const s0 = aMinutos(salida);
+  if (d === null || f0 === null || e === null || s0 === null) return true;
+  const f = f0 <= d ? f0 + 1440 : f0;
+  const s = s0 <= e ? s0 + 1440 : s0;
+  return [-1440, 0, 1440].some((corrimiento) => d + corrimiento <= e && s <= f + corrimiento);
+};

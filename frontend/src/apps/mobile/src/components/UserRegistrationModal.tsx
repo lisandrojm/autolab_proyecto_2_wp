@@ -22,9 +22,9 @@ import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfi
 import { fuzzyMatch } from "../../../../utils/searchHelpers";
 import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeContrato } from "../../../../utils/tramiteImpositivo";
 import { claveOrdenTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
-import { CampoHora } from "../../../../components/contratacion/CampoHora";
+import { SelectorHora } from "../../../../components/contratacion/SelectorHora";
 import { ImportesDelContrato } from "../../../../components/contratacion/ImportesDelContrato";
-import { horasDelHorario, HORAS_DEL_DIA, sumarMinutos } from "../../../../utils/horario";
+import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from "../../../../utils/horario";
 import { esContratoVigente, fechaISO, getContratoActivo } from "../../../../utils/contratoVigencia";
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
@@ -868,6 +868,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     setFormData((p) => (p.inTime === inicio && p.outTime === fin ? p : { ...p, inTime: inicio, outTime: fin }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areaTurnoElegido]);
+
+  /*
+    ¿El horario elegido se sale del turno? (ver `horarioDentroDelTurno`). Sólo para avisar: no frena.
+  */
+  const fueraDelTurno = !!areaTurnoElegido?.horario && !!formData.inTime && !!formData.outTime && !horarioDentroDelTurno(areaTurnoElegido.inicio, areaTurnoElegido.fin, formData.inTime, formData.outTime);
 
   const candidatosAReemplazar = useMemo(() => {
     if (formData.projectIds.length === 0) return [];
@@ -1896,18 +1901,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               Modificar Horario (Entrada - Salida)*
             </label>
             <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <CampoHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} placeholder="Entrada" listId="horas-enteras" className={CLASE_HORA} />
+              <div className="flex-1">
+                <SelectorHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} etiqueta="Entrada" placeholder="Entrada" className={CLASE_HORA} />
               </div>
               <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
-              {/* Las sugerencias de los dos campos: horas enteras. */}
-              <datalist id="horas-enteras">
-                {HORAS_DEL_DIA.map((h) => (
-                  <option key={h} value={h} />
-                ))}
-              </datalist>
-              <div className="relative flex-1">
-                <CampoHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} placeholder="Salida" listId="horas-enteras" className={CLASE_HORA} />
+              <div className="flex-1">
+                {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
+                <SelectorHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} etiqueta="Salida" placeholder="Salida" className={CLASE_HORA} desde={formData.inTime} />
               </div>
             </div>
             {horarioExcedido ? (
@@ -1918,6 +1918,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <p className="text-[11px] text-slate-400">
                 {areaTurnoElegido?.horario ? `Viene del turno ${areaTurnoElegido.turnoNombre} (${areaTurnoElegido.horario}). Cambialo si esta persona entra o sale a otra hora.` : "Se completa con el horario del turno que elijas arriba."}
                 {limiteHoras != null && ` Hasta ${limiteHoras} h por jornada, según el tipo de contrato.`}
+              </p>
+            )}
+            {/*
+              EL HORARIO SE SALE DEL TURNO: SE AVISA, NO SE BLOQUEA.
+
+              Que alguien entre antes o se quede después del turno es legítimo y hay que poder pedirlo;
+              lo que no puede pasar es que se mande sin que nadie lo haya visto. Por eso es un aviso al
+              lado del campo y no un error: la solicitud se envía igual.
+            */}
+            {fueraDelTurno && (
+              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                Ojo: {formData.inTime} a {formData.outTime} se sale del turno {areaTurnoElegido!.turnoNombre} ({areaTurnoElegido!.horario}). Se puede pedir igual.
               </p>
             )}
           </div>

@@ -9,6 +9,7 @@ import { areasAPI, Area } from "../../api/areas";
 import { shiftsAPI, Shift } from "../../api/shifts";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { activityLogTypesAPI, RequestConfig } from "../../api/requestConfig";
+import { projectsAPI } from "../../api/projects";
 import { EstadoBadge } from "../EstadoSelect";
 import { textoDeDias } from "../../utils/jerarquiaTurnos";
 import { mesesEquivalentes } from "../../utils/jornadas";
@@ -28,6 +29,15 @@ import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista,
 
   Los nombres se resuelven contra los catálogos, no se guardan en la solicitud: así muestran lo que el
   ABM dice HOY. Lo que no se pueda resolver se muestra como «—» y no se inventa.
+
+  ES EL MISMO DETALLE EN LA APP Y EN EL PANEL, y por eso está acá. La app tenía su propia pantalla
+  («Detalles del Alta») que mostraba otra cosa: el área salía de un campo que una solicitud nunca
+  llena —siempre decía «Sin área»—, la categoría aparecía incluso en un servicio, que por definición no
+  tiene, y faltaban el tipo de contrato, la empresa, los días, las jornadas y los importes. Dos
+  pantallas para el mismo dato terminan contestando distinto; ésta es una sola.
+
+  LO QUE NO APLICA NO SE MUESTRA: un servicio no lleva convenio ni categoría (es la misma regla del
+  formulario, `tipoImpositivo === "constancia_cuit"`), y sin reemplazo no hay a quién reemplazar.
 */
 
 const conveniosApi = createSimpleCatalogApi("/convenios");
@@ -61,12 +71,25 @@ interface Props {
   catalogos: ReturnType<typeof useCatalogosDeSolicitudes>;
   /** Los proyectos ya resueltos por la pantalla (la global los trae con su cliente). */
   proyectos?: ProyectoDeSolicitud[];
+  /**
+   * La solicitud COMPLETA, cuando la pantalla ya la tiene cargada.
+   *
+   * La app la pasa: su listado de Contratación trae las solicitudes enteras, y pedir la ficha por id
+   * (`GET /users/:id`) exige permiso de administración, que quien usa la app no tiene —con lo cual el
+   * detalle se abría vacío—. El panel no la pasa y se pide sola, que es lo que hace que la pantalla
+   * global (que trae filas resumidas) muestre exactamente lo mismo.
+   */
+  solicitudCompleta?: User | null;
   /** Falta cuando la pantalla no puede aprobar (la aprobación vive en el equipo del proyecto). */
   onAprobar?: (s: SolicitudVista) => void;
   onRechazar?: (s: SolicitudVista) => void;
+  /** Acciones de quien PIDIÓ el alta (la app): corregirla o darla de baja mientras está pendiente. */
+  onEditar?: (s: SolicitudVista) => void;
+  onCancelar?: (s: SolicitudVista) => void;
+  cancelando?: boolean;
 }
 
-export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solicitud, catalogos, proyectos, onAprobar, onRechazar }) => {
+export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solicitud, catalogos, proyectos, solicitudCompleta, onAprobar, onRechazar, onEditar, onCancelar, cancelando }) => {
   const [detalle, setDetalle] = useState<User | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -78,6 +101,8 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   const [motivos, setMotivos] = useState<RequestConfig[]>([]);
   /** A quién reemplaza, buscado aparte: viene como id y el nombre no está en la solicitud. */
   const [reemplazado, setReemplazado] = useState<string>("");
+  /** Los proyectos pedidos, cuando la pantalla no los trae resueltos (la app no los tiene a mano). */
+  const [proyectosPropios, setProyectosPropios] = useState<ProyectoDeSolicitud[]>([]);
 
   const id = solicitud?._id || "";
 
@@ -95,6 +120,12 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     setError("");
     setDetalle(null);
     setReemplazado("");
+    // Ya cargada por la pantalla: no se vuelve a pedir (y no hace falta el permiso para pedirla).
+    if (solicitudCompleta && String(solicitudCompleta._id) === String(id)) {
+      setDetalle(solicitudCompleta);
+      setCargando(false);
+      return;
+    }
     usersAPI
       .get(id)
       .then((u) => {
@@ -110,7 +141,8 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     return () => {
       vivo = false;
     };
-  }, [isOpen, id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, id, solicitudCompleta]);
 
   // Los catálogos con los que se traducen los ids. Cada uno falla solo: si no llega, ese campo dice «—».
   useEffect(() => {
@@ -148,6 +180,27 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     };
   }, [isOpen, m.replacedUserId]);
 
+  /*
+    Los proyectos de la solicitud, por su cuenta: `metadata.projectIds` son ids pelados y la app no
+    tiene la lista cargada. Se pide sólo si la pantalla no los pasó y hay ids que resolver.
+  */
+  useEffect(() => {
+    const ids: string[] = (m.projectIds || []).map((p: any) => String(typeof p === "object" ? p?._id : p)).filter(Boolean);
+    if (!isOpen || (proyectos && proyectos.length > 0) || ids.length === 0) return;
+    let vivo = true;
+    projectsAPI
+      .listAll({ slim: true })
+      .then((ps) => {
+        if (!vivo) return;
+        setProyectosPropios(ps.filter((p) => ids.includes(String(p._id))).map((p) => ({ _id: String(p._id), name: p.name, clienteNombre: typeof p.clientId === "object" ? p.clientId?.name : undefined })));
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, detalle, proyectos]);
+
   const nombreDe = <T extends { _id: string }>(lista: T[], idBuscado: any, campo: (x: T) => string) => {
     const buscado = String(typeof idBuscado === "object" && idBuscado ? idBuscado._id : idBuscado || "");
     if (!buscado) return "";
@@ -164,6 +217,8 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   }, [m.roles_frame, m.rolesFrameIds, m.roleFrameId, catalogos.roleFrames]);
 
   const categoria = catalogos.categoriasSat.find((c) => String(c._id) === String(m.categoriaSatId || ""));
+  /** Un servicio no tiene convenio ni categoría: el importe se carga a mano (regla del formulario). */
+  const esServicios = m.tipoImpositivo === "constancia_cuit";
   const tramite = catalogos.resolverTramite(m.tipoImpositivo);
   const diasSemana: number[] = Array.isArray(m.diasSemana) ? m.diasSemana : [];
   const jornadas = Number(m.workdaysCount) || 0;
@@ -187,7 +242,7 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   }));
 
   const estado: EstadoSolicitud = (m.solicitudStatus as EstadoSolicitud) || solicitud?.estado || "pendiente";
-  const proyectosAMostrar = proyectos && proyectos.length > 0 ? proyectos : [];
+  const proyectosAMostrar = proyectos && proyectos.length > 0 ? proyectos : proyectosPropios;
   const puedeDecidir = estado === "pendiente" && !cargando && !!detalle;
 
   return (
@@ -208,10 +263,21 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
             <FontAwesomeIcon icon={ESTADO_SOLICITUD[estado].icono} className="text-[9px]" />
             {ESTADO_SOLICITUD[estado].texto}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button onClick={onClose} className="px-3 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
               Cerrar
             </button>
+            {/* Lo de quien la pidió: corregirla o darla de baja, sólo mientras nadie la decidió. */}
+            {puedeDecidir && onCancelar && solicitud && (
+              <button onClick={() => onCancelar(solicitud)} disabled={cancelando} className="px-3 py-2 text-sm font-medium rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">
+                {cancelando ? "Cancelando…" : "Cancelar solicitud"}
+              </button>
+            )}
+            {puedeDecidir && onEditar && solicitud && (
+              <button onClick={() => onEditar(solicitud)} className="px-3 py-2 text-sm font-semibold rounded-lg border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                Editar solicitud
+              </button>
+            )}
             {puedeDecidir && onRechazar && solicitud && (
               <button onClick={() => onRechazar(solicitud)} className="px-3 py-2 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
                 <FontAwesomeIcon icon={faTimes} className="text-[11px]" />
@@ -307,9 +373,15 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
             </div>
 
             <div className="space-y-4">
-              <Bloque titulo="Convenio e importes">
-                <Fila label="Convenio (CCT)" valor={nombreDe(convenios, m.convenioId, (c) => c.name)} />
-                <Fila label="Categoría" valor={categoria?.name} />
+              <Bloque titulo={esServicios ? "Importes" : "Convenio e importes"}>
+                {esServicios ? (
+                  <p className="border-b border-gray-100 py-2 text-[11px] text-gray-500 dark:border-gray-700/60 dark:text-gray-400">Es un servicio: no hay convenio ni categoría, así que el importe se cargó a mano.</p>
+                ) : (
+                  <>
+                    <Fila label="Convenio (CCT)" valor={nombreDe(convenios, m.convenioId, (c) => c.name)} />
+                    <Fila label="Categoría" valor={categoria?.name} />
+                  </>
+                )}
                 <Fila label="Importe por jornada" valor={pesos(valorJornada || null)} />
                 <Fila label="Importe por semana" valor={pesos(semanal)} />
                 <Fila label="Importe mensual" valor={pesos(mensual)} />
