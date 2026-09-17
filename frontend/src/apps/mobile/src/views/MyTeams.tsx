@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import ContratoMiembroModal from "../components/ContratoMiembroModal";
+import ProyectoInfoModal from "../components/ProyectoInfoModal";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useProfile } from "../hooks/useProfile";
 import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects";
@@ -96,6 +97,8 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   const [buscaSinArea, setBuscaSinArea] = useState("");
   /** La persona cuyo contrato se está viendo (sólo el coordinador del proyecto; ver `tarjeta`). */
   const [contratoDe, setContratoDe] = useState<{ userId: string; nombre: string } | null>(null);
+  /** La ficha del proyecto (cliente, sede, centro de costo, empresas): la misma que el escritorio. */
+  const [verInfoProyecto, setVerInfoProyecto] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -227,6 +230,32 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
 
   const equipo = equipos?.find((e) => e.proyecto._id === proyectoId) || null;
 
+  /** Para la ficha: TODAS las áreas del proyecto con sus turnos, no sólo las que uno tiene a cargo. */
+  const areasDelProyecto = useMemo(() => {
+    if (!equipo) return [];
+    const nombreArea = new Map(areas.map((a) => [String(a._id), a.name]));
+    const turnoPorId = new Map(turnos.map((s) => [String(s._id), s]));
+    return (equipo.proyecto.areasConfig || [])
+      .map((ac: any) => ({
+        nombre: (typeof ac.areaId === "object" && ac.areaId?.name) || nombreArea.get(idDe(ac.areaId)) || "Área",
+        turnos: (ac.shiftIds || []).map((s: any) => etiquetaDeTurno((typeof s === "object" && s?.name) || turnoPorId.get(idDe(s))?.name || "Turno")),
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [equipo, areas, turnos]);
+
+  /** El «i» al lado del nombre del proyecto: abre su ficha. */
+  const botonInfoProyecto = (
+    <button
+      type="button"
+      onClick={() => setVerInfoProyecto(true)}
+      aria-label="Ver los datos del proyecto"
+      title="Ver los datos del proyecto"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors active:bg-slate-100 dark:active:bg-slate-800"
+    >
+      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+    </button>
+  );
+
   const porTurno = useMemo(() => {
     const m = new Map<string, AreaShiftMember[]>();
     for (const persona of personas || []) {
@@ -342,19 +371,25 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
             {equipos.length > 1 ? (
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-500 dark:text-slate-400">Proyecto</label>
-                <select value={proyectoId} onChange={(e) => setProyectoId(e.target.value)} className="w-full rounded border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
-                  {equipos.map((e) => (
-                    <option key={e.proyecto._id} value={e.proyecto._id}>
-                      {typeof e.proyecto.clientId === "object" && e.proyecto.clientId?.name ? `${e.proyecto.clientId.name} | ` : ""}
-                      {e.proyecto.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1">
+                  <select value={proyectoId} onChange={(e) => setProyectoId(e.target.value)} className="w-full rounded border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                    {equipos.map((e) => (
+                      <option key={e.proyecto._id} value={e.proyecto._id}>
+                        {typeof e.proyecto.clientId === "object" && e.proyecto.clientId?.name ? `${e.proyecto.clientId.name} | ` : ""}
+                        {e.proyecto.name}
+                      </option>
+                    ))}
+                  </select>
+                  {botonInfoProyecto}
+                </div>
               </div>
             ) : (
-              <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                {typeof equipo?.proyecto.clientId === "object" && equipo?.proyecto.clientId?.name ? `${equipo.proyecto.clientId.name} | ` : ""}
-                {equipo?.proyecto.name}
+              <p className="flex items-center gap-1 text-lg font-bold text-slate-900 dark:text-slate-100">
+                <span className="min-w-0 truncate">
+                  {typeof equipo?.proyecto.clientId === "object" && equipo?.proyecto.clientId?.name ? `${equipo.proyecto.clientId.name} | ` : ""}
+                  {equipo?.proyecto.name}
+                </span>
+                {botonInfoProyecto}
               </p>
             )}
 
@@ -550,6 +585,8 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       </div>
 
       <ContratoMiembroModal isOpen={!!contratoDe && !!equipo} onClose={() => setContratoDe(null)} projectId={equipo?.proyecto._id || ""} userId={contratoDe?.userId || ""} nombre={contratoDe?.nombre || ""} />
+
+      <ProyectoInfoModal isOpen={verInfoProyecto && !!equipo} onClose={() => setVerInfoProyecto(false)} proyecto={equipo?.proyecto || null} supervisorNombre={equipo?.supervisorNombre || ""} areas={areasDelProyecto} />
     </div>
   );
 }
