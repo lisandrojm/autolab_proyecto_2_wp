@@ -3653,8 +3653,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       Tipo de contrato <span className="text-red-500">*</span>
                     </label>
                     {impositivosDelAbm.length > 0 && (
-                      <button type="button" onClick={() => setFiltroTramiteOpen(true)} title="Filtrar por trámite (ARCA / Servicios)" className="text-gray-400 hover:text-blue-500 transition-colors">
+                      /*
+                        DICE «FILTRAR», no sólo el embudo.
+
+                        El ícono solo no decía qué filtraba ni que filtrara algo: es el único embudo
+                        del formulario y estaba entre un rótulo y un badge de color, así que se leía
+                        como decoración. La palabra ocupa dos centímetros y saca la pregunta.
+                      */
+                      <button type="button" onClick={() => setFiltroTramiteOpen(true)} title="Filtrar por trámite (ARCA / Servicios)" className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-blue-500 transition-colors">
                         <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+                        Filtrar
                       </button>
                     )}
                     {estadoImpositivoPorTipo(allEstados, filtroTramite) && (

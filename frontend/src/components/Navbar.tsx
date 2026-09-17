@@ -741,17 +741,21 @@ export const MobileNavbar: React.FC = () => {
       }
 
       /*
-        EL NÚMERO DE LA BANDEJA: naranja, y sólo cuando hay algo.
+        EL NÚMERO DE LA BANDEJA: entre paréntesis, al lado del nombre.
 
-        En cero no se dibuja: un «0» al lado de Solicitudes ocupa el mismo lugar que un 12 y dice lo
-        mismo que no tener nada, que es justo lo que se quiere leer de un vistazo. Es distinto de los
-        `count` grises de este menú, que dicen cuántos hay en total.
+        Es el mismo gesto que el título de cada pantalla («Solicitudes (1)»), así que el menú y lo
+        que se abre dicen el número igual. Con un globo naranja el menú parecía una app de mensajes:
+        cinco rótulos tranquilos y una mancha de color que se llevaba toda la atención, todo el
+        tiempo, por algo que no es urgente sino pendiente.
+
+        En cero no se dibuja: un «(0)» ocupa el mismo lugar que un «(12)» y dice lo mismo que no
+        tener nada, que es justo lo que se quiere leer de un vistazo.
       */
       const bandeja = (item as any).pendientes as number | undefined;
       const pill =
         bandeja && bandeja > 0 ? (
-          <span title={`${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="ml-2 inline-flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white">
-            {bandeja > 99 ? '99+' : bandeja}
+          <span title={`${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="ml-1.5 shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400">
+            ({bandeja > 99 ? '99+' : bandeja})
           </span>
         ) : null;
 
@@ -794,12 +798,10 @@ export const MobileNavbar: React.FC = () => {
                   </div>
                 )}
                 <span className="font-medium truncate">{item.label}</span>
-              </div>
-              <div className="flex items-center">
                 {/* Cerrado, el número es lo único que dice que adentro hay trabajo. */}
                 {pill}
-                <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="ml-2 h-3 w-3 shrink-0" />
               </div>
+              <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="ml-2 h-3 w-3 shrink-0" />
             </button>
 
             {isOpen && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child, true))}</nav>}
@@ -878,9 +880,9 @@ export const MobileNavbar: React.FC = () => {
             )}
             <span className="font-medium truncate">{item.label}</span>
             {item.badge && <span className={`ml-1 px-2 py-0.5 rounded text-[8px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase`}>{item.badge}</span>}
+            {pill}
           </div>
 
-          {pill}
           {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? 'bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white' : 'bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>{item.count}</span>}
         </Link>
       );
