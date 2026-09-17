@@ -3,6 +3,8 @@ export declare const NOVEDAD_REGISTRO = "registro_nuevo";
 export declare const NOVEDAD_SOLICITUD = "solicitud_nueva";
 export declare const NOVEDAD_SOLICITUD_APROBADA = "solicitud_aprobada";
 export declare const NOVEDAD_SOLICITUD_RECHAZADA = "solicitud_rechazada";
+export declare const NOVEDAD_SOLICITUD_CANCELADA = "solicitud_cancelada";
+export declare const NOVEDAD_SOLICITUD_REABIERTA = "solicitud_reabierta";
 /** Los tipos que la app cuenta por tarjeta. Agregar uno acá sin tocar la app lo deja sin contar. */
 export declare const TIPOS_NOVEDAD: string[];
 interface Aviso {

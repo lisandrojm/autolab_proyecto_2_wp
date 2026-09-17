@@ -9,7 +9,7 @@ import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js
 import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../utils/permisosMobile.js";
-import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
+import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
@@ -1912,20 +1912,36 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoS
         }
         const updated = await User.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { $set: cambio }, { new: true }).select("-password");
         /*
-          AVISARLE A QUIEN LA PIDIÓ que se rechazó, y por qué.
+          AVISARLE A QUIEN LA PIDIÓ, PASE LO QUE PASE CON SU SOLICITUD.
     
-          Es la única forma de que se entere sin entrar a mirar: el motivo viaja en el aviso para que no
-          tenga que abrir la solicitud para saber qué corregir. Al reabrirla no se avisa nada: no es una
-          decisión sobre el pedido, es deshacer una.
+          Es la única forma de que se entere sin entrar a mirar, y por eso avisa cualquier cambio de
+          estado y no sólo el rechazo: quien la cargó desde la app la sigue por el número de la tarjeta
+          Contratación, y una solicitud que se cancela o que vuelve a quedar pendiente sin avisar cambia
+          de estado a sus espaldas. En el rechazo el motivo viaja en el aviso, para no tener que abrirla
+          para saber qué corregir.
+    
+          REABIERTA VA TAMBIÉN A QUIEN TIENE QUE APROBARLA: volver a pendiente no es sólo deshacer una
+          decisión, es una solicitud que otra vez espera resolución, igual que una nueva.
+    
+          `notificar` saca de la lista a quien hizo el cambio: el coordinador que cancela la suya no se
+          avisa a sí mismo, y el responsable que reabre una tampoco.
         */
-        if (status === "rechazada") {
+        const avisoPorEstado = {
+            rechazada: { type: NOVEDAD_SOLICITUD_RECHAZADA, title: "Solicitud rechazada", message: `${nombreDePersona(user)}${texto ? `: ${texto}` : ""}` },
+            cancelada: { type: NOVEDAD_SOLICITUD_CANCELADA, title: "Solicitud cancelada", message: `${nombreDePersona(user)}${texto ? `: ${texto}` : ""}` },
+            pendiente: { type: NOVEDAD_SOLICITUD_REABIERTA, title: "Solicitud reabierta", message: `${nombreDePersona(user)} volvió a quedar pendiente de aprobación.` },
+        };
+        const aviso = avisoPorEstado[String(status)];
+        if (aviso) {
+            const m = user.metadata || {};
+            const aprobadores = status === "pendiente" ? await responsablesDeProyectos(req.tenantObjectId, [...(m.projectIds || []), ...(user.projectIds || [])]) : [];
             await notificar({
                 tenantId: req.tenantObjectId,
-                destinatarios: [user.metadata?.solicitudCreadaPor],
-                type: NOVEDAD_SOLICITUD_RECHAZADA,
-                title: "Solicitud rechazada",
+                destinatarios: [m.solicitudCreadaPor, ...aprobadores],
+                type: aviso.type,
+                title: aviso.title,
                 refId: user._id,
-                message: `${nombreDePersona(user)}${texto ? `: ${texto}` : ""}`,
+                message: aviso.message,
                 excepto: req.user.userId,
             });
         }

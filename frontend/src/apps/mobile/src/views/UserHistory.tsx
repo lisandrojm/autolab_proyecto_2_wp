@@ -20,7 +20,7 @@ import { contratosPorVencerAPI, ContratoPorVencer, DIAS_DE_AVISO_OPCIONES } from
 import { sweetAlert } from "../utils/sweetAlert";
 import AvisoNovedades from "../components/AvisoNovedades";
 import { useNovedades } from "../hooks/useNovedades";
-import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA } from "../../../../api/personnel";
+import { NOVEDADES_CONTRATACION } from "../../../../api/personnel";
 
 /*
   CÓMO SE MUESTRA EL ESTADO DE UNA SOLICITUD.
@@ -68,7 +68,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   /** Qué solicitud se está borrando: la tarjeta se apaga mientras el server contesta. */
   const [borrando, setBorrando] = useState<string | null>(null);
   /** Qué solicitudes son nuevas (aviso sin leer) y cómo marcarlas leídas, de a una o todas. */
-  const novedades = useNovedades([NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA]);
+  const novedades = useNovedades(NOVEDADES_CONTRATACION);
 
   /*
     POR VENCER: los contratos de la gente a cargo que terminan en la próxima semana, para renovarlos o
@@ -336,7 +336,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
       />
 
       <div className="px-4 pt-4">
-        <AvisoNovedades tipos={[NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA]} texto={(n) => (n === 1 ? "1 novedad de contratación" : `${n} novedades de contratación`)} />
+        <AvisoNovedades tipos={NOVEDADES_CONTRATACION} texto={(n) => (n === 1 ? "1 novedad de contratación" : `${n} novedades de contratación`)} />
         {/* Lo que se pidió, y lo que hay que decidir antes de que venza. */}
         <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-xl bg-slate-100 dark:bg-slate-800/60">
           {(

@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faCheckDouble, faEnvelope, faEnvelopeOpen, faLink, faUserPlus, faCircleCheck, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faCheckDouble, faEnvelope, faEnvelopeOpen, faLink, faUserPlus, faCircleCheck, faCircleXmark, faBan, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import SectionHeader from "../components/SectionHeader";
 import { useNotifications } from "../hooks/useNotifications";
-import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA } from "../../../../api/personnel";
+import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA } from "../../../../api/personnel";
 import { ViewType } from "../types";
 
 /*
@@ -25,6 +25,8 @@ const NOVEDADES: Record<string, { icono: IconDefinition; vista?: ViewType }> = {
   [NOVEDAD_SOLICITUD]: { icono: faUserPlus, vista: "user_history" },
   [NOVEDAD_SOLICITUD_APROBADA]: { icono: faCircleCheck, vista: "user_history" },
   [NOVEDAD_SOLICITUD_RECHAZADA]: { icono: faCircleXmark, vista: "user_history" },
+  [NOVEDAD_SOLICITUD_CANCELADA]: { icono: faBan, vista: "user_history" },
+  [NOVEDAD_SOLICITUD_REABIERTA]: { icono: faRotateLeft, vista: "user_history" },
 };
 
 const cuando = (iso: string) => {

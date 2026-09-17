@@ -124,6 +124,16 @@ export const NOVEDAD_REGISTRO = "registro_nuevo";
 export const NOVEDAD_SOLICITUD = "solicitud_nueva";
 export const NOVEDAD_SOLICITUD_APROBADA = "solicitud_aprobada";
 export const NOVEDAD_SOLICITUD_RECHAZADA = "solicitud_rechazada";
+export const NOVEDAD_SOLICITUD_CANCELADA = "solicitud_cancelada";
+export const NOVEDAD_SOLICITUD_REABIERTA = "solicitud_reabierta";
+
+/**
+ * Todo lo que se cuenta en la tarjeta Contratación: la solicitud que entra y cada decisión posterior.
+ *
+ * Es una lista y no tres constantes sueltas porque la usan tres pantallas —el número de la tarjeta,
+ * el banner del Historial y la campanita—: sumar un tipo en una sola las dejaba diciendo distinto.
+ */
+export const NOVEDADES_CONTRATACION = [NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA];
 
 export interface Notification {
   _id: string;

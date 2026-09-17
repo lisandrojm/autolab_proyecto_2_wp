@@ -22,8 +22,17 @@ export const NOVEDAD_REGISTRO = "registro_nuevo";
 export const NOVEDAD_SOLICITUD = "solicitud_nueva";
 export const NOVEDAD_SOLICITUD_APROBADA = "solicitud_aprobada";
 export const NOVEDAD_SOLICITUD_RECHAZADA = "solicitud_rechazada";
+/*
+  TODO CAMBIO DE ESTADO AVISA, no sólo el rechazo.
+
+  Quien pidió el alta desde la app sigue su solicitud por el número de la tarjeta Contratación: si la
+  cancelan o la vuelven a dejar pendiente y eso no avisa nada, la solicitud cambia de estado a sus
+  espaldas y se entera cuando entra a mirar —que es justo lo que las novedades vinieron a evitar—.
+*/
+export const NOVEDAD_SOLICITUD_CANCELADA = "solicitud_cancelada";
+export const NOVEDAD_SOLICITUD_REABIERTA = "solicitud_reabierta";
 /** Los tipos que la app cuenta por tarjeta. Agregar uno acá sin tocar la app lo deja sin contar. */
-export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA];
+export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA];
 const idValido = (x) => !!x && Types.ObjectId.isValid(String(x));
 /** Manda el aviso a cada destinatario. No lanza: un aviso perdido no puede tumbar la operación. */
 export async function notificar({ tenantId, destinatarios, type, title, message, linkUrl, refId, excepto }) {

@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus, faSitemap, faCalendarCheck, faLink } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
+import { useRefrescoEnFoco } from "../hooks/useRefrescoEnFoco";
 import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
-import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, ProfileData } from "../../../../api/personnel";
+import { NOVEDADES_CONTRATACION, NOVEDAD_REGISTRO, ProfileData } from "../../../../api/personnel";
 import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
@@ -39,23 +40,27 @@ export default function Home({ onNavigate }: HomeProps) {
     nadie pierde de vista algo por haber tocado la tarjeta sin tiempo de resolverlo.
   */
   const nuevosRegistros = porTipo[NOVEDAD_REGISTRO] || 0;
-  const nuevasContrataciones = (porTipo[NOVEDAD_SOLICITUD] || 0) + (porTipo[NOVEDAD_SOLICITUD_APROBADA] || 0) + (porTipo[NOVEDAD_SOLICITUD_RECHAZADA] || 0);
+  const nuevasContrataciones = NOVEDADES_CONTRATACION.reduce((total, tipo) => total + (porTipo[tipo] || 0), 0);
   /*
     CONTRATOS POR VENCER: el aviso de la semana previa. Se muestra en la tarjeta Contratación, que es
     donde se resuelven (pestaña «Por vencer»). Con su catch: sin el número, la tarjeta sigue igual.
+
+    Se vuelve a contar mientras la app está a la vista, igual que las novedades: un contrato entra en
+    la ventana de aviso por el paso del tiempo, sin que nadie toque nada, y la app puede llevar días
+    abierta con el número del día que se abrió.
   */
   const [porVencer, setPorVencer] = useState(0);
-  useEffect(() => {
+  const contarPorVencer = useCallback(() => {
     if (!(user?.permissions || []).includes(MOBILE_USERS)) return;
-    let cancelado = false;
     contratosPorVencerAPI
       .contar()
-      .then((n) => !cancelado && setPorVencer(n))
+      .then(setPorVencer)
       .catch(() => undefined);
-    return () => {
-      cancelado = true;
-    };
   }, [user]);
+  useEffect(() => {
+    contarPorVencer();
+  }, [contarPorVencer]);
+  useRefrescoEnFoco(contarPorVencer);
   const { profile, loading: profileLoading } = useProfile();
 
   /*
@@ -149,7 +154,14 @@ export default function Home({ onNavigate }: HomeProps) {
       ),
     view: "user_history" as ViewType,
     disabled: false,
-    nuevos: nuevasContrataciones,
+    /*
+      EL NÚMERO CUENTA TAMBIÉN LOS CONTRATOS POR VENCER.
+
+      No es una novedad sin leer —no se marca leído, baja cuando se renuevan o se dejan vencer— pero
+      es lo mismo que pide la tarjeta: algo que espera que alguien lo resuelva. Yendo sólo en el
+      renglón de abajo, en gris, se perdía entre las tarjetas; el punto naranja es lo que se mira.
+    */
+    nuevos: nuevasContrataciones + porVencer,
   };
 
   // «Mis equipos»: las áreas y turnos que la persona tiene a cargo, con su gente.

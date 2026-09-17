@@ -20,6 +20,7 @@ import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { usePermisoInactivo } from "../../../stores/permisosInactivosStore";
 import { useNotifications } from "./hooks/useNotifications";
+import { useRefrescoEnFoco } from "./hooks/useRefrescoEnFoco";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
 
@@ -30,14 +31,19 @@ function App() {
   const { user, tenantId, setTenantId } = useAuthStore();
   const { theme } = useThemeStore();
   /*
-    Los avisos se piden UNA vez al abrir la app, no al entrar a la campanita: el número tiene que estar
-    en la barra de abajo y en las tarjetas del inicio desde el primer momento, que es de lo que sirve.
+    Los avisos se piden al abrir la app, no al entrar a la campanita: el número tiene que estar en la
+    barra de abajo y en las tarjetas del inicio desde el primer momento, que es de lo que sirve.
+
+    Y se vuelven a pedir mientras la app está a la vista: lo que se decide en el escritorio —aprobar,
+    rechazar, reabrir una solicitud— pasa con la app ya abierta, y sin este refresco el número recién
+    cambiaba la próxima vez que alguien la cerrara y la volviera a abrir.
   */
-  const { unreadCount, ensureLoaded } = useNotifications();
+  const { unreadCount, ensureLoaded, refetch } = useNotifications();
   useEffect(() => {
     ensureLoaded();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useRefrescoEnFoco(() => void refetch());
 
   useEffect(() => {
     if (theme === "dark") {
