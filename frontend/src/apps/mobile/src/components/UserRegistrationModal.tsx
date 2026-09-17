@@ -2724,17 +2724,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   const elegida = cat._id === formData.categoriaSatId;
                   const grupo = cat.data?.numeroCategoria;
                   return (
-                    <div key={cat._id} className={`flex items-center gap-3 rounded-lg border p-3 transition-all ${elegida ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}>
-                      {/* El círculo elige sin pasar por el detalle: quien ya sabe cuál es no tiene que mirarlo. */}
-                      <button type="button" onClick={() => elegirCategoria(cat._id)} aria-pressed={elegida} aria-label={`Elegir ${cat.name}`} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>
-                        {elegida && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}
-                      </button>
-                      {/* La fila abre la escala: a qué grupo pertenece y cuánto se paga. */}
-                      <button type="button" onClick={() => setCategoriaDetalle(cat)} className="flex min-w-0 flex-1 items-center gap-2 text-left" aria-label={`Ver la escala de ${cat.name}`}>
+                    <div key={cat._id} className={`flex items-center gap-2 rounded-lg border p-3 transition-all ${elegida ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}>
+                      {/* Tocar la fila ELIGE, que es a lo que se viene. Ver la escala es el otro botón. */}
+                      <button type="button" onClick={() => elegirCategoria(cat._id)} aria-pressed={elegida} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegida && <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</span>
                         {cat.data?.codigoArca && <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{cat.data.codigoArca}</span>}
                         <span className="min-w-0 flex-1 truncate text-sm font-medium">{cat.name}</span>
-                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">{grupo ? `Grupo ${grupo}` : "Sin grupo"}</span>
-                        <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                      </button>
+                      {/* El grupo, y al lado qué pasa si se toca: abre la escala, no elige la categoría. */}
+                      <button
+                        type="button"
+                        onClick={() => setCategoriaDetalle(cat)}
+                        aria-label={`Ver la escala de ${cat.name}`}
+                        className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-slate-500 transition-colors active:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:active:bg-slate-800"
+                      >
+                        <span className="text-[10px] font-bold uppercase tracking-wide">{grupo ? `Grupo ${grupo}` : "Sin grupo"}</span>
+                        <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">· Ver detalle</span>
+                        <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                       </button>
                     </div>
                   );
