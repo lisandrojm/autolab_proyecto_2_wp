@@ -17,11 +17,30 @@ import { sweetAlert } from "../../utils/sweetAlert";
   vuelven a subir. Rechazar la tanda entera por una fila es rehacer la planilla completa por un dedazo.
 */
 
+/** Lo que la ventana necesita de un componente de modal. El panel y la app tienen el suyo. */
+type ComponenteModal = React.ComponentType<{
+  isOpen: boolean;
+  onClose: () => void;
+  title: any;
+  subtitle?: any;
+  size?: any;
+  zIndex?: number;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+}>;
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   /** Se llama al terminar con algo creado: la pantalla recarga su listado. */
   onImportado: () => void;
+  /**
+   * Con qué ventana se dibuja. Por defecto la del panel; la app pasa la suya.
+   *
+   * Se recibe en vez de elegirla con un flag para no importar acá un componente de `apps/mobile`:
+   * esto es código compartido, y lo compartido no puede depender de una de las dos apps.
+   */
+  ModalComponente?: ComponenteModal;
 }
 
 /** Las filas con problemas, agrupadas por fila del Excel: una fila puede fallar en varios campos. */
@@ -31,7 +50,7 @@ const porFila = (errores: ErrorFilaImport[]): { fila: number; problemas: ErrorFi
   return [...mapa.entries()].sort((a, b) => a[0] - b[0]).map(([fila, problemas]) => ({ fila, problemas }));
 };
 
-export const CargaMasivaModal: React.FC<Props> = ({ isOpen, onClose, onImportado }) => {
+export const CargaMasivaModal: React.FC<Props> = ({ isOpen, onClose, onImportado, ModalComponente = Modal }) => {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [revision, setRevision] = useState<RevisionPlanilla | null>(null);
   const [resultado, setResultado] = useState<ResultadoImport | null>(null);
@@ -96,36 +115,45 @@ export const CargaMasivaModal: React.FC<Props> = ({ isOpen, onClose, onImportado
   const conError = revision ? porFila(revision.errores) : [];
 
   return (
-    <Modal
+    <ModalComponente
       isOpen={isOpen}
       onClose={cerrar}
-      title="Carga masiva de solicitudes"
-      subtitle="Una fila por persona: cada una entra como una solicitud pendiente de aprobación"
-      size="lg"
-      zIndex={95}
-      footer={
-        <div className="flex w-full items-center justify-between gap-3">
-          <button type="button" onClick={bajarPlantilla} disabled={cargando !== ""} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400">
+      /*
+        BAJAR LA PLANILLA ES EL PRIMER PASO, así que va arriba y no en el pie.
+
+        En el pie quedaba en diagonal con lo que hay que hacer —se lee de arriba hacia abajo: qué es
+        esto, bajala, completala, subila— y compartía renglón con «Crear N solicitudes», que es el
+        último. Al lado del título es lo primero que se ve al abrir.
+      */
+      title={
+        <span className="flex flex-wrap items-center gap-3">
+          Carga masiva de solicitudes
+          <button type="button" onClick={bajarPlantilla} disabled={cargando !== ""} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-500/20 disabled:opacity-50 dark:text-blue-400">
             <FontAwesomeIcon icon={cargando === "plantilla" ? faSpinner : faDownload} className={`h-3.5 w-3.5 ${cargando === "plantilla" ? "animate-spin" : ""}`} />
             Descargar plantilla
           </button>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={cerrar} className="btn-secondary">
-              {resultado ? "Cerrar" : "Cancelar"}
+        </span>
+      }
+      subtitle="Una fila por persona. Cada una entra como una solicitud pendiente de aprobación"
+      size="lg"
+      zIndex={95}
+      footer={
+        <div className="flex w-full items-center justify-end gap-3">
+          <button type="button" onClick={cerrar} className="btn-secondary">
+            {resultado ? "Cerrar" : "Cancelar"}
+          </button>
+          {!resultado && (
+            <button type="button" onClick={importar} disabled={!revision || revision.listas.length === 0 || cargando !== ""} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
+              {cargando === "importando" ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  Creando…
+                </>
+              ) : (
+                `Crear ${revision?.listas.length || 0} solicitud${revision?.listas.length === 1 ? "" : "es"}`
+              )}
             </button>
-            {!resultado && (
-              <button type="button" onClick={importar} disabled={!revision || revision.listas.length === 0 || cargando !== ""} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
-                {cargando === "importando" ? (
-                  <>
-                    <FontAwesomeIcon icon={faSpinner} className="mr-2 h-3.5 w-3.5 animate-spin" />
-                    Creando…
-                  </>
-                ) : (
-                  `Crear ${revision?.listas.length || 0} solicitud${revision?.listas.length === 1 ? "" : "es"}`
-                )}
-              </button>
-            )}
-          </div>
+          )}
         </div>
       }
     >
@@ -159,7 +187,7 @@ export const CargaMasivaModal: React.FC<Props> = ({ isOpen, onClose, onImportado
             {/* 1. LA PLANILLA. Se explica antes de pedir el archivo: bajarla es el primer paso. */}
             <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Bajá la plantilla (abajo a la izquierda): viene con los <strong>proyectos, áreas, turnos, roles, tipos de contrato, convenios y categorías de esta cuenta</strong> como desplegables, y una hoja «Catálogos» con todos los valores.
+                Bajá la plantilla (arriba, al lado del título): viene con los <strong>proyectos, áreas, turnos, roles, tipos de contrato, convenios y categorías de esta cuenta</strong> como desplegables, y una hoja «Catálogos» con todos los valores.
               </p>
               <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
                 Funciona en Excel, LibreOffice y Google Sheets. Las combinaciones —que el turno sea de esa área en ese proyecto, que la categoría sea del convenio— se revisan acá al subirla, así que se pueden completar en cualquiera de los tres.
@@ -239,7 +267,7 @@ export const CargaMasivaModal: React.FC<Props> = ({ isOpen, onClose, onImportado
           </>
         )}
       </div>
-    </Modal>
+    </ModalComponente>
   );
 };
 

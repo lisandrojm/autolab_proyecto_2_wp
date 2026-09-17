@@ -213,4 +213,18 @@ export const convenioDeCategoria = (categoriaId: string | number | undefined, ca
  * dividido 30. Se propone, no se impone —lo pactado puede ser otro— pero tenerlo que escribir a mano
  * desde cero era pedirle a un coordinador que calcule algo que el convenio ya dice.
  */
-export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undefined): number => (categoria ? Number((Number(categoria.data?.neto ?? 0) / 30).toFixed(2)) : 0);
+/**
+ * El importe por jornada que propone una categoría: su neto mensual dividido 30.
+ *
+ * EL MULTIPLICADOR DEL TIPO DE CONTRATO SE APLICA ACÁ. Un contrato «Jornada» con multiplicador 1,5
+ * paga una vez y media la jornada de la escala: el número que hay que proponer es el ya multiplicado,
+ * no la escala pelada —que es lo que valdría si el contrato fuera común—. Vive en esta función y no
+ * en cada pantalla para que la app y el escritorio propongan lo mismo.
+ *
+ * Sin multiplicador cargado (0, vacío o ausente) se usa 1: es «sin multiplicador», no «por cero».
+ */
+export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undefined, multiplicadorDiario?: number | null): number => {
+  if (!categoria) return 0;
+  const multiplicador = Number(multiplicadorDiario) > 0 ? Number(multiplicadorDiario) : 1;
+  return Number(((Number(categoria.data?.neto ?? 0) / 30) * multiplicador).toFixed(2));
+};

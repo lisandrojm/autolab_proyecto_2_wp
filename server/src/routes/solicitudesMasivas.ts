@@ -3,8 +3,11 @@ import multer from "multer";
 import { Types } from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
-import { requirePermission } from "../middleware/permissions.js";
+import { requireAnyPermission } from "../middleware/permissions.js";
 import { User } from "../models/User.js";
+import { Project } from "../models/Project.js";
+import { MOBILE_USERS } from "../utils/permisosMobile.js";
+import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { Role } from "../models/Role.js";
 import { NOVEDAD_SOLICITUD, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
 import { cargarCatalogos, construirPlantilla, crearSolicitud, ErrorFila, filasDelArchivo, FilaValidada, MAX_FILAS, soloDigitos, validarFila } from "../services/solicitudesMasivas.js";
@@ -26,8 +29,33 @@ import { cargarCatalogos, construirPlantilla, crearSolicitud, ErrorFila, filasDe
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-/** Quién puede hacer esto: el mismo permiso con el que se ven y se aprueban las solicitudes. */
-const PERMISO = "admin_users:view";
+/*
+  QUIÉN PUEDE HACER ESTO: quien administra solicitudes, y quien las pide desde la app.
+
+  El coordinador que carga las altas de a una en el teléfono es el que tiene el equipo entero para
+  dar de alta, así que es el primer interesado en subir una planilla. Lo que lo acota no es el
+  permiso sino el ALCANCE: su plantilla trae sólo sus proyectos (ver `proyectosVisibles`), y una fila
+  con un proyecto que no es suyo se rechaza como «no existe» —que es lo que ese proyecto es para él—.
+*/
+const PERMISOS = ["admin_users:view", MOBILE_USERS];
+
+/**
+ * A qué proyectos alcanza la carga de esta persona. `null` = todos (un admin).
+ *
+ * Es la misma regla que el resto de la plataforma (`GET /projects`): lo asignado más lo que tiene a
+ * cargo como responsable. No se inventa un criterio propio: si la carga masiva viera más que el
+ * listado de proyectos, sería una puerta de atrás a los datos de otros equipos.
+ */
+const proyectosVisibles = async (req: AuthenticatedRequest & TenantRequest): Promise<Types.ObjectId[] | null> => {
+  const roles = (req.user?.roles || []).map((r) => String(r).toLowerCase());
+  const principal = String(req.user?.primaryRole || "").toLowerCase();
+  if (roles.includes("admin") || roles.includes("superadmin") || principal === "admin" || principal === "superadmin") return null;
+
+  const { proyectos } = await alcanceDeResponsable(req.tenantObjectId, req.user!.userId);
+  const asignados = await Project.find({ tenantId: req.tenantObjectId, assignedUsers: new Types.ObjectId(req.user!.userId) }).distinct("_id");
+  const ids = [...new Set([...proyectos, ...asignados].map((id: any) => String(id)))];
+  return ids.map((id) => new Types.ObjectId(id));
+};
 
 /**
  * Las personas de la planilla que YA están en la plataforma, buscadas por CUIT o documento.
@@ -61,12 +89,12 @@ const usuariosDeLaPlanilla = async (tenantId: Types.ObjectId, cuils: string[]): 
 };
 
 /** Lee el archivo, lo valida entero y devuelve las filas listas y los errores, sin crear nada. */
-const revisarArchivo = async (buffer: Buffer, tenantId: Types.ObjectId): Promise<{ listas: FilaValidada[]; errores: ErrorFila[]; total: number }> => {
+const revisarArchivo = async (buffer: Buffer, tenantId: Types.ObjectId, visibles: Types.ObjectId[] | null): Promise<{ listas: FilaValidada[]; errores: ErrorFila[]; total: number }> => {
   const filas = filasDelArchivo(buffer);
   if (filas.length === 0) return { listas: [], errores: [], total: 0 };
   if (filas.length > MAX_FILAS) throw new Error(`La planilla tiene ${filas.length} filas y el máximo es ${MAX_FILAS}. Partila en tandas.`);
 
-  const { catalogos, proyectos, turnosPorId } = await cargarCatalogos(tenantId);
+  const { catalogos, proyectos, turnosPorId } = await cargarCatalogos(tenantId, visibles);
   const usuariosPorCuil = await usuariosDeLaPlanilla(tenantId, filas.flatMap((f) => [soloDigitos(f.valores.cuil), soloDigitos(f.valores.reemplazaA)]));
 
   const listas: FilaValidada[] = [];
@@ -85,9 +113,9 @@ const revisarArchivo = async (buffer: Buffer, tenantId: Types.ObjectId): Promise
   Se genera en cada descarga y no se guarda: los proyectos, los turnos y las categorías cambian, y
   una plantilla guardada es una lista de opciones vencida que igual se completa.
 */
-router.get("/plantilla", requireTenant, authenticateToken, requirePermission(PERMISO), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/plantilla", requireTenant, authenticateToken, requireAnyPermission(...PERMISOS), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { catalogos } = await cargarCatalogos(req.tenantObjectId!);
+    const { catalogos } = await cargarCatalogos(req.tenantObjectId!, await proyectosVisibles(req));
     const buffer = await construirPlantilla(catalogos);
     const fecha = new Date().toISOString().slice(0, 10);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -100,13 +128,13 @@ router.get("/plantilla", requireTenant, authenticateToken, requirePermission(PER
 });
 
 /** POST /solicitudes-masivas/previsualizar — qué se va a crear y qué filas están mal. No crea nada. */
-router.post("/previsualizar", requireTenant, authenticateToken, requirePermission(PERMISO), upload.single("archivo"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.post("/previsualizar", requireTenant, authenticateToken, requireAnyPermission(...PERMISOS), upload.single("archivo"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     if (!req.file?.buffer) {
       res.status(400).json({ error: "Falta el archivo." });
       return;
     }
-    const revision = await revisarArchivo(req.file.buffer, req.tenantObjectId!);
+    const revision = await revisarArchivo(req.file.buffer, req.tenantObjectId!, await proyectosVisibles(req));
     res.json(revision);
   } catch (error: any) {
     console.error("Previsualizar solicitudes error:", error);
@@ -124,13 +152,13 @@ router.post("/previsualizar", requireTenant, authenticateToken, requirePermissio
   a medio migrar— no puede voltear a las treinta que ya se crearon. Lo que se rompe se informa con su
   número de fila.
 */
-router.post("/importar", requireTenant, authenticateToken, requirePermission(PERMISO), upload.single("archivo"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.post("/importar", requireTenant, authenticateToken, requireAnyPermission(...PERMISOS), upload.single("archivo"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     if (!req.file?.buffer) {
       res.status(400).json({ error: "Falta el archivo." });
       return;
     }
-    const { listas, errores, total } = await revisarArchivo(req.file.buffer, req.tenantObjectId!);
+    const { listas, errores, total } = await revisarArchivo(req.file.buffer, req.tenantObjectId!, await proyectosVisibles(req));
     if (listas.length === 0) {
       res.status(400).json({ error: "Ninguna fila de la planilla se puede importar.", errores, total });
       return;

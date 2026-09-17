@@ -12,6 +12,8 @@ export interface ContratoItem {
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
+    /** El contrato es por UNA jornada: se pide con un solo día y las jornadas son 1. */
+    esUnSoloDia?: boolean;
     /** Límites de la jornada del tipo de contrato. `null`/ausente = sin límite. */
     horasPorJornada?: number | null;
     diasPorSemana?: number | null;
@@ -34,6 +36,7 @@ export interface ContratoInput {
   cantidadJornadas?: string | number;
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;
+  esUnSoloDia?: boolean;
   horasPorJornada?: string | number;
   diasPorSemana?: string | number;
   requiereFirma?: boolean;

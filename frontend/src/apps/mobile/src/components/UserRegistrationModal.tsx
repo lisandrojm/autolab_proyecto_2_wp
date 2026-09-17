@@ -374,23 +374,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const categoriaElegida = useMemo(() => categoriasSat.find((c) => c._id === formData.categoriaSatId) || null, [categoriasSat, formData.categoriaSatId]);
 
   /*
-    LA DIFERENCIA CONTRA LA ESCALA, cuando se pisa el importe propuesto.
-
-    El número de la categoría es el del convenio; el que se paga puede ser otro, y está bien que lo
-    sea. Lo que no puede pasar es que la diferencia quede invisible: pagar de menos que la escala es
-    un problema, y pagar de más es una decisión que alguien tomó y conviene que se vea escrita.
-
-    `null` mientras no haya categoría o el importe coincida: no hay nada que mostrar.
-  */
-  const diferenciaContraEscala = useMemo(() => {
-    const escala = importePorJornadaDeCategoria(categoriaElegida || undefined);
-    const cargado = Number(formData.dailyRate);
-    if (!escala || !Number.isFinite(cargado) || !formData.dailyRate) return null;
-    const delta = Number((cargado - escala).toFixed(2));
-    return delta === 0 ? null : { escala, delta };
-  }, [categoriaElegida, formData.dailyRate]);
-
-  /*
     CUANDO HAY UNA SOLA OPCIÓN, SE ELIGE SOLA.
 
     Es el caso normal —un proyecto, una empleadora, un CCT— y obligar a abrir un combo de un ítem
@@ -720,6 +703,76 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     del horario y frenan el envío, porque cuál de las dos puntas corregir lo decide quien carga.
     Sin límite cargado en el contrato, no se acota nada.
   */
+  /*
+    EL MULTIPLICADOR DEL TIPO DE CONTRATO. Un «Jornada» con 1,5 paga una vez y media la escala.
+
+    Cero, vacío o sin cargar es «sin multiplicador» y vale 1: multiplicar por cero dejaría el importe
+    en nada, que es lo contrario de lo que un campo vacío quiere decir.
+  */
+  const multiplicadorDiario = Number(contratoElegido?.data?.multiplicadorDiario) > 0 ? Number(contratoElegido!.data!.multiplicadorDiario) : 1;
+
+  /** Este tipo de contrato es de UNA jornada: se pide con un solo día (ver `esUnSoloDia` en el ABM). */
+  const esDeUnSoloDia = !!contratoElegido?.data?.esUnSoloDia;
+
+  /**
+   * ELEGIR EL DÍA DE UN CONTRATO POR JORNADA: de esa fecha sale todo lo demás.
+   *
+   * Desde y hasta son el mismo día, la jornada es una, y el día que trabaja es el de la semana que
+   * caiga —un contrato de un martes trabaja los martes—. Son datos que en un contrato de un día no
+   * tienen otra respuesta posible: preguntarlos sería pedir que alguien los deduzca a mano.
+   */
+  const elegirDiaUnico = (fecha: string) => {
+    if (!fecha) {
+      setFormData((p) => ({ ...p, startDate: "", dueDate: "" }));
+      return;
+    }
+    const diaSemana = new Date(`${fecha}T00:00:00`).getDay();
+    setFormData((p) => ({
+      ...p,
+      startDate: fecha,
+      dueDate: fecha,
+      diasPorSemana: "1",
+      diasSemana: [diaSemana],
+      diasRotativos: false,
+      workdaysCount: "1",
+      // Es el calculado real, no un ajuste a mano: un día es una jornada.
+      workdaysOverridden: false,
+      workdaysOverrideReason: "",
+      workdaysOverrideNote: "",
+    }));
+  };
+
+  /*
+    AL MARCAR UN TIPO DE CONTRATO DE UN DÍA CON FECHAS YA CARGADAS, mandan las de arriba.
+
+    Se conserva el «desde» —que es el día que alguien eligió— y se le aplica el resto de la regla. Sin
+    esto, cambiar el tipo de contrato dejaba un período de treinta días con un contrato por jornada.
+  */
+  useEffect(() => {
+    if (!esDeUnSoloDia || !formData.startDate) return;
+    if (formData.dueDate === formData.startDate && formData.workdaysCount === "1") return;
+    elegirDiaUnico(formData.startDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esDeUnSoloDia, formData.startDate]);
+
+  /*
+    LA DIFERENCIA CONTRA LA ESCALA, cuando se pisa el importe propuesto.
+
+    El número de la categoría es el del convenio; el que se paga puede ser otro, y está bien que lo
+    sea. Lo que no puede pasar es que la diferencia quede invisible: pagar de menos que la escala es
+    un problema, y pagar de más es una decisión que alguien tomó y conviene que se vea escrita.
+
+    `null` mientras no haya categoría o el importe coincida: no hay nada que mostrar.
+  */
+  const diferenciaContraEscala = useMemo(() => {
+    // Con el multiplicador incluido: si no, un contrato de 1,5 mostraría siempre «+50% contra la escala».
+    const escala = importePorJornadaDeCategoria(categoriaElegida || undefined, multiplicadorDiario);
+    const cargado = Number(formData.dailyRate);
+    if (!escala || !Number.isFinite(cargado) || !formData.dailyRate) return null;
+    const delta = Number((cargado - escala).toFixed(2));
+    return delta === 0 ? null : { escala, delta };
+  }, [categoriaElegida, formData.dailyRate, multiplicadorDiario]);
+
   const limiteHoras = contratoElegido?.data?.horasPorJornada ?? null;
   const limiteDias = contratoElegido?.data?.diasPorSemana ?? null;
   const duracionHorario = horasDelHorario(formData.inTime, formData.outTime);
@@ -941,20 +994,39 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const panelComoTrabaja = (titulo: string) => (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40">
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{titulo}</p>
-      <div id="bloque-dias">
-        <DiasDeTrabajo
-          variante="mobile"
-          jornadas={Number(formData.diasPorSemana) || 0}
-          onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(limiteDias != null ? Math.min(n, limiteDias) : n) : "" }))}
-          rotativos={formData.diasRotativos}
-          onRotativos={cambiarRotativos}
-          dias={formData.diasSemana}
-          onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
-          limiteContrato={limiteDias}
-          errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
-          errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
-        />
-      </div>
+      {/*
+        EN UN CONTRATO DE UN DÍA NO HAY DÍAS POR SEMANA QUE ELEGIR.
+
+        Todo sale del día elegido arriba: una jornada, ese día de la semana. Dejar los campos abiertos
+        permitiría cargar «5 días por semana» en un contrato por jornada —un dato que se contradice
+        con el propio tipo de contrato— y obligaría a validar a mano algo que no tiene alternativa.
+      */}
+      {esDeUnSoloDia ? (
+        <div id="bloque-dias" className="rounded-lg border border-slate-200 bg-white/60 p-2.5 text-[11px] text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+          {formData.startDate ? (
+            <>
+              <span className="font-semibold text-slate-700 dark:text-slate-200">1 jornada</span>, el {new Date(`${formData.startDate}T00:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "2-digit", month: "long" })}.
+            </>
+          ) : (
+            "Elegí el día arriba: de ahí salen la jornada y el día que trabaja."
+          )}
+        </div>
+      ) : (
+        <div id="bloque-dias">
+          <DiasDeTrabajo
+            variante="mobile"
+            jornadas={Number(formData.diasPorSemana) || 0}
+            onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(limiteDias != null ? Math.min(n, limiteDias) : n) : "" }))}
+            rotativos={formData.diasRotativos}
+            onRotativos={cambiarRotativos}
+            dias={formData.diasSemana}
+            onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
+            limiteContrato={limiteDias}
+            errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
+            errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
+          />
+        </div>
+      )}
       {/*
         EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
         Se llama «Modificar» porque es lo que se hace acá: el turno elegido lo completa, y esto
@@ -997,7 +1069,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           </p>
         )}
       </div>
-      {/* Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada. */}
+      {/*
+        Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada.
+
+        En un contrato de un día es 1 y no se pregunta: el bloque entero —con su cálculo, su ajuste a
+        mano y su motivo— existe para repartir un período entre meses, y acá no hay período.
+      */}
+      {!esDeUnSoloDia && (
       <div className="md:col-span-3">
         <JornadasSolicitud
           desde={formData.startDate}
@@ -1019,6 +1097,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           aviso={avisoJornadas}
         />
       </div>
+      )}
     </div>
   );
 
@@ -1263,14 +1342,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     Sólo pisa el campo cuando cambia la categoría, no en cada render: si no, sería imposible escribir
     un importe distinto.
   */
-  const categoriaAnterior = useRef(formData.categoriaSatId);
+  const propuestaAnterior = useRef(`${formData.categoriaSatId}::${formData.contratoId}`);
   useEffect(() => {
-    if (categoriaAnterior.current === formData.categoriaSatId) return;
-    categoriaAnterior.current = formData.categoriaSatId;
+    /*
+      Se vuelve a proponer cuando cambia la categoría O el tipo de contrato: el multiplicador sale del
+      contrato, así que elegir primero la categoría y después el contrato tiene que actualizar el
+      número. Sin el contrato en la clave, quedaba la escala sin multiplicar.
+    */
+    const clave = `${formData.categoriaSatId}::${formData.contratoId}`;
+    if (propuestaAnterior.current === clave) return;
+    propuestaAnterior.current = clave;
     if (!formData.categoriaSatId) return;
-    const propuesto = importePorJornadaDeCategoria(categoriasSat.find((c) => c._id === formData.categoriaSatId));
+    const propuesto = importePorJornadaDeCategoria(
+      categoriasSat.find((c) => c._id === formData.categoriaSatId),
+      multiplicadorDiario,
+    );
     if (propuesto > 0) setFormData((p) => ({ ...p, dailyRate: String(propuesto) }));
-  }, [formData.categoriaSatId, categoriasSat]);
+  }, [formData.categoriaSatId, formData.contratoId, categoriasSat, multiplicadorDiario]);
 
   /*
     AL ELEGIR UN TIPO DE SERVICIOS SE SUELTA LA CATEGORÍA, y el importe se queda.
@@ -1894,14 +1982,29 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           formulario entre el título y las fechas.
         */}
         <div id="bloque-fechas" className="sticky -top-6 z-20 -mx-6 space-y-1 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-slate-700 dark:bg-gray-800">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <CustomDatePicker label="Desde" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
+          {/*
+            UN CONTRATO DE UN DÍA SE PIDE CON UN DÍA, no con un período de un día.
+
+            Pedir «desde» y «hasta» para contratar una jornada es hacer escribir dos veces la misma
+            fecha, y deja abierta la puerta a que queden distintas —un contrato «de un día» de tres
+            días—. Con el tipo marcado como de un solo día (ver `esUnSoloDia`), el calendario es uno
+            solo y de él salen las dos fechas, la jornada y el día de la semana que trabaja.
+          */}
+          {esDeUnSoloDia ? (
+            <div className="space-y-1 md:max-w-[16rem]">
+              <CustomDatePicker label="Día" value={formData.startDate} onChange={elegirDiaUnico} />
+              <p className="text-[11px] text-slate-400">Un solo día: «{contratoElegido?.name}» es un contrato por jornada.</p>
             </div>
-            <div className="space-y-1">
-              <CustomDatePicker label="Hasta" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <CustomDatePicker label="Desde" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
+              </div>
+              <div className="space-y-1">
+                <CustomDatePicker label="Hasta" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
+              </div>
             </div>
-          </div>
+          )}
           {/* Se dice apenas pasa, no al enviar: con el fin antes del inicio no hay jornadas que calcular. */}
           {erroresJornadas.fechas && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{erroresJornadas.fechas}</p>}
         </div>
@@ -2105,6 +2208,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   <p className="text-[11px] text-slate-400">
                     De la escala de {categoriaElegida.name}
                     {convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.
+                  </p>
+                )}
+                {/*
+                  EL MULTIPLICADOR, DICHO CON LOS DOS NÚMEROS.
+
+                  Un importe que sale 1,5 veces más alto que la escala del convenio parece un error de
+                  carga si no se explica de dónde salió: acá se lee la cuenta entera —la escala, el
+                  multiplicador y de qué contrato viene—.
+                */}
+                {categoriaElegida && multiplicadorDiario !== 1 && (
+                  <p className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                    Escala {importePorJornadaDeCategoria(categoriaElegida).toLocaleString("es-AR", { minimumFractionDigits: 2 })} × {multiplicadorDiario} del contrato {contratoElegido?.name}.
                   </p>
                 )}
                 {diferenciaContraEscala && (

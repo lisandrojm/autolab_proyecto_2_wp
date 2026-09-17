@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconDefinition, faArrowLeft, faCircleInfo, faSignOutAlt, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
@@ -13,6 +13,17 @@ interface SectionHeaderProps {
   onBack?: () => void;
   /** Un botón extra dentro del info, para lo que la sección ya tenía (p. ej. los datos de vacaciones). */
   extra?: { label: string; onClick: () => void };
+  /**
+   * Acciones de la sección, al lado del título.
+   *
+   * Es para lo que se usa DESDE la sección y tiene que verse al entrar —la carga masiva de
+   * Contratación, por ejemplo—. Va acá y no en un botón flotante porque el flotante ya es el «+»:
+   * un segundo botón redondo al lado compite con él y termina leyéndose como un adorno.
+   *
+   * Se dibuja pegado a la «i» y no contra el borde derecho: las dos cosas son de la sección, y a la
+   * derecha del todo está «salir», que es de la app. Con el título truncado, la acción no se corre.
+   */
+  acciones?: React.ReactNode;
 }
 
 /**
@@ -22,7 +33,7 @@ interface SectionHeaderProps {
  * vista tenía su propio encabezado copiado —con pequeñas diferencias— y ninguna dejaba salir sin volver
  * al inicio. La «i» explica qué se hace ahí: el que entra por primera vez no tiene a quién preguntar.
  */
-export default function SectionHeader({ icon, titulo, subtitulo, info, onBack, extra }: SectionHeaderProps) {
+export default function SectionHeader({ icon, titulo, subtitulo, info, onBack, extra, acciones }: SectionHeaderProps) {
   const { logout } = useAuthStore();
   const [verInfo, setVerInfo] = useState(false);
 
@@ -48,6 +59,7 @@ export default function SectionHeader({ icon, titulo, subtitulo, info, onBack, e
                 <button onClick={() => setVerInfo(true)} aria-label={`Qué se hace en ${titulo}`} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-slate-300 dark:text-slate-400">
                   <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                 </button>
+                {acciones}
               </div>
               {subtitulo && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{subtitulo}</p>}
             </div>

@@ -16,6 +16,14 @@ export interface IContrato extends Document {
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
     /**
+     * El contrato es por UNA jornada: se contrata un día, no un período.
+     *
+     * Cambia cómo se pide el alta —un solo calendario en vez de desde/hasta— y fija las jornadas en
+     * 1. Es un campo propio y no se deduce de `cantidadJornadas`: ese número es cuántas jornadas
+     * paga el tipo de contrato en general, y hay tipos de un día con otra cantidad cargada.
+     */
+    esUnSoloDia?: boolean;
+    /**
      * Límites de la jornada de este tipo de contrato (un «6x6»: 6 días por semana, 6 horas por jornada).
      * Opcionales: `null` = sin límite. Son la base para acotar la solicitud de contratación.
      */
@@ -71,6 +79,7 @@ const contratoSchema = new Schema<IContrato>(
       cantidadJornadas: { type: Number, default: 0 },
       multiplicadorDiario: { type: Number, default: 0 },
       esTiempoIndeterminado: { type: Boolean, default: false },
+      esUnSoloDia: { type: Boolean, default: false },
       horasPorJornada: { type: Number, default: null },
       diasPorSemana: { type: Number, default: null },
       requiereFirma: { type: Boolean, default: true },

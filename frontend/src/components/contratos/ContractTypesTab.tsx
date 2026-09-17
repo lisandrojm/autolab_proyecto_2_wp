@@ -48,6 +48,7 @@ interface FormState {
   horasPorJornada: string;
   diasPorSemana: string;
   esTiempoIndeterminado: boolean;
+  esUnSoloDia: boolean;
   requiereFirma: boolean;
   isActive: boolean;
   /** Estados (no globales) que van a quedar vinculados a TODAS las Plantillas de este Contrato. */
@@ -59,7 +60,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, esUnSoloDia: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -147,6 +148,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   /** Para enfocar el nombre cuando falta: sin pestañas, el error se resuelve en la misma vista. */
   const nombreRef = React.useRef<HTMLInputElement | null>(null);
   const [showTiempoIndetInfo, setShowTiempoIndetInfo] = useState(false);
+  const [showUnSoloDiaInfo, setShowUnSoloDiaInfo] = useState(false);
   const [editando, setEditando] = useState<ContratoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   // Selección de Estados al abrir el modal: para diffear contra `form.estadoIds` al guardar.
@@ -460,6 +462,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       horasPorJornada: contrato.data?.horasPorJornada != null ? String(contrato.data.horasPorJornada) : '',
       diasPorSemana: contrato.data?.diasPorSemana != null ? String(contrato.data.diasPorSemana) : '',
       esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
+      esUnSoloDia: !!contrato.data?.esUnSoloDia,
       requiereFirma: contrato.data?.requiereFirma !== false,
       isActive: contrato.isActive !== false,
       // Si el contrato no tenía ninguno —quedaron así los de antes de esta regla— se muestra el
@@ -579,6 +582,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       horasPorJornada: form.horasPorJornada,
       diasPorSemana: form.diasPorSemana,
       esTiempoIndeterminado: form.esTiempoIndeterminado,
+      esUnSoloDia: form.esUnSoloDia,
       requiereFirma: form.requiereFirma,
       isActive: form.isActive,
       afipModalidadContrato: form.afipModalidadContrato.trim(),
@@ -945,6 +949,22 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               </button>
             </div>
 
+            {/*
+              CONTRATO DE UN SOLO DÍA: cambia CÓMO se pide el alta, no sólo cuánto dura.
+
+              Es un campo propio y no se deduce de «Cantidad de Jornadas»: ese número es lo que el
+              tipo paga en general, y hay tipos de un día que lo tienen cargado con otra cosa.
+            */}
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={form.esUnSoloDia} onChange={(e) => setForm((p) => ({ ...p, esUnSoloDia: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                <span className="text-gray-700 dark:text-gray-300">Es de un solo día</span>
+              </label>
+              <button type="button" onClick={() => setShowUnSoloDiaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre contratos de un solo día">
+                <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
@@ -1289,6 +1309,27 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
           </p>
           <p>
             Al elegir este Contrato en <strong>Agregar/Configurar miembro</strong>, el campo <strong>Fecha de baja</strong> se deja vacío y el contrato queda <strong>vigente</strong> hasta que se le cargue una baja manualmente.
+          </p>
+        </div>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={showUnSoloDiaInfo}
+        onClose={() => setShowUnSoloDiaInfo(false)}
+        title="Es de un solo día"
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setShowUnSoloDiaInfo(false), variant: 'primary' }]}
+      >
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            Se contrata <strong>una jornada</strong>, no un período: una cobertura puntual, un día de rodaje.
+          </p>
+          <p>
+            Al elegir este Contrato en la <strong>Solicitud de Contratación</strong>, en vez de «Desde» y «Hasta» se pide <strong>un solo día</strong>. Con eso, la cantidad de jornadas queda en <strong>1</strong> y el día que trabaja se marca según el día de la semana que caiga.
+          </p>
+          <p>
+            Es un campo propio y no se deduce de «Cantidad de Jornadas»: ese número es cuántas jornadas paga el tipo de contrato en general.
           </p>
         </div>
       </InfoModal>

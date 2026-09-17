@@ -151,11 +151,40 @@ export interface Catalogos {
  * resolver cada celda. Los proyectos traen sus áreas y turnos poblados porque de ahí sale la única
  * validación que la planilla no puede hacer: que ese turno sea de esa área EN ESE proyecto.
  */
-export const cargarCatalogos = async (tenantId: Types.ObjectId): Promise<{ catalogos: Catalogos; proyectos: any[]; turnosPorId: Map<string, any>; contratosPorId: Map<string, any>; tramitePorContrato: Map<string, string> }> => {
+export const cargarCatalogos = async (
+  tenantId: Types.ObjectId,
+  /**
+   * A qué proyectos se limita todo. `null` = todos los del tenant (un admin).
+   *
+   * Es lo que hace que un coordinador pueda usar la carga masiva desde la app sin que la plantilla le
+   * muestre los proyectos de los demás: baja la suya, y si escribe otro nombre el import no lo
+   * encuentra, exactamente igual que si no existiera.
+   */
+  proyectosVisibles: Types.ObjectId[] | null = null,
+): Promise<{ catalogos: Catalogos; proyectos: any[]; turnosPorId: Map<string, any>; contratosPorId: Map<string, any>; tramitePorContrato: Map<string, string> }> => {
+  const filtroProyectos: any = { tenantId, ...(proyectosVisibles ? { _id: { $in: proyectosVisibles } } : {}) };
+  const proyectosDelAlcance: any[] = await Project.find(filtroProyectos).select("name clientId areasConfig contratoEmpresas metadata.responsableId").populate("clientId", "name").lean();
+
+  /*
+    LAS ÁREAS Y LOS TURNOS SALEN DE ESOS PROYECTOS, no del catálogo entero.
+
+    El desplegable sirve para elegir, y ofrecer un área que ningún proyecto del alcance usa es
+    ofrecer una fila que el import va a rechazar. Los ids se juntan de `areasConfig`, que es
+    justamente el cruce que después se valida.
+  */
+  const idsAreas = new Set<string>();
+  const idsTurnos = new Set<string>();
+  for (const p of proyectosDelAlcance) {
+    for (const ac of (p.areasConfig || []) as any[]) {
+      if (ac?.areaId) idsAreas.add(String(ac.areaId?._id || ac.areaId));
+      for (const s of (ac?.shiftIds || []) as any[]) idsTurnos.add(String(s?._id || s));
+    }
+  }
+
   const [proyectos, areas, turnos, roles, contratos, convenios, categorias, empresas, motivos, plantillas, estados] = await Promise.all([
-    Project.find({ tenantId }).select("name clientId areasConfig contratoEmpresas metadata.responsableId").populate("clientId", "name").lean(),
-    Area.find({ tenantId }).select("name").sort({ name: 1 }).lean(),
-    Shift.find({ tenantId }).select("name startTime endTime days order").sort({ order: 1, startTime: 1 }).lean(),
+    Promise.resolve(proyectosDelAlcance),
+    Area.find({ tenantId, _id: { $in: [...idsAreas] } }).select("name").sort({ name: 1 }).lean(),
+    Shift.find({ tenantId, _id: { $in: [...idsTurnos] } }).select("name startTime endTime days order").sort({ order: 1, startTime: 1 }).lean(),
     RoleFrame.find({}).select("name data.rol.id").sort({ name: 1 }).lean(),
     Contrato.find({}).select("name data").sort({ name: 1 }).lean(),
     Convenio.find({}).select("name externalId").sort({ externalId: 1 }).lean(),

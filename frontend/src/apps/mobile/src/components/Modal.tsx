@@ -5,7 +5,8 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  /** Texto, o un nodo cuando el encabezado lleva una acción al lado (igual que el modal del panel). */
+  title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "fullscreen";
