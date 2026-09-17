@@ -791,6 +791,23 @@ class UsersAPI {
   }
 
   /**
+   * LA BANDEJA DE TRABAJO DE CONTRATACIÓN: cuántas solicitudes esperan una decisión y cuántos
+   * contratos esperan su trámite impositivo. Son los números del menú (ver `Navbar`).
+   *
+   * Cada uno con su permiso del lado del server, así que van por separado y quien no tenga uno de
+   * los dos recibe 403 en ése y el otro se muestra igual.
+   */
+  async contarSolicitudesPendientes(): Promise<number> {
+    const { data } = await axios.get("/users/solicitudes-pendientes/count", { headers: this.getHeaders() });
+    return Number(data?.count) || 0;
+  }
+
+  async contarContratosPendientes(): Promise<number> {
+    const { data } = await axios.get("/users/contratos-pendientes/count", { headers: this.getHeaders() });
+    return Number(data?.count) || 0;
+  }
+
+  /**
    * Cambia el estado de una solicitud SIN borrarla. "pendiente" deshace un rechazo/cancelación.
    *
    * El `motivo` es el del rechazo: se guarda con la solicitud para que quien la pidió sepa qué

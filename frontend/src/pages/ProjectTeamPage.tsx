@@ -229,8 +229,32 @@ function numeroALetras(num: number): string {
   return (Millones(entero) + " " + centavosStr).replace(/\s+/g, " ").trim();
 }
 
-export const ProjectTeamPage: React.FC = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+/**
+ * ABRIR EL WIZARD DE CONTRATACIÓN DESDE OTRA PANTALLA, sin mudarse a Gestionar Equipo.
+ *
+ * «Editar para Aprobar» de Solicitudes abría esta pantalla entera para que la persona volviera a
+ * buscar la solicitud y tocara el mismo botón por segunda vez. Ahora Solicitudes monta esta misma
+ * pantalla en modo «sólo aprobación»: se dibujan únicamente sus modales y el wizard se abre solo,
+ * arriba de Solicitudes.
+ *
+ * Por qué montar la PANTALLA y no un componente propio: el wizard son ~1400 líneas de JSX sobre
+ * cuarenta piezas de estado de acá (catálogos, el proyecto, el equipo, los cálculos de jornadas).
+ * Sacarlo a un archivo es un refactor que vale la pena hacer, pero aparte y con tiempo de probarlo;
+ * duplicarlo para esta pantalla sería garantizar que las dos versiones se separen. Esto no mueve
+ * una línea de esa lógica: sólo elige qué se dibuja.
+ */
+export interface AprobacionEnModal {
+  projectId: string;
+  /** La solicitud a aprobar. Es también el id del usuario-solicitud, que es lo que el wizard recibe. */
+  solicitudId: string;
+  onCerrar: () => void;
+  onAprobada: () => void;
+}
+
+export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> = ({ soloAprobacion }) => {
+  const { projectId: projectIdDeLaUrl } = useParams<{ projectId: string }>();
+  // En modo «sólo aprobación» no hay URL de proyecto: lo dice quien abre el modal.
+  const projectId = soloAprobacion?.projectId || projectIdDeLaUrl;
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = useAuthStore();
@@ -315,6 +339,8 @@ export const ProjectTeamPage: React.FC = () => {
   const [, setWizardStep] = useState<1 | 2>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   const [showEstadoInfo, setShowEstadoInfo] = useState(false);
+  // De dónde salen las empresas del contrato y del release, y por qué a veces hay una sola.
+  const [showEmpresasInfo, setShowEmpresasInfo] = useState(false);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
   // modal de contratos. null = no se edita uno puntual (alta nueva o edición genérica → se toca el último).
   const [editingContractIndex, setEditingContractIndex] = useState<number | null>(null);
@@ -453,6 +479,28 @@ export const ProjectTeamPage: React.FC = () => {
   };
   const contratoEmpresas = resolveEmpresas(project?.contratoEmpresas);
   const releaseEmpresas = resolveEmpresas(project?.releaseEmpresas);
+  /*
+    CON UNA SOLA EMPRESA NO HAY NADA QUE ELEGIR: queda puesta.
+
+    El proyecto define con qué empresas se contrata y con cuáles se firma el release; cuando definió
+    una sola, el desplegable tenía igual un «Selecciona empresa…» vacío adelante, y el contrato se
+    podía guardar sin empleadora por no haber tocado un campo que tenía una única respuesta posible.
+
+    Sólo se completa lo VACÍO: un contrato que ya venía con otra empresa guardada no se pisa —puede
+    ser de antes de que el proyecto acotara la lista, y cambiárselo por debajo sería reescribirle la
+    empleadora a alguien que entró a tocar otra cosa—.
+  */
+  const unicaEmpresaContrato = contratoEmpresas.length === 1 ? contratoEmpresas[0].id : "";
+  const unicaEmpresaRelease = releaseEmpresas.length === 1 ? releaseEmpresas[0].id : "";
+  useEffect(() => {
+    if (!selectedUserForWizard) return;
+    setWizardData((prev) => {
+      const empresaContratoId = unicaEmpresaContrato && !prev.empresaContratoId ? unicaEmpresaContrato : prev.empresaContratoId;
+      const empresaReleaseId = unicaEmpresaRelease && !prev.empresaReleaseId ? unicaEmpresaRelease : prev.empresaReleaseId;
+      if (empresaContratoId === prev.empresaContratoId && empresaReleaseId === prev.empresaReleaseId) return prev;
+      return { ...prev, empresaContratoId, empresaReleaseId };
+    });
+  }, [selectedUserForWizard, unicaEmpresaContrato, unicaEmpresaRelease]);
 
   // Persistence for view mode
   useEffect(() => {
@@ -1518,6 +1566,24 @@ export const ProjectTeamPage: React.FC = () => {
     handleOpenWizard(user._id, contractOverride, contractIndex);
   };
 
+  /*
+    MODO «SÓLO APROBACIÓN»: el wizard se abre solo, una vez, apenas el proyecto está cargado.
+
+    Es el mismo camino que el botón de la pestaña Solicitudes —`handleOpenWizard(id, …, id)`, donde
+    el id de la solicitud es también el del usuario que la representa—, así que aprobar desde
+    Solicitudes y aprobar desde el equipo del proyecto son literalmente la misma operación.
+
+    Espera al proyecto porque de ahí salen las áreas, los turnos y la configuración del equipo con
+    los que el formulario se precarga: abrirlo antes lo dejaría a medio llenar.
+  */
+  const wizardAutoAbierto = useRef(false);
+  useEffect(() => {
+    if (!soloAprobacion || wizardAutoAbierto.current || !project) return;
+    wizardAutoAbierto.current = true;
+    void handleOpenWizard(soloAprobacion.solicitudId, undefined, undefined, soloAprobacion.solicitudId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soloAprobacion, project]);
+
   /* ------------------------------- Actions -------------------------------- */
 
   const handleOpenWizard = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
@@ -2094,6 +2160,8 @@ export const ProjectTeamPage: React.FC = () => {
       setRolFrameAgregado(null);
       setRolFrameBusqueda("");
       setShowAddModal(false);
+      // Modo «sólo aprobación»: la solicitud quedó aprobada y quien abrió el modal recarga su lista.
+      soloAprobacion?.onAprobada();
     } catch (error: any) {
       console.error("Assign member error:", error);
       let errorMsg = "Internal server error during assignment";
@@ -2789,6 +2857,1663 @@ export const ProjectTeamPage: React.FC = () => {
       />
     );
   };
+  /*
+    LOS MODALES, APARTE DEL CONTENIDO DE LA PANTALLA.
+
+    Están en variables y no escritos adentro del `PageLayout` por el modo «sólo aprobación» (ver
+    `soloAprobacion`): ahí se dibujan los modales SIN la pantalla, para que el wizard de contratación
+    se pueda abrir desde Solicitudes sin mudarlo de archivo ni tener una segunda copia.
+
+    Son dos grupos porque así estaban: los del proyecto viven adentro del `project ? (…)` —necesitan
+    el proyecto cargado— y los sueltos cuelgan del layout.
+  */
+  const modalesDelProyecto = (
+    <>
+      {/* Modals */}
+
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Agregar Miembros al Equipo"
+        subtitle={
+          <div className="flex items-center gap-2">
+            <span>Disponibles para asignar ({filteredCandidates.length})</span>
+            <button type="button" onClick={() => setShowCandidatesInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué usuarios se muestran?">
+              <FontAwesomeIcon icon={faInfoCircle} className="text-xs" />
+            </button>
+          </div>
+        }
+        size="xl"
+      >
+        <div className="space-y-4 max-h-[85vh] flex flex-col">
+          <div className="flex flex-col gap-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
+                </div>
+                <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
+              </div>
+              <button onClick={() => setShowFilters(true)} className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}>
+                <FontAwesomeIcon icon={faFilter} className="text-xs" />
+                Filtros
+                {activeAddFiltersCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800 shadow-sm">{activeAddFiltersCount}</span>}
+              </button>
+            </div>
+
+            {/* Filter Badges */}
+            {activeAddFiltersCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-1 px-1">
+                {filterRole && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <span className="opacity-60">Rol:</span> {filterRole}
+                    <button onClick={() => setFilterRole("")} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                      <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+                {filterRoleFrame && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                    <span className="opacity-60">Role Frame:</span> {filterRoleFrame}
+                    <button onClick={() => setFilterRoleFrame("")} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
+                      <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+                {filterProject && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+                    <span className="opacity-60">Proyecto:</span> {filterProject}
+                    <button onClick={() => setFilterProject("")} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
+                      <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    setFilterRole("");
+                    setFilterRoleFrame("");
+                    setFilterProject("");
+                  }}
+                  className="text-[10px] text-gray-500 hover:text-red-500 font-bold ml-1 transition-colors uppercase tracking-wider"
+                >
+                  Limpiar Todo
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-100 dark:border-gray-700 rounded-lg">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                    <th className="px-4 py-3">Nombre</th>
+                    <th className="px-4 py-3">Rol</th>
+                    <th className="px-4 py-3">Rol/es Frame</th>
+                    <th className="px-4 py-3">Proyecto/s</th>
+                    <th className="px-4 py-3">Turnos asociados</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
+                  {searchingCandidates ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        <FontAwesomeIcon icon={faSearch} className="animate-pulse mr-2" />
+                        Buscando candidatos...
+                      </td>
+                    </tr>
+                  ) : filteredCandidates.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : "No hay usuarios disponibles para asignar"}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCandidates.map((user) => {
+                      const isCoordinator = checkIsCoordinator(user);
+                      const metadataProjects = user.metadata?.projects || [];
+                      // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
+                      const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
+                      const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
+                      const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
+
+                      return (
+                        <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1 max-w-[150px]">
+                              {(user.roles || []).map((r) => {
+                                const lower = r.name.toLowerCase();
+                                const isCoord = lower.includes("coordinador");
+                                const isResp = lower.includes("responsable");
+
+                                let classes = "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800";
+                                if (isCoord) {
+                                  classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800";
+                                } else if (isResp) {
+                                  classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
+                                }
+
+                                return (
+                                  <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${classes}`}>
+                                    {r.name}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {rolFrames.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 max-w-[180px]">
+                                {rolFrames.map((rf, idx) => (
+                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                                    {rf}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-0.5">
+                              {activeProjects.length > 0 ? (
+                                activeProjects.map((p, idx) => (
+                                  <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
+                                    {p}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-1.5">
+                              {user.turnos && user.turnos.length > 0 ? (
+                                user.turnos.map((t) => (
+                                  <div key={typeof t === "string" ? t : t._id} className="flex flex-col gap-0.5">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === "object" ? t.name : "Turno"}</span>
+                                    {typeof t === "object" && t.startTime && t.endTime && (
+                                      <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
+                                        {t.startTime} - {t.endTime}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
+                              <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                              Agregar
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Paginación de candidatos (misma UX que Contratos/Novedades) */}
+          {candTotalPages > 1 && (
+            <div className="mt-1 flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shrink-0">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{filteredCandidates.length}</span> en esta página · <span className="font-semibold text-gray-900 dark:text-gray-100">{candTotal}</span> usuarios · pág. {candPage}/{candTotalPages}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setCandPage((p) => Math.max(1, p - 1))} disabled={candPage === 1 || searchingCandidates} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  <FontAwesomeIcon icon={faChevronLeft} />
+                </button>
+                <div className="flex items-center px-4 text-sm font-medium dark:text-gray-100">
+                  Página {candPage} de {candTotalPages}
+                </div>
+                <button onClick={() => setCandPage((p) => Math.min(candTotalPages, p + 1))} disabled={candPage === candTotalPages || searchingCandidates} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  <FontAwesomeIcon icon={faChevronRight} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Candidates Filter Modal */}
+      <Modal
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        title="Filtros Avanzados"
+        subtitle="Configura los filtros para refinar los candidatos"
+        size="sm"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <button
+              onClick={() => {
+                setFilterRole("");
+                setFilterRoleFrame("");
+                setFilterProject("");
+                setShowFilters(false);
+              }}
+              className="btn-secondary"
+            >
+              Limpiar Todo
+            </button>
+            <button onClick={() => setShowFilters(false)} className="btn-primary">
+              Aplicar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol</label>
+            <div className="relative">
+              <select className="input-field py-2 w-full text-xs pr-8" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+                <option value="">Todos los Roles</option>
+                {Array.from(new Set(allUsers.flatMap((u) => (u.roles || []).map((r) => r.name))))
+                  .sort()
+                  .map((roleName) => (
+                    <option key={roleName} value={roleName}>
+                      {roleName}
+                    </option>
+                  ))}
+              </select>
+              <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol/es Frame</label>
+            <div className="relative">
+              <select className="input-field py-2 w-full text-xs pr-8" value={filterRoleFrame} onChange={(e) => setFilterRoleFrame(e.target.value)}>
+                <option value="">Todos los Rol Frames</option>
+                {allRoleFrames.map((rf) => (
+                  <option key={rf._id} value={rf.name}>
+                    {rf.name}
+                  </option>
+                ))}
+              </select>
+              <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Proyecto/s</label>
+            <div className="relative">
+              <select className="input-field py-2 w-full text-xs pr-8" value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
+                <option value="">Todos los Proyectos</option>
+                {Array.from(new Set(allUsers.flatMap((u) => (u.metadata?.projects || []).map((p) => p.nombre_proyecto))))
+                  .filter(Boolean)
+                  .sort()
+                  .map((projectName) => (
+                    <option key={projectName} value={projectName}>
+                      {projectName}
+                    </option>
+                  ))}
+              </select>
+              <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
+          </div>
+
+          {activeAddFiltersCount > 0 && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+              <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? "s" : ""} aplicado{activeAddFiltersCount > 1 ? "s" : ""}.
+              </p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Info Modal for Candidates */}
+      <Modal isOpen={showCandidatesInfo} onClose={() => setShowCandidatesInfo(false)} title="Usuarios Disponibles" size="md">
+        <div className="space-y-4">
+          <div className="flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
+            <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 dark:text-blue-400 mt-1" />
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              <p className="font-bold mb-2">¿Quiénes aparecen en esta lista?</p>
+              <p>
+                La lista muestra a todos los <strong>usuarios activos</strong> de la plataforma que actualmente <strong>no forman parte del equipo</strong> de este proyecto.
+              </p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400 ml-4 list-disc">
+            <li>Usuarios con estado "Activo" en sus metadatos.</li>
+            <li>Se excluyen usuarios que ya están asignados a este proyecto.</li>
+            <li>Puedes buscar por nombre o email para filtrar resultados específicos.</li>
+          </ul>
+        </div>
+      </Modal>
+
+      {/* Viewing Shifts Modal */}
+      <Modal
+        isOpen={!!viewingShiftsData}
+        onClose={() => setViewingShiftsData(null)}
+        title={`Turnos ${viewingShiftsData?.assignmentType === "coordinated" ? "Supervisados" : "Asignados"} - ${viewingShiftsData?.areaName}`}
+        subtitle={
+          viewingShiftsData ? (
+            <p className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight">
+              {viewingShiftsData.user.firstName} {viewingShiftsData.user.lastName}
+            </p>
+          ) : (
+            ""
+          )
+        }
+        size="md"
+      >
+        <div className="space-y-4">
+          {(() => {
+            if (!viewingShiftsData) return null;
+            const { user, areaId, assignmentType } = viewingShiftsData;
+            const userConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
+            let shifts: any[] = [];
+
+            // Helper to get coordinated shift IDs for exclusion
+            const getCoordinatedShiftIds = () => {
+              if (!project?.coordinatorAssignments) return [];
+              return project.coordinatorAssignments
+                .filter((asm) => {
+                  const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+                  const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                  return String(uid) === String(user._id) && String(aid) === String(areaId);
+                })
+                .map((asm) => (typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId));
+            };
+
+            const coordShiftIds = getCoordinatedShiftIds();
+
+            // 1. If viewing coordinated, check ONLY coordinatorAssignments
+            if (assignmentType === "coordinated") {
+              if (project?.coordinatorAssignments) {
+                const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
+                  const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+                  const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                  return String(uid) === String(user._id) && String(aid) === String(areaId);
+                });
+                myCoordAsgn.forEach((asm) => {
+                  const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
+                  const shift = allShifts.find((s) => String(s._id) === String(sid));
+                  if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) shifts.push(shift);
+                });
+              }
+            } else {
+              // 2. If viewing standard, check team configuration assignments (Wizard) and EXCLUDE coordinated ones
+              const assignments = userConfig?.areaShiftAssignments || [];
+              const areaAssign = assignments.find((a: any) => {
+                const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                if (String(aid) === String(areaId)) return true;
+                const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+                const targetName = viewingShiftsData.areaName;
+                return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
+              });
+
+              if (areaAssign) {
+                const sids = areaAssign.shiftIds || [];
+                sids.forEach((sid: any) => {
+                  const actualSid = typeof sid === "object" ? sid?._id : sid;
+
+                  // EXCLUDE if it's in coordinated
+                  if (coordShiftIds.includes(actualSid)) return;
+
+                  const shift = allShifts.find((s) => String(s._id) === String(actualSid));
+                  if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
+                    shifts.push(shift);
+                  }
+                });
+              }
+
+              // 3. Check user's contract history (metadata) fallback
+              if (shifts.length === 0) {
+                const projectMeta = user.metadata?.projects?.find((p: any) => {
+                  const pId = p.projectId;
+                  const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+                  return String(idToCheck) === String(project?._id);
+                });
+                const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
+
+                if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
+                  const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
+                    const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                    if (String(aid) === String(areaId)) return true;
+                    const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+                    const targetName = viewingShiftsData.areaName;
+                    return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
+                  });
+
+                  if (fallbackAssign) {
+                    const sids = fallbackAssign.shiftIds || [];
+                    sids.forEach((sid: any) => {
+                      const actualSid = typeof sid === "object" ? sid?._id : sid;
+
+                      // EXCLUDE if it's in coordinated
+                      if (coordShiftIds.includes(actualSid)) return;
+
+                      const shift = allShifts.find((s) => String(s._id) === String(actualSid));
+                      if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
+                        shifts.push(shift);
+                      }
+                    });
+                  }
+                }
+              }
+            }
+
+            // 4. Legacy members fallback
+            if (shifts.length === 0) {
+              // Fallback for legacy members (only if nothing found yet)
+              const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+              const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
+              const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
+              if (shift) shifts = [shift];
+            }
+
+            if (shifts.length === 0) return <p className="text-center text-gray-500 py-12">No hay turnos asignados para esta área.</p>;
+
+            // En los que coordina, cada turno abre el detalle de sus personas: la columna de la
+            // tabla ya muestra sólo las áreas, así que es el camino para ver un horario puntual.
+            const abrirDetalle = (s: any) => {
+              setViewingShiftsData(null);
+              handleOpenAreaShiftDetail(areaId, viewingShiftsData.areaName, s);
+            };
+            return shifts.map((s, idx) => (
+              <div
+                key={idx}
+                onClick={assignmentType === "coordinated" ? () => abrirDetalle(s) : undefined}
+                title={assignmentType === "coordinated" ? "Ver las personas de este turno" : undefined}
+                className={`p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3 ${assignmentType === "coordinated" ? "cursor-pointer hover:border-amber-300 dark:hover:border-amber-600 transition-colors" : ""}`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                    {s.name}
+                    {assignmentType === "coordinated" && <span className="ml-1.5 text-amber-600 dark:text-amber-400">({getAreaShiftPeopleCount(areaId, String(s._id))})</span>}
+                  </span>
+                  <span className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[10px] font-black shadow-sm">
+                    {s.startTime} — {s.endTime} HS
+                  </span>
+                </div>
+                {s.days && s.days.length > 0 && (
+                  <div className="flex gap-1.5 mt-1">
+                    {["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"].map((label, dIdx) => (
+                      <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? "bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700" : "text-gray-300 dark:text-gray-600"}`}>
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ));
+          })()}
+        </div>
+      </Modal>
+
+      {/* Detalle de personas de un área/turno: click en el chip del área (todos los horarios) o en un turno */}
+      <Modal
+        isOpen={!!viewingAreaShift}
+        onClose={() => {
+          setViewingAreaShift(null);
+          setAreaShiftMembers(null);
+        }}
+        title={viewingAreaShift ? `Personas en ${viewingAreaShift.areaName}` : "Personas"}
+        subtitle={viewingAreaShift ? <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">{viewingAreaShift.shift ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})` : (viewingAreaShift.shifts || []).map((s: any) => s.name).join(" · ") || "Todos los horarios del área"}</p> : ""}
+        size="lg"
+      >
+        {loadingAreaShiftMembers ? (
+          <div className="py-12">
+            <LoadingSpinner message="Cargando personas..." />
+          </div>
+        ) : !areaShiftMembers || areaShiftMembers.total === 0 ? (
+          <p className="text-center text-gray-500 py-12">No hay personas asignadas a esta área y turno.</p>
+        ) : (
+          (() => {
+            const cuentan = areaShiftMembers.members.filter((m) => m.cuenta);
+            const noCuentan = areaShiftMembers.members.filter((m) => !m.cuenta);
+            // Viendo el área completa, cada persona muestra en qué horarios está.
+            const mostrarTurnos = !viewingAreaShift?.shift;
+
+            const renderMember = (m: (typeof areaShiftMembers.members)[number]) => (
+              <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" : "bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80"}`}>
+                <div className="flex flex-col min-w-0 gap-1">
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{m.firstName || m.lastName ? `${m.firstName} ${m.lastName}`.trim() : m.email}</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{m.email}</span>
+                  {mostrarTurnos && (m.shiftIds || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {(m.shiftIds || []).map((sid) => {
+                        const s: any = allShifts.find((x) => String(x._id) === String(sid));
+                        return (
+                          <span key={sid} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap">
+                            {s ? `${s.name} (${s.startTime} - ${s.endTime})` : "Turno"}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.activo ? "ACTIVO" : "INACTIVO"}</span>
+                  {m.estadoContrato ? <EstadoBadge name={m.estadoContrato} className="text-[10px] whitespace-nowrap" /> : <span className="text-[10px] text-gray-400">Sin contrato</span>}
+                  <div className="flex flex-col items-end gap-0.5 text-[10px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded uppercase font-bold ${m.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                    <span>Alta: {formatContractDate(m.fechaAlta)}</span>
+                    <span>Baja: {m.fechaBaja ? formatContractDate(m.fechaBaja) : "—"}</span>
+                  </div>
+                </div>
+              </div>
+            );
+
+            return (
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    <strong>{areaShiftMembers.cuentan}</strong> persona{areaShiftMembers.cuentan === 1 ? "" : "s"} activa{areaShiftMembers.cuentan === 1 ? "" : "s"} con contrato vigente
+                    {areaShiftMembers.total !== areaShiftMembers.cuentan ? (
+                      <>
+                        {" "}
+                        · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? "" : "s"} en total
+                      </>
+                    ) : null}
+                    {mostrarTurnos ? " en los horarios que supervisa de esta área." : ". El número de la columna Área/Turno Supervisada es el primero."}
+                  </p>
+                </div>
+
+                {cuentan.length > 0 && <div className="space-y-2">{cuentan.map(renderMember)}</div>}
+
+                {noCuentan.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-2">No suman al total ({noCuentan.length})</p>
+                    {noCuentan.map(renderMember)}
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        )}
+      </Modal>
+
+      {/*
+        Buscador del catálogo completo de oficios, para cuando el que corresponde no está entre
+        los de la persona. Se elige UNO: es con el que se la contrata acá, y al guardar se le suma
+        a la ficha. Va por encima del wizard, que es desde donde se abre.
+      */}
+      <Modal
+        isOpen={rolFrameBuscadorOpen}
+        onClose={() => setRolFrameBuscadorOpen(false)}
+        title="Otro rol empresa"
+        subtitle="El que elijas se le agrega a la ficha de la persona al guardar"
+        size="md"
+        zIndex={110}
+        footer={
+          <div className="flex w-full justify-end">
+            <button type="button" onClick={() => setRolFrameBuscadorOpen(false)} className="btn-secondary">
+              Cancelar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <input type="text" autoFocus value={rolFrameBusqueda} onChange={(e) => setRolFrameBusqueda(e.target.value)} placeholder="Buscar especialidad…" className="input-field w-full" />
+          <div className="grid max-h-[45vh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            {rolesFrameParaBuscar.length === 0 ? (
+              <p className="col-span-full py-8 text-center text-xs italic text-gray-400">{rolFrameBusqueda ? `No hay especialidades que coincidan con "${rolFrameBusqueda}"` : "La persona ya tiene todos los oficios del catálogo."}</p>
+            ) : (
+              rolesFrameParaBuscar.map((rf) => (
+                <button
+                  key={rf._id}
+                  type="button"
+                  onClick={() => {
+                    setRolFrameAgregado(rf);
+                    // Se deja elegido en el desplegable, que es lo que el wizard guarda.
+                    setWizardData((prev) => ({ ...prev, rol_frame_id: String(rf.data?.rol?.id || ""), categoria_sat_id: "" }));
+                    setRolFrameBuscadorOpen(false);
+                    setRolFrameBusqueda("");
+                  }}
+                  className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-left text-sm text-gray-700 transition-all hover:border-blue-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200"
+                >
+                  {rf.name}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Wizard Modal */}
+      <Modal
+        isOpen={!!selectedUserForWizard}
+        onClose={() => {
+          setSelectedUserForWizard(null);
+          // El oficio agregado a mano es de ESTA carga: si se cierra sin guardar, no queda nada.
+          setRolFrameAgregado(null);
+          setRolFrameBusqueda("");
+          // Abierto desde Solicitudes no hay pantalla atrás: cerrarlo es cerrar el modo entero.
+          soloAprobacion?.onCerrar();
+        }}
+        title={esEdicionMiembro ? "Configurar Miembro" : "Agregar Miembro"}
+        subtitle={
+          selectedUserForWizard ? (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{project?.name}</span>
+              <p className="text-base font-black text-blue-600 dark:text-blue-400 uppercase tracking-tight">
+                {selectedUserForWizard.firstName} {selectedUserForWizard.lastName}
+              </p>
+            </div>
+          ) : (
+            project?.name
+          )
+        }
+        size="xl"
+        footer={
+          <div className="flex gap-3 w-full">
+            {/* Una sola acción: el formulario es uno solo y se guarda desde cualquier punto. */}
+            <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
+              GUARDAR
+            </button>
+          </div>
+        }
+      >
+        <div className="flex flex-col h-[520px]">
+          {/* Un solo formulario, en una sola columna con scroll: el orden va de arriba hacia abajo. */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
+            {(
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/*
+                  EMPLEADO OCUPA MEDIA FILA, no la entera.
+
+                  Es un campo de solo lectura —el nombre de quien se está configurando— así que no
+                  gana nada con el ancho completo, y lo que costaba era el desfasaje: al ocupar dos
+                  columnas, todo lo de abajo quedaba corrido medio lugar y los pares se partían.
+                  «Empresa del Contrato» terminaba al lado de «Role Frame», y «Empresa del Release»
+                  al lado de «Convenio», que son justamente los que hay que leer juntos.
+
+                  Con esto las filas quedan: Empleado | Role Frame · Empresa del Contrato | Empresa
+                  del Release · Convenio | Categoría · Tipo de Contrato | Estado. Los pares que
+                  comparten fila son los que se deciden juntos, y el orden sigue la cadena:
+                  empresa → convenios de ese CUIT → categorías de esos convenios.
+                */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Empleado <span className="text-red-500">*</span>
+                  </label>
+                  <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
+                </div>
+
+                {/*
+                  EL DESPLEGABLE OFRECE LOS OFICIOS DE LA PERSONA; EL BOTÓN, TODOS LOS DEMÁS.
+
+                  La lista corta es la correcta el 90% de las veces y por eso sigue siendo la que se
+                  ve. Pero cuando se contrata a alguien para algo que no figura en su ficha —porque
+                  nunca lo hizo acá, o porque quedó incompleta— antes no había salida: el select no
+                  lo ofrecía y el wizard exige uno. Se elegía cualquiera con tal de avanzar.
+
+                  Lo que se elige por el buscador se le AGREGA a la ficha al guardar: que además sea
+                  Utilero es un dato de la persona, no de este contrato, y la próxima vez tiene que
+                  estar en la lista corta.
+                */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Role Frame a Desempeñar <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))} required>
+                      <option value="">Selecciona role frame...</option>
+                      {rolesFrameOfrecidos.map((rf) => (
+                        <option key={rf._id} value={rf.data.rol.id}>
+                          {rf.name}
+                          {!userAssignedRoleFrames.some((p) => p._id === rf._id) ? " (nuevo)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => setRolFrameBuscadorOpen(true)} title="Buscar otro rol empresa" className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
+                      Otro rol
+                    </button>
+                  </div>
+                  {rolFrameAgregado && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
+                </div>
+
+                {/*
+                  LA EMPRESA VA ANTES QUE EL CONVENIO, Y ESO NO ES ORDEN ESTÉTICO.
+
+                  La cadena es empresa → convenios registrados por ese CUIT → categorías de esos
+                  convenios. Estaba 200 líneas más abajo, así que quien cargaba de arriba hacia
+                  abajo llegaba a Convenio sin empresa elegida y se encontraba el select apagado
+                  diciéndole que eligiera algo que todavía no había aparecido en pantalla.
+                */}
+                {/*
+                  EL «SELECCIONA EMPRESA…» SÓLO CUANDO HAY ALGO QUE ELEGIR.
+
+                  Con una sola empresa configurada en el proyecto, la opción vacía era la única forma
+                  de equivocarse: el contrato quedaba sin empleadora por no haber desplegado una lista
+                  de un elemento. Se deja igual si lo guardado no está en la lista —el proyecto cambió
+                  sus empresas después—, porque ahí el campo sí está diciendo algo raro y esconderlo
+                  detrás de una única opción haría creer que quedó elegida la que se ve.
+                */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Empresa del Contrato</label>
+                    <button type="button" onClick={() => setShowEmpresasInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿De dónde salen estas empresas?" aria-label="Información sobre las empresas del contrato y del release">
+                      <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
+                    {(contratoEmpresas.length !== 1 || !contratoEmpresas.some((e) => e.id === wizardData.empresaContratoId)) && <option value="">{contratoEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>}
+                    {contratoEmpresas.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Define qué convenios y categorías se pueden elegir abajo.</p>
+                </div>
+
+                {/* Las dos empresas juntas: se eligen de la misma lista y se confunden si están separadas. */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Empresa del Release</label>
+                    <button type="button" onClick={() => setShowEmpresasInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿De dónde salen estas empresas?" aria-label="Información sobre las empresas del contrato y del release">
+                      <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
+                    {(releaseEmpresas.length !== 1 || !releaseEmpresas.some((e) => e.id === wizardData.empresaReleaseId)) && <option value="">{releaseEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>}
+                    {releaseEmpresas.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  {/*
+                    RÓTULO, FILTRO Y BADGE, TODO EN UNA FILA DE ALTO FIJO.
+
+                    Antes los tres trámites estaban como botones sueltos entre el rótulo y el
+                    desplegable: además de ser tres cosas para elegir una, esa fila empujaba el
+                    select hacia abajo y lo desalineaba de «Categoría», que está a la izquierda en
+                    la misma grilla. Y como la fila aparecía o no según el caso, la desalineación
+                    cambiaba sola.
+
+                    Ahora el filtro se elige en una ventana aparte —el mismo patrón de «Filtros
+                    avanzados»— y acá arriba queda solo el que está aplicado, como badge con una X
+                    para sacarlo. El `h-6` es lo que garantiza la alineación: la fila mide siempre
+                    lo mismo, haya badge o no, igual que la de «Categoría».
+                  */}
+                  <div className="h-6 flex items-center gap-2 ml-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                      Tipo de contrato <span className="text-red-500">*</span>
+                    </label>
+                    {impositivosDelAbm.length > 0 && (
+                      <button type="button" onClick={() => setFiltroTramiteOpen(true)} title="Filtrar por trámite (ARCA / Servicios)" className="text-gray-400 hover:text-blue-500 transition-colors">
+                        <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+                      </button>
+                    )}
+                    {estadoImpositivoPorTipo(allEstados, filtroTramite) && (
+                      /*
+                        EL FILTRO APLICADO, MÁS CHICO QUE EL BADGE DE ESTADO Y CON LA X ADENTRO.
+
+                        Son dos badges de color a pocos centímetros —éste dice «por qué la lista
+                        está recortada» y el de Estado dice «qué estado va a quedar»— y del mismo
+                        tamaño se leen como lo mismo. Acá va en 9px y con la X dentro del recuadro:
+                        pegada por fuera parecía otro control suelto, no la forma de sacar ESTE
+                        filtro.
+                      */
+                      <EstadoBadge name={estadoImpositivoPorTipo(allEstados, filtroTramite)!.name} className="text-[9px] px-1.5 py-0 whitespace-nowrap">
+                        <button type="button" onClick={() => setFiltroTramite("")} title="Quitar el filtro" className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" aria-label="Quitar el filtro de trámite">
+                          <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                        </button>
+                      </EstadoBadge>
+                    )}
+                  </div>
+
+                  {/*
+                    Lista propia y no un <select> nativo: un <option> solo admite texto, y acá
+                    cada tipo tiene que mostrar SU badge de trámite al lado del nombre. Es el
+                    mismo badge de Contratos, para que se lea como lo mismo. Ver
+                    `components/contratos/TipoContratoSelect.tsx`.
+                  */}
+                  <TipoContratoSelect
+                    options={contratosFiltradosPorTramite}
+                    value={wizardData.contrato_id}
+                    estados={allEstados}
+                    tramitePorContrato={tramitePorContrato}
+                    onChange={(contratoId) => {
+                      const contrato = contratos.find((c) => c._id === contratoId);
+                      // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
+                      // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
+                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === contratoId);
+                      const unicaPlantilla = plantillasDelContrato.length === 1 ? plantillasDelContrato[0] : undefined;
+                      setWizardData((prev) => ({
+                        ...prev,
+                        contrato_id: contratoId,
+                        contrato_frame_id: unicaPlantilla?._id || "",
+                        nombre_contrato: unicaPlantilla?.name || "",
+                        tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : "",
+                        fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? "" : prev.fecha_baja_contrato,
+                      }));
+                    }}
+                  />
+
+
+                  {filtroTramite && contratosFiltradosPorTramite.length === 0 && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún tipo de contrato está configurado para este trámite. Vinculalo desde el ABM de Estados, o mirá todos.</p>
+                  )}
+                  {contratoDelWizard && (limiteHorasWizard != null || limiteDiasWizard != null) && (
+                    <p className="ml-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 dark:text-gray-400">
+                      {limiteHorasWizard != null && (
+                        <span>
+                          <strong className="text-gray-900 dark:text-white">{limiteHorasWizard}</strong> h por jornada
+                        </span>
+                      )}
+                      {limiteDiasWizard != null && (
+                        <span>
+                          <strong className="text-gray-900 dark:text-white">{limiteDiasWizard}</strong> días por semana
+                        </span>
+                      )}
+                      <span className="text-gray-400">Limitan el horario y los días.</span>
+                    </p>
+                  )}
+                </div>
+
+                {(() => {
+                  if (!wizardData.contrato_id) return null;
+                  const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+
+                  // Varias Plantillas para el mismo Contrato: hay que elegir cuál usar para el PDF.
+                  if (plantillasDelContrato.length > 1) {
+                    return (
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                          Plantilla <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          className="input-field w-full"
+                          value={wizardData.contrato_frame_id}
+                          onChange={(e) => {
+                            const cf = plantillasDelContrato.find((p) => p._id === e.target.value);
+                            setWizardData((prev) => ({
+                              ...prev,
+                              contrato_frame_id: cf?._id || "",
+                              nombre_contrato: cf?.name || "",
+                              tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : "",
+                            }));
+                          }}
+                          required
+                        >
+                          <option value="">Selecciona plantilla...</option>
+                          {plantillasDelContrato.map((cf) => (
+                            <option key={cf._id} value={cf._id}>
+                              {cf.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-gray-400 ml-1">Este contrato tiene más de una plantilla: elegí cuál se usa para generar el PDF.</p>
+                      </div>
+                    );
+                  }
+
+                  // Ninguna Plantilla asignada todavía: se puede guardar, pero no se podrá generar el PDF.
+                  if (plantillasDelContrato.length === 0) {
+                    return (
+                      <div className="md:col-span-2 -mt-2">
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                          Este contrato todavía no tiene ninguna Plantilla asignada: se puede guardar, pero no se va a poder generar el PDF hasta asignarle una desde <strong>Plantillas | Contratos</strong>.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
+
+                <div className="space-y-1.5">
+                  {esAltaNueva ? (
+                    <>
+                      {/* `h-6`, el mismo alto fijo que el rótulo de «Tipo de contrato» que está a
+                          la izquierda en esta fila: es lo que hace que los dos campos arranquen a
+                          la misma altura. Sin esto el rótulo mide lo que mida su contenido —acá,
+                          un botón de info; allá, un badge que aparece o no— y la desalineación
+                          cambia sola según el caso. */}
+                      <div className="h-6 flex items-center gap-1.5 ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Estado <span className="text-red-500">*</span>
+                        </label>
+                        <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
+                          <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="input-field w-full flex items-center">{estadoImpositivoAuto ? <EstadoBadge name={estadoImpositivoAuto.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_frame_id ? "Este tipo de contrato no tiene un estado impositivo configurado" : "Elegí primero el Tipo de contrato"}</span>}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-6 flex items-center ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Estado <span className="text-red-500">*</span>
+                        </label>
+                      </div>
+                      {/*
+                        SE MUESTRA, NO SE ELIGE — igual que en el alta.
+
+                        El estado sale del Tipo de Contrato: al cambiarlo, este valor se recalcula
+                        solo. Mientras fue un selector, elegir a mano acá dejaba un estado que el
+                        siguiente cambio de tipo pisaba sin avisar, y no había forma de saber si el
+                        que se veía era el elegido o el derivado.
+                      */}
+                      <div className="input-field w-full flex items-center">
+                        {estadoElegido ? <EstadoBadge name={estadoElegido.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_id ? "Este tipo de contrato no tiene un estado configurado" : "Elegí primero el Tipo de contrato"}</span>}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/*
+                  Alta y baja del contrato, juntas: son los dos extremos del mismo período.
+
+                  Cada par va en su PROPIA fila de dos columnas y no suelto en el grid de arriba:
+                  «Fecha baja» desaparece cuando el tipo de contrato es de tiempo indeterminado, y
+                  con los campos sueltos ese hueco corría a todos los de abajo — las horas quedaban
+                  apareadas con una fecha según qué contrato estuviera elegido.
+                */}
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
+                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
+                  </div>
+                  {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Fecha baja contrato <span className="text-red-500">*</span>
+                      </label>
+                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
+                    </div>
+                  )}
+                </div>
+
+                {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
+                <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
+                    Asignación por Área y Turno <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">
+                    Elegí el área y el turno donde va a trabajar este miembro: uno solo de cada uno. Tocá un área para ver sus turnos. Con el turno elegido, acá abajo se cargan los días que trabaja y el horario de entrada y salida.
+                  </p>
+
+                  {(project?.areasConfig || []).length === 0 && (
+                    // Sin áreas en el proyecto no se puede completar este paso (es obligatorio) → link a Editar Proyecto.
+                    <div className="flex flex-col items-center gap-2 py-4 text-center bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                      <p className="text-sm text-gray-500">Este proyecto no tiene áreas configuradas.</p>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })} className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline" title="Ir a Editar Proyecto para agregar áreas">
+                          <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
+                          Editar proyecto para agregar áreas
+                        </button>
+                        <button type="button" onClick={() => setShowSinAreasInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors" title="Por qué no puedo guardar los cambios del miembro" aria-label="Información: el proyecto no tiene áreas configuradas">
+                          <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {(() => {
+                      const isCoordinadorRole = coordinaAreas(selectedUserForWizard?.roles);
+                      /*
+                        UN ÁREA Y UN TURNO, Y LAS ÁREAS CERRADAS HASTA QUE SE ABRAN.
+
+                        Antes se podían tildar varios turnos de varias áreas a la vez, y por eso hacía falta
+                        toda una maquinaria que detectaba superposiciones horarias y bloqueaba los turnos
+                        incompatibles. Elegir de a uno la vuelve innecesaria —no hay con qué superponerse— y
+                        saca de la pantalla los avisos de «se superpone» que hoy tapan la mitad de la grilla.
+
+                        Un proyecto con ocho áreas por cuatro turnos son treinta y dos tarjetas abiertas, que
+                        es lo que empuja el resto del formulario fuera de la pantalla. Cerradas se leen las
+                        áreas de un vistazo, y la elegida muestra su turno en el encabezado sin abrirla.
+
+                        Al contrato que ya tenga varias áreas guardadas de antes no se le toca nada: se
+                        muestran todas marcadas y la primera elección lo deja en una sola. Normalizarlo al
+                        abrir el wizard sería borrarle asignaciones a alguien que sólo vino a mirar.
+                      */
+                      const seleccionActual = wizardData.areaShiftAssignments[0];
+                      // Sin tocar nada se abre la que tiene la elección; `null` es «la cerré yo».
+                      const areaAbierta = areaExpandida === undefined ? seleccionActual?.areaId ?? null : areaExpandida;
+
+                      return (project?.areasConfig || []).map((ac: any) => {
+                        const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+                        const areaObj = allAreas.find((a) => a._id === aId);
+                        const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
+                        const isCoordinadorArea = areaObj?.isSystem;
+                        const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
+
+                        const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
+                        const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+                        // Current assignment for this area
+                        const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
+                        const selectedShiftIds = currentAssignment?.shiftIds || [];
+                        const isAreaActive = selectedShiftIds.length > 0;
+                        const estaAbierta = areaAbierta === aId;
+                        // Qué turno quedó elegido, para leerlo con el área cerrada.
+                        const turnosElegidos = selectedShiftIds
+                          .map((id) => allShifts.find((s) => String(s._id) === id)?.name)
+                          .filter(Boolean)
+                          .join(", ");
+
+                        return (
+                          <div key={aId} className={`rounded-xl border overflow-hidden transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
+                            <button type="button" onClick={() => setAreaExpandida(estaAbierta ? null : aId)} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors" aria-expanded={estaAbierta} title={estaAbierta ? "Cerrar el área" : "Ver los turnos del área"}>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FontAwesomeIcon icon={estaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400 shrink-0" />
+                                <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 shrink-0 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
+                                <span className="font-bold text-sm uppercase tracking-wide truncate">{aName || aId}</span>
+                                {isAreaRestricted && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter shrink-0">Requiere Supervisor</span>}
+                              </div>
+                              {isAreaActive ? <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase truncate shrink-0">{turnosElegidos}</span> : <span className="text-[10px] font-medium text-gray-400 uppercase shrink-0">Sin turno</span>}
+                            </button>
+                            {estaAbierta && (
+                              <>
+                                {isAreaRestricted && (
+                                  <div className="px-4 pb-3">
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Supervisa áreas y turnos». Dale un rol que lo incluya desde su ficha.</p>
+                                  </div>
+                                )}
+                                {/*
+                                  LOS TURNOS, COMO EN LA SOLICITUD DE CONTRATACIÓN DE LA APP.
+
+                                  Misma fila con el redondelito de elegido, el nombre y, debajo, el horario y los
+                                  días en texto. Se reemplazó a la tarjeta con las siete iniciales de la semana:
+                                  pintadas una al lado de la otra había que decodificar cuáles estaban encendidas,
+                                  y ocupaban el ancho que hace que entren tres turnos donde entraban cuatro.
+
+                                  Las dos pantallas piden lo mismo —un área y un turno— y ahora se eligen con el
+                                  mismo gesto, que es de lo que se trata: quien carga la solicitud en el teléfono
+                                  y quien la aprueba en el escritorio están mirando la misma lista.
+                                */}
+                                <div className={`grid grid-cols-1 gap-2 px-4 pb-3 sm:grid-cols-2 lg:grid-cols-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
+                                  {shiftsForArea.map((shift) => {
+                                    const isSelected = selectedShiftIds.includes(String(shift._id));
+                                    const horario = shift.startTime && shift.endTime ? `${shift.startTime} a ${shift.endTime}` : "";
+                                    const dias = textoDeDias(shift.days);
+
+                                    return (
+                                      <button
+                                        key={shift._id}
+                                        type="button"
+                                        disabled={isAreaRestricted}
+                                        aria-pressed={isSelected}
+                                        onClick={() => {
+                                          setWizardData((prev) => ({
+                                            ...prev,
+                                            // Elegir uno reemplaza lo que hubiera; volver a tocarlo lo deja sin área.
+                                            areaShiftAssignments: isSelected ? [] : [{ areaId: aId, shiftIds: [String(shift._id)] }],
+                                            /*
+                                              ELEGIR UN TURNO COMPLETA EL HORARIO DEL CONTRATO con el de ese turno.
+
+                                              Antes eran independientes y el horario se cargaba a mano, con los turnos
+                                              filtrados por él: había que saber a qué hora entra cada turno para que
+                                              apareciera. Ahora manda el turno, que es el dato que se conoce, y el
+                                              horario queda editable abajo para cuando esta persona entra o sale a otra
+                                              hora. Al DESELECCIONARLO no se toca: borrar el horario de un contrato
+                                              porque se destildó un turno sería perder un dato que nadie pidió cambiar.
+                                            */
+                                            ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
+                                          }));
+                                        }}
+                                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${isSelected ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:border-blue-600"}`}
+                                        title={isSelected ? `${shift.name} (tocá para quitarlo)` : shift.name}
+                                      >
+                                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
+                                        <span className="min-w-0">
+                                          <span className="block truncate text-sm font-medium">{shift.name}</span>
+                                          {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
+                                          {(horario || dias) && <span className="block text-[10px] text-gray-400">{[horario, dias].filter(Boolean).join(" · ")}</span>}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                {/* Elegido el turno, acá mismo se dice cómo trabaja en él. */}
+                                {isAreaActive && <div className="px-4 pb-3">{panelComoTrabaja("Cómo trabaja en este turno")}</div>}
+                              </>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/*
+                    LO ELEGIDO, EN UN BADGE, FUERA DE LA LISTA.
+
+                    Con las áreas cerradas la elección se ve en el encabezado de UNA de ellas, y hay que
+                    acordarse de cuál para encontrarla. Acá abajo queda siempre en el mismo lugar, se lee
+                    sin abrir nada y trae el área además del turno —que es el par que importa—. La ✕ lo
+                    saca sin tener que volver a entrar al área para destildarlo.
+
+                    Es una lista y no un solo badge por los contratos viejos con varias áreas guardadas:
+                    se muestran todas, y cada una se puede sacar por separado.
+                  */}
+                  {wizardData.areaShiftAssignments.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 ml-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Elegido</span>
+                      {wizardData.areaShiftAssignments.flatMap((a) =>
+                        a.shiftIds.map((sid) => {
+                          const areaNombre = allAreas.find((ar) => String(ar._id) === String(a.areaId))?.name || a.areaId;
+                          const turnoNombre = allShifts.find((sh) => String(sh._id) === String(sid))?.name || sid;
+                          const texto = `${areaNombre} · ${turnoNombre}`;
+                          return (
+                            <span key={`${a.areaId}-${sid}`} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                              {texto}
+                              <button
+                                type="button"
+                                title={`Quitar ${texto}`}
+                                onClick={() =>
+                                  setWizardData((prev) => ({
+                                    ...prev,
+                                    areaShiftAssignments: prev.areaShiftAssignments.map((x) => (x.areaId === a.areaId ? { ...x, shiftIds: x.shiftIds.filter((s) => s !== sid) } : x)).filter((x) => x.shiftIds.length > 0),
+                                  }))
+                                }
+                                className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5"
+                              >
+                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                              </button>
+                            </span>
+                          );
+                        }),
+                      )}
+                    </div>
+                  )}
+
+                  {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Elegí el área y el turno donde va a trabajar.</p>}
+
+                  {/* Sin áreas configuradas no hay turno al que pertenecer: va sola, para poder cargarla igual. */}
+                  {(project?.areasConfig || []).length === 0 && panelComoTrabaja("Cómo trabaja")}
+                </div>
+
+                {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}
+                {!esServicios && (
+                <>
+                {/*
+                  CONVENIO — es un FILTRO, no un dato del contrato.
+
+                  Replica el flujo de ARCA (convenio → categoría) sin cambiar el modelo: no se
+                  guarda, no viaja en el payload y no toca el TXT. Está acá porque el encuadre lo
+                  terminaba decidiendo quien cargó las categorías de la función Frame, y así había
+                  convenios habilitados por ARCA que no se podían usar.
+                */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
+                  <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
+                    <option value="">Todos los convenios de la empleadora</option>
+                    {conveniosDisponibles.map((c) => (
+                      <option key={c.externalId} value={c.externalId}>
+                        {c.externalId}
+                        {c.name ? ` — ${c.name}` : ""} ({c.cantidadCategorias}){c.registrado ? "" : " · no registrado en ARCA"}
+                      </option>
+                    ))}
+                  </select>
+                  {!wizardData.empresaContratoId ? <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p> : conveniosDisponibles.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p> : <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>}
+                </div>
+
+                <div className="space-y-1.5">
+                  {/* Alto fijo, igual que el rótulo de «Tipo de contrato»: es lo que mantiene
+                      los dos desplegables alineados aunque el de al lado muestre un badge. */}
+                  <div className="h-6 flex items-center ml-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                      Categoría <span className="text-red-500">*</span>
+                    </label>
+                  </div>
+                  <select
+                    className="input-field w-full"
+                    value={wizardData.categoria_sat_id}
+                    onChange={(e) => {
+                      setAvisoConvenio("");
+                      setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
+                    }}
+                    required
+                  >
+                    <option value="">Selecciona categoria...</option>
+                    {availableCategoriasSat.map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.codigoArca ? `${c.codigoArca} — ` : ""}
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
+                  {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
+
+                  {/*
+                    El escape hatch del filtro por función Frame.
+
+                    Solo aparece con un convenio elegido, porque sin convenio «todas las del
+                    convenio» no quiere decir nada. Cuando la función no tiene NINGUNA categoría de
+                    ese convenio se prende solo y queda fijo: apagarlo dejaría el select vacío, que
+                    es el estado sin explicación que esto viene a sacar.
+                  */}
+                  {convenioFiltro && wizardData.rol_frame_id && (
+                    <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+                      <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
+                      <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
+                    </label>
+                  )}
+                  {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
+
+                  {/*
+                    El filtro se dice, no se aplica en silencio: si una categoría que el operador
+                    esperaba ver no está, tiene que saber por qué y qué la destraba.
+
+                    Las dos causas van separadas porque llevan a acciones distintas: lo que oculta
+                    ARCA no se puede destrabar desde acá (hay que registrar el convenio en la
+                    empleadora); lo que oculta el filtro se destraba cambiando el select de arriba.
+                  */}
+                  {conveniosDeLaEmpleadora && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(", ")}).`}
+                      {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ""}
+                      {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ""}
+                    </p>
+                  )}
+                </div>
+
+                </>
+                )}
+
+                {/*
+                  LOS IMPORTES: los mismos cuatro que la solicitud de la app, enlazados entre sí. Se
+                  carga cualquiera —jornada, semana, mes o total— y los otros se recalculan; el
+                  mensual es el ancla, así que un mes completo totaliza exactamente el mensual.
+                  Lo que se guarda sigue siendo el sueldo por jornada.
+                */}
+                <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
+                  <ImportesDelContrato
+                    className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ""}
+                    onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))}
+                    mesesEq={mesesEqWizard}
+                    jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0}
+                    diasSemana={diasSemanaWizard}
+                    bloqueado={!esServicios && !wizardData.categoria_sat_id}
+                    textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala."
+                    claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1"
+                    claseCampo="input-field w-full"
+                    claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300"
+                    claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1"
+                  />
+
+                  {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
+                <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
+                  <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Sueldo en mano texto <span className="text-red-500">*</span>
+                  </label>
+                  <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
+                </div>
+
+                {/*
+                  LA ESCALA DEL CONVENIO NO APLICA A UN SERVICIO.
+
+                  Sueldo diario neto, diferencia diaria, neto y bruto salen de la CATEGORÍA del
+                  convenio, y un contrato de Servicios no tiene categoría —la pantalla ni siquiera la
+                  ofrece, y el efecto de arriba la limpia si venía puesta—. Se mostraban igual, los
+                  cuatro en cero, debajo de un importe total que sí está cargado: cuatro campos que no
+                  se pueden completar y que contradicen al de arriba.
+
+                  Se mira el TRÁMITE (`esServicios` → `constancia_cuit`) y no el nombre del estado:
+                  «Pedido de Servicios» se puede renombrar desde el ABM en cualquier momento.
+                */}
+                {!esServicios && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo diario neto</label>
+                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_diario_neto} readOnly />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
+                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold" style={{ color: wizardData.diferencia_diaria_neto < 0 ? "#ef4444" : "#22c55e" }} value={wizardData.diferencia_diaria_neto} readOnly />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
+                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
+                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
+                      </div>
+                    </div>
+                  </>
+                )}
+                </div>
+
+                {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
+                <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
+                    <input
+                      type="checkbox"
+                      id="esReemplazo"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={wizardData.reemplazo}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : "" }));
+                        if (!checked) setHerenciaReemplazo(null);
+                      }}
+                    />
+                    <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Es reemplazo
+                    </label>
+                  </div>
+
+                  {wizardData.reemplazo && (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
+                      <select
+                        className="input-field w-full"
+                        value={wizardData.empleado_id_reemplezado}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: value }));
+                          // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
+                          if (value) applyReplacedMemberAssignments(value);
+                          else setHerenciaReemplazo(null);
+                        }}
+                      >
+                        <option value="">Selecciona empleado...</option>
+                        {teamMembers
+                          .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
+                          .map((m) => (
+                            <option key={m._id} value={(m.metadata as any)?.id}>
+                              {m.firstName} {m.lastName}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Aviso de la herencia: qué se copió (o por qué no se pudo) antes de mostrar las áreas. */}
+                  {herenciaReemplazo && (
+                    <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"}`}>
+                      <p className="font-bold flex items-center gap-2">
+                        <FontAwesomeIcon icon={herenciaReemplazo.ok ? faInfoCircle : faTriangleExclamation} />
+                        {herenciaReemplazo.ok ? `Área y turno heredados de ${herenciaReemplazo.replacedName}` : `No se pudo heredar el área de ${herenciaReemplazo.replacedName}`}
+                      </p>
+                      <p className="mt-1 leading-normal">
+                        {herenciaReemplazo.ok ? (
+                          <>
+                            Se preseleccionó <strong>{herenciaReemplazo.detalle}</strong>. Si necesitás otra cosa, cambiala más arriba, en Asignación por Área y Turno.
+                          </>
+                        ) : (
+                          herenciaReemplazo.detalle
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {/* Step 2: Sueldo */}
+
+            {/*
+              Acá estaba el paso «Extras»: sede y observaciones. Se sacó. La sede se configura en el
+              proyecto y se toma de ahí (ver `initialSedeId`); las observaciones no se piden más. Las
+              que ya tenga un contrato no se borran: viajan tal cual en `wizardData`.
+            */}
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+
+  const modalesSueltos = (
+    <>
+  {/*
+    FILTRO DE TRÁMITE — ventana aparte, como «Filtros avanzados».
+
+    Elegir entre ARCA y Servicios es una decisión de filtrado, no un campo del contrato: metida
+    en el formulario competía visualmente con lo que sí se está cargando y desalineaba la fila.
+    Acá tiene lugar para mostrarse con los badges de color de verdad —que en una ventana de
+    filtros ayudan a reconocerlos, mientras que en el medio del formulario distraían—.
+  */}
+  <Modal
+    isOpen={filtroTramiteOpen}
+    onClose={() => setFiltroTramiteOpen(false)}
+    title="Filtrar tipos de contrato"
+    subtitle="Por el trámite que declaran ante ARCA"
+    size="sm"
+    zIndex={120}
+    footer={
+      <div className="flex items-center justify-between w-full gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setFiltroTramite("");
+            setFiltroTramiteOpen(false);
+          }}
+          className="btn-secondary"
+        >
+          Ver todos
+        </button>
+        <button type="button" onClick={() => setFiltroTramiteOpen(false)} className="btn-primary">
+          Cerrar
+        </button>
+      </div>
+    }
+  >
+    <div className="space-y-2">
+      {impositivosDelAbm.map((e) => {
+        const tipo = e.data?.tipoImpositivo;
+        if (!esTipoImpositivo(tipo)) return null;
+        const activo = filtroTramite === tipo;
+        const cuantos = contratos.filter((c) => tramitePorContrato.get(c._id) === tipo).length;
+        return (
+          <button
+            key={e._id}
+            type="button"
+            onClick={() => {
+              setFiltroTramite(activo ? "" : tipo);
+              setFiltroTramiteOpen(false);
+            }}
+            className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition-colors ${activo ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20" : "border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600"}`}
+          >
+            <EstadoBadge name={e.name} />
+            {/* Cuántos tipos de contrato quedan de cada lado: evita elegir un filtro que deja
+                la lista vacía y después no entender por qué no hay nada para seleccionar. */}
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{cuantos === 1 ? "1 tipo" : `${cuantos} tipos`}</span>
+          </button>
+        );
+      })}
+      <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-1">El filtro solo acota la lista de tipos de contrato. No cambia nada de lo que se guarda.</p>
+    </div>
+  </Modal>
+
+  {/* Modal de detalle del empleado: contratos del proyecto + descargas */}
+  <EmployeeContractsModal
+    isOpen={!!selectedMemberForDetail}
+    onClose={() => setSelectedMemberForDetail(null)}
+    user={selectedMemberForDetail}
+    projectId={projectId || ""}
+    contratoFrames={contratoFrames}
+    releases={releases}
+    contratoEmpresas={contratoEmpresas}
+    releaseEmpresas={releaseEmpresas}
+    onEdit={(u, contract, contractIndex) => {
+      setSelectedMemberForDetail(null);
+      handleOpenScheduleModal(u, contract, contractIndex);
+    }}
+    onDelete={(id) => {
+      setSelectedMemberForDetail(null);
+      handleRemoveUser(id);
+    }}
+    onUploadAltaDocumento={handleUploadAltaDocumento}
+  />
+
+  {/* Info: por qué no se puede guardar el miembro si el proyecto no tiene áreas */}
+  <InfoModal
+    isOpen={showSinAreasInfo}
+    onClose={() => setShowSinAreasInfo(false)}
+    title="El proyecto no tiene áreas configuradas"
+    subtitle="Por qué no podés guardar los cambios del miembro"
+    size="sm"
+    zIndex={100}
+    actions={[
+      {
+        label: "Ir a Editar Proyecto",
+        onClick: () => {
+          setShowSinAreasInfo(false);
+          navigate(`/projects/${projectId}`, { state: { openEdit: true } });
+        },
+        variant: "primary",
+      },
+      { label: "Entendido", onClick: () => setShowSinAreasInfo(false), variant: "secondary" },
+    ]}
+  >
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+        La <strong>asignación por área y turno es obligatoria</strong> para guardar un miembro. Si el proyecto no tiene áreas, no hay nada para seleccionar y cualquier cambio del miembro (sueldo, contrato, extras) queda bloqueado.
+      </p>
+      <ul className="space-y-3">
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Entrá a <strong>Editar Proyecto → Configuración por Área</strong> y agregá al menos un área con sus turnos.
+          </span>
+        </li>
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">Volvé al equipo y configurá el miembro: ya vas a poder elegir área y turno, y guardar.</span>
+        </li>
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">Sin áreas, además, los usuarios no pueden cargar su área y los supervisores no pueden informar novedades sobre ellos.</span>
+        </li>
+      </ul>
+    </div>
+  </InfoModal>
+
+  {/* Info: de dónde sale el Estado del contrato (Agregar/Configurar miembro) */}
+  <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: "Entendido", onClick: () => setShowEstadoInfo(false), variant: "primary" }]}>
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+        El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de ARCA" o "Pedido de Servicios"), se muestra acá. Si no tiene ninguno, no hay nada para mostrar.
+      </p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+        Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{" "}
+        <Link to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+          Contratos → Estados de Contratos
+        </Link>
+        .
+      </p>
+    </div>
+  </InfoModal>
+
+  {/* Info: de dónde salen las empresas del contrato y del release */}
+  <InfoModal
+    isOpen={showEmpresasInfo}
+    onClose={() => setShowEmpresasInfo(false)}
+    title="Empresa del Contrato y del Release"
+    subtitle="Por qué aparecen esas empresas y dónde se eligen"
+    size="sm"
+    zIndex={120}
+    actions={[{ label: "Entendido", onClick: () => setShowEmpresasInfo(false), variant: "primary" }]}
+  >
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+        Las dos listas salen de <strong>este proyecto</strong>: son las empresas que tiene configuradas para contratar y para firmar el release. Por eso acá no aparecen todas las del sistema, sino las que el proyecto habilitó.
+      </p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+        Si ves <strong>una sola</strong>, es porque el proyecto definió una sola para ese uso: queda elegida y no hay nada que decidir. Con el proyecto sin ninguna configurada se ofrecen todas, que es lo único que permite generar el documento.
+      </p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+        Se cambian en{" "}
+        <Link to={`/projects/${projectId}`} target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+          el proyecto → Editar
+        </Link>
+        , en Empresa del contrato y Empresa del release.
+      </p>
+    </div>
+  </InfoModal>
+
+  {/* Info: qué significa el número entre paréntesis en Área/Turno Coordinada */}
+  <InfoModal isOpen={openCoordCountInfo} onClose={() => setOpenCoordCountInfo(false)} title="Personas supervisadas por área y turno" subtitle="Qué significa el número entre paréntesis" size="sm" zIndex={100} actions={[{ label: "Entendido", onClick: () => setOpenCoordCountInfo(false), variant: "primary" }]}>
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+        El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong> asignados a esa combinación exacta de área y turno, o sea a quiénes supervisa esa persona en ese horario.
+      </p>
+      <ul className="space-y-3">
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            <strong>Estado activo</strong>: el usuario figura como ACTIVO. <strong>Contrato vigente</strong>: su contrato no tiene fecha de baja, o la baja es de hoy en adelante. Quien no cumple las dos cosas no suma.
+          </span>
+        </li>
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Haciendo <strong>click en el turno</strong> se abre el detalle de esas personas con su estado, estado de contrato y alta/baja. Las que no cumplen aparecen al final, en <strong>"No suman al total"</strong>.
+          </span>
+        </li>
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es el total de esos horarios contando a cada <strong>persona una sola vez</strong>: quien está asignado a dos turnos de la misma área suma uno, no dos.
+          </span>
+        </li>
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            El <strong>supervisor se incluye a sí mismo</strong> si además pertenece a esa área y turno.
+          </span>
+        </li>
+        <li className="flex items-start gap-3">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Se calcula sobre <strong>todo el equipo del proyecto</strong>, no solo sobre la página que estás viendo, y se actualiza cuando cambian las asignaciones de los miembros.
+          </span>
+        </li>
+      </ul>
+    </div>
+  </InfoModal>
+    </>
+  );
+
+
+  /*
+    EN MODO «SÓLO APROBACIÓN» NO SE DIBUJA LA PANTALLA, sólo sus modales.
+
+    El velo tapa el rato entre el click y el wizard: hay que traer el proyecto, el equipo y la ficha
+    completa de la persona, y sin nada en pantalla el botón parece no haber hecho nada.
+  */
+  if (soloAprobacion)
+    return (
+      <>
+        {!selectedUserForWizard && (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          </div>
+        )}
+        {modalesDelProyecto}
+        {modalesSueltos}
+      </>
+    );
 
   return (
     <PageLayout
@@ -3173,1563 +4898,11 @@ export const ProjectTeamPage: React.FC = () => {
             {activeTab === "solicitudes" && project && <TeamSolicitudesTab projectId={projectId!} project={project} refreshSignal={solicitudesRefresh} onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)} />}
           </div>
 
-          {/* Modals */}
-
-          <Modal
-            isOpen={showAddModal}
-            onClose={() => setShowAddModal(false)}
-            title="Agregar Miembros al Equipo"
-            subtitle={
-              <div className="flex items-center gap-2">
-                <span>Disponibles para asignar ({filteredCandidates.length})</span>
-                <button type="button" onClick={() => setShowCandidatesInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué usuarios se muestran?">
-                  <FontAwesomeIcon icon={faInfoCircle} className="text-xs" />
-                </button>
-              </div>
-            }
-            size="xl"
-          >
-            <div className="space-y-4 max-h-[85vh] flex flex-col">
-              <div className="flex flex-col gap-3 shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
-                    </div>
-                    <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
-                  </div>
-                  <button onClick={() => setShowFilters(true)} className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}>
-                    <FontAwesomeIcon icon={faFilter} className="text-xs" />
-                    Filtros
-                    {activeAddFiltersCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800 shadow-sm">{activeAddFiltersCount}</span>}
-                  </button>
-                </div>
-
-                {/* Filter Badges */}
-                {activeAddFiltersCount > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 mt-1 px-1">
-                    {filterRole && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        <span className="opacity-60">Rol:</span> {filterRole}
-                        <button onClick={() => setFilterRole("")} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
-                          <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                        </button>
-                      </span>
-                    )}
-                    {filterRoleFrame && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                        <span className="opacity-60">Role Frame:</span> {filterRoleFrame}
-                        <button onClick={() => setFilterRoleFrame("")} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
-                          <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                        </button>
-                      </span>
-                    )}
-                    {filterProject && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
-                        <span className="opacity-60">Proyecto:</span> {filterProject}
-                        <button onClick={() => setFilterProject("")} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
-                          <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                        </button>
-                      </span>
-                    )}
-                    <button
-                      onClick={() => {
-                        setFilterRole("");
-                        setFilterRoleFrame("");
-                        setFilterProject("");
-                      }}
-                      className="text-[10px] text-gray-500 hover:text-red-500 font-bold ml-1 transition-colors uppercase tracking-wider"
-                    >
-                      Limpiar Todo
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-100 dark:border-gray-700 rounded-lg">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
-                    <thead>
-                      <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                        <th className="px-4 py-3">Nombre</th>
-                        <th className="px-4 py-3">Rol</th>
-                        <th className="px-4 py-3">Rol/es Frame</th>
-                        <th className="px-4 py-3">Proyecto/s</th>
-                        <th className="px-4 py-3">Turnos asociados</th>
-                        <th className="px-4 py-3 text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
-                      {searchingCandidates ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                            <FontAwesomeIcon icon={faSearch} className="animate-pulse mr-2" />
-                            Buscando candidatos...
-                          </td>
-                        </tr>
-                      ) : filteredCandidates.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                            {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : "No hay usuarios disponibles para asignar"}
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredCandidates.map((user) => {
-                          const isCoordinator = checkIsCoordinator(user);
-                          const metadataProjects = user.metadata?.projects || [];
-                          // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
-                          const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
-                          const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
-                          const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
-
-                          return (
-                            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</span>
-                                  <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                  {(user.roles || []).map((r) => {
-                                    const lower = r.name.toLowerCase();
-                                    const isCoord = lower.includes("coordinador");
-                                    const isResp = lower.includes("responsable");
-
-                                    let classes = "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800";
-                                    if (isCoord) {
-                                      classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800";
-                                    } else if (isResp) {
-                                      classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
-                                    }
-
-                                    return (
-                                      <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${classes}`}>
-                                        {r.name}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                {rolFrames.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1 max-w-[180px]">
-                                    {rolFrames.map((rf, idx) => (
-                                      <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                                        {rf}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col gap-0.5">
-                                  {activeProjects.length > 0 ? (
-                                    activeProjects.map((p, idx) => (
-                                      <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
-                                        {p}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs text-gray-400">—</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col gap-1.5">
-                                  {user.turnos && user.turnos.length > 0 ? (
-                                    user.turnos.map((t) => (
-                                      <div key={typeof t === "string" ? t : t._id} className="flex flex-col gap-0.5">
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === "object" ? t.name : "Turno"}</span>
-                                        {typeof t === "object" && t.startTime && t.endTime && (
-                                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
-                                            {t.startTime} - {t.endTime}
-                                          </span>
-                                        )}
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs text-gray-400">—</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
-                                  <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                                  Agregar
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Paginación de candidatos (misma UX que Contratos/Novedades) */}
-              {candTotalPages > 1 && (
-                <div className="mt-1 flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shrink-0">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{filteredCandidates.length}</span> en esta página · <span className="font-semibold text-gray-900 dark:text-gray-100">{candTotal}</span> usuarios · pág. {candPage}/{candTotalPages}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setCandPage((p) => Math.max(1, p - 1))} disabled={candPage === 1 || searchingCandidates} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                      <FontAwesomeIcon icon={faChevronLeft} />
-                    </button>
-                    <div className="flex items-center px-4 text-sm font-medium dark:text-gray-100">
-                      Página {candPage} de {candTotalPages}
-                    </div>
-                    <button onClick={() => setCandPage((p) => Math.min(candTotalPages, p + 1))} disabled={candPage === candTotalPages || searchingCandidates} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                      <FontAwesomeIcon icon={faChevronRight} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Modal>
-
-          {/* Candidates Filter Modal */}
-          <Modal
-            isOpen={showFilters}
-            onClose={() => setShowFilters(false)}
-            title="Filtros Avanzados"
-            subtitle="Configura los filtros para refinar los candidatos"
-            size="sm"
-            footer={
-              <div className="flex items-center justify-between w-full">
-                <button
-                  onClick={() => {
-                    setFilterRole("");
-                    setFilterRoleFrame("");
-                    setFilterProject("");
-                    setShowFilters(false);
-                  }}
-                  className="btn-secondary"
-                >
-                  Limpiar Todo
-                </button>
-                <button onClick={() => setShowFilters(false)} className="btn-primary">
-                  Aplicar
-                </button>
-              </div>
-            }
-          >
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol</label>
-                <div className="relative">
-                  <select className="input-field py-2 w-full text-xs pr-8" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-                    <option value="">Todos los Roles</option>
-                    {Array.from(new Set(allUsers.flatMap((u) => (u.roles || []).map((r) => r.name))))
-                      .sort()
-                      .map((roleName) => (
-                        <option key={roleName} value={roleName}>
-                          {roleName}
-                        </option>
-                      ))}
-                  </select>
-                  <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol/es Frame</label>
-                <div className="relative">
-                  <select className="input-field py-2 w-full text-xs pr-8" value={filterRoleFrame} onChange={(e) => setFilterRoleFrame(e.target.value)}>
-                    <option value="">Todos los Rol Frames</option>
-                    {allRoleFrames.map((rf) => (
-                      <option key={rf._id} value={rf.name}>
-                        {rf.name}
-                      </option>
-                    ))}
-                  </select>
-                  <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Proyecto/s</label>
-                <div className="relative">
-                  <select className="input-field py-2 w-full text-xs pr-8" value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
-                    <option value="">Todos los Proyectos</option>
-                    {Array.from(new Set(allUsers.flatMap((u) => (u.metadata?.projects || []).map((p) => p.nombre_proyecto))))
-                      .filter(Boolean)
-                      .sort()
-                      .map((projectName) => (
-                        <option key={projectName} value={projectName}>
-                          {projectName}
-                        </option>
-                      ))}
-                  </select>
-                  <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                </div>
-              </div>
-
-              {activeAddFiltersCount > 0 && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                  <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
-                    Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? "s" : ""} aplicado{activeAddFiltersCount > 1 ? "s" : ""}.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Modal>
-
-          {/* Info Modal for Candidates */}
-          <Modal isOpen={showCandidatesInfo} onClose={() => setShowCandidatesInfo(false)} title="Usuarios Disponibles" size="md">
-            <div className="space-y-4">
-              <div className="flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
-                <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 dark:text-blue-400 mt-1" />
-                <div className="text-sm text-gray-700 dark:text-gray-300">
-                  <p className="font-bold mb-2">¿Quiénes aparecen en esta lista?</p>
-                  <p>
-                    La lista muestra a todos los <strong>usuarios activos</strong> de la plataforma que actualmente <strong>no forman parte del equipo</strong> de este proyecto.
-                  </p>
-                </div>
-              </div>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400 ml-4 list-disc">
-                <li>Usuarios con estado "Activo" en sus metadatos.</li>
-                <li>Se excluyen usuarios que ya están asignados a este proyecto.</li>
-                <li>Puedes buscar por nombre o email para filtrar resultados específicos.</li>
-              </ul>
-            </div>
-          </Modal>
-
-          {/* Viewing Shifts Modal */}
-          <Modal
-            isOpen={!!viewingShiftsData}
-            onClose={() => setViewingShiftsData(null)}
-            title={`Turnos ${viewingShiftsData?.assignmentType === "coordinated" ? "Supervisados" : "Asignados"} - ${viewingShiftsData?.areaName}`}
-            subtitle={
-              viewingShiftsData ? (
-                <p className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight">
-                  {viewingShiftsData.user.firstName} {viewingShiftsData.user.lastName}
-                </p>
-              ) : (
-                ""
-              )
-            }
-            size="md"
-          >
-            <div className="space-y-4">
-              {(() => {
-                if (!viewingShiftsData) return null;
-                const { user, areaId, assignmentType } = viewingShiftsData;
-                const userConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
-                let shifts: any[] = [];
-
-                // Helper to get coordinated shift IDs for exclusion
-                const getCoordinatedShiftIds = () => {
-                  if (!project?.coordinatorAssignments) return [];
-                  return project.coordinatorAssignments
-                    .filter((asm) => {
-                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
-                      return String(uid) === String(user._id) && String(aid) === String(areaId);
-                    })
-                    .map((asm) => (typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId));
-                };
-
-                const coordShiftIds = getCoordinatedShiftIds();
-
-                // 1. If viewing coordinated, check ONLY coordinatorAssignments
-                if (assignmentType === "coordinated") {
-                  if (project?.coordinatorAssignments) {
-                    const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
-                      return String(uid) === String(user._id) && String(aid) === String(areaId);
-                    });
-                    myCoordAsgn.forEach((asm) => {
-                      const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
-                      const shift = allShifts.find((s) => String(s._id) === String(sid));
-                      if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) shifts.push(shift);
-                    });
-                  }
-                } else {
-                  // 2. If viewing standard, check team configuration assignments (Wizard) and EXCLUDE coordinated ones
-                  const assignments = userConfig?.areaShiftAssignments || [];
-                  const areaAssign = assignments.find((a: any) => {
-                    const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
-                    if (String(aid) === String(areaId)) return true;
-                    const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
-                    const targetName = viewingShiftsData.areaName;
-                    return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
-                  });
-
-                  if (areaAssign) {
-                    const sids = areaAssign.shiftIds || [];
-                    sids.forEach((sid: any) => {
-                      const actualSid = typeof sid === "object" ? sid?._id : sid;
-
-                      // EXCLUDE if it's in coordinated
-                      if (coordShiftIds.includes(actualSid)) return;
-
-                      const shift = allShifts.find((s) => String(s._id) === String(actualSid));
-                      if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
-                        shifts.push(shift);
-                      }
-                    });
-                  }
-
-                  // 3. Check user's contract history (metadata) fallback
-                  if (shifts.length === 0) {
-                    const projectMeta = user.metadata?.projects?.find((p: any) => {
-                      const pId = p.projectId;
-                      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-                      return String(idToCheck) === String(project?._id);
-                    });
-                    const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
-
-                    if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
-                      const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-                        const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
-                        if (String(aid) === String(areaId)) return true;
-                        const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
-                        const targetName = viewingShiftsData.areaName;
-                        return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
-                      });
-
-                      if (fallbackAssign) {
-                        const sids = fallbackAssign.shiftIds || [];
-                        sids.forEach((sid: any) => {
-                          const actualSid = typeof sid === "object" ? sid?._id : sid;
-
-                          // EXCLUDE if it's in coordinated
-                          if (coordShiftIds.includes(actualSid)) return;
-
-                          const shift = allShifts.find((s) => String(s._id) === String(actualSid));
-                          if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
-                            shifts.push(shift);
-                          }
-                        });
-                      }
-                    }
-                  }
-                }
-
-                // 4. Legacy members fallback
-                if (shifts.length === 0) {
-                  // Fallback for legacy members (only if nothing found yet)
-                  const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
-                  const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
-                  const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
-                  if (shift) shifts = [shift];
-                }
-
-                if (shifts.length === 0) return <p className="text-center text-gray-500 py-12">No hay turnos asignados para esta área.</p>;
-
-                // En los que coordina, cada turno abre el detalle de sus personas: la columna de la
-                // tabla ya muestra sólo las áreas, así que es el camino para ver un horario puntual.
-                const abrirDetalle = (s: any) => {
-                  setViewingShiftsData(null);
-                  handleOpenAreaShiftDetail(areaId, viewingShiftsData.areaName, s);
-                };
-                return shifts.map((s, idx) => (
-                  <div
-                    key={idx}
-                    onClick={assignmentType === "coordinated" ? () => abrirDetalle(s) : undefined}
-                    title={assignmentType === "coordinated" ? "Ver las personas de este turno" : undefined}
-                    className={`p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3 ${assignmentType === "coordinated" ? "cursor-pointer hover:border-amber-300 dark:hover:border-amber-600 transition-colors" : ""}`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                        {s.name}
-                        {assignmentType === "coordinated" && <span className="ml-1.5 text-amber-600 dark:text-amber-400">({getAreaShiftPeopleCount(areaId, String(s._id))})</span>}
-                      </span>
-                      <span className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[10px] font-black shadow-sm">
-                        {s.startTime} — {s.endTime} HS
-                      </span>
-                    </div>
-                    {s.days && s.days.length > 0 && (
-                      <div className="flex gap-1.5 mt-1">
-                        {["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"].map((label, dIdx) => (
-                          <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? "bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700" : "text-gray-300 dark:text-gray-600"}`}>
-                            {label}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ));
-              })()}
-            </div>
-          </Modal>
-
-          {/* Detalle de personas de un área/turno: click en el chip del área (todos los horarios) o en un turno */}
-          <Modal
-            isOpen={!!viewingAreaShift}
-            onClose={() => {
-              setViewingAreaShift(null);
-              setAreaShiftMembers(null);
-            }}
-            title={viewingAreaShift ? `Personas en ${viewingAreaShift.areaName}` : "Personas"}
-            subtitle={viewingAreaShift ? <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">{viewingAreaShift.shift ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})` : (viewingAreaShift.shifts || []).map((s: any) => s.name).join(" · ") || "Todos los horarios del área"}</p> : ""}
-            size="lg"
-          >
-            {loadingAreaShiftMembers ? (
-              <div className="py-12">
-                <LoadingSpinner message="Cargando personas..." />
-              </div>
-            ) : !areaShiftMembers || areaShiftMembers.total === 0 ? (
-              <p className="text-center text-gray-500 py-12">No hay personas asignadas a esta área y turno.</p>
-            ) : (
-              (() => {
-                const cuentan = areaShiftMembers.members.filter((m) => m.cuenta);
-                const noCuentan = areaShiftMembers.members.filter((m) => !m.cuenta);
-                // Viendo el área completa, cada persona muestra en qué horarios está.
-                const mostrarTurnos = !viewingAreaShift?.shift;
-
-                const renderMember = (m: (typeof areaShiftMembers.members)[number]) => (
-                  <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" : "bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80"}`}>
-                    <div className="flex flex-col min-w-0 gap-1">
-                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{m.firstName || m.lastName ? `${m.firstName} ${m.lastName}`.trim() : m.email}</span>
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{m.email}</span>
-                      {mostrarTurnos && (m.shiftIds || []).length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {(m.shiftIds || []).map((sid) => {
-                            const s: any = allShifts.find((x) => String(x._id) === String(sid));
-                            return (
-                              <span key={sid} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap">
-                                {s ? `${s.name} (${s.startTime} - ${s.endTime})` : "Turno"}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.activo ? "ACTIVO" : "INACTIVO"}</span>
-                      {m.estadoContrato ? <EstadoBadge name={m.estadoContrato} className="text-[10px] whitespace-nowrap" /> : <span className="text-[10px] text-gray-400">Sin contrato</span>}
-                      <div className="flex flex-col items-end gap-0.5 text-[10px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded uppercase font-bold ${m.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.vigente ? "VIGENTE" : "NO VIGENTE"}</span>
-                        <span>Alta: {formatContractDate(m.fechaAlta)}</span>
-                        <span>Baja: {m.fechaBaja ? formatContractDate(m.fechaBaja) : "—"}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-
-                return (
-                  <div className="space-y-4">
-                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                      <p className="text-xs text-amber-800 dark:text-amber-300">
-                        <strong>{areaShiftMembers.cuentan}</strong> persona{areaShiftMembers.cuentan === 1 ? "" : "s"} activa{areaShiftMembers.cuentan === 1 ? "" : "s"} con contrato vigente
-                        {areaShiftMembers.total !== areaShiftMembers.cuentan ? (
-                          <>
-                            {" "}
-                            · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? "" : "s"} en total
-                          </>
-                        ) : null}
-                        {mostrarTurnos ? " en los horarios que supervisa de esta área." : ". El número de la columna Área/Turno Supervisada es el primero."}
-                      </p>
-                    </div>
-
-                    {cuentan.length > 0 && <div className="space-y-2">{cuentan.map(renderMember)}</div>}
-
-                    {noCuentan.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-2">No suman al total ({noCuentan.length})</p>
-                        {noCuentan.map(renderMember)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()
-            )}
-          </Modal>
-
-          {/*
-            Buscador del catálogo completo de oficios, para cuando el que corresponde no está entre
-            los de la persona. Se elige UNO: es con el que se la contrata acá, y al guardar se le suma
-            a la ficha. Va por encima del wizard, que es desde donde se abre.
-          */}
-          <Modal
-            isOpen={rolFrameBuscadorOpen}
-            onClose={() => setRolFrameBuscadorOpen(false)}
-            title="Otro rol empresa"
-            subtitle="El que elijas se le agrega a la ficha de la persona al guardar"
-            size="md"
-            zIndex={110}
-            footer={
-              <div className="flex w-full justify-end">
-                <button type="button" onClick={() => setRolFrameBuscadorOpen(false)} className="btn-secondary">
-                  Cancelar
-                </button>
-              </div>
-            }
-          >
-            <div className="space-y-3">
-              <input type="text" autoFocus value={rolFrameBusqueda} onChange={(e) => setRolFrameBusqueda(e.target.value)} placeholder="Buscar especialidad…" className="input-field w-full" />
-              <div className="grid max-h-[45vh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-                {rolesFrameParaBuscar.length === 0 ? (
-                  <p className="col-span-full py-8 text-center text-xs italic text-gray-400">{rolFrameBusqueda ? `No hay especialidades que coincidan con "${rolFrameBusqueda}"` : "La persona ya tiene todos los oficios del catálogo."}</p>
-                ) : (
-                  rolesFrameParaBuscar.map((rf) => (
-                    <button
-                      key={rf._id}
-                      type="button"
-                      onClick={() => {
-                        setRolFrameAgregado(rf);
-                        // Se deja elegido en el desplegable, que es lo que el wizard guarda.
-                        setWizardData((prev) => ({ ...prev, rol_frame_id: String(rf.data?.rol?.id || ""), categoria_sat_id: "" }));
-                        setRolFrameBuscadorOpen(false);
-                        setRolFrameBusqueda("");
-                      }}
-                      className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-left text-sm text-gray-700 transition-all hover:border-blue-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200"
-                    >
-                      {rf.name}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          </Modal>
-
-          {/* Wizard Modal */}
-          <Modal
-            isOpen={!!selectedUserForWizard}
-            onClose={() => {
-              setSelectedUserForWizard(null);
-              // El oficio agregado a mano es de ESTA carga: si se cierra sin guardar, no queda nada.
-              setRolFrameAgregado(null);
-              setRolFrameBusqueda("");
-            }}
-            title={esEdicionMiembro ? "Configurar Miembro" : "Agregar Miembro"}
-            subtitle={
-              selectedUserForWizard ? (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{project?.name}</span>
-                  <p className="text-base font-black text-blue-600 dark:text-blue-400 uppercase tracking-tight">
-                    {selectedUserForWizard.firstName} {selectedUserForWizard.lastName}
-                  </p>
-                </div>
-              ) : (
-                project?.name
-              )
-            }
-            size="xl"
-            footer={
-              <div className="flex gap-3 w-full">
-                {/* Una sola acción: el formulario es uno solo y se guarda desde cualquier punto. */}
-                <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
-                  GUARDAR
-                </button>
-              </div>
-            }
-          >
-            <div className="flex flex-col h-[520px]">
-              {/* Un solo formulario, en una sola columna con scroll: el orden va de arriba hacia abajo. */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
-                {(
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/*
-                      EMPLEADO OCUPA MEDIA FILA, no la entera.
-
-                      Es un campo de solo lectura —el nombre de quien se está configurando— así que no
-                      gana nada con el ancho completo, y lo que costaba era el desfasaje: al ocupar dos
-                      columnas, todo lo de abajo quedaba corrido medio lugar y los pares se partían.
-                      «Empresa del Contrato» terminaba al lado de «Role Frame», y «Empresa del Release»
-                      al lado de «Convenio», que son justamente los que hay que leer juntos.
-
-                      Con esto las filas quedan: Empleado | Role Frame · Empresa del Contrato | Empresa
-                      del Release · Convenio | Categoría · Tipo de Contrato | Estado. Los pares que
-                      comparten fila son los que se deciden juntos, y el orden sigue la cadena:
-                      empresa → convenios de ese CUIT → categorías de esos convenios.
-                    */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Empleado <span className="text-red-500">*</span>
-                      </label>
-                      <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
-                    </div>
-
-                    {/*
-                      EL DESPLEGABLE OFRECE LOS OFICIOS DE LA PERSONA; EL BOTÓN, TODOS LOS DEMÁS.
-
-                      La lista corta es la correcta el 90% de las veces y por eso sigue siendo la que se
-                      ve. Pero cuando se contrata a alguien para algo que no figura en su ficha —porque
-                      nunca lo hizo acá, o porque quedó incompleta— antes no había salida: el select no
-                      lo ofrecía y el wizard exige uno. Se elegía cualquiera con tal de avanzar.
-
-                      Lo que se elige por el buscador se le AGREGA a la ficha al guardar: que además sea
-                      Utilero es un dato de la persona, no de este contrato, y la próxima vez tiene que
-                      estar en la lista corta.
-                    */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Role Frame a Desempeñar <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))} required>
-                          <option value="">Selecciona role frame...</option>
-                          {rolesFrameOfrecidos.map((rf) => (
-                            <option key={rf._id} value={rf.data.rol.id}>
-                              {rf.name}
-                              {!userAssignedRoleFrames.some((p) => p._id === rf._id) ? " (nuevo)" : ""}
-                            </option>
-                          ))}
-                        </select>
-                        <button type="button" onClick={() => setRolFrameBuscadorOpen(true)} title="Buscar otro rol empresa" className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
-                          Otro rol
-                        </button>
-                      </div>
-                      {rolFrameAgregado && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
-                    </div>
-
-                    {/*
-                      LA EMPRESA VA ANTES QUE EL CONVENIO, Y ESO NO ES ORDEN ESTÉTICO.
-
-                      La cadena es empresa → convenios registrados por ese CUIT → categorías de esos
-                      convenios. Estaba 200 líneas más abajo, así que quien cargaba de arriba hacia
-                      abajo llegaba a Convenio sin empresa elegida y se encontraba el select apagado
-                      diciéndole que eligiera algo que todavía no había aparecido en pantalla.
-                    */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
-                      <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
-                        <option value="">{contratoEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>
-                        {contratoEmpresas.map((emp) => (
-                          <option key={emp.id} value={emp.id}>
-                            {emp.label}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Define qué convenios y categorías se pueden elegir abajo.</p>
-                    </div>
-
-                    {/* Las dos empresas juntas: se eligen de la misma lista y se confunden si están separadas. */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
-                      <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
-                        <option value="">{releaseEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>
-                        {releaseEmpresas.map((emp) => (
-                          <option key={emp.id} value={emp.id}>
-                            {emp.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {/*
-                        RÓTULO, FILTRO Y BADGE, TODO EN UNA FILA DE ALTO FIJO.
-
-                        Antes los tres trámites estaban como botones sueltos entre el rótulo y el
-                        desplegable: además de ser tres cosas para elegir una, esa fila empujaba el
-                        select hacia abajo y lo desalineaba de «Categoría», que está a la izquierda en
-                        la misma grilla. Y como la fila aparecía o no según el caso, la desalineación
-                        cambiaba sola.
-
-                        Ahora el filtro se elige en una ventana aparte —el mismo patrón de «Filtros
-                        avanzados»— y acá arriba queda solo el que está aplicado, como badge con una X
-                        para sacarlo. El `h-6` es lo que garantiza la alineación: la fila mide siempre
-                        lo mismo, haya badge o no, igual que la de «Categoría».
-                      */}
-                      <div className="h-6 flex items-center gap-2 ml-1">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                          Tipo de contrato <span className="text-red-500">*</span>
-                        </label>
-                        {impositivosDelAbm.length > 0 && (
-                          <button type="button" onClick={() => setFiltroTramiteOpen(true)} title="Filtrar por trámite (ARCA / Servicios)" className="text-gray-400 hover:text-blue-500 transition-colors">
-                            <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
-                          </button>
-                        )}
-                        {estadoImpositivoPorTipo(allEstados, filtroTramite) && (
-                          /*
-                            EL FILTRO APLICADO, MÁS CHICO QUE EL BADGE DE ESTADO Y CON LA X ADENTRO.
-
-                            Son dos badges de color a pocos centímetros —éste dice «por qué la lista
-                            está recortada» y el de Estado dice «qué estado va a quedar»— y del mismo
-                            tamaño se leen como lo mismo. Acá va en 9px y con la X dentro del recuadro:
-                            pegada por fuera parecía otro control suelto, no la forma de sacar ESTE
-                            filtro.
-                          */
-                          <EstadoBadge name={estadoImpositivoPorTipo(allEstados, filtroTramite)!.name} className="text-[9px] px-1.5 py-0 whitespace-nowrap">
-                            <button type="button" onClick={() => setFiltroTramite("")} title="Quitar el filtro" className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" aria-label="Quitar el filtro de trámite">
-                              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                            </button>
-                          </EstadoBadge>
-                        )}
-                      </div>
-
-                      {/*
-                        Lista propia y no un <select> nativo: un <option> solo admite texto, y acá
-                        cada tipo tiene que mostrar SU badge de trámite al lado del nombre. Es el
-                        mismo badge de Contratos, para que se lea como lo mismo. Ver
-                        `components/contratos/TipoContratoSelect.tsx`.
-                      */}
-                      <TipoContratoSelect
-                        options={contratosFiltradosPorTramite}
-                        value={wizardData.contrato_id}
-                        estados={allEstados}
-                        tramitePorContrato={tramitePorContrato}
-                        onChange={(contratoId) => {
-                          const contrato = contratos.find((c) => c._id === contratoId);
-                          // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
-                          // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
-                          const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === contratoId);
-                          const unicaPlantilla = plantillasDelContrato.length === 1 ? plantillasDelContrato[0] : undefined;
-                          setWizardData((prev) => ({
-                            ...prev,
-                            contrato_id: contratoId,
-                            contrato_frame_id: unicaPlantilla?._id || "",
-                            nombre_contrato: unicaPlantilla?.name || "",
-                            tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : "",
-                            fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? "" : prev.fecha_baja_contrato,
-                          }));
-                        }}
-                      />
-
-
-                      {filtroTramite && contratosFiltradosPorTramite.length === 0 && (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún tipo de contrato está configurado para este trámite. Vinculalo desde el ABM de Estados, o mirá todos.</p>
-                      )}
-                      {contratoDelWizard && (limiteHorasWizard != null || limiteDiasWizard != null) && (
-                        <p className="ml-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 dark:text-gray-400">
-                          {limiteHorasWizard != null && (
-                            <span>
-                              <strong className="text-gray-900 dark:text-white">{limiteHorasWizard}</strong> h por jornada
-                            </span>
-                          )}
-                          {limiteDiasWizard != null && (
-                            <span>
-                              <strong className="text-gray-900 dark:text-white">{limiteDiasWizard}</strong> días por semana
-                            </span>
-                          )}
-                          <span className="text-gray-400">Limitan el horario y los días.</span>
-                        </p>
-                      )}
-                    </div>
-
-                    {(() => {
-                      if (!wizardData.contrato_id) return null;
-                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
-
-                      // Varias Plantillas para el mismo Contrato: hay que elegir cuál usar para el PDF.
-                      if (plantillasDelContrato.length > 1) {
-                        return (
-                          <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                              Plantilla <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                              className="input-field w-full"
-                              value={wizardData.contrato_frame_id}
-                              onChange={(e) => {
-                                const cf = plantillasDelContrato.find((p) => p._id === e.target.value);
-                                setWizardData((prev) => ({
-                                  ...prev,
-                                  contrato_frame_id: cf?._id || "",
-                                  nombre_contrato: cf?.name || "",
-                                  tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : "",
-                                }));
-                              }}
-                              required
-                            >
-                              <option value="">Selecciona plantilla...</option>
-                              {plantillasDelContrato.map((cf) => (
-                                <option key={cf._id} value={cf._id}>
-                                  {cf.name}
-                                </option>
-                              ))}
-                            </select>
-                            <p className="text-[10px] text-gray-400 ml-1">Este contrato tiene más de una plantilla: elegí cuál se usa para generar el PDF.</p>
-                          </div>
-                        );
-                      }
-
-                      // Ninguna Plantilla asignada todavía: se puede guardar, pero no se podrá generar el PDF.
-                      if (plantillasDelContrato.length === 0) {
-                        return (
-                          <div className="md:col-span-2 -mt-2">
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                              Este contrato todavía no tiene ninguna Plantilla asignada: se puede guardar, pero no se va a poder generar el PDF hasta asignarle una desde <strong>Plantillas | Contratos</strong>.
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      return null;
-                    })()}
-
-                    <div className="space-y-1.5">
-                      {esAltaNueva ? (
-                        <>
-                          {/* `h-6`, el mismo alto fijo que el rótulo de «Tipo de contrato» que está a
-                              la izquierda en esta fila: es lo que hace que los dos campos arranquen a
-                              la misma altura. Sin esto el rótulo mide lo que mida su contenido —acá,
-                              un botón de info; allá, un badge que aparece o no— y la desalineación
-                              cambia sola según el caso. */}
-                          <div className="h-6 flex items-center gap-1.5 ml-1">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                              Estado <span className="text-red-500">*</span>
-                            </label>
-                            <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
-                              <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          <div className="input-field w-full flex items-center">{estadoImpositivoAuto ? <EstadoBadge name={estadoImpositivoAuto.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_frame_id ? "Este tipo de contrato no tiene un estado impositivo configurado" : "Elegí primero el Tipo de contrato"}</span>}</div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="h-6 flex items-center ml-1">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                              Estado <span className="text-red-500">*</span>
-                            </label>
-                          </div>
-                          {/*
-                            SE MUESTRA, NO SE ELIGE — igual que en el alta.
-
-                            El estado sale del Tipo de Contrato: al cambiarlo, este valor se recalcula
-                            solo. Mientras fue un selector, elegir a mano acá dejaba un estado que el
-                            siguiente cambio de tipo pisaba sin avisar, y no había forma de saber si el
-                            que se veía era el elegido o el derivado.
-                          */}
-                          <div className="input-field w-full flex items-center">
-                            {estadoElegido ? <EstadoBadge name={estadoElegido.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_id ? "Este tipo de contrato no tiene un estado configurado" : "Elegí primero el Tipo de contrato"}</span>}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/*
-                      Alta y baja del contrato, juntas: son los dos extremos del mismo período.
-
-                      Cada par va en su PROPIA fila de dos columnas y no suelto en el grid de arriba:
-                      «Fecha baja» desaparece cuando el tipo de contrato es de tiempo indeterminado, y
-                      con los campos sueltos ese hueco corría a todos los de abajo — las horas quedaban
-                      apareadas con una fecha según qué contrato estuviera elegido.
-                    */}
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
-                        <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
-                      </div>
-                      {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
-                        <div className="space-y-1.5">
-                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                            Fecha baja contrato <span className="text-red-500">*</span>
-                          </label>
-                          <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
-                    <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
-                        Asignación por Área y Turno <span className="text-red-500">*</span>
-                      </label>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">
-                        Elegí el área y el turno donde va a trabajar este miembro: uno solo de cada uno. Tocá un área para ver sus turnos. Con el turno elegido, acá abajo se cargan los días que trabaja y el horario de entrada y salida.
-                      </p>
-
-                      {(project?.areasConfig || []).length === 0 && (
-                        // Sin áreas en el proyecto no se puede completar este paso (es obligatorio) → link a Editar Proyecto.
-                        <div className="flex flex-col items-center gap-2 py-4 text-center bg-gray-50 dark:bg-gray-900/30 rounded-lg">
-                          <p className="text-sm text-gray-500">Este proyecto no tiene áreas configuradas.</p>
-                          <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })} className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline" title="Ir a Editar Proyecto para agregar áreas">
-                              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
-                              Editar proyecto para agregar áreas
-                            </button>
-                            <button type="button" onClick={() => setShowSinAreasInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors" title="Por qué no puedo guardar los cambios del miembro" aria-label="Información: el proyecto no tiene áreas configuradas">
-                              <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        {(() => {
-                          const isCoordinadorRole = coordinaAreas(selectedUserForWizard?.roles);
-                          /*
-                            UN ÁREA Y UN TURNO, Y LAS ÁREAS CERRADAS HASTA QUE SE ABRAN.
-
-                            Antes se podían tildar varios turnos de varias áreas a la vez, y por eso hacía falta
-                            toda una maquinaria que detectaba superposiciones horarias y bloqueaba los turnos
-                            incompatibles. Elegir de a uno la vuelve innecesaria —no hay con qué superponerse— y
-                            saca de la pantalla los avisos de «se superpone» que hoy tapan la mitad de la grilla.
-
-                            Un proyecto con ocho áreas por cuatro turnos son treinta y dos tarjetas abiertas, que
-                            es lo que empuja el resto del formulario fuera de la pantalla. Cerradas se leen las
-                            áreas de un vistazo, y la elegida muestra su turno en el encabezado sin abrirla.
-
-                            Al contrato que ya tenga varias áreas guardadas de antes no se le toca nada: se
-                            muestran todas marcadas y la primera elección lo deja en una sola. Normalizarlo al
-                            abrir el wizard sería borrarle asignaciones a alguien que sólo vino a mirar.
-                          */
-                          const seleccionActual = wizardData.areaShiftAssignments[0];
-                          // Sin tocar nada se abre la que tiene la elección; `null` es «la cerré yo».
-                          const areaAbierta = areaExpandida === undefined ? seleccionActual?.areaId ?? null : areaExpandida;
-
-                          return (project?.areasConfig || []).map((ac: any) => {
-                            const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                            const areaObj = allAreas.find((a) => a._id === aId);
-                            const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
-                            const isCoordinadorArea = areaObj?.isSystem;
-                            const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
-
-                            const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
-                            const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-                            // Current assignment for this area
-                            const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
-                            const selectedShiftIds = currentAssignment?.shiftIds || [];
-                            const isAreaActive = selectedShiftIds.length > 0;
-                            const estaAbierta = areaAbierta === aId;
-                            // Qué turno quedó elegido, para leerlo con el área cerrada.
-                            const turnosElegidos = selectedShiftIds
-                              .map((id) => allShifts.find((s) => String(s._id) === id)?.name)
-                              .filter(Boolean)
-                              .join(", ");
-
-                            return (
-                              <div key={aId} className={`rounded-xl border overflow-hidden transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
-                                <button type="button" onClick={() => setAreaExpandida(estaAbierta ? null : aId)} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors" aria-expanded={estaAbierta} title={estaAbierta ? "Cerrar el área" : "Ver los turnos del área"}>
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <FontAwesomeIcon icon={estaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400 shrink-0" />
-                                    <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 shrink-0 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
-                                    <span className="font-bold text-sm uppercase tracking-wide truncate">{aName || aId}</span>
-                                    {isAreaRestricted && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter shrink-0">Requiere Supervisor</span>}
-                                  </div>
-                                  {isAreaActive ? <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase truncate shrink-0">{turnosElegidos}</span> : <span className="text-[10px] font-medium text-gray-400 uppercase shrink-0">Sin turno</span>}
-                                </button>
-                                {estaAbierta && (
-                                  <>
-                                    {isAreaRestricted && (
-                                      <div className="px-4 pb-3">
-                                        <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Supervisa áreas y turnos». Dale un rol que lo incluya desde su ficha.</p>
-                                      </div>
-                                    )}
-                                    {/*
-                                      LOS TURNOS, COMO EN LA SOLICITUD DE CONTRATACIÓN DE LA APP.
-
-                                      Misma fila con el redondelito de elegido, el nombre y, debajo, el horario y los
-                                      días en texto. Se reemplazó a la tarjeta con las siete iniciales de la semana:
-                                      pintadas una al lado de la otra había que decodificar cuáles estaban encendidas,
-                                      y ocupaban el ancho que hace que entren tres turnos donde entraban cuatro.
-
-                                      Las dos pantallas piden lo mismo —un área y un turno— y ahora se eligen con el
-                                      mismo gesto, que es de lo que se trata: quien carga la solicitud en el teléfono
-                                      y quien la aprueba en el escritorio están mirando la misma lista.
-                                    */}
-                                    <div className={`grid grid-cols-1 gap-2 px-4 pb-3 sm:grid-cols-2 lg:grid-cols-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
-                                      {shiftsForArea.map((shift) => {
-                                        const isSelected = selectedShiftIds.includes(String(shift._id));
-                                        const horario = shift.startTime && shift.endTime ? `${shift.startTime} a ${shift.endTime}` : "";
-                                        const dias = textoDeDias(shift.days);
-
-                                        return (
-                                          <button
-                                            key={shift._id}
-                                            type="button"
-                                            disabled={isAreaRestricted}
-                                            aria-pressed={isSelected}
-                                            onClick={() => {
-                                              setWizardData((prev) => ({
-                                                ...prev,
-                                                // Elegir uno reemplaza lo que hubiera; volver a tocarlo lo deja sin área.
-                                                areaShiftAssignments: isSelected ? [] : [{ areaId: aId, shiftIds: [String(shift._id)] }],
-                                                /*
-                                                  ELEGIR UN TURNO COMPLETA EL HORARIO DEL CONTRATO con el de ese turno.
-
-                                                  Antes eran independientes y el horario se cargaba a mano, con los turnos
-                                                  filtrados por él: había que saber a qué hora entra cada turno para que
-                                                  apareciera. Ahora manda el turno, que es el dato que se conoce, y el
-                                                  horario queda editable abajo para cuando esta persona entra o sale a otra
-                                                  hora. Al DESELECCIONARLO no se toca: borrar el horario de un contrato
-                                                  porque se destildó un turno sería perder un dato que nadie pidió cambiar.
-                                                */
-                                                ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
-                                              }));
-                                            }}
-                                            className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${isSelected ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:border-blue-600"}`}
-                                            title={isSelected ? `${shift.name} (tocá para quitarlo)` : shift.name}
-                                          >
-                                            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
-                                            <span className="min-w-0">
-                                              <span className="block truncate text-sm font-medium">{shift.name}</span>
-                                              {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
-                                              {(horario || dias) && <span className="block text-[10px] text-gray-400">{[horario, dias].filter(Boolean).join(" · ")}</span>}
-                                            </span>
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                    {/* Elegido el turno, acá mismo se dice cómo trabaja en él. */}
-                                    {isAreaActive && <div className="px-4 pb-3">{panelComoTrabaja("Cómo trabaja en este turno")}</div>}
-                                  </>
-                                )}
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-
-                      {/*
-                        LO ELEGIDO, EN UN BADGE, FUERA DE LA LISTA.
-
-                        Con las áreas cerradas la elección se ve en el encabezado de UNA de ellas, y hay que
-                        acordarse de cuál para encontrarla. Acá abajo queda siempre en el mismo lugar, se lee
-                        sin abrir nada y trae el área además del turno —que es el par que importa—. La ✕ lo
-                        saca sin tener que volver a entrar al área para destildarlo.
-
-                        Es una lista y no un solo badge por los contratos viejos con varias áreas guardadas:
-                        se muestran todas, y cada una se puede sacar por separado.
-                      */}
-                      {wizardData.areaShiftAssignments.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2 ml-1">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Elegido</span>
-                          {wizardData.areaShiftAssignments.flatMap((a) =>
-                            a.shiftIds.map((sid) => {
-                              const areaNombre = allAreas.find((ar) => String(ar._id) === String(a.areaId))?.name || a.areaId;
-                              const turnoNombre = allShifts.find((sh) => String(sh._id) === String(sid))?.name || sid;
-                              const texto = `${areaNombre} · ${turnoNombre}`;
-                              return (
-                                <span key={`${a.areaId}-${sid}`} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                                  {texto}
-                                  <button
-                                    type="button"
-                                    title={`Quitar ${texto}`}
-                                    onClick={() =>
-                                      setWizardData((prev) => ({
-                                        ...prev,
-                                        areaShiftAssignments: prev.areaShiftAssignments.map((x) => (x.areaId === a.areaId ? { ...x, shiftIds: x.shiftIds.filter((s) => s !== sid) } : x)).filter((x) => x.shiftIds.length > 0),
-                                      }))
-                                    }
-                                    className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5"
-                                  >
-                                    <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                                  </button>
-                                </span>
-                              );
-                            }),
-                          )}
-                        </div>
-                      )}
-
-                      {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Elegí el área y el turno donde va a trabajar.</p>}
-
-                      {/* Sin áreas configuradas no hay turno al que pertenecer: va sola, para poder cargarla igual. */}
-                      {(project?.areasConfig || []).length === 0 && panelComoTrabaja("Cómo trabaja")}
-                    </div>
-
-                    {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}
-                    {!esServicios && (
-                    <>
-                    {/*
-                      CONVENIO — es un FILTRO, no un dato del contrato.
-
-                      Replica el flujo de ARCA (convenio → categoría) sin cambiar el modelo: no se
-                      guarda, no viaja en el payload y no toca el TXT. Está acá porque el encuadre lo
-                      terminaba decidiendo quien cargó las categorías de la función Frame, y así había
-                      convenios habilitados por ARCA que no se podían usar.
-                    */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
-                      <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
-                        <option value="">Todos los convenios de la empleadora</option>
-                        {conveniosDisponibles.map((c) => (
-                          <option key={c.externalId} value={c.externalId}>
-                            {c.externalId}
-                            {c.name ? ` — ${c.name}` : ""} ({c.cantidadCategorias}){c.registrado ? "" : " · no registrado en ARCA"}
-                          </option>
-                        ))}
-                      </select>
-                      {!wizardData.empresaContratoId ? <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p> : conveniosDisponibles.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p> : <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {/* Alto fijo, igual que el rótulo de «Tipo de contrato»: es lo que mantiene
-                          los dos desplegables alineados aunque el de al lado muestre un badge. */}
-                      <div className="h-6 flex items-center ml-1">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                          Categoría <span className="text-red-500">*</span>
-                        </label>
-                      </div>
-                      <select
-                        className="input-field w-full"
-                        value={wizardData.categoria_sat_id}
-                        onChange={(e) => {
-                          setAvisoConvenio("");
-                          setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
-                        }}
-                        required
-                      >
-                        <option value="">Selecciona categoria...</option>
-                        {availableCategoriasSat.map((c: any) => (
-                          <option key={c.id} value={c.id}>
-                            {c.codigoArca ? `${c.codigoArca} — ` : ""}
-                            {c.nombre}
-                          </option>
-                        ))}
-                      </select>
-                      {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
-                      {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
-
-                      {/*
-                        El escape hatch del filtro por función Frame.
-
-                        Solo aparece con un convenio elegido, porque sin convenio «todas las del
-                        convenio» no quiere decir nada. Cuando la función no tiene NINGUNA categoría de
-                        ese convenio se prende solo y queda fijo: apagarlo dejaría el select vacío, que
-                        es el estado sin explicación que esto viene a sacar.
-                      */}
-                      {convenioFiltro && wizardData.rol_frame_id && (
-                        <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                          <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
-                          <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
-                        </label>
-                      )}
-                      {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
-
-                      {/*
-                        El filtro se dice, no se aplica en silencio: si una categoría que el operador
-                        esperaba ver no está, tiene que saber por qué y qué la destraba.
-
-                        Las dos causas van separadas porque llevan a acciones distintas: lo que oculta
-                        ARCA no se puede destrabar desde acá (hay que registrar el convenio en la
-                        empleadora); lo que oculta el filtro se destraba cambiando el select de arriba.
-                      */}
-                      {conveniosDeLaEmpleadora && (
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(", ")}).`}
-                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ""}
-                          {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ""}
-                        </p>
-                      )}
-                    </div>
-
-                    </>
-                    )}
-
-                    {/*
-                      LOS IMPORTES: los mismos cuatro que la solicitud de la app, enlazados entre sí. Se
-                      carga cualquiera —jornada, semana, mes o total— y los otros se recalculan; el
-                      mensual es el ancla, así que un mes completo totaliza exactamente el mensual.
-                      Lo que se guarda sigue siendo el sueldo por jornada.
-                    */}
-                    <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                      <ImportesDelContrato
-                        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                        valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ""}
-                        onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))}
-                        mesesEq={mesesEqWizard}
-                        jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0}
-                        diasSemana={diasSemanaWizard}
-                        bloqueado={!esServicios && !wizardData.categoria_sat_id}
-                        textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala."
-                        claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1"
-                        claseCampo="input-field w-full"
-                        claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300"
-                        claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1"
-                      />
-
-                      {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
-                    <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
-                      <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Sueldo en mano texto <span className="text-red-500">*</span>
-                      </label>
-                      <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo diario neto</label>
-                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_diario_neto} readOnly />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
-                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold" style={{ color: wizardData.diferencia_diaria_neto < 0 ? "#ef4444" : "#22c55e" }} value={wizardData.diferencia_diaria_neto} readOnly />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
-                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
-                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
-                      </div>
-                    </div>
-                    </div>
-
-                    {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
-                    <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
-                        <input
-                          type="checkbox"
-                          id="esReemplazo"
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          checked={wizardData.reemplazo}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : "" }));
-                            if (!checked) setHerenciaReemplazo(null);
-                          }}
-                        />
-                        <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Es reemplazo
-                        </label>
-                      </div>
-
-                      {wizardData.reemplazo && (
-                        <div className="space-y-1.5">
-                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
-                          <select
-                            className="input-field w-full"
-                            value={wizardData.empleado_id_reemplezado}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: value }));
-                              // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
-                              if (value) applyReplacedMemberAssignments(value);
-                              else setHerenciaReemplazo(null);
-                            }}
-                          >
-                            <option value="">Selecciona empleado...</option>
-                            {teamMembers
-                              .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
-                              .map((m) => (
-                                <option key={m._id} value={(m.metadata as any)?.id}>
-                                  {m.firstName} {m.lastName}
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Aviso de la herencia: qué se copió (o por qué no se pudo) antes de mostrar las áreas. */}
-                      {herenciaReemplazo && (
-                        <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"}`}>
-                          <p className="font-bold flex items-center gap-2">
-                            <FontAwesomeIcon icon={herenciaReemplazo.ok ? faInfoCircle : faTriangleExclamation} />
-                            {herenciaReemplazo.ok ? `Área y turno heredados de ${herenciaReemplazo.replacedName}` : `No se pudo heredar el área de ${herenciaReemplazo.replacedName}`}
-                          </p>
-                          <p className="mt-1 leading-normal">
-                            {herenciaReemplazo.ok ? (
-                              <>
-                                Se preseleccionó <strong>{herenciaReemplazo.detalle}</strong>. Si necesitás otra cosa, cambiala más arriba, en Asignación por Área y Turno.
-                              </>
-                            ) : (
-                              herenciaReemplazo.detalle
-                            )}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-                )}
-
-                {/* Step 2: Sueldo */}
-
-                {/*
-                  Acá estaba el paso «Extras»: sede y observaciones. Se sacó. La sede se configura en el
-                  proyecto y se toma de ahí (ver `initialSedeId`); las observaciones no se piden más. Las
-                  que ya tenga un contrato no se borran: viajan tal cual en `wizardData`.
-                */}
-              </div>
-            </div>
-          </Modal>
+          {modalesDelProyecto}
         </div>
       ) : null}
 
-      {/*
-        FILTRO DE TRÁMITE — ventana aparte, como «Filtros avanzados».
-
-        Elegir entre ARCA y Servicios es una decisión de filtrado, no un campo del contrato: metida
-        en el formulario competía visualmente con lo que sí se está cargando y desalineaba la fila.
-        Acá tiene lugar para mostrarse con los badges de color de verdad —que en una ventana de
-        filtros ayudan a reconocerlos, mientras que en el medio del formulario distraían—.
-      */}
-      <Modal
-        isOpen={filtroTramiteOpen}
-        onClose={() => setFiltroTramiteOpen(false)}
-        title="Filtrar tipos de contrato"
-        subtitle="Por el trámite que declaran ante ARCA"
-        size="sm"
-        zIndex={120}
-        footer={
-          <div className="flex items-center justify-between w-full gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setFiltroTramite("");
-                setFiltroTramiteOpen(false);
-              }}
-              className="btn-secondary"
-            >
-              Ver todos
-            </button>
-            <button type="button" onClick={() => setFiltroTramiteOpen(false)} className="btn-primary">
-              Cerrar
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-2">
-          {impositivosDelAbm.map((e) => {
-            const tipo = e.data?.tipoImpositivo;
-            if (!esTipoImpositivo(tipo)) return null;
-            const activo = filtroTramite === tipo;
-            const cuantos = contratos.filter((c) => tramitePorContrato.get(c._id) === tipo).length;
-            return (
-              <button
-                key={e._id}
-                type="button"
-                onClick={() => {
-                  setFiltroTramite(activo ? "" : tipo);
-                  setFiltroTramiteOpen(false);
-                }}
-                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition-colors ${activo ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20" : "border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600"}`}
-              >
-                <EstadoBadge name={e.name} />
-                {/* Cuántos tipos de contrato quedan de cada lado: evita elegir un filtro que deja
-                    la lista vacía y después no entender por qué no hay nada para seleccionar. */}
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{cuantos === 1 ? "1 tipo" : `${cuantos} tipos`}</span>
-              </button>
-            );
-          })}
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-1">El filtro solo acota la lista de tipos de contrato. No cambia nada de lo que se guarda.</p>
-        </div>
-      </Modal>
-
-      {/* Modal de detalle del empleado: contratos del proyecto + descargas */}
-      <EmployeeContractsModal
-        isOpen={!!selectedMemberForDetail}
-        onClose={() => setSelectedMemberForDetail(null)}
-        user={selectedMemberForDetail}
-        projectId={projectId || ""}
-        contratoFrames={contratoFrames}
-        releases={releases}
-        contratoEmpresas={contratoEmpresas}
-        releaseEmpresas={releaseEmpresas}
-        onEdit={(u, contract, contractIndex) => {
-          setSelectedMemberForDetail(null);
-          handleOpenScheduleModal(u, contract, contractIndex);
-        }}
-        onDelete={(id) => {
-          setSelectedMemberForDetail(null);
-          handleRemoveUser(id);
-        }}
-        onUploadAltaDocumento={handleUploadAltaDocumento}
-      />
-
-      {/* Info: por qué no se puede guardar el miembro si el proyecto no tiene áreas */}
-      <InfoModal
-        isOpen={showSinAreasInfo}
-        onClose={() => setShowSinAreasInfo(false)}
-        title="El proyecto no tiene áreas configuradas"
-        subtitle="Por qué no podés guardar los cambios del miembro"
-        size="sm"
-        zIndex={100}
-        actions={[
-          {
-            label: "Ir a Editar Proyecto",
-            onClick: () => {
-              setShowSinAreasInfo(false);
-              navigate(`/projects/${projectId}`, { state: { openEdit: true } });
-            },
-            variant: "primary",
-          },
-          { label: "Entendido", onClick: () => setShowSinAreasInfo(false), variant: "secondary" },
-        ]}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            La <strong>asignación por área y turno es obligatoria</strong> para guardar un miembro. Si el proyecto no tiene áreas, no hay nada para seleccionar y cualquier cambio del miembro (sueldo, contrato, extras) queda bloqueado.
-          </p>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Entrá a <strong>Editar Proyecto → Configuración por Área</strong> y agregá al menos un área con sus turnos.
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Volvé al equipo y configurá el miembro: ya vas a poder elegir área y turno, y guardar.</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Sin áreas, además, los usuarios no pueden cargar su área y los supervisores no pueden informar novedades sobre ellos.</span>
-            </li>
-          </ul>
-        </div>
-      </InfoModal>
-
-      {/* Info: de dónde sale el Estado del contrato (Agregar/Configurar miembro) */}
-      <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: "Entendido", onClick: () => setShowEstadoInfo(false), variant: "primary" }]}>
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de ARCA" o "Pedido de Servicios"), se muestra acá. Si no tiene ninguno, no hay nada para mostrar.
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{" "}
-            <Link to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-              Contratos → Estados de Contratos
-            </Link>
-            .
-          </p>
-        </div>
-      </InfoModal>
-
-      {/* Info: qué significa el número entre paréntesis en Área/Turno Coordinada */}
-      <InfoModal isOpen={openCoordCountInfo} onClose={() => setOpenCoordCountInfo(false)} title="Personas supervisadas por área y turno" subtitle="Qué significa el número entre paréntesis" size="sm" zIndex={100} actions={[{ label: "Entendido", onClick: () => setOpenCoordCountInfo(false), variant: "primary" }]}>
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong> asignados a esa combinación exacta de área y turno, o sea a quiénes supervisa esa persona en ese horario.
-          </p>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                <strong>Estado activo</strong>: el usuario figura como ACTIVO. <strong>Contrato vigente</strong>: su contrato no tiene fecha de baja, o la baja es de hoy en adelante. Quien no cumple las dos cosas no suma.
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Haciendo <strong>click en el turno</strong> se abre el detalle de esas personas con su estado, estado de contrato y alta/baja. Las que no cumplen aparecen al final, en <strong>"No suman al total"</strong>.
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es el total de esos horarios contando a cada <strong>persona una sola vez</strong>: quien está asignado a dos turnos de la misma área suma uno, no dos.
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                El <strong>supervisor se incluye a sí mismo</strong> si además pertenece a esa área y turno.
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Se calcula sobre <strong>todo el equipo del proyecto</strong>, no solo sobre la página que estás viendo, y se actualiza cuando cambian las asignaciones de los miembros.
-              </span>
-            </li>
-          </ul>
-        </div>
-      </InfoModal>
+      {modalesSueltos}
     </PageLayout>
   );
 };

@@ -1032,6 +1032,77 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
 });
 
 /*
+  LA BANDEJA DE TRABAJO DE CONTRATACIÓN: cuántas cosas hay esperando en cada etapa.
+
+  El menú muestra un número al lado de Solicitudes y de Contratos, y su suma en el grupo. Son dos
+  endpoints y no uno porque cada etapa tiene su permiso: quien ve Solicitudes puede no ver Contratos,
+  y un endpoint único tendría que devolver la mitad en cero sin poder explicar por qué.
+
+  SON CONSULTAS DE CONTAR, no listados recortados. Pedirle a los overviews «traeme una fila y decime
+  el total» hace todo el trabajo del listado —siete populates, resolución de sede y centro de costo,
+  el barrido de los ~4000 contratos— para dibujar un número, y eso corre en CADA pantalla que muestre
+  el menú.
+*/
+router.get("/solicitudes-pendientes/count", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    // «Pendiente» es lo que espera una decisión. Aprobadas, rechazadas y canceladas ya se resolvieron.
+    const count = await User.countDocuments({ tenantId: req.tenantObjectId, "metadata.solicitudStatus": "pendiente" });
+    res.json({ count });
+  } catch (error) {
+    console.error("Get solicitudes pendientes count error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
+  CUÁNTOS CONTRATOS ESTÁN ESPERANDO EL TRÁMITE IMPOSITIVO (el paso 1 de Gestión de Contratos).
+
+  Es el trabajo que la pantalla de Contratos tiene para hacer y que vive en la base: los contratos
+  parados en un estado impositivo —alta temprana ante ARCA, constancia de CUIT—, que es de donde
+  salen las tres primeras pestañas.
+
+  LOS PASOS DE DROPBOX (para firmar, enviado, firmados) NO SE CUENTAN: viven en carpetas de Dropbox
+  y contarlos significa pegarle a su API en cada carga del menú. El número dice lo que se puede
+  responder desde la base, y la pantalla sigue mostrando el detalle de cada paso.
+
+  El nombre del estado se compara por su clave canónica (`claveEstado`) y no crudo: el mismo estado
+  quedó guardado con más de un nombre («Falta pedido de AFIP» y «Pedido de AFIP» son el mismo), y
+  comparar textos dejaría contratos afuera del conteo.
+*/
+router.get("/contratos-pendientes/count", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const estados: any[] = await Info.find({ tenantId: req.tenantObjectId, type: "estado-empleado", "data.esImpositivo": true })
+      .select("name")
+      .lean();
+    const claves = new Set(estados.map((e: any) => claveEstado(String(e?.name || ""))).filter(Boolean));
+    if (claves.size === 0) {
+      res.json({ count: 0 });
+      return;
+    }
+
+    const projectIds = await Project.find({ tenantId: req.tenantObjectId }).distinct("_id");
+    if (projectIds.length === 0) {
+      res.json({ count: 0 });
+      return;
+    }
+
+    // Del contrato sólo viaja el nombre del estado: es lo único que se mira para contar.
+    const filas: any[] = await UserProject.aggregate([
+      { $match: { projectId: { $in: projectIds } } },
+      { $project: { e: { $map: { input: { $ifNull: ["$contracts", []] }, as: "c", in: "$$c.nombre_estado_empleado" } } } },
+    ]);
+
+    let count = 0;
+    for (const f of filas) for (const nombre of f?.e || []) if (claves.has(claveEstado(String(nombre || "")))) count++;
+
+    res.json({ count });
+  } catch (error) {
+    console.error("Get contratos pendientes count error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
  * GET /users/solicitudes-overview - Listado GLOBAL de solicitudes de alta, el equivalente de
  * `contracts-overview` para el otro lado del ciclo: lo que todavía no es un contrato.
  *

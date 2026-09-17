@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -12,6 +11,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
+// La pantalla del equipo, montada en modo «sólo aprobación»: de ahí sale el wizard de contratación.
+import { ProjectTeamPage } from "./ProjectTeamPage";
 
 /**
  * SOLICITUDES, TODAS, EN UN SOLO LUGAR.
@@ -35,8 +36,9 @@ const PAGE_SIZE = 25;
 const CLAVE_AYUDA = "solicitudes" as const;
 
 export const SolicitudesPage: React.FC = () => {
-  const navigate = useNavigate();
   const catalogos = useCatalogosDeSolicitudes();
+  /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
+  const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string } | null>(null);
   /** La solicitud que se está revisando: el detalle completo, antes de decidir. */
   const [revisando, setRevisando] = useState<SolicitudVista | null>(null);
   const ayuda = getHelp(CLAVE_AYUDA);
@@ -154,10 +156,15 @@ export const SolicitudesPage: React.FC = () => {
   };
 
   /**
-   * Aprobar NO se hace acá: necesita el wizard de Configurar Miembro del proyecto, que es donde se
-   * completan el contrato, el área y el turno. Así que esto lleva a la pestaña Solicitudes de ese
-   * proyecto, con la solicitud ya en pantalla. Con varios proyectos pedidos se va al primero; los
-   * demás quedan a la vista en la columna Cliente / Proyecto.
+   * APROBAR SE HACE ACÁ, en el wizard del proyecto abierto arriba de esta pantalla.
+   *
+   * Antes esto navegaba a Gestionar Equipo → pestaña Solicitudes, y ahí había que encontrar la
+   * solicitud y tocar «Editar para Aprobar» de nuevo: el botón no aprobaba, mudaba de pantalla. El
+   * wizard es el mismo —vive en `ProjectTeamPage`, que se monta en modo «sólo aprobación» (ver
+   * `AprobacionEnModal`)—, así que lo que se completa y lo que se guarda no cambian en nada.
+   *
+   * Con varios proyectos pedidos se aprueba para el primero; los demás quedan a la vista en las
+   * columnas Cliente y Proyecto.
    */
   const irAAprobar = (s: SolicitudVista) => {
     const destino = s.proyectos?.[0];
@@ -165,7 +172,8 @@ export const SolicitudesPage: React.FC = () => {
       sweetAlert.error("Sin proyecto", "La solicitud no tiene un proyecto asignado, así que no hay equipo al que agregarla.");
       return;
     }
-    navigate(`/projects/${destino._id}/team?tab=solicitudes`);
+    setRevisando(null);
+    setAprobando({ projectId: destino._id, solicitudId: s._id });
   };
 
   /** Las filas del server ya vienen con la forma que espera la tabla. */
@@ -263,6 +271,26 @@ export const SolicitudesPage: React.FC = () => {
 
           {/* Revisar acá; aprobar sigue llevando al equipo del proyecto, que es donde se carga el contrato. */}
           <SolicitudDetalleModal isOpen={!!revisando} onClose={() => setRevisando(null)} solicitud={revisando} catalogos={catalogos} proyectos={revisando?.proyectos} onAprobar={irAAprobar} onRechazar={pedirMotivoYRechazar} />
+
+          {/*
+            EL WIZARD DE CONTRATACIÓN, ARRIBA DE ESTA PANTALLA.
+
+            Se monta `ProjectTeamPage` en modo «sólo aprobación»: dibuja sus modales y nada más. Es
+            la misma pantalla que se abría antes con un `navigate`, con la diferencia de que no se
+            pierde el listado ni los filtros que se estaban mirando.
+          */}
+          {aprobando && (
+            <ProjectTeamPage
+              soloAprobacion={{
+                ...aprobando,
+                onCerrar: () => setAprobando(null),
+                onAprobada: () => {
+                  setAprobando(null);
+                  cargar(page);
+                },
+              }}
+            />
+          )}
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-1">

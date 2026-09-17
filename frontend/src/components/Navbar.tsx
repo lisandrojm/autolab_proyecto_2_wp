@@ -11,6 +11,7 @@ import { usePermisoInactivo } from '../stores/permisosInactivosStore';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
+import { usersAPI } from '../api/users';
 import { SettingsModal } from './SettingsModal';
 import { useClientContextStore } from '../stores/clientContextStore';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
@@ -289,6 +290,32 @@ export const MobileNavbar: React.FC = () => {
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, projects: 0 });
   const SHOW_MENU_COUNTS = false;
 
+  /*
+    LA BANDEJA DE TRABAJO DE CONTRATACIÓN: lo que está esperando que alguien lo resuelva.
+
+    Es OTRA COSA que los `adminCounts` de arriba —esos cuentan cuántos hay (47 clientes, 800
+    proyectos) y por eso están apagados—: acá el número es una cola de trabajo, y por eso se ve y
+    pinta naranja. Solicitudes cuenta las que esperan decisión; Contratos, los que esperan su trámite
+    impositivo; el grupo «Contratación» suma los dos, que es lo que hay para hacer ahí adentro.
+
+    Cada pedido con su `catch`: sin permiso el server contesta 403 y esa parte queda en cero, sin
+    llevarse puesto el resto del menú.
+  */
+  const [pendientes, setPendientes] = useState({ solicitudes: 0, contratos: 0 });
+  useEffect(() => {
+    let cancelado = false;
+    Promise.all([
+      hasPermission('admin_users:view') ? usersAPI.contarSolicitudesPendientes().catch(() => 0) : Promise.resolve(0),
+      hasPermission('admin_contracts:view') ? usersAPI.contarContratosPendientes().catch(() => 0) : Promise.resolve(0),
+    ]).then(([solicitudes, contratos]) => {
+      if (!cancelado) setPendientes({ solicitudes, contratos });
+    });
+    return () => {
+      cancelado = true;
+    };
+    // `location.pathname`: al volver de aprobar o rechazar algo, el número tiene que estar al día.
+  }, [hasPermission, user, location.pathname]);
+
   useEffect(() => {
     const fetchAdminCounts = async () => {
       try {
@@ -358,6 +385,8 @@ export const MobileNavbar: React.FC = () => {
       external?: boolean;
       scope?: 'global' | 'client';
       count?: number;
+      /** Cuántas cosas esperan que alguien las resuelva acá adentro. Ver `pendientes`. */
+      pendientes?: number;
       dividerTop?: boolean;
       badge?: string;
       badgeColor?: string;
@@ -385,11 +414,11 @@ export const MobileNavbar: React.FC = () => {
       // de la ficha de un cliente o de una empresa, con el nombre a la vista— y no por su etiqueta.
       if (hasPermission('admin_projects:view')) base.push({ permiso: 'admin_projects:view', path: '/admin/projects', icon: faBriefcase, label: 'Proyectos', scope: 'global', count: adminCounts.projects });
       if (hasPermission('admin_sedes:view')) base.push({ permiso: 'admin_sedes:view', path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
-      if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global' });
+      if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global', pendientes: pendientes.contratos });
       // Solicitudes va pegada a Contratos porque son los dos extremos del mismo ciclo: lo que se
       // pidió y lo que ya se contrató. Comparte permiso con Usuarios —una solicitud es un alta de
       // usuario, no un contrato— igual que el endpoint que la alimenta.
-      if (hasPermission('admin_users:view')) base.push({ permiso: 'admin_users:view', path: '/admin/solicitudes', icon: faUserPlus, label: 'Solicitudes', scope: 'global' });
+      if (hasPermission('admin_users:view')) base.push({ permiso: 'admin_users:view', path: '/admin/solicitudes', icon: faUserPlus, label: 'Solicitudes', scope: 'global', pendientes: pendientes.solicitudes });
       if (hasPermission('admin_activity_logs:view')) base.push({ permiso: 'admin_activity_logs:view', path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
       if (hasPermission('admin_orders:view')) base.push({ permiso: 'admin_orders:view', path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (hasPermission('admin_vacations:view')) base.push({ permiso: 'admin_vacations:view', path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
@@ -552,7 +581,21 @@ export const MobileNavbar: React.FC = () => {
       el orden del ciclo (ver `CONTRATACION_PATHS`), porque ahí el orden dice qué etapa va antes.
     */
     const contratacionChildren = (CONTRATACION_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems);
-    const contratacionGroup = { path: '#contratacion', groupKey: 'contratacion', icon: faFileSignature, label: 'Contratación', scope: 'global' as const, children: contratacionChildren };
+    /*
+      El número del grupo es la SUMA de sus hijos, no un tercer contador.
+
+      «Contratación» cerrado tiene que decir cuánto hay para hacer adentro —si no, hay que abrirlo
+      para enterarse—, y sumar acá garantiza que diga exactamente lo que se ve al abrirlo.
+    */
+    const contratacionGroup = {
+      path: '#contratacion',
+      groupKey: 'contratacion',
+      icon: faFileSignature,
+      label: 'Contratación',
+      scope: 'global' as const,
+      children: contratacionChildren,
+      pendientes: contratacionChildren.reduce((total, hijo: any) => total + (hijo.pendientes || 0), 0),
+    };
 
     // Los sueltos de la sección. Los grupos entran aparte y ordenan por su propio rótulo.
     // Solicitudes, Contratos y Documentos ya NO están acá: se fueron adentro de «Contratación», y
@@ -697,6 +740,21 @@ export const MobileNavbar: React.FC = () => {
         return <div key={item.path} className="my-2 border-t border-gray-200 dark:border-gray-700" role="separator" />;
       }
 
+      /*
+        EL NÚMERO DE LA BANDEJA: naranja, y sólo cuando hay algo.
+
+        En cero no se dibuja: un «0» al lado de Solicitudes ocupa el mismo lugar que un 12 y dice lo
+        mismo que no tener nada, que es justo lo que se quiere leer de un vistazo. Es distinto de los
+        `count` grises de este menú, que dicen cuántos hay en total.
+      */
+      const bandeja = (item as any).pendientes as number | undefined;
+      const pill =
+        bandeja && bandeja > 0 ? (
+          <span title={`${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="ml-2 inline-flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white">
+            {bandeja > 99 ? '99+' : bandeja}
+          </span>
+        ) : null;
+
       // Encabezado de sección dentro de un subgrupo (ej: "Nomencladores de ARCA"). No es navegable:
       // separa lo universal de lo que no lo es, que es la distinción que el menú venía escondiendo.
       if (item.section) {
@@ -737,7 +795,11 @@ export const MobileNavbar: React.FC = () => {
                 )}
                 <span className="font-medium truncate">{item.label}</span>
               </div>
-              <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
+              <div className="flex items-center">
+                {/* Cerrado, el número es lo único que dice que adentro hay trabajo. */}
+                {pill}
+                <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="ml-2 h-3 w-3 shrink-0" />
+              </div>
             </button>
 
             {isOpen && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child, true))}</nav>}
@@ -818,6 +880,7 @@ export const MobileNavbar: React.FC = () => {
             {item.badge && <span className={`ml-1 px-2 py-0.5 rounded text-[8px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase`}>{item.badge}</span>}
           </div>
 
+          {pill}
           {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? 'bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white' : 'bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>{item.count}</span>}
         </Link>
       );
