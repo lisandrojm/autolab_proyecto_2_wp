@@ -44,6 +44,8 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog"
 import { Area, areasAPI } from "../api/areas";
 import { userProjectsAPI } from "../api/userProjects";
 import { shiftsAPI, Shift } from "../api/shifts";
+// Los días de un turno en texto («Lun a Vie»), dichos igual que en la app y en Jerarquía.
+import { textoDeDias } from "../utils/jerarquiaTurnos";
 import { clientsAPI } from "../api/clients";
 import { infoAPI, InfoItem } from "../api/info";
 import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
@@ -965,6 +967,14 @@ export const ProjectTeamPage: React.FC = () => {
       .filter((sh): sh is NonNullable<typeof sh> => !!sh && !!sh.startTime && !!sh.endTime)
       .filter((sh) => !horarioDentroDelTurno(sh.startTime, sh.endTime, wizardData.hora_inicio, wizardData.hora_fin));
   }, [wizardData.areaShiftAssignments, wizardData.hora_inicio, wizardData.hora_fin, allShifts]);
+  /** «ÁREA · Turno» de lo elegido, para encabezar los días y el horario con el turno del que son. */
+  const areaTurnoDelWizard = useMemo(() => {
+    const sel = wizardData.areaShiftAssignments[0];
+    if (!sel) return "";
+    const area = allAreas.find((a) => String(a._id) === String(sel.areaId))?.name || "";
+    const turno = allShifts.find((sh) => String(sh._id) === String(sel.shiftIds[0]))?.name || "";
+    return [area, turno].filter(Boolean).join(" · ");
+  }, [wizardData.areaShiftAssignments, allAreas, allShifts]);
   useEffect(() => {
     if (limiteDiasWizard == null) return;
     setWizardData((prev) => {
@@ -4021,42 +4031,6 @@ export const ProjectTeamPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/*
-                      Los días de la semana. EL MISMO componente que la Solicitud de Contratación de mobile.
-
-                      Va debajo del horario porque es la otra mitad del mismo dato: el horario dice a
-                      qué hora, esto dice qué días. Estaban separados —uno acá y el otro solo en
-                      mobile— y el escritorio guardaba 5 jornadas fijas sin que nadie lo eligiera.
-                    */}
-                    <div className="md:col-span-2">
-                      <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
-                    </div>
-
-                    {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo. */}
-                    <div className="md:col-span-2">
-                      <JornadasSolicitud
-                        desde={wizardData.fecha_alta_contrato}
-                        hasta={wizardData.fecha_baja_contrato}
-                        rotativos={wizardData.dias_rotativos}
-                        calculadas={jornadasCalculadasWizard}
-                        dias={wizardData.dias_semana}
-                        valor={String(wizardData.cantidad_jornadas_laborales || "")}
-                        onValor={(v) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(v) || 0 }))}
-                        ajustado={ajusteJornadas.ajustado}
-                        motivo={ajusteJornadas.motivo}
-                        nota={ajusteJornadas.nota}
-                        onEditarManual={() => setAjusteJornadas((a) => ({ ...a, ajustado: true }))}
-                        onCancelarAjuste={() => {
-                          setAjusteJornadas({ ajustado: false, motivo: "", nota: "" });
-                          if (jornadasCalculadasWizard !== null) setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
-                        }}
-                        onMotivo={(m) => setAjusteJornadas((a) => ({ ...a, motivo: m }))}
-                        onNota={(n) => setAjusteJornadas((a) => ({ ...a, nota: n }))}
-                        errores={erroresJornadasWizard}
-                        mostrarErrores
-                      />
-                    </div>
-
                     {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
                     <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
@@ -4064,7 +4038,7 @@ export const ProjectTeamPage: React.FC = () => {
                         Asignación por Área y Turno <span className="text-red-500">*</span>
                       </label>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">
-                        Elegí el área y el turno donde va a trabajar este miembro: uno solo de cada uno. Tocá un área para ver sus turnos. El horario de entrada y salida se completa con el del turno que elijas; más abajo se puede modificar.
+                        Elegí el área y el turno donde va a trabajar este miembro: uno solo de cada uno. Tocá un área para ver sus turnos. Con el turno elegido, acá abajo se cargan los días que trabaja y el horario de entrada y salida.
                       </p>
 
                       {(project?.areasConfig || []).length === 0 && (
@@ -4105,7 +4079,6 @@ export const ProjectTeamPage: React.FC = () => {
                           const seleccionActual = wizardData.areaShiftAssignments[0];
                           // Sin tocar nada se abre la que tiene la elección; `null` es «la cerré yo».
                           const areaAbierta = areaExpandida === undefined ? seleccionActual?.areaId ?? null : areaExpandida;
-                          const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
 
                           return (project?.areasConfig || []).map((ac: any) => {
                             const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
@@ -4146,15 +4119,30 @@ export const ProjectTeamPage: React.FC = () => {
                                         <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Supervisa áreas y turnos». Dale un rol que lo incluya desde su ficha.</p>
                                       </div>
                                     )}
-                                    <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
+                                    {/*
+                                      LOS TURNOS, COMO EN LA SOLICITUD DE CONTRATACIÓN DE LA APP.
+
+                                      Misma fila con el redondelito de elegido, el nombre y, debajo, el horario y los
+                                      días en texto. Se reemplazó a la tarjeta con las siete iniciales de la semana:
+                                      pintadas una al lado de la otra había que decodificar cuáles estaban encendidas,
+                                      y ocupaban el ancho que hace que entren tres turnos donde entraban cuatro.
+
+                                      Las dos pantallas piden lo mismo —un área y un turno— y ahora se eligen con el
+                                      mismo gesto, que es de lo que se trata: quien carga la solicitud en el teléfono
+                                      y quien la aprueba en el escritorio están mirando la misma lista.
+                                    */}
+                                    <div className={`grid grid-cols-1 gap-2 px-4 pb-3 sm:grid-cols-2 lg:grid-cols-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
                                       {shiftsForArea.map((shift) => {
                                         const isSelected = selectedShiftIds.includes(String(shift._id));
+                                        const horario = shift.startTime && shift.endTime ? `${shift.startTime} a ${shift.endTime}` : "";
+                                        const dias = textoDeDias(shift.days);
 
                                         return (
                                           <button
                                             key={shift._id}
                                             type="button"
                                             disabled={isAreaRestricted}
+                                            aria-pressed={isSelected}
                                             onClick={() => {
                                               setWizardData((prev) => ({
                                                 ...prev,
@@ -4173,22 +4161,15 @@ export const ProjectTeamPage: React.FC = () => {
                                                 ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
                                               }));
                                             }}
-                                            className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50" : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}
+                                            className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${isSelected ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:border-blue-600"}`}
                                             title={isSelected ? `${shift.name} (tocá para quitarlo)` : shift.name}
                                           >
-                                            <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-200"}`}>{shift.name}</span>
-                                            <span className={`text-[10px] font-medium uppercase mt-0.5 ${isSelected ? "text-blue-600 dark:text-blue-500" : "text-gray-500"}`}>
-                                              {shift.startTime} — {shift.endTime} hs
+                                            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
+                                            <span className="min-w-0">
+                                              <span className="block truncate text-sm font-medium">{shift.name}</span>
+                                              {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
+                                              {(horario || dias) && <span className="block text-[10px] text-gray-400">{[horario, dias].filter(Boolean).join(" · ")}</span>}
                                             </span>
-                                            {shift.days && shift.days.length > 0 && (
-                                              <div className="flex gap-1 mt-1.5">
-                                                {DAY_LABELS.map((label, dayIdx) => (
-                                                  <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isSelected ? "bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200" : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300") : "text-gray-300 dark:text-gray-600"}`}>
-                                                    {label}
-                                                  </span>
-                                                ))}
-                                              </div>
-                                            )}
                                           </button>
                                         );
                                       })}
@@ -4201,52 +4182,151 @@ export const ProjectTeamPage: React.FC = () => {
                         })()}
                       </div>
 
+                      {/*
+                        LO ELEGIDO, EN UN BADGE, FUERA DE LA LISTA.
+
+                        Con las áreas cerradas la elección se ve en el encabezado de UNA de ellas, y hay que
+                        acordarse de cuál para encontrarla. Acá abajo queda siempre en el mismo lugar, se lee
+                        sin abrir nada y trae el área además del turno —que es el par que importa—. La ✕ lo
+                        saca sin tener que volver a entrar al área para destildarlo.
+
+                        Es una lista y no un solo badge por los contratos viejos con varias áreas guardadas:
+                        se muestran todas, y cada una se puede sacar por separado.
+                      */}
+                      {wizardData.areaShiftAssignments.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 ml-1">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Elegido</span>
+                          {wizardData.areaShiftAssignments.flatMap((a) =>
+                            a.shiftIds.map((sid) => {
+                              const areaNombre = allAreas.find((ar) => String(ar._id) === String(a.areaId))?.name || a.areaId;
+                              const turnoNombre = allShifts.find((sh) => String(sh._id) === String(sid))?.name || sid;
+                              const texto = `${areaNombre} · ${turnoNombre}`;
+                              return (
+                                <span key={`${a.areaId}-${sid}`} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                  {texto}
+                                  <button
+                                    type="button"
+                                    title={`Quitar ${texto}`}
+                                    onClick={() =>
+                                      setWizardData((prev) => ({
+                                        ...prev,
+                                        areaShiftAssignments: prev.areaShiftAssignments.map((x) => (x.areaId === a.areaId ? { ...x, shiftIds: x.shiftIds.filter((s) => s !== sid) } : x)).filter((x) => x.shiftIds.length > 0),
+                                      }))
+                                    }
+                                    className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5"
+                                  >
+                                    <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                                  </button>
+                                </span>
+                              );
+                            }),
+                          )}
+                        </div>
+                      )}
+
                       {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Elegí el área y el turno donde va a trabajar.</p>}
+
+                      {/*
+                        CÓMO TRABAJA EN ESE TURNO: los días y el horario, adentro del área y del turno elegidos.
+
+                        Estaban sueltos más arriba y más abajo en el formulario, con media pantalla entre
+                        ellos y sin decir de qué turno hablaban. Son del turno: cuántos días por semana y
+                        cuáles trabaja ahí, y a qué hora entra y sale. Adentro, el encabezado dice de qué
+                        turno son, y el horario que se completa solo al elegirlo aparece donde se lo acaba
+                        de elegir.
+
+                        Cuántos días por semana se admiten como MÁXIMO lo sigue mandando el tipo de
+                        contrato (`limiteDiasWizard`): el turno dice cuáles, el contrato cuántos.
+
+                        Sin áreas configuradas en el proyecto no hay turno al que pertenecer, y se
+                        muestran igual: esconderlos dejaría el contrato sin días ni horario.
+                      */}
+                      {(wizardData.areaShiftAssignments.length > 0 || (project?.areasConfig || []).length === 0) && (
+                        <div className="space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/20 p-4">
+                          {areaTurnoDelWizard && <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Cómo trabaja en {areaTurnoDelWizard}</p>}
+
+                          {/*
+                            Los días de la semana. EL MISMO componente que la Solicitud de Contratación de mobile.
+
+                            Va arriba del horario porque es la otra mitad del mismo dato: esto dice qué
+                            días, el horario dice a qué hora. Estaban separados —uno acá y el otro solo en
+                            mobile— y el escritorio guardaba 5 jornadas fijas sin que nadie lo eligiera.
+                          */}
+                          <div className="md:col-span-2">
+                            <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
+                          </div>
+
+                          {/*
+                            EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
+
+                            Se llama «Modificar» porque es lo que se hace acá: el turno elegido lo
+                            completa, y esto es para cuando esta persona entra o sale a otra hora que el turno.
+                            Inicio y fin van juntos —son las dos puntas de lo mismo— con una sola aclaración
+                            debajo del par.
+                          */}
+                          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <label className="md:col-span-2 block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 -mb-2">
+                              <FontAwesomeIcon icon={faClock} className="mr-1" />
+                              Modificar Horario (Entrada - Salida) <span className="text-red-500">*</span>
+                            </label>
+                            <div className="space-y-1.5">
+                              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Entrada</label>
+                              <SelectorHora
+                                valor={wizardData.hora_inicio}
+                                onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))}
+                                etiqueta="Entrada"
+                                placeholder="Entrada"
+                                className="input-field w-full"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Salida</label>
+                              {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
+                              <SelectorHora valor={wizardData.hora_fin} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_fin: h }))} etiqueta="Salida" placeholder="Salida" className="input-field w-full" desde={wizardData.hora_inicio} />
+                            </div>
+                            {horarioExcedidoWizard ? (
+                              <p className="md:col-span-2 text-[11px] font-medium text-red-600 dark:text-red-400 ml-1 -mt-2">
+                                El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
+                              </p>
+                            ) : (
+                              <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">
+                                Se completa con el horario del turno elegido; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ""}
+                              </p>
+                            )}
+                            {/* Se sale del turno: se avisa y se guarda igual (ver `turnosFueraDeHorario`). */}
+                            {turnosFueraDeHorario.length > 0 && (
+                              <p className="md:col-span-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 ml-1 -mt-1">
+                                Ojo: {wizardData.hora_inicio} a {wizardData.hora_fin} se sale {turnosFueraDeHorario.length === 1 ? "del turno" : "de los turnos"} {turnosFueraDeHorario.map((sh) => `${sh.name} (${sh.startTime} a ${sh.endTime})`).join(", ")}. Se puede guardar igual.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/*
-                      EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
-
-                      Se llama «Modificar» porque es lo que se hace acá: el turno elegido arriba lo
-                      completa, y esto es para cuando esta persona entra o sale a otra hora que el turno.
-                      Inicio y fin van juntos —son las dos puntas de lo mismo— con una sola aclaración
-                      debajo del par.
-                    */}
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className="md:col-span-2 block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 -mb-2">
-                        <FontAwesomeIcon icon={faClock} className="mr-1" />
-                        Modificar Horario (Entrada - Salida) <span className="text-red-500">*</span>
-                      </label>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Entrada</label>
-                        <SelectorHora
-                          valor={wizardData.hora_inicio}
-                          onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))}
-                          etiqueta="Entrada"
-                          placeholder="Entrada"
-                          className="input-field w-full"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Salida</label>
-                        {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
-                        <SelectorHora valor={wizardData.hora_fin} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_fin: h }))} etiqueta="Salida" placeholder="Salida" className="input-field w-full" desde={wizardData.hora_inicio} />
-                      </div>
-                      {horarioExcedidoWizard ? (
-                        <p className="md:col-span-2 text-[11px] font-medium text-red-600 dark:text-red-400 ml-1 -mt-2">
-                          El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
-                        </p>
-                      ) : (
-                        <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">
-                          Se completa con el horario del turno elegido arriba; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ""}
-                        </p>
-                      )}
-                      {/* Se sale del turno: se avisa y se guarda igual (ver `turnosFueraDeHorario`). */}
-                      {turnosFueraDeHorario.length > 0 && (
-                        <p className="md:col-span-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 ml-1 -mt-1">
-                          Ojo: {wizardData.hora_inicio} a {wizardData.hora_fin} se sale {turnosFueraDeHorario.length === 1 ? "del turno" : "de los turnos"} {turnosFueraDeHorario.map((sh) => `${sh.name} (${sh.startTime} a ${sh.endTime})`).join(", ")}. Se puede guardar igual.
-                        </p>
-                      )}
+                    {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo. */}
+                    <div className="md:col-span-2">
+                      <JornadasSolicitud
+                        desde={wizardData.fecha_alta_contrato}
+                        hasta={wizardData.fecha_baja_contrato}
+                        rotativos={wizardData.dias_rotativos}
+                        calculadas={jornadasCalculadasWizard}
+                        dias={wizardData.dias_semana}
+                        valor={String(wizardData.cantidad_jornadas_laborales || "")}
+                        onValor={(v) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(v) || 0 }))}
+                        ajustado={ajusteJornadas.ajustado}
+                        motivo={ajusteJornadas.motivo}
+                        nota={ajusteJornadas.nota}
+                        onEditarManual={() => setAjusteJornadas((a) => ({ ...a, ajustado: true }))}
+                        onCancelarAjuste={() => {
+                          setAjusteJornadas({ ajustado: false, motivo: "", nota: "" });
+                          if (jornadasCalculadasWizard !== null) setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
+                        }}
+                        onMotivo={(m) => setAjusteJornadas((a) => ({ ...a, motivo: m }))}
+                        onNota={(n) => setAjusteJornadas((a) => ({ ...a, nota: n }))}
+                        errores={erroresJornadasWizard}
+                        mostrarErrores
+                      />
                     </div>
 
                     {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}
