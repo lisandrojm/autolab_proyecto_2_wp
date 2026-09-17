@@ -908,6 +908,19 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const fueraDelTurno = !!areaTurnoElegido?.horario && !!formData.inTime && !!formData.outTime && !horarioDentroDelTurno(areaTurnoElegido.inicio, areaTurnoElegido.fin, formData.inTime, formData.outTime);
 
+  /*
+    EL HORARIO NO SE TOCA HASTA QUE HAYA ÁREA Y TURNO.
+
+    El campo se llama «Modificar horario» porque MODIFICA el del turno: elegir el turno lo completa
+    (ver el efecto de arriba) y eso pisa lo que se hubiera cargado antes. Poner 00:00 a 07:00 y verlo
+    desaparecer al elegir el turno es trabajo tirado, y encima el aviso de «se sale del turno» no puede
+    decir nada mientras no haya turno con qué comparar.
+
+    Si el proyecto no tiene áreas y turnos cargados no se pide ninguno (ver el envío), así que ahí el
+    horario queda libre: bloquearlo dejaría la solicitud sin horario y sin forma de cargarlo.
+  */
+  const sinAreaTurnoTodavia = !areaTurnoElegido && (opcionesAreaTurno?.length ?? 0) > 0;
+
   const candidatosAReemplazar = useMemo(() => {
     if (formData.projectIds.length === 0) return [];
     const busca = replacedSearchTerm.trim().toLowerCase();
@@ -1936,15 +1949,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </label>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <SelectorHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} etiqueta="Entrada" placeholder="Entrada" className={CLASE_HORA} />
+                <SelectorHora disabled={sinAreaTurnoTodavia} valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} etiqueta="Entrada" placeholder="Entrada" className={CLASE_HORA} />
               </div>
               <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
               <div className="flex-1">
                 {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
-                <SelectorHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} etiqueta="Salida" placeholder="Salida" className={CLASE_HORA} desde={formData.inTime} />
+                <SelectorHora disabled={sinAreaTurnoTodavia} valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} etiqueta="Salida" placeholder="Salida" className={CLASE_HORA} desde={formData.inTime} />
               </div>
             </div>
-            {horarioExcedido ? (
+            {sinAreaTurnoTodavia ? (
+              <p className="text-[11px] text-slate-400">Elegí primero el área y el turno: de ahí sale el horario, y esto es para corregirlo.</p>
+            ) : horarioExcedido ? (
               <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
                 El tipo de contrato admite hasta {limiteHoras} h por jornada y el horario suma {duracionHorario?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
               </p>
