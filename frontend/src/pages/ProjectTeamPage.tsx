@@ -23,6 +23,7 @@ import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { TeamJerarquiaTab } from "../components/team/TeamJerarquiaTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
+import { MiembroElegible, SelectorMiembroModal } from "../components/team/SelectorMiembroModal";
 import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from "../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../components/contratacion/JornadasSolicitud";
 import { ImportesDelContrato } from "../components/contratacion/ImportesDelContrato";
@@ -341,6 +342,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [showEstadoInfo, setShowEstadoInfo] = useState(false);
   // De dónde salen las empresas del contrato y del release, y por qué a veces hay una sola.
   const [showEmpresasInfo, setShowEmpresasInfo] = useState(false);
+  // La ventana para elegir a quién reemplaza (ver `SelectorMiembroModal`).
+  const [reemplazadoModalOpen, setReemplazadoModalOpen] = useState(false);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
   // modal de contratos. null = no se edita uno puntual (alta nueva o edición genérica → se toca el último).
   const [editingContractIndex, setEditingContractIndex] = useState<number | null>(null);
@@ -2350,6 +2353,33 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     return Math.round(total * 10) / 10;
   };
 
+  /**
+   * A QUIÉN SE PUEDE REEMPLAZAR: el equipo del proyecto, menos la persona que se está contratando.
+   *
+   * Se arma acá y no adentro de la ventana porque el rol de cada uno sale de `metadata.projects` de
+   * ESTE proyecto —el mismo cruce que hace la tabla del equipo (`renderUserRow`)—, y el id que el
+   * contrato guarda es el de FRAME (`metadata.id`), no el `_id` de la plataforma.
+   */
+  const candidatosAReemplazar = useMemo<MiembroElegible[]>(
+    () =>
+      teamMembers
+        .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
+        .map((m) => {
+          const proyectoMeta = (m.metadata?.projects || []).find((p: any) => String(typeof p.projectId === "object" ? (p.projectId as any)?._id : p.projectId) === String(projectId));
+          return {
+            user: m,
+            idFrame: String((m.metadata as any)?.id || ""),
+            nombre: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.email || "Sin nombre",
+            email: m.email || "",
+            rolFrame: (proyectoMeta as any)?.nombre_rol_frame || m.externalInfo?.rolFrames?.[0] || "-",
+          };
+        })
+        .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    [teamMembers, selectedUserForWizard, projectId],
+  );
+
+  const reemplazadoElegido = candidatosAReemplazar.find((c) => c.idFrame && c.idFrame === String(wizardData.empleado_id_reemplezado));
+
   const renderUserRow = (user: User) => {
     const userConfig = teamConfig.find((c) => c.userId === user._id);
     const projectMeta = user.metadata?.projects?.find((p: any) => {
@@ -3487,6 +3517,23 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         </div>
       </Modal>
 
+      {/* A quién reemplaza: el equipo del proyecto, con buscador y filtro por rol. */}
+      <SelectorMiembroModal
+        isOpen={reemplazadoModalOpen}
+        onClose={() => setReemplazadoModalOpen(false)}
+        miembros={candidatosAReemplazar}
+        valor={String(wizardData.empleado_id_reemplezado || "")}
+        onElegir={(idFrame) => {
+          setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: idFrame }));
+          // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
+          applyReplacedMemberAssignments(idFrame);
+        }}
+        onQuitar={() => {
+          setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: "" }));
+          setHerenciaReemplazo(null);
+        }}
+      />
+
       {/* Wizard Modal */}
       <Modal
         isOpen={!!selectedUserForWizard}
@@ -4216,7 +4263,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     <input
                       type="checkbox"
                       id="esReemplazo"
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="hidden"
                       checked={wizardData.reemplazo}
                       onChange={(e) => {
                         const checked = e.target.checked;
@@ -4224,7 +4271,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         if (!checked) setHerenciaReemplazo(null);
                       }}
                     />
-                    <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {/*
+                      UN SWITCH, COMO «DÍAS ROTATIVOS».
+
+                      Es un sí/no que cambia lo que muestra el formulario —abajo aparece a quién
+                      reemplaza y de ahí se heredan área y turno—, y ésos en esta app son switches. El
+                      checkbox cuadrado de 14px era el único del formulario y se leía como un ítem de
+                      lista, no como algo que enciende otra cosa.
+                    */}
+                    <label htmlFor="esReemplazo" className="flex cursor-pointer select-none items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <span className={`flex h-6 w-10 shrink-0 items-center rounded-full p-1 duration-300 ease-in-out ${wizardData.reemplazo ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
+                        <span className={`h-4 w-4 transform rounded-full bg-white shadow-md duration-300 ease-in-out ${wizardData.reemplazo ? "translate-x-4" : ""}`} />
+                      </span>
                       Es reemplazo
                     </label>
                   </div>
@@ -4232,26 +4290,24 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   {wizardData.reemplazo && (
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
-                      <select
-                        className="input-field w-full"
-                        value={wizardData.empleado_id_reemplezado}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: value }));
-                          // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
-                          if (value) applyReplacedMemberAssignments(value);
-                          else setHerenciaReemplazo(null);
-                        }}
-                      >
-                        <option value="">Selecciona empleado...</option>
-                        {teamMembers
-                          .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
-                          .map((m) => (
-                            <option key={m._id} value={(m.metadata as any)?.id}>
-                              {m.firstName} {m.lastName}
-                            </option>
-                          ))}
-                      </select>
+                      {/*
+                        SE ELIGE EN UNA VENTANA CON BUSCADOR, no en un desplegable.
+
+                        El `<select>` listaba a las sesenta personas del equipo por nombre, sin buscar
+                        y sin decir qué hace cada una: con dos apellidos parecidos no había forma de
+                        saber cuál era. Ver `SelectorMiembroModal`.
+                      */}
+                      <button type="button" onClick={() => setReemplazadoModalOpen(true)} aria-haspopup="dialog" className="input-field flex w-full items-center justify-between gap-2 py-2.5 text-left">
+                        {reemplazadoElegido ? (
+                          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
+                            <span className="font-medium">{reemplazadoElegido.nombre}</span>
+                            {reemplazadoElegido.rolFrame && reemplazadoElegido.rolFrame !== "-" && <span className="text-gray-500 dark:text-gray-400">{reemplazadoElegido.rolFrame}</span>}
+                          </span>
+                        ) : (
+                          <span className="flex-1 text-gray-400 dark:text-gray-500">Elegí a quién reemplaza...</span>
+                        )}
+                        <FontAwesomeIcon icon={faSearch} className="h-3 w-3 shrink-0 text-gray-400" />
+                      </button>
                     </div>
                   )}
 
