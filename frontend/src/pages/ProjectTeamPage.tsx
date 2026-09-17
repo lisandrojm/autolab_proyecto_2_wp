@@ -415,6 +415,13 @@ export const ProjectTeamPage: React.FC = () => {
   const [showSinAreasInfo, setShowSinAreasInfo] = useState(false);
   // Aviso de la herencia de área/turno al marcar un reemplazo (qué se copió o por qué no se pudo).
   const [herenciaReemplazo, setHerenciaReemplazo] = useState<{ ok: boolean; replacedName: string; detalle: string } | null>(null);
+  /**
+   * Qué área está abierta en «Asignación por Área y Turno» (una sola a la vez).
+   *
+   * `undefined` es «nadie tocó nada»: ahí manda la elección —se abre el área elegida, o ninguna si es
+   * un alta nueva—. `null` es un área cerrada a mano, que tiene que quedarse cerrada.
+   */
+  const [areaExpandida, setAreaExpandida] = useState<string | null | undefined>(undefined);
 
   // Modal de detalle del empleado (contratos del proyecto + descargas)
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
@@ -1673,6 +1680,7 @@ export const ProjectTeamPage: React.FC = () => {
     setSelectedUserForWizard(user);
     setWizardStep(1);
     setHerenciaReemplazo(null); // el aviso de herencia es por cada vez que se elige a quién reemplaza
+    setAreaExpandida(undefined); // que el acordeón vuelva a abrir el área de ESTE miembro, no la del anterior
 
     // Aseguramos tener la lista de empresas para poblar los selects de Empresa del Contrato / Release.
     if (companies.length === 0) {
@@ -1855,7 +1863,7 @@ export const ProjectTeamPage: React.FC = () => {
     // (de hecho el campo ni se muestra).
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
     if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push("Fecha baja contrato");
-    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push("Área y turno (al menos uno)");
+    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push("Área y turno");
     if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push("Horario (entrada y salida)");
     if (horarioExcedidoWizard) faltan.push(`Horario dentro de las ${limiteHorasWizard} h por jornada del contrato`);
     if (erroresJornadasWizard.jornadas) faltan.push("Cantidad de jornadas");
@@ -2129,7 +2137,16 @@ export const ProjectTeamPage: React.FC = () => {
       return;
     }
 
-    const detalle = assignments
+    /*
+      SE HEREDA UN ÁREA Y UN TURNO, no todo lo que tenga la persona reemplazada.
+
+      Es la misma regla que la elección a mano: dejar dos heredadas pondría al wizard en un estado que
+      nadie puede volver a armar desde la pantalla, y bastaría tocar cualquier turno para perder una
+      sin haber querido. Si la reemplazada tiene más de uno se avisa cuál se tomó, en `detalle`.
+    */
+    const heredadas = [{ areaId: assignments[0].areaId, shiftIds: assignments[0].shiftIds.slice(0, 1) }];
+
+    const detalle = heredadas
       .map((a) => {
         const areaName = allAreas.find((ar) => String(ar._id) === a.areaId)?.name || a.areaId;
         const turnos = a.shiftIds.map((s) => allShifts.find((sh) => String(sh._id) === s)?.name || s).join(", ");
@@ -2137,7 +2154,8 @@ export const ProjectTeamPage: React.FC = () => {
       })
       .join(" + ");
 
-    setWizardData((prev) => ({ ...prev, areaShiftAssignments: assignments }));
+    setWizardData((prev) => ({ ...prev, areaShiftAssignments: heredadas }));
+    setAreaExpandida(undefined); // que se abra el área heredada, y no la que estuviera abierta
     setHerenciaReemplazo({ ok: true, replacedName, detalle });
   };
 
@@ -4046,7 +4064,7 @@ export const ProjectTeamPage: React.FC = () => {
                         Asignación por Área y Turno <span className="text-red-500">*</span>
                       </label>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">
-                        Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente. El horario de entrada y salida se completa con el del turno que elijas; más abajo se puede modificar.
+                        Elegí el área y el turno donde va a trabajar este miembro: uno solo de cada uno. Tocá un área para ver sus turnos. El horario de entrada y salida se completa con el del turno que elijas; más abajo se puede modificar.
                       </p>
 
                       {(project?.areasConfig || []).length === 0 && (
@@ -4065,28 +4083,29 @@ export const ProjectTeamPage: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {(() => {
                           const isCoordinadorRole = coordinaAreas(selectedUserForWizard?.roles);
-                          // Helper to check time overlap
-                          const timeToMinutes = (t: string) => {
-                            const [h, m] = t.split(":").map(Number);
-                            return h * 60 + m;
-                          };
-                          const timesOverlap = (s1Start: string, s1End: string, s2Start: string, s2End: string) => {
-                            let a1 = timeToMinutes(s1Start),
-                              b1 = timeToMinutes(s1End);
-                            let a2 = timeToMinutes(s2Start),
-                              b2 = timeToMinutes(s2End);
-                            if (b1 <= a1) b1 += 24 * 60;
-                            if (b2 <= a2) b2 += 24 * 60;
-                            return a1 < b2 && a2 < b1;
-                          };
-                          // Helper to check if two shifts share at least one work day
-                          const daysOverlap = (d1: number[], d2: number[]) => {
-                            if (d1.length === 0 || d2.length === 0) return true; // if no days configured, assume overlap
-                            return d1.some((d) => d2.includes(d));
-                          };
+                          /*
+                            UN ÁREA Y UN TURNO, Y LAS ÁREAS CERRADAS HASTA QUE SE ABRAN.
+
+                            Antes se podían tildar varios turnos de varias áreas a la vez, y por eso hacía falta
+                            toda una maquinaria que detectaba superposiciones horarias y bloqueaba los turnos
+                            incompatibles. Elegir de a uno la vuelve innecesaria —no hay con qué superponerse— y
+                            saca de la pantalla los avisos de «se superpone» que hoy tapan la mitad de la grilla.
+
+                            Un proyecto con ocho áreas por cuatro turnos son treinta y dos tarjetas abiertas, que
+                            es lo que empuja el resto del formulario fuera de la pantalla. Cerradas se leen las
+                            áreas de un vistazo, y la elegida muestra su turno en el encabezado sin abrirla.
+
+                            Al contrato que ya tenga varias áreas guardadas de antes no se le toca nada: se
+                            muestran todas marcadas y la primera elección lo deja en una sola. Normalizarlo al
+                            abrir el wizard sería borrarle asignaciones a alguien que sólo vino a mirar.
+                          */
+                          const seleccionActual = wizardData.areaShiftAssignments[0];
+                          // Sin tocar nada se abre la que tiene la elección; `null` es «la cerré yo».
+                          const areaAbierta = areaExpandida === undefined ? seleccionActual?.areaId ?? null : areaExpandida;
+                          const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
 
                           return (project?.areasConfig || []).map((ac: any) => {
                             const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
@@ -4102,134 +4121,87 @@ export const ProjectTeamPage: React.FC = () => {
                             const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
                             const selectedShiftIds = currentAssignment?.shiftIds || [];
                             const isAreaActive = selectedShiftIds.length > 0;
-
-                            // Collect ALL selected shift data across ALL areas for overlap detection
-                            const allSelectedShiftData: { areaId: string; shiftId: string; name: string; start: string; end: string; days: number[] }[] = [];
-                            wizardData.areaShiftAssignments.forEach((asa) => {
-                              asa.shiftIds.forEach((sid) => {
-                                const sh = allShifts.find((s) => String(s._id) === sid);
-                                if (sh) allSelectedShiftData.push({ areaId: asa.areaId, shiftId: sid, name: sh.name, start: sh.startTime, end: sh.endTime, days: sh.days || [] });
-                              });
-                            });
+                            const estaAbierta = areaAbierta === aId;
+                            // Qué turno quedó elegido, para leerlo con el área cerrada.
+                            const turnosElegidos = selectedShiftIds
+                              .map((id) => allShifts.find((s) => String(s._id) === id)?.name)
+                              .filter(Boolean)
+                              .join(", ");
 
                             return (
-                              <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
-                                <div className="flex items-center justify-between px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
-                                    <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
-                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Supervisor</span>}
+                              <div key={aId} className={`rounded-xl border overflow-hidden transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
+                                <button type="button" onClick={() => setAreaExpandida(estaAbierta ? null : aId)} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors" aria-expanded={estaAbierta} title={estaAbierta ? "Cerrar el área" : "Ver los turnos del área"}>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <FontAwesomeIcon icon={estaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400 shrink-0" />
+                                    <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 shrink-0 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
+                                    <span className="font-bold text-sm uppercase tracking-wide truncate">{aName || aId}</span>
+                                    {isAreaRestricted && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter shrink-0">Requiere Supervisor</span>}
                                   </div>
-                                  {isAreaActive && (
-                                    <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
-                                      {selectedShiftIds.length} turno{selectedShiftIds.length > 1 ? "s" : ""}
-                                    </span>
-                                  )}
-                                </div>
-                                {isAreaRestricted && (
-                                  <div className="px-4 pb-3">
-                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Supervisa áreas y turnos». Dale un rol que lo incluya desde su ficha.</p>
-                                  </div>
+                                  {isAreaActive ? <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase truncate shrink-0">{turnosElegidos}</span> : <span className="text-[10px] font-medium text-gray-400 uppercase shrink-0">Sin turno</span>}
+                                </button>
+                                {estaAbierta && (
+                                  <>
+                                    {isAreaRestricted && (
+                                      <div className="px-4 pb-3">
+                                        <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Esta persona no puede tener áreas a cargo: le falta «Supervisa áreas y turnos». Dale un rol que lo incluya desde su ficha.</p>
+                                      </div>
+                                    )}
+                                    <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
+                                      {shiftsForArea.map((shift) => {
+                                        const isSelected = selectedShiftIds.includes(String(shift._id));
+
+                                        return (
+                                          <button
+                                            key={shift._id}
+                                            type="button"
+                                            disabled={isAreaRestricted}
+                                            onClick={() => {
+                                              setWizardData((prev) => ({
+                                                ...prev,
+                                                // Elegir uno reemplaza lo que hubiera; volver a tocarlo lo deja sin área.
+                                                areaShiftAssignments: isSelected ? [] : [{ areaId: aId, shiftIds: [String(shift._id)] }],
+                                                /*
+                                                  ELEGIR UN TURNO COMPLETA EL HORARIO DEL CONTRATO con el de ese turno.
+
+                                                  Antes eran independientes y el horario se cargaba a mano, con los turnos
+                                                  filtrados por él: había que saber a qué hora entra cada turno para que
+                                                  apareciera. Ahora manda el turno, que es el dato que se conoce, y el
+                                                  horario queda editable abajo para cuando esta persona entra o sale a otra
+                                                  hora. Al DESELECCIONARLO no se toca: borrar el horario de un contrato
+                                                  porque se destildó un turno sería perder un dato que nadie pidió cambiar.
+                                                */
+                                                ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
+                                              }));
+                                            }}
+                                            className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50" : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}
+                                            title={isSelected ? `${shift.name} (tocá para quitarlo)` : shift.name}
+                                          >
+                                            <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-200"}`}>{shift.name}</span>
+                                            <span className={`text-[10px] font-medium uppercase mt-0.5 ${isSelected ? "text-blue-600 dark:text-blue-500" : "text-gray-500"}`}>
+                                              {shift.startTime} — {shift.endTime} hs
+                                            </span>
+                                            {shift.days && shift.days.length > 0 && (
+                                              <div className="flex gap-1 mt-1.5">
+                                                {DAY_LABELS.map((label, dayIdx) => (
+                                                  <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isSelected ? "bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200" : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300") : "text-gray-300 dark:text-gray-600"}`}>
+                                                    {label}
+                                                  </span>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </>
                                 )}
-                                <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
-                                  {shiftsForArea.map((shift) => {
-                                    const isSelected = selectedShiftIds.includes(String(shift._id));
-
-                                    // Check if this shift overlaps with ANY currently selected shift
-                                    const overlappingWith = allSelectedShiftData.find((sel) => (sel.areaId !== aId || sel.shiftId !== String(shift._id)) && timesOverlap(shift.startTime, shift.endTime, sel.start, sel.end) && daysOverlap(shift.days || [], sel.days));
-                                    const isBlocked = !isSelected && !!overlappingWith;
-
-                                    const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
-
-                                    return (
-                                      <button
-                                        key={shift._id}
-                                        type="button"
-                                        disabled={isAreaRestricted}
-                                        onClick={() => {
-                                          setWizardData((prev) => {
-                                            let assignments = [...prev.areaShiftAssignments];
-
-                                            if (isSelected) {
-                                              const idx = assignments.findIndex((a) => a.areaId === aId);
-                                              if (idx !== -1) {
-                                                assignments[idx] = {
-                                                  ...assignments[idx],
-                                                  shiftIds: assignments[idx].shiftIds.filter((id) => id !== String(shift._id)),
-                                                };
-                                                if (assignments[idx].shiftIds.length === 0) assignments.splice(idx, 1);
-                                              }
-                                            } else {
-                                              // AUTO-DEACTIVATE OVERLAPPING SHIFTS
-                                              assignments = assignments
-                                                .map((a) => ({
-                                                  ...a,
-                                                  shiftIds: a.shiftIds.filter((sid) => {
-                                                    const sh = allShifts.find((s) => String(s._id) === sid);
-                                                    if (!sh) return true;
-                                                    const overlaps = timesOverlap(shift.startTime, shift.endTime, sh.startTime, sh.endTime) && daysOverlap(shift.days || [], sh.days);
-                                                    return !overlaps;
-                                                  }),
-                                                }))
-                                                .filter((a) => a.shiftIds.length > 0);
-
-                                              // Add the new shift
-                                              const idx = assignments.findIndex((a) => a.areaId === aId);
-                                              if (idx !== -1) {
-                                                assignments[idx] = {
-                                                  ...assignments[idx],
-                                                  shiftIds: [...assignments[idx].shiftIds, String(shift._id)],
-                                                };
-                                              } else {
-                                                assignments.push({ areaId: aId, shiftIds: [String(shift._id)] });
-                                              }
-                                            }
-
-                                            /*
-                                              ACTIVAR UN TURNO COMPLETA EL HORARIO DEL CONTRATO con el de ese turno.
-
-                                              Antes eran independientes y el horario se cargaba a mano, con los turnos
-                                              filtrados por él: había que saber a qué hora entra cada turno para que
-                                              apareciera. Ahora manda el turno, que es el dato que se conoce, y el
-                                              horario queda editable abajo para cuando esta persona entra o sale a otra
-                                              hora. Al DESACTIVARLO no se toca: borrar el horario de un contrato porque
-                                              se destildó un turno sería perder un dato que nadie pidió cambiar.
-                                            */
-                                            return {
-                                              ...prev,
-                                              areaShiftAssignments: assignments,
-                                              ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
-                                            };
-                                          });
-                                        }}
-                                        className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50" : isBlocked ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 hover:border-blue-300 dark:hover:border-blue-600 opacity-80" : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}
-                                        title={isBlocked ? `Se superpone con "${overlappingWith?.name}"` : shift.name}
-                                      >
-                                        <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-blue-700 dark:text-blue-400" : isBlocked ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-200"}`}>{shift.name}</span>
-                                        <span className={`text-[10px] font-medium uppercase mt-0.5 ${isSelected ? "text-blue-600 dark:text-blue-500" : isBlocked ? "text-gray-400" : "text-gray-500"}`}>
-                                          {shift.startTime} — {shift.endTime} hs
-                                        </span>
-                                        {shift.days && shift.days.length > 0 && (
-                                          <div className="flex gap-1 mt-1.5">
-                                            {DAY_LABELS.map((label, dayIdx) => (
-                                              <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isSelected ? "bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200" : isBlocked ? "text-gray-400 dark:text-gray-600" : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300") : "text-gray-300 dark:text-gray-600"}`}>
-                                                {label}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {isBlocked && <span className="text-[9px] text-red-500 dark:text-red-400 mt-1 normal-case font-medium">⚠ Se superpone con "{overlappingWith?.name}"</span>}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
                               </div>
                             );
                           });
                         })()}
                       </div>
 
-                      {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Debes seleccionar al menos un área y turno.</p>}
+                      {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Elegí el área y el turno donde va a trabajar.</p>}
                     </div>
 
                     {/*
