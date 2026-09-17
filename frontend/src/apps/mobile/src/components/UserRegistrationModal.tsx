@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
@@ -33,6 +33,23 @@ import { useAuthStore } from "../../../../stores/authStore";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { MOBILE_REGISTRO, PROJECT_SUPERVISOR } from "../../../../utils/permisosMobile";
 import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
+
+/** Importes de la escala, como se leen en un recibo. Sin número cargado, un guion: 0 no es «no sabemos». */
+const pesos = (n?: number): string => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n).toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 }) : "—");
+
+const fechaDeEscala = (v?: string | Date): string => {
+  if (!v) return "—";
+  const d = new Date(v as any);
+  return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("es-AR");
+};
+
+/** Una fila etiqueta/importe del detalle de la escala. */
+const FilaEscala: React.FC<{ label: string; valor: string; destacado?: boolean }> = ({ label, valor, destacado }) => (
+  <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 last:border-0 dark:border-slate-800">
+    <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+    <span className={`text-right text-sm ${destacado ? "font-black text-emerald-600 dark:text-emerald-400" : "font-semibold text-slate-900 dark:text-slate-100"}`}>{valor}</span>
+  </div>
+);
 
 /** Un área y turno que se puede asignar en la solicitud, ya con los nombres para mostrarlo. */
 interface OpcionAreaTurno {
@@ -143,6 +160,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [categoriaBusqueda, setCategoriaBusqueda] = useState("");
   /** El escape del filtro por rol, por convenio: ver todas las categorías de ESTE convenio. */
   const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
+  /*
+    LA CATEGORÍA QUE SE ESTÁ MIRANDO, antes de elegirla.
+
+    Lo que se paga no sale de la categoría sino de su GRUPO —doce escalas cubren más de cien
+    categorías—, y de la lista no se podía saber ni a qué grupo pertenece cada una ni cuánto es. Tocar
+    la fila abre esa escala; el círculo de la izquierda sigue eligiendo de una, sin pasar por acá.
+  */
+  const [categoriaDetalle, setCategoriaDetalle] = useState<CategoriaSatItem | null>(null);
+
+  /** Elegir la categoría, desde la lista o desde su detalle: un solo lugar que cierra lo que quedó abierto. */
+  const elegirCategoria = (id: string) => {
+    setFormData((prev) => ({ ...prev, categoriaSatId: id }));
+    setAvisoCascada("");
+    setCategoriaDetalle(null);
+    setCategoriaModalOpen(false);
+    setCategoriaBusqueda("");
+  };
   /** Lo último que la cascada limpió sola. Se muestra para que no parezca un error de la pantalla. */
   const [avisoCascada, setAvisoCascada] = useState("");
   const [showRoleFilterMenu, setShowRoleFilterMenu] = useState(false);
@@ -2673,28 +2707,90 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               ) : (
                 categoriasParaElegir.map((cat) => {
                   const elegida = cat._id === formData.categoriaSatId;
+                  const grupo = cat.data?.numeroCategoria;
                   return (
-                    <button
-                      key={cat._id}
-                      type="button"
-                      onClick={() => {
-                        setFormData((prev) => ({ ...prev, categoriaSatId: cat._id }));
-                        setAvisoCascada("");
-                        setCategoriaModalOpen(false);
-                        setCategoriaBusqueda("");
-                      }}
-                      aria-pressed={elegida}
-                      className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${elegida ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
-                    >
-                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegida && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
-                      {cat.data?.codigoArca && <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{cat.data.codigoArca}</span>}
-                      <span className="flex-1 truncate text-sm font-medium">{cat.name}</span>
-                    </button>
+                    <div key={cat._id} className={`flex items-center gap-3 rounded-lg border p-3 transition-all ${elegida ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}>
+                      {/* El círculo elige sin pasar por el detalle: quien ya sabe cuál es no tiene que mirarlo. */}
+                      <button type="button" onClick={() => elegirCategoria(cat._id)} aria-pressed={elegida} aria-label={`Elegir ${cat.name}`} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>
+                        {elegida && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}
+                      </button>
+                      {/* La fila abre la escala: a qué grupo pertenece y cuánto se paga. */}
+                      <button type="button" onClick={() => setCategoriaDetalle(cat)} className="flex min-w-0 flex-1 items-center gap-2 text-left" aria-label={`Ver la escala de ${cat.name}`}>
+                        {cat.data?.codigoArca && <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{cat.data.codigoArca}</span>}
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{cat.name}</span>
+                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">{grupo ? `Grupo ${grupo}` : "Sin grupo"}</span>
+                        <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                      </button>
+                    </div>
                   );
                 })
               )}
             </div>
           </div>
+        </Modal>
+
+        {/*
+          LA ESCALA DE LA CATEGORÍA: a qué grupo pertenece y cuánto se paga.
+
+          Los importes son del GRUPO y no de la categoría (salvo en los convenios que no tienen grupos,
+          donde la escala es propia): se dice cuál de los dos casos es, porque explica por qué dos
+          categorías distintas muestran los mismos números.
+        */}
+        <Modal
+          isOpen={!!categoriaDetalle}
+          onClose={() => setCategoriaDetalle(null)}
+          title={categoriaDetalle?.name || "Categoría"}
+          subtitle={categoriaDetalle?.data?.codigoArca ? `Código ARCA ${categoriaDetalle.data.codigoArca}` : undefined}
+          size="md"
+          zIndex={90}
+          footer={
+            <div className="flex w-full items-center justify-between gap-3">
+              <button type="button" onClick={() => setCategoriaDetalle(null)} className="px-4 py-2.5 text-sm font-bold text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300">
+                Volver
+              </button>
+              <button type="button" onClick={() => categoriaDetalle && elegirCategoria(categoriaDetalle._id)} className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                {categoriaDetalle && categoriaDetalle._id === formData.categoriaSatId ? "Seguir con esta" : "Elegir esta categoría"}
+              </button>
+            </div>
+          }
+        >
+          {categoriaDetalle &&
+            (() => {
+              const d: any = categoriaDetalle.data || {};
+              const vencida = d.vigenciaHasta ? new Date(d.vigenciaHasta).getTime() < Date.now() : false;
+              return (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Grupo</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{d.numeroCategoria ? `Grupo ${d.numeroCategoria}${d.grupoNombre ? ` — ${d.grupoNombre}` : ""}` : "Sin grupo"}</p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                      {d.escalaOrigen === "grupo"
+                        ? "Los importes son los del grupo: los comparten todas sus categorías."
+                        : d.escalaOrigen === "categoria"
+                          ? "Este convenio no publica grupos, así que la escala es de esta categoría."
+                          : "No tiene escala cargada. El alta ante ARCA necesita la retribución, así que hay que cargarla desde Configuración → ARCA → Categorías."}
+                    </p>
+                  </div>
+
+                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                    <FilaEscala label="Sueldo básico" valor={pesos(d.sueldoBasico)} />
+                    <FilaEscala label="Adicional" valor={pesos(d.sueldoAdicional)} />
+                    <FilaEscala label="Sueldo bruto" valor={pesos(d.sueldoBruto)} destacado />
+                    <FilaEscala label="Presentismo" valor={pesos(d.presentismo)} />
+                    <FilaEscala label="Neto" valor={pesos(d.neto)} />
+                    <FilaEscala label="Actualización" valor={fechaDeEscala(d.fechaActualizacion)} />
+                    {d.vigenciaHasta && <FilaEscala label="Vigencia hasta" valor={fechaDeEscala(d.vigenciaHasta)} />}
+                  </div>
+
+                  {vencida && (
+                    <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                      <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 h-3 w-3 shrink-0" />
+                      La escala venció el {fechaDeEscala(d.vigenciaHasta)}: la solicitud se manda igual, con el último importe pactado.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
         </Modal>
 
         {/*

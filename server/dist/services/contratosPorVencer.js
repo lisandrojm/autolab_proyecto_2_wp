@@ -8,8 +8,10 @@ import { RoleFrame } from "../models/RoleFrame.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
-/** Con cuánta anticipación aparece un contrato: una semana antes de su fecha de baja. */
+/** Con cuánta anticipación aparece un contrato, si no se pide otra cosa: una semana antes de su baja. */
 export const DIAS_DE_AVISO = 7;
+/** Hasta dónde se puede estirar la ventana desde el filtro del móvil. */
+export const DIAS_DE_AVISO_MAX = 60;
 // Fechas "YYYY-MM-DD" como días calendario: al mediodía UTC, para que ningún huso corra el día.
 const sumarDias = (iso, dias) => {
     const d = new Date(`${iso}T12:00:00Z`);
@@ -59,22 +61,24 @@ const cache = new Map();
 export function olvidarContratosPorVencer() {
     cache.clear();
 }
-export function listarContratosPorVencer(tenantId, userId, hoy = hoyArgentina()) {
+export function listarContratosPorVencer(tenantId, userId, hoy = hoyArgentina(), dias = DIAS_DE_AVISO) {
+    const ventana = Number.isInteger(dias) && dias >= 1 && dias <= DIAS_DE_AVISO_MAX ? dias : DIAS_DE_AVISO;
     const ahora = Date.now();
     for (const [k, v] of cache)
         if (v.hasta <= ahora)
             cache.delete(k);
-    const clave = `${tenantId}:${userId}:${hoy}`;
+    // La ventana va en la clave: 7 y 15 días son dos listas distintas y no pueden pisarse entre sí.
+    const clave = `${tenantId}:${userId}:${hoy}:${ventana}`;
     const guardado = cache.get(clave);
     if (guardado)
         return guardado.promesa;
-    const promesa = calcular(tenantId, userId, hoy);
+    const promesa = calcular(tenantId, userId, hoy, ventana);
     cache.set(clave, { hasta: ahora + CACHE_MS, promesa });
     // Un error no se guarda: el próximo pedido vuelve a intentar.
     promesa.catch(() => cache.delete(clave));
     return promesa;
 }
-async function calcular(tenantId, userId, hoy) {
+async function calcular(tenantId, userId, hoy, dias) {
     const t0 = Date.now();
     const tenant = new Types.ObjectId(String(tenantId));
     const yo = new Types.ObjectId(String(userId));
@@ -105,11 +109,11 @@ async function calcular(tenantId, userId, hoy) {
       lista de formas posibles). Lo usa el índice de `contracts.fecha_baja_contrato`. El filtro exacto
       sigue acá abajo: la base puede dejar pasar de más, nunca de menos.
     */
-    const limite = sumarDias(hoy, DIAS_DE_AVISO);
+    const limite = sumarDias(hoy, dias);
     const seleccion = ["projectId", "userId", ...CAMPOS_CONTRATO.map((c) => `contracts.${c}`)].join(" ");
     const asignaciones = await UserProject.find({
         projectId: { $in: projectIds.map((id) => new Types.ObjectId(id)) },
-        $or: [{ "contracts.fecha_baja_contrato": { $gte: hoy, $lt: sumarDias(limite, 1) } }, { "contracts.fecha_baja_contrato": { $in: variantesDMY(hoy, DIAS_DE_AVISO) } }],
+        $or: [{ "contracts.fecha_baja_contrato": { $gte: hoy, $lt: sumarDias(limite, 1) } }, { "contracts.fecha_baja_contrato": { $in: variantesDMY(hoy, dias) } }],
     })
         .select(seleccion)
         .lean();

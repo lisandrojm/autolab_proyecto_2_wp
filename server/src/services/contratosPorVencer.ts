@@ -9,8 +9,10 @@ import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
 
-/** Con cuánta anticipación aparece un contrato: una semana antes de su fecha de baja. */
+/** Con cuánta anticipación aparece un contrato, si no se pide otra cosa: una semana antes de su baja. */
 export const DIAS_DE_AVISO = 7;
+/** Hasta dónde se puede estirar la ventana desde el filtro del móvil. */
+export const DIAS_DE_AVISO_MAX = 60;
 
 /*
   CONTRATOS POR VENCER: QUÉ ENTRA Y QUIÉN LO VE.
@@ -20,9 +22,10 @@ export const DIAS_DE_AVISO = 7;
   etiqueta «Renovación») o lo DEJA VENCER.
 
   QUÉ CONTRATO ENTRA:
-   - Ya empezó y termina entre hoy y dentro de 7 días.
+   - Ya empezó y termina entre hoy y dentro de `dias` (7 por defecto; el filtro del móvil lo estira).
    - Dura MÁS de una semana. Hay muchísimos contratos de un solo día (alta = baja): avisar de todos
-     llenaría la lista de cosas que nadie piensa renovar.
+     llenaría la lista de cosas que nadie piensa renovar. Esta regla NO sigue a la ventana: mirar 15
+     días adelante es querer ver más lejos, no empezar a ver contratos cortos que nadie renueva.
    - No fue renovado ya: si la misma asignación tiene otro contrato que arranca después de esta baja,
      la continuidad ya está resuelta.
    - Nadie lo resolvió (`RenovacionContrato`). Una renovación pedida y después RECHAZADA o CANCELADA no
@@ -104,20 +107,22 @@ export function olvidarContratosPorVencer(): void {
   cache.clear();
 }
 
-export function listarContratosPorVencer(tenantId: Types.ObjectId | string, userId: string, hoy: string = hoyArgentina()): Promise<ContratoPorVencer[]> {
+export function listarContratosPorVencer(tenantId: Types.ObjectId | string, userId: string, hoy: string = hoyArgentina(), dias: number = DIAS_DE_AVISO): Promise<ContratoPorVencer[]> {
+  const ventana = Number.isInteger(dias) && dias >= 1 && dias <= DIAS_DE_AVISO_MAX ? dias : DIAS_DE_AVISO;
   const ahora = Date.now();
   for (const [k, v] of cache) if (v.hasta <= ahora) cache.delete(k);
-  const clave = `${tenantId}:${userId}:${hoy}`;
+  // La ventana va en la clave: 7 y 15 días son dos listas distintas y no pueden pisarse entre sí.
+  const clave = `${tenantId}:${userId}:${hoy}:${ventana}`;
   const guardado = cache.get(clave);
   if (guardado) return guardado.promesa;
-  const promesa = calcular(tenantId, userId, hoy);
+  const promesa = calcular(tenantId, userId, hoy, ventana);
   cache.set(clave, { hasta: ahora + CACHE_MS, promesa });
   // Un error no se guarda: el próximo pedido vuelve a intentar.
   promesa.catch(() => cache.delete(clave));
   return promesa;
 }
 
-async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: string): Promise<ContratoPorVencer[]> {
+async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: string, dias: number): Promise<ContratoPorVencer[]> {
   const t0 = Date.now();
   const tenant = new Types.ObjectId(String(tenantId));
   const yo = new Types.ObjectId(String(userId));
@@ -147,11 +152,11 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
     lista de formas posibles). Lo usa el índice de `contracts.fecha_baja_contrato`. El filtro exacto
     sigue acá abajo: la base puede dejar pasar de más, nunca de menos.
   */
-  const limite = sumarDias(hoy, DIAS_DE_AVISO);
+  const limite = sumarDias(hoy, dias);
   const seleccion = ["projectId", "userId", ...CAMPOS_CONTRATO.map((c) => `contracts.${c}`)].join(" ");
   const asignaciones: any[] = await UserProject.find({
     projectId: { $in: projectIds.map((id) => new Types.ObjectId(id)) },
-    $or: [{ "contracts.fecha_baja_contrato": { $gte: hoy, $lt: sumarDias(limite, 1) } }, { "contracts.fecha_baja_contrato": { $in: variantesDMY(hoy, DIAS_DE_AVISO) } }],
+    $or: [{ "contracts.fecha_baja_contrato": { $gte: hoy, $lt: sumarDias(limite, 1) } }, { "contracts.fecha_baja_contrato": { $in: variantesDMY(hoy, dias) } }],
   })
     .select(seleccion)
     .lean();

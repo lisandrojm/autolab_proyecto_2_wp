@@ -4,7 +4,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { User } from "../models/User.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
-import { listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
+import { DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 
 /*
   «Por vencer» de Contratación (móvil). Qué contratos entran y quién los ve está en
@@ -17,8 +17,11 @@ const router = Router();
 
 router.get("/", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const contratos = await listarContratosPorVencer(req.tenantObjectId!, req.user!.userId);
-    res.json({ contratos });
+    // `dias`: con cuánta anticipación se quieren ver (el filtro del móvil). Fuera de rango, la de siempre.
+    const pedidos = Number(req.query.dias);
+    const dias = Number.isInteger(pedidos) && pedidos >= 1 && pedidos <= DIAS_DE_AVISO_MAX ? pedidos : DIAS_DE_AVISO;
+    const contratos = await listarContratosPorVencer(req.tenantObjectId!, req.user!.userId, undefined, dias);
+    res.json({ contratos, dias });
   } catch (error) {
     console.error("Contratos por vencer error:", error);
     res.status(500).json({ error: "No se pudieron cargar los contratos por vencer." });

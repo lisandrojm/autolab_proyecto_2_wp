@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
@@ -16,7 +16,7 @@ import { SolicitudDetalleModal } from "../../../../components/solicitudes/Solici
 import { solicitudDesdeUser, useCatalogosDeSolicitudes } from "../../../../components/solicitudes/SolicitudesTable";
 import { User, usersAPI } from "../../../../api/users";
 import SectionHeader from "../components/SectionHeader";
-import { contratosPorVencerAPI, ContratoPorVencer } from "../../../../api/contratosPorVencer";
+import { contratosPorVencerAPI, ContratoPorVencer, DIAS_DE_AVISO_OPCIONES } from "../../../../api/contratosPorVencer";
 import { sweetAlert } from "../utils/sweetAlert";
 import AvisoNovedades from "../components/AvisoNovedades";
 import { useNovedades } from "../hooks/useNovedades";
@@ -33,6 +33,23 @@ const ESTADOS_SOLICITUD: Record<string, { label: string; cls: string }> = {
   aprobada: { label: "APROBADA", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   rechazada: { label: "RECHAZADA", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
   cancelada: { label: "CANCELADA", cls: "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300" },
+};
+
+/**
+ * Con cuánta anticipación mirar los contratos por vencer, guardado EN ESTE TELÉFONO.
+ *
+ * Quien trabaja mirando 15 días no quiere volver a elegirlo cada vez que entra, y no es una
+ * configuración de la empresa: es cómo mira esta persona. El `catch` es para el modo privado, donde
+ * `localStorage` tira excepción: sin guardar, la pantalla sigue funcionando con el valor de siempre.
+ */
+const CLAVE_DIAS = "porVencer:dias";
+const leerDiasGuardados = (): number => {
+  try {
+    const guardado = Number(localStorage.getItem(CLAVE_DIAS));
+    return DIAS_DE_AVISO_OPCIONES.includes(guardado) ? guardado : DIAS_DE_AVISO_OPCIONES[0];
+  } catch {
+    return DIAS_DE_AVISO_OPCIONES[0];
+  }
 };
 
 interface UserHistoryProps {
@@ -64,13 +81,45 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   /** El contrato que se está renovando: abre el formulario de solicitud ya completo. */
   const [renovacion, setRenovacion] = useState<{ plantilla: any; userProjectId: string; fechaBajaContrato: string } | null>(null);
 
-  const cargarPorVencer = () => {
+  /*
+    EL FILTRO: con cuánta anticipación, y qué tipos de contrato.
+
+    Los DÍAS los resuelve el server —es otra lista, no un recorte de la que ya está— y quedan guardados
+    en el teléfono. Los TIPOS se filtran acá, sobre lo que llegó, y las opciones salen de los contratos
+    que hay: ofrecer tipos que no aparecen en ninguno es ofrecer listas vacías.
+  */
+  const [diasAviso, setDiasAviso] = useState<number>(leerDiasGuardados);
+  const [tiposElegidos, setTiposElegidos] = useState<string[]>([]);
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+
+  const cargarPorVencer = (dias: number = diasAviso) => {
     contratosPorVencerAPI
-      .listar()
+      .listar(dias)
       .then(setPorVencer)
       .catch(() => setPorVencer([]));
   };
-  useEffect(cargarPorVencer, []);
+  useEffect(() => {
+    setPorVencer(null);
+    cargarPorVencer(diasAviso);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diasAviso]);
+
+  const cambiarDias = (dias: number) => {
+    setDiasAviso(dias);
+    try {
+      localStorage.setItem(CLAVE_DIAS, String(dias));
+    } catch {
+      /* sin guardar, la pantalla sigue andando */
+    }
+  };
+  const alternarTipo = (tipo: string) => setTiposElegidos((prev) => (prev.includes(tipo) ? prev.filter((x) => x !== tipo) : [...prev, tipo]));
+
+  const tipoDe = (c: ContratoPorVencer) => c.contrato || "Sin tipo";
+  const cuentaPorTipo = new Map<string, number>();
+  (porVencer || []).forEach((c) => cuentaPorTipo.set(tipoDe(c), (cuentaPorTipo.get(tipoDe(c)) || 0) + 1));
+  const tiposDisponibles = [...cuentaPorTipo.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const porVencerVisibles = (porVencer || []).filter((c) => tiposElegidos.length === 0 || tiposElegidos.includes(tipoDe(c)));
+  const cantidadFiltros = tiposElegidos.length + (diasAviso === DIAS_DE_AVISO_OPCIONES[0] ? 0 : 1);
 
   /** Un contrato no tiene `_id` propio: lo nombran su asignación y su fecha de baja. */
   const claveDe = (c: ContratoPorVencer) => `${c.userProjectId}::${c.fechaBaja}`;
@@ -101,6 +150,39 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
     }
   };
 
+  /** Una etiqueta de filtro puesto, con su ✕ para sacarlo. */
+  const badgeFiltro = (texto: string, quitar: () => void) => (
+    <span key={texto} className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/40 bg-blue-500/15 py-1 pl-3 pr-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
+      {texto}
+      <button type="button" onClick={quitar} aria-label={`Quitar ${texto}`} className="flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-blue-500/25">
+        <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+      </button>
+    </span>
+  );
+
+  const barraDeFiltros = (
+    <div className="mb-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">{porVencer && tiposElegidos.length > 0 ? `${porVencerVisibles.length} de ${porVencer.length} · próximos ${diasAviso} días` : `Vencen en los próximos ${diasAviso} días`}</p>
+        <button
+          type="button"
+          onClick={() => setFiltrosAbiertos(true)}
+          className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${cantidadFiltros ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"}`}
+        >
+          <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+          Filtrar{cantidadFiltros ? ` (${cantidadFiltros})` : ""}
+        </button>
+      </div>
+      {/* Qué filtros están puestos, con su ✕: «Filtrar (2)» avisa que hay, pero no cuáles. */}
+      {cantidadFiltros > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {diasAviso !== DIAS_DE_AVISO_OPCIONES[0] && badgeFiltro(`Vencen en ${diasAviso} días`, () => cambiarDias(DIAS_DE_AVISO_OPCIONES[0]))}
+          {tiposElegidos.map((t) => badgeFiltro(t, () => alternarTipo(t)))}
+        </div>
+      )}
+    </div>
+  );
+
   const renderPorVencer = () => {
     if (porVencer === null)
       return (
@@ -110,23 +192,35 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           ))}
         </div>
       );
+    // La barra va SIEMPRE, también sin resultados: si no hay nada en 7 días, mirar 15 es lo que sigue.
     if (porVencer.length === 0)
       return (
-        <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:bg-slate-800/50">
-          {/* Contrato con reloj: lo que se muestra acá son contratos a los que se les acaba el tiempo. */}
-          <div className="relative mb-3">
-            <FontAwesomeIcon icon={faFileContract} className="w-10 h-10 text-slate-300" />
-            <span className="absolute -bottom-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
-              <FontAwesomeIcon icon={faClock} className="w-3.5 h-3.5 text-amber-500" />
-            </span>
+        <>
+          {barraDeFiltros}
+          <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:bg-slate-800/50">
+            {/* Contrato con reloj: lo que se muestra acá son contratos a los que se les acaba el tiempo. */}
+            <div className="relative mb-3">
+              <FontAwesomeIcon icon={faFileContract} className="w-10 h-10 text-slate-300" />
+              <span className="absolute -bottom-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+                <FontAwesomeIcon icon={faClock} className="w-3.5 h-3.5 text-amber-500" />
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No hay contratos por vencer</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Acá aparecen los contratos de tu gente que terminan en los próximos {diasAviso} días. Con «Filtrar» podés mirar más lejos.</p>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">No hay contratos por vencer</p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Acá aparecen, una semana antes, los contratos de tu gente que terminan.</p>
-        </div>
+        </>
+      );
+    if (porVencerVisibles.length === 0)
+      return (
+        <>
+          {barraDeFiltros}
+          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">Ninguno de esos tipos de contrato vence en los próximos {diasAviso} días.</p>
+        </>
       );
     return (
       <div className="space-y-3">
-        {porVencer.map((c) => {
+        {barraDeFiltros}
+        {porVencerVisibles.map((c) => {
           const clave = claveDe(c);
           const urgente = c.diasRestantes <= 2;
           return (
@@ -238,7 +332,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         icon={faUsers}
         titulo="Solicitud de Contratación"
         onBack={() => onNavigate("home")}
-        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Por vencer» aparecen, una semana antes, los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer."}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Por vencer» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
@@ -365,6 +459,73 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           </div>
         )}
       </div>
+
+      {/* FILTRAR «POR VENCER»: anticipación y tipo de contrato. Centrado, como el resto de la app. */}
+      {filtrosAbiertos && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setFiltrosAbiertos(false)}>
+          <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <p className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar
+              </p>
+              <button type="button" onClick={() => setFiltrosAbiertos(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
+                <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-5 overflow-y-auto p-4">
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">¿Cuánto antes querés verlos?</p>
+                <div className="flex flex-wrap gap-2">
+                  {DIAS_DE_AVISO_OPCIONES.map((d) => (
+                    <button key={d} type="button" onClick={() => cambiarDias(d)} aria-pressed={diasAviso === d} className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors ${diasAviso === d ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
+                      {d} días
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-400">Queda guardado en este teléfono. Los contratos que duran una semana o menos no aparecen, mires con la anticipación que mires.</p>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipo de contrato</p>
+                {tiposDisponibles.length === 0 ? (
+                  <p className="text-[11px] text-slate-400">No hay contratos por vencer para filtrar.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {tiposDisponibles.map(([tipo, cuenta]) => {
+                      const elegido = tiposElegidos.includes(tipo);
+                      return (
+                        <button key={tipo} type="button" onClick={() => alternarTipo(tipo)} aria-pressed={elegido} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${elegido ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
+                          {tipo}
+                          <span className={elegido ? "text-blue-100" : "text-slate-400"}>{cuenta}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-1.5 text-[11px] text-slate-400">{tiposElegidos.length ? "Se muestran los de cualquiera de los tipos marcados." : "Sin marcar, se muestran todos."}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => {
+                  setTiposElegidos([]);
+                  cambiarDias(DIAS_DE_AVISO_OPCIONES[0]);
+                }}
+                disabled={cantidadFiltros === 0}
+                className="text-sm font-bold text-red-600 disabled:opacity-40 dark:text-red-400"
+              >
+                Limpiar
+              </button>
+              <button type="button" onClick={() => setFiltrosAbiertos(false)} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700">
+                Ver {porVencerVisibles.length} {porVencerVisibles.length === 1 ? "contrato" : "contratos"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Action Button */}
       <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">

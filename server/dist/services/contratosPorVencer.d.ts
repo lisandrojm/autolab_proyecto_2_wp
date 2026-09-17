@@ -1,6 +1,8 @@
 import { Types } from "mongoose";
-/** Con cuánta anticipación aparece un contrato: una semana antes de su fecha de baja. */
+/** Con cuánta anticipación aparece un contrato, si no se pide otra cosa: una semana antes de su baja. */
 export declare const DIAS_DE_AVISO = 7;
+/** Hasta dónde se puede estirar la ventana desde el filtro del móvil. */
+export declare const DIAS_DE_AVISO_MAX = 60;
 export interface ContratoPorVencer {
     userProjectId: string;
     userId: string;
@@ -30,4 +32,4 @@ export interface ContratoPorVencer {
  */
 export declare const variantesDMY: (desde: string, dias: number) => string[];
 export declare function olvidarContratosPorVencer(): void;
-export declare function listarContratosPorVencer(tenantId: Types.ObjectId | string, userId: string, hoy?: string): Promise<ContratoPorVencer[]>;
+export declare function listarContratosPorVencer(tenantId: Types.ObjectId | string, userId: string, hoy?: string, dias?: number): Promise<ContratoPorVencer[]>;

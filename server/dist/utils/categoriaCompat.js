@@ -29,6 +29,7 @@ const aplanar = (c, g) => {
         data: {
             id: c.legacyId,
             numeroCategoria: g?.numero,
+            grupoNombre: g?.nombre || undefined,
             nombre: c.nombre,
             // Numérico por compatibilidad; el canónico de 6 dígitos con ceros va en `codigoArca`.
             codigoAfip: c.codigoArca ? Number(c.codigoArca) : 0,
@@ -43,6 +44,7 @@ const aplanar = (c, g) => {
             neto: e.neto,
             sueldoNetoLetras: e.sueldoNetoLetras,
             fechaActualizacion: e.fechaActualizacion,
+            vigenciaHasta: e.vigenciaHasta,
             escalaOrigen: e.origen,
         },
     };

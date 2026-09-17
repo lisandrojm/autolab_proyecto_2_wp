@@ -36,6 +36,8 @@ export interface CategoriaCompat {
     codigoArca?: string;
     convenio?: string;
     grupoId?: any;
+    /** Nombre del grupo, si el convenio le da uno («Grupo 1» suele no tenerlo). */
+    grupoNombre?: string;
     sueldoBasico: number;
     sueldoAdicional: number;
     presentismo: number;
@@ -44,6 +46,8 @@ export interface CategoriaCompat {
     neto: number;
     sueldoNetoLetras: string;
     fechaActualizacion?: Date | string;
+    /** Hasta cuándo rige la escala. Vacío = la paritaria no declaró vencimiento. */
+    vigenciaHasta?: Date | string;
     /** De dónde salió la escala: `"categoria"`, `"grupo"`, o `null` si no hay. */
     escalaOrigen?: "categoria" | "grupo" | null;
   };
@@ -63,6 +67,7 @@ const aplanar = (c: any, g: any): CategoriaCompat => {
     data: {
       id: c.legacyId,
       numeroCategoria: g?.numero,
+      grupoNombre: g?.nombre || undefined,
       nombre: c.nombre,
       // Numérico por compatibilidad; el canónico de 6 dígitos con ceros va en `codigoArca`.
       codigoAfip: c.codigoArca ? Number(c.codigoArca) : 0,
@@ -77,6 +82,7 @@ const aplanar = (c: any, g: any): CategoriaCompat => {
       neto: e.neto,
       sueldoNetoLetras: e.sueldoNetoLetras,
       fechaActualizacion: e.fechaActualizacion,
+      vigenciaHasta: e.vigenciaHasta,
       escalaOrigen: e.origen,
     },
   };

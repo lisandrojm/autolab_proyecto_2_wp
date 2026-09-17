@@ -18,6 +18,8 @@ export interface CategoriaCompat {
         codigoArca?: string;
         convenio?: string;
         grupoId?: any;
+        /** Nombre del grupo, si el convenio le da uno («Grupo 1» suele no tenerlo). */
+        grupoNombre?: string;
         sueldoBasico: number;
         sueldoAdicional: number;
         presentismo: number;
@@ -26,6 +28,8 @@ export interface CategoriaCompat {
         neto: number;
         sueldoNetoLetras: string;
         fechaActualizacion?: Date | string;
+        /** Hasta cuándo rige la escala. Vacío = la paritaria no declaró vencimiento. */
+        vigenciaHasta?: Date | string;
         /** De dónde salió la escala: `"categoria"`, `"grupo"`, o `null` si no hay. */
         escalaOrigen?: "categoria" | "grupo" | null;
     };

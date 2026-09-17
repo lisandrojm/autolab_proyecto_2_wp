@@ -35,6 +35,13 @@ export interface CategoriaSatItem {
     sueldoBasico: number;
     sueldoAdicional: number;
     nombre: string;
+    /** El grupo salarial del que cuelga, si el convenio tiene grupos. Es donde vive la escala. */
+    grupoId?: string | null;
+    grupoNombre?: string;
+    /** Hasta cuándo rige la escala. Vacío = la paritaria no declaró vencimiento. */
+    vigenciaHasta?: string;
+    /** De dónde salió la escala: del grupo, de la propia categoría, o de ningún lado. */
+    escalaOrigen?: "categoria" | "grupo" | null;
   };
   createdAt: string;
   updatedAt: string;

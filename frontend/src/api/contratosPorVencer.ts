@@ -33,9 +33,13 @@ export interface ContratoPorVencer {
   plantilla: { firstName: string; lastName: string; hireDate?: string; metadata: Record<string, any> };
 }
 
+/** Los días de anticipación que se pueden elegir en el filtro. El primero es el de siempre. */
+export const DIAS_DE_AVISO_OPCIONES = [7, 15, 30];
+
 export const contratosPorVencerAPI = {
-  async listar(): Promise<ContratoPorVencer[]> {
-    const { data } = await axios.get(`/contratos-por-vencer`);
+  /** `dias`: con cuánta anticipación verlos (7 por defecto; el server acepta hasta 60). */
+  async listar(dias?: number): Promise<ContratoPorVencer[]> {
+    const { data } = await axios.get(`/contratos-por-vencer`, dias ? { params: { dias } } : undefined);
     return Array.isArray(data?.contratos) ? data.contratos : [];
   },
 
