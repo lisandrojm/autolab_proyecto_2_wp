@@ -50,7 +50,15 @@ export interface Catalogos {
  * resolver cada celda. Los proyectos traen sus áreas y turnos poblados porque de ahí sale la única
  * validación que la planilla no puede hacer: que ese turno sea de esa área EN ESE proyecto.
  */
-export declare const cargarCatalogos: (tenantId: Types.ObjectId) => Promise<{
+export declare const cargarCatalogos: (tenantId: Types.ObjectId, 
+/**
+ * A qué proyectos se limita todo. `null` = todos los del tenant (un admin).
+ *
+ * Es lo que hace que un coordinador pueda usar la carga masiva desde la app sin que la plantilla le
+ * muestre los proyectos de los demás: baja la suya, y si escribe otro nombre el import no lo
+ * encuentra, exactamente igual que si no existiera.
+ */
+proyectosVisibles?: Types.ObjectId[] | null) => Promise<{
     catalogos: Catalogos;
     proyectos: any[];
     turnosPorId: Map<string, any>;

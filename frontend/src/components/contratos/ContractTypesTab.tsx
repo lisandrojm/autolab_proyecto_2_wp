@@ -48,7 +48,7 @@ interface FormState {
   horasPorJornada: string;
   diasPorSemana: string;
   esTiempoIndeterminado: boolean;
-  esUnSoloDia: boolean;
+  modoFechas: 'periodo' | 'dias';
   requiereFirma: boolean;
   isActive: boolean;
   /** Estados (no globales) que van a quedar vinculados a TODAS las Plantillas de este Contrato. */
@@ -60,7 +60,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, esUnSoloDia: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -148,7 +148,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   /** Para enfocar el nombre cuando falta: sin pestañas, el error se resuelve en la misma vista. */
   const nombreRef = React.useRef<HTMLInputElement | null>(null);
   const [showTiempoIndetInfo, setShowTiempoIndetInfo] = useState(false);
-  const [showUnSoloDiaInfo, setShowUnSoloDiaInfo] = useState(false);
+  const [showModoFechasInfo, setShowModoFechasInfo] = useState(false);
   const [editando, setEditando] = useState<ContratoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   // Selección de Estados al abrir el modal: para diffear contra `form.estadoIds` al guardar.
@@ -462,7 +462,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       horasPorJornada: contrato.data?.horasPorJornada != null ? String(contrato.data.horasPorJornada) : '',
       diasPorSemana: contrato.data?.diasPorSemana != null ? String(contrato.data.diasPorSemana) : '',
       esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
-      esUnSoloDia: !!contrato.data?.esUnSoloDia,
+      modoFechas: contrato.data?.modoFechas === 'dias' ? 'dias' : 'periodo',
       requiereFirma: contrato.data?.requiereFirma !== false,
       isActive: contrato.isActive !== false,
       // Si el contrato no tenía ninguno —quedaron así los de antes de esta regla— se muestra el
@@ -582,7 +582,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       horasPorJornada: form.horasPorJornada,
       diasPorSemana: form.diasPorSemana,
       esTiempoIndeterminado: form.esTiempoIndeterminado,
-      esUnSoloDia: form.esUnSoloDia,
+      modoFechas: form.modoFechas,
       requiereFirma: form.requiereFirma,
       isActive: form.isActive,
       afipModalidadContrato: form.afipModalidadContrato.trim(),
@@ -950,19 +950,36 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
             </div>
 
             {/*
-              CONTRATO DE UN SOLO DÍA: cambia CÓMO se pide el alta, no sólo cuánto dura.
+              CÓMO SE ELIGEN LAS FECHAS: un período, o días sueltos en un calendario.
 
-              Es un campo propio y no se deduce de «Cantidad de Jornadas»: ese número es lo que el
-              tipo paga en general, y hay tipos de un día que lo tienen cargado con otra cosa.
+              Es una decisión del TIPO de contrato, no de cada solicitud: cómo se contrata un
+              «Jornada» no lo decide quien carga el alta. Y no es lo mismo que «tiempo
+              indeterminado», que habla de cuánto dura, no de cómo se eligen los días.
             */}
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={form.esUnSoloDia} onChange={(e) => setForm((p) => ({ ...p, esUnSoloDia: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                <span className="text-gray-700 dark:text-gray-300">Es de un solo día</span>
-              </label>
-              <button type="button" onClick={() => setShowUnSoloDiaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre contratos de un solo día">
-                <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-              </button>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cómo se eligen las fechas</label>
+                <button type="button" onClick={() => setShowModoFechasInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre cómo se eligen las fechas">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { valor: 'periodo' as const, titulo: 'Período', ayuda: 'Desde y hasta, con los días de la semana que trabaja.' },
+                  { valor: 'dias' as const, titulo: 'Días sueltos', ayuda: 'Se pintan los días en un calendario. Cada día es una jornada.' },
+                ]).map((op) => (
+                  <button
+                    key={op.valor}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, modoFechas: op.valor }))}
+                    aria-pressed={form.modoFechas === op.valor}
+                    className={`rounded-lg border p-2.5 text-left transition-all ${form.modoFechas === op.valor ? 'border-blue-500 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20' : 'border-gray-200 bg-white hover:border-blue-300 dark:border-gray-700 dark:bg-gray-900/40'}`}
+                  >
+                    <span className={`block text-sm font-semibold ${form.modoFechas === op.valor ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>{op.titulo}</span>
+                    <span className="mt-0.5 block text-[11px] text-gray-500 dark:text-gray-400">{op.ayuda}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1314,22 +1331,22 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       </InfoModal>
 
       <InfoModal
-        isOpen={showUnSoloDiaInfo}
-        onClose={() => setShowUnSoloDiaInfo(false)}
-        title="Es de un solo día"
+        isOpen={showModoFechasInfo}
+        onClose={() => setShowModoFechasInfo(false)}
+        title="Cómo se eligen las fechas"
         size="sm"
         zIndex={120}
-        actions={[{ label: 'Entendido', onClick: () => setShowUnSoloDiaInfo(false), variant: 'primary' }]}
+        actions={[{ label: 'Entendido', onClick: () => setShowModoFechasInfo(false), variant: 'primary' }]}
       >
         <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           <p>
-            Se contrata <strong>una jornada</strong>, no un período: una cobertura puntual, un día de rodaje.
+            Decide qué calendario se usa al pedir el alta con este tipo de contrato, en la <strong>Solicitud de Contratación</strong>.
           </p>
           <p>
-            Al elegir este Contrato en la <strong>Solicitud de Contratación</strong>, en vez de «Desde» y «Hasta» se pide <strong>un solo día</strong>. Con eso, la cantidad de jornadas queda en <strong>1</strong> y el día que trabaja se marca según el día de la semana que caiga.
+            <strong>Período</strong>: «Desde» y «Hasta», y adentro se marcan los días de la semana que trabaja. Es lo habitual, para alguien que entra por un tiempo.
           </p>
           <p>
-            Es un campo propio y no se deduce de «Cantidad de Jornadas»: ese número es cuántas jornadas paga el tipo de contrato en general.
+            <strong>Días sueltos</strong>: un calendario donde se pintan los días uno por uno, como en Vacaciones. Se pueden marcar de a uno —un solo día también— y <strong>cada día marcado es una jornada</strong>. Es para lo que se contrata por día: una cobertura, tres días de rodaje salteados. Un período ahí mentiría, porque diría que trabaja todo el tramo.
           </p>
         </div>
       </InfoModal>

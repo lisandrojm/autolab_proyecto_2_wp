@@ -97,6 +97,7 @@ const userSchema = new Schema({
         },
         diasPorSemana: { type: Number },
         diasSemana: { type: [Number], default: undefined },
+        fechasTrabajadas: { type: [String], default: undefined },
         diasRotativos: { type: Boolean, default: false },
         schedule: String,
         dailyRate: Number,

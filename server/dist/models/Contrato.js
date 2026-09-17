@@ -7,6 +7,7 @@ const contratoSchema = new Schema({
         cantidadJornadas: { type: Number, default: 0 },
         multiplicadorDiario: { type: Number, default: 0 },
         esTiempoIndeterminado: { type: Boolean, default: false },
+        modoFechas: { type: String, enum: ["periodo", "dias"], default: "periodo" },
         horasPorJornada: { type: Number, default: null },
         diasPorSemana: { type: Number, default: null },
         requiereFirma: { type: Boolean, default: true },

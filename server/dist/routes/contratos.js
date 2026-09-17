@@ -93,7 +93,7 @@ const leerLimitesDeJornada = (horas, dias) => {
 // POST / - crear
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
         if (limites.error) {
             res.status(400).json({ error: limites.error });
@@ -117,6 +117,7 @@ router.post("/", authenticateToken, async (req, res) => {
                 horasPorJornada: limites.horasPorJornada,
                 diasPorSemana: limites.diasPorSemana,
                 esTiempoIndeterminado: esTiempoIndeterminado === "true" || esTiempoIndeterminado === true,
+                modoFechas: modoFechas === "dias" ? "dias" : "periodo",
                 requiereFirma: requiereFirma === undefined ? true : requiereFirma === "true" || requiereFirma === true,
                 afipModalidadContrato: afipModalidadContrato != null ? String(afipModalidadContrato).trim() : undefined,
                 afipTipoServicio: afipTipoServicio != null ? String(afipTipoServicio).trim() : undefined,
@@ -141,7 +142,7 @@ router.post("/", authenticateToken, async (req, res) => {
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
         if (limites.error) {
             res.status(400).json({ error: limites.error });
@@ -175,6 +176,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
             item.data.diasPorSemana = limites.diasPorSemana;
         if (esTiempoIndeterminado !== undefined)
             item.data.esTiempoIndeterminado = esTiempoIndeterminado === "true" || esTiempoIndeterminado === true;
+        if (modoFechas !== undefined)
+            item.data.modoFechas = modoFechas === "dias" ? "dias" : "periodo";
         if (requiereFirma !== undefined)
             item.data.requiereFirma = requiereFirma === "true" || requiereFirma === true;
         if (generaAlta !== undefined)

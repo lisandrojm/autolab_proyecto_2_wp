@@ -173,6 +173,16 @@ export interface IUserMetadata {
     /** Días de la semana de la solicitud (0=domingo…6=sábado). Ver `dias_semana` del contrato. */
     diasPorSemana?: number;
     diasSemana?: number[];
+    /**
+     * LOS DÍAS EXACTOS que se trabajan, cuando el tipo de contrato se pide por días sueltos
+     * (`Contrato.data.modoFechas === "dias"`).
+     *
+     * `diasSemana` dice los días de la semana y `startDate`/`dueDate` el período que abarcan, pero
+     * ninguno de los dos distingue «los martes de septiembre» de «el 2, el 9 y el 23»: eso está acá,
+     * en "YYYY-MM-DD". Es de lo que sale la cantidad de jornadas, y lo que hay que poder mirar cuando
+     * alguien pregunta qué días se contrataron.
+     */
+    fechasTrabajadas?: string[];
     diasRotativos?: boolean;
     schedule?: string;
     dailyRate?: number;

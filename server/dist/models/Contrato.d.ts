@@ -15,6 +15,19 @@ export interface IContrato extends Document {
         multiplicadorDiario: number;
         esTiempoIndeterminado: boolean;
         /**
+         * CÓMO SE ELIGEN LAS FECHAS DE ESTE TIPO DE CONTRATO.
+         *
+         *   periodo  desde y hasta, y la persona trabaja los días de la semana que se marquen adentro.
+         *            Es lo de siempre y el valor por defecto.
+         *   dias     se pintan los días uno por uno en un calendario, como en Vacaciones. Cada día
+         *            marcado es UNA jornada: sirve para lo que se contrata por día suelto —una cobertura,
+         *            tres días de rodaje salteados— donde un período miente sobre lo que se trabaja.
+         *
+         * Es del TIPO DE CONTRATO y no de cada solicitud: cómo se contrata un «Jornada» no lo decide
+         * quien carga el alta.
+         */
+        modoFechas?: "periodo" | "dias";
+        /**
          * Límites de la jornada de este tipo de contrato (un «6x6»: 6 días por semana, 6 horas por jornada).
          * Opcionales: `null` = sin límite. Son la base para acotar la solicitud de contratación.
          */

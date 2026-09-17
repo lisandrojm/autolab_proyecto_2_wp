@@ -12,6 +12,8 @@ import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat
 import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
+// El mismo calendario de Vacaciones: se pintan los días de a uno.
+import { CustomMultiDatePicker } from "./CustomMultiDatePicker";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { companiesAPI, Company } from "../../../../api/companies";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../../../api/simpleCatalog";
@@ -215,6 +217,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     categoriaSatId: "",
     startDate: "",
     dueDate: "",
+    /**
+     * Los días exactos, cuando el tipo de contrato se pide por días sueltos («YYYY-MM-DD»).
+     *
+     * Vacío con un contrato por período: ahí las fechas son el desde y el hasta, y los días de la
+     * semana dicen cuáles se trabajan adentro.
+     */
+    fechasTrabajadas: [] as string[],
     workdaysCount: "",
     diasPorSemana: SEMANA_POR_DEFECTO.diasPorSemana,
     diasSemana: [...SEMANA_POR_DEFECTO.diasSemana],
@@ -526,6 +535,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         roleFrameIds: (meta.rolesFrameIds?.length ? meta.rolesFrameIds : meta.roles_frame?.length ? meta.roles_frame : meta.roleFrameId ? [meta.roleFrameId] : []).map((rf: any) => String(typeof rf === "string" ? rf : rf?._id)).filter(Boolean),
         categoriaSatId: meta.categoriaSatId || "",
         startDate: meta.startDate || fuente.hireDate?.split("T")[0] || "",
+        // Los días marcados, si la solicitud se pidió con un contrato por días sueltos.
+        fechasTrabajadas: Array.isArray((m as any).fechasTrabajadas) ? ((m as any).fechasTrabajadas as string[]) : [],
         dueDate: meta.dueDate || "",
         workdaysCount: meta.workdaysCount?.toString() || "",
         // Las solicitudes anteriores a este campo no traen días: se abren vacías y hay que
@@ -559,6 +570,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         roleFrameIds: [],
         categoriaSatId: "",
         startDate: "",
+        fechasTrabajadas: [],
         dueDate: "",
         workdaysCount: "",
         diasPorSemana: SEMANA_POR_DEFECTO.diasPorSemana,
@@ -711,49 +723,45 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const multiplicadorDiario = Number(contratoElegido?.data?.multiplicadorDiario) > 0 ? Number(contratoElegido!.data!.multiplicadorDiario) : 1;
 
-  /** Este tipo de contrato es de UNA jornada: se pide con un solo día (ver `esUnSoloDia` en el ABM). */
-  const esDeUnSoloDia = !!contratoElegido?.data?.esUnSoloDia;
+  /**
+   * ESTE TIPO DE CONTRATO SE PIDE POR DÍAS SUELTOS, no por período (ver `modoFechas` en el ABM).
+   *
+   * Cambia el calendario del formulario: en vez de «desde» y «hasta» se pintan los días uno por uno,
+   * como en Vacaciones, y cada día marcado es una jornada. Se puede marcar uno solo.
+   */
+  const porDiasSueltos = contratoElegido?.data?.modoFechas === "dias";
 
   /**
-   * ELEGIR EL DÍA DE UN CONTRATO POR JORNADA: de esa fecha sale todo lo demás.
+   * LOS DÍAS MARCADOS EN EL CALENDARIO, y todo lo que se deduce de ellos.
    *
-   * Desde y hasta son el mismo día, la jornada es una, y el día que trabaja es el de la semana que
-   * caiga —un contrato de un martes trabaja los martes—. Son datos que en un contrato de un día no
-   * tienen otra respuesta posible: preguntarlos sería pedir que alguien los deduzca a mano.
+   * De la lista salen las cuatro cosas que el contrato necesita y que nadie tendría por qué volver a
+   * cargar a mano: el período que abarcan (el primero y el último), cuántas jornadas son (una por
+   * día), qué días de la semana toca y cuántos son. La lista exacta se guarda aparte
+   * (`fechasTrabajadas`): «los martes de septiembre» y «el 2, el 9 y el 23» tienen los mismos días
+   * de la semana y el mismo período, y no son lo mismo.
    */
-  const elegirDiaUnico = (fecha: string) => {
-    if (!fecha) {
-      setFormData((p) => ({ ...p, startDate: "", dueDate: "" }));
+  const elegirDiasSueltos = (fechas: string[]) => {
+    const dias = [...new Set(fechas.filter(Boolean))].sort();
+    if (dias.length === 0) {
+      setFormData((p) => ({ ...p, fechasTrabajadas: [], startDate: "", dueDate: "", workdaysCount: "", diasSemana: [], diasPorSemana: "" }));
       return;
     }
-    const diaSemana = new Date(`${fecha}T00:00:00`).getDay();
+    const diasSemana = [...new Set(dias.map((d) => new Date(`${d}T00:00:00`).getDay()))].sort((a, b) => a - b);
     setFormData((p) => ({
       ...p,
-      startDate: fecha,
-      dueDate: fecha,
-      diasPorSemana: "1",
-      diasSemana: [diaSemana],
+      fechasTrabajadas: dias,
+      startDate: dias[0],
+      dueDate: dias[dias.length - 1],
+      diasSemana,
+      diasPorSemana: String(diasSemana.length),
       diasRotativos: false,
-      workdaysCount: "1",
-      // Es el calculado real, no un ajuste a mano: un día es una jornada.
+      workdaysCount: String(dias.length),
+      // Es el número real de jornadas, no un ajuste a mano: cada día marcado es una.
       workdaysOverridden: false,
       workdaysOverrideReason: "",
       workdaysOverrideNote: "",
     }));
   };
-
-  /*
-    AL MARCAR UN TIPO DE CONTRATO DE UN DÍA CON FECHAS YA CARGADAS, mandan las de arriba.
-
-    Se conserva el «desde» —que es el día que alguien eligió— y se le aplica el resto de la regla. Sin
-    esto, cambiar el tipo de contrato dejaba un período de treinta días con un contrato por jornada.
-  */
-  useEffect(() => {
-    if (!esDeUnSoloDia || !formData.startDate) return;
-    if (formData.dueDate === formData.startDate && formData.workdaysCount === "1") return;
-    elegirDiaUnico(formData.startDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [esDeUnSoloDia, formData.startDate]);
 
   /*
     LA DIFERENCIA CONTRA LA ESCALA, cuando se pisa el importe propuesto.
@@ -995,20 +1003,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40">
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{titulo}</p>
       {/*
-        EN UN CONTRATO DE UN DÍA NO HAY DÍAS POR SEMANA QUE ELEGIR.
+        CON DÍAS SUELTOS NO HAY DÍAS POR SEMANA QUE ELEGIR.
 
-        Todo sale del día elegido arriba: una jornada, ese día de la semana. Dejar los campos abiertos
-        permitiría cargar «5 días por semana» en un contrato por jornada —un dato que se contradice
-        con el propio tipo de contrato— y obligaría a validar a mano algo que no tiene alternativa.
+        Todo sale de los días marcados en el calendario: una jornada por día y los días de la semana
+        que tocan. Dejar los campos abiertos permitiría cargar «5 días por semana» sobre tres días
+        marcados —un dato que se contradice con el calendario de arriba—.
       */}
-      {esDeUnSoloDia ? (
+      {porDiasSueltos ? (
         <div id="bloque-dias" className="rounded-lg border border-slate-200 bg-white/60 p-2.5 text-[11px] text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
-          {formData.startDate ? (
+          {formData.fechasTrabajadas.length > 0 ? (
             <>
-              <span className="font-semibold text-slate-700 dark:text-slate-200">1 jornada</span>, el {new Date(`${formData.startDate}T00:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "2-digit", month: "long" })}.
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {formData.fechasTrabajadas.length} {formData.fechasTrabajadas.length === 1 ? "jornada" : "jornadas"}
+              </span>
+              : {formData.fechasTrabajadas.map((d) => new Date(`${d}T00:00:00`).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })).join(" · ")}
             </>
           ) : (
-            "Elegí el día arriba: de ahí salen la jornada y el día que trabaja."
+            "Marcá los días arriba: de ahí salen las jornadas y los días que trabaja."
           )}
         </div>
       ) : (
@@ -1072,10 +1083,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       {/*
         Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada.
 
-        En un contrato de un día es 1 y no se pregunta: el bloque entero —con su cálculo, su ajuste a
-        mano y su motivo— existe para repartir un período entre meses, y acá no hay período.
+        Con días sueltos son los días marcados y no se pregunta: el bloque entero —con su cálculo, su
+        ajuste a mano y su motivo— existe para repartir un período entre meses, y acá no hay período.
       */}
-      {!esDeUnSoloDia && (
+      {!porDiasSueltos && (
       <div className="md:col-span-3">
         <JornadasSolicitud
           desde={formData.startDate}
@@ -1594,6 +1605,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           diasPorSemana: Number(formData.diasPorSemana) || undefined,
           diasSemana: formData.diasSemana,
           diasRotativos: formData.diasRotativos,
+          /*
+            LOS DÍAS EXACTOS, cuando el contrato se pide por días sueltos.
+
+            `diasSemana` y el período no alcanzan para reconstruirlos: «los martes de septiembre» y
+            «el 2, el 9 y el 23» tienen los mismos días de la semana y el mismo desde/hasta.
+          */
+          fechasTrabajadas: formData.fechasTrabajadas.length > 0 ? formData.fechasTrabajadas : undefined,
           schedule: `${formData.inTime} - ${formData.outTime}`,
           // Con qué CUIT se contrata y bajo qué CCT. Sin esto el alta llega sin empleadora y hay que
           // deducirla del proyecto más tarde, cuando ya nadie recuerda cuál de las tres era.
@@ -1664,6 +1682,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         roleFrameIds: [],
         categoriaSatId: "",
         startDate: "",
+        fechasTrabajadas: [],
         dueDate: "",
         workdaysCount: "",
         diasPorSemana: SEMANA_POR_DEFECTO.diasPorSemana,
@@ -1983,17 +2002,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         */}
         <div id="bloque-fechas" className="sticky -top-6 z-20 -mx-6 space-y-1 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-slate-700 dark:bg-gray-800">
           {/*
-            UN CONTRATO DE UN DÍA SE PIDE CON UN DÍA, no con un período de un día.
+            EL CALENDARIO LO DECIDE EL TIPO DE CONTRATO (ver `modoFechas` en su ABM).
 
-            Pedir «desde» y «hasta» para contratar una jornada es hacer escribir dos veces la misma
-            fecha, y deja abierta la puerta a que queden distintas —un contrato «de un día» de tres
-            días—. Con el tipo marcado como de un solo día (ver `esUnSoloDia`), el calendario es uno
-            solo y de él salen las dos fechas, la jornada y el día de la semana que trabaja.
+            Con «días sueltos» se pintan los días uno por uno —el mismo calendario de Vacaciones— y
+            cada uno es una jornada; se puede marcar uno solo. Un período ahí mentiría: diría que
+            trabaja los treinta días del tramo cuando son tres salteados.
           */}
-          {esDeUnSoloDia ? (
-            <div className="space-y-1 md:max-w-[16rem]">
-              <CustomDatePicker label="Día" value={formData.startDate} onChange={elegirDiaUnico} />
-              <p className="text-[11px] text-slate-400">Un solo día: «{contratoElegido?.name}» es un contrato por jornada.</p>
+          {porDiasSueltos ? (
+            <div className="space-y-1">
+              <CustomMultiDatePicker label="Días que trabaja" value={formData.fechasTrabajadas} onChange={(d: string | string[]) => elegirDiasSueltos(Array.isArray(d) ? d : d ? [d] : [])} />
+              <p className="text-[11px] text-slate-400">
+                {formData.fechasTrabajadas.length > 0 ? (
+                  <>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">
+                      {formData.fechasTrabajadas.length} {formData.fechasTrabajadas.length === 1 ? "jornada" : "jornadas"}
+                    </span>
+                    , entre el {new Date(`${formData.startDate}T00:00:00`).toLocaleDateString("es-AR")} y el {new Date(`${formData.dueDate}T00:00:00`).toLocaleDateString("es-AR")}.
+                  </>
+                ) : (
+                  <>«{contratoElegido?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
+                )}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
