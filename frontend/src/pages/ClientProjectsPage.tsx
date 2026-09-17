@@ -916,7 +916,8 @@ export const ClientProjectsPage: React.FC = () => {
                 onClick={() => navigate(`/projects/${project._id}`)}
                 className="hover:scale-105 hover:shadow-lg transition-all duration-200"
                 header={{
-                  title: `Proyecto | ${project.name}`,
+                  // Sólo el nombre: la pantalla es Proyectos y la tarjeta ya se lee como uno.
+                  title: project.name,
                   subtitle: project.description,
                   badges: [
                     {

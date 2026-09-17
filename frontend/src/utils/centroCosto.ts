@@ -25,6 +25,17 @@ export const idCentroCosto = (cc: any): number | null => {
 /** ¿Está inhabilitado en Tango? Ausente cuenta como habilitado: los viejos no tienen el campo. */
 export const centroCostoInhabilitado = (cc: any): boolean => String(cc?.habilitado ?? "S").toUpperCase() === "N";
 
+/** Una fila del catálogo, lista para ofrecerla: el par (empresa, id) más cómo se muestra. */
+export interface OpcionCentroCosto {
+  clave: string;
+  id: number;
+  empresaTangoId?: number;
+  etiqueta: string;
+  descripcion: string;
+  empresa: string;
+  inhabilitado: boolean;
+}
+
 /**
  * Las opciones de un select de centro de costo.
  *
@@ -33,7 +44,7 @@ export const centroCostoInhabilitado = (cc: any): boolean => String(cc?.habilita
  * centro, y guardar cualquier otro cambio de la ficha se lo borraría sin que nadie lo pidiera. Ése se
  * muestra con «(inhabilitado)» para que se vea por qué conviene cambiarlo.
  */
-export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): Array<{ clave: string; id: number; empresaTangoId?: number; etiqueta: string; descripcion: string; empresa: string; inhabilitado: boolean }> =>
+export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): OpcionCentroCosto[] =>
   (catalogo || [])
     .map((cc) => ({ cc, id: idCentroCosto(cc) }))
     .filter((x): x is { cc: any; id: number } => x.id !== null)
@@ -45,12 +56,80 @@ export const opcionesCentroCosto = (catalogo: any[], idActual?: number | null): 
       // La empresa viaja con la opción: el proyecto guarda el par (empresa, id), que es lo único que
       // identifica un centro —el mismo id es otro código en cada empresa de Tango—.
       empresaTangoId: Number(x.cc?.empresaTangoId) || undefined,
-      etiqueta: etiquetaCentroCosto(x.cc) + (centroCostoInhabilitado(x.cc) ? " (inhabilitado)" : ""),
+      etiqueta: etiquetaCentroCosto(x.cc) + (centroCostoInhabilitado(x.cc) ? SUFIJO_INHABILITADO : ""),
       descripcion: String(x.cc?.descAuxiliar || x.cc?.data?.descripcion || "").trim(),
       // De qué empresa vino: los códigos se repiten entre las tres, así que sin esto «682» es ambiguo.
       empresa: String(x.cc?.empresaNombre || "").trim(),
       inhabilitado: centroCostoInhabilitado(x.cc),
     }));
+
+/** Lo que `opcionesCentroCosto` le agrega al código de un centro dado de baja en Tango. */
+export const SUFIJO_INHABILITADO = " (inhabilitado)";
+
+/** Un código del catálogo, con todas las empresas de Tango donde existe. */
+export interface GrupoCentroCosto {
+  /** El código pelado («682», «001»), sin el sufijo de inhabilitado. Es la clave del grupo. */
+  etiqueta: string;
+  /** La descripción de la PRIMERA empresa donde aparece; ver por qué abajo. */
+  descripcion: string;
+  /** Las empresas donde existe el código, sin repetir y en el orden del catálogo. */
+  empresas: string[];
+  /** Las descripciones distintas de las demás empresas, para el tooltip. Vacío si todas dicen lo mismo. */
+  otrasDescripciones: string[];
+  inhabilitado: boolean;
+  /** Las filas que se agruparon. La primera es la que se guarda al elegir el grupo. */
+  opciones: OpcionCentroCosto[];
+}
+
+/**
+ * UNA FILA POR CÓDIGO, NO UNA POR EMPRESA.
+ *
+ * Tango trae el mismo código una vez por cada empresa que lo tiene: el catálogo son 2204 filas para
+ * unos setecientos centros, y la lista se leía «001 PARA ASIGNAR CC» tres veces seguidas, «1 HAITI»
+ * otras tres. Buscar «682» devolvía tres resultados idénticos entre los que no había nada que elegir
+ * —el centro es el mismo, lo único que cambiaba era de qué empresa venía la fila—.
+ *
+ * Agrupado, el código se dice una vez y las empresas van en badges, que es la información que esas
+ * tres filas tenían para dar. Elegir el grupo guarda la PRIMERA opción (el par empresa + id que la
+ * plataforma necesita para resolverlo), y su descripción es la que se muestra: en la práctica las
+ * tres dicen lo mismo, y cuando no, las otras quedan en `otrasDescripciones` para el tooltip.
+ *
+ * El orden del catálogo se respeta: viene ordenado por código, así que los grupos salen igual.
+ */
+export const agruparCentrosPorCodigo = (opciones: OpcionCentroCosto[]): GrupoCentroCosto[] => {
+  const porCodigo = new Map<string, GrupoCentroCosto>();
+  for (const o of opciones) {
+    /*
+      Se agrupa por el código PELADO, sin el «(inhabilitado)» que le agrega `opcionesCentroCosto`.
+
+      Un código puede estar dado de baja en una empresa y seguir vigente en las otras: con el sufijo
+      adentro de la clave, esa misma «682» abría dos filas —«682» y «682 (inhabilitado)»— que es
+      exactamente lo que agrupar vino a sacar. El estado del grupo se decide abajo, mirándolas todas.
+    */
+    const etiqueta = o.etiqueta.replace(SUFIJO_INHABILITADO, "");
+    const clave = etiqueta.trim().toLowerCase();
+    const grupo = porCodigo.get(clave);
+    if (!grupo) {
+      porCodigo.set(clave, {
+        etiqueta,
+        descripcion: o.descripcion,
+        empresas: o.empresa ? [o.empresa] : [],
+        otrasDescripciones: [],
+        inhabilitado: o.inhabilitado,
+        opciones: [o],
+      });
+      continue;
+    }
+    grupo.opciones.push(o);
+    if (o.empresa && !grupo.empresas.includes(o.empresa)) grupo.empresas.push(o.empresa);
+    // Sin descripción en la primera, sirve la de cualquier otra: es el mismo centro.
+    if (!grupo.descripcion) grupo.descripcion = o.descripcion;
+    else if (o.descripcion && o.descripcion !== grupo.descripcion && !grupo.otrasDescripciones.includes(o.descripcion)) grupo.otrasDescripciones.push(o.descripcion);
+    // Inhabilitado sólo si lo está en TODAS: en una sola empresa el código se sigue pudiendo usar.
+    grupo.inhabilitado = grupo.inhabilitado && o.inhabilitado;
+  }
+  return [...porCodigo.values()];
+};
 
 /**
  * EN QUÉ EMPRESAS EXISTE ESE CÓDIGO.

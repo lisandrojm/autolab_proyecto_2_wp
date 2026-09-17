@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faCheck, faTimes, faPiggyBank } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { fuzzyMatch } from "../../utils/searchHelpers";
-import { empresasDelCentroCosto, opcionesCentroCosto } from "../../utils/centroCosto";
+import { agruparCentrosPorCodigo, empresasDelCentroCosto, GrupoCentroCosto, opcionesCentroCosto, SUFIJO_INHABILITADO } from "../../utils/centroCosto";
 
 /*
   ELEGIR EL CENTRO DE COSTO DE UN PROYECTO.
@@ -15,6 +15,9 @@ import { empresasDelCentroCosto, opcionesCentroCosto } from "../../utils/centroC
   Acá se ve el CÓDIGO y su DESCRIPCIÓN juntos, y se busca por cualquiera de los dos: quien conoce el
   número escribe «682» y quien conoce el proyecto escribe «PEGSA». La búsqueda es la misma difusa que
   el resto de la plataforma (`fuzzyMatch`), así que no hace falta acertar los espacios ni los acentos.
+
+  UNA FILA POR CÓDIGO, con las empresas de Tango en badges. El catálogo trae el mismo código una vez
+  por empresa —2204 filas—, y repetido tres veces no daba nada para elegir: el centro es el mismo.
 
   LOS INHABILITADOS NO SE OFRECEN —Tango dice que no se usan más—, salvo el que el proyecto ya tiene
   puesto: sacarlo de la lista dejaría el campo vacío sobre un proyecto que sí tiene centro, y el
@@ -44,6 +47,15 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
   const inputRef = useRef<HTMLInputElement>(null);
 
   const opciones = useMemo(() => opcionesCentroCosto(catalogo, valor), [catalogo, valor]);
+  /*
+    LA LISTA VA AGRUPADA POR CÓDIGO: una fila por centro, no una por empresa de Tango.
+
+    El catálogo trae el mismo código repetido por cada empresa que lo tiene —2204 filas para unos
+    setecientos centros—, así que buscar «682» devolvía tres resultados idénticos entre los que no
+    había nada que elegir. Ahora el código va una vez, con las empresas en badges (ver
+    `agruparCentrosPorCodigo`).
+  */
+  const grupos = useMemo(() => agruparCentrosPorCodigo(opciones), [opciones]);
   /* La opción exacta es el par (empresa, id). Sin empresa guardada, la primera con ese id. */
   const elegida = (empresaTangoId ? opciones.find((o) => o.id === Number(valor) && o.empresaTangoId === Number(empresaTangoId)) : undefined) || opciones.find((o) => o.id === Number(valor));
   /*
@@ -52,7 +64,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
     El mismo número vive en varias empresas de Tango, y el campo tiene que decirlo: «662» a secas no
     aclara de qué empresa es, y mostrar una sola haría creer que es exclusivo de ésa.
   */
-  const empresasDelElegido = useMemo(() => (elegida ? empresasDelCentroCosto(catalogo, elegida.etiqueta.replace(" (inhabilitado)", "")) : []), [catalogo, elegida]);
+  const empresasDelElegido = useMemo(() => (elegida ? empresasDelCentroCosto(catalogo, elegida.etiqueta.replace(SUFIJO_INHABILITADO, "")) : []), [catalogo, elegida]);
 
   useEffect(() => {
     if (!abierto) return;
@@ -69,13 +81,28 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
   */
   const filtradas = useMemo(() => {
     const q = busqueda.trim();
-    if (!q) return opciones;
-    return opciones.filter((o) => fuzzyMatch(`${o.etiqueta} ${o.descripcion} ${o.empresa}`, q));
-  }, [opciones, busqueda]);
+    if (!q) return grupos;
+    // Se busca también por las descripciones de las otras empresas: son el mismo centro.
+    return grupos.filter((g) => fuzzyMatch(`${g.etiqueta} ${g.descripcion} ${g.otrasDescripciones.join(" ")} ${g.empresas.join(" ")}`, q));
+  }, [grupos, busqueda]);
 
   const elegir = (id: number, empresa?: number) => {
     onCambio(id, empresa);
     setAbierto(false);
+  };
+
+  /*
+    ELEGIR UN CÓDIGO GUARDA LA PRIMERA DE SUS FILAS —salvo que ya esté elegida otra de ese mismo
+    código, y ahí se respeta la que está—.
+
+    El proyecto guarda el par (empresa de Tango, id) porque el id solo es ambiguo, así que el grupo
+    tiene que resolverse a UNA fila. Volver a tocar el código que ya estaba elegido no le cambia la
+    empresa por debajo: sería reescribir un dato que nadie pidió tocar.
+  */
+  const elegirGrupo = (g: GrupoCentroCosto) => {
+    const yaElegida = g.opciones.find((o) => o.id === Number(valor) && (!empresaTangoId || o.empresaTangoId === Number(empresaTangoId)));
+    const o = yaElegida || g.opciones[0];
+    elegir(o.id, o.empresaTangoId);
   };
 
   return (
@@ -102,7 +129,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
         isOpen={abierto}
         onClose={() => setAbierto(false)}
         title="Centro de costo"
-        subtitle={`${opciones.length} centros del catálogo de Tango. Buscá por código, descripción o empresa.`}
+        subtitle={`${grupos.length} centros del catálogo de Tango. Buscá por código, descripción o empresa.`}
         size="lg"
         zIndex={zIndex}
         footer={
@@ -143,7 +170,7 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
           </div>
 
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            {filtradas.length === opciones.length ? `${opciones.length} centros` : `${filtradas.length} de ${opciones.length}`}
+            {filtradas.length === grupos.length ? `${grupos.length} centros` : `${filtradas.length} de ${grupos.length}`}
           </p>
 
           {/*
@@ -158,19 +185,29 @@ export const SelectorCentroCosto: React.FC<SelectorCentroCostoProps> = ({ valor,
                 <p className="text-xs text-gray-400">Probá con el código («682») o con una palabra de la descripción.</p>
               </div>
             ) : (
-              filtradas.map((o) => {
-                const esLaElegida = o.id === Number(valor);
+              filtradas.map((g) => {
+                const esLaElegida = !!elegida && g.etiqueta === elegida.etiqueta.replace(SUFIJO_INHABILITADO, "");
                 return (
                   <button
-                    key={o.clave}
+                    key={g.etiqueta}
                     type="button"
-                    onClick={() => elegir(o.id, o.empresaTangoId)}
+                    onClick={() => elegirGrupo(g)}
+                    // Cuando las empresas describen el mismo código distinto, las otras se leen acá: son una sola línea y no entran.
+                    title={g.otrasDescripciones.length > 0 ? `También figura como: ${g.otrasDescripciones.join(" · ")}` : undefined}
                     className={`flex w-full items-center gap-3 border-b border-gray-100 px-4 py-2.5 text-left last:border-0 dark:border-gray-700/60 ${esLaElegida ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-900/40"}`}
                   >
-                    <span className="w-24 shrink-0 font-mono text-sm font-bold text-gray-900 dark:text-white">{o.etiqueta}</span>
-                    <span className={`min-w-0 flex-1 truncate text-sm ${o.inhabilitado ? "text-gray-400 line-through" : "text-gray-600 dark:text-gray-300"}`}>{o.descripcion || "—"}</span>
-                    {/* La empresa: el mismo código existe en las tres y no es el mismo centro. */}
-                    {o.empresa && <span className="shrink-0 rounded bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{o.empresa}</span>}
+                    <span className="w-24 shrink-0 font-mono text-sm font-bold text-gray-900 dark:text-white">{g.etiqueta}</span>
+                    <span className={`min-w-0 flex-1 truncate text-sm ${g.inhabilitado ? "text-gray-400 line-through" : "text-gray-600 dark:text-gray-300"}`}>{g.descripcion || "—"}</span>
+                    {/* Dado de baja en TODAS sus empresas: se ofrece igual porque es el que el proyecto tiene puesto. */}
+                    {g.inhabilitado && <span className="shrink-0 text-[11px] italic text-gray-400">inhabilitado</span>}
+                    {/* En qué empresas de Tango existe ese código: es lo que antes decía cada fila repetida. */}
+                    <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                      {g.empresas.map((e) => (
+                        <span key={e} className="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {e}
+                        </span>
+                      ))}
+                    </span>
                     {esLaElegida && <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />}
                   </button>
                 );

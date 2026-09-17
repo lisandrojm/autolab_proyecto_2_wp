@@ -377,8 +377,9 @@ export const ProjectDetailPage: React.FC = () => {
   const sedeName = project?.metadataResolutions?.sede?.name || project?.metadataResolutions?.sede?.data?.nombre || null;
 
   return (
+    // Sólo el nombre en el título: se llega desde Proyectos y el ícono ya dice qué es.
     <PageLayout
-      title={`Proyecto | ${project.name}`}
+      title={project.name}
       badge={sedeName ? { text: sedeName, variant: "default" } : undefined}
       faIcon={{ icon: faBriefcase }}
       clientMiniAvatar={{

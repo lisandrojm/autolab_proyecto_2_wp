@@ -917,10 +917,111 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     turno elegido, que es a lo que pertenecen: son cómo trabaja ESTA persona en ESE turno.
 
     Si el proyecto no tiene áreas y turnos cargados no se pide ninguno (ver el envío): ahí se muestran
-    igual y sueltos, porque esconderlos dejaría la solicitud sin días ni horario y sin forma de cargarlos.
+    igual y sueltos (`proyectoSinAreas`), porque esconderlos dejaría la solicitud sin días ni horario
+    y sin forma de cargarlos.
   */
   const proyectoSinAreas = opcionesAreaTurno !== null && opcionesAreaTurno.length === 0;
-  const mostrarComoTrabaja = !!areaTurnoElegido || proyectoSinAreas;
+
+  /*
+    CÓMO TRABAJA EN ESE TURNO: los días, el horario y las jornadas, adentro del turno que se eligió.
+
+    Es una sola cosa —cuántos días por semana y cuáles trabaja en ese turno, a qué hora entra y sale,
+    y cuántas jornadas suma el período— y estaba repartida en tres lugares del formulario, dos de
+    ellos antes de que se supiera de qué turno se hablaba. Va adentro del área desplegada, debajo de
+    los turnos, para que se lea como lo que es: la continuación de haber elegido ese turno.
+
+    Es una función y no un bloque suelto porque se dibuja en tres lugares: adentro del área elegida,
+    debajo del área y turno únicos cuando el proyecto ofrece uno solo, y sola cuando el proyecto no
+    tiene áreas configuradas —ahí no hay turno al que pertenecer, y esconderla dejaría la solicitud
+    sin días, sin horario y sin jornadas—.
+
+    Cuántos días por semana se admiten como MÁXIMO lo sigue mandando el tipo de contrato
+    (`limiteDias`): el turno dice cuáles, el contrato cuántos.
+  */
+  const panelComoTrabaja = (titulo: string) => (
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{titulo}</p>
+      <div id="bloque-dias">
+        <DiasDeTrabajo
+          variante="mobile"
+          jornadas={Number(formData.diasPorSemana) || 0}
+          onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(limiteDias != null ? Math.min(n, limiteDias) : n) : "" }))}
+          rotativos={formData.diasRotativos}
+          onRotativos={cambiarRotativos}
+          dias={formData.diasSemana}
+          onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
+          limiteContrato={limiteDias}
+          errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
+          errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
+        />
+      </div>
+      {/*
+        EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
+        Se llama «Modificar» porque es lo que se hace acá: el turno elegido lo completa, y esto
+        es para el caso en que esta persona entra o sale a otra hora que el turno.
+      */}
+      <div className="space-y-1">
+        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
+          Modificar Horario (Entrada - Salida)*
+        </label>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <SelectorHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} etiqueta="Entrada" placeholder="Entrada" className={CLASE_HORA} />
+          </div>
+          <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
+          <div className="flex-1">
+            {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
+            <SelectorHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} etiqueta="Salida" placeholder="Salida" className={CLASE_HORA} desde={formData.inTime} />
+          </div>
+        </div>
+        {horarioExcedido ? (
+          <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
+            El tipo de contrato admite hasta {limiteHoras} h por jornada y el horario suma {duracionHorario?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
+          </p>
+        ) : (
+          <p className="text-[11px] text-slate-400">
+            {areaTurnoElegido?.horario ? `Viene del turno ${areaTurnoElegido.turnoNombre} (${areaTurnoElegido.horario}). Cambialo si esta persona entra o sale a otra hora.` : "Cargá la entrada y la salida: este proyecto no tiene turnos de los que sacarlas."}
+            {limiteHoras != null && ` Hasta ${limiteHoras} h por jornada, según el tipo de contrato.`}
+          </p>
+        )}
+        {/*
+          EL HORARIO SE SALE DEL TURNO: SE AVISA, NO SE BLOQUEA.
+          Que alguien entre antes o se quede después del turno es legítimo y hay que poder pedirlo;
+          lo que no puede pasar es que se mande sin que nadie lo haya visto. Por eso es un aviso al
+          lado del campo y no un error: la solicitud se envía igual.
+        */}
+        {fueraDelTurno && (
+          <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+            Ojo: {formData.inTime} a {formData.outTime} se sale del turno {areaTurnoElegido!.turnoNombre} ({areaTurnoElegido!.horario}). Se puede pedir igual.
+          </p>
+        )}
+      </div>
+      {/* Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada. */}
+      <div className="md:col-span-3">
+        <JornadasSolicitud
+          desde={formData.startDate}
+          hasta={formData.dueDate}
+          rotativos={formData.diasRotativos}
+          calculadas={jornadasCalculadas}
+          dias={formData.diasSemana}
+          valor={formData.workdaysCount}
+          onValor={(v) => setFormData((p) => ({ ...p, workdaysCount: v }))}
+          ajustado={formData.workdaysOverridden}
+          motivo={formData.workdaysOverrideReason}
+          nota={formData.workdaysOverrideNote}
+          onEditarManual={editarJornadasAMano}
+          onCancelarAjuste={volverAlCalculado}
+          onMotivo={(m) => setFormData((p) => ({ ...p, workdaysOverrideReason: m }))}
+          onNota={(n) => setFormData((p) => ({ ...p, workdaysOverrideNote: n }))}
+          errores={erroresJornadas}
+          mostrarErrores={intentoEnviar}
+          aviso={avisoJornadas}
+        />
+      </div>
+    </div>
+  );
+
 
   const candidatosAReemplazar = useMemo(() => {
     if (formData.projectIds.length === 0) return [];
@@ -1831,15 +1932,19 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             ) : opcionesAreaTurno.length === 0 ? (
               <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona.</p>
             ) : opcionesAreaTurno.length === 1 ? (
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {opcionesAreaTurno[0].areaNombre} · {opcionesAreaTurno[0].turnoNombre}
+              <>
+                <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+                  <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                      {opcionesAreaTurno[0].areaNombre} · {opcionesAreaTurno[0].turnoNombre}
+                    </span>
+                    {(opcionesAreaTurno[0].horario || opcionesAreaTurno[0].dias) && <span className="block text-[11px] text-slate-400">{[opcionesAreaTurno[0].horario, opcionesAreaTurno[0].dias].filter(Boolean).join(" · ")}</span>}
                   </span>
-                  {(opcionesAreaTurno[0].horario || opcionesAreaTurno[0].dias) && <span className="block text-[11px] text-slate-400">{[opcionesAreaTurno[0].horario, opcionesAreaTurno[0].dias].filter(Boolean).join(" · ")}</span>}
-                </span>
-              </div>
+                </div>
+                {/* Con una sola opción no se elige: ya está puesta, y abajo va cómo trabaja en ella. */}
+                {panelComoTrabaja("Cómo trabaja en este turno")}
+              </>
             ) : (
               <>
                 <p className="text-[11px] text-slate-400">
@@ -1860,27 +1965,31 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                         )}
                       </button>
                       {areasAbiertas.has(area.areaId) && (
-                      <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
-                        {area.turnos.map((t) => {
-                          const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId;
-                          return (
-                            <button
-                              key={`${t.areaId}-${t.shiftId}`}
-                              type="button"
-                              onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: t.areaId, shiftIds: [t.shiftId] }] }))}
-                              aria-pressed={elegido}
-                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
-                            >
-                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
-                              <span className="min-w-0">
-                                <span className="block truncate text-sm font-medium">{t.turnoNombre}</span>
-                                {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
-                                {(t.horario || t.dias) && <span className="block text-[10px] text-slate-400">{[t.horario, t.dias].filter(Boolean).join(" · ")}</span>}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                        <>
+                          <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
+                            {area.turnos.map((t) => {
+                              const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId;
+                              return (
+                                <button
+                                  key={`${t.areaId}-${t.shiftId}`}
+                                  type="button"
+                                  onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: t.areaId, shiftIds: [t.shiftId] }] }))}
+                                  aria-pressed={elegido}
+                                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+                                >
+                                  <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-sm font-medium">{t.turnoNombre}</span>
+                                    {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
+                                    {(t.horario || t.dias) && <span className="block text-[10px] text-slate-400">{[t.horario, t.dias].filter(Boolean).join(" · ")}</span>}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {/* Elegido el turno, acá mismo se dice cómo trabaja en él. */}
+                          {areaTurnoElegido?.areaId === area.areaId && <div className="px-2.5 pb-2.5">{panelComoTrabaja("Cómo trabaja en este turno")}</div>}
+                        </>
                       )}
                     </div>
                   ))}
@@ -1889,115 +1998,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             )}
             {intentoEnviar && !areaTurnoElegido && (opcionesAreaTurno?.length ?? 0) > 0 && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">Elegí el área y el turno donde va a trabajar.</p>}
 
-            {/*
-              CÓMO TRABAJA EN ESE TURNO: los días y el horario, adentro del área y del turno elegidos.
-
-              Estaban arriba, antes de saber de qué turno se hablaba, y se leían como datos del contrato
-              a secas. Son del turno: cuántos días por semana y cuáles se trabaja ahí, y a qué hora se
-              entra y se sale. Puestos adentro, el encabezado dice de qué turno son y el horario que se
-              completa solo al elegirlo aparece donde se lo acaba de elegir, no media pantalla más abajo.
-
-              Cuántos días por semana admite el contrato lo sigue mandando el tipo de contrato
-              (`limiteDias`): el turno dice cuáles, el contrato cuántos como máximo.
-            */}
-            {mostrarComoTrabaja && (
-              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{areaTurnoElegido ? `Cómo trabaja en ${areaTurnoElegido.areaNombre} · ${areaTurnoElegido.turnoNombre}` : "Cómo trabaja"}</p>
-
-                <div id="bloque-dias">
-                  <DiasDeTrabajo
-                    variante="mobile"
-                    jornadas={Number(formData.diasPorSemana) || 0}
-                    onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(limiteDias != null ? Math.min(n, limiteDias) : n) : "" }))}
-                    rotativos={formData.diasRotativos}
-                    onRotativos={cambiarRotativos}
-                    dias={formData.diasSemana}
-                    onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
-                    errorDiasPorSemana={intentoEnviar ? erroresJornadas.diasPorSemana : undefined}
-                    errorDias={intentoEnviar ? erroresJornadas.dias : undefined}
-                  />
-                  {limiteDias != null && <p className="mt-1 text-[11px] text-slate-400">El tipo de contrato admite hasta {limiteDias} {limiteDias === 1 ? "día" : "días"} por semana.</p>}
-                </div>
-
-                {/*
-                  EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
-
-                  Se llama «Modificar» porque es lo que se hace acá: el turno elegido lo completa, y esto
-                  es para el caso en que esta persona entra o sale a otra hora que el turno.
-                */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                    <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
-                    Modificar Horario (Entrada - Salida)*
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <SelectorHora valor={formData.inTime} onCambio={(h) => setFormData((p) => ({ ...p, inTime: h, outTime: !p.outTime && h && limiteHoras != null ? sumarMinutos(h, limiteHoras * 60) : p.outTime }))} etiqueta="Entrada" placeholder="Entrada" className={CLASE_HORA} />
-                    </div>
-                    <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
-                    <div className="flex-1">
-                      {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
-                      <SelectorHora valor={formData.outTime} onCambio={(h) => setFormData((p) => ({ ...p, outTime: h }))} etiqueta="Salida" placeholder="Salida" className={CLASE_HORA} desde={formData.inTime} />
-                    </div>
-                  </div>
-                  {horarioExcedido ? (
-                    <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
-                      El tipo de contrato admite hasta {limiteHoras} h por jornada y el horario suma {duracionHorario?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-slate-400">
-                      {areaTurnoElegido?.horario ? `Viene del turno ${areaTurnoElegido.turnoNombre} (${areaTurnoElegido.horario}). Cambialo si esta persona entra o sale a otra hora.` : "Cargá la entrada y la salida: este proyecto no tiene turnos de los que sacarlas."}
-                      {limiteHoras != null && ` Hasta ${limiteHoras} h por jornada, según el tipo de contrato.`}
-                    </p>
-                  )}
-                  {/*
-                    EL HORARIO SE SALE DEL TURNO: SE AVISA, NO SE BLOQUEA.
-
-                    Que alguien entre antes o se quede después del turno es legítimo y hay que poder pedirlo;
-                    lo que no puede pasar es que se mande sin que nadie lo haya visto. Por eso es un aviso al
-                    lado del campo y no un error: la solicitud se envía igual.
-                  */}
-                  {fueraDelTurno && (
-                    <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                      Ojo: {formData.inTime} a {formData.outTime} se sale del turno {areaTurnoElegido!.turnoNombre} ({areaTurnoElegido!.horario}). Se puede pedir igual.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Sin áreas configuradas no hay turno al que pertenecer: va sola, para poder cargarla igual. */}
+            {proyectoSinAreas && panelComoTrabaja("Cómo trabaja")}
           </div>
         )}
-
-        {/*
-          LAS JORNADAS VAN ÚLTIMAS, DESPUÉS DEL ÁREA Y EL TURNO.
-
-          Salen de las fechas y de los días que trabaja, y los días ahora se eligen adentro del turno:
-          puesto acá arriba, el total quedaba encima de los campos de los que se deduce.
-        */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Las jornadas TOTALES (22, 30…): lo que multiplica al sueldo por jornada. */}
-          <div className="md:col-span-3">
-            <JornadasSolicitud
-              desde={formData.startDate}
-              hasta={formData.dueDate}
-              rotativos={formData.diasRotativos}
-              calculadas={jornadasCalculadas}
-              dias={formData.diasSemana}
-              valor={formData.workdaysCount}
-              onValor={(v) => setFormData((p) => ({ ...p, workdaysCount: v }))}
-              ajustado={formData.workdaysOverridden}
-              motivo={formData.workdaysOverrideReason}
-              nota={formData.workdaysOverrideNote}
-              onEditarManual={editarJornadasAMano}
-              onCancelarAjuste={volverAlCalculado}
-              onMotivo={(m) => setFormData((p) => ({ ...p, workdaysOverrideReason: m }))}
-              onNota={(n) => setFormData((p) => ({ ...p, workdaysOverrideNote: n }))}
-              errores={erroresJornadas}
-              mostrarErrores={intentoEnviar}
-              aviso={avisoJornadas}
-            />
-          </div>
-        </div>
 
         {/*
           LA CADENA, EN ORDEN: convenio → categoría, y abajo el importe por jornada y por semana. Con un

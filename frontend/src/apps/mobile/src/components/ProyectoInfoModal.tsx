@@ -28,6 +28,14 @@ interface Props {
   supervisorNombre: string;
   /** Las áreas del proyecto con sus turnos, con los nombres ya resueltos. */
   areas: { nombre: string; turnos: string[] }[];
+  /**
+   * Lo que la persona tiene EN ESTE proyecto (su contrato, su área y turno, lo que supervisa).
+   *
+   * Lo arma la pantalla porque depende de quién mira, y va arriba de los datos del proyecto: quien
+   * abre la ficha de un proyecto en el que trabaja busca primero lo suyo. Sin nada que decir —un
+   * proyecto donde no tiene nada— no se pasa y la ficha queda igual que antes.
+   */
+  asignacion?: React.ReactNode;
 }
 
 const ESTADOS: Record<string, { label: string; cls: string }> = {
@@ -57,7 +65,7 @@ const chips = (valores: string[], clase: string) => (
   </div>
 );
 
-export default function ProyectoInfoModal({ isOpen, onClose, proyecto, supervisorNombre, areas }: Props) {
+export default function ProyectoInfoModal({ isOpen, onClose, proyecto, supervisorNombre, areas, asignacion }: Props) {
   const [empresas, setEmpresas] = useState<Company[] | null>(null);
 
   useEffect(() => {
@@ -92,6 +100,8 @@ export default function ProyectoInfoModal({ isOpen, onClose, proyecto, superviso
           <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${estado.cls}`}>{estado.label}</span>
           {cliente && <span className="rounded bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">{cliente}</span>}
         </div>
+
+        {asignacion}
 
         {proyecto.description && <p className="rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">{proyecto.description}</p>}
 

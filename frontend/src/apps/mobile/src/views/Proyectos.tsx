@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBriefcase, faBuilding, faIdCard, faClock, faLayerGroup, faChevronDown, faChevronRight, faUserShield, faUserTie, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcase, faBuilding, faIdCard, faClock, faLayerGroup, faChevronRight, faSearch, faUserShield, faUserTie, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../../../stores/authStore';
 import { useProfile } from '../hooks/useProfile';
 import { format } from 'date-fns';
@@ -8,6 +8,8 @@ import { projectsAPI, Project } from '../../../../api/projects';
 import { areasAPI, Area } from '../../../../api/areas';
 import { shiftsAPI, Shift } from '../../../../api/shifts';
 import SectionHeader from '../components/SectionHeader';
+import ProyectoInfoModal from '../components/ProyectoInfoModal';
+import { etiquetaDeTurno } from '../../../../utils/jerarquiaTurnos';
 
 /** Id de algo que puede venir poblado (objeto) o pelado (string). */
 const idDe = (x: any): string => (x && typeof x === 'object' ? String(x._id || x.id || '') : x ? String(x) : '');
@@ -20,16 +22,15 @@ interface Entrada {
 }
 
 /**
- * PROYECTOS: DÓNDE TRABAJA LA PERSONA, TODOS A LA VISTA.
+ * PROYECTOS: TODOS LOS QUE LA PERSONA PUEDE VER, Y LA FICHA DE CADA UNO.
  *
- * Antes se llamaba «Asignación» y mostraba UN proyecto, con un desplegable para cambiar de uno a otro:
- * quien estaba en varios no veía de un vistazo en cuáles. Ahora es la lista entera, una tarjeta por
- * proyecto, y cada una se abre para ver sede, contrato, vigencia, horario y áreas y turnos.
+ * Empezó siendo «Asignación», que mostraba UN proyecto con un desplegable para cambiar de uno a otro;
+ * después fue la lista de los propios, cada tarjeta desplegable con lo que la persona tenía ahí. Hoy
+ * es la lista COMPLETA —los que el server deja ver, ver `entradas`— y cada una abre la ficha entera
+ * del proyecto: cliente, coordinador, sede, centro de costo, empresas y todas sus áreas y turnos.
  *
- * Entran dos clases de proyecto:
- *  - Los que tiene con CONTRATO vigente (`metadata.projects`, que el server ya filtra por contrato activo).
- *  - Los que SUPERVISA o COORDINA sin tener contrato ahí. Mismo criterio que «Mis equipos»: el
- *    responsable se compara con el id de FRAME (`metadata.id`), y la coordinación, con sus ids o su email.
+ * La ficha es la misma que abre «Mis equipos» (`ProyectoInfoModal`), con un bloque más adelante: lo
+ * que la persona tiene EN ESE proyecto, que es lo que antes se desplegaba en la tarjeta.
  */
 export default function Proyectos() {
   const { profile, loading } = useProfile();
@@ -38,10 +39,10 @@ export default function Proyectos() {
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
-  /** Proyecto completo (con `teamConfig`) de cada tarjeta abierta. `null` = se pidió y falló. */
+  /** Proyecto completo (con `teamConfig` y `areasConfig`) de cada ficha abierta. `null` = se pidió y falló. */
   const [completos, setCompletos] = useState<Record<string, Project | null>>({});
-  /** Tarjetas abiertas. `null` = nadie tocó nada todavía: ahí manda el default (ver `abiertos`). */
-  const [abiertosTocados, setAbiertosTocados] = useState<Set<string> | null>(null);
+  /** De qué proyecto está abierta la ficha. */
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const pedidos = useRef(new Set<string>());
   // El perfil y el usuario de sesión traen más de lo que declaran sus tipos (`_id`, `metadata.id`, `nombre`).
   const yo: any = user;
@@ -303,30 +304,38 @@ export default function Proyectos() {
     };
   }, []);
 
-  /** Los proyectos de la persona: con contrato, más los que supervisa o coordina sin tenerlo. */
+  /**
+   * TODOS LOS PROYECTOS, no sólo los de la persona.
+   *
+   * Antes la lista se armaba al revés: se partía de los contratos del perfil y se le sumaban los
+   * proyectos que supervisa o coordina. Quien quería mirar la ficha de cualquier otro —de qué cliente
+   * es, qué centro de costo tiene, en qué sede— no tenía dónde.
+   *
+   * QUÉ ES «TODOS»: los que el server devuelve en `GET /projects`, que ya aplica la visibilidad de la
+   * plataforma —un admin ve todos; el resto, los que tiene asignados más los que tiene a cargo como
+   * responsable (ver `alcanceDeResponsable` en el server)—. La app no agrega ni saca nada: mostrar
+   * más que eso no depende de esta pantalla, y filtrar de nuevo acá era esconder lo que ya llegó.
+   *
+   * El contrato propio (`resumen`) se pega al proyecto que le corresponde. Una tarjeta por PROYECTO:
+   * antes era una por contrato, y quien tenía dos en el mismo proyecto lo veía repetido.
+   */
   const entradas = useMemo<Entrada[]>(() => {
-    const lista: Entrada[] = [];
-    const conContrato = new Set<string>();
+    const porProyecto = new Map<string, Entrada>();
+    for (const p of allProjects) {
+      const pid = String(p._id);
+      porProyecto.set(pid, { clave: pid, pid, resumen: null });
+    }
     for (const up of profile?.metadata?.projects || []) {
       // OJO: metadata.projects[] son docs UserProject → el id del proyecto está en `projectId`, no en `_id`.
       const pid = idDe(up?.projectId) || idDe(up?._id);
       if (!pid) continue;
-      lista.push({ clave: idDe(up?._id) || pid, pid, resumen: up });
-      conContrato.add(pid);
+      const entrada = porProyecto.get(pid);
+      // Un contrato en un proyecto que el listado no trajo igual se muestra: es trabajo de la persona.
+      if (entrada) entrada.resumen = entrada.resumen || up;
+      else porProyecto.set(pid, { clave: pid, pid, resumen: up });
     }
-
-    const misIds = new Set([yo?._id, yo?.id, profile?.userId, profile?._id].filter(Boolean).map(String));
-    const miEmail = String(yo?.email || profile?.email || '').toLowerCase();
-    const miIdFrame = perfil?.metadata?.id ?? yo?.metadata?.id;
-    for (const p of allProjects) {
-      const pid = String(p._id);
-      if (conContrato.has(pid)) continue;
-      const supervisa = miIdFrame != null && p.metadata?.responsableId != null && String(p.metadata.responsableId) === String(miIdFrame);
-      const coordina = (p.coordinatorAssignments || []).some((a: any) => misIds.has(idDe(a.userId)) || (!!miEmail && String(a.userId?.email || '').toLowerCase() === miEmail));
-      if (supervisa || coordina) lista.push({ clave: pid, pid, resumen: null });
-    }
-    return lista;
-  }, [profile, user, allProjects]);
+    return [...porProyecto.values()];
+  }, [profile, allProjects]);
 
   const proyectoPorId = useMemo(() => new Map(allProjects.map((p) => [String(p._id), p])), [allProjects]);
 
@@ -349,43 +358,163 @@ export default function Proyectos() {
     [entradas, completos, proyectoPorId, profile, allAreas, allShifts],
   );
 
-  // Con un solo proyecto no hay nada que elegir: arranca abierto. Con varios, cerrados, para verlos todos.
-  const abiertos: Set<string> = abiertosTocados ?? new Set(tarjetas.length === 1 ? [tarjetas[0].clave] : []);
-  const alternar = (clave: string) => {
-    const next = new Set(abiertos);
-    if (next.has(clave)) next.delete(clave);
-    else next.add(clave);
-    setAbiertosTocados(next);
-  };
+  /*
+    EL BUSCADOR: aparece cuando la lista deja de entrar en la cabeza.
+
+    Con los proyectos propios eran dos o tres y se elegía mirando; con todos los del tenant pueden ser
+    cien, y scrollear cien tarjetas en un teléfono para llegar a una no es elegir, es buscar a mano.
+  */
+  const [busqueda, setBusqueda] = useState('');
+  const visibles = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return tarjetas;
+    return tarjetas.filter((t) => `${t.info.name} ${t.info.client}`.toLowerCase().includes(q));
+  }, [tarjetas, busqueda]);
 
   /*
-    El proyecto COMPLETO se pide recién al abrir su tarjeta, y una sola vez. El listado no trae
-    `teamConfig` —de ahí salen las áreas y turnos del equipo—, y pedir el de cada proyecto al entrar
-    serían N consultas para tarjetas que quizás nadie abre.
+    La ficha COMPLETA se pide al abrir el proyecto, y una sola vez por proyecto.
+
+    El listado no trae `teamConfig` —de ahí salen el área y el turno propios— y pedir el de cada
+    proyecto al entrar serían tantas consultas como proyectos, para fichas que quizás nadie abre.
+    `team: "ids"`: el equipo poblado con sus contratos pesa MB y corta por timeout en proyectos
+    grandes (ver ActivityLogs).
   */
-  const clavesAbiertas = [...abiertos].sort().join('|');
   useEffect(() => {
-    for (const t of tarjetas) {
-      if (!abiertos.has(t.clave) || pedidos.current.has(t.pid)) continue;
-      pedidos.current.add(t.pid);
-      // `team: "ids"`: acá sólo se usan teamConfig y coordinatorAssignments; el equipo poblado con
-      // sus contratos pesaba MB y cortaba por timeout en proyectos grandes (ver ActivityLogs).
-      projectsAPI
-        .getProject(t.pid, { team: 'ids' })
-        .then((p) => setCompletos((prev) => ({ ...prev, [t.pid]: p })))
-        .catch((err) => {
-          console.error('Error fetching full project details:', err);
-          setCompletos((prev) => ({ ...prev, [t.pid]: null }));
-        });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clavesAbiertas, tarjetas]);
+    if (!seleccionado || pedidos.current.has(seleccionado)) return;
+    pedidos.current.add(seleccionado);
+    projectsAPI
+      .getProject(seleccionado, { team: 'ids' })
+      .then((p) => setCompletos((prev) => ({ ...prev, [seleccionado]: p })))
+      .catch((err) => {
+        console.error('Error fetching full project details:', err);
+        setCompletos((prev) => ({ ...prev, [seleccionado]: null }));
+      });
+  }, [seleccionado]);
+
+  const tarjetaAbierta = visibles.find((t) => t.pid === seleccionado) || tarjetas.find((t) => t.pid === seleccionado) || null;
+  const proyectoAbierto: any = seleccionado ? completos[seleccionado] || proyectoPorId.get(seleccionado) || null : null;
+
+  /** El coordinador del proyecto, ya resuelto por el listado: no hace falta otra consulta. */
+  const responsableAbierto = useMemo(() => {
+    const resp: any = proyectoAbierto?.metadataResolutions?.responsable;
+    return resp ? resp.name || `${resp.firstName || ''} ${resp.lastName || ''}`.trim() : '';
+  }, [proyectoAbierto]);
+
+  /** Para la ficha: TODAS las áreas del proyecto con sus turnos, no sólo las de la persona. */
+  const areasDelAbierto = useMemo(() => {
+    if (!proyectoAbierto) return [] as { nombre: string; turnos: string[] }[];
+    const nombreArea = new Map(allAreas.map((a) => [String(a._id), a.name]));
+    const turnoPorId = new Map(allShifts.map((s) => [String(s._id), s]));
+    return ((proyectoAbierto.areasConfig || []) as any[])
+      .map((ac: any) => ({
+        nombre: (typeof ac.areaId === 'object' && ac.areaId?.name) || nombreArea.get(idDe(ac.areaId)) || 'Área',
+        turnos: (ac.shiftIds || []).map((s: any) => etiquetaDeTurno((typeof s === 'object' && s?.name) || turnoPorId.get(idDe(s))?.name || 'Turno')),
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [proyectoAbierto, allAreas, allShifts]);
+
+  /** Área y turno, en chips, como se veían en la tarjeta abierta. */
+  const chipsDeAreas = (grupos: { areaName: string; shifts: any[] }[], color: 'blue' | 'amber') => (
+    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+      <div className="space-y-3">
+        {grupos.map((group, gidx) => (
+          <div key={gidx} className="flex flex-wrap items-center gap-1.5">
+            <span className={`text-[9px] px-2 py-0.5 rounded border flex items-center gap-1 font-black uppercase tracking-widest ${color === 'blue' ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20'}`}>
+              <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+              {group.areaName}
+            </span>
+            {group.shifts.map((s: any, sidx: number) => (
+              <span key={sidx} className={`text-[9px] px-2 py-0.5 rounded border flex items-center gap-1 font-bold uppercase ${color === 'blue' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/15' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/15'}`}>
+                <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
+                {s.name}
+                {s.time && s.time !== 'Sin horario' ? ` (${s.time})` : ''}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  /**
+   * LO QUE LA PERSONA TIENE EN ESE PROYECTO, arriba de la ficha.
+   *
+   * Es lo que antes mostraba la tarjeta al desplegarse. En un proyecto donde no tiene nada —ahora la
+   * lista los trae todos— no se dibuja: una ficha con «Sin turnos asignados» repetido no dice nada.
+   */
+  const bloqueAsignacion = () => {
+    const t = tarjetaAbierta;
+    if (!t) return undefined;
+    const info = t.info;
+    const tieneContrato = !!t.resumen;
+    const propios = new Map<string, { areaName: string; shifts: any[] }>();
+    info.detailedShifts.forEach((s: any) => {
+      if (!propios.has(s.area)) propios.set(s.area, { areaName: s.area, shifts: [] });
+      propios.get(s.area)!.shifts.push(s);
+    });
+    const coordina = info.coordinatedShifts.length > 0;
+    if (!tieneContrato && !coordina && propios.size === 0) return undefined;
+
+    return (
+      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tu asignación</p>
+
+        {tieneContrato ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-slate-100 bg-white/70 p-2 dark:border-slate-800 dark:bg-slate-900/40">
+                <p className="mb-1 flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-slate-400">
+                  <FontAwesomeIcon icon={faBuilding} className="text-slate-300" /> Sede
+                </p>
+                <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{info.sede}</p>
+              </div>
+              <div className="rounded-lg border border-slate-100 bg-white/70 p-2 dark:border-slate-800 dark:bg-slate-900/40">
+                <p className="mb-1 flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-slate-400">
+                  <FontAwesomeIcon icon={faIdCard} className="text-slate-300" /> Rol Frame
+                </p>
+                <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{info.roleFrame}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {[
+                { label: 'Contrato', valor: info.contractType },
+                { label: 'Vigencia', valor: info.dates },
+                { label: 'Horario', valor: info.schedule },
+              ].map((f) => (
+                <div key={f.label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-1.5 last:border-0 dark:border-slate-800">
+                  <p className="text-[9px] font-black uppercase tracking-tighter text-slate-400">{f.label}</p>
+                  <p className="text-right text-xs font-bold text-slate-700 dark:text-slate-300">{f.valor}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-[11px] italic text-slate-500 dark:text-slate-400">No tenés contrato en este proyecto: aparece acá porque lo {info.isResponsable ? 'coordinás' : 'supervisás'}.</p>
+        )}
+
+        {propios.size > 0 && (
+          <div className="space-y-2">
+            <p className="text-center text-[9px] font-black uppercase tracking-widest text-slate-300">Área / Turno</p>
+            {chipsDeAreas([...propios.values()], 'blue')}
+          </div>
+        )}
+
+        {coordina && (
+          <div className="space-y-2">
+            <p className="text-center text-[9px] font-black uppercase tracking-widest text-slate-300">Área / Turno supervisada</p>
+            {chipsDeAreas(info.coordinatedShifts, 'amber')}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const encabezado = (
     <SectionHeader
       icon={faBriefcase}
       titulo="Proyectos"
-      info={"Los proyectos en los que estás: los que tenés con contrato y los que coordinás o supervisás.\n\nTocá uno para ver sede, contrato, vigencia, horario y las áreas y turnos que tenés asignados o supervisás."}
+      info={'Todos los proyectos a los que tenés acceso, no sólo en los que trabajás.\n\nTocá uno para ver su ficha completa: cliente, coordinador, sede, centro de costo, fecha de alta, empresas del contrato y del release, y todas sus áreas con sus turnos.\n\nEn los que tenés contrato o supervisás, la ficha arranca con lo tuyo: contrato, vigencia, horario y tu área y turno.'}
     />
   );
 
@@ -405,171 +534,81 @@ export default function Proyectos() {
     <div className="flex-1 pb-24">
       {encabezado}
       <div className="px-4 pt-4 space-y-3">
-        {tarjetas.length === 0 ? (
+        {tarjetas.length > 6 && (
+          <div className="relative">
+            <FontAwesomeIcon icon={faSearch} className="pointer-events-none absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por proyecto o cliente…"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+        )}
+
+        {visibles.length === 0 ? (
           <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 py-10 text-center space-y-3">
             <FontAwesomeIcon icon={faBriefcase} className="text-slate-200 dark:text-slate-800 text-2xl" />
-            <p className="text-[10px] text-slate-400 italic font-medium">Sin proyectos asignados</p>
+            <p className="text-[10px] text-slate-400 italic font-medium">{busqueda.trim() ? 'Ningún proyecto coincide con la búsqueda' : 'Sin proyectos para mostrar'}</p>
           </div>
         ) : (
-          tarjetas.map((t) => {
+          visibles.map((t) => {
             const { info } = t;
-            const abierto = abiertos.has(t.clave);
             const tieneContrato = !!t.resumen;
             const coordina = info.coordinatedShifts.length > 0;
-            const cargandoTurnos = abierto && !(t.pid in completos) && info.detailedShifts.length === 0;
 
             return (
-              <div key={t.clave} className="bg-white dark:bg-slate-900/70 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                <button type="button" onClick={() => alternar(t.clave)} aria-expanded={abierto} className="w-full text-left p-4 flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[8px] font-black text-primary uppercase tracking-widest truncate">{info.client}</p>
-                    <p className="text-base font-black text-slate-900 dark:text-slate-100 leading-tight mt-0.5">{info.name}</p>
-                    {/*
-                      Qué es la persona EN ESTE proyecto. Los roles generales de la cuenta («Supervisor»,
-                      «Coordinador») se mostraban acá cuando había un solo proyecto a la vista; en una lista
-                      se repetirían en todas las tarjetas, también donde no aplican.
-                    */}
-                    <div className="flex flex-wrap gap-1.5 mt-2">
+              <button
+                key={t.clave}
+                type="button"
+                onClick={() => setSeleccionado(t.pid)}
+                className="flex w-full items-start gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-sm transition-colors active:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/70 dark:active:bg-slate-800"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[8px] font-black uppercase tracking-widest text-primary">{info.client}</p>
+                  <p className="mt-0.5 text-base font-black leading-tight text-slate-900 dark:text-slate-100">{info.name}</p>
+                  {/*
+                    Qué es la persona EN ESTE proyecto. Los roles generales de la cuenta («Supervisor»,
+                    «Coordinador») se mostraban acá cuando había un solo proyecto a la vista; en una lista
+                    se repetirían en todas las tarjetas, también donde no aplican.
+                  */}
+                  {(info.isResponsable || coordina || tieneContrato) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
                       {info.isResponsable && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500 text-white text-[8px] font-black uppercase tracking-wider shadow-sm">
+                        <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white shadow-sm">
                           <FontAwesomeIcon icon={faUserShield} size="xs" />
                           Coordinador del proyecto
                         </span>
                       )}
                       {coordina && !info.isResponsable && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[8px] font-black uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
                           <FontAwesomeIcon icon={faUserTie} size="xs" />
                           Supervisor
                         </span>
                       )}
                       {tieneContrato && !info.isResponsable && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[8px] font-black uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
                           <FontAwesomeIcon icon={faUsers} size="xs" />
                           Equipo de proyecto
                         </span>
                       )}
                     </div>
-                    {!abierto && tieneContrato && (
-                      <p className="mt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
-                        {info.contractType} · {info.dates}
-                      </p>
-                    )}
-                  </div>
-                  <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="mt-1 text-xs text-slate-400" />
-                </button>
-
-                {abierto && (
-                  <div className="px-4 pb-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    {tieneContrato ? (
-                      <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-slate-50/50 dark:bg-slate-800/30 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
-                            <p className="text-[8px] font-black text-slate-400 uppercase flex items-center gap-1.5 tracking-widest mb-1">
-                              <FontAwesomeIcon icon={faBuilding} className="text-slate-300" /> Sede
-                            </p>
-                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{info.sede}</p>
-                          </div>
-                          <div className="bg-slate-50/50 dark:bg-slate-800/30 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
-                            <p className="text-[8px] font-black text-slate-400 uppercase flex items-center gap-1.5 tracking-widest mb-1">
-                              <FontAwesomeIcon icon={faIdCard} className="text-slate-300" /> Rol Frame
-                            </p>
-                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{info.roleFrame}</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Contrato</p>
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 text-right">{info.contractType}</p>
-                          </div>
-                          <div className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Vigencia</p>
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 text-right">{info.dates}</p>
-                          </div>
-                          <div className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Horario</p>
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 text-right">{info.schedule}</p>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">No tenés contrato en este proyecto: aparece porque lo {info.isResponsable ? 'coordinás' : 'supervisás'}.</p>
-                    )}
-
-                    {/* Área / turno propios. Sin contrato y sin turnos no hay nada que decir: se omite. */}
-                    {(tieneContrato || info.detailedShifts.length > 0) && (
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno</p>
-                        {info.detailedShifts.length > 0 ? (
-                          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
-                            <div className="space-y-3">
-                              {(() => {
-                                const grouped = new Map<string, { areaName: string; shifts: any[] }>();
-                                info.detailedShifts.forEach((s: any) => {
-                                  if (!grouped.has(s.area)) grouped.set(s.area, { areaName: s.area, shifts: [] });
-                                  grouped.get(s.area)!.shifts.push(s);
-                                });
-                                return Array.from(grouped.values()).map((group, gidx) => (
-                                  <div key={gidx} className="space-y-1.5">
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="text-[9px] bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
-                                        <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                        {group.areaName}
-                                      </span>
-                                      {group.shifts.map((s, sidx) => (
-                                        <span key={sidx} className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-500/15 flex items-center gap-1 font-bold uppercase">
-                                          <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
-                                          {s.name}
-                                          {s.time && s.time !== 'Sin horario' ? ` (${s.time})` : ''}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ));
-                              })()}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
-                            <p className="text-[10px] text-slate-400 italic font-medium">{cargandoTurnos ? 'Cargando áreas y turnos…' : 'Sin turnos asignados'}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {coordina && (
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno Supervisada</p>
-                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
-                          <div className="space-y-3">
-                            {info.coordinatedShifts.map((group: any, gidx: number) => (
-                              <div key={gidx} className="space-y-1.5">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="text-[9px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
-                                    <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                    {group.areaName}
-                                  </span>
-                                  {group.shifts.map((s: any, sidx: number) => (
-                                    <span key={sidx} className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-500/15 flex items-center gap-1 font-bold uppercase">
-                                      <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
-                                      {s.name}
-                                      {s.time && s.time !== 'Sin horario' ? ` (${s.time})` : ''}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  )}
+                  {tieneContrato && (
+                    <p className="mt-2 truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      {info.contractType} · {info.dates}
+                    </p>
+                  )}
+                </div>
+                <FontAwesomeIcon icon={faChevronRight} className="mt-1 text-xs text-slate-400" />
+              </button>
             );
           })
         )}
       </div>
+
+      {/* La ficha entera del proyecto, la misma que abre «Mis equipos». */}
+      <ProyectoInfoModal isOpen={!!seleccionado} onClose={() => setSeleccionado(null)} proyecto={proyectoAbierto} supervisorNombre={responsableAbierto} areas={areasDelAbierto} asignacion={bloqueAsignacion()} />
     </div>
   );
 }

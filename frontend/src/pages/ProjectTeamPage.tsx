@@ -967,14 +967,104 @@ export const ProjectTeamPage: React.FC = () => {
       .filter((sh): sh is NonNullable<typeof sh> => !!sh && !!sh.startTime && !!sh.endTime)
       .filter((sh) => !horarioDentroDelTurno(sh.startTime, sh.endTime, wizardData.hora_inicio, wizardData.hora_fin));
   }, [wizardData.areaShiftAssignments, wizardData.hora_inicio, wizardData.hora_fin, allShifts]);
-  /** «ÁREA · Turno» de lo elegido, para encabezar los días y el horario con el turno del que son. */
-  const areaTurnoDelWizard = useMemo(() => {
-    const sel = wizardData.areaShiftAssignments[0];
-    if (!sel) return "";
-    const area = allAreas.find((a) => String(a._id) === String(sel.areaId))?.name || "";
-    const turno = allShifts.find((sh) => String(sh._id) === String(sel.shiftIds[0]))?.name || "";
-    return [area, turno].filter(Boolean).join(" · ");
-  }, [wizardData.areaShiftAssignments, allAreas, allShifts]);
+  /*
+    CÓMO TRABAJA EN ESE TURNO: los días, el horario y las jornadas, adentro del turno que se eligió.
+
+    Es una sola cosa —cuántos días por semana y cuáles trabaja en ese turno, a qué hora entra y sale,
+    y cuántas jornadas suma el contrato— y estaba repartida en tres lugares del formulario, dos de
+    ellos antes de que se supiera de qué turno se hablaba. Va adentro del área desplegada, debajo de
+    los turnos, para que se lea como lo que es: la continuación de haber elegido ese turno.
+
+    Es una función y no un bloque suelto porque se dibuja en dos lugares: adentro del área elegida y,
+    cuando el proyecto no tiene áreas configuradas, sola —ahí no hay turno al que pertenecer, y
+    esconderla dejaría el contrato sin días, sin horario y sin jornadas—.
+
+    Cuántos días por semana se admiten como MÁXIMO lo sigue mandando el tipo de contrato
+    (`limiteDiasWizard`): el turno dice cuáles, el contrato cuántos.
+  */
+  const panelComoTrabaja = (titulo: string) => (
+    <div className="space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/30 p-4">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{titulo}</p>
+      {/*
+        Los días de la semana. EL MISMO componente que la Solicitud de Contratación de mobile.
+
+        Va arriba del horario porque es la otra mitad del mismo dato: esto dice qué días, el horario
+        dice a qué hora. Estaban separados —uno acá y el otro solo en mobile— y el escritorio
+        guardaba 5 jornadas fijas sin que nadie lo eligiera.
+      */}
+      <div className="md:col-span-2">
+        <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} limiteContrato={limiteDiasWizard} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
+      </div>
+      {/*
+        EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
+
+        Se llama «Modificar» porque es lo que se hace acá: el turno elegido lo completa, y esto es
+        para cuando esta persona entra o sale a otra hora que el turno. Inicio y fin van juntos —son
+        las dos puntas de lo mismo— con una sola aclaración debajo del par.
+      */}
+      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label className="md:col-span-2 block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 -mb-2">
+          <FontAwesomeIcon icon={faClock} className="mr-1" />
+          Modificar Horario (Entrada - Salida) <span className="text-red-500">*</span>
+        </label>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Entrada</label>
+          <SelectorHora
+            valor={wizardData.hora_inicio}
+            onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))}
+            etiqueta="Entrada"
+            placeholder="Entrada"
+            className="input-field w-full"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Salida</label>
+          {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
+          <SelectorHora valor={wizardData.hora_fin} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_fin: h }))} etiqueta="Salida" placeholder="Salida" className="input-field w-full" desde={wizardData.hora_inicio} />
+        </div>
+        {horarioExcedidoWizard ? (
+          <p className="md:col-span-2 text-[11px] font-medium text-red-600 dark:text-red-400 ml-1 -mt-2">
+            El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
+          </p>
+        ) : (
+          <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">
+            Se completa con el horario del turno elegido; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ""}
+          </p>
+        )}
+        {/* Se sale del turno: se avisa y se guarda igual (ver `turnosFueraDeHorario`). */}
+        {turnosFueraDeHorario.length > 0 && (
+          <p className="md:col-span-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 ml-1 -mt-1">
+            Ojo: {wizardData.hora_inicio} a {wizardData.hora_fin} se sale {turnosFueraDeHorario.length === 1 ? "del turno" : "de los turnos"} {turnosFueraDeHorario.map((sh) => `${sh.name} (${sh.startTime} a ${sh.endTime})`).join(", ")}. Se puede guardar igual.
+          </p>
+        )}
+      </div>
+      {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo. */}
+      <div className="md:col-span-2">
+        <JornadasSolicitud
+          desde={wizardData.fecha_alta_contrato}
+          hasta={wizardData.fecha_baja_contrato}
+          rotativos={wizardData.dias_rotativos}
+          calculadas={jornadasCalculadasWizard}
+          dias={wizardData.dias_semana}
+          valor={String(wizardData.cantidad_jornadas_laborales || "")}
+          onValor={(v) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(v) || 0 }))}
+          ajustado={ajusteJornadas.ajustado}
+          motivo={ajusteJornadas.motivo}
+          nota={ajusteJornadas.nota}
+          onEditarManual={() => setAjusteJornadas((a) => ({ ...a, ajustado: true }))}
+          onCancelarAjuste={() => {
+            setAjusteJornadas({ ajustado: false, motivo: "", nota: "" });
+            if (jornadasCalculadasWizard !== null) setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
+          }}
+          onMotivo={(m) => setAjusteJornadas((a) => ({ ...a, motivo: m }))}
+          onNota={(n) => setAjusteJornadas((a) => ({ ...a, nota: n }))}
+          errores={erroresJornadasWizard}
+          mostrarErrores
+        />
+      </div>
+    </div>
+  );
+
   useEffect(() => {
     if (limiteDiasWizard == null) return;
     setWizardData((prev) => {
@@ -4174,6 +4264,8 @@ export const ProjectTeamPage: React.FC = () => {
                                         );
                                       })}
                                     </div>
+                                    {/* Elegido el turno, acá mismo se dice cómo trabaja en él. */}
+                                    {isAreaActive && <div className="px-4 pb-3">{panelComoTrabaja("Cómo trabaja en este turno")}</div>}
                                   </>
                                 )}
                               </div>
@@ -4226,107 +4318,8 @@ export const ProjectTeamPage: React.FC = () => {
 
                       {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Elegí el área y el turno donde va a trabajar.</p>}
 
-                      {/*
-                        CÓMO TRABAJA EN ESE TURNO: los días y el horario, adentro del área y del turno elegidos.
-
-                        Estaban sueltos más arriba y más abajo en el formulario, con media pantalla entre
-                        ellos y sin decir de qué turno hablaban. Son del turno: cuántos días por semana y
-                        cuáles trabaja ahí, y a qué hora entra y sale. Adentro, el encabezado dice de qué
-                        turno son, y el horario que se completa solo al elegirlo aparece donde se lo acaba
-                        de elegir.
-
-                        Cuántos días por semana se admiten como MÁXIMO lo sigue mandando el tipo de
-                        contrato (`limiteDiasWizard`): el turno dice cuáles, el contrato cuántos.
-
-                        Sin áreas configuradas en el proyecto no hay turno al que pertenecer, y se
-                        muestran igual: esconderlos dejaría el contrato sin días ni horario.
-                      */}
-                      {(wizardData.areaShiftAssignments.length > 0 || (project?.areasConfig || []).length === 0) && (
-                        <div className="space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/20 p-4">
-                          {areaTurnoDelWizard && <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Cómo trabaja en {areaTurnoDelWizard}</p>}
-
-                          {/*
-                            Los días de la semana. EL MISMO componente que la Solicitud de Contratación de mobile.
-
-                            Va arriba del horario porque es la otra mitad del mismo dato: esto dice qué
-                            días, el horario dice a qué hora. Estaban separados —uno acá y el otro solo en
-                            mobile— y el escritorio guardaba 5 jornadas fijas sin que nadie lo eligiera.
-                          */}
-                          <div className="md:col-span-2">
-                            <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
-                          </div>
-
-                          {/*
-                            EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
-
-                            Se llama «Modificar» porque es lo que se hace acá: el turno elegido lo
-                            completa, y esto es para cuando esta persona entra o sale a otra hora que el turno.
-                            Inicio y fin van juntos —son las dos puntas de lo mismo— con una sola aclaración
-                            debajo del par.
-                          */}
-                          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <label className="md:col-span-2 block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 -mb-2">
-                              <FontAwesomeIcon icon={faClock} className="mr-1" />
-                              Modificar Horario (Entrada - Salida) <span className="text-red-500">*</span>
-                            </label>
-                            <div className="space-y-1.5">
-                              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Entrada</label>
-                              <SelectorHora
-                                valor={wizardData.hora_inicio}
-                                onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))}
-                                etiqueta="Entrada"
-                                placeholder="Entrada"
-                                className="input-field w-full"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Salida</label>
-                              {/* `desde`: en la salida, cada hora muestra cuántas horas da la jornada. */}
-                              <SelectorHora valor={wizardData.hora_fin} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_fin: h }))} etiqueta="Salida" placeholder="Salida" className="input-field w-full" desde={wizardData.hora_inicio} />
-                            </div>
-                            {horarioExcedidoWizard ? (
-                              <p className="md:col-span-2 text-[11px] font-medium text-red-600 dark:text-red-400 ml-1 -mt-2">
-                                El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
-                              </p>
-                            ) : (
-                              <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">
-                                Se completa con el horario del turno elegido; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ""}
-                              </p>
-                            )}
-                            {/* Se sale del turno: se avisa y se guarda igual (ver `turnosFueraDeHorario`). */}
-                            {turnosFueraDeHorario.length > 0 && (
-                              <p className="md:col-span-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 ml-1 -mt-1">
-                                Ojo: {wizardData.hora_inicio} a {wizardData.hora_fin} se sale {turnosFueraDeHorario.length === 1 ? "del turno" : "de los turnos"} {turnosFueraDeHorario.map((sh) => `${sh.name} (${sh.startTime} a ${sh.endTime})`).join(", ")}. Se puede guardar igual.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo. */}
-                    <div className="md:col-span-2">
-                      <JornadasSolicitud
-                        desde={wizardData.fecha_alta_contrato}
-                        hasta={wizardData.fecha_baja_contrato}
-                        rotativos={wizardData.dias_rotativos}
-                        calculadas={jornadasCalculadasWizard}
-                        dias={wizardData.dias_semana}
-                        valor={String(wizardData.cantidad_jornadas_laborales || "")}
-                        onValor={(v) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(v) || 0 }))}
-                        ajustado={ajusteJornadas.ajustado}
-                        motivo={ajusteJornadas.motivo}
-                        nota={ajusteJornadas.nota}
-                        onEditarManual={() => setAjusteJornadas((a) => ({ ...a, ajustado: true }))}
-                        onCancelarAjuste={() => {
-                          setAjusteJornadas({ ajustado: false, motivo: "", nota: "" });
-                          if (jornadasCalculadasWizard !== null) setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
-                        }}
-                        onMotivo={(m) => setAjusteJornadas((a) => ({ ...a, motivo: m }))}
-                        onNota={(n) => setAjusteJornadas((a) => ({ ...a, nota: n }))}
-                        errores={erroresJornadasWizard}
-                        mostrarErrores
-                      />
+                      {/* Sin áreas configuradas no hay turno al que pertenecer: va sola, para poder cargarla igual. */}
+                      {(project?.areasConfig || []).length === 0 && panelComoTrabaja("Cómo trabaja")}
                     </div>
 
                     {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}

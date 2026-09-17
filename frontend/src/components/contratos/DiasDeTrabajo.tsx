@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 /**
  * CUÁNTOS DÍAS POR SEMANA TRABAJA, Y CUÁLES. Un solo componente para las dos pantallas.
@@ -110,6 +112,14 @@ interface Props {
    */
   jornadasTotales?: number;
   onJornadasTotales?: (n: number) => void;
+  /**
+   * Hasta cuántos días por semana admite el TIPO DE CONTRATO elegido (`Contrato.data.diasPorSemana`).
+   *
+   * `null` o sin pasar = ese contrato no fija ninguno, y ahí el tope es 7, que es la semana entera.
+   * Es sólo para decirlo y para acotar el campo; recortar lo que ya estaba cargado lo sigue haciendo
+   * cada pantalla, que es la que sabe qué más toca cuando el contrato cambia.
+   */
+  limiteContrato?: number | null;
   /** Errores al intentar guardar, dichos debajo de cada campo. */
   errorDiasPorSemana?: string;
   errorDias?: string;
@@ -118,13 +128,25 @@ interface Props {
   className?: string;
 }
 
-export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, desde, hasta, jornadasTotales, onJornadasTotales, errorDiasPorSemana, errorDias, variante = "desk", className = "" }) => {
+export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, desde, hasta, jornadasTotales, onJornadasTotales, limiteContrato, errorDiasPorSemana, errorDias, variante = "desk", className = "" }) => {
+  const [verTope, setVerTope] = useState(false);
   const estimadas = jornadasEstimadas(desde, hasta, jornadas);
   const mobile = variante === "mobile";
   const maximo = maximoDiasElegibles(jornadas, rotativos);
   const problema = problemaDeDias(jornadas, rotativos, dias);
   // Con esquema fijo y sin la cantidad cargada, el tope es 0: todos los días quedan bloqueados.
   const sinCantidad = !rotativos && !jornadas;
+  /*
+    CUÁNTOS DÍAS POR SEMANA SE PUEDEN CARGAR: LO DICE EL CONTRATO.
+
+    El campo decía «Máximo 7» a secas y no era cierto: un «5x7» no admite seis, y quien cargaba seis
+    se los veía recortar sin saber por qué. El 7 es el tope de la semana, el que rige cuando el tipo
+    de contrato no fija ninguno — el valor por defecto, no la regla.
+
+    Va en un ⓘ y no en el renglón de ayuda porque es una explicación de dos oraciones que se lee una
+    vez; debajo del campo, en cada pantalla, era otro párrafo fijo compitiendo con el error.
+  */
+  const tope = limiteContrato != null && limiteContrato > 0 ? Math.min(7, Math.trunc(limiteContrato)) : 7;
 
   const etiqueta = mobile ? "text-xs font-bold text-slate-500 uppercase tracking-wider" : "block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1";
   const input = mobile ? "w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" : "input-field w-full";
@@ -147,15 +169,26 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
   return (
     <div className={`${marco} ${className}`}>
       <div className={`space-y-1.5 ${mobile ? "sm:max-w-[10rem]" : ""}`}>
-        <label className={etiqueta}>Días por semana</label>
+        <div className="flex items-center gap-1.5">
+          <label className={etiqueta}>Días por semana</label>
+          <button type="button" onClick={() => setVerTope((v) => !v)} aria-expanded={verTope} title="¿Cuál es el máximo?" aria-label="Cuál es el máximo de días por semana" className="text-slate-400 transition-colors hover:text-blue-500">
+            <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {verTope && (
+          <p className={`${ayuda} rounded-lg border border-blue-200 bg-blue-50/60 p-2 leading-relaxed dark:border-blue-900 dark:bg-blue-950/30`}>
+            Cuántos días de la semana trabaja. El máximo lo fija el <strong>tipo de contrato</strong>:{" "}
+            {limiteContrato != null && limiteContrato > 0 ? <>el elegido admite hasta {tope} por semana.</> : <>el elegido no fija ninguno, así que el tope es 7, la semana entera.</>}
+          </p>
+        )}
         <input
           type="number"
           min={1}
-          max={7}
+          max={tope}
           step={1}
           value={jornadas || ""}
           onChange={(e) => {
-            const n = Math.max(0, Math.min(7, Math.trunc(Number(e.target.value)) || 0));
+            const n = Math.max(0, Math.min(tope, Math.trunc(Number(e.target.value)) || 0));
             onJornadas(n);
             /*
               Bajar la cantidad recorta lo que ya estaba marcado, y solo en esquema fijo.
@@ -170,7 +203,7 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
           placeholder="Ej: 5"
           aria-invalid={!!errorDiasPorSemana}
         />
-        {errorDiasPorSemana ? <p className={error}>{errorDiasPorSemana}</p> : <p className={ayuda}>Cuántos días de la semana trabaja. Máximo 7.</p>}
+        {errorDiasPorSemana && <p className={error}>{errorDiasPorSemana}</p>}
       </div>
 
       {/*
@@ -203,7 +236,8 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
           </label>
         </div>
 
-        <p className={ayuda}>{rotativos ? "Marcá entre qué días rota. Pueden ser más que los días que trabaja." : "Marcá los días fijos que trabaja."}</p>
+        {/* En rotativo se aclara qué significan los días marcados; en fijo, los chips y la cuenta de abajo alcanzan. */}
+        {rotativos && <p className={ayuda}>Marcá entre qué días rota. Pueden ser más que los días que trabaja.</p>}
 
         <div className="flex flex-wrap gap-1.5">
           {DIAS_SEMANA.map((d) => {
