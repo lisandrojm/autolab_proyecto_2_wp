@@ -158,6 +158,20 @@ export const formatFechaSolicitud = (dateStr?: string | null) => {
   }
 };
 
+/*
+  LAS FECHAS DEL CONTRATO SON DÍAS DE CALENDARIO, no instantes.
+
+  `startDate`/`dueDate` llegan como "2026-09-19" o "2026-09-19T00:00:00.000Z": las dos son medianoche
+  UTC, y pasadas por `new Date` en Argentina (UTC-3) caen el día anterior a las 21 h. La tabla decía
+  «18 sept» para un contrato que arranca el 19, mientras el detalle —que corta los diez primeros
+  caracteres— decía 19/09. Se arma la fecha con el día escrito, sin zona horaria de por medio.
+*/
+export const formatDiaSolicitud = (dateStr?: string | null) => {
+  const [y, m, d] = String(dateStr || "").slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return formatFechaSolicitud(dateStr);
+  return new Date(y, m - 1, d).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+};
+
 interface SolicitudesTableProps {
   solicitudes: SolicitudVista[];
   catalogos: ReturnType<typeof useCatalogosDeSolicitudes>;
@@ -306,9 +320,9 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
                   <td className="px-4 py-3">
                     <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                      <span>{formatFechaSolicitud(s.startDate)}</span>
+                      <span>{formatDiaSolicitud(s.startDate)}</span>
                       <span className="mx-1 text-gray-300">→</span>
-                      <span>{s.dueDate ? formatFechaSolicitud(s.dueDate) : "Indef."}</span>
+                      <span>{s.dueDate ? formatDiaSolicitud(s.dueDate) : "Indef."}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
