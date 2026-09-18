@@ -46,31 +46,51 @@ export function elegirContratoDeSolicitud<T extends { c: any }>(todos: T[], para
   );
 }
 
-/**
- * EL CONTRATO QUE CREÓ UNA SOLICITUD AL APROBARSE, para borrarlo junto con ella.
- *
- * Se busca en la persona que recibió el contrato y en los proyectos que pidió la solicitud:
- *   1. por `solicitudId`, que la aprobación deja anotado en el contrato — es exacto;
- *   2. si no hay (contratos aprobados antes de ese campo), por las fechas que pidió la solicitud:
- *      primero alta y baja, después sólo el alta. Cada criterio vale SOLO si da un único contrato
- *      que no pertenezca a otra solicitud: si hay dos iguales, no se adivina cuál borrar.
- *
- * Si no aparece —p. ej. porque al aprobar se cambiaron las fechas— no se borra nada y se dice.
- */
-export async function borrarContratoDeSolicitud(params: {
+/** Dónde buscar el contrato de una solicitud: quién lo recibió y qué se pidió. */
+export interface DatosDeSolicitud {
   solicitudId: string;
   personaId: string;
   projectIds: unknown[];
   startDate?: unknown;
   dueDate?: unknown;
-}): Promise<{ borrado: boolean; proyecto?: string; desde?: string; hasta?: string }> {
+}
+
+/**
+ * Los datos de búsqueda a partir del documento de la solicitud (con `_id` y `metadata`).
+ *
+ * El contrato va en la PERSONA: si la solicitud apunta a alguien que ya existía (`solicitudUserId`),
+ * es esa; si no, al aprobarla la solicitud se convirtió en la persona misma.
+ */
+export function datosDeSolicitud(solicitud: any): DatosDeSolicitud {
+  const m = solicitud?.metadata || {};
+  const id = String(solicitud?._id || "");
+  const apuntaAOtraPersona = !!m.solicitudUserId && String(m.solicitudUserId) !== id;
+  return { solicitudId: id, personaId: apuntaAOtraPersona ? String(m.solicitudUserId) : id, projectIds: m.projectIds || [], startDate: m.startDate, dueDate: m.dueDate };
+}
+
+/**
+ * EL CONTRATO QUE CREÓ UNA SOLICITUD AL APROBARSE: para editarlo desde la solicitud o borrarlo con ella.
+ *
+ * Se busca en la persona que recibió el contrato y en los proyectos que pidió la solicitud:
+ *   1. por `solicitudId`, que la aprobación deja anotado en el contrato — es exacto;
+ *   2. si no hay (contratos aprobados antes de ese campo), por las fechas que pidió la solicitud:
+ *      primero alta y baja, después sólo el alta. Cada criterio vale SOLO si da un único contrato
+ *      que no pertenezca a otra solicitud: si hay dos iguales, no se adivina cuál es.
+ *
+ * `null` si no aparece —p. ej. porque al aprobar se cambiaron las fechas—.
+ */
+export async function buscarContratoDeSolicitud(params: DatosDeSolicitud): Promise<{ up: any; c: any; idx: number } | null> {
   const projectIds = (params.projectIds || []).map((p: any) => String(p?._id ?? p)).filter((id) => Types.ObjectId.isValid(id));
-  if (!Types.ObjectId.isValid(params.personaId) || projectIds.length === 0) return { borrado: false };
+  if (!Types.ObjectId.isValid(params.personaId) || projectIds.length === 0) return null;
 
   const asignaciones: any[] = await UserProject.find({ userId: params.personaId, projectId: { $in: projectIds } });
   const todos = asignaciones.flatMap((up) => (up.contracts || []).map((c: any, idx: number) => ({ up, c, idx })));
+  return elegirContratoDeSolicitud(todos, params);
+}
 
-  const elegido = elegirContratoDeSolicitud(todos, params);
+/** Borra el contrato de la solicitud, si aparece. Si no, no toca nada y lo dice. */
+export async function borrarContratoDeSolicitud(params: DatosDeSolicitud): Promise<{ borrado: boolean; proyecto?: string; desde?: string; hasta?: string }> {
+  const elegido = await buscarContratoDeSolicitud(params);
   if (!elegido) return { borrado: false };
 
   const detalle = { proyecto: String(elegido.up.nombre_proyecto || ""), desde: dia(elegido.c.fecha_alta_contrato), hasta: dia(elegido.c.fecha_baja_contrato) };

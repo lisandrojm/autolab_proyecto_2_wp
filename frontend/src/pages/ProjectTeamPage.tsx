@@ -248,7 +248,13 @@ export interface AprobacionEnModal {
   projectId: string;
   /** La solicitud a aprobar. Es también el id del usuario-solicitud, que es lo que el wizard recibe. */
   solicitudId: string;
+  /**
+   * Una solicitud YA APROBADA no se aprueba de nuevo: se corrige el contrato que creó. Con esto el
+   * modal abre ESE contrato en el mismo formulario, en vez de arrancar una aprobación.
+   */
+  editarContrato?: { userId: string; contractIndex: number };
   onCerrar: () => void;
+  /** Se guardó: la solicitud quedó aprobada, o el contrato corregido. */
   onAprobada: () => void;
 }
 
@@ -887,7 +893,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     pasada, el re-sincronizado por cambio de tipo nunca corría. El contrato nuevo quedaba guardado
     con el estado del viejo, sin «Pedido de ARCA», y no aparecía en Contratos › Alta temprana de ARCA.
   */
-  const esAltaNueva = !!approvingSolicitudId || !allUsers.some((m) => m._id === selectedUserForWizard?._id);
+  /*
+    Y EDITAR UN CONTRATO PUNTUAL NUNCA ES UN ALTA: tiene índice, así que existe. Sin esto, abrirlo antes
+    de que cargue el equipo (desde Contratos o desde una solicitud aprobada) lo daba por nuevo y le
+    pisaba el estado con el impositivo de su tipo, como si el trámite no hubiera avanzado.
+  */
+  const esAltaNueva = !!approvingSolicitudId || (editingContractIndex === null && !allUsers.some((m) => m._id === selectedUserForWizard?._id));
 
   // Un estado impositivo solo puede estar vinculado a una Plantilla (lo exige el ABM de Estados),
   // así que a lo sumo hay uno por Tipo de contrato/Plantilla elegido: no hace falta que el usuario
@@ -1590,7 +1601,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   useEffect(() => {
     if (!soloAprobacion || wizardAutoAbierto.current || !project) return;
     wizardAutoAbierto.current = true;
-    void handleOpenWizard(soloAprobacion.solicitudId, undefined, undefined, soloAprobacion.solicitudId);
+    const { editarContrato } = soloAprobacion;
+    if (editarContrato) void handleOpenWizard(editarContrato.userId, undefined, editarContrato.contractIndex);
+    else void handleOpenWizard(soloAprobacion.solicitudId, undefined, undefined, soloAprobacion.solicitudId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soloAprobacion, project]);
 
@@ -1972,7 +1985,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       anterior, o «Activo») y el contrato no caía en la bandeja de ARCA. Es la misma regla que
       `esAltaNueva`, evaluada con la persona que se acaba de resolver.
     */
-    const esContratoNuevo = !!approveSolicitudId || !allUsers.some((m) => m._id === user._id);
+    const esContratoNuevo = !!approveSolicitudId || (typeof contractIndex !== "number" && !contractOverride && !allUsers.some((m) => m._id === user._id));
     const estadoDelContratoNuevo = esContratoNuevo ? estadoImpositivoDePlantilla(allEstados, deLaSolicitud.contrato_frame_id ?? initialContratoFrameId) : undefined;
 
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
@@ -2183,7 +2196,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       setRolFrameAgregado(null);
       setRolFrameBusqueda("");
       setShowAddModal(false);
-      // Modo «sólo aprobación»: la solicitud quedó aprobada y quien abrió el modal recarga su lista.
+      // Modo «sólo aprobación»: la solicitud quedó aprobada (o su contrato corregido) y quien abrió el modal recarga su lista.
       soloAprobacion?.onAprobada();
     } catch (error: any) {
       console.error("Assign member error:", error);
@@ -4979,7 +4992,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               />
             )}
 
-            {activeTab === "solicitudes" && project && <TeamSolicitudesTab projectId={projectId!} project={project} refreshSignal={solicitudesRefresh} onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)} />}
+            {activeTab === "solicitudes" && project && <TeamSolicitudesTab
+                projectId={projectId!}
+                project={project}
+                refreshSignal={solicitudesRefresh}
+                onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)}
+                // El contrato de una aprobada puede estar en otro de los proyectos que pidió: ahí se va a ese equipo.
+                onEditarContrato={(u) => (u.projectId === projectId ? handleOpenWizard(u.userId, undefined, u.contractIndex) : navigate(`/projects/${u.projectId}/team`, { state: { openWizardFor: { userId: u.userId, contractIndex: u.contractIndex } } }))}
+              />}
           </div>
 
           {modalesDelProyecto}

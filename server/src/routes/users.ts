@@ -14,7 +14,7 @@ import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
-import { borrarContratoDeSolicitud } from "../services/contratoDeSolicitud.js";
+import { borrarContratoDeSolicitud, buscarContratoDeSolicitud, datosDeSolicitud } from "../services/contratoDeSolicitud.js";
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { Area } from "../models/Area.js";
@@ -43,7 +43,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requireAnyPermission, requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
-import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia.js";
+import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { claveEstado } from "../utils/estadoClave.js";
 
 const router = Router();
@@ -816,6 +816,28 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
           .filter(Boolean)
       : [];
 
+    /*
+      LAS BANDEJAS (`estados`) LISTAN CADA CONTRATO QUE ESTÁ EN ELLAS, no sólo el que rige.
+
+      El listado general muestra una fila por persona y proyecto: su contrato de hoy. Pero una bandeja
+      como «Alta temprana de ARCA» es una lista de trámites pendientes, y cada contrato tiene el suyo.
+      Con contratos por jornada es lo normal: la persona trabaja hoy con un contrato y ya tiene
+      aprobado el de mañana, o se le aprobó uno de hace dos semanas. Mirando sólo el que rige, esos
+      quedaban tapados —estaban en «Pedido de ARCA» y no aparecían en ningún lado—.
+
+      Además del que rige se suma entonces todo contrato de la persona en ese proyecto que esté en la
+      bandeja y haya arrancado hace poco o arranque más adelante (`DIAS_ATRAS_BANDEJA`). La ventana
+      deja afuera los contratos viejos que quedaron en un estado de trámite sin que nadie lo cerrara:
+      ésos no son trabajo pendiente y, sumados al TXT de ARCA, darían altas de gente que ya no está.
+    */
+    const DIAS_ATRAS_BANDEJA = 90;
+    const desdeBandeja = (() => {
+      const d = new Date(`${hoyArgentina()}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() - DIAS_ATRAS_BANDEJA);
+      return d.toISOString().slice(0, 10);
+    })();
+    const enBandeja = (c: any) => estadosFiltro.includes(estadoCanonico(String(c?.nombre_estado_empleado ?? "")));
+
     // Filas "livianas": lo mínimo para filtrar, ordenar y paginar. El contrato completo se resuelve
     // después, ya recortado a la página.
     const rows: any[] = [];
@@ -829,25 +851,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       const contratoActivo: any = getContratoActivo(contratos);
       if (!contratoActivo) continue;
 
+      // Lo que es de la PERSONA descarta la asignación entera; lo del CONTRATO, sólo ese contrato.
       if (metadataActivo !== undefined && !!user.metadata?.activo !== metadataActivo) continue;
-
-      if (vigencia) {
-        const vigente = esContratoVigente(contratoActivo);
-        if (vigencia === "vigente" ? !vigente : vigente) continue;
-      }
-
-      if (tipoContrato && String(contratoActivo.nombre_contrato ?? "") !== tipoContrato) continue;
-
-      if (estadoContrato && estadoCanonico(String(contratoActivo.nombre_estado_empleado ?? "")) !== estadoCanonico(estadoContrato)) continue;
-
-      if (estadosFiltro.length > 0 && !estadosFiltro.includes(estadoCanonico(String(contratoActivo.nombre_estado_empleado ?? "")))) continue;
-
-      if (reemplazo) {
-        const esReemplazo = !!contratoActivo.reemplazo;
-        if (reemplazo === "con" ? !esReemplazo : esReemplazo) continue;
-      }
-
-      if (empresaContratoId && String(contratoActivo.empresaContratoId ?? "") !== empresaContratoId) continue;
 
       if (roleFilterRegex && !(user.roles || []).some((r: any) => roleFilterRegex.test(String(r?.name || "")))) continue;
 
@@ -857,10 +862,32 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         if (permisoExcluido && permisos.has(permisoExcluido)) continue;
       }
 
+      const candidatosDeLaAsignacion: any[] =
+        estadosFiltro.length > 0
+          ? contratos.filter((c) => enBandeja(c) && (c === contratoActivo || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
+          : [contratoActivo];
+
+      for (const contrato of candidatosDeLaAsignacion) {
+      if (vigencia) {
+        const vigente = esContratoVigente(contrato);
+        if (vigencia === "vigente" ? !vigente : vigente) continue;
+      }
+
+      if (tipoContrato && String(contrato.nombre_contrato ?? "") !== tipoContrato) continue;
+
+      if (estadoContrato && estadoCanonico(String(contrato.nombre_estado_empleado ?? "")) !== estadoCanonico(estadoContrato)) continue;
+
+      if (reemplazo) {
+        const esReemplazo = !!contrato.reemplazo;
+        if (reemplazo === "con" ? !esReemplazo : esReemplazo) continue;
+      }
+
+      if (empresaContratoId && String(contrato.empresaContratoId ?? "") !== empresaContratoId) continue;
+
       if (searchRegex) {
         const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim();
-        const candidatos = [nombreCompleto, user.email, project.name, m.nombre_rol_frame, contratoActivo.nombre_contrato];
-        if (!candidatos.some((c) => c && searchRegex.test(String(c)))) continue;
+        const textos = [nombreCompleto, user.email, project.name, m.nombre_rol_frame, contrato.nombre_contrato];
+        if (!textos.some((c) => c && searchRegex.test(String(c)))) continue;
       }
 
       const clientId = project.clientId ? String(project.clientId?._id || project.clientId) : "";
@@ -882,8 +909,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         projectName: project.name || "",
         nombreRolFrame: m.nombre_rol_frame || "",
         contractsInProject: contratos.length,
-        contractIndex: contratos.indexOf(contratoActivo),
-        // Los campos del contrato activo se completan en la FASE 2 (solo para la página devuelta).
+        contractIndex: contratos.indexOf(contrato),
+        // Los campos del contrato se completan en la FASE 2 (solo para la página devuelta).
         contratoEmpresas: empresasPorProyecto.get(String(project._id))?.contratoEmpresas || [],
         releaseEmpresas: empresasPorProyecto.get(String(project._id))?.releaseEmpresas || [],
         // Datos para el chequeo de completitud AFIP (se resuelven contra los catálogos en el front).
@@ -891,10 +918,13 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // Declaración explícita de "no tiene CUIT/CUIL argentino" (extranjeros): la usa la
         // pestaña "Sin CUIT" de Gestión de Contratos para separarlos de los trámites de AFIP.
         sinCuit: user.metadata?.sinCuit === true,
+        // Sólo para ordenar: dos contratos de la misma persona quedan juntos y por fecha.
+        _alta: fechaISO(contrato.fecha_alta_contrato),
       });
+      }
     }
 
-    rows.sort((a, b) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }));
+    rows.sort((a, b) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }) || a.projectName.localeCompare(b.projectName, "es") || String(a._alta).localeCompare(String(b._alta)));
 
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Number(req.query.limit) || 25);
@@ -907,9 +937,22 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     // quien tiene 146), y de ahí se usaba uno: eran 8,6 s para 30 filas. El índice ya lo resolvió la
     // FASE 1, así que se le pide a Mongo justo ese elemento con un $switch por membership.
     const tFase2 = Date.now();
-    const contratoActivoPorMembership = new Map<string, any>();
+    /*
+      Clave `asignación:índice`, no sólo la asignación: en las bandejas una misma asignación puede
+      traer varias filas (ver `DIAS_ATRAS_BANDEJA`). El $switch de abajo resuelve UN índice por
+      asignación, así que va con la primera fila de cada una; las demás —pocas: son los contratos que
+      no rigen hoy— se piden aparte, enteras.
+    */
+    const claveFila = (id: string, idx: number) => `${id}:${idx}`;
+    const contratoPorFila = new Map<string, any>();
+    const indicePrincipal = new Map<string, number>();
+    const filasExtra: { id: string; idx: number }[] = [];
+    for (const r of pageRows) {
+      if (!indicePrincipal.has(r._id)) indicePrincipal.set(r._id, Number(r.contractIndex) || 0);
+      else filasExtra.push({ id: r._id, idx: Number(r.contractIndex) || 0 });
+    }
     if (pageRows.length > 0) {
-      const ids = pageRows.map((r) => new Types.ObjectId(r._id));
+      const ids = [...indicePrincipal.keys()].map((id) => new Types.ObjectId(id));
 
       /*
        * EL $switch VA POR ÍNDICE DE CONTRATO, NO POR FILA.
@@ -927,11 +970,10 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
        * El índice 0 no necesita rama: ya es el `default`.
        */
       const idsPorIndice = new Map<number, Types.ObjectId[]>();
-      for (const r of pageRows) {
-        const idx = Number(r.contractIndex) || 0;
+      for (const [id, idx] of indicePrincipal) {
         if (idx === 0) continue;
         const lista = idsPorIndice.get(idx) || [];
-        lista.push(new Types.ObjectId(r._id));
+        lista.push(new Types.ObjectId(id));
         idsPorIndice.set(idx, lista);
       }
       const ramas = [...idsPorIndice.entries()].map(([idx, lista]) => ({ case: { $in: ["$_id", lista] }, then: idx }));
@@ -945,11 +987,19 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
           },
         },
       ]);
-      docs.forEach((d: any) => contratoActivoPorMembership.set(String(d._id), d.c || {}));
+      docs.forEach((d: any) => contratoPorFila.set(claveFila(String(d._id), indicePrincipal.get(String(d._id)) ?? 0), d.c || {}));
+
+      if (filasExtra.length > 0) {
+        const extras: any[] = await UserProject.find({ _id: { $in: [...new Set(filasExtra.map((f) => f.id))].map((id) => new Types.ObjectId(id)) } })
+          .select("contracts")
+          .lean();
+        const porId = new Map(extras.map((d: any) => [String(d._id), d.contracts || []]));
+        filasExtra.forEach((f) => contratoPorFila.set(claveFila(f.id, f.idx), porId.get(f.id)?.[f.idx] || {}));
+      }
     }
 
-    const fullRows = pageRows.map((r) => {
-      const c: any = contratoActivoPorMembership.get(r._id) || {};
+    const fullRows = pageRows.map(({ _alta, ...r }) => {
+      const c: any = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
       return {
         ...r,
         nombre_contrato: c.nombre_contrato || "",
@@ -2247,7 +2297,7 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
     if (m.solicitudStatus === "aprobada") {
       const apuntaAOtraPersona = !!m.solicitudUserId && String(m.solicitudUserId) !== String(id);
       // El contrato primero: si falla, la solicitud sigue ahí y se puede reintentar.
-      contrato = await borrarContratoDeSolicitud({ solicitudId: String(id), personaId: apuntaAOtraPersona ? String(m.solicitudUserId) : String(id), projectIds: m.projectIds || [], startDate: m.startDate, dueDate: m.dueDate });
+      contrato = await borrarContratoDeSolicitud(datosDeSolicitud(solicitud));
       const esLaPersona = !apuntaAOtraPersona || !!(await UserProject.exists({ userId: id }));
       if (esLaPersona) {
         await Promise.all([
@@ -2283,6 +2333,36 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
   } catch (error) {
     console.error("Delete solicitud error:", error);
     res.status(500).json({ error: "No se pudo borrar la solicitud." });
+  }
+});
+
+/*
+  DÓNDE ESTÁ EL CONTRATO DE UNA SOLICITUD APROBADA, para editarlo desde la solicitud.
+
+  Una aprobada ya no se corrige como pedido: lo que hay que corregir es el contrato que creó. Esto dice
+  en qué proyecto, de quién y en qué posición está, y la pantalla abre ahí el mismo formulario del
+  equipo. Se busca igual que al borrarla (`buscarContratoDeSolicitud`).
+*/
+router.get("/:id/solicitud/contrato", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const solicitud: any = await User.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).select("metadata.solicitudStatus metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate").lean();
+    if (!solicitud) {
+      res.status(404).json({ error: "Solicitud no encontrada" });
+      return;
+    }
+    if (solicitud.metadata?.solicitudStatus !== "aprobada") {
+      res.status(400).json({ error: "Sólo una solicitud aprobada tiene contrato." });
+      return;
+    }
+    const encontrado = await buscarContratoDeSolicitud(datosDeSolicitud(solicitud));
+    if (!encontrado) {
+      res.status(404).json({ error: "No se encontró el contrato que generó esta solicitud: puede que al aprobarla se hayan cambiado las fechas, o que ya se haya borrado. Buscalo en el equipo del proyecto." });
+      return;
+    }
+    res.json({ projectId: String(encontrado.up.projectId), userId: String(encontrado.up.userId), contractIndex: encontrado.idx });
+  } catch (error) {
+    console.error("Get solicitud contrato error:", error);
+    res.status(500).json({ error: "No se pudo buscar el contrato de la solicitud." });
   }
 });
 

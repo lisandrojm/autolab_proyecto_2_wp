@@ -45,6 +45,8 @@ const conveniosApi = createSimpleCatalogApi('/convenios');
  * tres pestañas de una.
  */
 const CONTRACTS_OVERVIEW_CACHE = 'contracts-overview:';
+/** Clave de los contratos en el estado de envío de documentación (pestaña Generar Documentos). */
+const claveCacheEnvio = (estado: string) => `${CONTRACTS_OVERVIEW_CACHE}envio:${estado}`;
 
 const FILAS_POR_PAGINA = 25;
 
@@ -3585,11 +3587,22 @@ export const ContractBulkFirmaTab: React.FC<{
 
   // Mismo caché compartido que las otras pestañas de Gestión (ver CONTRACTS_OVERVIEW_CACHE):
   // volver acá desde otra sub-pestaña no repite la consulta. `load(true)` fuerza el refresco.
+  /*
+    SE PIDEN LOS CONTRATOS DEL ESTADO DE ENVÍO, no el padrón entero.
+
+    Traía todos (una fila por persona y proyecto, con el contrato que rige hoy) y filtraba acá. Así un
+    contrato que no es el de hoy —el de la jornada de mañana, uno aprobado tarde— salía de la bandeja
+    de ARCA y no llegaba nunca a esta: pedidos por estado, el server trae cada contrato que esté en él
+    (ver `DIAS_ATRAS_BANDEJA` en `contracts-overview`). Es además la misma consulta que usa el
+    contador de esta pestaña, así que el número y la lista no pueden discrepar.
+  */
   const load = useCallback((force = false) => {
     if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
     setLoading(true);
-    return Promise.all([cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}todos`, () => usersAPI.listContractsOverview({ limit: 5000 })), firmaDigitalAPI.config()])
-      .then(([res, cfg]) => {
+    return cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config())
+      .then(async (cfg) => {
+        const estado = cfg?.estadoEnvioDocNombre || '';
+        const res = estado ? await cachedFetch(claveCacheEnvio(estado), () => usersAPI.listContractsOverview({ limit: 5000, estados: [estado] })) : { rows: [] as ContractOverviewRow[] };
         setRows(res.rows);
         setConfig(cfg);
       })
@@ -3609,13 +3622,13 @@ export const ContractBulkFirmaTab: React.FC<{
       if (!patch) return load(true);
       const esLaFila = (r: ContractOverviewRow) => r._id === record._id && r.contractIndex === record.contractIndex;
       setRows((prev) => prev.map((r) => (esLaFila(r) ? { ...r, ...patch } : r)));
-      updateRefCache<{ rows: ContractOverviewRow[] }>(`${CONTRACTS_OVERVIEW_CACHE}todos`, (data) => ({
+      if (config?.estadoEnvioDocNombre) updateRefCache<{ rows: ContractOverviewRow[] }>(claveCacheEnvio(config.estadoEnvioDocNombre), (data) => ({
         ...data,
         rows: (data.rows || []).map((r) => (esLaFila(r) ? { ...r, ...patch } : r)),
       }));
       return Promise.resolve();
     },
-    [load],
+    [load, config],
   );
 
   // Trámite impositivo de ORIGEN del contrato (por su tipo/plantilla, no por el estado actual —

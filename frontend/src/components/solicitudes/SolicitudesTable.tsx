@@ -197,13 +197,15 @@ interface SolicitudesTableProps {
   onRechazar: (s: SolicitudVista) => void;
   onReabrir: (s: SolicitudVista) => void;
   onEliminar: (s: SolicitudVista) => void;
+  /** Corrige el contrato que creó una solicitud APROBADA. Sin esto, la fila aprobada sólo dice «Ya aprobada». */
+  onEditarAprobada?: (s: SolicitudVista) => void;
   /** Texto del botón de aprobar; en la vista global dice a qué proyecto lleva. */
   tituloAprobar?: (s: SolicitudVista) => string;
   /** Abre el detalle completo de la solicitud. Sin esto la fila no es clickeable. */
   onVerDetalle?: (s: SolicitudVista) => void;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, tituloAprobar, onVerDetalle }) => {
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle }) => {
   const { resolverRolFrame, resolverTramite } = catalogos;
 
   return (
@@ -373,7 +375,18 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                           </button>
                         </>
                       ) : s.estado === "aprobada" ? (
-                        <span className="text-xs text-gray-400 italic">Ya aprobada</span>
+                        /*
+                          EDITAR UNA APROBADA ES CORREGIR SU CONTRATO, no el pedido: la solicitud ya
+                          cumplió su función y cambiarla no movería nada. Abre el contrato que creó en
+                          el mismo formulario con que se aprobó.
+                        */
+                        onEditarAprobada ? (
+                          <button onClick={() => onEditarAprobada(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors" title="Editar el contrato que se creó al aprobarla">
+                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Ya aprobada</span>
+                        )
                       ) : (
                         <button onClick={() => onReabrir(s)} className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Volver a dejarla pendiente">
                           <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
@@ -394,7 +407,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         también el contrato que creó al aprobarse (ver `DELETE /users/:id/solicitud`).
                       */}
                       <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title={s.estado === "aprobada" ? "Eliminar la solicitud y su contrato" : "Eliminar definitivamente"}>
-                        <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                       </button>
                     </div>
                   </td>

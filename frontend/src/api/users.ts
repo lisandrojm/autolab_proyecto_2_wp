@@ -849,6 +849,15 @@ class UsersAPI {
     emitUsersChanged("delete", id);
     return data || {};
   }
+
+  /**
+   * Dónde está el contrato que creó una solicitud APROBADA, para abrirlo y corregirlo. Si no se
+   * encuentra, el server contesta 404 con el motivo.
+   */
+  async contratoDeSolicitud(id: string): Promise<{ projectId: string; userId: string; contractIndex: number }> {
+    const { data } = await axios.get(`/users/${id}/solicitud/contrato`, { headers: this.getHeaders() });
+    return data;
+  }
 }
 
 /** Qué pasó con el contrato al eliminar una solicitud APROBADA. Sin `contrato`: no era una aprobada. */

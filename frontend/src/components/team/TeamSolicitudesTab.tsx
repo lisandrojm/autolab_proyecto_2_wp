@@ -14,6 +14,8 @@ interface TeamSolicitudesTabProps {
   onApprove: (user: User) => void;
   /** Cambia para forzar recarga de la lista (p.ej. tras aprobar desde el wizard). */
   refreshSignal?: number;
+  /** Abre el contrato que creó una solicitud APROBADA, para corregirlo. */
+  onEditarContrato?: (ubicacion: { projectId: string; userId: string; contractIndex: number }) => void;
 }
 
 /**
@@ -24,7 +26,7 @@ interface TeamSolicitudesTabProps {
  * Solicitudes. Acá solo queda lo propio de la pestaña: traer las solicitudes, quedarse con las de
  * este proyecto y entregar el `User` completo al wizard que las aprueba.
  */
-export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectId, project, onApprove, refreshSignal }) => {
+export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectId, project, onApprove, refreshSignal, onEditarContrato }) => {
   const [solicitudes, setSolicitudes] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -102,6 +104,18 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
     onApprove(original);
   };
 
+  /** Editar una aprobada es corregir el contrato que creó: el server dice dónde está. */
+  const editarAprobada = async (s: SolicitudVista) => {
+    if (!onEditarContrato) return;
+    try {
+      const ubicacion = await usersAPI.contratoDeSolicitud(s._id);
+      setRevisando(null);
+      onEditarContrato(ubicacion);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo abrir el contrato", e?.response?.data?.error || "Probá de nuevo en un momento.");
+    }
+  };
+
   /** Borrado definitivo: solo desde el admin, para depurar el listado. */
   const handleDelete = async (s: SolicitudVista) => {
     const result = await sweetAlert.confirm("¿Eliminar solicitud?", textoEliminarSolicitud(s), "Sí, eliminar");
@@ -160,6 +174,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
           onRechazar={pedirMotivoYRechazar}
           onReabrir={(s) => cambiarEstado(s, "pendiente")}
           onEliminar={handleDelete}
+          onEditarAprobada={onEditarContrato ? editarAprobada : undefined}
         />
       )}
 

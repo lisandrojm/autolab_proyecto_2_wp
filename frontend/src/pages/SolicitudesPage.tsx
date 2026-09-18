@@ -39,7 +39,7 @@ const CLAVE_AYUDA = "solicitudes" as const;
 export const SolicitudesPage: React.FC = () => {
   const catalogos = useCatalogosDeSolicitudes();
   /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
-  const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string } | null>(null);
+  const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number } } | null>(null);
   /** La ventana de carga masiva: bajar la plantilla, subirla y crear la tanda. */
   const [cargaMasivaAbierta, setCargaMasivaAbierta] = useState(false);
   /** La solicitud que se está revisando: el detalle completo, antes de decidir. */
@@ -156,6 +156,22 @@ export const SolicitudesPage: React.FC = () => {
       cargar(page);
     } catch (error: any) {
       sweetAlert.error("Error", error.response?.data?.error || "No se pudo eliminar la solicitud.");
+    }
+  };
+
+  /**
+   * EDITAR UNA APROBADA ES CORREGIR EL CONTRATO QUE CREÓ, en el mismo modal con que se aprobó.
+   *
+   * El server dice dónde está (proyecto, persona, posición); si no lo encuentra —p. ej. porque al
+   * aprobarla se cambiaron las fechas— contesta con el motivo y se muestra tal cual.
+   */
+  const editarAprobada = async (s: SolicitudVista) => {
+    try {
+      const ubicacion = await usersAPI.contratoDeSolicitud(s._id);
+      setRevisando(null);
+      setAprobando({ projectId: ubicacion.projectId, solicitudId: s._id, editarContrato: { userId: ubicacion.userId, contractIndex: ubicacion.contractIndex } });
+    } catch (e: any) {
+      sweetAlert.error("No se pudo abrir el contrato", e?.response?.data?.error || "Probá de nuevo en un momento.");
     }
   };
 
@@ -283,6 +299,7 @@ export const SolicitudesPage: React.FC = () => {
             onRechazar={pedirMotivoYRechazar}
             onReabrir={(s) => cambiarEstado(s, "pendiente")}
             onEliminar={eliminar}
+            onEditarAprobada={editarAprobada}
           />
 
           {/* Revisar acá; aprobar sigue llevando al equipo del proyecto, que es donde se carga el contrato. */}
