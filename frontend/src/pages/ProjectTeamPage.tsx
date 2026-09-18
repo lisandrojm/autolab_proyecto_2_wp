@@ -34,7 +34,7 @@ import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/E
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
-import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
+import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
 import { TipoContratoSelect } from "../components/contratos/TipoContratoSelect";
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
 import { coordinaAreas, PROJECT_COORDINATOR } from "../utils/permisosMobile";
@@ -877,17 +877,24 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // `teamMembers` es un alias de `allUsers` (useMemo declarado más abajo); se usa `allUsers`
   // directo acá para no depender de una variable declarada después en el archivo.
-  const esAltaNueva = !allUsers.some((m) => m._id === selectedUserForWizard?._id);
+  /*
+    APROBAR UNA SOLICITUD ES SIEMPRE UN CONTRATO NUEVO, aunque la persona ya esté en el equipo.
+
+    El backend lo agrega al lado del anterior (`isUpdate: false`), así que su estado tiene que ser el
+    del arranque del circuito —el impositivo de su Tipo de Contrato—, igual que un alta. Antes, si la
+    persona ya era del equipo, el wizard entraba en modo «Configurar Miembro»: arrastraba el estado del
+    contrato ANTERIOR (p. ej. «Firmado») y, como la plantilla pedida solía ser la misma de la vez
+    pasada, el re-sincronizado por cambio de tipo nunca corría. El contrato nuevo quedaba guardado
+    con el estado del viejo, sin «Pedido de ARCA», y no aparecía en Contratos › Alta temprana de ARCA.
+  */
+  const esAltaNueva = !!approvingSolicitudId || !allUsers.some((m) => m._id === selectedUserForWizard?._id);
 
   // Un estado impositivo solo puede estar vinculado a una Plantilla (lo exige el ABM de Estados),
   // así que a lo sumo hay uno por Tipo de contrato/Plantilla elegido: no hace falta que el usuario
   // elija, se muestra directo. En "Agregar Miembro" el Estado SIEMPRE sale del Tipo de Contrato
   // elegido (no se elige a mano); en "Configurar Miembro" se elige de un select, que además incluye
   // este estado impositivo como una opción más (ver `estadosDisponibles`).
-  const estadoImpositivoAuto = useMemo(() => {
-    if (!wizardData.contrato_frame_id) return undefined;
-    return allEstados.find((e) => !!(e.data as any)?.esImpositivo && ((e.data as any)?.contratoFrameIds || []).some((id: string) => String(id) === String(wizardData.contrato_frame_id)));
-  }, [allEstados, wizardData.contrato_frame_id]);
+  const estadoImpositivoAuto = useMemo(() => estadoImpositivoDePlantilla(allEstados, wizardData.contrato_frame_id), [allEstados, wizardData.contrato_frame_id]);
 
   /**
    * Estados que se ofrecen en "Configurar Miembro" (edición): los del ABM vinculados al tipo de
@@ -1956,6 +1963,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           ...(metaSolicitud.empleado_id_reemplezado ? { empleado_id_reemplezado: String(metaSolicitud.empleado_id_reemplezado) } : {}),
         };
 
+    /*
+      UN CONTRATO NUEVO ARRANCA EN EL ESTADO IMPOSITIVO DE SU PLANTILLA, no en el del contrato anterior.
+
+      Se fija acá y no se deja sólo al efecto de `estadoImpositivoAuto`: ese efecto corre cuando cambia
+      la plantilla, y abrir el wizard con la MISMA que la vez anterior —aprobar dos solicitudes de
+      «Jornada» seguidas— no la cambia. El estado quedaba en `initialEstadoId` (el del contrato
+      anterior, o «Activo») y el contrato no caía en la bandeja de ARCA. Es la misma regla que
+      `esAltaNueva`, evaluada con la persona que se acaba de resolver.
+    */
+    const esContratoNuevo = !!approveSolicitudId || !allUsers.some((m) => m._id === user._id);
+    const estadoDelContratoNuevo = esContratoNuevo ? estadoImpositivoDePlantilla(allEstados, deLaSolicitud.contrato_frame_id ?? initialContratoFrameId) : undefined;
+
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
     setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || "").trim());
     setVerTodasDelConvenio(false);
@@ -1996,6 +2015,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       areaShiftAssignments: areaShiftAssignments,
       // Lo de la solicitud, último: es lo que pidió quien la cargó.
       ...deLaSolicitud,
+      ...(esContratoNuevo ? { estado_id: estadoDelContratoNuevo ? String(estadoDelContratoNuevo.data.id) : "" } : {}),
     });
   };
 

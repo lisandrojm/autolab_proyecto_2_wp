@@ -47,6 +47,13 @@ export const estadosImpositivos = (estados: InfoItem[]): InfoItem[] => estados.f
 export const estadoImpositivoPorTipo = (estados: InfoItem[], tipo: TipoImpositivo | "" | undefined): InfoItem | null => (tipo ? estados.find((e) => !!e.data?.esImpositivo && e.data?.tipoImpositivo === tipo) || null : null);
 
 /**
+ * El estado impositivo vinculado a una PLANTILLA: es el estado con el que arranca un contrato nuevo.
+ * A lo sumo hay uno por plantilla (lo exige el ABM de Estados). `undefined` = la plantilla no tiene.
+ */
+export const estadoImpositivoDePlantilla = (estados: InfoItem[], contratoFrameId: string | undefined): InfoItem | undefined =>
+  contratoFrameId ? estadosImpositivos(estados).find((e) => (e.data?.contratoFrameIds || []).some((id) => String(id) === String(contratoFrameId))) : undefined;
+
+/**
  * El trámite que declara un TIPO DE CONTRATO (el `Contrato`, no la Plantilla).
  *
  * El estado impositivo se vincula a la PLANTILLA (`contratoFrameIds`), no al tipo de contrato, así
