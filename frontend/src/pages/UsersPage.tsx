@@ -26,7 +26,9 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faCheck, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faCheck, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup, faFileSignature } from '@fortawesome/free-solid-svg-icons';
+import { RichTextViewer } from '../components/ui/RichTextEditor';
+import { terminosCondicionesAPI } from '../api/terminosCondiciones';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
@@ -190,6 +192,20 @@ export const UsersPage: React.FC = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
   const [viewActiveTab, setViewActiveTab] = useState<ModalTab>('general');
+  /** El texto de los términos que aceptó la persona de la ficha, en la versión exacta que aceptó. */
+  const [terminosLeidos, setTerminosLeidos] = useState<{ titulo: string; contenido: string; version: number; esLaActual: boolean } | null>(null);
+  const [cargandoTerminos, setCargandoTerminos] = useState(false);
+
+  const verTerminosAceptados = async (t: { terminosId: string; version: number }) => {
+    try {
+      setCargandoTerminos(true);
+      setTerminosLeidos(await terminosCondicionesAPI.version(String(t.terminosId), t.version));
+    } catch (e: any) {
+      sweetAlert.error('No se pudo abrir el texto', e?.response?.data?.error || 'Probá de nuevo en un momento.');
+    } finally {
+      setCargandoTerminos(false);
+    }
+  };
 
   const canManage = hasPermission('admin_users:view');
 
@@ -1494,6 +1510,47 @@ export const UsersPage: React.FC = () => {
                       );
                     })()}
                   </div>
+
+                  {/*
+                    TÉRMINOS Y CONDICIONES, sin condición: «no los aceptó» también es un dato. Se ve qué
+                    aceptó, qué versión, cuándo y desde dónde, y el texto exacto de esa versión aunque
+                    después se haya editado.
+                  */}
+                  <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                      <FontAwesomeIcon icon={faFileSignature} className="text-gray-300" />
+                      Términos y condiciones
+                    </label>
+                    {viewUser.metadata?.terminosAceptados ? (
+                      (() => {
+                        const t = viewUser.metadata.terminosAceptados;
+                        const cuando = new Date(t.aceptadoEl).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        return (
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                                <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500" />
+                                Aceptó «{t.titulo}»<span className="text-xs font-normal text-gray-500">· versión {t.version}</span>
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                El {cuando}
+                                {t.ip ? ` · desde la IP ${t.ip}` : ''}
+                              </p>
+                            </div>
+                            <button type="button" onClick={() => verTerminosAceptados(t)} disabled={cargandoTerminos} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2">
+                              <FontAwesomeIcon icon={cargandoTerminos ? faSpinner : faFileSignature} spin={cargandoTerminos} />
+                              Ver texto aceptado
+                            </button>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Sin aceptación registrada</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Se guarda cuando la persona se registra con un link y hay términos vigentes.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -2251,6 +2308,19 @@ export const UsersPage: React.FC = () => {
           </div>
         </InfoModal>
       )}
+
+      {/* El texto que aceptó, arriba de la ficha. */}
+      <InfoModal
+        isOpen={!!terminosLeidos}
+        onClose={() => setTerminosLeidos(null)}
+        title={terminosLeidos?.titulo || 'Términos y condiciones'}
+        subtitle={terminosLeidos ? `Versión ${terminosLeidos.version}${terminosLeidos.esLaActual ? '' : ' · después se editó: éste es el texto que aceptó'}` : undefined}
+        size="lg"
+        zIndex={120}
+        actions={[{ label: 'Cerrar', onClick: () => setTerminosLeidos(null), variant: 'primary' }]}
+      >
+        {terminosLeidos && <RichTextViewer html={terminosLeidos.contenido} className="text-sm text-gray-800 dark:text-gray-200" />}
+      </InfoModal>
 
       <UserFormModal
         isOpen={showModal}
