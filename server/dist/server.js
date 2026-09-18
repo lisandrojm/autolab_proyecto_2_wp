@@ -55,6 +55,7 @@ import { tiposEntidadFinancieraRoutes } from "./routes/tiposEntidadFinanciera.js
 import { obraSocialRoutes } from "./routes/obrasSociales.js";
 import { sindicatoRoutes } from "./routes/sindicatos.js";
 import { paisResidenciaRoutes } from "./routes/paisesResidencia.js";
+import { terminosCondicionesRoutes } from "./routes/terminosCondiciones.js";
 import { contratosPorVencerRoutes } from "./routes/contratosPorVencer.js";
 // Tablas oficiales de ARCA (Simplificación Registral) usadas para armar el TXT de alta masiva.
 import { arcaSucursalRoutes } from "./routes/arcaSucursales.js";
@@ -241,6 +242,7 @@ app.use("/api/v1/tipos-entidad-financiera", tiposEntidadFinancieraRoutes);
 app.use("/api/v1/obras-sociales", obraSocialRoutes);
 app.use("/api/v1/sindicatos", sindicatoRoutes);
 app.use("/api/v1/paises-residencia", paisResidenciaRoutes);
+app.use("/api/v1/terminos-condiciones", terminosCondicionesRoutes);
 app.use("/api/v1/contratos-por-vencer", contratosPorVencerRoutes);
 // ABM de categorías en la forma de ARCA: convenio → grupo (escala) → categoría. Toda la escritura.
 app.use("/api/v1/arca/categorias", arcaCategoriasRoutes);

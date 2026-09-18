@@ -162,6 +162,17 @@ export interface IUserMetadata {
      * De qué link de registro vino la persona, y con eso quién la invitó y para qué proyecto, área y turno.
      * Lo escribe `POST /auth/registro`. Es lo que arma la lista «Registrados» del móvil de quien invitó.
      */
+    /**
+     * Los términos y condiciones que aceptó al registrarse con un link: cuáles, qué versión y cuándo.
+     * La versión permite leer el texto exacto aunque después se haya editado (ver `TerminosCondiciones`).
+     */
+    terminosAceptados?: {
+        terminosId: Types.ObjectId;
+        version: number;
+        titulo: string;
+        aceptadoEl: Date;
+        ip?: string;
+    };
     registro?: {
         linkId?: Types.ObjectId;
         invitadoPor?: Types.ObjectId;

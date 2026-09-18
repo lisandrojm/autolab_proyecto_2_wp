@@ -106,6 +106,7 @@ export const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
       "config_profile:view",
       "config_activity_logs:view",
       "config_paises_residencia:view",
+      "config_terminos:view",
       "config_orders:view",
       // Plantillas (subgrupo): el membrete va primero, igual que en el menú
       "config_membretes:view",
@@ -185,6 +186,7 @@ export const MODULE_LABELS: Record<string, string> = {
   "config_bancos:view": "Entidades Financieras",
   "config_sindicatos:view": "Sindicatos",
   "config_paises_residencia:view": "Países de residencia",
+  "config_terminos:view": "Términos y condiciones (registro)",
   "config_holidays:view": "Feriados",
   "config_profile:view": "Mi Perfil",
   "config_activity_logs:view": "Novedades",

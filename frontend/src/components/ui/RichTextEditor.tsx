@@ -55,6 +55,47 @@ const VariableHighlight = Extension.create({
   },
 });
 
+/**
+ * Cómo se ve el contenido: párrafos, títulos, listas, tablas. Es lo mismo en el editor y en el visor,
+ * para que lo que se escribe en el ABM se lea igual donde se muestra.
+ */
+const CLASES_CONTENIDO = `[&_.ProseMirror]:outline-none
+  [&_.ProseMirror_p]:mb-2
+  [&_.ProseMirror_h1]:text-xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:mb-2
+  [&_.ProseMirror_h2]:text-lg [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:mb-2
+  [&_.ProseMirror_h3]:text-base [&_.ProseMirror_h3]:font-bold [&_.ProseMirror_h3]:mb-2
+  [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6 [&_.ProseMirror_ul]:mb-2
+  [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6 [&_.ProseMirror_ol]:mb-2
+  [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:w-full [&_.ProseMirror_table]:my-2
+  [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-gray-400 [&_.ProseMirror_td]:p-1.5
+  [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-400 [&_.ProseMirror_th]:p-1.5 [&_.ProseMirror_th]:bg-gray-100 dark:[&_.ProseMirror_th]:bg-gray-800
+  [&_.ProseMirror_hr]:my-3 [&_.ProseMirror_hr]:border-gray-300`;
+
+/**
+ * MUESTRA un HTML del editor, sin editarlo.
+ *
+ * Pasa por el mismo esquema que el editor en vez de inyectar el HTML con `dangerouslySetInnerHTML`:
+ * TipTap se queda sólo con lo que sabe dibujar —negrita, listas, tablas, alineación— y descarta el
+ * resto (scripts, atributos, estilos). Importa en páginas públicas como el registro, que muestran un
+ * texto que se cargó en el ABM.
+ */
+export const RichTextViewer: React.FC<{ html: string; className?: string }> = ({ html, className = "" }) => {
+  const editor = useEditor({
+    extensions: [StarterKit, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit],
+    content: html || "",
+    editable: false,
+  });
+  useEffect(() => {
+    if (editor && (html || "") !== editor.getHTML()) editor.commands.setContent(html || "", { emitUpdate: false });
+  }, [html, editor]);
+  if (!editor) return null;
+  return (
+    <div className={`${CLASES_CONTENIDO} ${className}`}>
+      <EditorContent editor={editor} />
+    </div>
+  );
+};
+
 /** Grupo de variables para mostrarlas separadas por título. */
 export interface VariableGroup {
   grupo: string;
@@ -369,20 +410,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
               e.chain().focus("end").run();
             }
           }}
-          className="bg-white dark:bg-gray-900 rounded-b-md px-4 py-3 overflow-y-auto cursor-text text-sm text-gray-900 dark:text-gray-100
-            [&_.ProseMirror]:outline-none
-            [&_.ProseMirror_p]:mb-2
-            [&_.ProseMirror_h1]:text-xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:mb-2
-            [&_.ProseMirror_h2]:text-lg [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:mb-2
-            [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6 [&_.ProseMirror_ul]:mb-2
-            [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6 [&_.ProseMirror_ol]:mb-2
-            [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:w-full [&_.ProseMirror_table]:my-2
-            [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-gray-400 [&_.ProseMirror_td]:p-1.5
-            [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-400 [&_.ProseMirror_th]:p-1.5 [&_.ProseMirror_th]:bg-gray-100 dark:[&_.ProseMirror_th]:bg-gray-800
-            [&_.ProseMirror_hr]:my-3 [&_.ProseMirror_hr]:border-gray-300
+          className={`bg-white dark:bg-gray-900 rounded-b-md px-4 py-3 overflow-y-auto cursor-text text-sm text-gray-900 dark:text-gray-100 ${CLASES_CONTENIDO}
             [&_.tiptap-variable]:text-amber-600 [&_.tiptap-variable]:font-semibold
             [&_.tiptap-variable]:bg-amber-100 [&_.tiptap-variable]:rounded [&_.tiptap-variable]:px-0.5
-            dark:[&_.tiptap-variable]:text-amber-300 dark:[&_.tiptap-variable]:bg-amber-400/15"
+            dark:[&_.tiptap-variable]:text-amber-300 dark:[&_.tiptap-variable]:bg-amber-400/15`}
         >
           <EditorContent editor={editor} />
         </div>

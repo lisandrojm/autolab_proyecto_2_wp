@@ -87,6 +87,13 @@ const userSchema = new Schema({
         workdaysOverridden: { type: Boolean, default: undefined },
         workdaysOverrideReason: { type: String, enum: ["extension_rodaje", "jornada_caida", "feriado_trabajado", "franco_trabajado", "alta_baja_parcial", "reemplazo_parcial", "otro", null], default: undefined },
         workdaysOverrideNote: { type: String, default: undefined },
+        terminosAceptados: {
+            terminosId: { type: Schema.Types.ObjectId, ref: "TerminosCondiciones" },
+            version: { type: Number },
+            titulo: { type: String },
+            aceptadoEl: { type: Date },
+            ip: { type: String },
+        },
         registro: {
             linkId: { type: Schema.Types.ObjectId, ref: "RegistroLink" },
             invitadoPor: { type: Schema.Types.ObjectId, ref: "User" },

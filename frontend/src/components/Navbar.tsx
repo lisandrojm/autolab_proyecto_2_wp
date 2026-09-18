@@ -165,7 +165,9 @@ const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/document
  */
 // «Permisos» (qué permisos están activos para toda la plataforma) va junto a Roles. Sólo existe en el
 // menú del SuperAdmin; para el resto el `filter(Boolean)` de abajo lo descarta.
-const ROLES_PATHS = ['/roles', '/permisos'];
+// «Términos y condiciones» también: es lo que acepta una persona al registrarse, o sea parte de cómo
+// se define quién entra a la plataforma.
+const ROLES_PATHS = ['/roles', '/permisos', '/terminos-condiciones'];
 
 /**
  * Subgrupo "Documentos" (dentro de Configuración): la integración con Dropbox, entera.
@@ -402,6 +404,9 @@ export const MobileNavbar: React.FC = () => {
       // «Permisos» es del SuperAdmin aunque esté parado en un tenant común: se decide por su rol, no por
       // el tenant. Sin distinguir mayúsculas, como el resto de la app (el rol llega como «SuperAdmin»).
       if (user?.primaryRole?.toLowerCase() === 'superadmin' || (user?.roles || []).some((r: any) => String(typeof r === 'string' ? r : r?.name || '').toLowerCase() === 'superadmin')) base.push({ path: '/permisos', icon: faToggleOn, label: 'Permisos', scope: 'global' });
+      // `config_terminos:view` es nuevo: hasta que se tilde en los roles, entra quien administra usuarios,
+      // que es quien maneja los registros y sus links.
+      if (hasPermission('config_terminos:view') || hasPermission('admin_users:view')) base.push({ path: '/terminos-condiciones', icon: faFileSignature, label: 'Términos y condiciones', scope: 'global' });
       if (hasPermission('admin_roles_empresa:view')) base.push({ permiso: 'admin_roles_empresa:view', path: '/roles-empresa', icon: faUserTag, label: 'Roles Empresa', scope: 'global' });
       if (hasPermission('admin_areas:view')) base.push({ permiso: 'admin_areas:view', path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
       if (hasPermission('admin_users:view')) base.push({ permiso: 'admin_users:view', path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users });
@@ -676,7 +681,7 @@ export const MobileNavbar: React.FC = () => {
     const documentosChildren = (DOCUMENTOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
     const documentosGroup = { path: '#documentos', groupKey: 'documentos', icon: faDropbox, label: 'Documentos', scope: 'global' as const, children: documentosChildren };
 
-    // Subgrupo «Usuarios» de Configuración: solo Roles (ver ROLES_PATHS para por qué el grupo existe).
+    // Subgrupo «Usuarios» de Configuración: Roles, Permisos y Términos y condiciones (ver ROLES_PATHS).
     const usuariosConfigChildren = ROLES_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
     const usuariosConfigGroup = { path: '#usuarios-config', groupKey: 'usuariosConfig', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosConfigChildren };
 

@@ -61,6 +61,7 @@ import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
 import { GuiaObrasSocialesPage } from "./pages/GuiaObrasSocialesPage";
 import { EmparejarAsistentePage } from "./pages/EmparejarAsistentePage";
 import { NomenclaturaArchivosPage } from "./pages/NomenclaturaArchivosPage";
+import { TerminosCondicionesPage } from "./pages/TerminosCondicionesPage";
 import { ArcaActividadesPage } from "./pages/ArcaActividadesPage";
 import { ArcaModalidadesContratacionPage } from "./pages/ArcaModalidadesContratacionPage";
 import { ArcaTiposServicioPage } from "./pages/ArcaTiposServicioPage";
@@ -611,6 +612,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ArcaActividadesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/terminos-condiciones"
+                element={
+                  <ProtectedRoute>
+                    <TerminosCondicionesPage />
                   </ProtectedRoute>
                 }
               />

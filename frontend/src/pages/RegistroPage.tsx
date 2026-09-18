@@ -8,6 +8,7 @@ import { faCircleInfo, faSpinner, faLandmark, faCircleCheck, faEye, faEyeSlash, 
 import { useSearchParams, Link } from "react-router-dom";
 import { CuitInput, isValidCuit } from "../components/ui/CuitInput";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { RichTextViewer } from "../components/ui/RichTextEditor";
 import { sweetAlert } from "../utils/sweetAlert";
 import { generarPassword } from "../utils/password";
 import { fuzzyMatch } from "../utils/searchHelpers";
@@ -137,6 +138,46 @@ const TIPOS_CUENTA: InfoOption[] = [
 
 // La cascada de datos bancarios vive en utils/bancarios.ts: la comparten esta pantalla y el
 // modal de Nuevo/Editar Usuario. Ver el comentario de ese archivo.
+
+/** Los términos y condiciones vigentes, tal como llegan de `registro-info`. */
+interface TerminosRegistro {
+  id: string;
+  titulo: string;
+  contenido: string;
+  version: number;
+}
+
+/**
+ * El texto de los términos y condiciones, en el mismo modal oscuro que el resto de la página.
+ *
+ * «Acepto» tilda la casilla y cierra: es el camino natural después de leerlos, y evita tener que
+ * volver a buscar la casilla abajo. Cerrar sin aceptar no la toca.
+ */
+const ModalTerminos: React.FC<{ terminos: TerminosRegistro; onCerrar: () => void; onAceptar: () => void }> = ({ terminos, onCerrar, onAceptar }) =>
+  createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onCerrar}>
+      <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-xl border border-gray-700 bg-gray-800 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+          <h3 className="text-sm font-bold text-gray-100">{terminos.titulo}</h3>
+          <button type="button" onClick={onCerrar} className="text-gray-400 hover:text-gray-200 text-lg leading-none" aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+        <div className="px-5 py-4 overflow-y-auto">
+          <RichTextViewer html={terminos.contenido} className="text-sm text-gray-300 leading-relaxed" />
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-700">
+          <button type="button" onClick={onCerrar} className="px-4 py-2 rounded-lg border border-gray-600 text-sm text-gray-300 hover:bg-gray-700 transition-colors">
+            Cerrar
+          </button>
+          <button type="button" onClick={onAceptar} className="px-4 py-2 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+            Acepto
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 
 /**
  * Qué son los Roles Empresa y por qué se puede elegir más de uno.
@@ -354,6 +395,12 @@ export const RegistroPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Los términos vigentes. `null` = no hay: el registro no pide aceptar nada. */
+  const [terminos, setTerminos] = useState<TerminosRegistro | null>(null);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [terminosAbiertos, setTerminosAbiertos] = useState(false);
+  /** La casilla en rojo: se intentó terminar sin aceptarlos. */
+  const [faltaAceptarTerminos, setFaltaAceptarTerminos] = useState(false);
   // Campos obligatorios faltantes (para marcarlos en rojo por paso).
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
 
@@ -393,6 +440,7 @@ export const RegistroPage: React.FC = () => {
         setTiposEntidad(Array.isArray(data.tiposEntidad) ? data.tiposEntidad : null);
         setRolesFrame(data.rolesFrame || []);
         setLinkInfo(data.link || null);
+        setTerminos(data.terminos || null);
       } catch {
         if (!cancelled) setInvalidToken(true);
       } finally {
@@ -745,11 +793,21 @@ export const RegistroPage: React.FC = () => {
       }
     }
     setFieldErrors({});
+    // Los términos, último: es lo que se acepta con todo lo demás ya cargado.
+    if (terminos && !aceptaTerminos) {
+      setFaltaAceptarTerminos(true);
+      setError("Para registrarte tenés que aceptar los términos y condiciones.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       const payload = {
         token,
+        // Qué versión se aceptó: si cambió mientras se llenaba el formulario, el server pide releerla.
+        aceptaTerminos: terminos ? aceptaTerminos : undefined,
+        terminosId: terminos?.id,
+        terminosVersion: terminos?.version,
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
@@ -797,6 +855,13 @@ export const RegistroPage: React.FC = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // Se editaron mientras tanto: se muestran los nuevos y hay que volver a aceptarlos.
+        if (res.status === 409 && data.terminos) {
+          setTerminos(data.terminos);
+          setAceptaTerminos(false);
+          setFaltaAceptarTerminos(true);
+          setTerminosAbiertos(true);
+        }
         setError(data.error || "No se pudo completar el registro.");
         setSubmitting(false);
         return;
@@ -1465,6 +1530,48 @@ export const RegistroPage: React.FC = () => {
           {/* «Anterior» a partir del segundo paso: sin él, revisar algo que quedó atrás obligaba a
             tocar la pestaña del encabezado, que no se lee como parte del recorrido. Ocupa lo que
             necesita y deja el ancho al botón que avanza, que es la acción principal. */}
+          {/*
+            ACEPTAR LOS TÉRMINOS, en el último paso y pegado al botón que termina: es lo que se acepta
+            junto con todo lo cargado. El texto está a un click, en el ⓘ o en el nombre mismo.
+          */}
+          {terminos && activeTab === "bancarios" && (
+            <div className={`mx-6 mt-4 flex items-start gap-3 rounded-lg border px-4 py-3 ${faltaAceptarTerminos && !aceptaTerminos ? "border-red-500/60 bg-red-500/10" : "border-gray-700"}`}>
+              <input
+                id="acepta-terminos"
+                type="checkbox"
+                checked={aceptaTerminos}
+                onChange={(e) => {
+                  setAceptaTerminos(e.target.checked);
+                  if (e.target.checked) {
+                    setFaltaAceptarTerminos(false);
+                    setError(null);
+                  }
+                }}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-500 bg-gray-800 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <label htmlFor="acepta-terminos" className="text-sm text-gray-300 cursor-pointer">
+                Leí y acepto los{" "}
+                <button type="button" onClick={() => setTerminosAbiertos(true)} className="font-medium text-blue-400 hover:text-blue-300 underline underline-offset-2">
+                  términos y condiciones
+                </button>
+                <button type="button" onClick={() => setTerminosAbiertos(true)} title="Leer los términos y condiciones" aria-label="Leer los términos y condiciones" className="ml-1.5 text-gray-400 hover:text-gray-200 transition-colors align-middle">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                </button>
+              </label>
+            </div>
+          )}
+          {terminos && terminosAbiertos && (
+            <ModalTerminos
+              terminos={terminos}
+              onCerrar={() => setTerminosAbiertos(false)}
+              onAceptar={() => {
+                setAceptaTerminos(true);
+                setFaltaAceptarTerminos(false);
+                setError(null);
+                setTerminosAbiertos(false);
+              }}
+            />
+          )}
           <div className="px-6 py-4 flex items-center gap-3">
             {activeTab !== tabs[0].key && (
               <button type="button" onClick={handleBack} disabled={submitting} className="shrink-0 px-6 py-4 rounded-lg text-center font-medium tracking-wide uppercase border border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">

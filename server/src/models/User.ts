@@ -169,6 +169,17 @@ export interface IUserMetadata {
    * De qué link de registro vino la persona, y con eso quién la invitó y para qué proyecto, área y turno.
    * Lo escribe `POST /auth/registro`. Es lo que arma la lista «Registrados» del móvil de quien invitó.
    */
+  /**
+   * Los términos y condiciones que aceptó al registrarse con un link: cuáles, qué versión y cuándo.
+   * La versión permite leer el texto exacto aunque después se haya editado (ver `TerminosCondiciones`).
+   */
+  terminosAceptados?: {
+    terminosId: Types.ObjectId;
+    version: number;
+    titulo: string;
+    aceptadoEl: Date;
+    ip?: string;
+  };
   registro?: {
     linkId?: Types.ObjectId;
     invitadoPor?: Types.ObjectId;
@@ -362,6 +373,13 @@ const userSchema = new Schema<IUser>(
       workdaysOverridden: { type: Boolean, default: undefined },
       workdaysOverrideReason: { type: String, enum: ["extension_rodaje", "jornada_caida", "feriado_trabajado", "franco_trabajado", "alta_baja_parcial", "reemplazo_parcial", "otro", null], default: undefined },
       workdaysOverrideNote: { type: String, default: undefined },
+      terminosAceptados: {
+        terminosId: { type: Schema.Types.ObjectId, ref: "TerminosCondiciones" },
+        version: { type: Number },
+        titulo: { type: String },
+        aceptadoEl: { type: Date },
+        ip: { type: String },
+      },
       registro: {
         linkId: { type: Schema.Types.ObjectId, ref: "RegistroLink" },
         invitadoPor: { type: Schema.Types.ObjectId, ref: "User" },

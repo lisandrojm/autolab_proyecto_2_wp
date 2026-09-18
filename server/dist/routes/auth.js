@@ -21,6 +21,7 @@ import { addUserToClientUsuarios } from "../services/clientUsuariosService.js";
 import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile.js";
 import { celularValido } from "../utils/telefono.js";
 import { PaisResidencia } from "../models/PaisResidencia.js";
+import { TerminosCondiciones } from "../models/TerminosCondiciones.js";
 import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
 import { z } from "zod";
@@ -580,6 +581,16 @@ router.post("/registro-link", requireTenant, authenticateToken, async (req, res)
     }
 });
 // GET /auth/registro-info?token=... - Catálogos públicos para el formulario de registro
+/**
+ * Los términos y condiciones VIGENTES del tenant, tal como los ve y acepta quien se registra.
+ * `null` si no hay ninguno vigente: el registro no pide aceptar nada.
+ */
+async function terminosVigentes(tenantId) {
+    if (!Types.ObjectId.isValid(tenantId))
+        return null;
+    const t = await TerminosCondiciones.findOne({ tenantId, vigente: true }).select("titulo contenido version").lean();
+    return t ? { id: String(t._id), titulo: t.titulo, contenido: t.contenido, version: t.version } : null;
+}
 router.get("/registro-info", async (req, res) => {
     try {
         const token = String(req.query.token || "");
@@ -656,6 +667,8 @@ router.get("/registro-info", async (req, res) => {
             bancos,
             tiposEntidad,
             rolesFrame,
+            // Lo que hay que aceptar para terminar el registro. Sin términos vigentes, no se pide nada.
+            terminos: await terminosVigentes(payload.tenantId),
         });
     }
     catch (error) {
@@ -867,6 +880,31 @@ router.post("/registro", async (req, res) => {
                 areaId: oid(payload.areaId),
                 shiftId: oid(payload.shiftId),
                 registradoAt: new Date(),
+            };
+        }
+        /*
+          TÉRMINOS Y CONDICIONES: si hay vigentes, sin aceptarlos no hay registro.
+    
+          Se compara la VERSIÓN que leyó con la vigente: si alguien los editó mientras la persona llenaba
+          el formulario, aceptó un texto que ya no es el vigente. Se le devuelve el nuevo para que lo lea
+          y lo acepte, en vez de dejar constancia de una aceptación sobre algo que no vio.
+        */
+        const terminos = await terminosVigentes(String(tenantId));
+        if (terminos) {
+            if (body.aceptaTerminos !== true) {
+                res.status(400).json({ error: "Para registrarte tenés que aceptar los términos y condiciones." });
+                return;
+            }
+            if (String(body.terminosId || "") !== terminos.id || Number(body.terminosVersion) !== terminos.version) {
+                res.status(409).json({ error: "Los términos y condiciones se actualizaron mientras completabas el formulario. Leé la versión nueva y aceptala para terminar.", terminos });
+                return;
+            }
+            metadata.terminosAceptados = {
+                terminosId: new Types.ObjectId(terminos.id),
+                version: terminos.version,
+                titulo: terminos.titulo,
+                aceptadoEl: new Date(),
+                ip: String(req.headers["x-forwarded-for"] || req.ip || "").split(",")[0].trim() || undefined,
             };
         }
         const clientIds = payload.clientId && Types.ObjectId.isValid(payload.clientId) ? [new Types.ObjectId(payload.clientId)] : [];
