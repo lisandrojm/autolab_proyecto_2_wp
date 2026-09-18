@@ -17,7 +17,7 @@ import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE
 const MOSTRAR_NOTIFICACION_DESTACADA = false;
 
 /**
- * EL ORDEN DE LAS TARJETAS: Mis equipos, Contratación, Cumplimiento, Cargar novedades, y al final lo
+ * EL ORDEN DE LAS TARJETAS: Equipos, Contratación, Cumplimiento, Novedades, y al final lo
  * propio —Pedidos y Vacaciones—. Va por vista y no por el orden en que se agregan abajo, así sumar una
  * tarjeta no reordena las demás.
  */
@@ -109,8 +109,8 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const novedadesAction = {
     icon: faFileAlt,
-    // Se llama como su permiso («Cargar novedades»): así se sabe qué tarjeta da cada tilde del rol.
-    title: "Cargar novedades",
+    // El permiso del rol se sigue llamando «Cargar novedades»; la tarjeta, corta, para que entre en el teléfono.
+    title: "Novedades",
     description: "La asistencia de tu gente",
     view: "activity_logs" as ViewType,
     disabled: false,
@@ -164,10 +164,10 @@ export default function Home({ onNavigate }: HomeProps) {
     nuevos: nuevasContrataciones + porVencer,
   };
 
-  // «Mis equipos»: las áreas y turnos que la persona tiene a cargo, con su gente.
+  // «Equipos»: las áreas y turnos que la persona tiene a cargo, con su gente.
   const equiposAction = {
     icon: faSitemap,
-    title: "Mis equipos",
+    title: "Equipos",
     description: "Áreas, turnos y personas a cargo",
     view: "my_teams" as ViewType,
     disabled: false,
@@ -307,7 +307,7 @@ export default function Home({ onNavigate }: HomeProps) {
       )}
 
       {/* GRID */}
-      <div className={`grid grid-cols-2 gap-4 p-4`}>
+      <div className={`grid grid-cols-2 gap-3 p-4`}>
         {acciones.map((action, index) => {
           return (
             <button
@@ -321,24 +321,21 @@ export default function Home({ onNavigate }: HomeProps) {
                 }
               }}
               disabled={action.disabled}
-              className={`relative flex flex-col gap-3 space-y-2 rounded-xl border p-4 text-left shadow-sm transition-transform
+              className={`relative flex flex-col gap-1 rounded-xl border p-3 text-left shadow-sm transition-transform
                 ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
               {/* BADGE */}
               <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
-              {/* Cuántas novedades sin mirar tiene esta tarjeta. */}
-              {(action as any).nuevos > 0 && <span className="absolute right-3 top-3 flex min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white">{(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}</span>}
-              <div className="flex-col gap-1 items-center space-y-1">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center">
-                    <FontAwesomeIcon icon={action.icon} className="h-5 w-5 text-primary" />
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{action.title}</h2>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{action.description}</p>
-                </div>
+              {/*
+                Cuántas novedades sin mirar tiene esta tarjeta. Va SOBRE la esquina, afuera del contenido:
+                adentro de la tarjeta le comía lugar al título y, en un teléfono angosto, lo pisaba.
+              */}
+              {(action as any).nuevos > 0 && <span className="absolute -right-2 -top-2 z-10 flex min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white ring-2 ring-slate-800">{(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}</span>}
+              <div className="flex min-w-0 items-center gap-2">
+                <FontAwesomeIcon icon={action.icon} className="h-4 w-4 shrink-0 text-primary" />
+                <h2 className="min-w-0 break-words text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
               </div>
+              <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">{action.description}</p>
             </button>
           );
         })}

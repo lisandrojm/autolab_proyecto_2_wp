@@ -344,7 +344,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       {/* HEADER */}
       <SectionHeader
         icon={faSitemap}
-        titulo="Mis equipos"
+        titulo="Equipos"
         onBack={() => onNavigate("home")}
         info={
           "Las áreas y turnos que tenés a cargo, con la gente de cada uno: lo mismo que la Jerarquía del proyecto en el escritorio.\n\nArranca todo cerrado. Cada área muestra sus turnos con cuántas personas suman sobre el total asignado (suman las activas con contrato vigente). Tocá un área para ver sus turnos, y un turno para ver quiénes lo integran.\n\nSi estás en más de un proyecto, elegí cuál ver."

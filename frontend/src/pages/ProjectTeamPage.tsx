@@ -29,7 +29,7 @@ import { JornadasSolicitud } from "../components/contratacion/JornadasSolicitud"
 import { ImportesDelContrato } from "../components/contratacion/ImportesDelContrato";
 import { SelectorHora } from "../components/contratacion/SelectorHora";
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from "../utils/horario";
-import { erroresDeJornadas, jornadasDelCalendario, mesesEquivalentes } from "../utils/jornadas";
+import { avisoIndeterminado, erroresDeJornadas, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../utils/jornadas";
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
@@ -463,6 +463,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Modal de detalle del empleado (contratos del proyecto + descargas)
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
   const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
+  /** Terminó la carga en segundo plano de los catálogos del wizard (ver `handleOpenWizard`). */
+  const [catalogosWizardListos, setCatalogosWizardListos] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [detailRefsLoaded, setDetailRefsLoaded] = useState(false);
@@ -670,7 +672,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       try {
         setLoading(true);
 
-        enSegundoPlano().catch((e) => console.error("Error cargando catálogos:", e));
+        // Con error también se da por terminada: el wizard abre igual, con lo que haya, en vez de colgarse.
+        enSegundoPlano()
+          .catch((e) => console.error("Error cargando catálogos:", e))
+          .finally(() => setCatalogosWizardListos(true));
 
         const [projectData, teamUsers, vacationsData, areasData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId, { team: "ids" }), // específico del proyecto: no se cachea
@@ -990,13 +995,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     número acá y otro allá, y quien aprobaba tenía que rehacer la cuenta a mano.
   */
   const diasSemanaWizard = wizardData.dias_rotativos ? Number(wizardData.dias_por_semana) || 0 : wizardData.dias_semana.length;
-  const jornadasCalculadasWizard = jornadasDelCalendario(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, wizardData.dias_semana);
-  const mesesEqWizard = mesesEquivalentes(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, wizardData.dias_semana);
+  // Sin fecha de baja (tiempo indeterminado) se cuenta sobre el mes del alta: ver `periodoDeCalculo`.
+  const indeterminadoWizard = !!contratos.find((c) => c._id === wizardData.contrato_id)?.data?.esTiempoIndeterminado;
+  const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard);
+  const jornadasCalculadasWizard = jornadasDelCalendario(periodoWizard.desde, periodoWizard.hasta, wizardData.dias_semana);
+  const mesesEqWizard = mesesEquivalentes(periodoWizard.desde, periodoWizard.hasta, wizardData.dias_semana);
   /** El ajuste manual de las jornadas es de la pantalla: al contrato va el número final. */
   const [ajusteJornadas, setAjusteJornadas] = useState<{ ajustado: boolean; motivo: string; nota: string }>({ ajustado: false, motivo: "", nota: "" });
   const datosJornadasWizard = {
-    desde: wizardData.fecha_alta_contrato,
-    hasta: wizardData.fecha_baja_contrato,
+    desde: periodoWizard.desde,
+    hasta: periodoWizard.hasta,
     diasPorSemana: String(wizardData.dias_por_semana || ""),
     dias: wizardData.dias_semana,
     rotativos: wizardData.dias_rotativos,
@@ -1110,8 +1118,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo. */}
       <div className="md:col-span-2">
         <JornadasSolicitud
-          desde={wizardData.fecha_alta_contrato}
-          hasta={wizardData.fecha_baja_contrato}
+          desde={periodoWizard.desde}
+          hasta={periodoWizard.hasta}
+          aviso={avisoIndeterminado(wizardData.fecha_alta_contrato, indeterminadoWizard)}
           rotativos={wizardData.dias_rotativos}
           calculadas={jornadasCalculadasWizard}
           dias={wizardData.dias_semana}
@@ -1609,7 +1618,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   /* ------------------------------- Actions -------------------------------- */
 
-  const handleOpenWizard = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
+  const abrirWizardAhora = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
     // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
     // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
     setEditingContractIndex(typeof contractIndex === "number" ? contractIndex : null);
@@ -1902,7 +1911,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     // Horario de la solicitud (metadata.schedule = "HH:MM - HH:MM") como fallback cuando no hay contrato
     // previo (p.ej. al aprobar una solicitud desde el wizard).
-    const metaSchedule = String((user.metadata as any)?.schedule || "");
+    // De la SOLICITUD cuando se aprueba: `user` ya es la persona real, que no tiene el horario pedido.
+    const metaSchedule = String(((solicitud ?? user).metadata as any)?.schedule || "");
     const [metaHoraInicio, metaHoraFin] = metaSchedule.includes("-") ? metaSchedule.split("-").map((s) => s.trim()) : ["", ""];
 
     // Se resetea ACÁ (no en el efecto) para que la primera corrida del auto-set de estado, tras este
@@ -1956,14 +1966,26 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       return id ? allRoleFrames.find((r) => String(r._id) === String(id)) : undefined;
     })();
     const plantillasDeSolicitud = metaSolicitud?.contratoId ? contratoFrames.filter((cf) => String(typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === String(metaSolicitud.contratoId)) : [];
-    const unicaPlantillaSolicitud = plantillasDeSolicitud.length === 1 ? plantillasDeSolicitud[0] : undefined;
+    /*
+      La plantilla del tipo pedido: la única que tenga, o la del contrato anterior si es de ESTE tipo.
+      Con varias y ninguna conocida queda vacía y se elige en el select de «Plantilla» —que es lo que
+      define el Estado—, en vez de arrastrar la de un contrato anterior de OTRO tipo, que daría el
+      estado de ese otro tipo.
+    */
+    const unicaPlantillaSolicitud = plantillasDeSolicitud.length === 1 ? plantillasDeSolicitud[0] : plantillasDeSolicitud.find((cf) => cf._id === initialContratoFrameId);
     const deLaSolicitud: Record<string, any> = !metaSolicitud
       ? {}
       : {
           ...(rolDeSolicitud?.data?.rol?.id != null ? { rol_frame_id: String(rolDeSolicitud.data.rol.id) } : {}),
           ...(catDeSolicitud?.data?.id != null ? { categoria_sat_id: String(catDeSolicitud.data.id) } : {}),
           ...(metaSolicitud.contratoId ? { contrato_id: String(metaSolicitud.contratoId) } : {}),
-          ...(unicaPlantillaSolicitud ? { contrato_frame_id: unicaPlantillaSolicitud._id, nombre_contrato: unicaPlantillaSolicitud.name, tipo_contrato_id: unicaPlantillaSolicitud.data?.id != null ? String(unicaPlantillaSolicitud.data.id) : "" } : {}),
+          ...(metaSolicitud.contratoId
+            ? unicaPlantillaSolicitud
+              ? { contrato_frame_id: unicaPlantillaSolicitud._id, nombre_contrato: unicaPlantillaSolicitud.name, tipo_contrato_id: unicaPlantillaSolicitud.data?.id != null ? String(unicaPlantillaSolicitud.data.id) : "" }
+              : { contrato_frame_id: "", nombre_contrato: "", tipo_contrato_id: "" }
+            : {}),
+          // El horario pedido, por encima del de un contrato anterior.
+          ...(metaHoraInicio && metaHoraFin ? { hora_inicio: metaHoraInicio, hora_fin: metaHoraFin } : {}),
           ...(metaSolicitud.empresaContratoId ? { empresaContratoId: String(metaSolicitud.empresaContratoId) } : {}),
           ...(metaSolicitud.startDate ? { fecha_alta_contrato: String(metaSolicitud.startDate).slice(0, 10) } : {}),
           ...(metaSolicitud.dueDate ? { fecha_baja_contrato: String(metaSolicitud.dueDate).slice(0, 10) } : {}),
@@ -2030,7 +2052,48 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       ...deLaSolicitud,
       ...(esContratoNuevo ? { estado_id: estadoDelContratoNuevo ? String(estadoDelContratoNuevo.data.id) : "" } : {}),
     });
+
+    /*
+      LAS JORNADAS AJUSTADAS A MANO EN LA SOLICITUD SIGUEN AJUSTADAS.
+
+      Sin esto el wizard las recalculaba del calendario apenas abría y pisaba el número que se pidió,
+      con su motivo. Fuera de una aprobación arranca sin ajuste: el estado es de la pantalla y, si no
+      se limpia, queda el de la vez anterior.
+    */
+    setAjusteJornadas(
+      metaSolicitud?.workdaysOverridden
+        ? { ajustado: true, motivo: String(metaSolicitud.workdaysOverrideReason || ""), nota: String(metaSolicitud.workdaysOverrideNote || "") }
+        : { ajustado: false, motivo: "", nota: "" },
+    );
+    // El rol pedido tiene que estar en el desplegable aunque no esté en la ficha: si falta, se suma al guardar.
+    setRolFrameAgregado(rolDeSolicitud || null);
   };
+
+  /*
+    EL WIZARD ESPERA A LOS CATÁLOGOS.
+
+    Se precarga TRADUCIENDO lo guardado contra ellos: el rol de la solicitud a su id del desplegable,
+    la categoría a su convenio, el tipo de contrato a su plantilla y de ahí al Estado. Los catálogos
+    se cargan en segundo plano y, desde Solicitudes, el modal se abría apenas estaba el proyecto: con
+    las listas todavía vacías no se traducía nada —sin rol, sin Estado— y lo que se veía era lo del
+    contrato ANTERIOR (su categoría, su convenio). Si todavía no llegaron, la apertura queda pendiente
+    y se hace cuando llegan.
+  */
+  const [aperturaPendiente, setAperturaPendiente] = useState<Parameters<typeof abrirWizardAhora> | null>(null);
+  const handleOpenWizard = async (...args: Parameters<typeof abrirWizardAhora>) => {
+    if (!catalogosWizardListos) {
+      setAperturaPendiente(args);
+      return;
+    }
+    await abrirWizardAhora(...args);
+  };
+  useEffect(() => {
+    if (!catalogosWizardListos || !aperturaPendiente) return;
+    const args = aperturaPendiente;
+    setAperturaPendiente(null);
+    void abrirWizardAhora(...args);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogosWizardListos, aperturaPendiente]);
 
   // Al llegar desde "Editar" del modal de Contratos (admin), abrir el wizard precargado con ese contrato.
   const wizardAutoOpenedRef = useRef(false);
@@ -2160,7 +2223,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         lista corta sin que nadie lo vuelva a buscar. Va con su propio catch porque el miembro ya quedó
         guardado y eso es lo que no se puede perder.
       */
-      if (rolFrameAgregado) {
+      // Sólo si es el que quedó elegido: si después se cambió por otro, no hay nada que sumar.
+      if (rolFrameAgregado && String(rolFrameAgregado.data?.rol?.id) === String(wizardData.rol_frame_id) && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id)) {
         try {
           await usersAPI.agregarRolesFrame(selectedUserForWizard._id, [rolFrameAgregado._id]);
         } catch (e) {
@@ -3657,7 +3721,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       Otro rol
                     </button>
                   </div>
-                  {rolFrameAgregado && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
+                  {rolFrameAgregado && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id) && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
                 </div>
 
                 {/*
@@ -4228,6 +4292,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ""}
                     onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))}
                     mesesEq={mesesEqWizard}
+                    indeterminado={indeterminadoWizard}
                     jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0}
                     diasSemana={diasSemanaWizard}
                     bloqueado={!esServicios && !wizardData.categoria_sat_id}

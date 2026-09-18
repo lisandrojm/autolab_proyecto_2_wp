@@ -12,7 +12,7 @@ import { activityLogTypesAPI, RequestConfig } from "../../api/requestConfig";
 import { projectsAPI } from "../../api/projects";
 import { EstadoBadge } from "../EstadoSelect";
 import { textoDeDias } from "../../utils/jerarquiaTurnos";
-import { mesesEquivalentes } from "../../utils/jornadas";
+import { mesesEquivalentes, periodoDeCalculo } from "../../utils/jornadas";
 import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista, formatFechaSolicitud, useCatalogosDeSolicitudes } from "./SolicitudesTable";
 
 /*
@@ -231,9 +231,13 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     los números por los que pregunta quien aprueba, y recalcularlos con la fórmula compartida evita
     que esta pantalla conteste distinto que la que cargó el alta.
   */
-  const mesesEq = mesesEquivalentes(m.startDate, m.dueDate, diasSemana);
-  const total = jornadas > 0 ? valorJornada * jornadas : null;
-  const mensual = total !== null && mesesEq > 0 ? total / mesesEq : null;
+  // Tiempo indeterminado: las jornadas son las de un mes completo y no hay total (ver `periodoDeCalculo`).
+  const indeterminado = !!contratos.find((c) => String(c._id) === String(m.contratoId || ""))?.data?.esTiempoIndeterminado;
+  const periodo = periodoDeCalculo(m.startDate, m.dueDate, indeterminado);
+  const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana);
+  const totalCalculado = jornadas > 0 ? valorJornada * jornadas : null;
+  const mensual = totalCalculado !== null && mesesEq > 0 ? totalCalculado / mesesEq : null;
+  const total = indeterminado ? null : totalCalculado;
   const semanal = valorJornada > 0 && diasPorSemana > 0 ? valorJornada * diasPorSemana : null;
 
   const areasTurnos: { area: string; turnos: string[] }[] = (m.areaShiftAssignments || []).map((a: any) => ({
@@ -385,7 +389,7 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                 <Fila label="Importe por jornada" valor={pesos(valorJornada || null)} />
                 <Fila label="Importe por semana" valor={pesos(semanal)} />
                 <Fila label="Importe mensual" valor={pesos(mensual)} />
-                <Fila label="Importe total" valor={pesos(total)} />
+                <Fila label="Importe total" valor={indeterminado ? <span className="text-gray-400">No tiene: tiempo indeterminado</span> : pesos(total)} />
               </Bloque>
 
               <Bloque titulo="Área y turno">

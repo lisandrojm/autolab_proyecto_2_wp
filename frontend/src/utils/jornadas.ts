@@ -39,6 +39,31 @@ const utc = (fecha?: string): number | null => {
 
 const DIA_MS = 86400000;
 
+/**
+ * EL PERÍODO CON EL QUE SE CUENTAN JORNADAS E IMPORTES.
+ *
+ * A plazo es el del contrato: desde → hasta. Uno de TIEMPO INDETERMINADO no tiene hasta, y sin período
+ * no había jornadas ni meses: el importe por jornada quedaba en 0 y la diferencia diaria contra la
+ * escala, negativa. Se toma entonces el MES CALENDARIO COMPLETO del alta: las jornadas son las de ese
+ * mes, así que la jornada es el mensual ÷ sus días hábiles —la misma regla que un contrato a plazo de
+ * un mes entero— y el total del contrato no existe.
+ */
+export const periodoDeCalculo = (desde: string | undefined, hasta: string | undefined, indeterminado: boolean): { desde: string; hasta: string } => {
+  if (!indeterminado) return { desde: desde || "", hasta: hasta || "" };
+  const m = /^(\d{4})-(\d{2})/.exec(desde || "");
+  if (!m) return { desde: "", hasta: "" };
+  const ultimoDia = new Date(Date.UTC(Number(m[1]), Number(m[2]), 0)).getUTCDate();
+  return { desde: `${m[1]}-${m[2]}-01`, hasta: `${m[1]}-${m[2]}-${String(ultimoDia).padStart(2, "0")}` };
+};
+
+/** Cómo se explica el período de un contrato de tiempo indeterminado. `""` si no aplica. */
+export const avisoIndeterminado = (desde: string | undefined, indeterminado: boolean): string => {
+  const m = /^(\d{4})-(\d{2})/.exec(desde || "");
+  if (!indeterminado || !m) return "";
+  const mes = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1)).toLocaleDateString("es-AR", { month: "long", year: "numeric", timeZone: "UTC" });
+  return `Tiempo indeterminado: no hay fecha de baja, así que las jornadas son las de un mes completo —${mes}, el del alta— y el importe por jornada es el mensual ÷ esas jornadas.`;
+};
+
 /** Días corridos del período, ambos extremos inclusive. `null` si falta una fecha o el fin es anterior. */
 export const diasCorridos = (desde?: string, hasta?: string): number | null => {
   const d1 = utc(desde);

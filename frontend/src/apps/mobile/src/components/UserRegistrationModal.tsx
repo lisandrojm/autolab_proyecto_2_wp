@@ -5,7 +5,7 @@ import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt,
 import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
-import { erroresDeJornadas, hayAjuste, jornadasDelCalendario, mesesEquivalentes } from "../../../../utils/jornadas";
+import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
@@ -1089,8 +1089,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       {!porDiasSueltos && (
       <div className="md:col-span-3">
         <JornadasSolicitud
-          desde={formData.startDate}
-          hasta={formData.dueDate}
+          desde={periodo.desde}
+          hasta={periodo.hasta}
           rotativos={formData.diasRotativos}
           calculadas={jornadasCalculadas}
           dias={formData.diasSemana}
@@ -1105,7 +1105,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           onNota={(n) => setFormData((p) => ({ ...p, workdaysOverrideNote: n }))}
           errores={erroresJornadas}
           mostrarErrores={intentoEnviar}
-          aviso={avisoJornadas}
+          aviso={avisoJornadas || avisoIndeterminado(formData.startDate, indeterminado)}
         />
       </div>
       )}
@@ -1401,9 +1401,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     se recalculan solas ante cualquier cambio de fechas, días o del switch. Con rotativos no hay patrón
     del cual deducirlas: se cargan a mano y ahí no existe «calculado» ni ajuste.
   */
+  // Tiempo indeterminado: sin fecha de baja se cuenta sobre el mes del alta (ver `periodoDeCalculo`).
+  const indeterminado = !!contratoElegido?.data?.esTiempoIndeterminado;
+  const periodo = useMemo(() => periodoDeCalculo(formData.startDate, formData.dueDate, indeterminado), [formData.startDate, formData.dueDate, indeterminado]);
   const jornadasCalculadas = useMemo(
-    () => (formData.diasRotativos ? null : jornadasDelCalendario(formData.startDate, formData.dueDate, formData.diasSemana)),
-    [formData.diasRotativos, formData.startDate, formData.dueDate, formData.diasSemana],
+    () => (formData.diasRotativos ? null : jornadasDelCalendario(periodo.desde, periodo.hasta, formData.diasSemana)),
+    [formData.diasRotativos, periodo, formData.diasSemana],
   );
 
   /*
@@ -1446,8 +1449,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   };
 
   const datosJornadas = {
-    desde: formData.startDate,
-    hasta: formData.dueDate,
+    desde: periodo.desde,
+    hasta: periodo.hasta,
     diasPorSemana: formData.diasPorSemana,
     dias: formData.diasSemana,
     rotativos: formData.diasRotativos,
@@ -1467,7 +1470,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   // Las jornadas que se pagan: las ajustadas a mano si se ajustaron (o con días rotativos); si no, las del calendario.
   const jornadasDelContrato = (formData.workdaysOverridden || formData.diasRotativos ? Number(formData.workdaysCount) : jornadasCalculadas) || 0;
   // Cuánto dura el contrato en meses: siempre desde las fechas reales, aunque las jornadas se hayan ajustado.
-  const mesesEq = useMemo(() => mesesEquivalentes(formData.startDate, formData.dueDate, formData.diasSemana), [formData.startDate, formData.dueDate, formData.diasSemana]);
+  const mesesEq = useMemo(() => mesesEquivalentes(periodo.desde, periodo.hasta, formData.diasSemana), [periodo, formData.diasSemana]);
   /*
     SIN CATEGORÍA, LOS IMPORTES ESTÁN BLOQUEADOS.
 
@@ -2224,6 +2227,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             valorJornada={formData.dailyRate}
             onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
             mesesEq={mesesEq}
+            indeterminado={indeterminado}
             jornadas={jornadasDelContrato}
             diasSemana={diasSemanaNum}
             bloqueado={importesBloqueados}

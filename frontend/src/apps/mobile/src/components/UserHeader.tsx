@@ -57,9 +57,9 @@ export default function UserHeader({ user, perfil, className = "" }: UserHeaderP
     // Sin avatar: las iniciales no dicen nada que no diga el nombre y la pantalla tiene que quedar limpia.
     <div className={`flex items-center gap-3 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">{nombre}</h2>
+        <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{nombre}</h2>
         {badgesDeJerarquia(user).map((b) => (
-          <span key={b.texto} className={`rounded border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${b.clase}`}>
+          <span key={b.texto} className={`rounded border px-1 py-0.5 text-[9px] font-black uppercase tracking-wider ${b.clase}`}>
             {b.texto}
           </span>
         ))}

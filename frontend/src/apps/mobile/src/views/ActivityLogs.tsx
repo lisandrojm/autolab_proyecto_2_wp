@@ -2505,7 +2505,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     <div className="flex-1 pb-24">
       <SectionHeader
         icon={faCalendar}
-        titulo="Mis Novedades"
+        titulo="Novedades"
         onBack={() => onNavigate("home")}
         info={"Cargá las novedades de la gente de tus áreas y turnos: quién vino, ausencias, reemplazos, horas extra y bajas.\n\nElegí el día, completá lo que pasó y envialo. Cada día tiene que quedar enviado: si no, tu coordinador lo ve como pendiente."}
       />
