@@ -4,6 +4,7 @@ import { faCheck, faTimes, faClock, faRotateLeft, faTrash, faCommentDots, faEdit
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { infoAPI, InfoItem } from "../../api/info";
+import type { ResultadoEliminarSolicitud } from "../../api/users";
 import { EstadoBadge } from "../EstadoSelect";
 import { estadoImpositivoPorTipo, esTipoImpositivo } from "../../utils/tramiteImpositivo";
 
@@ -143,11 +144,25 @@ export const useCatalogosDeSolicitudes = () => {
   }, [roleFrames, categoriasSat, estados]);
 };
 
-/** Lo que dice la confirmación de «Eliminar»: en una aprobada se borra el pedido, no la contratación. */
+/** Lo que dice la confirmación de «Eliminar»: en una aprobada se va también el contrato que creó. */
 export const textoEliminarSolicitud = (s: SolicitudVista) =>
   s.estado === "aprobada"
-    ? `Se eliminará la solicitud de ${s.nombre}. El contrato que generó NO se borra: sigue en la ficha de la persona y, si hay que deshacerlo, se da de baja desde Contratos.`
+    ? `Se eliminará la solicitud de ${s.nombre} y también el contrato que se creó al aprobarla. Los demás contratos de la persona no se tocan. Esta acción no se puede deshacer.`
     : `Se eliminará definitivamente la solicitud de ${s.nombre}. Esta acción no se puede deshacer.`;
+
+/**
+ * Lo que se dice DESPUÉS de eliminar. En una aprobada se nombra el contrato que se fue con ella, y si
+ * no se encontró se avisa: la solicitud ya no está, así que es la única pista para buscarlo a mano.
+ */
+export const resultadoEliminarSolicitud = (r: ResultadoEliminarSolicitud): { encontrado: boolean; texto: string } => {
+  const c = r.contrato;
+  if (!c) return { encontrado: true, texto: "La solicitud fue eliminada." };
+  if (c.borrado) {
+    const periodo = c.desde ? ` (${formatDiaSolicitud(c.desde)}${c.hasta ? ` → ${formatDiaSolicitud(c.hasta)}` : ", indeterminado"})` : "";
+    return { encontrado: true, texto: `Se eliminaron la solicitud y su contrato${c.proyecto ? ` en ${c.proyecto}` : ""}${periodo}.` };
+  }
+  return { encontrado: false, texto: "Se eliminó la solicitud, pero no se encontró el contrato que generó: puede que al aprobarla se hayan cambiado las fechas. Si la persona sigue en el equipo del proyecto, eliminá el contrato desde ahí." };
+};
 
 export const formatFechaSolicitud = (dateStr?: string | null) => {
   if (!dateStr) return "N/A";
@@ -375,10 +390,10 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         inventar un motivo de rechazo para poder sacar de la lista algo que nunca fue un pedido.
 
                         Esta tabla es del panel, así que también se ofrece sobre una APROBADA (en la app no:
-                        el server se la niega a quien no administra). Lo que se borra es el pedido; el
-                        contrato que generó queda en la ficha de la persona (ver `DELETE /users/:id/solicitud`).
+                        el server se la niega a quien no administra). Ahí deshace la contratación: se va
+                        también el contrato que creó al aprobarse (ver `DELETE /users/:id/solicitud`).
                       */}
-                      <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title={s.estado === "aprobada" ? "Eliminar la solicitud (el contrato queda)" : "Eliminar definitivamente"}>
+                      <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title={s.estado === "aprobada" ? "Eliminar la solicitud y su contrato" : "Eliminar definitivamente"}>
                         <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
                       </button>
                     </div>

@@ -75,6 +75,7 @@ import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js"
 import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../services/novedadesNotificaciones.js";
 import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
+import { quitarContrato } from "../services/contratoDeSolicitud.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 async function ensureDir(dir) {
@@ -1471,6 +1472,26 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             proyecto_id: project.metadata?.id || project.externalId,
             empleado_id: user.metadata?.id,
         };
+        /*
+          APROBAR UNA SOLICITUD: la solicitud y quien recibe el contrato pueden ser DOS documentos.
+    
+          Una solicitud cargada desde la app es un usuario de paso (`solicitud_…@pending.com`) que apunta a
+          la persona real en `metadata.solicitudUserId`; el contrato va en la ficha de ESA persona. Por eso
+          `approveSolicitud` llega como el id de la solicitud: dando por sentado que era el mismo usuario,
+          el contrato terminaba en el usuario de paso y la persona seguía sin contrato.
+    
+          Se sigue aceptando `true` para las solicitudes que no apuntan a nadie —el alta crea a la persona,
+          así que solicitud y usuario son el mismo documento— y para un front que todavía no se actualizó.
+        */
+        const idSolicitud = typeof approveSolicitud === "string" && Types.ObjectId.isValid(approveSolicitud) ? String(approveSolicitud) : approveSolicitud ? String(userId) : "";
+        /*
+          El contrato de una aprobación queda atado a su solicitud: así, borrar la solicitud aprobada borra
+          ESTE contrato y no otro de la misma persona (ver `borrarContratoDeSolicitud`). No se toma del
+          cliente: lo pone la aprobación, y al editar el contrato se arrastra del anterior (más abajo).
+        */
+        delete enrichedContract.solicitudId;
+        if (idSolicitud)
+            enrichedContract.solicitudId = new Types.ObjectId(idSolicitud);
         // 2. Find or Create UserProject (assignment)
         // Search by internal IDs first, then also by external IDs to prevent duplicate key errors
         const extProjId = enrichedContract.proyecto_id;
@@ -1506,6 +1527,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                     enrichedContract.altaDocumentoUrl = prevContract.altaDocumentoUrl;
                 if (enrichedContract.altaDocumentoNombre === undefined)
                     enrichedContract.altaDocumentoNombre = prevContract.altaDocumentoNombre;
+                if (enrichedContract.solicitudId === undefined && prevContract.solicitudId)
+                    enrichedContract.solicitudId = prevContract.solicitudId;
             }
             if (hasExplicitIndex) {
                 userProject.contracts[idxNum] = enrichedContract;
@@ -1558,18 +1581,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 "metadata.projects": userProject._id,
             },
         };
-        /*
-          APROBAR UNA SOLICITUD: la solicitud y quien recibe el contrato pueden ser DOS documentos.
-    
-          Una solicitud cargada desde la app es un usuario de paso (`solicitud_…@pending.com`) que apunta a
-          la persona real en `metadata.solicitudUserId`; el contrato va en la ficha de ESA persona. Por eso
-          `approveSolicitud` llega como el id de la solicitud: dando por sentado que era el mismo usuario,
-          el contrato terminaba en el usuario de paso y la persona seguía sin contrato.
-    
-          Se sigue aceptando `true` para las solicitudes que no apuntan a nadie —el alta crea a la persona,
-          así que solicitud y usuario son el mismo documento— y para un front que todavía no se actualizó.
-        */
-        const idSolicitud = typeof approveSolicitud === "string" && Types.ObjectId.isValid(approveSolicitud) ? String(approveSolicitud) : approveSolicitud ? String(userId) : "";
+        // Marcar la solicitud aprobada (`idSolicitud` se resolvió arriba, al armar el contrato).
         let solicitudAprobada = null;
         if (idSolicitud) {
             // Quien recibe el contrato queda activo: ya está contratado y tiene que poder entrar.
@@ -1657,17 +1669,7 @@ router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTe
             res.status(400).json({ error: "Contrato no encontrado" });
             return;
         }
-        up.contracts.splice(idx, 1);
-        up.markModified("contracts");
-        if (up.contracts.length === 0) {
-            const upId = up._id;
-            await up.deleteOne();
-            await Project.findByIdAndUpdate(projectId, { $pull: { assignedUsers: userId, teamConfig: { userId }, coordinatorAssignments: { userId } } });
-            await User.findByIdAndUpdate(userId, { $pull: { projectIds: projectId, "metadata.projects": upId } });
-        }
-        else {
-            await up.save();
-        }
+        await quitarContrato(up, idx);
         res.json({ message: "Contrato eliminado" });
     }
     catch (error) {

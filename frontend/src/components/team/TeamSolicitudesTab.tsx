@@ -4,7 +4,7 @@ import { faUserPlus, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { SolicitudVista, SolicitudesTable, solicitudDesdeUser, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../solicitudes/SolicitudesTable";
+import { SolicitudVista, SolicitudesTable, solicitudDesdeUser, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../solicitudes/SolicitudDetalleModal";
 
 interface TeamSolicitudesTabProps {
@@ -108,8 +108,9 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
     if (!result.isConfirmed) return;
 
     try {
-      await usersAPI.eliminarSolicitud(s._id);
-      sweetAlert.success("Solicitud Eliminada", "La solicitud fue eliminada.");
+      const r = resultadoEliminarSolicitud(await usersAPI.eliminarSolicitud(s._id));
+      if (r.encontrado) sweetAlert.success("Solicitud Eliminada", r.texto);
+      else sweetAlert.warning("Solicitud Eliminada", r.texto);
       fetchSolicitudes();
     } catch (error: any) {
       sweetAlert.error("Error", error.response?.data?.error || "Error al eliminar la solicitud");

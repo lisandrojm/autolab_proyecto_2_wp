@@ -9,7 +9,7 @@ import { clientsAPI } from "../api/clients";
 import { projectsAPI } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
+import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
 import { CargaMasivaModal } from "../components/solicitudes/CargaMasivaModal";
 // La pantalla del equipo, montada en modo «sólo aprobación»: de ahí sale el wizard de contratación.
@@ -150,8 +150,9 @@ export const SolicitudesPage: React.FC = () => {
     const r = await sweetAlert.confirm("¿Eliminar solicitud?", textoEliminarSolicitud(s), "Sí, eliminar");
     if (!r.isConfirmed) return;
     try {
-      await usersAPI.eliminarSolicitud(s._id);
-      sweetAlert.success("Solicitud eliminada", "La solicitud fue eliminada.");
+      const resultado = resultadoEliminarSolicitud(await usersAPI.eliminarSolicitud(s._id));
+      if (resultado.encontrado) sweetAlert.success("Solicitud eliminada", resultado.texto);
+      else sweetAlert.warning("Solicitud eliminada", resultado.texto);
       cargar(page);
     } catch (error: any) {
       sweetAlert.error("Error", error.response?.data?.error || "No se pudo eliminar la solicitud.");

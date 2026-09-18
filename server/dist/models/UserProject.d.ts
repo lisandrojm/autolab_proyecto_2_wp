@@ -190,6 +190,12 @@ interface IContract {
      *
      * Es exclusivo de esa pestaña: no toca "Alta temprana de ARCA" ni "Constancia de CUIT".
      */
+    /**
+     * La solicitud de contratación cuya aprobación creó este contrato. Es lo que permite que borrar la
+     * solicitud aprobada borre ESTE contrato y no otro de la misma persona en el mismo proyecto. Los
+     * contratos aprobados antes de que existiera el campo no lo tienen (ver `contratoDeSolicitud.ts`).
+     */
+    solicitudId?: Types.ObjectId;
     sinCuitValidacion?: {
         /** Documentación de respaldo cargada. Hace falta al menos una para poder marcar `validado`. */
         documentos: {

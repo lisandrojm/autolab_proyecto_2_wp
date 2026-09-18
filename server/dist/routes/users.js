@@ -14,6 +14,7 @@ import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
+import { borrarContratoDeSolicitud } from "../services/contratoDeSolicitud.js";
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { Area } from "../models/Area.js";
@@ -2032,18 +2033,20 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoS
   Contratación para siempre y no había forma de sacarla desde la app —`DELETE /users/:id` pide permiso
   de administración, porque borra personas—.
 
-  UNA APROBADA SE BORRA SÓLO DESDE EL PANEL, Y SIN TOCAR LA CONTRATACIÓN. Quien la pidió desde la app
-  no llega hasta acá: `permisoSobreSolicitudPropia` le pide permiso de administración a una aprobada.
-  Lo que se borra es el PEDIDO; el contrato que generó sigue en la ficha de la persona y se da de baja
-  desde Contratos. Y hay dos casos, porque al aprobar la solicitud puede haberse convertido en la
+  UNA APROBADA SE BORRA SÓLO DESDE EL PANEL, Y DESHACE LA CONTRATACIÓN. Quien la pidió desde la app no
+  llega hasta acá: `permisoSobreSolicitudPropia` le pide permiso de administración a una aprobada.
+  Se borra también el contrato que creó al aprobarse (`borrarContratoDeSolicitud`: por `solicitudId`,
+  o por las fechas pedidas en las aprobadas antes de ese campo); los demás contratos de la persona no
+  se tocan. Si ese contrato no aparece, la solicitud se borra igual y la respuesta lo dice, para que se
+  lo busque a mano. Después, dos casos, porque al aprobar la solicitud puede haberse convertido en la
   persona misma:
     · apunta a otra persona (`solicitudUserId`) y no tiene contratos propios → es sólo el pedido: se
       borra el documento, igual que una pendiente;
-    · es la persona (no apunta a nadie, o ya tiene asignaciones): borrar el documento sería borrar al
-      empleado con todos sus contratos. Se le quitan las marcas de solicitud y nada más: sale de las
-      listas de Solicitudes y sigue siendo el usuario que es.
-  Una renovación aprobada no vuelve a «Por vencer» al borrarla: ese listado ya descarta el contrato que
-  tiene uno posterior en la misma asignación, que es justo lo que dejó la aprobación.
+    · es la persona (no apunta a nadie, o tiene asignaciones propias): borrar el documento sería borrar
+      al empleado con el resto de sus contratos. Se le quitan las marcas de solicitud y nada más: sale
+      de las listas de Solicitudes y sigue siendo el usuario que es.
+  Una renovación aprobada que se borra vuelve a dejar el contrato viejo en «Por vencer»: la renovación
+  se deshizo, así que hay que volver a decidirla.
 
   Se deshace además lo que la solicitud había dejado alrededor:
     · la decisión de renovación, si era una: sin eso el contrato quedaba fuera de «Por vencer» para
@@ -2055,7 +2058,7 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoS
 router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSolicitudPropia({ incluirCerradas: true }), async (req, res) => {
     try {
         const id = req.params.id;
-        const solicitud = await User.findOne({ _id: id, tenantId: req.tenantObjectId }).select("firstName lastName email metadata.fullName metadata.isSolicitud metadata.solicitudStatus metadata.solicitudUserId").lean();
+        const solicitud = await User.findOne({ _id: id, tenantId: req.tenantObjectId }).select("firstName lastName email metadata.fullName metadata.isSolicitud metadata.solicitudStatus metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate").lean();
         if (!solicitud) {
             res.status(404).json({ error: "Solicitud no encontrada" });
             return;
@@ -2066,8 +2069,12 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
             return;
         }
         const nombre = m.fullName || `${solicitud.firstName || ""} ${solicitud.lastName || ""}`.trim() || solicitud.email;
+        /** El contrato que se borró con la solicitud aprobada (o que no se encontró). Viaja en la respuesta. */
+        let contrato;
         if (m.solicitudStatus === "aprobada") {
             const apuntaAOtraPersona = !!m.solicitudUserId && String(m.solicitudUserId) !== String(id);
+            // El contrato primero: si falla, la solicitud sigue ahí y se puede reintentar.
+            contrato = await borrarContratoDeSolicitud({ solicitudId: String(id), personaId: apuntaAOtraPersona ? String(m.solicitudUserId) : String(id), projectIds: m.projectIds || [], startDate: m.startDate, dueDate: m.dueDate });
             const esLaPersona = !apuntaAOtraPersona || !!(await UserProject.exists({ userId: id }));
             if (esLaPersona) {
                 await Promise.all([
@@ -2077,8 +2084,8 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
                     Notification.deleteMany({ tenantId: req.tenantObjectId, refId: id, type: { $in: [NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA] } }),
                 ]);
                 olvidarContratosPorVencer();
-                console.log(`[SOLICITUD] ${req.user.userId} sacó de la lista la solicitud aprobada de ${nombre} (${id}); la persona y sus contratos quedan`);
-                res.json({ success: true });
+                console.log(`[SOLICITUD] ${req.user.userId} sacó de la lista la solicitud aprobada de ${nombre} (${id}); contrato ${contrato.borrado ? `borrado (${contrato.proyecto} ${contrato.desde} → ${contrato.hasta || "indeterminado"})` : "no encontrado"}; la persona queda`);
+                res.json({ success: true, contrato });
                 return;
             }
         }
@@ -2093,8 +2100,8 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
         ]);
         // El contrato que esperaba esta renovación vuelve a «Por vencer»: la lista está cacheada.
         olvidarContratosPorVencer();
-        console.log(`[SOLICITUD] ${req.user.userId} borró la solicitud de ${nombre} (${id})`);
-        res.json({ success: true });
+        console.log(`[SOLICITUD] ${req.user.userId} borró la solicitud de ${nombre} (${id})${contrato ? `; contrato ${contrato.borrado ? `borrado (${contrato.proyecto} ${contrato.desde} → ${contrato.hasta || "indeterminado"})` : "no encontrado"}` : ""}`);
+        res.json({ success: true, ...(contrato ? { contrato } : {}) });
     }
     catch (error) {
         console.error("Delete solicitud error:", error);
