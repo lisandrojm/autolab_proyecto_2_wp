@@ -42,6 +42,12 @@ class TerminosCondicionesAPI {
   async remove(id: string): Promise<void> {
     await axios.delete(`/terminos-condiciones/${id}`);
   }
+
+  /** El texto exacto de una versión: lo que aceptó una persona, aunque después se haya editado. */
+  async version(id: string, version: number): Promise<{ titulo: string; contenido: string; version: number; esLaActual: boolean }> {
+    const { data } = await axios.get(`/terminos-condiciones/${id}/version/${version}`);
+    return data;
+  }
 }
 
 export const terminosCondicionesAPI = new TerminosCondicionesAPI();

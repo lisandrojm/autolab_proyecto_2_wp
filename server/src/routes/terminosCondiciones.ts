@@ -54,6 +54,32 @@ router.get("/", async (req: Req, res: Response) => {
   }
 });
 
+/*
+  GET /terminos-condiciones/:id/version/:version — el texto EXACTO de una versión.
+
+  Es lo que muestra la ficha de una persona: lo que aceptó, aunque después se haya editado. Si es la
+  versión actual sale del documento; si no, del historial.
+*/
+router.get("/:id/version/:version", async (req: Req, res: Response) => {
+  try {
+    const doc: any = await TerminosCondiciones.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).lean();
+    if (!doc) {
+      res.status(404).json({ error: "Esos términos y condiciones ya no existen." });
+      return;
+    }
+    const version = Number(req.params.version);
+    const texto = doc.version === version ? doc : (doc.historial || []).find((h: any) => h.version === version);
+    if (!texto) {
+      res.status(404).json({ error: `No está guardada la versión ${version} de estos términos.` });
+      return;
+    }
+    res.json({ titulo: texto.titulo, contenido: texto.contenido, version, esLaActual: doc.version === version });
+  } catch (error) {
+    console.error("[TERMINOS] version:", error);
+    res.status(500).json({ error: "No se pudo cargar esa versión de los términos." });
+  }
+});
+
 // POST /terminos-condiciones — { titulo, contenido, vigente? }
 router.post("/", async (req: Req, res: Response) => {
   try {

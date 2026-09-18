@@ -351,6 +351,8 @@ export interface User {
     nombreValidadoArcaAt?: string;
     /** Declaró no tener CUIT/CUIL argentino (extranjeros). */
     sinCuit?: boolean;
+    /** Los términos y condiciones que aceptó al registrarse con link: cuáles, qué versión, cuándo y desde dónde. */
+    terminosAceptados?: { terminosId: string; version: number; titulo: string; aceptadoEl: string; ip?: string };
     estadoCivil?: string;
     calle?: string;
     altura?: string;
