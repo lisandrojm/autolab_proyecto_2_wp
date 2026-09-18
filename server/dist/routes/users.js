@@ -9,7 +9,7 @@ import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js
 import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../utils/permisosMobile.js";
-import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
+import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
@@ -1217,7 +1217,8 @@ const permisoSobreSolicitudPropia = (opciones = {}) => async (req, res, next) =>
         /*
           Editar y cancelar son sobre una PENDIENTE. Borrar (`incluirCerradas`) va también sobre una
           rechazada o cancelada —es justo lo que hay que poder limpiar del historial—, pero nunca sobre
-          una APROBADA: eso ya es una contratación con contrato y se deshace desde el panel.
+          una APROBADA: eso ya es una contratación con contrato, y borrarla queda para el panel (cae en
+          el `admin` de abajo).
         */
         const alcanzada = opciones.incluirCerradas ? !!estado && estado !== "aprobada" : m.isSolicitud === true && estado === "pendiente";
         const propia = !m.solicitudCreadaPor || String(m.solicitudCreadaPor) === String(req.user.userId);
@@ -2031,8 +2032,18 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoS
   Contratación para siempre y no había forma de sacarla desde la app —`DELETE /users/:id` pide permiso
   de administración, porque borra personas—.
 
-  NUNCA UNA APROBADA: eso ya es una contratación con contrato en la ficha de alguien, y deshacerla es
-  darle de baja el contrato desde el panel, no borrar el pedido.
+  UNA APROBADA SE BORRA SÓLO DESDE EL PANEL, Y SIN TOCAR LA CONTRATACIÓN. Quien la pidió desde la app
+  no llega hasta acá: `permisoSobreSolicitudPropia` le pide permiso de administración a una aprobada.
+  Lo que se borra es el PEDIDO; el contrato que generó sigue en la ficha de la persona y se da de baja
+  desde Contratos. Y hay dos casos, porque al aprobar la solicitud puede haberse convertido en la
+  persona misma:
+    · apunta a otra persona (`solicitudUserId`) y no tiene contratos propios → es sólo el pedido: se
+      borra el documento, igual que una pendiente;
+    · es la persona (no apunta a nadie, o ya tiene asignaciones): borrar el documento sería borrar al
+      empleado con todos sus contratos. Se le quitan las marcas de solicitud y nada más: sale de las
+      listas de Solicitudes y sigue siendo el usuario que es.
+  Una renovación aprobada no vuelve a «Por vencer» al borrarla: ese listado ya descarta el contrato que
+  tiene uno posterior en la misma asignación, que es justo lo que dejó la aprobación.
 
   Se deshace además lo que la solicitud había dejado alrededor:
     · la decisión de renovación, si era una: sin eso el contrato quedaba fuera de «Por vencer» para
@@ -2044,7 +2055,7 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoS
 router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSolicitudPropia({ incluirCerradas: true }), async (req, res) => {
     try {
         const id = req.params.id;
-        const solicitud = await User.findOne({ _id: id, tenantId: req.tenantObjectId }).select("firstName lastName email metadata.fullName metadata.isSolicitud metadata.solicitudStatus").lean();
+        const solicitud = await User.findOne({ _id: id, tenantId: req.tenantObjectId }).select("firstName lastName email metadata.fullName metadata.isSolicitud metadata.solicitudStatus metadata.solicitudUserId").lean();
         if (!solicitud) {
             res.status(404).json({ error: "Solicitud no encontrada" });
             return;
@@ -2054,9 +2065,22 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
             res.status(400).json({ error: "Esto no es una solicitud de contratación." });
             return;
         }
+        const nombre = m.fullName || `${solicitud.firstName || ""} ${solicitud.lastName || ""}`.trim() || solicitud.email;
         if (m.solicitudStatus === "aprobada") {
-            res.status(409).json({ error: "Esta solicitud ya fue aprobada: es una contratación. Para deshacerla hay que dar de baja el contrato desde el panel." });
-            return;
+            const apuntaAOtraPersona = !!m.solicitudUserId && String(m.solicitudUserId) !== String(id);
+            const esLaPersona = !apuntaAOtraPersona || !!(await UserProject.exists({ userId: id }));
+            if (esLaPersona) {
+                await Promise.all([
+                    User.updateOne({ _id: id, tenantId: req.tenantObjectId }, { $unset: { "metadata.solicitudStatus": "", "metadata.solicitudCreadaPor": "", "metadata.solicitudUserId": "", "metadata.solicitudMotivoRechazo": "", "metadata.solicitudRechazadaPor": "", "metadata.solicitudRechazadaEl": "" } }),
+                    RenovacionContrato.deleteMany({ tenantId: req.tenantObjectId, solicitudId: id }),
+                    // Sólo los avisos de la solicitud: el resto de los que apuntan a esta persona siguen valiendo.
+                    Notification.deleteMany({ tenantId: req.tenantObjectId, refId: id, type: { $in: [NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA] } }),
+                ]);
+                olvidarContratosPorVencer();
+                console.log(`[SOLICITUD] ${req.user.userId} sacó de la lista la solicitud aprobada de ${nombre} (${id}); la persona y sus contratos quedan`);
+                res.json({ success: true });
+                return;
+            }
         }
         await User.deleteOne({ _id: id, tenantId: req.tenantObjectId });
         await Promise.all([
@@ -2069,7 +2093,6 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
         ]);
         // El contrato que esperaba esta renovación vuelve a «Por vencer»: la lista está cacheada.
         olvidarContratosPorVencer();
-        const nombre = m.fullName || `${solicitud.firstName || ""} ${solicitud.lastName || ""}`.trim() || solicitud.email;
         console.log(`[SOLICITUD] ${req.user.userId} borró la solicitud de ${nombre} (${id})`);
         res.json({ success: true });
     }

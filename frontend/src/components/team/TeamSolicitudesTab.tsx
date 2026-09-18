@@ -4,7 +4,7 @@ import { faUserPlus, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { SolicitudVista, SolicitudesTable, solicitudDesdeUser, useCatalogosDeSolicitudes } from "../solicitudes/SolicitudesTable";
+import { SolicitudVista, SolicitudesTable, solicitudDesdeUser, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../solicitudes/SolicitudDetalleModal";
 
 interface TeamSolicitudesTabProps {
@@ -104,7 +104,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
 
   /** Borrado definitivo: solo desde el admin, para depurar el listado. */
   const handleDelete = async (s: SolicitudVista) => {
-    const result = await sweetAlert.confirm("¿Eliminar solicitud?", `Se eliminará definitivamente la solicitud de ${s.nombre}. Esta acción no se puede deshacer.`, "Sí, eliminar");
+    const result = await sweetAlert.confirm("¿Eliminar solicitud?", textoEliminarSolicitud(s), "Sí, eliminar");
     if (!result.isConfirmed) return;
 
     try {

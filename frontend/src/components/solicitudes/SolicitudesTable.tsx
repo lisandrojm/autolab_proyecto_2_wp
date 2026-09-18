@@ -143,6 +143,12 @@ export const useCatalogosDeSolicitudes = () => {
   }, [roleFrames, categoriasSat, estados]);
 };
 
+/** Lo que dice la confirmación de «Eliminar»: en una aprobada se borra el pedido, no la contratación. */
+export const textoEliminarSolicitud = (s: SolicitudVista) =>
+  s.estado === "aprobada"
+    ? `Se eliminará la solicitud de ${s.nombre}. El contrato que generó NO se borra: sigue en la ficha de la persona y, si hay que deshacerlo, se da de baja desde Contratos.`
+    : `Se eliminará definitivamente la solicitud de ${s.nombre}. Esta acción no se puede deshacer.`;
+
 export const formatFechaSolicitud = (dateStr?: string | null) => {
   if (!dateStr) return "N/A";
   try {
@@ -347,21 +353,20 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       )}
 
                       {/*
-                        BORRAR, EN CUALQUIER ESTADO MENOS APROBADA —igual que en la app—.
+                        BORRAR, EN CUALQUIER ESTADO.
 
                         Rechazar y borrar contestan cosas distintas: rechazar es una decisión sobre un pedido
                         real y queda en el historial con su motivo; borrar es para lo que no aporta historial
                         —una prueba, una cargada dos veces—. Ofrecerlo recién después de rechazar obligaba a
                         inventar un motivo de rechazo para poder sacar de la lista algo que nunca fue un pedido.
 
-                        Una APROBADA no: ya es una contratación con contrato, y el server la rechaza igual
-                        (`DELETE /users/:id/solicitud` contesta 409).
+                        Esta tabla es del panel, así que también se ofrece sobre una APROBADA (en la app no:
+                        el server se la niega a quien no administra). Lo que se borra es el pedido; el
+                        contrato que generó queda en la ficha de la persona (ver `DELETE /users/:id/solicitud`).
                       */}
-                      {s.estado !== "aprobada" && (
-                        <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar definitivamente">
-                          <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
-                        </button>
-                      )}
+                      <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title={s.estado === "aprobada" ? "Eliminar la solicitud (el contrato queda)" : "Eliminar definitivamente"}>
+                        <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
+                      </button>
                     </div>
                   </td>
                 </tr>

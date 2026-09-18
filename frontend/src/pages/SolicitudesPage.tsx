@@ -9,7 +9,7 @@ import { clientsAPI } from "../api/clients";
 import { projectsAPI } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
+import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
 import { CargaMasivaModal } from "../components/solicitudes/CargaMasivaModal";
 // La pantalla del equipo, montada en modo «sólo aprobación»: de ahí sale el wizard de contratación.
@@ -147,7 +147,7 @@ export const SolicitudesPage: React.FC = () => {
   };
 
   const eliminar = async (s: SolicitudVista) => {
-    const r = await sweetAlert.confirm("¿Eliminar solicitud?", `Se eliminará definitivamente la solicitud de ${s.nombre}. Esta acción no se puede deshacer.`, "Sí, eliminar");
+    const r = await sweetAlert.confirm("¿Eliminar solicitud?", textoEliminarSolicitud(s), "Sí, eliminar");
     if (!r.isConfirmed) return;
     try {
       await usersAPI.eliminarSolicitud(s._id);
