@@ -55,7 +55,20 @@ const fechaISOExpr = (campo: string) => ({
  * Devuelve userId → contrato que rige (sólo los campos que usan los contadores y el detalle), o sin
  * entrada si la persona no tiene vínculo con el proyecto.
  */
-export async function contratosQueRigenDelProyecto(projectId: string, hoy: string): Promise<Map<string, any>> {
+/** Lo que devuelve siempre: lo que miran los contadores y la Jerarquía. */
+const CAMPOS_BASE = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_estado_empleado", "nombre_contrato", "areaShiftAssignments"];
+
+/**
+ * `camposExtra`: campos del contrato que además hacen falta. La tabla de Gestionar Equipo pide una
+ * docena —tipo, reemplazo, horario, jornadas, empresas— porque los muestra en sus columnas. Se piden
+ * explícitos y no «todo el contrato» para que el peso de esto no crezca cada vez que alguien agrega
+ * un campo al contrato.
+ *
+ * `_indice` es la posición en el array del UserProject —la que esperan editar y descargar— y `_total`
+ * cuántos contratos tiene la persona en ese proyecto, que es lo que muestra la columna CONTRATOS.
+ */
+export async function contratosQueRigenDelProyecto(projectId: string, hoy: string, camposExtra: string[] = []): Promise<Map<string, any>> {
+  const campos = [...new Set([...CAMPOS_BASE, ...camposExtra])];
   const filas = await UserProject.aggregate([
     { $match: { projectId: new Types.ObjectId(projectId) } },
     {
@@ -119,6 +132,7 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
         _id: 0,
         userId: 1,
         indice: "$elegido.i",
+        total: { $size: { $ifNull: ["$contracts", []] } },
         contrato: {
           $cond: [
             { $eq: ["$elegido", null] },
@@ -126,13 +140,7 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
             {
               $let: {
                 vars: { c: { $arrayElemAt: ["$contracts", "$elegido.i"] } },
-                in: {
-                  fecha_alta_contrato: "$$c.fecha_alta_contrato",
-                  fecha_baja_contrato: "$$c.fecha_baja_contrato",
-                  nombre_estado_empleado: "$$c.nombre_estado_empleado",
-                  nombre_contrato: "$$c.nombre_contrato",
-                  areaShiftAssignments: "$$c.areaShiftAssignments",
-                },
+                in: Object.fromEntries(campos.map((campo) => [campo, `$$c.${campo}`])),
               },
             },
           ],
@@ -140,5 +148,5 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
       },
     },
   ]);
-  return new Map(filas.map((f: any) => [String(f.userId), f.contrato ? { ...f.contrato, _indice: f.indice } : null]));
+  return new Map(filas.map((f: any) => [String(f.userId), f.contrato ? { ...f.contrato, _indice: f.indice, _total: f.total } : null]));
 }

@@ -40,6 +40,7 @@ import { requireAnyPermission, requirePermission } from "../middleware/permissio
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { claveEstado } from "../utils/estadoClave.js";
 const router = Router();
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
@@ -393,23 +394,22 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         /*
           MODO TABLA DE EQUIPO (`?teamTable=true` + `projectId`): lo que Gestionar Equipo dibuja, y nada más.
     
-          El modo por defecto traía TODOS los `UserProject` de cada persona con TODOS sus contratos
-          completos —documentación, firmas, importes, sedes— para pintar una tabla que sólo mira el
-          proyecto abierto: 400 KB por página. Acá se piden la entrada de ESE proyecto y, de sus
-          contratos, sólo los campos que leen las columnas, el modal de contratos y el filtro de estado.
+          NO VIAJA NINGÚN ARRAY DE CONTRATOS. El modo por defecto mandaba todos los `UserProject` de cada
+          persona con su historial completo: 354 contratos para pintar 25 filas, 389 KB. Y la tabla, de todo
+          eso, muestra UNO: el que rige hoy. Así que el server manda ese, con los campos de sus columnas,
+          más cuántos hay (`contractCount`) y en qué posición está (`lastContractIndex`).
     
-          EL ARRAY `contracts` CONSERVA ORDEN Y LONGITUD, y eso no es un detalle: el modal de contratos usa
-          el ÍNDICE dentro del array para editar y para descargar el contrato firmado (`indiceEnBD`). Una
-          projection de subcampos no reordena ni saltea elementos; filtrarlos sí rompería eso.
+          CUÁL RIGE LO ELIGE MONGO, con `contratosQueRigenDelProyecto`: la misma regla que `getContratoActivo`
+          del front —vigentes; entre ellos manda el tiempo indeterminado; el más reciente por alta y, a
+          igualdad, por carga; sin vigentes, el más reciente de todos—, ya verificada contra ella. Copiarla
+          acá habría sido la segunda copia de una regla que decide lo que se ve en cada fila.
+    
+          El HISTORIAL sigue estando, en `GET /users/:id/contracts`, y lo pide el modal al abrirse.
         */
         const teamTable = req.query.teamTable === "true" && typeof req.query.projectId === "string" && !!req.query.projectId;
+        /** Campos del contrato que rige que muestran las columnas (además de los que la agregación ya trae). */
         const CAMPOS_CONTRATO_TABLA = [
-            // Vigencia y cuál rige hoy (`getContratoActivo` mira estas tres).
-            "fecha_alta_contrato",
-            "fecha_baja_contrato",
             "fecha_carga",
-            // Columnas de la tabla.
-            "nombre_contrato",
             "tipo_contrato_id",
             "nombre_estado_empleado",
             "nombre_rol_frame",
@@ -431,16 +431,14 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
             "nombre_empresa_release",
             "altaDocumentoUrl",
             "altaDocumentoNombre",
-        ]
-            .map((c) => `contracts.${c}`)
-            .join(" ");
+        ];
         const projectsPopulate = teamTable
             ? {
                 path: "metadata.projects",
                 model: UserProject,
-                // Sólo el proyecto abierto: la tabla resuelve todo con `projects.find(p => p.projectId === projectId)`.
+                // Sólo el proyecto abierto, y SIN contratos: el que rige llega aparte, ya elegido.
                 match: { projectId: String(req.query.projectId) },
-                select: `projectId nombre_rol_frame ${CAMPOS_CONTRATO_TABLA}`,
+                select: "projectId nombre_rol_frame",
             }
             : slimProjects
                 ? {
@@ -496,7 +494,12 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
                     .populate({ path: "metadata.projects", model: UserProject, select: "projectId nombre_rol_frame nombre_sede contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga" })
                     .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
                 : User.find(filter)
-                    .select("-password")
+                    /*
+                      La tabla de equipo no muestra datos bancarios, ni el CUIT, ni la fecha de nacimiento: eso
+                      es la ficha de la persona, que se pide aparte al abrirla. Acá viajaría en cada una de las
+                      25 filas de cada página, para no dibujarse.
+                    */
+                    .select(teamTable ? "-password -metadata.cbu -metadata.nroDeCuentaBancaria -metadata.aliasBancario -metadata.tipoDeCuentaBancaria -metadata.cuit -metadata.fechaNac" : "-password")
                     .populate({ path: "roles", select: "name permissions", model: Role })
                     .populate({
                     path: "projectIds",
@@ -668,6 +671,11 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           calcula donde están los datos: una sola agregación para toda la página, en vez de arrastrar
           cientos de contratos por fila para sumar dos números.
         */
+        /*
+          EL CONTRATO QUE RIGE DE CADA UNO, ya elegido por Mongo. Ver el comentario del modo tabla: es lo
+          único que la tabla muestra de todo el historial, y viene con su posición y con el total.
+        */
+        const contratoQueRige = teamTable ? await contratosQueRigenDelProyecto(String(req.query.projectId), hoyArgentina(), CAMPOS_CONTRATO_TABLA) : null;
         const totalesPorUsuario = new Map();
         if (teamTable && idsPagina.length > 0) {
             const filas = await UserProject.aggregate([
@@ -681,8 +689,12 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         res.json({
             users: enrichedUsers.map((u) => {
                 const totales = totalesPorUsuario.get(String(u._id));
+                const rige = contratoQueRige?.get(String(u._id)) || null;
                 return {
                     ...u,
+                    // Sólo en modo tabla. `lastContractIndex` es la posición en el array del UserProject: es lo
+                    // que esperan editar, descargar y subir documentación.
+                    ...(teamTable ? { contractCount: rige?._total ?? 0, lastContract: rige, lastContractIndex: rige?._indice ?? -1 } : {}),
                     // `jornadasTotales`/`contratosTotales` sólo existen en el modo tabla; quien no los recibe
                     // sigue sumando sobre `metadata.projects` como siempre.
                     metadata: totales ? { ...u.metadata, jornadasTotales: totales.jornadas, contratosTotales: totales.contratos } : u.metadata,
@@ -1668,6 +1680,40 @@ router.get("/eligible-responsables", requireTenant, authenticateToken, async (re
     }
 });
 // GET /users/:id - Obtener usuario específico
+/*
+  GET /users/:id/contracts?projectId= — el historial de contratos de una persona en un proyecto.
+
+  Existe porque el listado dejó de mandarlo: antes el modal de contratos leía el array que venía
+  embebido en cada fila de la tabla, y por eso 25 filas arrastraban 354 contratos completos. Ahora la
+  tabla muestra el que rige y este endpoint se pide al ABRIR el modal, para una sola persona.
+
+  El array viaja COMPLETO y EN EL ORDEN DE LA BASE, sin filtrar ni reordenar: el modal usa la posición
+  dentro del array para editar, descargar y subir la documentación de cada contrato.
+
+  Lleva sueldos, así que pide el mismo permiso que la ficha de un usuario y comprueba que el proyecto
+  sea del tenant de quien pregunta; `users_&_projects` no guarda tenant propio.
+*/
+router.get("/:id/contracts", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const projectId = String(req.query.projectId || "");
+        if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(projectId)) {
+            res.status(400).json({ error: "Falta indicar la persona y el proyecto." });
+            return;
+        }
+        const proyecto = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+        if (!proyecto) {
+            res.status(404).json({ error: "Proyecto no encontrado" });
+            return;
+        }
+        const vinculo = await UserProject.findOne({ userId: id, projectId }).select("contracts nombre_rol_frame").lean();
+        res.json({ contracts: vinculo?.contracts || [], nombre_rol_frame: vinculo?.nombre_rol_frame || "" });
+    }
+    catch (error) {
+        console.error("Get user contracts error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {
         const user = await User.findOne({

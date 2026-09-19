@@ -291,6 +291,19 @@ export interface User {
     dueDate?: string;
     createdAt?: string;
   }[];
+  /*
+    EL CONTRATO QUE RIGE, ELEGIDO EN EL SERVER (sólo en la tabla de Gestionar Equipo, `?teamTable=true`).
+
+    Ese listado NO manda el historial: cada persona tiene 22 contratos de promedio y la tabla muestra
+    uno. `lastContract` es ese uno —con la misma regla que `getContratoActivo`—, `contractCount`
+    cuántos hay en total (la columna CONTRATOS) y `lastContractIndex` su posición en el array del
+    UserProject, que es la que esperan editar, descargar y subir documentación.
+
+    El historial se pide aparte, con `contratosDelProyecto`.
+  */
+  lastContract?: Contract | null;
+  contractCount?: number;
+  lastContractIndex?: number;
   metadata?: {
     projects?: UserProjectMetadata[];
     documento?: string;
@@ -760,6 +773,18 @@ class UsersAPI {
   }
 
 
+
+  /**
+   * El historial de contratos de una persona EN UN PROYECTO, en el orden de la base.
+   *
+   * La tabla de Gestionar Equipo dejó de traerlo (mandaba los de las 25 filas para mostrar uno de
+   * cada una); esto lo pide el modal de contratos cuando se abre el historial, para una sola persona.
+   * El orden importa: la posición en el array es la que usan editar, descargar y subir el alta.
+   */
+  async contratosDelProyecto(userId: string, projectId: string): Promise<Contract[]> {
+    const { data } = await axios.get(`/users/${userId}/contracts`, { params: { projectId }, headers: this.getHeaders() });
+    return Array.isArray(data?.contracts) ? data.contracts : [];
+  }
 
   /** Todos los contratos de una persona (cross-proyecto/cliente), enriquecidos para gestionarlos. */
   async getAllContracts(userId: string): Promise<ManagedContract[]> {

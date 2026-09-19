@@ -58,6 +58,38 @@ import { cachedFetch } from "../utils/refCache";
 
 const HELP_KEY = "projectTeam" as const;
 
+/*
+  EL VÍNCULO DE LA PERSONA CON EL PROYECTO ABIERTO.
+*/
+function vinculoConElProyecto(user: any, projectId?: string): any {
+  return (user?.metadata?.projects || []).find((p: any) => {
+    const pId = p?.projectId;
+    return String(typeof pId === "object" ? pId?._id : pId) === String(projectId);
+  });
+}
+
+/*
+  EL CONTRATO QUE RIGE DE UNA FILA DE LA TABLA.
+
+  La tabla muestra UNO de los contratos de cada persona: el que rige hoy. Antes llegaban los 22 de
+  promedio que tiene cada una para elegirlo acá —354 contratos completos para dibujar 25 filas— y
+  esa era la mayor parte de lo que tardaba la pantalla en cargar.
+
+  Ahora lo elige el server (`?teamTable=true`, con la misma regla que `getContratoActivo`) y lo manda
+  en `lastContract`. El cálculo local queda de respaldo para las pantallas que traen al usuario
+  completo —el wizard, el detalle— donde sí viaja el historial.
+*/
+function contratoQueRige(user: any, projectId?: string): any {
+  if (user?.lastContract !== undefined) return user.lastContract;
+  return getContratoActivo(vinculoConElProyecto(user, projectId)?.contracts as any[]);
+}
+
+/** Cuántos contratos tiene la persona en el proyecto: lo cuenta el server, o el array si vino. */
+function cantidadDeContratos(user: any, projectId?: string): number {
+  if (typeof user?.contractCount === "number") return user.contractCount;
+  return vinculoConElProyecto(user, projectId)?.contracts?.length || 0;
+}
+
 // Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
 function formatContractDate(d?: string): string {
   if (!d) return "—";
@@ -909,14 +941,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Se deduplica por etiqueta canónica: "Falta pedido de ARCA" y "Pedido de ARCA" son el mismo estado.
     const seen = new Set<string>();
     allEstados.forEach((e) => e.name && seen.add(estadoLabel(e.name)));
-    // Último contrato del miembro en este proyecto (getActiveContract se declara más abajo, así que
-    // acá se resuelve igual pero inline).
+    // El contrato que rige de cada miembro en este proyecto (lo elige el server; ver `contratoQueRige`).
     teamRows.forEach((u) => {
-      const projectMeta = u.metadata?.projects?.find((p: any) => {
-        const pId = p.projectId;
-        return String(typeof pId === "object" ? (pId as any)?._id : pId) === String(projectId);
-      });
-      const estado = (getContratoActivo(projectMeta?.contracts as any[]) as any)?.nombre_estado_empleado || null;
+      const estado = (contratoQueRige(u, projectId) as any)?.nombre_estado_empleado || null;
       if (estado) seen.add(estadoLabel(estado));
     });
     return [...seen].map((name) => ({ value: name, label: name }));
@@ -2389,14 +2416,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   }
 
   // Último contrato del empleado en ESTE proyecto (mismo criterio que la columna Contrato).
-  const getActiveContract = (user: User): any => {
-    const projectMeta = user.metadata?.projects?.find((p: any) => {
-      const pId = p.projectId;
-      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-      return String(idToCheck) === String(projectId);
-    });
-    return getContratoActivo(projectMeta?.contracts as any[]);
-  };
+  const getActiveContract = (user: User): any => contratoQueRige(user, projectId);
 
   // Áreas/turnos de un miembro en el proyecto: misma fuente que usa el wizard al abrirse (teamConfig y,
   // si ahí no está, el último contrato del miembro).
@@ -2525,13 +2545,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   const renderUserRow = (user: User) => {
     const userConfig = teamConfig.find((c) => c.userId === user._id);
-    const projectMeta = user.metadata?.projects?.find((p: any) => {
-      const pId = p.projectId;
-      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-      return String(idToCheck) === String(projectId);
-    });
+    const projectMeta = vinculoConElProyecto(user, projectId);
     const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
-    const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
+    const activeContract = contratoQueRige(user, projectId);
 
     // `group` para que la celda fija pueda repintar su propio fondo en el hover: al ser opaca no la
     // alcanza el `hover:` de la fila, que queda por detrás.
@@ -2594,7 +2610,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         {/* Cantidad de contratos de la persona EN ESTE PROYECTO (la columna Contrato muestra el último). */}
         <td className="px-4 py-3 text-center">
           <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
-            {projectMeta?.contracts?.length || 0}
+            {cantidadDeContratos(user, projectId)}
           </span>
         </td>
         <td className="px-4 py-3">

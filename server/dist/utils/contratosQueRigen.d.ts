@@ -1,16 +1,10 @@
 /**
- * EL CONTRATO QUE RIGE DE CADA MIEMBRO, ELEGIDO ADENTRO DE MONGO.
+ * `camposExtra`: campos del contrato que además hacen falta. La tabla de Gestionar Equipo pide una
+ * docena —tipo, reemplazo, horario, jornadas, empresas— porque los muestra en sus columnas. Se piden
+ * explícitos y no «todo el contrato» para que el peso de esto no crezca cada vez que alguien agrega
+ * un campo al contrato.
  *
- * Los vínculos de un proyecto grande pesan: 254 personas con 22 contratos de promedio son 5,3 MB.
- * Traerlos para quedarse con UNO por persona hacía que `area-shift-counts` bajara ~1 MB aun pidiendo
- * cuatro campos (11 s medidos), y la Jerarquía lo repetía una vez por área. Acá la elección se hace
- * en la base con la misma regla que `getContratoActivo` —vigentes; entre ellos manda el tiempo
- * indeterminado; el más reciente por alta y, a igualdad, por carga; sin vigentes, el más reciente de
- * todos— y viaja una fila chica por persona.
- *
- * Si se toca la regla de `getContratoActivo`, hay que tocar esta también.
- *
- * Devuelve userId → contrato que rige (sólo los campos que usan los contadores y el detalle), o sin
- * entrada si la persona no tiene vínculo con el proyecto.
+ * `_indice` es la posición en el array del UserProject —la que esperan editar y descargar— y `_total`
+ * cuántos contratos tiene la persona en ese proyecto, que es lo que muestra la columna CONTRATOS.
  */
-export declare function contratosQueRigenDelProyecto(projectId: string, hoy: string): Promise<Map<string, any>>;
+export declare function contratosQueRigenDelProyecto(projectId: string, hoy: string, camposExtra?: string[]): Promise<Map<string, any>>;
