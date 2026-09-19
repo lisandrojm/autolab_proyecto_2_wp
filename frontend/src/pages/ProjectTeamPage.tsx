@@ -657,17 +657,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         setContratos(contratosData);
       };
 
-      // El cleanup de ids huérfanos es mantenimiento, no dato de pantalla: casi nunca borra algo y
-      // antes se esperaba a que contestara antes de pedir el equipo. Va al final y solo relee el
-      // proyecto si efectivamente sacó a alguien.
-      const limpiarHuerfanos = async () => {
-        const resultado = await projectsAPI.cleanupTeam(projectId);
-        if (resultado.removedCount > 0) {
-          const actualizado = await projectsAPI.getProject(projectId, { team: "ids" });
-          setProject(actualizado);
-          setTeamConfig(actualizado.teamConfig || []);
-        }
-      };
+      /*
+        ACÁ CORRÍA EL CLEANUP DE IDS HUÉRFANOS (`projectsAPI.cleanupTeam`) Y SE SACÓ.
+
+        Es una MUTACIÓN —borra ids de `assignedUsers`— y se disparaba sola al abrir una pantalla de
+        lectura, dos veces por montaje. Encima encadenaba: si borraba algo, releía el proyecto y
+        reescribía `teamConfig`, lo que volvía a disparar los contadores de área y turno.
+
+        Sigue disponible en `projectsAPI.cleanupTeam` para colgarlo de un botón de mantenimiento o de
+        un job. Lo que no puede es correr porque alguien miró el equipo.
+      */
 
       try {
         setLoading(true);
@@ -710,8 +709,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           }
         });
         setUserLookup(lookupMap);
-
-        limpiarHuerfanos().catch((e) => console.warn("Could not cleanup team:", e));
       } catch (error) {
         console.error("Error loading data:", error);
         sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
@@ -748,6 +745,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTermTeam, filterUserStatus, filterRolMobile, filterVigencia, filterTipoContrato, filterAreaTurno, filterEstadoContrato, filterReemplazo]);
 
+  /*
+    LA FIRMA DEL EQUIPO, NO EL ARRAY.
+
+    El efecto de abajo dependía de `teamConfig`, que durante la carga se reescribe con OTRO array del
+    mismo contenido. Cada reescritura era otra vuelta del efecto: cuatro pedidos de 2,5 a 4 s por
+    pantalla para traer 3,5 KB. Comparando el contenido se vuelve a pedir sólo cuando el equipo cambió
+    de verdad —un alta, una edición—, que es lo que el comentario de abajo siempre dijo que hacía.
+  */
+  const teamConfigKey = useMemo(() => JSON.stringify(teamConfig ?? []), [teamConfig]);
+
   // Cantidad de personas por área/turno: se recalcula en el server (equipo completo, no la página).
   // Se refresca cuando cambia `teamConfig`, o sea después de cada alta/edición de miembro.
   useEffect(() => {
@@ -764,7 +771,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     return () => {
       cancelled = true;
     };
-  }, [projectId, token, teamConfig]);
+    // `teamConfigKey` y no `teamConfig`: ver arriba.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, token, teamConfigKey]);
 
   // Cambio de página → traer esa página del server.
   const teamPageInitedRef = React.useRef(false);
