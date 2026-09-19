@@ -5,6 +5,7 @@ import { env } from "./config/env.js";
 
 import express from "express";
 import helmet from "helmet";
+import compression from "compression";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -131,6 +132,18 @@ const USE_HTTPS = String(env.USE_HTTPS) === "true";
 app.set("trust proxy", 1);
 // ───────────────── Middlewares base ─────────────────
 app.use(helmet({ crossOriginResourcePolicy: false }));
+
+/*
+  GZIP EN TODAS LAS RESPUESTAS.
+
+  Ninguna salía comprimida: cada listado viajaba entero —1 MB de centros de costo, 400 KB de usuarios—
+  por una conexión donde el límite real es el ancho de banda, no la CPU. JSON comprime alrededor de
+  diez veces, así que esto solo recorta casi toda la transferencia sin tocar una sola consulta.
+
+  Va DESPUÉS de helmet y ANTES de las rutas: comprime lo que ellas escriben. Lo que ya viene comprimido
+  —un xlsx, un PDF— lo saltea `compression` por su propio filtro, así que no se recomprime nada.
+*/
+app.use(compression());
 
 // express.json() solo para rutas que NO son uploads de archivos
 app.use((req, res, next) => {
