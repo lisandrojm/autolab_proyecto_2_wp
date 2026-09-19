@@ -1733,7 +1733,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
     // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el que
     // rige hoy (el vigente más reciente), que no siempre es el último cargado.
-    const contratoQueRige = getContratoActivo(lastProject?.contracts as any[]);
+    const elQueRige = getContratoActivo(lastProject?.contracts as any[]);
     /*
       EL CONTRATO SALE DE LA FICHA COMPLETA, no de la fila de la tabla.
 
@@ -1744,7 +1744,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       (`usersAPI.get`, arriba). El override queda de respaldo por si esa consulta falló.
     */
     const contratoPorIndice = typeof contractIndex === "number" ? ((lastProject?.contracts as any[])?.[contractIndex] ?? null) : null;
-    const lastContract = contratoPorIndice || contractOverride || contratoQueRige;
+    const lastContract = contratoPorIndice || contractOverride || elQueRige;
 
     /*
       Sin índice explícito el backend actualiza el ÚLTIMO contrato del array. Como acá se precargó el
@@ -1754,8 +1754,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       es una contratación nueva —típicamente una renovación de quien ya está—. Fijar el índice haría
       que aprobar pisara el contrato vigente en vez de agregarle el nuevo, y se perdería el anterior.
     */
-    if (!approveSolicitudId && typeof contractIndex !== "number" && !contractOverride && contratoQueRige && Array.isArray(lastProject?.contracts)) {
-      const idxQueRige = (lastProject!.contracts as any[]).indexOf(contratoQueRige);
+    if (!approveSolicitudId && typeof contractIndex !== "number" && !contractOverride && elQueRige && Array.isArray(lastProject?.contracts)) {
+      const idxQueRige = (lastProject!.contracts as any[]).indexOf(elQueRige);
       if (idxQueRige >= 0) setEditingContractIndex(idxQueRige);
     }
 
@@ -3464,12 +3464,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
               // 3. Check user's contract history (metadata) fallback
               if (shifts.length === 0) {
-                const projectMeta = user.metadata?.projects?.find((p: any) => {
-                  const pId = p.projectId;
-                  const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-                  return String(idToCheck) === String(project?._id);
-                });
-                const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
+                const activeContract = contratoQueRige(user, project?._id);
 
                 if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
                   const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
