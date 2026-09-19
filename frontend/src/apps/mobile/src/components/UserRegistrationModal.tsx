@@ -27,7 +27,7 @@ import { claveOrdenTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos"
 import { SelectorHora } from "../../../../components/contratacion/SelectorHora";
 import { ImportesDelContrato } from "../../../../components/contratacion/ImportesDelContrato";
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from "../../../../utils/horario";
-import { esContratoVigente, fechaISO, getContratoActivo } from "../../../../utils/contratoVigencia";
+import { esContratoVigente, fechaISO } from "../../../../utils/contratoVigencia";
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
 import { EstadoBadge } from "../../../../components/EstadoSelect";
@@ -136,7 +136,25 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   /** Catálogo de empresas y de convenios, para resolver nombres y la cadena proyecto → empresa → CCT. */
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
-  const [platformUsers, setPlatformUsers] = useState<any[]>([]);
+  /*
+    LAS PERSONAS LAS BUSCA EL SERVER, NO EL TELÉFONO.
+
+    Acá vivía la lista COMPLETA de personas activas del tenant —1577— y el buscador filtraba sobre
+    ella. Para eso había que bajarla: dos pedidos de 1000, ~1,5 MB, casi 11 segundos cada uno, porque
+    cada persona venía con las fechas de todos sus contratos (4592 en una sola página) para poder
+    decir "Vigente" al lado del nombre. El modal entero esperaba eso antes de dibujar nada.
+
+    Ahora se pide una página de `POR_PAGINA` filas por búsqueda, ya filtrada por texto y por rol, y el
+    contrato que rige de cada una viene elegido por Mongo. Medido: 731 ms y 21,7 KB.
+
+    Y deja de empeorar sola: antes cada persona nueva del tenant hacía más lenta esta pantalla.
+  */
+  const POR_PAGINA = 50;
+  const [personas, setPersonas] = useState<any[]>([]);
+  const [totalPersonas, setTotalPersonas] = useState(0);
+  const [buscandoPersonas, setBuscandoPersonas] = useState(false);
+  /** Cuánta gente tiene cada rol empresa, para el filtro por rol (lo cuenta el server). */
+  const [personasPorRol, setPersonasPorRol] = useState<Map<string, number>>(new Map());
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   /** Roles empresa de la persona elegida (vacío si el nombre se escribió a mano). Ver ese select. */
   const rolesDelUsuario: string[] = selectedUser?.metadata?.roleFrameIds || [];
@@ -428,33 +446,14 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         setLoadingData(true);
 
         /*
-          MODO SELECTOR en la lista de personas.
-
-          Esta pantalla usa de cada persona: el nombre, el mail, el documento, y con qué rol empresa
-          figura en sus proyectos —para el filtro por rol y para saber quién está en el proyecto
-          cuando hay que elegir a quién reemplaza—. El listado completo, en cambio, traía la ficha
-          entera de cada una: domicilio, datos bancarios, cliente, tenant y los proyectos poblados.
-
-          Medido contra la base para 83 personas: 1280 ms y 131 KB antes, 224 ms y 16 KB con `picker`.
-          Y la diferencia crece con la cantidad de gente del tenant, que es el caso real.
+          Las personas NO se cargan acá: las trae el buscador contra el server, a medida que se escribe
+          (ver `personas`). Lo único que se pide de entrada es cuánta gente tiene cada rol, que es lo
+          que necesita el filtro por rol para no ser una lista de nombres sin números.
         */
-        /*
-          TODAS LAS PERSONAS, NO LAS PRIMERAS MIL.
-
-          Se pedía una sola página de 1000 y la lista se cortaba ahí: con más gente registrada, el
-          resto no aparecía nunca —ni buscándolo por nombre, porque la búsqueda es sobre lo cargado— y
-          el contador decía «1000 personas» justo cuando había más. Ahora se pide la primera página y,
-          si el server dice que hay más, el resto en paralelo.
-        */
-        const POR_PAGINA = 1000;
-        const pedirPagina = (page: number) => usersAPI.list({ page, limit: POR_PAGINA, metadataActivo: "true", picker: true });
-        const personas = pedirPagina(1)
-          .then(async (primera) => {
-            const paginas = primera.pagination?.pages || 1;
-            const resto = paginas > 1 ? await Promise.all(Array.from({ length: paginas - 1 }, (_, i) => pedirPagina(i + 2))) : [];
-            setPlatformUsers([...(primera.users || []), ...resto.flatMap((r) => r.users || [])]);
-          })
-          .catch((e) => console.error("Error cargando personas:", e));
+        usersAPI
+          .rolesFrameCounts()
+          .then((filas) => setPersonasPorRol(new Map(filas.map((f) => [f.name, f.count]))))
+          .catch((e) => console.error("Error contando roles empresa:", e));
 
         /*
           Se guardan los proyectos ACTIVOS sin filtrar por el perfil: el filtro se aplica al pintar.
@@ -502,9 +501,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           .then((tipos) => setMotivos(tipos.filter((t) => t.isActive && !t.name.toLowerCase().includes("horas extra"))))
           .catch((e) => console.error("Error cargando motivos:", e));
 
-        // Personas entra en la espera del spinner porque el buscador es el segundo campo; si tarda
-        // más que los proyectos, igual no bloquea a los demás.
-        Promise.all([proyectos, personas]).finally(() => setLoadingData(false));
+        // El spinner lo sueltan los proyectos y nada más: son el primer campo del formulario y sin
+        // ellos no se puede empezar. El buscador de personas ya no bloquea porque ya no baja nada.
+        proyectos.finally(() => setLoadingData(false));
       };
       loadData();
     }
@@ -607,21 +606,37 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     La solicitud guarda a quién es (`solicitudUserId`), pero al abrirla sólo se recuperaba el nombre:
     la persona quedaba como si no estuviera elegida. Va DESPUÉS del efecto de arriba, que la limpia al abrir.
   */
+  /*
+    Se PIDE por su id. Antes se buscaba en la lista completa que el modal tenía en memoria; ahora esa
+    lista no existe y la persona puede no estar entre las que muestra el buscador.
+  */
+  const traerPersonaPorId = async (id: string) => {
+    const { users } = await usersAPI.list({ picker: true, ids: String(id), limit: 1 });
+    return users?.[0] || null;
+  };
+
   useEffect(() => {
     const id = (editingUser?.metadata as any)?.solicitudUserId;
     if (!isOpen || !id || selectedUser) return;
-    const persona = platformUsers.find((u) => String(u._id) === String(id));
-    if (persona) setSelectedUser(persona);
+    let vigente = true;
+    void traerPersonaPorId(String(id))
+      .then((persona) => { if (vigente && persona) setSelectedUser(persona); })
+      .catch((e) => console.error("Error trayendo la persona de la solicitud:", e));
+    return () => { vigente = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, editingUser, platformUsers]);
+  }, [isOpen, editingUser]);
 
-  // RENOVACIÓN: la persona es la del contrato que vence. Se elige cuando llega la lista de usuarios.
+  // RENOVACIÓN: la persona es la del contrato que vence.
   useEffect(() => {
     const id = renovacion?.plantilla?.metadata?.solicitudUserId;
     if (!isOpen || !id || editingUser) return;
-    const persona = platformUsers.find((u) => String(u._id) === String(id));
-    if (persona) setSelectedUser(persona);
-  }, [isOpen, renovacion, editingUser, platformUsers]);
+    let vigente = true;
+    void traerPersonaPorId(String(id))
+      .then((persona) => { if (vigente && persona) setSelectedUser(persona); })
+      .catch((e) => console.error("Error trayendo la persona de la renovación:", e));
+    return () => { vigente = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, renovacion, editingUser]);
 
   /*
     ARRANCA EN «PEDIDO DE ARCA».
@@ -641,15 +656,51 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     Estaba escrito adentro del JSX del desplegable; al mudarse a la ventana se saca acá para que la
     condición se lea una vez y no se recalcule en cada tecla dentro del render.
   */
-  const personasFiltradas = useMemo(() => {
-    const busca = userSearchTerm.trim().toLowerCase();
-    return platformUsers.filter((u) => {
-      const full = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
-      const coincideTexto = !busca || full.includes(busca) || (u.email || "").toLowerCase().includes(busca);
-      const coincideRol = selectedRoleFilters.length === 0 || (u.externalInfo?.rolFrames || []).some((rf: string) => selectedRoleFilters.includes(rf)) || (u.metadata?.projects || []).some((p: any) => selectedRoleFilters.includes(p.nombre_rol_frame));
-      return coincideTexto && coincideRol;
-    });
-  }, [platformUsers, userSearchTerm, selectedRoleFilters]);
+  /*
+    300 ms DE ESPERA ANTES DE PREGUNTAR.
+
+    Sin la espera, escribir «Martínez» son ocho consultas y las siete primeras se tiran. Con la
+    espera es una. El `pedidoPersonasRef` descarta las respuestas viejas: sin eso, una consulta lenta
+    que vuelve tarde pisa el resultado de la que se escribió después.
+  */
+  const pedidoPersonasRef = useRef(0);
+  const rolesParaElServer = selectedRoleFilters.join(",");
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = ++pedidoPersonasRef.current;
+    setBuscandoPersonas(true);
+    const t = setTimeout(() => {
+      usersAPI
+        .list({
+          page: 1,
+          limit: POR_PAGINA,
+          metadataActivo: "true",
+          picker: true,
+          // `email` es el parámetro de búsqueda del listado: mira el mail, el nombre y el apellido.
+          email: userSearchTerm.trim() || undefined,
+          rolFrame: rolesParaElServer || undefined,
+        })
+        .then((r) => {
+          if (id !== pedidoPersonasRef.current) return;
+          setPersonas(r.users || []);
+          setTotalPersonas(r.pagination?.total ?? (r.users || []).length);
+        })
+        .catch((e) => {
+          if (id !== pedidoPersonasRef.current) return;
+          console.error("Error buscando personas:", e);
+          setPersonas([]);
+          setTotalPersonas(0);
+        })
+        .finally(() => {
+          if (id === pedidoPersonasRef.current) setBuscandoPersonas(false);
+        });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, userSearchTerm, rolesParaElServer]);
+
+  /** Lo que la lista dibuja: ya viene filtrado y recortado por el server. */
+  const personasFiltradas = personas;
 
   /*
     EL CONTRATO QUE RIGE DE CADA PERSONA, para decirlo en su fila.
@@ -666,8 +717,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     };
     const mapa = new Map<string, { vigente: boolean; alta: string; baja: string } | null>();
     for (const u of personasFiltradas) {
-      const contratos = (u.metadata?.projects || []).flatMap((up: any) => (up && Array.isArray(up.contracts) ? up.contracts : []));
-      const c = getContratoActivo(contratos);
+      /*
+        `contratoQueRige` lo eligió el server con la misma regla que `getContratoActivo` (ver
+        `contratosQueRigenDeLasPersonas`). Antes se elegía acá, y para poder hacerlo había que bajarse
+        las fechas de TODOS los contratos de TODAS las personas.
+      */
+      const c = (u as any).contratoQueRige;
       mapa.set(String(u._id), c ? { vigente: esContratoVigente(c), alta: ddmmaaaa(fechaISO(c.fecha_alta_contrato)), baja: ddmmaaaa(fechaISO(c.fecha_baja_contrato)) } : null);
     }
     return mapa;
@@ -685,14 +740,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     ficha o en alguno de sus proyectos. Si contara distinto, el número prometería un resultado que el
     filtro no da.
   */
-  const personasPorRol = useMemo(() => {
-    const cuenta = new Map<string, number>();
-    for (const u of platformUsers) {
-      const suyos = new Set<string>([...((u.externalInfo?.rolFrames || []) as string[]), ...((u.metadata?.projects || []) as any[]).map((p) => p?.nombre_rol_frame).filter(Boolean)]);
-      for (const nombre of suyos) cuenta.set(nombre, (cuenta.get(nombre) || 0) + 1);
-    }
-    return cuenta;
-  }, [platformUsers]);
+  // El conteo por rol lo hace el server (`usersAPI.rolesFrameCounts`): ver `personasPorRol` arriba.
 
   /*
     QUIÉNES PUEDEN SER REEMPLAZADOS: el equipo del proyecto elegido, menos la persona del alta.
@@ -1113,21 +1161,40 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   );
 
 
-  const candidatosAReemplazar = useMemo(() => {
-    if (formData.projectIds.length === 0) return [];
-    const busca = replacedSearchTerm.trim().toLowerCase();
-    return platformUsers.filter((u) => {
-      if (selectedUser && String(u._id) === String(selectedUser._id)) return false;
-      const enElProyecto = (u.metadata?.projects || []).some((p: any) => {
-        const id = typeof p.projectId === "string" ? p.projectId : p.projectId?._id;
-        return formData.projectIds.includes(String(id));
-      });
-      if (!enElProyecto) return false;
-      if (!busca) return true;
-      const nombre = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
-      return nombre.includes(busca) || (u.email || "").toLowerCase().includes(busca);
-    });
-  }, [platformUsers, formData.projectIds, replacedSearchTerm, selectedUser]);
+  /*
+    QUIÉNES PUEDEN SER REEMPLAZADOS: el equipo del proyecto elegido, buscado en el server.
+
+    Es la misma consulta que el buscador de personas, acotada al proyecto (`projectId`). Antes se
+    filtraba la lista completa en el teléfono; sin esa lista, el equipo lo arma el server, que además
+    sabe quién está en el proyecto sin tener que mirar los `metadata.projects` de todo el mundo.
+
+    La persona del alta se saca acá: nadie se reemplaza a sí mismo.
+  */
+  const [candidatosAReemplazar, setCandidatosAReemplazar] = useState<any[]>([]);
+  const pedidoReemplazoRef = useRef(0);
+  const proyectoDelAlta = formData.projectIds[0] || "";
+  useEffect(() => {
+    if (!isOpen || !proyectoDelAlta) {
+      setCandidatosAReemplazar([]);
+      return;
+    }
+    const id = ++pedidoReemplazoRef.current;
+    const t = setTimeout(() => {
+      usersAPI
+        .list({ page: 1, limit: POR_PAGINA, metadataActivo: "true", picker: true, projectId: proyectoDelAlta, email: replacedSearchTerm.trim() || undefined })
+        .then((r) => {
+          if (id !== pedidoReemplazoRef.current) return;
+          setCandidatosAReemplazar((r.users || []).filter((u: any) => !selectedUser || String(u._id) !== String(selectedUser._id)));
+        })
+        .catch((e) => {
+          if (id !== pedidoReemplazoRef.current) return;
+          console.error("Error buscando a quién reemplaza:", e);
+          setCandidatosAReemplazar([]);
+        });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, proyectoDelAlta, replacedSearchTerm, selectedUser?._id]);
 
   // Auto-select project if only one exists or when projects list changes
   useEffect(() => {
@@ -1387,12 +1454,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   /** El motivo elegido, para mostrar su nombre sin repetir el `find` en cada lugar donde se usa. */
   const motivoElegido = motivos.find((m) => String(m._id) === String(formData.motivoReemplazoId)) || null;
 
-  /** Cómo se llama la persona reemplazada, para mostrarla en el campo sin volver a buscarla. */
-  const nombreReemplazado = (() => {
-    if (!formData.replacedUserId) return "";
-    const u = platformUsers.find((p) => String(p._id) === String(formData.replacedUserId));
-    return u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email : "";
-  })();
+  /*
+    CÓMO SE LLAMA LA PERSONA REEMPLAZADA.
+
+    Sale de la lista de candidatos cuando se la acaba de elegir. Al ABRIR una solicitud ya guardada
+    puede no estar ahí —el id viene de `metadata`, y los candidatos son los del proyecto y la
+    búsqueda actual—, así que en ese caso se la pide por su id.
+  */
+  const [nombreReemplazadoPedido, setNombreReemplazadoPedido] = useState<{ id: string; nombre: string } | null>(null);
+  const nombreDe = (u: any) => (u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || "" : "");
+  const enCandidatos = formData.replacedUserId ? candidatosAReemplazar.find((c) => String(c._id) === String(formData.replacedUserId)) : null;
+  const nombreReemplazado = enCandidatos ? nombreDe(enCandidatos) : nombreReemplazadoPedido?.id === String(formData.replacedUserId) ? nombreReemplazadoPedido.nombre : "";
+  useEffect(() => {
+    const id = formData.replacedUserId;
+    if (!isOpen || !id || enCandidatos || nombreReemplazadoPedido?.id === String(id)) return;
+    let vigente = true;
+    void traerPersonaPorId(String(id))
+      .then((u) => { if (vigente && u) setNombreReemplazadoPedido({ id: String(id), nombre: nombreDe(u) }); })
+      .catch((e) => console.error("Error trayendo a la persona reemplazada:", e));
+    return () => { vigente = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, formData.replacedUserId, enCandidatos]);
 
   /*
     ═══ LAS JORNADAS: CALCULADAS, O A MANO CON MOTIVO ═══  (la regla completa, en `utils/jornadas.ts`)
@@ -2528,15 +2610,30 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               </div>
             )}
 
-            {/* La lista no filtra por contrato: se dice, y cuántos tienen uno vigente. */}
+            {/*
+              La lista no filtra por contrato: se dice, y cuántos tienen uno vigente.
+
+              EL TOTAL LO CUENTA EL SERVER y los vigentes son los de las filas que se están mostrando.
+              Antes los dos números salían de la lista completa en memoria, que es lo que esta pantalla
+              dejó de bajarse; por eso, cuando hay más de los que entran, se dice cuántos se muestran:
+              si no, el número verde parecería hablar del total.
+            */}
             {personasFiltradas.length > 0 && (
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {personasFiltradas.length} {personasFiltradas.length === 1 ? "persona" : "personas"} · <span className="font-semibold text-green-600 dark:text-green-400">{conContratoVigente} con contrato vigente</span>. Aparecen todas, tengan contrato o no.
+                {totalPersonas} {totalPersonas === 1 ? "persona" : "personas"}
+                {totalPersonas > personasFiltradas.length ? ` · se muestran ${personasFiltradas.length}` : ""} · <span className="font-semibold text-green-600 dark:text-green-400">{conContratoVigente} con contrato vigente</span>. Aparecen todas, tengan contrato o no.
               </p>
             )}
 
             <div className="max-h-[45vh] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
-              {personasFiltradas.length === 0 ? (
+              {buscandoPersonas && personasFiltradas.length === 0 ? (
+                /* Buscando: NO se dice «no encontramos» todavía. La respuesta la da el server y tarda
+                   lo que tarda; anunciar que no existe antes de que conteste es decir algo que no se sabe. */
+                <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-slate-500">
+                  <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                  Buscando…
+                </div>
+              ) : personasFiltradas.length === 0 ? (
                 /* NO APARECE: lo más probable es que no se haya registrado. Se dice eso, y se le da la
                    salida ahí mismo, en vez de dejarlo buscando variantes del nombre. */
                 <div className="space-y-3 px-4 py-6 text-center">
@@ -2554,7 +2651,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   )}
                 </div>
               ) : (
-                personasFiltradas.slice(0, 50).map((u) => {
+                personasFiltradas.map((u) => {
                   const nombre = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email;
                   const elegida = selectedUser && String(selectedUser._id) === String(u._id);
                   const contrato = contratoDePersona.get(String(u._id));
@@ -2582,7 +2679,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 })
               )}
             </div>
-            {personasFiltradas.length > 50 && <p className="text-[11px] text-slate-400">Se muestran las primeras 50 de {personasFiltradas.length}. Afiná la búsqueda o filtrá por rol.</p>}
+            {totalPersonas > personasFiltradas.length && (
+              <p className="text-[11px] text-slate-400">
+                Se muestran las primeras {personasFiltradas.length} de {totalPersonas}. Afiná la búsqueda o filtrá por rol.
+              </p>
+            )}
             {/*
               Siempre a la vista, no sólo con la lista vacía: quien no encuentra a alguien entre 50 nombres
               parecidos también tiene que saber por qué.

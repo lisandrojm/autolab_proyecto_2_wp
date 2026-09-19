@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faUmbrellaBeach, faFileAlt, faBell, faSignOutAlt, faUserPlus, faSitemap, faCalendarCheck, faLink } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -108,7 +108,6 @@ export default function Home({ onNavigate }: HomeProps) {
   const sinContrato = !profileLoading && !hasActiveContract(profile);
 
   const novedadesAction = {
-    icon: faFileAlt,
     // El permiso del rol se sigue llamando «Cargar novedades»; la tarjeta, corta, para que entre en el teléfono.
     title: "Novedades",
     description: "La asistencia de tu gente",
@@ -117,7 +116,6 @@ export default function Home({ onNavigate }: HomeProps) {
   };
 
   const vacationsAction = {
-    icon: faUmbrellaBeach,
     title: "Vacaciones",
     description: "Solicitá tus días libres",
     view: "vacations" as ViewType,
@@ -128,7 +126,6 @@ export default function Home({ onNavigate }: HomeProps) {
   };
 
   const ordersAction = {
-    icon: faShoppingCart,
     title: "Pedidos",
     description: "Gestiona tus pedidos",
     view: "orders" as ViewType,
@@ -139,7 +136,6 @@ export default function Home({ onNavigate }: HomeProps) {
   };
 
   const userCreateAction = {
-    icon: faUserPlus,
     // «Contratación» y no «Usuarios»: lo que se hace acá es pedir un alta, no administrar gente. El
     // nombre viejo prometía una pantalla de usuarios que esta no es.
     title: "Contratación",
@@ -166,7 +162,6 @@ export default function Home({ onNavigate }: HomeProps) {
 
   // «Equipos»: las áreas y turnos que la persona tiene a cargo, con su gente.
   const equiposAction = {
-    icon: faSitemap,
     title: "Equipos",
     description: "Áreas, turnos y personas a cargo",
     view: "my_teams" as ViewType,
@@ -193,7 +188,6 @@ export default function Home({ onNavigate }: HomeProps) {
   }
   if (puede(MOBILE_ACTIVITY_COMPLIANCE)) {
     quickActions.push({
-      icon: faCalendarCheck,
       title: "Cumplimiento",
       description: "De tus supervisores",
       view: "activity_compliance" as ViewType,
@@ -224,7 +218,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
   // Registro: el link para que la gente de su área y turno se registre sola, y quiénes lo hicieron.
   if (puede(MOBILE_REGISTRO)) {
-    quickActions.push({ icon: faLink, title: "Registro", description: "Link de registro y registrados", view: "registro" as ViewType, disabled: false, nuevos: nuevosRegistros });
+    quickActions.push({ title: "Registro", description: "Link de registro y registrados", view: "registro" as ViewType, disabled: false, nuevos: nuevosRegistros });
   }
 
   /*
@@ -327,13 +321,19 @@ export default function Home({ onNavigate }: HomeProps) {
               {/* BADGE */}
               <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
               {/*
-                Cuántas novedades sin mirar tiene esta tarjeta. Va SOBRE la esquina, afuera del contenido:
-                adentro de la tarjeta le comía lugar al título y, en un teléfono angosto, lo pisaba.
+                SIN ÍCONO Y CON EL CONTADOR AL LADO DEL TÍTULO.
+
+                Los íconos eran decoración: el título ya dice qué es cada tarjeta, y en dos columnas
+                angostas lo único que hacían era correrlo. El contador de novedades sin mirar estaba
+                colgado de la esquina con `absolute`, fuera de la tarjeta, y quedaba flotando sobre el
+                borde; acá va en la misma línea que el título, que es donde se lee.
+
+                `items-start` y no `items-center`: cuando el título ocupa dos renglones, el globo tiene
+                que quedar a la altura del primero, no centrado contra los dos.
               */}
-              {(action as any).nuevos > 0 && <span className="absolute -right-2 -top-2 z-10 flex min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white ring-2 ring-slate-800">{(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}</span>}
-              <div className="flex min-w-0 items-center gap-2">
-                <FontAwesomeIcon icon={action.icon} className="h-4 w-4 shrink-0 text-primary" />
+              <div className="flex min-w-0 items-start gap-2">
                 <h2 className="min-w-0 break-words text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
+                {(action as any).nuevos > 0 && <span className="mt-0.5 flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white">{(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}</span>}
               </div>
               <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">{action.description}</p>
             </button>

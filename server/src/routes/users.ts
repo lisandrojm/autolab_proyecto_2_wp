@@ -44,7 +44,7 @@ import { requireAnyPermission, requirePermission } from "../middleware/permissio
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
-import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
+import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { claveEstado } from "../utils/estadoClave.js";
 
 const router = Router();
@@ -416,6 +416,46 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       andConditions.push({ _id: { $in: teamIds } }); // sin coincidencias → 0 resultados
     }
 
+    /*
+      `ids`: TRAER PERSONAS PUNTUALES POR SU _id.
+
+      Lo necesita quien antes tenía la lista entera en memoria y resolvía un id con un `find` local:
+      la solicitud que se está editando guarda a quién es (`solicitudUserId`) y a quién reemplaza,
+      y con el buscador contra el server esa persona puede no estar en la página que se ve.
+
+      Va por acá y no por `GET /users/:id` porque esa ficha pide `admin_users:view` —lleva datos
+      bancarios— y quien usa esta pantalla en el móvil no lo tiene: tiene el permiso del móvil.
+    */
+    if (req.query.ids) {
+      const pedidos = String(req.query.ids)
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => Types.ObjectId.isValid(id))
+        .map((id) => new Types.ObjectId(id));
+      andConditions.push({ _id: { $in: pedidos } }); // sin ids válidos → 0 resultados
+    }
+
+    /*
+      `rolFrame`: FILTRO POR ROL EMPRESA (uno o varios, separados por coma).
+
+      El móvil lo hacía en el teléfono sobre la lista entera. Acá se resuelve con dos consultas que
+      devuelven sólo ids: el rol puede estar en el vínculo con el proyecto, en alguno de sus
+      contratos, o ser un rol propio de la ficha —los tres casos que mira `externalInfo.rolFrames`—.
+    */
+    if (req.query.rolFrame) {
+      const nombres = String(req.query.rolFrame)
+        .split(",")
+        .map((n) => n.trim())
+        .filter(Boolean);
+      if (nombres.length > 0) {
+        const [porProyecto, propios] = await Promise.all([
+          UserProject.find({ $or: [{ nombre_rol_frame: { $in: nombres } }, { "contracts.nombre_rol_frame": { $in: nombres } }] }).distinct("userId"),
+          RoleFrame.find({ name: { $in: nombres } }).distinct("_id"),
+        ]);
+        andConditions.push({ $or: [{ _id: { $in: porProyecto } }, { "metadata.roles_frame": { $in: propios } }] });
+      }
+    }
+
     const filter = andConditions.length > 0 ? { $and: andConditions } : {};
 
 
@@ -532,10 +572,12 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         ? User.find(filter)
             .select("firstName lastName email metadata.id metadata.activo metadata.documento metadata.fullName metadata.projects metadata.roles_frame")
             /*
-              Del contrato sólo las FECHAS: con alta, baja y carga se sabe cuál rige y si está vigente, que
-              es lo que muestra cada fila del buscador. El contrato entero (firmas, documentación) no.
+              SIN NINGÚN CONTRATO. Traía las fechas de todos los de cada persona para que el front
+              calculara cuál rige: 4592 contratos y 638 KB en una página de 1000 personas, 11 s contra
+              Atlas. Cuál rige lo elige ahora Mongo y viaja en `contratoQueRige` (más abajo), que son
+              dos fechas por fila. Del vínculo quedan el proyecto y el rol, que es lo que se filtra.
             */
-            .populate({ path: "metadata.projects", model: UserProject, select: "projectId nombre_rol_frame nombre_sede contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga" })
+            .populate({ path: "metadata.projects", model: UserProject, select: "projectId nombre_rol_frame nombre_sede" })
             .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
       : User.find(filter)
           /*
@@ -731,6 +773,12 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     */
     const contratoQueRige = teamTable ? await contratosQueRigenDelProyecto(String(req.query.projectId), hoyArgentina(), CAMPOS_CONTRATO_TABLA) : null;
 
+    /*
+      MODO SELECTOR: el contrato que rige hoy de cada persona de ESTA página, con todos sus proyectos
+      juntos. Son las dos fechas que la fila muestra («Vigente · Alta 3/2/2025 · Baja —»).
+    */
+    const rigeEnElPicker = picker && idsPagina.length > 0 ? await contratosQueRigenDeLasPersonas(idsPagina, hoyArgentina()) : null;
+
     const totalesPorUsuario = new Map<string, { jornadas: number; contratos: number }>();
     if (teamTable && idsPagina.length > 0) {
       const filas: any[] = await UserProject.aggregate([
@@ -750,6 +798,8 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           // Sólo en modo tabla. `lastContractIndex` es la posición en el array del UserProject: es lo
           // que esperan editar, descargar y subir documentación.
           ...(teamTable ? { contractCount: rige?._total ?? 0, lastContract: rige, lastContractIndex: rige?._indice ?? -1 } : {}),
+          // Sólo en modo selector: las dos fechas del contrato que rige hoy, o null si no tiene ninguno.
+          ...(picker ? { contratoQueRige: rigeEnElPicker?.get(String(u._id)) ?? null } : {}),
           // `jornadasTotales`/`contratosTotales` sólo existen en el modo tabla; quien no los recibe
           // sigue sumando sobre `metadata.projects` como siempre.
           metadata: totales ? { ...u.metadata, jornadasTotales: totales.jornadas, contratosTotales: totales.contratos } : u.metadata,
@@ -769,6 +819,61 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
   }
 });
 
+/*
+  GET /users/roles-frame-counts — cuánta gente tiene cada rol empresa.
+
+  Lo pide el filtro por rol del buscador de personas: sin el número, es una lista de trescientas
+  especialidades donde la mayoría no filtra nada, se elige una, la lista queda vacía y no hay forma
+  de saber si el filtro está mal o si de verdad no hay nadie.
+
+  Se contaba en el teléfono recorriendo la lista completa de personas. Ahora es una agregación: el
+  trabajo queda en Mongo y lo que viaja son ~300 renglones de «nombre + número».
+
+  CUENTA CON EL MISMO CRITERIO QUE DESPUÉS FILTRA (`?rolFrame=`): el rol figura en el vínculo con
+  un proyecto, en alguno de sus contratos, o es un rol propio de la ficha. `$setUnion` deja una sola
+  aparición por persona, así que el `$sum: 1` de abajo cuenta personas y no vínculos.
+*/
+router.get("/roles-frame-counts", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const filas: any[] = await User.aggregate([
+      { $match: { tenantId: req.tenantObjectId, "metadata.activo": true } },
+      {
+        $lookup: {
+          from: UserProject.collection.name,
+          localField: "metadata.projects",
+          foreignField: "_id",
+          as: "_ups",
+          pipeline: [{ $project: { _id: 0, r: "$nombre_rol_frame", cr: { $map: { input: { $ifNull: ["$contracts", []] }, as: "c", in: "$c.nombre_rol_frame" } } } }],
+        },
+      },
+      {
+        $lookup: {
+          from: RoleFrame.collection.name,
+          localField: "metadata.roles_frame",
+          foreignField: "_id",
+          as: "_rfs",
+          pipeline: [{ $project: { _id: 0, name: 1 } }],
+        },
+      },
+      {
+        $project: {
+          roles: {
+            $setUnion: [{ $ifNull: ["$_ups.r", []] }, { $reduce: { input: { $ifNull: ["$_ups.cr", []] }, initialValue: [], in: { $concatArrays: ["$value", { $ifNull: ["$this", []] }] } } }, { $ifNull: ["$_rfs.name", []] }],
+          },
+        },
+      },
+      { $unwind: "$roles" },
+      { $match: { roles: { $nin: [null, ""] } } },
+      { $group: { _id: "$roles", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    res.json(filas.map((f: any) => ({ name: String(f._id), count: Number(f.count) || 0 })));
+  } catch (error) {
+    console.error("Get roles frame counts error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 /*
  * GET /users/contracts-overview - Listado global de contratos (Contratos, la página que no está
  * atada a un proyecto). A diferencia de GET /users (que pagina por usuario), acá cada fila es un

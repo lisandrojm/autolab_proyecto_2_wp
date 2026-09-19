@@ -302,6 +302,12 @@ export interface User {
     El historial se pide aparte, con `contratosDelProyecto`.
   */
   lastContract?: Contract | null;
+  /**
+   * Las dos fechas del contrato que rige HOY, con todos sus proyectos juntos (sólo en modo selector,
+   * `picker`). Reemplaza a bajarse las fechas de todos los contratos de todas las personas para
+   * calcularlo en el cliente. `null` = no tiene ninguno.
+   */
+  contratoQueRige?: { fecha_alta_contrato: string; fecha_baja_contrato: string } | null;
   contractCount?: number;
   lastContractIndex?: number;
   metadata?: {
@@ -528,6 +534,7 @@ function normalizeUser(raw: any): User {
     // Los manda el listado en modo tabla de equipo; en el resto vienen `undefined` (ver el tipo).
     // `null` (no tiene contrato) es distinto de ausente (el listado no lo manda): no colapsarlos.
     lastContract: raw?.lastContract,
+    contratoQueRige: raw?.contratoQueRige,
     contractCount: typeof raw?.contractCount === "number" ? raw.contractCount : undefined,
     lastContractIndex: typeof raw?.lastContractIndex === "number" ? raw.lastContractIndex : undefined,
     metadata: raw?.metadata,
@@ -583,6 +590,10 @@ class UsersAPI {
        * que necesita un buscador de personas, sin la ficha entera de cada una.
        */
       picker?: boolean;
+      /** Filtro por rol empresa (uno o varios, separados por coma). Mira el vínculo, sus contratos y la ficha. */
+      rolFrame?: string;
+      /** Personas puntuales por _id (separados por coma): para resolver a alguien que no está en la página. */
+      ids?: string;
       slimProjects?: boolean;
       /**
        * Modo tabla de equipo (requiere `projectId`): trae sólo la entrada de ESE proyecto y, de sus
@@ -619,6 +630,8 @@ class UsersAPI {
     if (params.notPermission) searchParams.append("notPermission", params.notPermission);
     if (params.lightweight) searchParams.append("lightweight", "true");
     if (params.picker) searchParams.append("picker", "true");
+    if (params.rolFrame) searchParams.append("rolFrame", params.rolFrame);
+    if (params.ids) searchParams.append("ids", params.ids);
     if (params.slimProjects) searchParams.append("slimProjects", "true");
     if (params.teamTable) searchParams.append("teamTable", "true");
 
@@ -789,6 +802,17 @@ class UsersAPI {
   async contratosDelProyecto(userId: string, projectId: string): Promise<Contract[]> {
     const { data } = await axios.get(`/users/${userId}/contracts`, { params: { projectId }, headers: this.getHeaders() });
     return Array.isArray(data?.contracts) ? data.contracts : [];
+  }
+
+  /**
+   * Cuánta gente tiene cada rol empresa, para el filtro por rol del buscador de personas.
+   *
+   * Lo cuenta el server con una agregación: antes se contaba en el cliente recorriendo la lista
+   * completa de personas, que es justamente lo que el buscador dejó de bajarse.
+   */
+  async rolesFrameCounts(): Promise<{ name: string; count: number }[]> {
+    const { data } = await axios.get(`/users/roles-frame-counts`, { headers: this.getHeaders() });
+    return Array.isArray(data) ? data : [];
   }
 
   /** Todos los contratos de una persona (cross-proyecto/cliente), enriquecidos para gestionarlos. */

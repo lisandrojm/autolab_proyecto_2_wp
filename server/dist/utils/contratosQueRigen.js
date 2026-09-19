@@ -147,3 +147,78 @@ export async function contratosQueRigenDelProyecto(projectId, hoy, camposExtra =
     ]);
     return new Map(filas.map((f) => [String(f.userId), f.contrato ? { ...f.contrato, _indice: f.indice, _total: f.total } : null]));
 }
+/**
+ * EL CONTRATO QUE RIGE DE CADA PERSONA, MIRANDO TODOS SUS PROYECTOS.
+ *
+ * La variante de arriba responde «en este proyecto»; ésta responde «hoy, en cualquier lado», que es
+ * lo que pregunta el buscador de personas de la solicitud de contratación: al lado de cada nombre
+ * dice si tiene contrato vigente y desde cuándo, sin importar de qué proyecto salga.
+ *
+ * Devuelve SÓLO las dos fechas porque es lo único que esa fila muestra. Antes el front recibía las
+ * fechas de TODOS los contratos de TODAS las personas para calcular esto en el teléfono: 4592
+ * contratos y 638 KB por página de 1000 personas, casi 11 segundos contra Atlas.
+ *
+ * Misma regla que `getContratoActivo`: entre los vigentes manda el de tiempo indeterminado; si no,
+ * el más reciente por alta y, a igualdad, por carga; sin vigentes, el más reciente de todos.
+ */
+export async function contratosQueRigenDeLasPersonas(userIds, hoy) {
+    const ids = userIds.map((id) => new Types.ObjectId(String(id)));
+    if (ids.length === 0)
+        return new Map();
+    const filas = await UserProject.aggregate([
+        { $match: { userId: { $in: ids } } },
+        /*
+          Se desarma el array y se vuelve a armar con TRES CAMPOS por contrato, no con el contrato.
+    
+          Una persona puede tener varios vínculos (uno por proyecto) y la elección es sobre todos sus
+          contratos juntos, así que hay que juntarlos. Juntar los contratos ENTEROS para quedarse con dos
+          fechas sería mover el historial completo adentro de Mongo; con las claves, cada contrato son
+          tres strings cortos.
+        */
+        { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
+        {
+            $project: {
+                _id: 0,
+                userId: 1,
+                alta: fechaISOExpr("$contracts.fecha_alta_contrato"),
+                baja: fechaISOExpr("$contracts.fecha_baja_contrato"),
+                carga: { $toString: { $ifNull: ["$contracts.fecha_carga", ""] } },
+            },
+        },
+        { $group: { _id: "$userId", claves: { $push: { alta: "$alta", baja: "$baja", carga: "$carga" } } } },
+        {
+            $addFields: {
+                vigentes: {
+                    $filter: {
+                        input: "$claves",
+                        as: "k",
+                        cond: { $and: [{ $or: [{ $eq: ["$$k.alta", ""] }, { $lte: ["$$k.alta", hoy] }] }, { $or: [{ $eq: ["$$k.baja", ""] }, { $gte: ["$$k.baja", hoy] }] }] },
+                    },
+                },
+            },
+        },
+        {
+            $addFields: {
+                candidatos: {
+                    $let: {
+                        vars: { indeterminados: { $filter: { input: "$vigentes", as: "k", cond: { $eq: ["$$k.baja", ""] } } } },
+                        in: { $cond: [{ $gt: [{ $size: "$$indeterminados" }, 0] }, "$$indeterminados", { $cond: [{ $gt: [{ $size: "$vigentes" }, 0] }, "$vigentes", "$claves"] }] },
+                    },
+                },
+            },
+        },
+        {
+            $addFields: {
+                elegido: {
+                    $reduce: {
+                        input: "$candidatos",
+                        initialValue: null,
+                        in: { $cond: [{ $or: [{ $eq: ["$$value", null] }, { $gte: [{ $concat: ["$$this.alta", "|", "$$this.carga"] }, { $concat: ["$$value.alta", "|", "$$value.carga"] }] }] }, "$$this", "$$value"] },
+                    },
+                },
+            },
+        },
+        { $project: { _id: 1, alta: "$elegido.alta", baja: "$elegido.baja" } },
+    ]);
+    return new Map(filas.map((f) => [String(f._id), f.alta === undefined && f.baja === undefined ? null : { fecha_alta_contrato: f.alta || "", fecha_baja_contrato: f.baja || "" }]));
+}
