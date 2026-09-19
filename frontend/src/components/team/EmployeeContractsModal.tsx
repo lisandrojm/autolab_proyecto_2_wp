@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faClockRotateLeft, faFileContract, faFileLines, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
-import { User, Contract } from "../../api/users";
+import { User, Contract, usersAPI } from "../../api/users";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -46,8 +46,27 @@ interface EmployeeContractsModalProps {
 export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, contratoEmpresas = [], releaseEmpresas = [], onEdit, onDelete, onUploadAltaDocumento }) => {
   const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
 
-  /** Los contratos tal como están guardados en el UserProject: de acá salen los índices que se editan. */
-  const contratosEnBD = useMemo(() => {
+  /*
+    DE ENTRADA, SÓLO EL CONTRATO QUE RIGE.
+
+    Este modal se abre desde la tabla de Gestionar Equipo, y esa tabla ya no trae el historial de nadie:
+    traerlo para las 25 filas de una página eran 354 contratos completos, y era la mayor parte de lo que
+    tardaba la pantalla en cargar. Cada fila viene con el contrato que rige, que es el que el modal
+    muestra desplegado y el único que se mira casi siempre.
+
+    El resto —el historial— se pide al tocar «Ver historial», para UNA persona, a
+    `GET /users/:id/contracts`. Mientras no se pida, no viaja.
+
+    Si el usuario llega con sus contratos adentro (la ficha completa, `GET /users/:id`), se usan esos
+    y no se pide nada: el modal sigue sirviendo a quien lo abra con un usuario ya hidratado.
+  */
+  const [historial, setHistorial] = useState<Contract[] | null>(null);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
+  /** Documentos de alta subidos con el modal abierto: índice en la BD → campos nuevos del contrato. */
+  const [altaSubida, setAltaSubida] = useState<Record<number, { altaDocumentoUrl?: string; altaDocumentoNombre?: string }>>({});
+
+  /** Los contratos embebidos en el usuario, si los trajo (índice = posición en el array del UserProject). */
+  const contratosEmbebidos = useMemo(() => {
     if (!user) return [] as Contract[];
     const projectMeta = user.metadata?.projects?.find((p) => {
       const pId = p.projectId;
@@ -56,6 +75,37 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     });
     return (projectMeta?.contracts || []) as Contract[];
   }, [user, projectId]);
+
+  /**
+   * Lo que se muestra, con la posición de cada contrato EN EL ARRAY DE LA BASE al lado: editar,
+   * descargar y subir el alta van por índice, así que mostrar un contrato suelto no puede perderlo.
+   */
+  const conIndice = useMemo(() => {
+    const conParche = (c: Contract, indiceBD: number) => ({ contrato: altaSubida[indiceBD] ? ({ ...c, ...altaSubida[indiceBD] } as Contract) : c, indiceBD });
+    if (historial) return historial.map(conParche);
+    if (contratosEmbebidos.length > 0) return contratosEmbebidos.map(conParche);
+    const rige = user?.lastContract;
+    return rige ? [conParche(rige, typeof user?.lastContractIndex === "number" ? user.lastContractIndex : -1)] : [];
+  }, [historial, contratosEmbebidos, user, altaSubida]);
+
+  /** Cuántos contratos tiene en total, aunque estén sin traer (lo cuenta el server). */
+  const totalContratos = historial ? historial.length : contratosEmbebidos.length > 0 ? contratosEmbebidos.length : (user?.contractCount ?? conIndice.length);
+  const faltaElHistorial = !historial && contratosEmbebidos.length === 0 && totalContratos > conIndice.length;
+
+  const verHistorial = async () => {
+    if (!user || cargandoHistorial) return;
+    setCargandoHistorial(true);
+    try {
+      setHistorial(await usersAPI.contratosDelProyecto(user._id, projectId));
+    } catch {
+      sweetAlert.error("Error", "No se pudo traer el historial de contratos.");
+    } finally {
+      setCargandoHistorial(false);
+    }
+  };
+
+  /** Los contratos en el orden de la base: sobre este orden se elige cuál rige. */
+  const contratosEnBD = useMemo(() => conIndice.map((x) => x.contrato), [conIndice]);
 
   // Del más reciente al más viejo: el último contrato arriba de todo.
   const contracts = useMemo(() => ordenarContratosDesc(contratosEnBD as any[]) as Contract[], [contratosEnBD]);
@@ -74,14 +124,18 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
   }, [contratosEnBD, contracts]);
 
   /** Índice del contrato en el array del UserProject, que es el que esperan editar/descargar/subir. */
-  const indiceEnBD = (contract: Contract) => contratosEnBD.indexOf(contract);
+  const indiceEnBD = (contract: Contract) => conIndice.find((x) => x.contrato === contract)?.indiceBD ?? -1;
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
   // Filtros: los mismos que la gestión cross-proyecto, sin cliente/proyecto (acá son fijos).
   const [filters, setFilters] = useState<ContractFilterState>(emptyContractFilters);
   useEffect(() => {
-    if (isOpen) setFilters(emptyContractFilters);
+    if (!isOpen) return;
+    setFilters(emptyContractFilters);
+    // El historial es de una persona y un proyecto: si cambia cualquiera de los dos, se pide de nuevo.
+    setHistorial(null);
+    setAltaSubida({});
   }, [isOpen, user?._id, projectId]);
 
   const tipos = useMemo(() => [...new Set(contracts.map((c) => c.nombre_contrato).filter((t): t is string => !!t))], [contracts]);
@@ -129,13 +183,13 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
             <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
             Contratos
           </span>
-          <span className="pb-2 text-xs text-gray-500">{visible.length} de {contracts.length}</span>
+          <span className="pb-2 text-xs text-gray-500">{visible.length} de {totalContratos}</span>
         </div>
 
         {visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center gap-3 py-10">
             <FontAwesomeIcon icon={faFileLines} className="h-10 w-10 text-gray-300 dark:text-gray-600" />
-            <p className="text-sm text-gray-500">{contracts.length === 0 ? "Este empleado no tiene contratos en el proyecto." : "Ningún contrato coincide con los filtros."}</p>
+            <p className="text-sm text-gray-500">{totalContratos === 0 ? "Este empleado no tiene contratos en el proyecto." : "Ningún contrato coincide con los filtros."}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -158,10 +212,33 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                 deleteTitle="Eliminar del proyecto"
                 onDownloadContract={(empresaId) => handleDownloadContract(contract, empresaId)}
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(release, contract, empresaId)}
-                onUploadAltaDocumento={user && onUploadAltaDocumento ? (file) => onUploadAltaDocumento(user, indiceEnBD(contract), file) : undefined}
+                /* Se guarda el parche acá también: el modal ya no lee el array del usuario, así que el
+                   documento recién subido no volvería solo. */
+                onUploadAltaDocumento={
+                  user && onUploadAltaDocumento
+                    ? async (file) => {
+                        const iBD = indiceEnBD(contract);
+                        await onUploadAltaDocumento(user, iBD, file);
+                        setAltaSubida((prev) => ({ ...prev, [iBD]: { altaDocumentoUrl: URL.createObjectURL(file), altaDocumentoNombre: file.name } }));
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
+        )}
+
+        {/* El historial no viaja con la tabla: se pide acá, para esta persona, y sólo si lo piden. */}
+        {faltaElHistorial && (
+          <button
+            type="button"
+            onClick={verHistorial}
+            disabled={cargandoHistorial}
+            className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:opacity-60"
+          >
+            <FontAwesomeIcon icon={cargandoHistorial ? faSpinner : faClockRotateLeft} className={`h-4 w-4 ${cargandoHistorial ? "animate-spin" : ""}`} />
+            {cargandoHistorial ? "Trayendo el historial…" : `Ver historial (${totalContratos - conIndice.length} contrato${totalContratos - conIndice.length === 1 ? "" : "s"} anterior${totalContratos - conIndice.length === 1 ? "" : "es"})`}
+          </button>
         )}
       </div>
     </Modal>
