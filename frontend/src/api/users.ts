@@ -525,6 +525,11 @@ function normalizeUser(raw: any): User {
     isSystem: !!raw?.isSystem,
     isProjectResponsible: !!raw?.isProjectResponsible,
     externalInfo: raw?.externalInfo,
+    // Los manda el listado en modo tabla de equipo; en el resto vienen `undefined` (ver el tipo).
+    // `null` (no tiene contrato) es distinto de ausente (el listado no lo manda): no colapsarlos.
+    lastContract: raw?.lastContract,
+    contractCount: typeof raw?.contractCount === "number" ? raw.contractCount : undefined,
+    lastContractIndex: typeof raw?.lastContractIndex === "number" ? raw.lastContractIndex : undefined,
     metadata: raw?.metadata,
   };
 }
