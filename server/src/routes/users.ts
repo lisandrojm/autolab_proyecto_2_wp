@@ -430,13 +430,67 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     // El contrato se trae on-demand al abrir el wizard vía GET /users/:id.
     const slimProjects = req.query.slimProjects === "true";
 
-    const projectsPopulate: any = slimProjects
+    /*
+      MODO TABLA DE EQUIPO (`?teamTable=true` + `projectId`): lo que Gestionar Equipo dibuja, y nada más.
+
+      El modo por defecto traía TODOS los `UserProject` de cada persona con TODOS sus contratos
+      completos —documentación, firmas, importes, sedes— para pintar una tabla que sólo mira el
+      proyecto abierto: 400 KB por página. Acá se piden la entrada de ESE proyecto y, de sus
+      contratos, sólo los campos que leen las columnas, el modal de contratos y el filtro de estado.
+
+      EL ARRAY `contracts` CONSERVA ORDEN Y LONGITUD, y eso no es un detalle: el modal de contratos usa
+      el ÍNDICE dentro del array para editar y para descargar el contrato firmado (`indiceEnBD`). Una
+      projection de subcampos no reordena ni saltea elementos; filtrarlos sí rompería eso.
+    */
+    const teamTable = req.query.teamTable === "true" && typeof req.query.projectId === "string" && !!req.query.projectId;
+
+    const CAMPOS_CONTRATO_TABLA = [
+      // Vigencia y cuál rige hoy (`getContratoActivo` mira estas tres).
+      "fecha_alta_contrato",
+      "fecha_baja_contrato",
+      "fecha_carga",
+      // Columnas de la tabla.
+      "nombre_contrato",
+      "tipo_contrato_id",
+      "nombre_estado_empleado",
+      "nombre_rol_frame",
+      "nombre_sede",
+      "reemplazo",
+      "empleado_id_reemplezado",
+      "sueldo_mano",
+      "cantidad_jornadas_laborales",
+      "dias_por_semana",
+      "dias_rotativos",
+      "dias_semana",
+      "hora_inicio",
+      "hora_fin",
+      "areaShiftAssignments",
+      // Las tarjetas del modal de contratos: empresas y el documento del alta.
+      "empresaContratoId",
+      "nombre_empresa_contrato",
+      "empresaReleaseId",
+      "nombre_empresa_release",
+      "altaDocumentoUrl",
+      "altaDocumentoNombre",
+    ]
+      .map((c) => `contracts.${c}`)
+      .join(" ");
+
+    const projectsPopulate: any = teamTable
       ? {
           path: "metadata.projects",
           model: UserProject,
-          select: "projectId nombre_rol_frame nombre_proyecto nombre_sede",
+          // Sólo el proyecto abierto: la tabla resuelve todo con `projects.find(p => p.projectId === projectId)`.
+          match: { projectId: String(req.query.projectId) },
+          select: `projectId nombre_rol_frame ${CAMPOS_CONTRATO_TABLA}`,
         }
-      : {
+      : slimProjects
+        ? {
+            path: "metadata.projects",
+            model: UserProject,
+            select: "projectId nombre_rol_frame nombre_proyecto nombre_sede",
+          }
+        : {
           path: "metadata.projects",
           model: UserProject,
           select: "projectId areaId nombre_rol_frame nombre_proyecto contracts",
@@ -660,8 +714,35 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       });
     }
 
+    /*
+      LAS JORNADAS DE TODA LA CARRERA, COMO NÚMERO Y NO COMO HISTORIAL.
+
+      La vista de tarjetas del equipo muestra la suma de `cantidad_jornadas_laborales` de TODOS los
+      proyectos de la persona. En el modo tabla ya no viajan los otros proyectos, así que ese total se
+      calcula donde están los datos: una sola agregación para toda la página, en vez de arrastrar
+      cientos de contratos por fila para sumar dos números.
+    */
+    const totalesPorUsuario = new Map<string, { jornadas: number; contratos: number }>();
+    if (teamTable && idsPagina.length > 0) {
+      const filas: any[] = await UserProject.aggregate([
+        { $match: { userId: { $in: idsPagina } } },
+        { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
+        { $group: { _id: "$userId", jornadas: { $sum: { $ifNull: ["$contracts.cantidad_jornadas_laborales", 0] } }, contratos: { $sum: 1 } } },
+      ]);
+      for (const f of filas) totalesPorUsuario.set(String(f._id), { jornadas: Number(f.jornadas) || 0, contratos: Number(f.contratos) || 0 });
+    }
+
     res.json({
-      users: enrichedUsers.map((u: any) => ({ ...u, solicitudesPendientes: solicitudesPorUsuario.get(String(u._id)) || [] })),
+      users: enrichedUsers.map((u: any) => {
+        const totales = totalesPorUsuario.get(String(u._id));
+        return {
+          ...u,
+          // `jornadasTotales`/`contratosTotales` sólo existen en el modo tabla; quien no los recibe
+          // sigue sumando sobre `metadata.projects` como siempre.
+          metadata: totales ? { ...u.metadata, jornadasTotales: totales.jornadas, contratosTotales: totales.contratos } : u.metadata,
+          solicitudesPendientes: solicitudesPorUsuario.get(String(u._id)) || [],
+        };
+      }),
       pagination: {
         page: Number(page),
         limit: Number(limit),

@@ -566,6 +566,12 @@ class UsersAPI {
        */
       picker?: boolean;
       slimProjects?: boolean;
+      /**
+       * Modo tabla de equipo (requiere `projectId`): trae sólo la entrada de ESE proyecto y, de sus
+       * contratos, los campos que la tabla muestra. Suma `metadata.jornadasTotales` y
+       * `metadata.contratosTotales`, calculados en el server sobre todos los proyectos de la persona.
+       */
+      teamTable?: boolean;
       /** Columna de orden: "name" | "email" | "cuit" | "documento" | "estado" | "contratos" | "roles". */
       sort?: string;
       /** Dirección del orden. Por defecto "asc". */
@@ -596,6 +602,7 @@ class UsersAPI {
     if (params.lightweight) searchParams.append("lightweight", "true");
     if (params.picker) searchParams.append("picker", "true");
     if (params.slimProjects) searchParams.append("slimProjects", "true");
+    if (params.teamTable) searchParams.append("teamTable", "true");
 
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
 

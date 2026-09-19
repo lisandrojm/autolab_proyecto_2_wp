@@ -395,10 +395,20 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
           </div>
         )}
         {(() => {
+          /*
+            Las jornadas de TODA la carrera, no las de un proyecto.
+
+            Cuando el listado viene recortado a un solo proyecto (la tabla de equipo pide
+            `teamTable`), el total lo calcula el server sobre todos los proyectos y llega como
+            `jornadasTotales`: sumar acá lo que se recibió daría el número de un proyecto con el
+            rótulo de todos. Sin ese campo —el resto de las pantallas— se suma como siempre.
+          */
           const totalDaysCount =
-            (user.metadata?.projects as any[])?.reduce((acc: number, p: any) => {
+            (user.metadata as any)?.jornadasTotales ??
+            ((user.metadata?.projects as any[])?.reduce((acc: number, p: any) => {
               return acc + (p.contracts?.reduce((pAcc: number, c: any) => pAcc + (c.cantidad_jornadas_laborales || 0), 0) || 0);
-            }, 0) || 0;
+            }, 0) ||
+              0);
 
           if (totalDaysCount === 0 && !user.metadata?.documento) return null;
 

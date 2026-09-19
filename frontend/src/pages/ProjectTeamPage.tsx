@@ -579,7 +579,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const reqId = ++teamReqIdRef.current;
     try {
       setTeamFetching(true);
-      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: "name" };
+      /*
+        `teamTable`: el server manda sólo la entrada de ESTE proyecto y, de sus contratos, los campos
+        que estas filas leen. Antes viajaban todos los proyectos de cada persona con el historial
+        completo de contratos: 400 KB por página para dibujar una tabla de un solo proyecto.
+      */
+      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: "name", teamTable: true };
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === "active") params.metadataActivo = "true";
       if (status === "inactive") params.metadataActivo = "false";
@@ -1680,7 +1685,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el que
     // rige hoy (el vigente más reciente), que no siempre es el último cargado.
     const contratoQueRige = getContratoActivo(lastProject?.contracts as any[]);
-    const lastContract = contractOverride || (typeof contractIndex === "number" && lastProject?.contracts?.[contractIndex] != null ? lastProject.contracts[contractIndex] : contratoQueRige);
+    /*
+      EL CONTRATO SALE DE LA FICHA COMPLETA, no de la fila de la tabla.
+
+      Al editar una tarjeta del modal de contratos llega `contractOverride`, que es el objeto de la
+      fila; desde que la tabla pide `teamTable`, esa fila trae sólo los campos que se muestran y le
+      faltan categoría, estado, sede e importes, que son justo los que el wizard precarga. Con el
+      índice alcanza para tomar ESE MISMO contrato del usuario completo que se acaba de traer
+      (`usersAPI.get`, arriba). El override queda de respaldo por si esa consulta falló.
+    */
+    const contratoPorIndice = typeof contractIndex === "number" ? ((lastProject?.contracts as any[])?.[contractIndex] ?? null) : null;
+    const lastContract = contratoPorIndice || contractOverride || contratoQueRige;
 
     /*
       Sin índice explícito el backend actualiza el ÚLTIMO contrato del array. Como acá se precargó el
