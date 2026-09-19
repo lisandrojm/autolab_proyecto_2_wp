@@ -87,6 +87,61 @@ export interface ResultadoImportCentrosCosto {
 /** El CRUD genérico sobre `/centros-costo` (listar, crear, editar, borrar, plantilla e import Excel). */
 export const centrosCostoApi = createSimpleCatalogApi("/centros-costo");
 
+/*
+  ═══════════════════════════════════════════════════════════════════════
+  BUSCAR EN EL SERVER, NO BAJAR EL CATÁLOGO
+  ═══════════════════════════════════════════════════════════════════════
+
+  El catálogo son 2.208 registros y más de un megabyte. Bajarlo entero para elegir UNO —o peor, para
+  mostrar el que ya está elegido— era lo que tenía la pantalla de Proyectos bloqueada casi veinte
+  segundos. Estas tres funciones son lo único que necesita el selector: buscar lo que se tipea, y
+  resolver el que el proyecto ya tiene.
+*/
+
+/** Una fila del listado, ya proyectada por el server (sin el subdocumento `data` ni timestamps). */
+export interface CentroCostoFila {
+  _id: string;
+  idAuxiliar?: number;
+  codAuxiliar?: string;
+  descAuxiliar?: string;
+  habilitado?: string;
+  empresaId?: string;
+  empresaTangoId?: number;
+  empresaNombre?: string;
+  name?: string;
+}
+
+interface RespuestaPaginada {
+  items: CentroCostoFila[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+/** El listado siempre devuelve array cuando no se pagina; con parámetros, `{ items, total }`. */
+const filas = (data: CentroCostoFila[] | RespuestaPaginada): CentroCostoFila[] => (Array.isArray(data) ? data : data?.items || []);
+
+/** Busca por código, descripción o nombre. `limit` alto a propósito: un código vive en varias empresas. */
+export const buscarCentrosCosto = async (q: string, limit = 50): Promise<CentroCostoFila[]> => {
+  const { data } = await axios.get("/centros-costo", { params: { q, limit } });
+  return filas(data);
+};
+
+/**
+ * El centro que un proyecto tiene guardado. Ojo: se guarda el par (`idAuxiliar`, `empresaTangoId`) y
+ * NO el `_id` de Mongo, porque el mismo id existe en cada empresa de Tango y significa otra cosa.
+ */
+export const centroCostoPorIdAuxiliar = async (idAuxiliar: number, empresaTangoId?: number): Promise<CentroCostoFila[]> => {
+  const { data } = await axios.get("/centros-costo", { params: { idAuxiliar, ...(empresaTangoId ? { empresaTangoId } : {}), limit: 20 } });
+  return filas(data);
+};
+
+/** Todas las filas de un código: son las empresas de Tango donde ese centro existe (los badges). */
+export const centrosCostoPorCodigo = async (codAuxiliar: string): Promise<CentroCostoFila[]> => {
+  const { data } = await axios.get("/centros-costo", { params: { codAuxiliar, limit: 20 } });
+  return filas(data);
+};
+
 /**
  * Importa el catálogo de Tango.
  *

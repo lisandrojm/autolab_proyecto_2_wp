@@ -533,6 +533,24 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   const effectiveViewMode = isLg ? viewMode : "cards";
 
+  /*
+    LOS PROYECTOS, SÓLO SI HAY TARJETAS EN PANTALLA.
+
+    `UserCard` los usa para poner el nombre de los otros proyectos de cada persona; la tabla no los
+    mira. Se pedían siempre —150 KB en la carga inicial— para una vista que en escritorio no es la
+    que se abre por defecto. Se piden una sola vez: `cachedFetch` los comparte con el resto de la app.
+  */
+  useEffect(() => {
+    if (effectiveViewMode !== "cards" || allProjects.length > 0) return;
+    let cancelado = false;
+    cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 }))
+      .then((ps) => !cancelado && setAllProjects(ps))
+      .catch((e) => console.error("Error cargando proyectos para las tarjetas:", e));
+    return () => {
+      cancelado = true;
+    };
+  }, [effectiveViewMode, allProjects.length]);
+
   /* -------------------------- Auto-Calculations ---------------------------
    * El Sueldo NETO y BRUTO salen de la Categoría seleccionada (ya vienen
    * calculados en el catálogo: bruto = básico + adicional + presentismo; neto = bruto × 0.81).
@@ -640,9 +658,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const init = async () => {
       // Segundo grupo: en paralelo con el primero, pero NO retiene el spinner.
       const enSegundoPlano = async () => {
-        const [clientes, proyectos, sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([
+        /*
+          EL LISTADO DE PROYECTOS SE FUE DE ACÁ. Son 150 KB que sólo usa la vista de TARJETAS, para
+          resolver los nombres de los otros proyectos de cada persona. En escritorio la vista por
+          defecto es la tabla, así que se bajaba siempre para no mostrarse nunca. Ahora se pide cuando
+          las tarjetas están en pantalla (ver el efecto más abajo).
+        */
+        const [clientes, sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([
           cachedFetch("clients:all", () => clientsAPI.listAll()),
-          cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 })),
           cachedFetch("info:sede", () => infoAPI.listByType("sede")),
           cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()),
           cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")),
@@ -652,7 +675,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           cachedFetch("contratos:all", () => contratosAPI.list()),
         ]);
         setAllClients(clientes);
-        setAllProjects(proyectos);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);

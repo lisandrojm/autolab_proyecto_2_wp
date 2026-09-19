@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { nombreCentroCosto, cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
+import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { BloqueEstado } from '../components/ui/BloqueEstado';
@@ -54,7 +54,6 @@ export const ProjectsPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [selectedClientId, setSelectedClientIdLocal] = useState('');
   const [availableSedes, setAvailableSedes] = useState<any[]>([]);
-  const [availableCostCenters, setAvailableCostCenters] = useState<any[]>([]);
   const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
   const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
   const [availableAreas, setAvailableAreas] = useState<Area[]>([]);
@@ -127,8 +126,14 @@ export const ProjectsPage: React.FC = () => {
       const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Id': tenantId };
 
       const [sedesRes, responsablesRes] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers })]);
-      // Los dos catálogos de centros de costo, unidos. Ver `cargarCentrosCosto`.
-      setAvailableCostCenters(await cargarCentrosCosto(import.meta.env.VITE_API_URL, headers));
+      /*
+        EL CATÁLOGO DE CENTROS DE COSTO YA NO SE BAJA.
+
+        Eran 2.208 registros, más de un megabyte y nueve segundos de espera, dos veces por pantalla,
+        para dos cosas: mostrar el código de cada proyecto y llenar un selector. Lo primero lo resuelve
+        el server en el propio listado (`metadataResolutions.centroCosto`); lo segundo lo hace el
+        selector buscando contra el server (ver `SelectorCentroCosto`).
+      */
 
       if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
       if (responsablesRes.ok) setAvailableCoordinators(await responsablesRes.json());
@@ -160,7 +165,7 @@ export const ProjectsPage: React.FC = () => {
         filtro es del lado del cliente, así que se resuelve contra el catálogo ya cargado en vez de
         pedirlo al server como en el listado por cliente — el resultado tiene que ser el mismo.
       */
-      const centro = nombreCentroCosto(p, availableCostCenters);
+      const centro = nombreCentroCosto(p);
       return (
         fuzzyMatch(p.name, lowerSearch) ||
         fuzzyMatch(p.description || '', lowerSearch) ||
@@ -169,7 +174,7 @@ export const ProjectsPage: React.FC = () => {
         fuzzyMatch(centro, lowerSearch)
       );
     });
-  }, [projects, searchTerm, clientMap, availableCostCenters]);
+  }, [projects, searchTerm, clientMap]);
 
   const handleProjectClick = (project: Project) => {
     const cId = typeof project.clientId === 'object' ? project.clientId._id : project.clientId;
@@ -367,7 +372,7 @@ export const ProjectsPage: React.FC = () => {
             const contratoEmpresaNames = (project.contratoEmpresas || []).map((id) => companies.find((c) => String(c._id) === String(id))?.razonSocial).filter((n): n is string => Boolean(n));
             const releaseEmpresaNames = (project.releaseEmpresas || []).map((id) => companies.find((c) => String(c._id) === String(id))?.razonSocial).filter((n): n is string => Boolean(n));
             // El código del centro de costo, con el mismo helper que la tabla y la ficha.
-            const centroCostoTarjeta = nombreCentroCosto(project, availableCostCenters);
+            const centroCostoTarjeta = nombreCentroCosto(project);
             return (
               <Card
                 key={project._id}
@@ -577,7 +582,7 @@ export const ProjectsPage: React.FC = () => {
                   const sedeName = project.metadataResolutions?.sede?.name || project.metadataResolutions?.sede?.data?.nombre || '-';
                   /* `ID: n` y no un guion cuando el id no resuelve: distingue «no tiene centro de
                      costo» de «apunta a uno que no está en el catálogo», que son cosas distintas. */
-                  const centroCosto = nombreCentroCosto(project, availableCostCenters);
+                  const centroCosto = nombreCentroCosto(project);
 
                   const statusColors: any = {
                     active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -691,7 +696,7 @@ export const ProjectsPage: React.FC = () => {
               <div>
                 <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
                 {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                <SelectorCentroCosto required valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} catalogo={availableCostCenters} />
+                <SelectorCentroCosto required valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
               </div>
 
               <div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { cargarCentrosCosto, idOpcional, nombreCentroCosto } from '../utils/centroCosto';
+import { idOpcional, nombreCentroCosto } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
@@ -52,7 +52,6 @@ export const ProjectDetailPage: React.FC = () => {
   const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
   const [availableAreas, setAvailableAreas] = useState<Area[]>([]);
   const [availableSedes, setAvailableSedes] = useState<any[]>([]);
-  const [availableCostCenters, setAvailableCostCenters] = useState<any[]>([]);
   const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   
@@ -175,8 +174,11 @@ export const ProjectDetailPage: React.FC = () => {
       ]);
 
       if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
-      // Los dos catálogos de centros de costo, unidos. Ver `cargarCentrosCosto`.
-      setAvailableCostCenters(await cargarCentrosCosto(import.meta.env.VITE_API_URL, headers));
+      /*
+        EL CATÁLOGO DE CENTROS DE COSTO YA NO SE BAJA: eran 2.208 registros y más de un megabyte para
+        mostrar un código. El nombre lo resuelve el server (`metadataResolutions.centroCosto`) y el
+        selector busca contra el server (ver `SelectorCentroCosto`).
+      */
       if (responsablesRes.ok) {
         setAvailableCoordinators(await responsablesRes.json());
       }
@@ -442,7 +444,7 @@ export const ProjectDetailPage: React.FC = () => {
                   <div>
                     <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
                     {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} empresaTangoId={projectForm.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} catalogo={availableCostCenters} />
+                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} empresaTangoId={projectForm.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
                   </div>
 
                   <div>
@@ -851,7 +853,7 @@ export const ProjectDetailPage: React.FC = () => {
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Centro de Costo</span>
                       {(() => {
                         // Un solo lugar decide qué se muestra: el código de Tango (ver `nombreCentroCosto`).
-                        const val = nombreCentroCosto(project, availableCostCenters);
+                        const val = nombreCentroCosto(project);
                         return val ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">{val}</span>
                         ) : (
@@ -1074,7 +1076,7 @@ export const ProjectDetailPage: React.FC = () => {
                     Centro de Costo
                   </label>
                   <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">
-                    {nombreCentroCosto(project, availableCostCenters)}
+                    {nombreCentroCosto(project)}
                   </span>
                 </div>
               )}

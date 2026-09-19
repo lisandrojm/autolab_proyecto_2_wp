@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 // Si necesitás i18n, usá: import { useTranslation } from "react-i18next";
 import { useAuthStore } from '../stores/authStore';
 import { projectsAPI, Project } from '../api/projects';
-import { nombreCentroCosto, cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
+import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { companiesAPI, Company } from '../api/companies';
 import { shiftsAPI, Shift } from '../api/shifts';
@@ -36,7 +36,6 @@ export const ClientProjectsPage: React.FC = () => {
   const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
   const [availableAreas, setAvailableAreas] = useState<Area[]>([]);
   const [availableSedes, setAvailableSedes] = useState<any[]>([]);
-  const [availableCostCenters, setAvailableCostCenters] = useState<any[]>([]);
   const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
 
@@ -165,8 +164,11 @@ export const ClientProjectsPage: React.FC = () => {
       const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Id': tenantId };
 
       const [sedesRes, responsablesRes] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers })]);
-      // Los dos catálogos de centros de costo, unidos. Ver `cargarCentrosCosto`.
-      setAvailableCostCenters(await cargarCentrosCosto(import.meta.env.VITE_API_URL, headers));
+      /*
+        EL CATÁLOGO DE CENTROS DE COSTO YA NO SE BAJA. Acá dolía el doble: este efecto se vuelve a
+        disparar con cada cambio de página, de búsqueda o de fecha, así que el megabyte viajaba otra
+        vez en cada uno. El nombre lo resuelve el server y el selector busca contra el server.
+      */
 
       if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
       if (responsablesRes.ok) {
@@ -491,7 +493,7 @@ export const ClientProjectsPage: React.FC = () => {
                       <div>
                         <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo</label>
                         {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                        <SelectorCentroCosto valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} catalogo={availableCostCenters} />
+                        <SelectorCentroCosto valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
                       </div>
 
                       <div>
@@ -838,7 +840,7 @@ export const ClientProjectsPage: React.FC = () => {
                         que pasa es que apunta a uno que no está. Son dos problemas distintos.
                       */}
                       {(() => {
-                        const cc = nombreCentroCosto(p, availableCostCenters);
+                        const cc = nombreCentroCosto(p);
                         return cc ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">{cc}</span>
                         ) : (
@@ -1030,7 +1032,7 @@ export const ClientProjectsPage: React.FC = () => {
                     Centro de Costo
                   </label>
                   {(() => {
-                    const cc = nombreCentroCosto(project, availableCostCenters);
+                    const cc = nombreCentroCosto(project);
                     return cc ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">{cc}</span>
                     ) : (

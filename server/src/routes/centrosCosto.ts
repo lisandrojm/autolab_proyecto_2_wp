@@ -441,6 +441,19 @@ router.get("/", authenticateToken, async (req: AuthenticatedRequest, res: Respon
     if (Number.isFinite(empresaTangoId)) filtro.empresaTangoId = empresaTangoId;
 
     /*
+      Filtros por el id y el código de Tango: son los que hidratan el valor YA elegido de un proyecto.
+
+      Un proyecto guarda el par (`centroCostoId` = `idAuxiliar`, `centroCostoEmpresaTangoId`), no el
+      `_id` de Mongo, así que sin esto el selector tendría que bajar el catálogo entero para poder
+      mostrar el centro que ya tiene puesto — que es justo lo que se vino a sacar.
+    */
+    const idAuxiliar = Number(req.query.idAuxiliar);
+    if (Number.isFinite(idAuxiliar)) filtro.idAuxiliar = idAuxiliar;
+
+    const codAuxiliar = String(req.query.codAuxiliar ?? "").trim();
+    if (codAuxiliar) filtro.codAuxiliar = codAuxiliar;
+
+    /*
       La búsqueda va por código, descripción y nombre, que es lo que se ve en pantalla. El texto se
       escapa antes de armar la expresión: sin eso, un paréntesis tipeado en el buscador es una
       expresión regular inválida —500— y un `.*` lo convierte en un recorrido de la colección entera.
@@ -454,7 +467,7 @@ router.get("/", authenticateToken, async (req: AuthenticatedRequest, res: Respon
     const consulta = CentroCosto.find(filtro).select(CAMPOS_LISTADO).sort({ codAuxiliar: 1 }).lean();
 
     // Sin ningún parámetro se contesta como antes: el array entero. Con cualquiera, paginado.
-    const paginado = ["page", "limit", "q", "search", "empresaId", "empresaTangoId"].some((k) => req.query[k] !== undefined);
+    const paginado = ["page", "limit", "q", "search", "empresaId", "empresaTangoId", "idAuxiliar", "codAuxiliar"].some((k) => req.query[k] !== undefined);
     if (!paginado) {
       res.json(await consulta.exec());
       return;
