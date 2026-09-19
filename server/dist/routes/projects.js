@@ -1322,10 +1322,17 @@ router.patch("/projects/:projectId/team-config", requireTenant, authenticateToke
 router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const { projectId } = req.params;
+        /*
+          `lean` + `select`: de acá sólo se leen los ids de `assignedUsers`. Hidratar el proyecto entero
+          —`teamConfig`, `coordinatorAssignments` y todo lo demás— para después escribir con
+          `findByIdAndUpdate` es traer cientos de kilobytes que no se miran.
+        */
         const project = await Project.findOne({
             _id: projectId,
             tenantId: req.tenantObjectId,
-        });
+        })
+            .select("assignedUsers")
+            .lean();
         if (!project) {
             return res.status(404).json({ error: "Project not found" });
         }
@@ -1338,10 +1345,13 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
             });
         }
         // Find which assigned user IDs actually exist in the database
+        // `lean`: se usan sólo los `_id`, no hace falta hidratar un documento de Mongoose por persona.
         const existingUsers = await User.find({
             _id: { $in: project.assignedUsers },
             tenantId: req.tenantObjectId,
-        }).select("_id");
+        })
+            .select("_id")
+            .lean();
         const existingIds = new Set(existingUsers.map((u) => u._id.toString()));
         const validAssignedUsers = project.assignedUsers.filter((id) => existingIds.has(id.toString()));
         const removedCount = originalCount - validAssignedUsers.length;
@@ -1352,10 +1362,9 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
                 newCount: originalCount,
             });
         }
-        // Update the project with only valid user IDs
-        await Project.findByIdAndUpdate(projectId, {
-            assignedUsers: validAssignedUsers,
-        });
+        // El tenant va también en el update: la verificación de arriba y la escritura tienen que mirar
+        // lo mismo, si no el filtro de tenant es una sugerencia.
+        await Project.updateOne({ _id: projectId, tenantId: req.tenantObjectId }, { $set: { assignedUsers: validAssignedUsers } });
         console.log(`[CLEANUP] Project ${projectId}: removed ${removedCount} orphaned user IDs (${originalCount} -> ${validAssignedUsers.length})`);
         res.json({
             message: `Cleaned up ${removedCount} orphaned user IDs`,

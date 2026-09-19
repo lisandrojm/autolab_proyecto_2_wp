@@ -392,6 +392,109 @@ router.get("/estado-sync", authenticateToken, async (_req, res) => {
   El resto —listar y borrar— sigue siendo el del router genérico. Lo que este archivo define arriba
   tiene prioridad: Express resuelve por orden de registro.
 */
+/*
+  ═══════════════════════════════════════════════════════════════════════
+  GET / — EL LISTADO. Paginado, con búsqueda y filtro por empresa.
+  ═══════════════════════════════════════════════════════════════════════
+
+  Lo servía el router genérico de catálogos, que no pagina, no proyecta y sólo atiende los filtros que
+  cada catálogo declara —y éste no declaraba ninguno—: devolvía los 2.208 centros COMPLETOS (~1 MB) y
+  tardaba unos 9 s en contestar, dos veces por pantalla. Para mostrar un badge con un código.
+
+  RETROCOMPATIBLE A PROPÓSITO. Sin parámetros sigue devolviendo el ARRAY entero, porque hay pantallas
+  que todavía cargan el catálogo para resolver nombres; pero ya PROYECTADO: sin `data` —que duplica
+  código y descripción—, sin `__v` y sin timestamps. Con `page`, `limit`, `q` o `empresaId` devuelve
+  `{ items, total, page, limit }`. El cliente (`utils/centroCosto.ts`) ya acepta las dos formas.
+
+  `data` NO se manda y eso es seguro: el front lo lee como respaldo de `idAuxiliar` y `codAuxiliar`
+  (ver `idCentroCosto` y `etiquetaCentroCosto`), y los dos van en la projection.
+*/
+const CAMPOS_LISTADO = "_id idAuxiliar codAuxiliar descAuxiliar habilitado empresaId empresaTangoId empresaNombre origen name externalId";
+const LIMITE_MAX = 200;
+router.get("/", authenticateToken, async (req, res) => {
+    try {
+        const filtro = {};
+        const empresaId = String(req.query.empresaId ?? "").trim();
+        if (empresaId) {
+            if (!mongoose.Types.ObjectId.isValid(empresaId)) {
+                res.status(400).json({ error: "empresaId inválido." });
+                return;
+            }
+            filtro.empresaId = new mongoose.Types.ObjectId(empresaId);
+        }
+        const empresaTangoId = Number(req.query.empresaTangoId);
+        if (Number.isFinite(empresaTangoId))
+            filtro.empresaTangoId = empresaTangoId;
+        /*
+          Filtros por el id y el código de Tango: son los que hidratan el valor YA elegido de un proyecto.
+    
+          Un proyecto guarda el par (`centroCostoId` = `idAuxiliar`, `centroCostoEmpresaTangoId`), no el
+          `_id` de Mongo, así que sin esto el selector tendría que bajar el catálogo entero para poder
+          mostrar el centro que ya tiene puesto — que es justo lo que se vino a sacar.
+        */
+        const idAuxiliar = Number(req.query.idAuxiliar);
+        if (Number.isFinite(idAuxiliar))
+            filtro.idAuxiliar = idAuxiliar;
+        const codAuxiliar = String(req.query.codAuxiliar ?? "").trim();
+        if (codAuxiliar)
+            filtro.codAuxiliar = codAuxiliar;
+        /*
+          La búsqueda va por código, descripción y nombre, que es lo que se ve en pantalla. El texto se
+          escapa antes de armar la expresión: sin eso, un paréntesis tipeado en el buscador es una
+          expresión regular inválida —500— y un `.*` lo convierte en un recorrido de la colección entera.
+        */
+        const q = String(req.query.q ?? req.query.search ?? "").trim();
+        if (q) {
+            const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            filtro.$or = [{ codAuxiliar: re }, { descAuxiliar: re }, { name: re }];
+        }
+        const consulta = CentroCosto.find(filtro).select(CAMPOS_LISTADO).sort({ codAuxiliar: 1 }).lean();
+        // Sin ningún parámetro se contesta como antes: el array entero. Con cualquiera, paginado.
+        const paginado = ["page", "limit", "q", "search", "empresaId", "empresaTangoId", "idAuxiliar", "codAuxiliar"].some((k) => req.query[k] !== undefined);
+        if (!paginado) {
+            res.json(await consulta.exec());
+            return;
+        }
+        const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), LIMITE_MAX);
+        const page = Math.max(Number(req.query.page) || 1, 1);
+        const [items, total] = await Promise.all([
+            consulta
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .exec(),
+            CentroCosto.countDocuments(filtro),
+        ]);
+        res.json({ items, total, page, limit });
+    }
+    catch (error) {
+        console.error("Listar centros de costo error:", error);
+        res.status(500).json({ error: "No se pudieron cargar los centros de costo." });
+    }
+});
+/**
+ * GET /:id — un centro suelto.
+ *
+ * Es lo que necesita un selector con buscador: la lista trae 20, pero el que el proyecto YA tiene
+ * puede no estar entre esos 20 y hay que poder mostrarlo igual.
+ */
+router.get("/:id", authenticateToken, async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            res.status(400).json({ error: "Id inválido." });
+            return;
+        }
+        const centro = await CentroCosto.findById(req.params.id).select(CAMPOS_LISTADO).lean();
+        if (!centro) {
+            res.status(404).json({ error: "Centro de costo no encontrado." });
+            return;
+        }
+        res.json(centro);
+    }
+    catch (error) {
+        console.error("Leer centro de costo error:", error);
+        res.status(500).json({ error: "No se pudo leer el centro de costo." });
+    }
+});
 router.use(createSimpleCatalogRouter(CentroCosto, {
     entityLabel: "Centro de Costo",
     sheetName: "CentrosCosto",
