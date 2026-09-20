@@ -347,8 +347,13 @@ export const RequestsConfigPage: React.FC = () => {
         await activityLogTypesAPI.delete(id);
         fetchTypes();
         sweetAlert.success('Eliminado', 'El tipo de novedad ha sido eliminado.');
-      } catch (error) {
-        sweetAlert.error('Error', 'No se pudo eliminar el tipo');
+      } catch (error: any) {
+        /*
+          El server rechaza el borrado cuando hay partes que nombran al tipo. El mensaje dice cuántos
+          y qué hacer; mostrarlo es la diferencia entre entenderlo y volver a intentarlo.
+        */
+        const datos = error?.response?.data;
+        sweetAlert.error('No se puede eliminar', [datos?.error, datos?.ayuda].filter(Boolean).join(' ') || 'No se pudo eliminar el tipo');
       }
     }
   };

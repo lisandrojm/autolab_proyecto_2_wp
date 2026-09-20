@@ -3,6 +3,7 @@ import { RequestConfig } from "../models/RequestConfig.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
+import { Request } from "../models/Request.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
 // GET /api/v1/request-config/settings
@@ -130,9 +131,35 @@ router.put("/:id", async (req, res) => {
     }
 });
 // DELETE /api/v1/activity-log-types/:id
+/**
+ * BORRAR UN TIPO QUE LOS PARTES TODAVÍA NOMBRAN LOS ROMPE EN SILENCIO.
+ *
+ * Los renglones guardan el motivo como TEXTO (`absenceReason`), no por id. Cuando el tipo
+ * desaparece, esos renglones dejan de emparejar con nada: no falla ninguna pantalla, simplemente su
+ * liquidación sale vacía. Pasó el 20/09/2026 con "Otros Presentes" —208 renglones, 122 de ellos con
+ * un reemplazante que se quedó sin su jornal— y hubo que restaurarlo con un script.
+ *
+ * Por eso: si hay renglones que lo nombran, NO SE BORRA. Se ofrece desactivarlo, que lo saca de los
+ * desplegables sin romper lo ya cargado.
+ */
 router.delete("/:id", async (req, res) => {
     try {
         const { id } = req.params;
+        const tipo = await RequestConfig.findOne({ _id: id, tenantId: req.tenantObjectId }).select("name").lean();
+        if (!tipo)
+            return res.status(404).json({ error: "Activity log configuration not found" });
+        const enUso = await Request.countDocuments({
+            tenantId: req.tenantObjectId,
+            $or: [{ "attendance.typeId": id }, { "attendance.absenceReason": tipo.name }],
+        });
+        if (enUso > 0) {
+            return res.status(409).json({
+                error: `No se puede borrar "${tipo.name}": hay ${enUso} parte(s) que lo usan.`,
+                ayuda: "Desactivalo en vez de borrarlo. Así deja de aparecer al cargar novedades, pero las que ya están cargadas siguen funcionando.",
+                enUso,
+                sugerencia: "desactivar",
+            });
+        }
         const deleted = await RequestConfig.findOneAndDelete({ _id: id, tenantId: req.tenantObjectId });
         if (!deleted)
             return res.status(404).json({ error: "Activity log configuration not found" });
