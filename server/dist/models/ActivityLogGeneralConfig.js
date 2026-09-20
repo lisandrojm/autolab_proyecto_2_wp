@@ -6,6 +6,12 @@ const horasExtraSchema = new Schema({
     unidad: { type: String, enum: ["cantidad", "importe"], default: "cantidad" },
     vigenteDesde: { type: String, default: null },
 }, { _id: false });
+const jornalBaseSchema = new Schema({
+    codigo: { type: String, default: null },
+    param: { type: String, enum: ["par1", "par2"], default: "par2" },
+    soloRegimen: { type: String, enum: ["mensual", "jornalero", null], default: "jornalero" },
+    vigenteDesde: { type: String, default: null },
+}, { _id: false });
 const ActivityLogGeneralConfigSchema = new Schema({
     tenantId: {
         type: Schema.Types.ObjectId,
@@ -19,6 +25,7 @@ const ActivityLogGeneralConfigSchema = new Schema({
         default: 3,
     },
     memosoftHorasExtra: { type: horasExtraSchema, default: null },
+    memosoftJornalBase: { type: jornalBaseSchema, default: null },
 }, {
     timestamps: true,
     collection: "activity_log_general_configs",

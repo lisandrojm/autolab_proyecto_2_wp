@@ -19,7 +19,7 @@ router.get("/settings", async (req, res) => {
 // PUT /api/v1/request-config/settings
 router.put("/settings", async (req, res) => {
     try {
-        const { allowedPastDays, memosoftHorasExtra } = req.body;
+        const { allowedPastDays, memosoftHorasExtra, memosoftJornalBase } = req.body;
         if (allowedPastDays !== undefined && (typeof allowedPastDays !== "number" || allowedPastDays < 1)) {
             return res.status(400).json({ error: "allowedPastDays must be a positive number" });
         }
@@ -37,6 +37,8 @@ router.put("/settings", async (req, res) => {
             cambios.allowedPastDays = allowedPastDays;
         if (memosoftHorasExtra !== undefined)
             cambios.memosoftHorasExtra = memosoftHorasExtra;
+        if (memosoftJornalBase !== undefined)
+            cambios.memosoftJornalBase = memosoftJornalBase;
         const config = await ActivityLogGeneralConfig.findOneAndUpdate({ tenantId: req.tenantObjectId }, { $set: cambios }, { new: true, upsert: true, setDefaultsOnInsert: true });
         res.json(config);
     }

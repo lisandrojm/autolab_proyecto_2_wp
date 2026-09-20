@@ -360,14 +360,48 @@ que son decisiones pendientes y no olvidos: la licencia por vacaciones (no hay c
 el motivo "Horas Extras y Feriados" (lo cubre la regla global; mapearlo además duplicaría el 0015) y
 el titular de "Sin Goce de Sueldo" (el catálogo pide un importe y de un parte salen días).
 
+### 5. Correr la liquidación del período
+
+```
+POST /api/v1/liquidacion/corridas          { "periodo": "2026-08" }
+POST /api/v1/liquidacion/corridas?previsualizar=1   # calcula y devuelve sin guardar
+GET  /api/v1/liquidacion/corridas?periodo=2026-08
+GET  /api/v1/liquidacion/corridas/<id>?hoja=<nombre de hoja>
+```
+
+**Reliquidar no pisa**: cada corrida es un documento nuevo, con sus números, sus excepciones y la
+fecha del mapeo con que se calculó. Así se puede contestar "¿qué mandamos el mes pasado?" sin
+depender de que alguien haya guardado el archivo.
+
+Cada fila guarda **de qué eventos salió** (`eventIds`) y cuántos días la componen. Es lo único que
+permite contestar "¿por qué acá dice 17 y no 18?" sin volver a correr todo.
+
+Para ver qué daría sin escribir nada en la base, con el mapeo semilla en memoria:
+
+```bash
+npx tsx src/scripts/verificarCorrida.ts <tenantId> 2026-08
+npx tsx src/scripts/verificarCorrida.ts <tenantId> 2026-08 --sin-jornal-base
+```
+
+### Tres reglas del motor que no se negocian
+
+- **Nada se infiere por descarte.** Una ausencia sin efecto configurado no se convierte en
+  "Inasistencia Injustificada": va al anexo.
+- **Las horas extra sin discriminar no se reparten.** El 98% de las horas cargadas está sólo en
+  `overtimeHours`, sin decir si son al 50% o al 100%. Mandarlas todas al 50% cambiaría lo que cobra
+  la gente, así que quedan anotadas para que alguien las clasifique.
+- **Un motivo mapeado para no emitir nada no es lo mismo que uno sin configurar.** El primero está
+  decidido y no avisa; el segundo avisa en cada corrida hasta que se resuelva.
+
 ## Tests
 
 ```bash
 npm run test:liquidacion           # de qué empresa es el contrato y bajo qué régimen se liquida
-npm run test:liquidacion-efectos   # qué efectos rigen ese día y si el mapeo es válido
+npm run test:liquidacion-efectos   # qué efectos rigen ese día, si el mapeo es válido, y los nombres
+npm run test:liquidacion-motor     # normalizar, codificar y agregar
 ```
 
 ## Lo que todavía no está
 
-Fases 2 a 5: el motor de cálculo, los tres archivos (planilla de control, import y anexo de
-excepciones) y el cruce con el reloj presencial.
+Fases 3 a 5: los tres archivos XLSX (planilla de control, import y anexo de excepciones) y el cruce
+con el reloj presencial. El cálculo ya está; falta escribirlo en disco.

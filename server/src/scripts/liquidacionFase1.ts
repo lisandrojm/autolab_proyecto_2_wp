@@ -39,66 +39,9 @@ import { reemplazarVigentes, validarEfecto } from "../utils/liquidacion/efectos.
 
 const CARPETA_RESPALDOS = path.resolve(process.cwd(), "migraciones-respaldo");
 
-type EfectoSemilla = {
-  conceptoCodigo: string;
-  param: "par1" | "par2";
-  unidad: "cantidad" | "importe";
-  fuente: "jornadas" | "horas50" | "horas100" | "fijo" | "manual";
-  aplicaA: "titular" | "reemplazante";
-  soloRegimen?: "mensual" | "jornalero" | null;
-  nota?: string;
-};
+import { MAPEO_SEMILLA, HORAS_EXTRA, MOTIVOS_QUE_NO_LIQUIDAN } from "../utils/liquidacion/mapeoSemilla.js";
+import { claveDeMotivo } from "../utils/liquidacion/nombresDeMotivo.js";
 
-/** El jornal que cobra quien cubre a otro. Es el efecto que más se repite, así que se nombra una vez. */
-const JORNAL_DEL_REEMPLAZANTE: EfectoSemilla = {
-  conceptoCodigo: "0000",
-  param: "par2",
-  unidad: "cantidad",
-  fuente: "jornadas",
-  aplicaA: "reemplazante",
-  soloRegimen: "jornalero",
-  nota: "El que cubre cobra el jornal. Sólo jornaleros: al mensual ya se le paga el mes.",
-};
-
-/** El mapeo tal como lo pasó RRHH, con las tres salvedades del encabezado. */
-const MAPEO_SEMILLA: Record<string, EfectoSemilla[]> = {
-  Franco: [JORNAL_DEL_REEMPLAZANTE],
-  "Cambios de Turno": [],
-  Compensatorios: [JORNAL_DEL_REEMPLAZANTE],
-  Enfermedad: [
-    { conceptoCodigo: "0012", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Licencia por enfermedad, en días." },
-    JORNAL_DEL_REEMPLAZANTE,
-  ],
-  Vacaciones: [JORNAL_DEL_REEMPLAZANTE],
-  "Sin Goce de Sueldo": [
-    {
-      conceptoCodigo: "0090",
-      param: "par2",
-      unidad: "importe",
-      fuente: "manual",
-      aplicaA: "titular",
-      nota: "PENDIENTE: el catálogo dice importe en par2, pero de un parte salen días. Confirmar con el estudio.",
-    },
-    JORNAL_DEL_REEMPLAZANTE,
-  ],
-  Feriado: [
-    { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Feriado, en días." },
-    /*
-      Al reemplazante mensual se le paga el feriado; al jornalero, el jornal. Es la lectura de
-      "0017 o 0000 según régimen" de la tabla, y está marcada como supuesto a confirmar.
-    */
-    { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "reemplazante", soloRegimen: "mensual", nota: "SUPUESTO: al mensual que cubre un feriado se le liquida el feriado." },
-    JORNAL_DEL_REEMPLAZANTE,
-  ],
-  "Horas Extras y Feriados": [],
-  "Otros Presentes": [
-    { conceptoCodigo: "0000", param: "par2", unidad: "cantidad", fuente: "jornadas", aplicaA: "reemplazante", nota: "Alguien que no es del proyecto vino a trabajar: cobra el jornal." },
-  ],
-  Renuncia: [],
-};
-
-/** La regla global de horas extra: los dos códigos de la tabla, con la unidad que dice el catálogo. */
-const HORAS_EXTRA = { codigo50: "0015", codigo100: "0016", param: "par1" as const, unidad: "cantidad" as const };
 
 interface Respaldo {
   fecha: string;
@@ -154,11 +97,19 @@ async function main() {
   const motivos: any[] = await RequestConfig.find({ tenantId }).select("name memosoftEffects").sort({ order: 1 }).lean();
   const respaldo: Respaldo = { fecha: new Date().toISOString(), tenantId: String(tenantId), motivos: [], horasExtraAnterior: undefined };
 
+  /*
+    La semilla se busca por clave normalizada y no por nombre exacto: los motivos se renombran desde
+    el ABM —"Compensatorios" pasó a "Compensatorio" el 20/09/2026— y con nombre exacto el script
+    dejaba de reconocerlos sin avisar de nada.
+  */
+  const semillaPorClave = new Map(Object.entries(MAPEO_SEMILLA).map(([nombre, efectos]) => [claveDeMotivo(nombre), efectos]));
+  const noLiquidaPorClave = new Set(MOTIVOS_QUE_NO_LIQUIDAN.map(claveDeMotivo));
+
   let problemas = 0;
-  const aGuardar: { motivoId: string; nombre: string; anterior: unknown; lista: any[] }[] = [];
+  const aGuardar: { motivoId: string; nombre: string; anterior: unknown; lista: any[]; noLiquida: boolean }[] = [];
 
   for (const motivo of motivos) {
-    const semilla = MAPEO_SEMILLA[motivo.name];
+    const semilla = semillaPorClave.get(claveDeMotivo(motivo.name));
     if (!semilla) {
       console.log(`?  "${motivo.name}" no está en el mapeo semilla. Se deja como está.`);
       continue;
@@ -178,9 +129,9 @@ async function main() {
       continue;
     }
 
-    const detalle = nuevos.length === 0 ? "sin efectos (no genera nada)" : nuevos.map((e) => `${e.conceptoCodigo}→${e.param} ${e.aplicaA}${e.soloRegimen ? ` (${e.soloRegimen})` : ""}`).join(", ");
+    const detalle = nuevos.length === 0 ? (noLiquidaPorClave.has(claveDeMotivo(motivo.name)) ? "marcado como que NO liquida nada" : "sin efectos") : nuevos.map((e) => `${e.conceptoCodigo}→${e.param} ${e.aplicaA}${e.soloRegimen ? ` (${e.soloRegimen})` : ""}`).join(", ");
     console.log(`+  "${motivo.name}": ${detalle}`);
-    aGuardar.push({ motivoId: String(motivo._id), nombre: motivo.name, anterior: motivo.memosoftEffects || [], lista: nuevos });
+    aGuardar.push({ motivoId: String(motivo._id), nombre: motivo.name, anterior: motivo.memosoftEffects || [], lista: nuevos, noLiquida: noLiquidaPorClave.has(claveDeMotivo(motivo.name)) });
   }
 
   console.log(`\nHoras extra (regla global): ${HORAS_EXTRA.codigo50} al 50% y ${HORAS_EXTRA.codigo100} al 100%, en ${HORAS_EXTRA.param} como ${HORAS_EXTRA.unidad}.`);
@@ -197,6 +148,7 @@ async function main() {
     if (!doc) continue;
     respaldo.motivos.push({ motivoId: x.motivoId, nombre: x.nombre, anterior: x.anterior });
     doc.memosoftEffects = reemplazarVigentes((doc.memosoftEffects || []) as any, x.lista as any, desde) as any;
+    (doc as any).memosoftNoLiquida = x.noLiquida;
     await doc.save();
   }
 

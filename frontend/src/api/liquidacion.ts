@@ -41,6 +41,8 @@ export interface MotivoConMapeo {
   name: string;
   isActive: boolean;
   requiresReplacement: boolean;
+  /** Revisado y decidido: este motivo no liquida nada. Distinto de no estar configurado. */
+  noLiquida?: boolean;
   /** Los efectos que rigen a la fecha consultada. */
   vigentes: MemosoftEffect[];
   /** Todos, incluidos los cerrados. Es el historial. */
@@ -104,10 +106,10 @@ export const liquidacionAPI = {
    * Reemplaza lo que rige para ese motivo. Lo anterior NO se borra: queda cerrado el día previo,
    * así una liquidación vieja se puede volver a armar con las reglas que tenía.
    */
-  guardarMapeo: async (motivoId: string, efectos: Partial<MemosoftEffect>[], desde?: string) => {
+  guardarMapeo: async (motivoId: string, efectos: Partial<MemosoftEffect>[], desde?: string, noLiquida?: boolean) => {
     const response = await axiosClient.put<{ _id: string; name: string; vigentes: MemosoftEffect[]; historial: MemosoftEffect[] }>(
       `/liquidacion/mapeo/${motivoId}`,
-      { efectos, desde },
+      { efectos, desde, noLiquida },
     );
     return response.data;
   },

@@ -1,0 +1,210 @@
+import crypto from "crypto";
+import { Types } from "mongoose";
+import { Request } from "../../models/Request.js";
+import { RequestConfig } from "../../models/RequestConfig.js";
+import { MemosoftConcepto } from "../../models/MemosoftConcepto.js";
+import { ActivityLogGeneralConfig } from "../../models/ActivityLogGeneralConfig.js";
+import { LiquidacionCorrida } from "../../models/LiquidacionCorrida.js";
+import { Project } from "../../models/Project.js";
+import { limitesDelPeriodo } from "../../utils/liquidacion/contratos.js";
+import { armarPadron } from "./padron.js";
+import { normalizarParte } from "./normalizar.js";
+import { codificarEvento } from "./codificar.js";
+import { agregarLineas, hojaDe } from "./agregar.js";
+import { claveDeMotivo } from "../../utils/liquidacion/nombresDeMotivo.js";
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * LA CORRIDA: las tres etapas puras, encadenadas contra la base
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Acá está TODO lo que habla con Mongo, para que normalizar, codificar y agregar se puedan probar
+ * sin levantar nada. Este archivo trae los datos, los pasa por las tres etapas en orden y guarda el
+ * resultado.
+ *
+ * NO GENERA NINGÚN ARCHIVO: eso es la fase 3. Esto deja calculado qué va a decir.
+ */
+/** Cuáles excepciones impiden descargar el import y cuáles sólo avisan. */
+const BLOQUEANTES = {
+    sin_legajo: true,
+    legajo_duplicado: true,
+    sin_empresa: true,
+    sin_centro_de_costo: true,
+    sin_regimen: true,
+    empresa_ambigua: true,
+    // Estas avisan: no ensucian el archivo, pero alguien tiene que resolverlas aparte.
+    sin_efecto_configurado: false,
+    efecto_manual: false,
+    horas_extra_sin_discriminar: false,
+    presente_sin_regla_base: false,
+    empresa_sin_dato: true,
+    regimen_sin_dato: true,
+    regimen_contradictorio: true,
+    centro_de_costo_ambiguo: true,
+};
+export async function correrLiquidacion(tenantId, periodo, createdBy, opciones = {}) {
+    const { desde, hasta } = limitesDelPeriodo(periodo);
+    const versionMapeo = opciones.versionMapeo || hasta;
+    /* ── 1. Todo lo que hace falta, en cinco consultas ── */
+    const [padron, motivos, conceptos, config, proyectos] = await Promise.all([
+        armarPadron(tenantId, periodo, opciones),
+        RequestConfig.find({ tenantId }).select("name memosoftEffects memosoftNoLiquida").lean(),
+        MemosoftConcepto.find({ tenantId }).select("codigo descripcion empresaId").lean(),
+        ActivityLogGeneralConfig.getOrCreateDefault(tenantId),
+        Project.find({ tenantId }).select("name").lean(),
+    ]);
+    const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), p.name]));
+    /*
+      EL PADRÓN SE INDEXA POR (persona, proyecto) Y TAMBIÉN POR PERSONA SOLA.
+  
+      Lo segundo es para los reemplazantes: el que cubre muchas veces no pertenece al proyecto del
+      parte, así que buscarlo sólo por (persona, proyecto) lo dejaría sin legajo y sin empresa, y su
+      jornal se perdería. Con el índice por persona se lo encuentra por su propio contrato.
+    */
+    const porPersonaYProyecto = new Map();
+    const porPersona = new Map();
+    for (const f of padron.filas) {
+        const datos = {
+            apellidoYNombre: f.apellidoYNombre,
+            legajo: f.legajo,
+            empresaId: f.empresaId,
+            ccCodigo: f.ccCodigo,
+            regimen: f.regimen,
+        };
+        const clave = `${f.userId}|${f.projectId}`;
+        if (!porPersonaYProyecto.has(clave))
+            porPersonaYProyecto.set(clave, datos);
+        if (!porPersona.has(f.userId))
+            porPersona.set(f.userId, datos);
+    }
+    const datosDe = (userId, projectId) => (projectId ? porPersonaYProyecto.get(`${userId}|${projectId}`) : undefined) || porPersona.get(userId);
+    /* ── 2. Los partes del período ── */
+    const filtroPartes = { tenantId, date: { $gte: desde, $lte: hasta }, "attendance.0": { $exists: true } };
+    if (opciones.projectId)
+        filtroPartes.projectId = new Types.ObjectId(opciones.projectId);
+    const partes = await Request.find(filtroPartes)
+        .select("date projectId areaId shiftId attendance")
+        .sort({ date: 1 })
+        .lean();
+    /* ── 3. Normalizar ── */
+    const eventos = [];
+    for (const parte of partes) {
+        eventos.push(...normalizarParte({
+            _id: String(parte._id),
+            date: parte.date,
+            projectId: parte.projectId ? String(parte.projectId) : null,
+            proyectoNombre: parte.projectId ? nombreProyecto.get(String(parte.projectId)) || null : null,
+            areaId: parte.areaId ? String(parte.areaId) : null,
+            shiftId: parte.shiftId ? String(parte.shiftId) : null,
+            attendance: (parte.attendance || []).map((r) => ({ ...r, _id: String(r._id) })),
+        }, datosDe));
+    }
+    /* ── 4. Codificar ── */
+    const efectosPorMotivo = new Map(motivos.map((m) => [String(m._id), m.memosoftEffects || []]));
+    const noLiquidaPorMotivo = new Map(motivos.map((m) => [String(m._id), !!m.memosoftNoLiquida]));
+    const noLiquidaPorNombre = new Map(motivos.map((m) => [claveDeMotivo(m.name), !!m.memosoftNoLiquida]));
+    /*
+      Los partes viejos no tienen `typeId` —el tipo viajaba como texto—, así que también se indexa por
+      nombre. Son 7.938 renglones: sin esto, todo lo cargado antes del backfill queda sin mapeo.
+  
+      La clave se normaliza (ver `utils/liquidacion/nombresDeMotivo.ts`) porque los nombres del ABM y
+      los textos guardados YA divergieron: los partes dicen "Compensatorios" y el motivo hoy se llama
+      "Compensatorio".
+    */
+    const efectosPorNombre = new Map(motivos.map((m) => [claveDeMotivo(m.name), m.memosoftEffects || []]));
+    const globales = {
+        horasExtra: config.memosoftHorasExtra || null,
+        jornalBase: config.memosoftJornalBase || null,
+    };
+    const lineas = [];
+    const exclusiones = [];
+    for (const evento of eventos) {
+        const efectos = (evento.motivoId ? efectosPorMotivo.get(evento.motivoId) : undefined) ||
+            (evento.motivoNombre ? efectosPorNombre.get(claveDeMotivo(evento.motivoNombre)) : undefined) ||
+            [];
+        const noLiquida = (evento.motivoId ? noLiquidaPorMotivo.get(evento.motivoId) : undefined) ??
+            (evento.motivoNombre ? noLiquidaPorNombre.get(claveDeMotivo(evento.motivoNombre)) : undefined) ??
+            false;
+        const r = codificarEvento(evento, efectos, globales, noLiquida);
+        lineas.push(...r.lineas);
+        exclusiones.push(...r.exclusiones);
+    }
+    /* ── 5. Agregar ── */
+    const agregadas = agregarLineas(lineas);
+    const nombreEmpresa = new Map();
+    padron.filas.forEach((f) => { if (f.empresaId && f.empresaNombre)
+        nombreEmpresa.set(f.empresaId, f.empresaNombre); });
+    const nombreCC = new Map();
+    padron.filas.forEach((f) => { if (f.ccCodigo && f.ccNombre)
+        nombreCC.set(f.ccCodigo, f.ccNombre); });
+    const descripcionConcepto = new Map();
+    conceptos.forEach((c) => { if (!descripcionConcepto.has(c.codigo))
+        descripcionConcepto.set(c.codigo, c.descripcion); });
+    const lineasCorrida = agregadas.map((l) => ({
+        empresaId: l.empresaId ? new Types.ObjectId(l.empresaId) : null,
+        empresaNombre: l.empresaId ? nombreEmpresa.get(l.empresaId) || null : null,
+        ccCodigo: l.ccCodigo,
+        ccNombre: l.ccCodigo ? nombreCC.get(l.ccCodigo) || null : null,
+        regimen: l.regimen,
+        legajo: l.legajo,
+        apellidoYNombre: l.apellidoYNombre,
+        userId: Types.ObjectId.isValid(l.userId) ? new Types.ObjectId(l.userId) : null,
+        conceptoCodigo: l.conceptoCodigo,
+        conceptoDescripcion: descripcionConcepto.get(l.conceptoCodigo) || null,
+        par1: l.par1,
+        par2: l.par2,
+        hoja: hojaDe(l, l.empresaId ? nombreEmpresa.get(l.empresaId) || "" : "", l.ccCodigo ? nombreCC.get(l.ccCodigo) : null),
+        eventIds: l.eventIds,
+        dias: l.dias,
+        origenes: l.origenes,
+    }));
+    /* ── 6. Las excepciones: las del padrón y las del cálculo, juntas ── */
+    const excepciones = [
+        ...padron.excepciones.map((e) => ({
+            motivo: e.tipo,
+            userId: Types.ObjectId.isValid(e.userId) ? new Types.ObjectId(e.userId) : null,
+            apellidoYNombre: e.apellidoYNombre,
+            fecha: null,
+            eventoId: null,
+            detalle: e.detalle,
+            bloqueante: BLOQUEANTES[e.tipo] ?? false,
+        })),
+        ...exclusiones.map((e) => ({
+            motivo: e.motivo,
+            userId: Types.ObjectId.isValid(e.userId) ? new Types.ObjectId(e.userId) : null,
+            apellidoYNombre: e.apellidoYNombre,
+            fecha: e.fecha,
+            eventoId: e.eventoId,
+            detalle: e.detalle,
+            bloqueante: BLOQUEANTES[e.motivo] ?? false,
+        })),
+    ];
+    // La huella se calcula sobre lo que va a terminar en el archivo, no sobre el documento entero.
+    const hashLineas = crypto
+        .createHash("sha1")
+        .update(JSON.stringify(lineasCorrida.map((l) => [l.hoja, l.legajo, l.conceptoCodigo, l.par1, l.par2])))
+        .digest("hex");
+    const resumen = {
+        partes: partes.length,
+        eventos: eventos.length,
+        lineas: lineasCorrida.length,
+        personas: new Set(lineasCorrida.map((l) => String(l.userId))).size,
+        hojas: new Set(lineasCorrida.map((l) => l.hoja)).size,
+        excepciones: excepciones.length,
+        bloqueantes: excepciones.filter((e) => e.bloqueante).length,
+    };
+    const corrida = {
+        tenantId,
+        periodo,
+        filtros: opciones,
+        versionMapeo,
+        createdBy,
+        lineas: lineasCorrida,
+        excepciones,
+        resumen,
+        hashLineas,
+    };
+    if (opciones.persistir === false)
+        return corrida;
+    // Reliquidar NO pisa: siempre es un documento nuevo.
+    return (await LiquidacionCorrida.create(corrida)).toObject();
+}

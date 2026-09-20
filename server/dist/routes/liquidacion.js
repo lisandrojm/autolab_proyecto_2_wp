@@ -8,6 +8,8 @@ import { MemosoftConcepto } from "../models/MemosoftConcepto.js";
 import { RequestConfig } from "../models/RequestConfig.js";
 import { efectosVigentesEn, validarEfecto, reemplazarVigentes } from "../utils/liquidacion/efectos.js";
 import { armarPadron } from "../services/liquidacion/padron.js";
+import { correrLiquidacion } from "../services/liquidacion/corrida.js";
+import { LiquidacionCorrida } from "../models/LiquidacionCorrida.js";
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * LIQUIDACIÓN — fase 0: el padrón y el catálogo de conceptos
@@ -128,7 +130,7 @@ liquidacionRouter.get("/mapeo", requirePermission(PERMISO_MAPEO), async (req, re
     try {
         const fecha = String(req.query.fecha || new Date().toISOString().slice(0, 10)).slice(0, 10);
         const [motivos, conceptos] = await Promise.all([
-            RequestConfig.find({ tenantId: req.tenantObjectId }).select("name order isActive requiresReplacement memosoftEffects").sort({ order: 1 }).lean(),
+            RequestConfig.find({ tenantId: req.tenantObjectId }).select("name order isActive requiresReplacement memosoftEffects memosoftNoLiquida").sort({ order: 1 }).lean(),
             MemosoftConcepto.find({ tenantId: req.tenantObjectId }).select("empresaId codigo descripcion usaPar1 usaPar2 unidadPar1 unidadPar2 activo").lean(),
         ]);
         res.json({
@@ -138,6 +140,7 @@ liquidacionRouter.get("/mapeo", requirePermission(PERMISO_MAPEO), async (req, re
                 name: m.name,
                 isActive: m.isActive !== false,
                 requiresReplacement: !!m.requiresReplacement,
+                noLiquida: !!m.memosoftNoLiquida,
                 vigentes: efectosVigentesEn(m.memosoftEffects || [], fecha),
                 historial: m.memosoftEffects || [],
             })),
@@ -158,7 +161,7 @@ liquidacionRouter.get("/mapeo", requirePermission(PERMISO_MAPEO), async (req, re
  */
 liquidacionRouter.put("/mapeo/:motivoId", requirePermission(PERMISO_MAPEO), async (req, res) => {
     try {
-        const cuerpo = z.object({ efectos: z.array(efectoSchema), desde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).parse(req.body);
+        const cuerpo = z.object({ efectos: z.array(efectoSchema), desde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), noLiquida: z.boolean().optional() }).parse(req.body);
         const desde = cuerpo.desde || new Date().toISOString().slice(0, 10);
         const motivo = await RequestConfig.findOne({ _id: req.params.motivoId, tenantId: req.tenantObjectId });
         if (!motivo)
@@ -180,13 +183,89 @@ liquidacionRouter.put("/mapeo/:motivoId", requirePermission(PERMISO_MAPEO), asyn
         if (problemas.length)
             return res.status(400).json({ error: "El mapeo no se puede guardar", problemas });
         motivo.memosoftEffects = reemplazarVigentes((motivo.memosoftEffects || []), nuevos, desde);
+        // Sólo si vino: no mandarla no significa desmarcarla.
+        if (cuerpo.noLiquida !== undefined)
+            motivo.memosoftNoLiquida = cuerpo.noLiquida;
         await motivo.save();
-        res.json({ _id: String(motivo._id), name: motivo.name, vigentes: efectosVigentesEn(motivo.memosoftEffects, desde), historial: motivo.memosoftEffects });
+        res.json({ _id: String(motivo._id), name: motivo.name, noLiquida: !!motivo.memosoftNoLiquida, vigentes: efectosVigentesEn(motivo.memosoftEffects, desde), historial: motivo.memosoftEffects });
     }
     catch (error) {
         if (error instanceof z.ZodError)
             return res.status(400).json({ error: "Datos inválidos", details: error.errors });
         console.error("Update mapeo de liquidación error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/* ═══════════════════════════ Las corridas ═══════════════════════════ */
+/**
+ * CALCULAR EL PERÍODO.
+ *
+ * Con `?previsualizar=1` calcula y devuelve sin guardar. Sin eso, queda una corrida nueva: nunca se
+ * pisa la anterior, así que reliquidar no borra lo que se mandó el mes pasado.
+ */
+liquidacionRouter.post("/corridas", requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const q = filtrosSchema.extend({ versionMapeo: z.string().optional() }).parse({ ...req.body, ...req.query });
+        const previsualizar = String(req.query.previsualizar || req.body?.previsualizar || "") === "1";
+        const corrida = await correrLiquidacion(req.tenantObjectId, q.periodo, new Types.ObjectId(req.user.userId), {
+            empresaId: q.empresaId,
+            ccCodigo: q.ccCodigo,
+            tipoContratoId: q.tipoContratoId,
+            projectId: q.projectId,
+            rolFrame: q.rolFrame,
+            regimen: q.regimen,
+            versionMapeo: q.versionMapeo,
+            persistir: !previsualizar,
+        });
+        res.status(previsualizar ? 200 : 201).json(corrida);
+    }
+    catch (error) {
+        if (error instanceof z.ZodError)
+            return res.status(400).json({ error: "Filtros inválidos", details: error.errors });
+        console.error("Correr liquidación error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/** El listado: sólo el resumen de cada corrida. Las líneas se piden una por una. */
+liquidacionRouter.get("/corridas", requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const filtro = { tenantId: req.tenantObjectId };
+        if (req.query.periodo)
+            filtro.periodo = String(req.query.periodo);
+        const corridas = await LiquidacionCorrida.find(filtro)
+            .select("periodo versionMapeo filtros resumen hashLineas createdBy createdAt")
+            .sort({ createdAt: -1 })
+            .limit(Math.min(100, Number(req.query.limit) || 25))
+            .populate("createdBy", "firstName lastName")
+            .lean();
+        res.json(corridas);
+    }
+    catch (error) {
+        console.error("Listar corridas error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * UNA CORRIDA ENTERA, con sus líneas y sus excepciones.
+ *
+ * Con `?hoja=` devuelve sólo una hoja, que es como se la mira cuando hay que revisar un centro de
+ * costo puntual sin bajarse las mil líneas del período.
+ */
+liquidacionRouter.get("/corridas/:id", requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const corrida = await LiquidacionCorrida.findOne({ _id: req.params.id, tenantId: req.tenantObjectId })
+            .populate("createdBy", "firstName lastName")
+            .lean();
+        if (!corrida)
+            return res.status(404).json({ error: "Corrida no encontrada" });
+        if (req.query.hoja) {
+            const hoja = String(req.query.hoja);
+            corrida.lineas = (corrida.lineas || []).filter((l) => l.hoja === hoja);
+        }
+        res.json(corrida);
+    }
+    catch (error) {
+        console.error("Ver corrida error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

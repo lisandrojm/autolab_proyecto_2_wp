@@ -10,6 +10,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { efectosVigentesEn, validarEfecto, reemplazarVigentes } from "./efectos.js";
+import { claveDeMotivo, indexarPorNombre } from "./nombresDeMotivo.js";
 const efecto = (extra = {}) => ({
     conceptoCodigo: "0012",
     param: "par1",
@@ -135,5 +136,32 @@ describe("liquidación · cambiar el mapeo sin borrar historia", () => {
         const despues = reemplazarVigentes([efecto({ vigenteDesde: "2025-01-01" })], [], "2026-09-01");
         assert.equal(despues.length, 1);
         assert.equal(efectosVigentesEn(despues, "2026-09-15").length, 0);
+    });
+});
+describe("liquidación · emparejar el motivo por nombre", () => {
+    it("el plural y el singular son el mismo motivo", () => {
+        /*
+          No es una hipótesis: el 20/09/2026 alguien renombró "Compensatorios" a "Compensatorio" desde
+          el ABM, y los 315 renglones ya cargados siguen guardando el texto viejo.
+        */
+        assert.equal(claveDeMotivo("Compensatorios"), claveDeMotivo("Compensatorio"));
+        assert.equal(claveDeMotivo("Cambios de Turno"), claveDeMotivo("Cambio de Turno"));
+    });
+    it("las mayúsculas, los acentos y los espacios de más no separan", () => {
+        assert.equal(claveDeMotivo("  ENFERMEDAD "), claveDeMotivo("Enfermedad"));
+        assert.equal(claveDeMotivo("Vacación"), claveDeMotivo("vacacion"));
+    });
+    it("lo que mobile llama 'Presente (Adicional)' es 'Otros Presentes'", () => {
+        assert.equal(claveDeMotivo("Presente (Adicional)"), claveDeMotivo("Otros Presentes"));
+    });
+    it("dos motivos distintos NO se confunden", () => {
+        // El emparejamiento es tolerante con la escritura, no con el significado.
+        assert.notEqual(claveDeMotivo("Enfermedad"), claveDeMotivo("Enfermería"));
+        assert.notEqual(claveDeMotivo("Franco"), claveDeMotivo("Feriado"));
+    });
+    it("si dos motivos colapsan en la misma clave, se avisa en vez de elegir uno", () => {
+        const { indice, colisiones } = indexarPorNombre([{ name: "Compensatorio" }, { name: "Compensatorios" }], (m) => m.name);
+        assert.equal(indice.size, 1);
+        assert.deepEqual(colisiones, ["Compensatorios"]);
     });
 });

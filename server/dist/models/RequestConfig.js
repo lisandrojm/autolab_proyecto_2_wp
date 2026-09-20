@@ -48,6 +48,7 @@ const requestConfigSchema = new Schema({
         ],
         default: [],
     },
+    memosoftNoLiquida: { type: Boolean, default: false },
     limit: {
         enabled: { type: Boolean, default: false },
         maxPorPeriodo: { type: Number },

@@ -61,6 +61,8 @@ export const MapeoMemosoft: React.FC = () => {
   const [guardando, setGuardando] = useState<string | null>(null);
   const [problemas, setProblemas] = useState<Record<string, ProblemaDeMapeo[]>>({});
   const [verHistorial, setVerHistorial] = useState<Record<string, boolean>>({});
+  /** La marca de "no liquida nada" mientras se edita. */
+  const [noLiquidaBorrador, setNoLiquidaBorrador] = useState<Record<string, boolean>>({});
 
   /* Las horas extra, que son globales. */
   const [horasExtra, setHorasExtra] = useState<{ codigo50: string; codigo100: string; param: 'par1' | 'par2'; unidad: 'cantidad' | 'importe' }>({
@@ -113,7 +115,10 @@ export const MapeoMemosoft: React.FC = () => {
 
   const editar = (motivoId: string, efectos: MemosoftEffect[]) => setBorradores((b) => ({ ...b, [motivoId]: efectos }));
 
-  const empezarAEditar = (motivo: MotivoConMapeo) => editar(motivo._id, motivo.vigentes.map((e) => ({ ...e })));
+  const empezarAEditar = (motivo: MotivoConMapeo) => {
+    setNoLiquidaBorrador((b) => ({ ...b, [motivo._id]: !!motivo.noLiquida }));
+    editar(motivo._id, motivo.vigentes.map((e) => ({ ...e })));
+  };
 
   const cambiarEfecto = (motivoId: string, i: number, cambio: Partial<MemosoftEffect>) => {
     const actual = borradores[motivoId] || [];
@@ -152,8 +157,10 @@ export const MapeoMemosoft: React.FC = () => {
           empresaId: e.empresaId || null,
           nota: e.nota,
         })),
+        undefined,
+        !!noLiquidaBorrador[motivo._id],
       );
-      setMotivos((lista) => lista.map((m) => (m._id === motivo._id ? { ...m, vigentes: guardado.vigentes, historial: guardado.historial } : m)));
+      setMotivos((lista) => lista.map((m) => (m._id === motivo._id ? { ...m, vigentes: guardado.vigentes, historial: guardado.historial, noLiquida: (guardado as any).noLiquida } : m)));
       setBorradores((b) => { const { [motivo._id]: _, ...resto } = b; return resto; });
       sweetAlert.success('Guardado', `El mapeo de "${motivo.name}" rige desde hoy. Lo anterior quedó en el historial.`);
     } catch (error: any) {
@@ -263,8 +270,11 @@ export const MapeoMemosoft: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{motivo.name}</span>
                 {!motivo.isActive && <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">inactivo</span>}
-                {efectos.length === 0 && (
+                {efectos.length === 0 && motivo.noLiquida && (
                   <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">no liquida nada</span>
+                )}
+                {efectos.length === 0 && !motivo.noLiquida && (
+                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">sin configurar</span>
                 )}
               </div>
 
@@ -306,7 +316,27 @@ export const MapeoMemosoft: React.FC = () => {
 
             <div className="px-4 py-3 space-y-2">
               {efectos.length === 0 && !editando && (
-                <p className="text-xs text-gray-400 dark:text-gray-500">Este motivo no genera ningún concepto en el recibo.</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {motivo.noLiquida
+                    ? 'Revisado: este motivo no genera ningún concepto en el recibo.'
+                    : 'Todavía nadie definió qué liquida este motivo. Cada corrida lo va a avisar hasta que se decida.'}
+                </p>
+              )}
+
+              {/*
+                LA DIFERENCIA ENTRE "NO LIQUIDA" Y "SIN CONFIGURAR".
+                Sin esta marca, un motivo decidido y uno olvidado se ven igual, y la corrida avisa de
+                los dos: son decenas de avisos por mes de cosas que están bien.
+              */}
+              {editando && efectos.length === 0 && (
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={!!noLiquidaBorrador[motivo._id]}
+                    onChange={(e) => setNoLiquidaBorrador((b) => ({ ...b, [motivo._id]: e.target.checked }))}
+                  />
+                  Este motivo no liquida nada, y está decidido
+                </label>
               )}
 
               {efectos.map((efecto, i) => {

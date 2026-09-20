@@ -20,11 +20,31 @@ export interface IHorasExtraMemosoft {
   vigenteDesde?: string | null;
 }
 
+/**
+ * EL JORNAL DEL DÍA TRABAJADO, para el que vino y no pasó nada.
+ *
+ * NO ESTABA EN EL PEDIDO Y SIN ESTO EL ARCHIVO NO CIERRA. Los renglones "presente, sin novedad" son
+ * la mayoría —5.456 de los 7.920 de toda la historia— y un jornalero cobra POR DÍA TRABAJADO: si
+ * nada los convierte en un concepto, la liquidación de los jornaleros sale casi vacía.
+ *
+ * Arranca sin configurar a propósito: hasta que RRHH diga qué concepto es, esos días no generan
+ * nada y la corrida lo dice, en vez de que el motor elija un código por su cuenta.
+ */
+export interface IJornalBaseMemosoft {
+  codigo?: string | null;
+  param: "par1" | "par2";
+  /** Normalmente "jornalero": al mensual ya se le paga el mes entero. Vacío = los dos. */
+  soloRegimen?: "mensual" | "jornalero" | null;
+  vigenteDesde?: string | null;
+}
+
 export interface IActivityLogGeneralConfig extends Document {
   tenantId: Types.ObjectId;
   allowedPastDays: number;
   /** Cómo se liquidan las horas extra a Memosoft. Ver `IHorasExtraMemosoft`. */
   memosoftHorasExtra?: IHorasExtraMemosoft | null;
+  /** Qué concepto cobra un día trabajado sin novedad. Ver `IJornalBaseMemosoft`. */
+  memosoftJornalBase?: IJornalBaseMemosoft | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +64,16 @@ const horasExtraSchema = new Schema<IHorasExtraMemosoft>(
   { _id: false },
 );
 
+const jornalBaseSchema = new Schema<IJornalBaseMemosoft>(
+  {
+    codigo: { type: String, default: null },
+    param: { type: String, enum: ["par1", "par2"], default: "par2" },
+    soloRegimen: { type: String, enum: ["mensual", "jornalero", null], default: "jornalero" },
+    vigenteDesde: { type: String, default: null },
+  },
+  { _id: false },
+);
+
 const ActivityLogGeneralConfigSchema = new Schema<IActivityLogGeneralConfig>(
   {
     tenantId: {
@@ -58,6 +88,7 @@ const ActivityLogGeneralConfigSchema = new Schema<IActivityLogGeneralConfig>(
       default: 3,
     },
     memosoftHorasExtra: { type: horasExtraSchema, default: null },
+    memosoftJornalBase: { type: jornalBaseSchema, default: null },
   },
   {
     timestamps: true,

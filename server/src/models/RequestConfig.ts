@@ -90,6 +90,15 @@ export interface IRequestConfig extends Document {
   /** Qué conceptos del RECIBO genera este tipo. Vacío = ninguno (ver `IMemosoftEffect`). */
   memosoftEffects: IMemosoftEffect[];
   /**
+   * "ESTE MOTIVO NO LIQUIDA NADA, Y ESTÁ DECIDIDO."
+   *
+   * Sin esto no hay forma de distinguir un motivo que nadie configuró todavía de uno que se revisó
+   * y no corresponde que genere nada. "Cambios de Turno" es el segundo caso: la persona trabajó,
+   * sólo que en otro turno. Sin la marca, cada corrida levantaba 61 avisos de algo que está bien, y
+   * entre esos avisos se perdían los que sí hay que mirar.
+   */
+  memosoftNoLiquida?: boolean;
+  /**
    * TOPE SIN BANCO: para lo que tiene un máximo pero no acumula saldo, como Enfermedad.
    *
    * Con `accion: 'avisar'` se deja cargar y se avisa; con `'bloquear'`, no se deja. Avisar es lo
@@ -155,6 +164,7 @@ const requestConfigSchema = new Schema<IRequestConfig>(
       ],
       default: [],
     },
+    memosoftNoLiquida: { type: Boolean, default: false },
     limit: {
       enabled: { type: Boolean, default: false },
       maxPorPeriodo: { type: Number },
