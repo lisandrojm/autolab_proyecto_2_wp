@@ -44,6 +44,7 @@ interface ActivityReport extends Omit<BaseActivityReport, "id"> {
   ausentes?: number;
   reemplazos?: number;
   otrosPresentes?: number;
+  compensatorios?: number;
   conHorasExtra?: number;
   sumaHorasExtra?: number;
   empleados?: string[];
@@ -267,6 +268,15 @@ export const RequestsPage: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
+  /*
+    EL DETALLE VIAJA APARTE, así que hay un rato en que el parte está abierto y sus renglones no
+    llegaron. Sin distinguirlo, «todavía no llegó» se leía igual que «este parte no tiene renglones»
+    y se disparaba el camino de abajo, que arma una lista figurada con todo el personal del proyecto
+    y los da por presentes. Un error de red terminaba mostrando 256 personas presentes que nadie
+    cargó.
+  */
+  const [detalleCargando, setDetalleCargando] = useState(false);
+  const [detalleFallo, setDetalleFallo] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
   const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
   const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments" | "overtime" | "additional">("attendance");
@@ -463,6 +473,7 @@ export const RequestsPage: React.FC = () => {
     ausentes: r.ausentes,
     reemplazos: r.reemplazos,
     otrosPresentes: r.otrosPresentes,
+    compensatorios: r.compensatorios,
     conHorasExtra: r.conHorasExtra,
     sumaHorasExtra: r.sumaHorasExtra,
     empleados: (r.empleados || []).map((id: any) => String(id?._id || id)),
@@ -507,12 +518,17 @@ export const RequestsPage: React.FC = () => {
     setSelectedReport(report);
     setViewMode("detail");
     setDetailTab("attendance");
+    setDetalleCargando(true);
+    setDetalleFallo(false);
     try {
       const completo = await activityReportsAPI.getById(report.id);
       // Si mientras tanto se cerró o se abrió otro, no se pisa lo que el usuario está mirando.
       setSelectedReport((actual) => (actual && actual.id === report.id ? mapearParte(completo) : actual));
     } catch (error) {
       console.error("Error fetching report detail", error);
+      setDetalleFallo(true);
+    } finally {
+      setDetalleCargando(false);
     }
   };
 
@@ -550,6 +566,12 @@ export const RequestsPage: React.FC = () => {
         .sort((a, b) => a.employeeName.localeCompare(b.employeeName));
     }
 
+    /*
+      Mientras el detalle viaja —o si no llegó— NO se arma nada: una lista inventada de presentes es
+      peor que una tabla vacía, porque parece un parte cargado que nadie cargó.
+    */
+    if (detalleCargando || detalleFallo) return [];
+
     // Legacy fallback: If report has NO attendance records, build virtual list from all project users
     const targetProjId = selectedReport.projectIdRaw;
     const projectUsers = allUsers.filter((u) => u.projectIds?.some((p) => p._id === targetProjId));
@@ -572,7 +594,7 @@ export const RequestsPage: React.FC = () => {
     });
 
     return fullAttendance.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [selectedReport, allUsers]);
+  }, [selectedReport, allUsers, detalleCargando, detalleFallo]);
 
   // Help integration
   const HELP_KEY = "activityLogs";
@@ -1023,16 +1045,16 @@ export const RequestsPage: React.FC = () => {
           {/* Tabs Navigation */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 bg-white dark:bg-gray-800 rounded-t-lg px-2 pt-2 overflow-x-auto">
             <button onClick={() => setDetailTab("attendance")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "attendance" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Asistencia del Personal ({mergedAttendance.length})
+              Asistencia del Personal ({selectedReport.registros ?? mergedAttendance.length})
             </button>
             <button onClick={() => setDetailTab("additional")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "additional" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Otros Presentes ({mergedAttendance.filter(esOtroPresente).length})
+              Otros Presentes ({selectedReport.otrosPresentes ?? mergedAttendance.filter(esOtroPresente).length})
             </button>
             <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Ausentes | Reemplazos ({selectedReport.attendance.filter(esAusente).length})
+              Ausentes | Reemplazos ({selectedReport.ausentes ?? selectedReport.attendance.filter(esAusente).length})
             </button>
             <button onClick={() => setDetailTab("overtime")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "overtime" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Horas Extras ({selectedReport.attendance.filter(tieneHorasExtras).length})
+              Horas Extras ({selectedReport.conHorasExtra ?? selectedReport.attendance.filter(tieneHorasExtras).length})
             </button>
             <button onClick={() => setDetailTab("comments")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "comments" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Comentarios ({selectedReport.comments ? 1 : 0})
@@ -1040,7 +1062,22 @@ export const RequestsPage: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            {detailTab === "attendance" &&
+            {/*
+              QUÉ PASA MIENTRAS EL DETALLE VIAJA.
+
+              Los renglones se piden aparte al abrir el parte. Sin decirlo, el rato de espera se ve
+              igual que un parte vacío —y si la consulta falla, se queda así para siempre—.
+            */}
+            {detalleCargando && (
+              <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">Cargando el detalle de la novedad…</div>
+            )}
+            {!detalleCargando && detalleFallo && (
+              <div className="p-8 text-center text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 rounded border border-red-200 dark:border-red-900">
+                No se pudo cargar el detalle de esta novedad. Cerrá y volvé a abrirla.
+              </div>
+            )}
+
+            {!detalleCargando && !detalleFallo && detailTab === "attendance" &&
               (mergedAttendance.length > 0 ? (
                 <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden animate-fade-in">
                   <div className="p-4">
@@ -1051,7 +1088,7 @@ export const RequestsPage: React.FC = () => {
                 <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Asistencia del Personal</div>
               ))}
 
-            {detailTab === "additional" &&
+            {!detalleCargando && !detalleFallo && detailTab === "additional" &&
               (() => {
                 const additionalRecords = mergedAttendance.filter(esOtroPresente);
                 return additionalRecords.length > 0 ? (
@@ -1065,7 +1102,7 @@ export const RequestsPage: React.FC = () => {
                 );
               })()}
 
-            {detailTab === "absences" &&
+            {!detalleCargando && !detalleFallo && detailTab === "absences" &&
               (() => {
                 const absentRecords = selectedReport.attendance.filter(esAusente);
 
@@ -1087,7 +1124,7 @@ export const RequestsPage: React.FC = () => {
                 return dynamicBlocks.length > 0 ? <div className="space-y-4 animate-fade-in">{dynamicBlocks}</div> : <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Ausentes</div>;
               })()}
 
-            {detailTab === "overtime" &&
+            {!detalleCargando && !detalleFallo && detailTab === "overtime" &&
               (() => {
                 const overtimeRecords = selectedReport.attendance.filter(tieneHorasExtras);
 
@@ -1102,7 +1139,7 @@ export const RequestsPage: React.FC = () => {
                 );
               })()}
 
-            {detailTab === "comments" &&
+            {!detalleCargando && !detalleFallo && detailTab === "comments" &&
               (selectedReport.comments ? (
                 <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-5 animate-fade-in">
                   <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded border border-yellow-100 dark:border-yellow-900/30 text-sm text-gray-700 dark:text-gray-300 font-mono whitespace-pre-line">{selectedReport.comments}</div>
@@ -1273,6 +1310,9 @@ export const RequestsPage: React.FC = () => {
                     Reemplazos
                   </th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Otros Presentes</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas que se tomaron un compensatorio. Van también en «Ausentes»: un compensatorio es una ausencia.">
+                    Compensatorios
+                  </th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas con horas extras">
                     Horas Extras
                   </th>
@@ -1364,6 +1404,13 @@ export const RequestsPage: React.FC = () => {
                       {(() => {
                         const otrosPresentes = report.otrosPresentes ?? report.attendance.filter(esOtroPresente).length;
                         return otrosPresentes > 0 ? <span className="text-amber-600 dark:text-amber-400 font-medium">{otrosPresentes}</span> : "0";
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                      {(() => {
+                        // Los cuenta el server; el `??` cubre un parte ya abierto, que sí trae su detalle.
+                        const compensatorios = report.compensatorios ?? report.attendance.filter((r) => r.status === "compensatory").length;
+                        return compensatorios > 0 ? <span className="text-violet-600 dark:text-violet-400 font-medium">{compensatorios}</span> : "0";
                       })()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">

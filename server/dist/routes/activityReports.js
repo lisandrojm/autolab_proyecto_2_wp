@@ -172,7 +172,13 @@ router.get("/", async (req, res) => {
                 registros: { $size: { $ifNull: ["$attendance", []] } },
                 ausentes: contar(noVino("status")),
                 reemplazos: contar({ $and: [noVino("status"), tieneReemplazo] }),
-                otrosPresentes: contar({ $regexMatch: { input: { $ifNull: ["$$a.absenceReason", ""] }, regex: "adicional", options: "i" } }),
+                otrosPresentes: contar({ $regexMatch: { input: { $ifNull: ["$a.absenceReason", ""] }, regex: "adicional", options: "i" } }),
+                /*
+                  Los que se tomaron un compensatorio. Es uno de los estados del parte, así que estas personas
+                  TAMBIÉN cuentan en «ausentes» —ausente es todo lo que no sea presente ni tarde— y eso no
+                  cambia: la columna nueva dice cuántas de esas ausencias fueron por compensatorio.
+                */
+                compensatorios: contar({ $eq: ["$a.status", "compensatory"] }),
                 conHorasExtra: contar({ $gt: [horasExtraDeLaFila, 0] }),
                 // El total de horas de la cabecera, que suma horas y no renglones.
                 sumaHorasExtra: { $sum: { $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: horasExtraDeLaFila } } },
@@ -352,14 +358,25 @@ router.post("/compliance/remind", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+/*
+  UN PARTE, CON SU DETALLE DE ASISTENCIA.
+
+  QUIÉN PUEDE ABRIRLO ES LO MISMO QUE DECIDE QUIÉN LO VE EN LA LISTA: el admin, cualquiera del
+  tenant; los demás, los suyos. Estaba atado a `userId` SIEMPRE, porque nació para «mi novedad» del
+  móvil, donde uno abre las propias. Cuando el listado del panel dejó de mandar la asistencia y el
+  detalle pasó a pedirse acá, eso se volvió un 404 para el admin en cada parte que no hubiera
+  cargado él —o sea casi todos—: la pantalla se quedaba sin renglones y caía en su camino viejo,
+  que arma una lista figurada con TODO el personal del proyecto y los da a todos por presentes.
+
+  El recorte por `userId` se conserva para quien no es admin: es el mismo que aplica el listado.
+*/
 router.get("/:id", async (req, res) => {
     try {
         const userId = req.user.userId;
-        const report = await Request.findOne({
-            _id: req.params.id,
-            tenantId: req.tenantObjectId,
-            userId,
-        })
+        const filtro = { _id: req.params.id, tenantId: req.tenantObjectId };
+        if (!isAdminReq(req))
+            filtro.userId = userId;
+        const report = await Request.findOne(filtro)
             .populate("projectId", "name")
             .populate("areaId", "name")
             .populate("shiftId", "name")
