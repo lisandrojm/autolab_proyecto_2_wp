@@ -26,6 +26,28 @@ interface ActivityReport extends Omit<BaseActivityReport, "id"> {
   id: string; // Ensure id compatibility if needed
   reportNumber?: string; // Added field
   projectIdRaw?: string; // Add this field
+  /* El área y el turno DEL PARTE, cuando se cargó apuntando a uno. La lista ya los leía; nunca
+     estuvieron declarados, así que el tipo decía que no existían. */
+  areaName?: string;
+  shiftId?: string;
+  shiftName?: string;
+  /*
+    LOS NÚMEROS DE LA FILA, CONTADOS POR EL SERVER.
+
+    La lista ya no recibe el detalle de asistencia —quince o veinte renglones por parte, cada uno
+    con su gente poblada: 4,5 MB y 27 segundos para 720 partes— sino estos números, que es lo único
+    que la tabla dibuja. El detalle se pide al abrir un parte.
+
+    `empleados` son los ids, sin repetir, de quienes figuran en el parte: con eso se arma la columna
+    «Área | Turno», que busca a cada uno en el directorio (ver `getAreaTurnoDeReporte`).
+  */
+  registros?: number;
+  ausentes?: number;
+  reemplazos?: number;
+  otrosPresentes?: number;
+  conHorasExtra?: number;
+  sumaHorasExtra?: number;
+  empleados?: string[];
   // .. other fields are inherited
 }
 
@@ -309,11 +331,7 @@ export const RequestsPage: React.FC = () => {
     const reportsProject = searchParams.get("reportsProject");
     if (reportId) {
       const report = reports.find((r) => r.id === reportId);
-      if (report) {
-        setSelectedReport(report);
-        setViewMode("detail");
-        setDetailTab("attendance");
-      }
+      if (report) void abrirDetalle(report);
       // Clean up URL after handling
       setSearchParams({}, { replace: true });
     } else if (reportsProject) {
@@ -378,13 +396,14 @@ export const RequestsPage: React.FC = () => {
     }
   };
 
-  const fetchReports = async () => {
-    try {
-      setLoading(true);
-      const data = await activityReportsAPI.getAll();
-      // Map API response to Component Type if necessary, or ensure Types match
-      // API returns _id, component expects id?
-      const formatted = data.map((r: any) => ({
+  /*
+    DE LO QUE MANDA EL API A LO QUE DIBUJA LA PANTALLA.
+
+    Se usa en los dos lados: el LISTADO, donde `attendance` viene vacío y los números llegan
+    contados, y el DETALLE de un parte, que sí trae sus renglones. Una sola función para no tener
+    dos formas del mismo objeto según de dónde salga.
+  */
+  const mapearParte = (r: any): ActivityReport => ({
         id: r._id,
         reportNumber: r.reportNumber, // Use real backend number
         date: r.date,
@@ -426,12 +445,46 @@ export const RequestsPage: React.FC = () => {
               replacementName: att.replacementId ? `${att.replacementId.firstName} ${att.replacementId.lastName}` : undefined,
             }))
           : [],
-      }));
-      setReports(formatted);
+    // Los números de la fila: el listado los trae contados; el detalle de un parte, no (los tiene él).
+    registros: r.registros,
+    ausentes: r.ausentes,
+    reemplazos: r.reemplazos,
+    otrosPresentes: r.otrosPresentes,
+    conHorasExtra: r.conHorasExtra,
+    sumaHorasExtra: r.sumaHorasExtra,
+    empleados: (r.empleados || []).map((id: any) => String(id?._id || id)),
+  });
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const data = await activityReportsAPI.getAll();
+      setReports(data.map(mapearParte));
     } catch (error) {
       console.error("Error fetching reports", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /*
+    EL DETALLE SE PIDE AL ABRIRLO.
+
+    El listado ya no lo trae (ver `mapearParte`), así que abrir un parte es una consulta por ese
+    parte. Se muestra enseguida con lo que ya se tiene —encabezado y números— y los renglones
+    aparecen cuando llegan: esperar a la respuesta para abrir haría que el click no hiciera nada
+    durante medio segundo.
+  */
+  const abrirDetalle = async (report: ActivityReport) => {
+    setSelectedReport(report);
+    setViewMode("detail");
+    setDetailTab("attendance");
+    try {
+      const completo = await activityReportsAPI.getById(report.id);
+      // Si mientras tanto se cerró o se abrió otro, no se pisa lo que el usuario está mirando.
+      setSelectedReport((actual) => (actual && actual.id === report.id ? mapearParte(completo) : actual));
+    } catch (error) {
+      console.error("Error fetching report detail", error);
     }
   };
 
@@ -441,15 +494,13 @@ export const RequestsPage: React.FC = () => {
     let totalAbsences = 0;
     let totalOvertimeHours = 0;
 
+    /*
+      De los números que ya vienen contados, no del detalle: la lista no lo tiene. El `??` recorre
+      los renglones sólo si el parte los trae (el que está abierto) o si el server no los mandó.
+    */
     filteredReports.forEach((report) => {
-      report.attendance.forEach((record) => {
-        if (record.status !== "present" && record.status !== "late") {
-          totalAbsences++;
-        }
-        if (record.overtimeHours > 0) {
-          totalOvertimeHours += record.overtimeHours;
-        }
-      });
+      totalAbsences += report.ausentes ?? report.attendance.filter(esAusente).length;
+      totalOvertimeHours += report.sumaHorasExtra ?? report.attendance.reduce((n, r) => n + (r.overtimeHours || 0), 0);
     });
 
     return { totalReports, totalAbsences, totalOvertimeHours };
@@ -515,9 +566,7 @@ export const RequestsPage: React.FC = () => {
   const helpEntry = getHelp(HELP_KEY);
 
   const handleViewDetail = (report: ActivityReport) => {
-    setSelectedReport(report);
-    setViewMode("detail");
-    setDetailTab("attendance");
+    void abrirDetalle(report);
   };
 
   const handleBackToList = () => {
@@ -593,8 +642,11 @@ export const RequestsPage: React.FC = () => {
       }
     }
 
-    report.attendance.forEach((att: any) => {
-      const empId = typeof att.employeeId === "object" && att.employeeId ? att.employeeId._id : att.employeeId;
+    /*
+      De `empleados` —los ids que manda el listado— y no del detalle de asistencia, que la lista ya
+      no recibe. Es la misma gente: son los ids, sin repetir, de quienes figuran en el parte.
+    */
+    (report.empleados || []).forEach((empId: string) => {
       const user = allUsers.find((u) => String(u._id) === String(empId));
       if (user) {
         const userProj = (user as any).metadata?.projects?.find((p: any) => String(p.projectId?._id || p.projectId || "") === String(report.projectIdRaw));
@@ -712,8 +764,11 @@ export const RequestsPage: React.FC = () => {
       }
     }
 
-    report.attendance.forEach((att: any) => {
-      const empId = typeof att.employeeId === "object" && att.employeeId ? att.employeeId._id : att.employeeId;
+    /*
+      De `empleados` —los ids que manda el listado— y no del detalle de asistencia, que la lista ya
+      no recibe. Es la misma gente: son los ids, sin repetir, de quienes figuran en el parte.
+    */
+    (report.empleados || []).forEach((empId: string) => {
       const user = allUsers.find((u) => String(u._id) === String(empId));
       if (user) {
         const userProj = (user as any).metadata?.projects?.find((p: any) => String(p.projectId?._id || p.projectId || "") === String(report.projectIdRaw));
@@ -854,7 +909,7 @@ export const RequestsPage: React.FC = () => {
                 {renderAreaShiftBadges(report, true)}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-medium">{report.attendance.length}</span> registros de asistencia
+                <span className="font-medium">{report.registros ?? report.attendance.length}</span> registros de asistencia
               </div>
             </CardItemGeneric>
           );
@@ -1272,17 +1327,19 @@ export const RequestsPage: React.FC = () => {
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">{renderAreaShiftBadges(report, false)}</div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.registros ?? report.attendance.length}</td>
                     {(() => {
                       // Dos columnas, dos números: cuántos faltaron y a cuántos los cubrió alguien.
                       // La resta —los que quedaron descubiertos— se lee sola, y en el detalle cada
                       // fila dice cuál es cuál.
-                      const ausentes = report.attendance.filter(esAusente);
-                      const reemplazos = ausentes.filter(tieneReemplazo).length;
+                      // Los cuenta el server (`ausentes`, `reemplazos`); el `??` cubre un parte ya abierto,
+                      // que sí trae su detalle, y cualquier respuesta vieja que todavía no los traiga.
+                      const ausentes = report.ausentes ?? report.attendance.filter(esAusente).length;
+                      const reemplazos = report.reemplazos ?? report.attendance.filter(esAusente).filter(tieneReemplazo).length;
                       return (
                         <>
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                            {ausentes.length > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{ausentes.length}</span> : "0"}
+                            {ausentes > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{ausentes}</span> : "0"}
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                             {reemplazos > 0 ? <span className="text-blue-600 dark:text-blue-400 font-medium">{reemplazos}</span> : "0"}
@@ -1292,13 +1349,13 @@ export const RequestsPage: React.FC = () => {
                     })()}
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
-                        const otrosPresentes = report.attendance.filter(esOtroPresente).length;
+                        const otrosPresentes = report.otrosPresentes ?? report.attendance.filter(esOtroPresente).length;
                         return otrosPresentes > 0 ? <span className="text-amber-600 dark:text-amber-400 font-medium">{otrosPresentes}</span> : "0";
                       })()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
-                        const overtimeCount = report.attendance.filter(tieneHorasExtras).length;
+                        const overtimeCount = report.conHorasExtra ?? report.attendance.filter(tieneHorasExtras).length;
                         return overtimeCount > 0 ? <span className="text-green-600 dark:text-green-400 font-medium">{overtimeCount}</span> : "0";
                       })()}
                     </td>

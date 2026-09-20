@@ -88,21 +88,55 @@ router.get("/", async (req, res) => {
         if (!isAdmin || forceOwn) {
             filter.userId = userId;
         }
-        const reports = await Request.find(filter)
-            .sort({ date: -1, createdAt: -1 })
-            .populate("userId", "firstName lastName")
-            .populate({
-            path: "projectId",
-            select: "name clientId",
-            populate: {
-                path: "clientId",
-                select: "name",
+        /*
+          EL LISTADO NO MANDA EL DETALLE DE ASISTENCIA: MANDA SUS NÚMEROS.
+    
+          Cada parte trae una fila por persona del turno —quince o veinte— con su estado, su reemplazo,
+          sus horarios y sus horas extra. La tabla de Novedades, de todo eso, muestra CINCO NÚMEROS por
+          fila. Traer el detalle entero para contarlos en el navegador costaba 27 segundos y 4,5 MB:
+          720 partes, 7.920 renglones de asistencia, cada uno con su empleado y su reemplazante
+          poblados. El 92% de ese peso era `attendance`.
+    
+          Ahora los cuenta Mongo (2,9 s y 342 KB medidos, sobre los mismos 720 partes) y el detalle se
+          pide al abrir un parte, con `GET /activity-reports/:id`.
+    
+          LOS CRITERIOS SON LOS DE LA PANTALLA, no otros: ausente es todo lo que no sea `present` ni
+          `late`; «otros presentes» son los que tienen «adicional» en el motivo; y horas extra CUENTA
+          renglones, no suma horas —la suma va aparte, para el total de arriba—. Si cambian allá
+          (`esAusente`, `esOtroPresente`, `tieneHorasExtras` en `RequestsPage`), cambian acá.
+    
+          `empleados` son los ids, sin repetir, de la gente que figura en el parte: es lo único que la
+          pantalla usa del detalle para armar la columna «Área | Turno» (busca a cada uno en el
+          directorio y mira su área y turno en ese proyecto). Van los ids pelados, no las fichas.
+        */
+        const noVino = (campo) => ({ $not: [{ $in: [`$a.${campo}`, ["present", "late"]] }] });
+        const tieneReemplazo = { $ne: [{ $ifNull: ["$a.replacementId", null] }, null] };
+        const horasExtra = { $ifNull: ["$a.overtimeHours", 0] };
+        const contar = (cond) => ({ $size: { $filter: { input: { $ifNull: ["$attendance", []] }, as: "a", cond } } });
+        const reports = await Request.aggregate([
+            { $match: filter },
+            { $sort: { date: -1, createdAt: -1 } },
+            {
+                $addFields: {
+                    registros: { $size: { $ifNull: ["$attendance", []] } },
+                    ausentes: contar(noVino("status")),
+                    reemplazos: contar({ $and: [noVino("status"), tieneReemplazo] }),
+                    otrosPresentes: contar({ $regexMatch: { input: { $ifNull: ["$a.absenceReason", ""] }, regex: "adicional", options: "i" } }),
+                    conHorasExtra: contar({ $gt: [horasExtra, 0] }),
+                    // El total de horas de la cabecera, que suma horas y no renglones.
+                    sumaHorasExtra: { $sum: { $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: horasExtra } } },
+                    empleados: { $setUnion: [{ $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: "$a.employeeId" } }, []] },
+                },
             },
-        })
-            .populate("areaId", "name")
-            .populate("shiftId", "name")
-            .populate("attendance.employeeId", "firstName lastName")
-            .populate("attendance.replacementId", "firstName lastName");
+            { $project: { attendance: 0 } },
+        ]);
+        // Los mismos nombres que antes. `populate` sobre objetos planos: la agregación no los trae sola.
+        await Request.populate(reports, [
+            { path: "userId", select: "firstName lastName" },
+            { path: "projectId", select: "name clientId", populate: { path: "clientId", select: "name" } },
+            { path: "areaId", select: "name" },
+            { path: "shiftId", select: "name" },
+        ]);
         res.json(reports);
     }
     catch (error) {
