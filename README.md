@@ -334,16 +334,40 @@ Los 29 códigos de Memosoft con, para cada uno, cuál de los dos parámetros usa
 una cantidad de días o un importe. Es **por empresa**: los códigos de 2030 y FZERO no son un
 estándar de Memosoft.
 
+### 4. El mapeo: qué concepto genera cada motivo
+
+**Configuración → Novedades → tab "Liquidación".** Ahí RRHH cambia a qué concepto del recibo va cada
+motivo, sin tocar código.
+
+Dos cosas que conviene saber antes de usarla:
+
+- **Guardar no pisa lo anterior.** Lo que regía queda cerrado el día previo y lo nuevo arranca hoy,
+  así volver a liquidar un mes viejo sigue usando las reglas de ese mes. Cada motivo muestra su
+  historial.
+- **Las horas extra no se configuran por motivo.** Se liquidan haya o no novedad, así que son una
+  regla global, arriba de todo en esa misma pantalla.
+
+Para cargar el mapeo inicial de una vez, en lugar de treinta líneas a mano:
+
+```bash
+npx tsx src/scripts/liquidacionFase1.ts <tenantId>              # simula
+npx tsx src/scripts/liquidacionFase1.ts <tenantId> --aplicar    # carga y deja respaldo
+npx tsx src/scripts/liquidacionFase1.ts --revertir "<respaldo>"
+```
+
+No pisa ningún motivo que ya tenga efectos vigentes. Y deja **sin mapear** tres cosas a propósito,
+que son decisiones pendientes y no olvidos: la licencia por vacaciones (no hay código confirmado),
+el motivo "Horas Extras y Feriados" (lo cubre la regla global; mapearlo además duplicaría el 0015) y
+el titular de "Sin Goce de Sueldo" (el catálogo pide un importe y de un parte salen días).
+
 ## Tests
 
 ```bash
-npm run test:liquidacion
+npm run test:liquidacion           # de qué empresa es el contrato y bajo qué régimen se liquida
+npm run test:liquidacion-efectos   # qué efectos rigen ese día y si el mapeo es válido
 ```
-
-Las dos funciones que deciden en qué hoja del archivo cae cada persona —`empresaDelContrato` y
-`regimenDelContrato`— con los nombres de contrato reales como casos.
 
 ## Lo que todavía no está
 
-Fases 1 a 5: el mapeo configurable de motivo → concepto, el motor de cálculo, los tres archivos
-(planilla de control, import y anexo de excepciones) y el cruce con el reloj presencial.
+Fases 2 a 5: el motor de cálculo, los tres archivos (planilla de control, import y anexo de
+excepciones) y el cruce con el reloj presencial.

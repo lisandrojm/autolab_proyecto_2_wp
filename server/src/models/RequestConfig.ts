@@ -26,6 +26,57 @@ export interface ILeaveEffect {
   };
 }
 
+
+/**
+ * QUÉ CONCEPTO DE MEMOSOFT GENERA UN MOTIVO DE NOVEDAD.
+ *
+ * OJO CON LA VECINDAD: `effects` (abajo) mueve el BANCO DE DÍAS —saldos internos de vacaciones y
+ * compensatorios—, y esto mueve el RECIBO DE SUELDO. Son dos cosas distintas y un motivo puede
+ * tener las dos: "Compensatorios" le consume un día del banco al titular Y le genera un jornal al
+ * reemplazante. Por eso son dos listas y no una.
+ *
+ * EL EFECTO CUELGA DEL `_id` DEL MOTIVO, NUNCA DE SU NOMBRE. El nombre se edita desde el ABM, y si
+ * el mapeo se apoyara en él, renombrar "Enfermedad" dejaría de generar licencias sin que nadie se
+ * entere hasta que salga el recibo.
+ */
+export interface IMemosoftEffect {
+  /** El código de cuatro dígitos, texto. Ver `models/MemosoftConcepto.ts`. */
+  conceptoCodigo: string;
+  /** En cuál de las dos columnas de parámetros va el número. */
+  param: "par1" | "par2";
+  /** Qué ES ese número. Tiene que coincidir con lo que el catálogo dice del concepto. */
+  unidad: "cantidad" | "importe";
+  /**
+   * De dónde sale el número.
+   *
+   *   · `jornadas` — los días que abarca la novedad.
+   *   · `horas50` / `horas100` — las horas extra cargadas en el parte.
+   *   · `fijo`     — siempre `valorFijo`.
+   *   · `manual`   — el motor NO lo calcula: lo carga una persona. Va al anexo hasta que lo hagan.
+   */
+  fuente: "jornadas" | "horas50" | "horas100" | "fijo" | "manual";
+  valorFijo?: number;
+  /** A quién se le liquida: al que faltó o al que lo cubrió. */
+  aplicaA: "titular" | "reemplazante";
+  /** Sólo para este régimen. Vacío = los dos. */
+  soloRegimen?: "mensual" | "jornalero" | null;
+  /** Sólo para esta empresa. Vacío = todas. Los códigos NO son universales entre empresas. */
+  empresaId?: Types.ObjectId | null;
+  /** Desde qué día rige, "AAAA-MM-DD". */
+  vigenteDesde: string;
+  /**
+   * Hasta qué día rigió. Vacío = sigue rigiendo.
+   *
+   * NO ESTABA EN EL PEDIDO Y HACE FALTA. Sin fecha de cierre, cambiar un mapeo obliga a borrar el
+   * efecto viejo, y borrarlo hace que una liquidación de un mes anterior se recalcule con reglas
+   * que entonces no existían. Cerrando en vez de borrar, cada período se puede volver a armar con
+   * lo que regía cuando se liquidó.
+   */
+  vigenteHasta?: string | null;
+  /** Nota de quien lo configuró: por qué este motivo va a este concepto. */
+  nota?: string;
+}
+
 export interface IRequestConfig extends Document {
   tenantId: Types.ObjectId;
   name: string;
@@ -34,8 +85,10 @@ export interface IRequestConfig extends Document {
   isActive: boolean;
   visibility: "all" | "specific";
   allowedProjectIds: Types.ObjectId[];
-  /** Qué cuentas mueve este tipo. Vacío = no mueve ninguna (ver `ILeaveEffect`). */
+  /** Qué cuentas de DÍAS mueve este tipo. Vacío = no mueve ninguna (ver `ILeaveEffect`). */
   effects: ILeaveEffect[];
+  /** Qué conceptos del RECIBO genera este tipo. Vacío = ninguno (ver `IMemosoftEffect`). */
+  memosoftEffects: IMemosoftEffect[];
   /**
    * TOPE SIN BANCO: para lo que tiene un máximo pero no acumula saldo, como Enfermedad.
    *
@@ -79,6 +132,25 @@ const requestConfigSchema = new Schema<IRequestConfig>(
             esFeriado: { type: Boolean },
             esDiaNoLaborable: { type: Boolean },
           },
+        },
+      ],
+      default: [],
+    },
+    memosoftEffects: {
+      type: [
+        {
+          _id: false,
+          conceptoCodigo: { type: String, required: true, trim: true },
+          param: { type: String, enum: ["par1", "par2"], required: true },
+          unidad: { type: String, enum: ["cantidad", "importe"], required: true },
+          fuente: { type: String, enum: ["jornadas", "horas50", "horas100", "fijo", "manual"], required: true },
+          valorFijo: { type: Number },
+          aplicaA: { type: String, enum: ["titular", "reemplazante"], required: true },
+          soloRegimen: { type: String, enum: ["mensual", "jornalero", null], default: null },
+          empresaId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
+          vigenteDesde: { type: String, required: true },
+          vigenteHasta: { type: String, default: null },
+          nota: { type: String },
         },
       ],
       default: [],

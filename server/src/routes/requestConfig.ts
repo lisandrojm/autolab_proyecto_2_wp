@@ -22,19 +22,28 @@ router.get("/settings", async (req: AuthenticatedRequest & TenantRequest, res) =
 // PUT /api/v1/request-config/settings
 router.put("/settings", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { allowedPastDays } = req.body;
+    const { allowedPastDays, memosoftHorasExtra } = req.body;
     
     if (allowedPastDays !== undefined && (typeof allowedPastDays !== "number" || allowedPastDays < 1)) {
       return res.status(400).json({ error: "allowedPastDays must be a positive number" });
     }
 
+    /*
+      CADA CAMPO SE TOCA SÓLO SI VINO EN EL CUERPO.
+
+      Antes esto escribía `allowedPastDays: allowedPastDays ?? 3` siempre, así que cualquier guardado
+      que no lo mandara lo reseteaba a 3 en silencio. Con un solo campo en la pantalla nunca se notó;
+      con dos, guardar las horas extra habría borrado los días permitidos. Lo mismo al revés.
+
+      El default de 3 sigue existiendo: lo pone el schema al crear el documento (`setDefaultsOnInsert`).
+    */
+    const cambios: any = {};
+    if (allowedPastDays !== undefined) cambios.allowedPastDays = allowedPastDays;
+    if (memosoftHorasExtra !== undefined) cambios.memosoftHorasExtra = memosoftHorasExtra;
+
     const config = await ActivityLogGeneralConfig.findOneAndUpdate(
       { tenantId: req.tenantObjectId },
-      {
-        $set: {
-          allowedPastDays: allowedPastDays !== undefined ? allowedPastDays : 3,
-        },
-      },
+      { $set: cambios },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     );
 

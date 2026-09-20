@@ -11,6 +11,20 @@ export interface RequestConfig {
   allowedProjectIds: string[];
 }
 
+/** Cómo se liquidan las horas extra a Memosoft. Es global: no depende del motivo de la novedad. */
+export interface HorasExtraMemosoft {
+  codigo50?: string | null;
+  codigo100?: string | null;
+  param: "par1" | "par2";
+  unidad: "cantidad" | "importe";
+  vigenteDesde?: string | null;
+}
+
+export interface GeneralSettings {
+  allowedPastDays: number;
+  memosoftHorasExtra?: HorasExtraMemosoft | null;
+}
+
 export const activityLogTypesAPI = {
   getAll: async () => {
     const response = await axiosClient.get<RequestConfig[]>("/request-config");
@@ -36,12 +50,18 @@ export const activityLogTypesAPI = {
   },
 
   getGeneralSettings: async () => {
-    const response = await axiosClient.get<{ allowedPastDays: number }>("/request-config/settings");
+    const response = await axiosClient.get<GeneralSettings>("/request-config/settings");
     return response.data;
   },
 
-  updateGeneralSettings: async (data: { allowedPastDays: number }) => {
-    const response = await axiosClient.put<{ allowedPastDays: number }>("/request-config/settings", data);
+  /**
+   * Manda SÓLO lo que se quiere cambiar.
+   *
+   * El servidor toca únicamente los campos que vienen, así que guardar las horas extra no pisa los
+   * días permitidos ni al revés.
+   */
+  updateGeneralSettings: async (data: Partial<GeneralSettings>) => {
+    const response = await axiosClient.put<GeneralSettings>("/request-config/settings", data);
     return response.data;
   },
 };

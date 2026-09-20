@@ -3,6 +3,7 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { ProjectHeaderSelector } from '../components/activity_logs_config/ProjectHeaderSelector';
 import { SortableActivityTypeRow, RequestConfig as RequestConfigType } from '../components/activity_logs_config/SortableActivityTypeRow';
+import { MapeoMemosoft } from '../components/activity_logs_config/MapeoMemosoft';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faFileInvoiceDollar, faSave } from '@fortawesome/free-solid-svg-icons';
 import { overtimeUtils, OvertimeSettings } from '../utils/overtimeUtils';
@@ -62,7 +63,7 @@ export const RequestsConfigPage: React.FC = () => {
   const HELP_KEY = 'requestsConfig' as const;
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'types' | 'project' | 'allowedDays' | 'glossary'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'types' | 'project' | 'allowedDays' | 'glossary' | 'liquidacion'>('general');
 
   useEffect(() => {
     if (location.state && (location.state as any).activeTab) {
@@ -455,6 +456,9 @@ export const RequestsConfigPage: React.FC = () => {
             </button>
             <button className={tabClass(activeTab === 'glossary')} onClick={() => setActiveTab('glossary')}>
               Glosario de Extras
+            </button>
+            <button className={tabClass(activeTab === 'liquidacion')} onClick={() => setActiveTab('liquidacion')}>
+              Liquidación
             </button>
           </div>
 
@@ -909,6 +913,14 @@ export const RequestsConfigPage: React.FC = () => {
             )}
 
             {/* ===================== GLOSARIO DE EXTRAS TAB ===================== */}
+            {/*
+              QUÉ LIQUIDA CADA MOTIVO A MEMOSOFT.
+
+              Vive en su propio componente porque esta página ya tiene 1.200 líneas y cinco tabs, y
+              porque el mapeo se va a seguir tocando: separado, se cambia sin releer todo lo demás.
+            */}
+            {activeTab === 'liquidacion' && <MapeoMemosoft />}
+
             {activeTab === 'glossary' && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-8">
                 <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-gray-700 pb-4">

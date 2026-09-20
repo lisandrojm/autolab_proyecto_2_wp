@@ -29,6 +29,25 @@ const requestConfigSchema = new Schema({
         ],
         default: [],
     },
+    memosoftEffects: {
+        type: [
+            {
+                _id: false,
+                conceptoCodigo: { type: String, required: true, trim: true },
+                param: { type: String, enum: ["par1", "par2"], required: true },
+                unidad: { type: String, enum: ["cantidad", "importe"], required: true },
+                fuente: { type: String, enum: ["jornadas", "horas50", "horas100", "fijo", "manual"], required: true },
+                valorFijo: { type: Number },
+                aplicaA: { type: String, enum: ["titular", "reemplazante"], required: true },
+                soloRegimen: { type: String, enum: ["mensual", "jornalero", null], default: null },
+                empresaId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
+                vigenteDesde: { type: String, required: true },
+                vigenteHasta: { type: String, default: null },
+                nota: { type: String },
+            },
+        ],
+        default: [],
+    },
     limit: {
         enabled: { type: Boolean, default: false },
         maxPorPeriodo: { type: Number },
