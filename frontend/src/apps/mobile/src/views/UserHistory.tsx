@@ -399,6 +399,16 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
               const estadoClave = String(meta.solicitudStatus || (meta.isSolicitud ? "pendiente" : "aprobada"));
               const estado = ESTADOS_SOLICITUD[estadoClave] || ESTADOS_SOLICITUD.pendiente;
               const periodo = [fechaCorta(meta.startDate), meta.dueDate ? fechaCorta(meta.dueDate) : "indeterminado"].join(" → ");
+              /*
+                APROBADA, PERO NO COMO LA PEDISTE.
+
+                Quien aprueba muchas veces corrige algo antes de guardar. Sin decirlo en la tarjeta, la
+                solicitud se ve igual que una que salió tal cual y nadie la abre: el cambio —y lo que
+                quien aprobó dejó explicado— no lo lee nunca, y el mismo error se carga de nuevo.
+              */
+              const revision: any = meta.solicitudRevision || null;
+              const cantidadDeCambios = revision?.cambios?.length || 0;
+              const hayRevision = cantidadDeCambios > 0 || !!revision?.comentario;
 
               return (
                 <div
@@ -420,6 +430,12 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                           {novedades.esNuevo(user._id) && <span className="rounded bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">Nueva</span>}
                           {/* Renueva un contrato que vencía: no es un ingreso nuevo. */}
                           {meta.esRenovacion && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
+                          {/* Se aprobó con correcciones: el detalle dice cuáles y por qué (ver `solicitudRevision`). */}
+                          {hayRevision && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                              {cantidadDeCambios > 0 ? `${cantidadDeCambios} ${cantidadDeCambios === 1 ? "cambio" : "cambios"}` : "Comentario"}
+                            </span>
+                          )}
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${estado.cls}`}>{estado.label}</span>
                         </div>
                       </div>

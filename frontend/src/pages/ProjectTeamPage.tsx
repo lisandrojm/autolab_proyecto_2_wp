@@ -17,7 +17,7 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap , faCommentDots } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
@@ -388,6 +388,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Si el wizard se abrió para APROBAR una solicitud, guardamos su id: al guardar, el backend marca la
   // solicitud como aprobada. null = alta/edición normal.
   const [approvingSolicitudId, setApprovingSolicitudId] = useState<string | null>(null);
+  /*
+    LO QUE QUIEN APRUEBA LE QUIERE DECIR A QUIEN PIDIÓ EL ALTA.
+
+    Aprobar casi nunca es sólo decir que sí: se abre el alta y se corrige lo que venga mal. Los
+    cambios los detecta el server solo (compara la solicitud contra el contrato guardado); esto es
+    para lo que ningún diff puede decir —por qué estaba mal y cómo cargarlo la próxima—.
+  */
+  const [comentarioRevision, setComentarioRevision] = useState("");
   // Se incrementa tras aprobar para que la pestaña Solicitudes recargue su lista.
   const [solicitudesRefresh, setSolicitudesRefresh] = useState(0);
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
@@ -1687,6 +1695,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setEditingContractIndex(typeof contractIndex === "number" ? contractIndex : null);
     // Si viene de aprobar una solicitud, recordamos el id para marcarla aprobada al guardar.
     setApprovingSolicitudId(approveSolicitudId ?? null);
+    setComentarioRevision("");
     // La lista de candidatos viene "slim" (sin contratos) para no cargar 100 historiales
     // de una. Traemos el usuario completo (con contratos) on-demand para el pre-fill.
     const cached = allUsers.find((u) => u._id === userId) || candidateUsers.find((u) => u._id === userId);
@@ -2264,6 +2273,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         // Si el wizard se abrió para aprobar una solicitud, el backend la marca aprobada.
         // Qué solicitud se está aprobando: el contrato va en la persona real, así que hay que decir cuál.
         approveSolicitud: approvingSolicitudId || undefined,
+        // Sólo al aprobar: queda guardado en la solicitud y se lee desde la app (ver `solicitudRevision`).
+        comentarioRevision: approvingSolicitudId ? comentarioRevision.trim() || undefined : undefined,
         contract: {
           ...wizardData,
           fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
@@ -4496,6 +4507,34 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               proyecto y se toma de ahí (ver `initialSedeId`); las observaciones no se piden más. Las
               que ya tenga un contrato no se borran: viajan tal cual en `wizardData`.
             */}
+
+            {/*
+              APROBANDO UNA SOLICITUD: qué decirle a quien la pidió.
+
+              Va acá abajo, pegado a GUARDAR, porque se escribe al final: recién después de corregir
+              el alta se sabe qué hubo que corregir. Los cambios los lista el server solo comparando
+              la solicitud con lo que se guarda; esto es lo que un diff no puede explicar.
+            */}
+            {approvingSolicitudId && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
+                <label htmlFor="comentario-revision" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                  <FontAwesomeIcon icon={faCommentDots} className="h-3.5 w-3.5" />
+                  Comentario para quien pidió el alta
+                </label>
+                <p className="mt-1 text-[11px] text-blue-700/80 dark:text-blue-300/80">
+                  Lo va a leer en la app, junto con los campos que le hayas cambiado. Contale qué corregiste y cómo cargarlo la próxima. Opcional.
+                </p>
+                <textarea
+                  id="comentario-revision"
+                  value={comentarioRevision}
+                  onChange={(e) => setComentarioRevision(e.target.value)}
+                  rows={3}
+                  maxLength={2000}
+                  placeholder="Ej: la fecha de baja tenía que ser el último día del rodaje, no el primero."
+                  className="mt-2 w-full resize-y rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-blue-900 dark:bg-gray-900 dark:text-white"
+                />
+              </div>
+            )}
           </div>
         </div>
       </Modal>

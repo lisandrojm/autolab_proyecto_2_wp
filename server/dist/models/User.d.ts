@@ -236,6 +236,27 @@ export interface IUserMetadata {
     solicitudMotivoRechazo?: string;
     solicitudRechazadaPor?: Types.ObjectId;
     solicitudRechazadaEl?: Date;
+    /**
+     * QUÉ SE LE CORRIGIÓ AL APROBARLA, y qué le quiere decir quien aprobó a quien la pidió.
+     *
+     * Aprobar no es sólo decir que sí: quien aprueba abre el alta y, muchas veces, arregla algo —la
+     * fecha de baja, el turno, el tipo de contrato— antes de guardar. Esa corrección no se veía en
+     * ningún lado: la solicitud quedaba «APROBADA» y quien la cargó seguía creyendo que se contrató
+     * lo que había pedido, así que la próxima lo volvía a cargar igual.
+     *
+     * Los cambios se guardan YA RESUELTOS A TEXTO, no como ids: es el registro de lo que se decidió
+     * ese día. Si mañana renombran el área o la empresa, lo que se le mostró a esa persona no cambia.
+     */
+    solicitudRevision?: {
+        cambios?: {
+            campo: string;
+            pedido: string;
+            aprobado: string;
+        }[];
+        comentario?: string;
+        porNombre?: string;
+        el?: Date;
+    };
     /** La solicitud RENUEVA un contrato por vencer (etiqueta «Renovación»). Ver `models/RenovacionContrato.ts`. */
     esRenovacion?: boolean;
     /** Qué contrato renueva: (UserProject, fecha de baja), que es como se identifica un contrato. */

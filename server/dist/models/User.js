@@ -134,6 +134,13 @@ const userSchema = new Schema({
         solicitudMotivoRechazo: { type: String },
         solicitudRechazadaPor: { type: Schema.Types.ObjectId, ref: "User" },
         solicitudRechazadaEl: { type: Date },
+        // Ver el comentario de la interfaz: se guarda en texto, no en ids.
+        solicitudRevision: {
+            cambios: [{ _id: false, campo: String, pedido: String, aprobado: String }],
+            comentario: String,
+            porNombre: String,
+            el: Date,
+        },
         esRenovacion: { type: Boolean },
         renovacionDe: {
             userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },

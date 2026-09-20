@@ -79,6 +79,7 @@ import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../servi
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
+import { cambiosAlAprobar } from "../services/revisionDeSolicitud.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1518,7 +1519,7 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
 router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { projectId } = req.params;
-    const { userId, contract, isUpdate, contractIndex, approveSolicitud } = req.body;
+    const { userId, contract, isUpdate, contractIndex, approveSolicitud, comentarioRevision } = req.body;
 
     if (!userId || !contract) {
       return res.status(400).json({ error: "userId and contract data are required" });
@@ -1760,13 +1761,42 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       a mirar la pantalla. Va después de guardar todo, porque lo que se avisa es un contrato que ya está.
     */
     if (solicitudAprobada) {
+      /*
+        QUÉ SE LE CORRIGIÓ AL APROBARLA, guardado en la solicitud.
+
+        Aprobar rara vez es sólo decir que sí: quien aprueba abre el alta y arregla lo que venga mal.
+        Esa corrección se perdía —la solicitud quedaba «APROBADA» a secas— y quien la cargó seguía
+        creyendo que se contrató lo que pidió, así que la próxima la cargaba igual. Acá queda, junto
+        con lo que quien aprueba le quiera explicar, para que se lea desde la app.
+
+        `solicitudAprobada` se leyó ANTES de marcarla aprobada (el `findOneAndUpdate` de arriba
+        devuelve el documento previo), así que su `metadata` todavía es lo que se pidió.
+      */
+      const cambios = await cambiosAlAprobar(solicitudAprobada.metadata as any, enrichedContract, project);
+      const comentario = typeof comentarioRevision === "string" ? comentarioRevision.trim().slice(0, 2000) : "";
+      if (cambios.length > 0 || comentario) {
+        const quienAprueba: any = await User.findById(req.user!.userId).select("firstName lastName metadata.fullName").lean();
+        await User.updateOne(
+          { _id: solicitudAprobada._id },
+          { $set: { "metadata.solicitudRevision": { cambios, comentario, porNombre: nombreDePersona(quienAprueba), el: new Date() } } },
+        );
+      }
+
+      /*
+        AVISARLE A QUIEN PIDIÓ EL ALTA.
+
+        El aviso dice si además hay algo para leer: «aprobada» y «aprobada con tres cambios» piden
+        cosas distintas de quien la cargó, y sin decirlo nadie vuelve a abrir una solicitud que ya
+        salió bien.
+      */
+      const hayQueLeer = cambios.length > 0 ? ` Se le ${cambios.length === 1 ? "cambió 1 dato" : `cambiaron ${cambios.length} datos`} al aprobarla${comentario ? ", con un comentario" : ""}.` : comentario ? " Te dejaron un comentario." : "";
       await notificar({
         tenantId: req.tenantObjectId!,
         destinatarios: [(solicitudAprobada.metadata as any)?.solicitudCreadaPor],
         type: NOVEDAD_SOLICITUD_APROBADA,
         title: "Solicitud aprobada",
         refId: solicitudAprobada._id,
-        message: `${nombreDePersona(solicitudAprobada)} ya tiene contrato en ${project.name}.`,
+        message: `${nombreDePersona(solicitudAprobada)} ya tiene contrato en ${project.name}.${hayQueLeer}`,
         excepto: req.user!.userId,
       });
     }

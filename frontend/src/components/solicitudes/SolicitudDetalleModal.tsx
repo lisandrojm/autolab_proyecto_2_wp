@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faCommentDots, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faCommentDots, faTriangleExclamation , faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { usersAPI, User } from "../../api/users";
 import { companiesAPI, Company } from "../../api/companies";
@@ -10,7 +10,7 @@ import { shiftsAPI, Shift } from "../../api/shifts";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { activityLogTypesAPI, RequestConfig } from "../../api/requestConfig";
 import { projectsAPI } from "../../api/projects";
-import { EstadoBadge } from "../EstadoSelect";
+import { EstadoBadge, estadoLabel } from "../EstadoSelect";
 import { textoDeDias } from "../../utils/jerarquiaTurnos";
 import { mesesEquivalentes, periodoDeCalculo } from "../../utils/jornadas";
 import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista, formatFechaSolicitud, useCatalogosDeSolicitudes } from "./SolicitudesTable";
@@ -49,6 +49,13 @@ const fecha = (iso?: string | null) => {
 const pesos = (n: number | null | undefined) => (n == null || !Number.isFinite(Number(n)) ? "" : `$ ${Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
 /** Una fila de dato. Sin valor muestra «—»: el campo existe, sólo que la solicitud no lo trajo. */
+/** Un campo que quien aprobó cambió respecto de lo que se había pedido (lo arma el server). */
+interface CambioDeRevision {
+  campo: string;
+  pedido: string;
+  aprobado: string;
+}
+
 const Fila = ({ label, valor }: { label: string; valor?: React.ReactNode }) => (
   <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-gray-700/60 py-2 last:border-b-0">
     <p className="shrink-0 pt-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</p>
@@ -245,6 +252,10 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     turnos: (a.shiftIds || []).map((s: any) => nombreDe(turnos, s, (x) => x.name)).filter(Boolean),
   }));
 
+  /** Qué se corrigió al aprobarla y qué dejó dicho quien aprobó (ver `solicitudRevision`). */
+  const revision: { cambios?: CambioDeRevision[]; comentario?: string; porNombre?: string; el?: string } | null = m.solicitudRevision || null;
+  const cambiosDeLaRevision: CambioDeRevision[] = revision?.cambios || [];
+
   const estado: EstadoSolicitud = (m.solicitudStatus as EstadoSolicitud) || solicitud?.estado || "pendiente";
   const proyectosAMostrar = proyectos && proyectos.length > 0 ? proyectos : proyectosPropios;
   const puedeDecidir = estado === "pendiente" && !cargando && !!detalle;
@@ -320,6 +331,55 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                   <span className="whitespace-pre-wrap">{m.solicitudMotivoRechazo}</span>
                 </span>
               </p>
+            </div>
+          )}
+
+          {/*
+            QUÉ SE LE CORRIGIÓ AL APROBARLA, y qué le dejó dicho quien aprobó.
+
+            Va arriba de todo lo demás, igual que el motivo del rechazo: quien abre una solicitud
+            aprobada la abre para ver si salió como la pidió. Antes no había forma de saberlo —decía
+            «APROBADA» y nada más—, así que el mismo error se volvía a cargar la vez siguiente.
+
+            Los valores llegan ya resueltos a texto desde el server (ver `revisionDeSolicitud`): son
+            lo que se decidió ESE día, aunque después se renombre el área o la empresa.
+          */}
+          {revision && (cambiosDeLaRevision.length > 0 || revision.comentario) && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+              <p className="flex items-start gap-2 font-bold">
+                <FontAwesomeIcon icon={faPenToSquare} className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {cambiosDeLaRevision.length > 0 ? `Se ${cambiosDeLaRevision.length === 1 ? "corrigió 1 dato" : `corrigieron ${cambiosDeLaRevision.length} datos`} al aprobarla` : "Comentario de quien aprobó"}
+              </p>
+
+              {cambiosDeLaRevision.length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {cambiosDeLaRevision.map((c: CambioDeRevision, i: number) => (
+                    <li key={`${c.campo}-${i}`} className="rounded-lg bg-white/70 px-2.5 py-1.5 dark:bg-blue-900/30">
+                      <p className="text-[11px] font-bold uppercase tracking-wide opacity-70">{c.campo}</p>
+                      {/*
+                        Los valores pasan por `estadoLabel`, que es donde se traduce la nomenclatura vieja
+                        («Pedido de AFIP» → «Pedido de ARCA»). Es inocuo para todo lo demás —devuelve el
+                        texto tal cual— y evita que acá se lea AFIP mientras el resto de la app dice ARCA.
+                      */}
+                      <p className="text-[13px] leading-snug">
+                        <span className="line-through opacity-60">{estadoLabel(c.pedido) || "—"}</span>
+                        <span className="px-1.5 opacity-60">→</span>
+                        <span className="font-bold">{estadoLabel(c.aprobado) || "—"}</span>
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {revision.comentario && <p className="mt-2 whitespace-pre-wrap border-l-2 border-blue-300 pl-2.5 italic dark:border-blue-700">{revision.comentario}</p>}
+
+              {(revision.porNombre || revision.el) && (
+                <p className="mt-2 text-[11px] opacity-70">
+                  {revision.porNombre}
+                  {revision.porNombre && revision.el ? " · " : ""}
+                  {revision.el ? fecha(revision.el) : ""}
+                </p>
+              )}
             </div>
           )}
 
