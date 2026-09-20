@@ -14,6 +14,8 @@ import { UserProfile } from "../models/UserProfile.js";
 import { Area } from "../models/Area.js";
 import { Project } from "../models/Project.js";
 import UserProject from "../models/UserProject.js";
+import { hoyArgentina } from "../utils/contratoVigencia.js";
+import { contratosQueRigenDeLasPersonas } from "../utils/contratosQueRigen.js";
 import fs from "fs";
 import path from "path";
 import { Client } from "../models/Client.js";
@@ -502,16 +504,83 @@ router.get("/users-balance", async (req: any, res) => {
       return res.status(400).json({ error: "Año inválido" });
     }
 
-    // 1. Get all active, non-system users in the tenant
+    /*
+      LOS USUARIOS, SIN SUS VÍNCULOS POBLADOS.
+
+      Acá se traían los 1576 usuarios del tenant con `metadata.projects` POBLADO ENTERO —o sea con
+      los 7462 contratos— y el `metadata` completo de cada uno: 10,8 MB. La consulta no terminaba
+      dentro del request, así que la pantalla se quedaba con una lista vacía y decía «no se
+      encontraron usuarios».
+
+      De todo eso se usan tres cosas —cuántos días trabajó, con qué rol empresa y qué contrato rige—
+      que se calculan más abajo con una sola consulta liviana, y `metadata.activo`, que es el único
+      campo del `metadata` que la pantalla mira.
+    */
     const users = await User.find({ tenantId, isSystem: { $ne: true } })
-      .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata projectIds")
-      .populate({
-        path: "metadata.projects",
-        populate: {
-          path: "projectId",
-          select: "name",
+      .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata.activo projectIds")
+      .lean();
+
+    /*
+      LOS CONTRATOS, EN CUATRO CAMPOS POR CONTRATO.
+
+      Las cuentas se siguen haciendo en JavaScript y con las mismas funciones que antes —la
+      antigüedad decide días de licencia por ley, y eso no se reescribe en una agregación—. Lo que
+      cambia es que en vez del contrato entero viajan las dos fechas que miden el período, la de
+      carga (que desempata cuál rige) y los tres nombres que la pantalla muestra.
+    */
+    const idsUsuarios = users.map((u: any) => u._id);
+    const vinculos: any[] = await UserProject.aggregate([
+      { $match: { userId: { $in: idsUsuarios } } },
+      {
+        $project: {
+          _id: 0,
+          userId: 1,
+          nombre_rol_frame: 1,
+          rol_frame_id: 1,
+          contracts: {
+            $map: {
+              input: { $ifNull: ["$contracts", []] },
+              as: "c",
+              in: {
+                fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                fecha_baja_contrato: "$$c.fecha_baja_contrato",
+                nombre_rol_frame: "$$c.nombre_rol_frame",
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    // El contrato que rige de cada persona, elegido adentro de Mongo: una fila chica por usuario.
+    const contratoQueRigeDe = await contratosQueRigenDeLasPersonas(idsUsuarios, hoyArgentina(), ["nombre_contrato", "tipo_contrato"]);
+
+    const vinculosPorUsuario = new Map<string, any[]>();
+    for (const v of vinculos) {
+      const clave = String(v.userId);
+      if (!vinculosPorUsuario.has(clave)) vinculosPorUsuario.set(clave, []);
+      vinculosPorUsuario.get(clave)!.push(v);
+    }
+
+    /**
+     * EL ROL EMPRESA CON EL QUE FIGURA HOY.
+     *
+     * Misma regla que tenía la pantalla: el último contrato no vencido que declare uno y, si ninguno
+     * lo declara, el del vínculo con el proyecto.
+     */
+    const rolEmpresaDe = (misVinculos: any[]): string => {
+      let rol = "Sin rol empresa";
+      const ahora = Date.now();
+      for (const v of misVinculos) {
+        for (const c of v.contracts || []) {
+          const baja = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+          if (baja) baja.setHours(23, 59, 59, 999);
+          if ((!baja || baja.getTime() >= ahora) && c.nombre_rol_frame) rol = c.nombre_rol_frame;
         }
-      });
+        if (rol === "Sin rol empresa" && v.nombre_rol_frame) rol = v.nombre_rol_frame;
+      }
+      return rol;
+    };
 
     // 2. Fetch all overrides for the selected year
     const { UserVacationBalance } = await import("../models/UserVacationBalance.js");
@@ -581,9 +650,10 @@ router.get("/users-balance", async (req: any, res) => {
       const uIdStr = user._id.toString();
 
       // A. Calculate seniority days from contracts (if any)
+      const misVinculos = vinculosPorUsuario.get(uIdStr) || [];
       let contractsDays = 0;
-      if (user.metadata?.projects && Array.isArray(user.metadata.projects)) {
-        contractsDays = user.metadata.projects.reduce((acc: number, p: any) => {
+      {
+        contractsDays = misVinculos.reduce((acc: number, p: any) => {
           if (!p || !p.contracts || !Array.isArray(p.contracts)) return acc;
           return (
             acc +
@@ -696,6 +766,16 @@ router.get("/users-balance", async (req: any, res) => {
         // Meta field for filters in frontend
         projectIds: user.projectIds?.map((p: any) => (p._id || p).toString()) || [],
         metadata: user.metadata,
+        /*
+          LO QUE LA PANTALLA SACABA DE LOS VÍNCULOS, YA RESUELTO.
+
+          Antes recorría `metadata.projects` con todos los contratos adentro para sacar estas tres
+          cosas. Se calculan acá, con las mismas funciones, y viajan como tres campos.
+        */
+        rolEmpresa: rolEmpresaDe(misVinculos),
+        contratoQueRige: contratoQueRigeDe.get(uIdStr) || null,
+        // Para el filtro por rol empresa, que mira el vínculo y no el contrato.
+        rolesFrame: misVinculos.map((v: any) => ({ rol_frame_id: v.rol_frame_id ?? null, nombre_rol_frame: v.nombre_rol_frame || "" })),
       });
     }
 

@@ -161,7 +161,15 @@ export async function contratosQueRigenDelProyecto(projectId, hoy, camposExtra =
  * Misma regla que `getContratoActivo`: entre los vigentes manda el de tiempo indeterminado; si no,
  * el más reciente por alta y, a igualdad, por carga; sin vigentes, el más reciente de todos.
  */
-export async function contratosQueRigenDeLasPersonas(userIds, hoy) {
+export async function contratosQueRigenDeLasPersonas(userIds, hoy, 
+/**
+ * Campos del contrato elegido que además hacen falta (`nombre_contrato`, `tipo_contrato`…).
+ *
+ * Las fechas van siempre: son las que deciden cuál rige y las que dicen si está vigente. Lo demás
+ * se pide explícito y no «todo el contrato», para que esto no engorde cada vez que alguien le
+ * agrega un campo al contrato.
+ */
+camposExtra = []) {
     const ids = userIds.map((id) => new Types.ObjectId(String(id)));
     if (ids.length === 0)
         return new Map();
@@ -183,9 +191,10 @@ export async function contratosQueRigenDeLasPersonas(userIds, hoy) {
                 alta: fechaISOExpr("$contracts.fecha_alta_contrato"),
                 baja: fechaISOExpr("$contracts.fecha_baja_contrato"),
                 carga: { $toString: { $ifNull: ["$contracts.fecha_carga", ""] } },
+                ...Object.fromEntries(camposExtra.map((campo) => [campo, `$contracts.${campo}`])),
             },
         },
-        { $group: { _id: "$userId", claves: { $push: { alta: "$alta", baja: "$baja", carga: "$carga" } } } },
+        { $group: { _id: "$userId", claves: { $push: { alta: "$alta", baja: "$baja", carga: "$carga", ...Object.fromEntries(camposExtra.map((campo) => [campo, `$${campo}`])) } } } },
         {
             $addFields: {
                 vigentes: {
@@ -218,7 +227,16 @@ export async function contratosQueRigenDeLasPersonas(userIds, hoy) {
                 },
             },
         },
-        { $project: { _id: 1, alta: "$elegido.alta", baja: "$elegido.baja" } },
+        { $project: { _id: 1, elegido: 1 } },
     ]);
-    return new Map(filas.map((f) => [String(f._id), f.alta === undefined && f.baja === undefined ? null : { fecha_alta_contrato: f.alta || "", fecha_baja_contrato: f.baja || "" }]));
+    return new Map(filas.map((f) => [
+        String(f._id),
+        f.elegido
+            ? {
+                fecha_alta_contrato: f.elegido.alta || "",
+                fecha_baja_contrato: f.elegido.baja || "",
+                ...Object.fromEntries(camposExtra.map((campo) => [campo, f.elegido[campo] ?? null])),
+            }
+            : null,
+    ]));
 }

@@ -52,6 +52,17 @@ interface UserVacationBalance {
   };
   projectIds: string[];
   metadata?: any;
+  /*
+    LO QUE ANTES SE SACABA RECORRIENDO `metadata.projects`.
+
+    Para mostrar el rol empresa y el contrato que rige, esta pantalla recorría los vínculos de cada
+    persona con TODOS sus contratos adentro: 1576 usuarios y 7462 contratos, 10,8 MB, y la consulta
+    no llegaba a terminar —por eso la tabla aparecía vacía—. Ahora los resuelve el server con las
+    mismas funciones y viajan resueltos.
+  */
+  rolEmpresa?: string;
+  contratoQueRige?: any | null;
+  rolesFrame?: { rol_frame_id?: any; nombre_rol_frame?: string }[];
 }
 
 /**
@@ -190,6 +201,9 @@ export const UserVacationManagementTab: React.FC = () => {
    * separado devuelve un contrato que la vista de al lado ya descartó.
    */
   const contratoQueRige = (balance: UserVacationBalance): any | null => {
+    // Lo elige el server con esta misma función (ver `routes/vacations.ts`). El `??` deja andando
+    // cualquier respuesta vieja que todavía traiga los vínculos.
+    if (balance.contratoQueRige !== undefined) return balance.contratoQueRige;
     const todos: any[] = [];
     for (const p of balance.metadata?.projects || []) {
       for (const c of (p as any)?.contracts || []) todos.push(c);
@@ -203,6 +217,8 @@ export const UserVacationManagementTab: React.FC = () => {
   };
 
   const getActiveRoleFrame = (balance: UserVacationBalance): string => {
+    // Lo resuelve el server con esta misma regla; lo de abajo queda para una respuesta vieja.
+    if (balance.rolEmpresa) return balance.rolEmpresa;
     let roleFrame = "Sin rol empresa";
     if (balance.metadata?.projects) {
       const now = new Date().getTime();
@@ -246,7 +262,8 @@ export const UserVacationManagementTab: React.FC = () => {
 
     if (selectedRoleFrame) {
       result = result.filter((b) => {
-        const userMetaProjects = b.metadata?.projects || [];
+        // Los vínculos de la persona, ya recortados a lo que el filtro mira (ver `rolesFrame`).
+        const userMetaProjects = b.rolesFrame ?? b.metadata?.projects ?? [];
         const rf = roleFrames.find((r) => r._id === selectedRoleFrame);
         if (rf) {
           return userMetaProjects.some((mp: any) => 

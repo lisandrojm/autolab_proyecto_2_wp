@@ -23,7 +23,12 @@ export declare function contratosQueRigenDelProyecto(projectId: string, hoy: str
  * Misma regla que `getContratoActivo`: entre los vigentes manda el de tiempo indeterminado; si no,
  * el más reciente por alta y, a igualdad, por carga; sin vigentes, el más reciente de todos.
  */
-export declare function contratosQueRigenDeLasPersonas(userIds: (string | Types.ObjectId)[], hoy: string): Promise<Map<string, {
-    fecha_alta_contrato: string;
-    fecha_baja_contrato: string;
-} | null>>;
+export declare function contratosQueRigenDeLasPersonas(userIds: (string | Types.ObjectId)[], hoy: string, 
+/**
+ * Campos del contrato elegido que además hacen falta (`nombre_contrato`, `tipo_contrato`…).
+ *
+ * Las fechas van siempre: son las que deciden cuál rige y las que dicen si está vigente. Lo demás
+ * se pide explícito y no «todo el contrato», para que esto no engorde cada vez que alguien le
+ * agrega un campo al contrato.
+ */
+camposExtra?: string[]): Promise<Map<string, any | null>>;
