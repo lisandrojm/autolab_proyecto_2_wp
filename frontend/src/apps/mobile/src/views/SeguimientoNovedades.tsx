@@ -35,8 +35,15 @@ interface SeguimientoNovedadesProps {
  *   3. El calendario, compacto: un día es un cuadrado de color; tocarlo abre su detalle debajo.
  *   4. La lista de coordinadores (o, con uno elegido, lo que le falta), con «Recordar».
  *
- * El server acota los datos a los proyectos que la persona supervisa: acá no se filtra nada por
- * seguridad, sólo por lo que se quiere ver. El Excel del panel web no está: en el teléfono no se usa.
+ * ACÁ SIEMPRE SE PIDE `soloMisProyectos`, y eso incluye al admin.
+ *
+ * La lista tiene que ser la del equipo de quien mira, no la de la empresa: con 44 proyectos y 10
+ * personas asignadas, un admin que entraba por el teléfono veía las 10 —ocho de ellas de un proyecto
+ * que no es suyo— y la pantalla dejaba de servir para lo que existe. En el panel web un admin sí
+ * está auditando todo, y ahí no se manda.
+ *
+ * El recorte de SEGURIDAD lo sigue haciendo el server por su cuenta; esto es además de eso.
+ * El Excel del panel web no está: en el teléfono no se usa.
  */
 
 type Estado = "complete" | "partial" | "pending" | "missing" | "none";
@@ -109,7 +116,7 @@ export default function SeguimientoNovedades({ onNavigate, embebido }: Seguimien
     setCargando(true);
     setError("");
     complianceAPI
-      .get({ from: desde, to: hasta, projectId: proyectoId || undefined })
+      .get({ from: desde, to: hasta, projectId: proyectoId || undefined, soloMisProyectos: true })
       .then((res) => {
         if (cancelado) return;
         setData(res);
@@ -196,7 +203,7 @@ export default function SeguimientoNovedades({ onNavigate, embebido }: Seguimien
 
   const recordar = async (ids?: string[]) => {
     try {
-      const res = await complianceAPI.remind({ from: desde, to: hasta, projectId: proyectoId || undefined, coordinatorIds: ids });
+      const res = await complianceAPI.remind({ from: desde, to: hasta, projectId: proyectoId || undefined, coordinatorIds: ids, soloMisProyectos: true });
       await sweetAlert.success(res.count > 0 ? "Recordatorio enviado" : "Sin envíos", res.count > 0 ? `Se notificó a ${res.count} supervisor(es).` : "No había a quién recordarle, o ya recibió un recordatorio hoy.");
     } catch (err: any) {
       sweetAlert.error("No se pudo enviar", err?.response?.data?.error || "Probá de nuevo en un momento.");

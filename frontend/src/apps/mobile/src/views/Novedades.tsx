@@ -81,13 +81,20 @@ export default function Novedades({ onNavigate, pestanaInicial }: NovedadesProps
     };
   }, [puedeCargar]);
 
-  const disponibles: Pestana[] = [...(puedeVerCumplimiento ? (["cumplimiento"] as const) : []), ...(tieneDondeCargar ? (["historial"] as const) : [])];
+  /*
+    "Mis novedades" VA PRIMERA, y es también la que abre.
+
+    Con Cumplimiento adelante la pantalla arrancaba mostrando el trabajo de otros, y quien entra a
+    Novedades casi siempre viene a cargar las suyas. Además confundía: el encabezado de Cumplimiento
+    dice "Todos los supervisores" y se leía como si fuera lo que uno mismo cargó.
+  */
+  const disponibles: Pestana[] = [...(tieneDondeCargar ? (["historial"] as const) : []), ...(puedeVerCumplimiento ? (["cumplimiento"] as const) : [])];
 
   /*
-    Arranca en la que pidieron si la tiene; si no, en la primera disponible —que es Cumplimiento
+    Arranca en la que pidieron si la tiene; si no, en la primera disponible —que es "Mis novedades"
     cuando están las dos—. `activa` vuelve a caer en la inicial si la elegida dejó de estar.
   */
-  const inicial: Pestana = pestanaInicial && disponibles.includes(pestanaInicial) ? pestanaInicial : disponibles[0] || "cumplimiento";
+  const inicial: Pestana = pestanaInicial && disponibles.includes(pestanaInicial) ? pestanaInicial : disponibles[0] || "historial";
   const [pestana, setPestana] = useState<Pestana | null>(null);
   const activa: Pestana = pestana && disponibles.includes(pestana) ? pestana : inicial;
 
@@ -108,8 +115,8 @@ export default function Novedades({ onNavigate, pestanaInicial }: NovedadesProps
           <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
             {(
               [
-                { id: "cumplimiento", label: "Cumplimiento" },
                 { id: "historial", label: "Mis novedades" },
+                { id: "cumplimiento", label: "Cumplimiento" },
               ] as const
             ).map((t) => (
               <button

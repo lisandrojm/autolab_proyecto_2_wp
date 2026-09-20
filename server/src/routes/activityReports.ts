@@ -35,25 +35,56 @@ const isAdminReq = (req: AuthenticatedRequest): boolean => {
 const escaparRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
+ * LOS PROYECTOS A LOS QUE UNA PERSONA PERTENECE, por los tres caminos que existen.
+ *
+ * Antes esto miraba SÓLO los proyectos cuyo responsable es la persona, y eso dejaba afuera al
+ * caso más común: un coordinador asignado a un proyecto, que no es su responsable, recibía una
+ * lista vacía. No fallaba nada —la pantalla mostraba cero— y por eso no se notaba.
+ */
+async function proyectosDondeParticipa(tenantId: any, userId: string): Promise<string[]> {
+  const [{ proyectos: comoResponsable }, asignado, usuario] = await Promise.all([
+    alcanceDeResponsable(tenantId, userId),
+    // Hay índice por (tenantId, coordinatorAssignments.userId): ver `models/Project.ts`.
+    Project.find({ tenantId, "coordinatorAssignments.userId": userId }).select("_id").lean(),
+    User.findById(userId).select("projectIds").lean(),
+  ]);
+
+  const todos = new Set<string>();
+  comoResponsable.forEach((id: any) => todos.add(String(id)));
+  (asignado as any[]).forEach((p: any) => todos.add(String(p._id)));
+  ((usuario as any)?.projectIds || []).forEach((id: any) => todos.add(String(id)));
+  return [...todos];
+}
+
+/**
  * QUÉ CUMPLIMIENTO PUEDE VER QUIEN PREGUNTA.
  *
- *   · Admin: todo, como hasta ahora (el modal del panel web).
- *   · Con «Seguimiento de novedades» (el supervisor en el móvil): SÓLO los proyectos que supervisa, es
- *     decir aquellos cuyo responsable es él. Un supervisor no ve los coordinadores de otro.
+ *   · Admin en el panel web: todo, como siempre. Es su panel.
+ *   · Con «Seguimiento de novedades» (el móvil): sólo los proyectos a los que pertenece.
  *   · Cualquier otro: nada (`null` → 403).
+ *
+ * `soloMisProyectos` ACOTA TAMBIÉN AL ADMIN, y el móvil siempre lo manda. La pantalla del teléfono
+ * es la del coordinador: ahí la lista tiene que ser la de su equipo, no la de la empresa entera.
+ * Un admin que entra por el teléfono viene a ver su propio proyecto, no a auditar los 44.
  *
  * `{}` significa sin recorte; `{ projectIds }` es la lista a la que se acota (puede venir vacía).
  */
 async function alcanceCumplimiento(req: AuthenticatedRequest & TenantRequest): Promise<{ projectIds?: string[] } | null> {
-  if (isAdminReq(req)) return {};
+  const soloMios = String(req.query.soloMisProyectos || (req.body || {}).soloMisProyectos || "") === "1";
+
+  if (isAdminReq(req)) {
+    if (!soloMios) return {};
+    return { projectIds: await proyectosDondeParticipa(req.tenantObjectId, req.user!.userId) };
+  }
+
   const roleNames = req.user?.roles || [];
   if (roleNames.length === 0) return null;
-  const roles = await Role.find({ tenantId: req.tenantObjectId, name: { $in: roleNames.map((n) => new RegExp(`^${escaparRegex(String(n))}$`, "i")) } })
+  const roles = await Role.find({ tenantId: req.tenantObjectId, name: { $in: roleNames.map((n) => new RegExp("^" + escaparRegex(String(n)) + "$", "i")) } })
     .select("permissions")
     .lean();
   if (!roles.some((r: any) => (r.permissions || []).includes(MOBILE_ACTIVITY_COMPLIANCE))) return null;
-  const { proyectos } = await alcanceDeResponsable(req.tenantObjectId, req.user!.userId);
-  return { projectIds: proyectos.map(String) };
+
+  return { projectIds: await proyectosDondeParticipa(req.tenantObjectId, req.user!.userId) };
 }
 
 const MAX_RANGE_DAYS = 92;

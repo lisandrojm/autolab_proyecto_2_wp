@@ -72,6 +72,8 @@ export interface ComplianceQuery {
   coordinatorId?: string;
   areaId?: string;
   shiftId?: string;
+  /** Acota a los proyectos a los que pertenece quien pregunta, incluso siendo admin. */
+  soloMisProyectos?: boolean;
 }
 
 export interface RemindPayload {
@@ -80,6 +82,8 @@ export interface RemindPayload {
   projectId?: string;
   coordinatorIds?: string[];
   message?: string;
+  /** Mismo recorte que en la consulta: el recordatorio no puede alcanzar a gente que no se ve. */
+  soloMisProyectos?: boolean;
 }
 
 export interface RemindResponse {
@@ -96,6 +100,13 @@ export const complianceAPI = {
     if (params.coordinatorId) sp.set("coordinatorId", params.coordinatorId);
     if (params.areaId) sp.set("areaId", params.areaId);
     if (params.shiftId) sp.set("shiftId", params.shiftId);
+    /*
+      ACOTAR A MIS PROYECTOS, aunque quien pregunte sea admin.
+
+      Lo manda el móvil y no la web: en el teléfono la pantalla es la del coordinador y la lista
+      tiene que ser la de su equipo. En el panel web un admin sí está auditando toda la empresa.
+    */
+    if (params.soloMisProyectos) sp.set("soloMisProyectos", "1");
     const { data } = await axiosClient.get<ComplianceResponse>(`/activity-reports/compliance?${sp.toString()}`);
     return data;
   },
