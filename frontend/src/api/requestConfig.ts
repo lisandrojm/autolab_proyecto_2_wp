@@ -20,9 +20,23 @@ export interface HorasExtraMemosoft {
   vigenteDesde?: string | null;
 }
 
+/**
+ * QUÉ CONCEPTO COBRA UN DÍA TRABAJADO SIN NOVEDAD.
+ *
+ * Es la mayoría de los renglones, y un jornalero cobra por día: sin esto, la liquidación de los
+ * jornaleros sale casi vacía. Arranca sin código porque cuál es lo define RRHH, no el sistema.
+ */
+export interface JornalBaseMemosoft {
+  codigo?: string | null;
+  param: "par1" | "par2";
+  soloRegimen?: "mensual" | "jornalero" | null;
+  vigenteDesde?: string | null;
+}
+
 export interface GeneralSettings {
   allowedPastDays: number;
   memosoftHorasExtra?: HorasExtraMemosoft | null;
+  memosoftJornalBase?: JornalBaseMemosoft | null;
 }
 
 export const activityLogTypesAPI = {

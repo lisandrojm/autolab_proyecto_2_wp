@@ -513,6 +513,14 @@ function normalizeUser(raw: any): User {
           };
         })
       : undefined,
+    /*
+      LAS SOLICITUDES DE ALTA PENDIENTES DE ESTA PERSONA.
+
+      `normalizeUser` arma un objeto campo por campo, así que lo que no se nombra acá NO LLEGA a la
+      pantalla aunque el server lo mande. El listado las manda (ver `routes/users.ts`) y UserCard
+      dibuja el badge "⚠ N solicitudes de alta"; al no copiarse, ese badge no aparecía nunca.
+    */
+    solicitudesPendientes: Array.isArray(raw?.solicitudesPendientes) ? raw.solicitudesPendientes : undefined,
     tenant: normalizeTenant(raw),
     tenantId: raw?.tenantId ?? undefined,
     lastLoginAt: raw?.lastLoginAt ? String(raw.lastLoginAt) : undefined,

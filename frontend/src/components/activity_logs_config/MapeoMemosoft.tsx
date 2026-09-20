@@ -73,6 +73,14 @@ export const MapeoMemosoft: React.FC = () => {
   });
   const [guardandoHE, setGuardandoHE] = useState(false);
 
+  /* El jornal del día trabajado, que tampoco depende del motivo. */
+  const [jornalBase, setJornalBase] = useState<{ codigo: string; param: 'par1' | 'par2'; soloRegimen: string }>({
+    codigo: '',
+    param: 'par2',
+    soloRegimen: 'jornalero',
+  });
+  const [guardandoJB, setGuardandoJB] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -84,6 +92,13 @@ export const MapeoMemosoft: React.FC = () => {
         setMotivos(mapeo.motivos);
         setConceptos(mapeo.conceptos);
         setEmpresas((listaEmpresas || []).map((e: any) => ({ _id: e._id, razonSocial: e.razonSocial })));
+        if (settings?.memosoftJornalBase) {
+          setJornalBase({
+            codigo: settings.memosoftJornalBase.codigo || '',
+            param: settings.memosoftJornalBase.param || 'par2',
+            soloRegimen: settings.memosoftJornalBase.soloRegimen || '',
+          });
+        }
         if (settings?.memosoftHorasExtra) {
           setHorasExtra({
             codigo50: settings.memosoftHorasExtra.codigo50 || '',
@@ -186,6 +201,26 @@ export const MapeoMemosoft: React.FC = () => {
     }
   };
 
+  const guardarJornalBase = async () => {
+    setGuardandoJB(true);
+    try {
+      await activityLogTypesAPI.updateGeneralSettings({
+        memosoftJornalBase: {
+          codigo: jornalBase.codigo || null,
+          param: jornalBase.param,
+          soloRegimen: (jornalBase.soloRegimen || null) as any,
+          vigenteDesde: new Date().toISOString().slice(0, 10),
+        },
+      });
+      sweetAlert.success('Guardado', jornalBase.codigo ? 'El día trabajado ya genera ese concepto.' : 'El día trabajado no genera ningún concepto.');
+    } catch (error) {
+      console.error(error);
+      sweetAlert.error('Error', 'No se pudo guardar el jornal del día trabajado.');
+    } finally {
+      setGuardandoJB(false);
+    }
+  };
+
   if (cargando) {
     return (
       <div className="flex items-center justify-center py-16 text-gray-500 dark:text-gray-400">
@@ -252,6 +287,59 @@ export const MapeoMemosoft: React.FC = () => {
             className="text-xs px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors"
           >
             <FontAwesomeIcon icon={guardandoHE ? faSpinner : faSave} spin={guardandoHE} className="mr-1.5" />
+            Guardar
+          </button>
+        </div>
+      </div>
+
+      {/* ─────────── El día trabajado: la otra regla global ─────────── */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800/40">
+        <div className="flex items-start gap-2 mb-3">
+          <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Día trabajado</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Qué cobra alguien que vino a trabajar y no tuvo ninguna novedad. Es la mayoría de los renglones del mes, y un
+              jornalero cobra por día: sin esto, su liquidación sale casi vacía. Al mensual normalmente no le corresponde,
+              porque ya se le paga el mes entero.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-xs text-gray-600 dark:text-gray-300">
+            <span className="block mb-1">Concepto</span>
+            <select className={selectClass} value={jornalBase.codigo} onChange={(e) => setJornalBase({ ...jornalBase, codigo: e.target.value })}>
+              <option value="">No genera nada</option>
+              {conceptosUnicos.map((c) => (
+                <option key={c.codigo} value={c.codigo}>{c.codigo} · {c.descripcion}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs text-gray-600 dark:text-gray-300">
+            <span className="block mb-1">Parámetro</span>
+            <select className={selectClass} value={jornalBase.param} onChange={(e) => setJornalBase({ ...jornalBase, param: e.target.value as 'par1' | 'par2' })}>
+              <option value="par1">par1</option>
+              <option value="par2">par2</option>
+            </select>
+          </label>
+
+          <label className="text-xs text-gray-600 dark:text-gray-300">
+            <span className="block mb-1">Para quién</span>
+            <select className={selectClass} value={jornalBase.soloRegimen} onChange={(e) => setJornalBase({ ...jornalBase, soloRegimen: e.target.value })}>
+              <option value="jornalero">Sólo jornaleros</option>
+              <option value="mensual">Sólo mensuales</option>
+              <option value="">Los dos</option>
+            </select>
+          </label>
+
+          <button
+            onClick={guardarJornalBase}
+            disabled={guardandoJB}
+            className="text-xs px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors"
+          >
+            <FontAwesomeIcon icon={guardandoJB ? faSpinner : faSave} spin={guardandoJB} className="mr-1.5" />
             Guardar
           </button>
         </div>
