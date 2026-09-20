@@ -36,6 +36,12 @@ interface IndicePorCrear {
 
 const INDICES: IndicePorCrear[] = [
   {
+    coleccion: "requests",
+    claves: { tenantId: 1, date: -1, createdAt: -1 },
+    porque:
+      "El listado de Novedades pagina ordenando por (date, createdAt) sobre todo el tenant. El índice que hay es {tenantId, userId, date}: sirve cuando alguien mira LAS SUYAS, no cuando un admin mira todas, que es la pantalla lenta.",
+  },
+  {
     coleccion: "centros-costo",
     claves: { codAuxiliar: 1 },
     porque: "El listado ordena por `codAuxiliar` y la búsqueda del selector filtra por él (routes/centrosCosto.ts).",

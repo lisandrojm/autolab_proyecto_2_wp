@@ -9,7 +9,17 @@ import { computeCompliance } from "../services/complianceService.js";
 import { Role } from "../models/Role.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { MOBILE_ACTIVITY_COMPLIANCE } from "../utils/permisosMobile.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+import { Project } from "../models/Project.js";
+import { User } from "../models/User.js";
 const router = Router();
+/** Los nombres que la pantalla muestra de cada parte. `populate` sobre objetos planos: la agregación no los trae sola. */
+const POPULADOS = [
+    { path: "userId", select: "firstName lastName" },
+    { path: "projectId", select: "name clientId", populate: { path: "clientId", select: "name" } },
+    { path: "areaId", select: "name" },
+    { path: "shiftId", select: "name" },
+];
 router.use(requireTenant, authenticateToken);
 const isAdminReq = (req) => {
     const roles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
@@ -89,6 +99,49 @@ router.get("/", async (req, res) => {
             filter.userId = userId;
         }
         /*
+          LOS FILTROS Y LA BÚSQUEDA, DEL LADO DEL SERVER.
+    
+          La pantalla los aplicaba sobre la lista completa que tenía en memoria, y por eso necesitaba
+          bajarla completa antes de poder mostrar nada. Resueltos acá, una página es una página.
+    
+          La búsqueda mira las mismas tres cosas que miraba la pantalla: el número del parte, el nombre
+          del proyecto y quién lo cargó. El número está en el parte; los otros dos viven en otras
+          colecciones, así que primero se resuelven a ids y el parte se busca por esos ids.
+    
+          `createFuzzySearchRegex` es el mismo criterio que usan Usuarios y Contratos: ignora tildes y
+          espacios, y exige todas las palabras. Es el que ya usaba el buscador de esta pantalla del lado
+          del cliente, así que buscar lo mismo sigue trayendo lo mismo.
+        */
+        const soloId = (v) => (typeof v === "string" && mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : null);
+        const proyectoPedido = soloId(req.query.projectId);
+        const areaPedida = soloId(req.query.areaId);
+        const turnoPedido = soloId(req.query.shiftId);
+        if (proyectoPedido)
+            filter.projectId = proyectoPedido;
+        if (areaPedida)
+            filter.areaId = areaPedida;
+        if (turnoPedido)
+            filter.shiftId = turnoPedido;
+        const busqueda = String(req.query.search || "").trim();
+        if (busqueda) {
+            const patron = createFuzzySearchRegex(busqueda);
+            const regex = { $regex: patron, $options: "i" };
+            const [proyectos, personas] = await Promise.all([
+                Project.find({ tenantId: req.tenantObjectId, name: regex }).distinct("_id"),
+                User.find({
+                    tenantId: req.tenantObjectId,
+                    $or: [
+                        { firstName: regex },
+                        { lastName: regex },
+                        { "metadata.fullName": regex },
+                        // Nombre y apellido juntos: «Javier Martin» no matchea ninguno de los dos por separado.
+                        { $expr: { $regexMatch: { input: { $concat: [{ $ifNull: ["$firstName", ""] }, " ", { $ifNull: ["$lastName", ""] }] }, regex: patron, options: "i" } } },
+                    ],
+                }).distinct("_id"),
+            ]);
+            filter.$or = [{ reportNumber: regex }, { projectId: { $in: proyectos } }, { userId: { $in: personas } }];
+        }
+        /*
           EL LISTADO NO MANDA EL DETALLE DE ASISTENCIA: MANDA SUS NÚMEROS.
     
           Cada parte trae una fila por persona del turno —quince o veinte— con su estado, su reemplazo,
@@ -109,34 +162,69 @@ router.get("/", async (req, res) => {
           pantalla usa del detalle para armar la columna «Área | Turno» (busca a cada uno en el
           directorio y mira su área y turno en ese proyecto). Van los ids pelados, no las fichas.
         */
-        const noVino = (campo) => ({ $not: [{ $in: [`$a.${campo}`, ["present", "late"]] }] });
-        const tieneReemplazo = { $ne: [{ $ifNull: ["$a.replacementId", null] }, null] };
-        const horasExtra = { $ifNull: ["$a.overtimeHours", 0] };
+        const noVino = (campo) => ({ $not: [{ $in: [`$$a.${campo}`, ["present", "late"]] }] });
+        const tieneReemplazo = { $ne: [{ $ifNull: ["$$a.replacementId", null] }, null] };
+        const horasExtraDeLaFila = { $ifNull: ["$$a.overtimeHours", 0] };
         const contar = (cond) => ({ $size: { $filter: { input: { $ifNull: ["$attendance", []] }, as: "a", cond } } });
-        const reports = await Request.aggregate([
-            { $match: filter },
-            { $sort: { date: -1, createdAt: -1 } },
-            {
-                $addFields: {
-                    registros: { $size: { $ifNull: ["$attendance", []] } },
-                    ausentes: contar(noVino("status")),
-                    reemplazos: contar({ $and: [noVino("status"), tieneReemplazo] }),
-                    otrosPresentes: contar({ $regexMatch: { input: { $ifNull: ["$a.absenceReason", ""] }, regex: "adicional", options: "i" } }),
-                    conHorasExtra: contar({ $gt: [horasExtra, 0] }),
-                    // El total de horas de la cabecera, que suma horas y no renglones.
-                    sumaHorasExtra: { $sum: { $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: horasExtra } } },
-                    empleados: { $setUnion: [{ $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: "$a.employeeId" } }, []] },
-                },
+        /** Los cinco números de la fila más los ids de su gente, listos para meter en un `$addFields`. */
+        const numeros = {
+            $addFields: {
+                registros: { $size: { $ifNull: ["$attendance", []] } },
+                ausentes: contar(noVino("status")),
+                reemplazos: contar({ $and: [noVino("status"), tieneReemplazo] }),
+                otrosPresentes: contar({ $regexMatch: { input: { $ifNull: ["$$a.absenceReason", ""] }, regex: "adicional", options: "i" } }),
+                conHorasExtra: contar({ $gt: [horasExtraDeLaFila, 0] }),
+                // El total de horas de la cabecera, que suma horas y no renglones.
+                sumaHorasExtra: { $sum: { $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: horasExtraDeLaFila } } },
+                empleados: { $setUnion: [{ $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: "$$a.employeeId" } }, []] },
             },
-            { $project: { attendance: 0 } },
-        ]);
-        // Los mismos nombres que antes. `populate` sobre objetos planos: la agregación no los trae sola.
-        await Request.populate(reports, [
-            { path: "userId", select: "firstName lastName" },
-            { path: "projectId", select: "name clientId", populate: { path: "clientId", select: "name" } },
-            { path: "areaId", select: "name" },
-            { path: "shiftId", select: "name" },
-        ]);
+        };
+        /*
+          MODO PAGINADO (`?page=`): una página, el total y los totales de la cabecera.
+    
+          Sin `page` contesta el array de siempre, que es lo que espera «Mis novedades» del móvil
+          (`?mine=1`: son las propias de una persona y no hay nada que paginar).
+    
+          Un solo `$facet`: las dos respuestas salen del mismo `$match` y del mismo `$sort`, así que la
+          base recorre los partes una vez. La página cuenta sus cinco números DESPUÉS de recortar —25
+          documentos— y los totales se suman sin traer ningún detalle.
+        */
+        const paginado = req.query.page !== undefined;
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 25));
+        if (paginado) {
+            const [salida] = await Request.aggregate([
+                { $match: filter },
+                { $sort: { date: -1, createdAt: -1 } },
+                {
+                    $facet: {
+                        filas: [{ $skip: (page - 1) * limit }, { $limit: limit }, numeros, { $project: { attendance: 0 } }],
+                        // Los de la cabecera, sobre TODO lo filtrado y no sobre la página: es lo que decían antes.
+                        totales: [
+                            {
+                                $group: {
+                                    _id: null,
+                                    partes: { $sum: 1 },
+                                    ausentes: { $sum: contar(noVino("status")) },
+                                    horasExtra: { $sum: { $sum: { $map: { input: { $ifNull: ["$attendance", []] }, as: "a", in: horasExtraDeLaFila } } } },
+                                },
+                            },
+                        ],
+                    },
+                },
+            ]);
+            const filas = salida?.filas || [];
+            const totales = salida?.totales?.[0] || { partes: 0, ausentes: 0, horasExtra: 0 };
+            await Request.populate(filas, POPULADOS);
+            res.json({
+                rows: filas,
+                pagination: { page, limit, total: totales.partes, totalPages: Math.max(1, Math.ceil(totales.partes / limit)) },
+                totales: { partes: totales.partes, ausentes: totales.ausentes, horasExtra: totales.horasExtra },
+            });
+            return;
+        }
+        const reports = await Request.aggregate([{ $match: filter }, { $sort: { date: -1, createdAt: -1 } }, numeros, { $project: { attendance: 0 } }]);
+        await Request.populate(reports, POPULADOS);
         res.json(reports);
     }
     catch (error) {

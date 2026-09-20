@@ -1,6 +1,5 @@
 // ... imports
 import React, { useState, useMemo } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -288,50 +287,41 @@ export const RequestsPage: React.FC = () => {
   const [showReportsModal, setShowReportsModal] = useState(false);
   const [reportsInitialProject, setReportsInitialProject] = useState("");
 
-  const filteredReports = useMemo(() => {
-    let result = reports;
+  /*
+    FILTRAR Y PAGINAR LOS HACE EL SERVER.
 
-    if (searchTerm) {
-      result = result.filter((r) => fuzzyMatch(r.reportNumber || "", searchTerm) || fuzzyMatch(r.projectName, searchTerm) || fuzzyMatch(r.submittedBy, searchTerm));
-    }
+    Acá se filtraba la lista entera en memoria y se le cortaban 25 filas: para eso había que bajar
+    los 720 partes con su detalle de asistencia, 4,5 MB y 27 segundos, aunque se vieran 25.
 
-    if (areaFilter !== "all") {
-      result = result.filter((r) => r.areaId === areaFilter);
-    }
-
-    if (shiftFilter !== "all") {
-      result = result.filter((r) => r.shiftId === shiftFilter);
-    }
-
-    if (projectFilter !== "all") {
-      result = result.filter((r) => r.projectIdRaw === projectFilter);
-    }
-
-    return result;
-  }, [reports, searchTerm, areaFilter, projectFilter, shiftFilter]);
-
-  // Paginación client-side de la tabla de novedades (misma UX que Contratos).
+    `reports` ES la página: ya viene filtrada y recortada (ver `fetchReports`). Se conservan los dos
+    nombres —`filteredReports` y `pagedReports`— porque los usa media pantalla y renombrarlos no
+    cambiaría nada de lo que se ve.
+  */
   const REQUESTS_PAGE_SIZE = 25;
   const [reqPage, setReqPage] = useState(1);
-  const reqTotalPages = Math.max(1, Math.ceil(filteredReports.length / REQUESTS_PAGE_SIZE));
-  const pagedReports = useMemo(
-    () => filteredReports.slice((reqPage - 1) * REQUESTS_PAGE_SIZE, reqPage * REQUESTS_PAGE_SIZE),
-    [filteredReports, reqPage],
-  );
-  useEffect(() => {
-    setReqPage(1);
-  }, [searchTerm, areaFilter, projectFilter, shiftFilter]);
-  useEffect(() => {
-    if (reqPage > reqTotalPages) setReqPage(reqTotalPages);
-  }, [reqPage, reqTotalPages]);
+  const [reqTotalPages, setReqTotalPages] = useState(1);
+  /** Los de la cabecera, sobre TODO lo filtrado: si contaran la página, cambiarían al pasar de página. */
+  const [totales, setTotales] = useState({ partes: 0, ausentes: 0, horasExtra: 0 });
+  const filteredReports = reports;
+  const pagedReports = reports;
 
   // Check for URL params to auto-open report detail
   useEffect(() => {
     const reportId = searchParams.get("report");
     const reportsProject = searchParams.get("reportsProject");
     if (reportId) {
-      const report = reports.find((r) => r.id === reportId);
-      if (report) void abrirDetalle(report);
+      /*
+        Se pide por su id y no se busca en `reports`: ahora `reports` es UNA página, y el parte que
+        manda el link casi nunca está entre esas 25 filas.
+      */
+      void activityReportsAPI
+        .getById(reportId)
+        .then((completo) => {
+          setSelectedReport(mapearParte(completo));
+          setViewMode("detail");
+          setDetailTab("attendance");
+        })
+        .catch(() => sweetAlert.error("Novedad no encontrada", "No se pudo abrir esa novedad. Puede haber sido eliminada."));
       // Clean up URL after handling
       setSearchParams({}, { replace: true });
     } else if (reportsProject) {
@@ -340,16 +330,39 @@ export const RequestsPage: React.FC = () => {
       setShowReportsModal(true);
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams, reports]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    fetchReports();
     fetchLogTypes();
     fetchUsers();
     fetchProjects();
     fetchAreas();
     fetchShifts();
   }, []);
+
+  /*
+    CADA PÁGINA ES UNA CONSULTA, y cambiar un filtro vuelve a la primera.
+
+    Los 300 ms de espera son por la búsqueda: sin ellos, escribir «Martínez» son ocho consultas y
+    las siete primeras se tiran. Los filtros no los necesitan —se elige uno y listo— pero comparten
+    el efecto y esperar un instante de más no se nota.
+  */
+  useEffect(() => {
+    const t = setTimeout(() => void fetchReports(reqPage), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reqPage, searchTerm, projectFilter, areaFilter, shiftFilter]);
+
+  // Cambiar un filtro con la página 5 abierta dejaría pidiendo una página que quizá ya no existe.
+  useEffect(() => {
+    setReqPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, projectFilter, areaFilter, shiftFilter]);
+
+  useEffect(() => {
+    if (reqPage > reqTotalPages) setReqPage(reqTotalPages);
+  }, [reqPage, reqTotalPages]);
 
   const fetchProjects = async () => {
     try {
@@ -455,11 +468,26 @@ export const RequestsPage: React.FC = () => {
     empleados: (r.empleados || []).map((id: any) => String(id?._id || id)),
   });
 
-  const fetchReports = async () => {
+  /*
+    UNA PÁGINA, con los filtros y la búsqueda puestos.
+
+    `all` es el valor que usan los selectores para «sin filtrar»; el API espera que ese parámetro
+    directamente no vaya.
+  */
+  const fetchReports = async (pagina = 1) => {
     try {
       setLoading(true);
-      const data = await activityReportsAPI.getAll();
-      setReports(data.map(mapearParte));
+      const resp = await activityReportsAPI.list({
+        page: pagina,
+        limit: REQUESTS_PAGE_SIZE,
+        search: searchTerm.trim() || undefined,
+        projectId: projectFilter !== "all" ? projectFilter : undefined,
+        areaId: areaFilter !== "all" ? areaFilter : undefined,
+        shiftId: shiftFilter !== "all" ? shiftFilter : undefined,
+      });
+      setReports(resp.rows.map(mapearParte));
+      setReqTotalPages(resp.pagination.totalPages);
+      setTotales(resp.totales);
     } catch (error) {
       console.error("Error fetching reports", error);
     } finally {
@@ -488,23 +516,8 @@ export const RequestsPage: React.FC = () => {
     }
   };
 
-  // Stats calculation
-  const stats = React.useMemo(() => {
-    let totalReports = filteredReports.length;
-    let totalAbsences = 0;
-    let totalOvertimeHours = 0;
-
-    /*
-      De los números que ya vienen contados, no del detalle: la lista no lo tiene. El `??` recorre
-      los renglones sólo si el parte los trae (el que está abierto) o si el server no los mandó.
-    */
-    filteredReports.forEach((report) => {
-      totalAbsences += report.ausentes ?? report.attendance.filter(esAusente).length;
-      totalOvertimeHours += report.sumaHorasExtra ?? report.attendance.reduce((n, r) => n + (r.overtimeHours || 0), 0);
-    });
-
-    return { totalReports, totalAbsences, totalOvertimeHours };
-  }, [filteredReports]);
+  // Los tres números de la cabecera: los cuenta el server sobre todo lo filtrado (ver `fetchReports`).
+  const stats = { totalReports: totales.partes, totalAbsences: totales.ausentes, totalOvertimeHours: totales.horasExtra };
 
   // Compute merged attendance for selected report
   const mergedAttendance = useMemo(() => {
@@ -589,7 +602,7 @@ export const RequestsPage: React.FC = () => {
       try {
         await activityReportsAPI.delete(id);
         await sweetAlert.success("Eliminado", "El reporte ha sido eliminado.");
-        fetchReports();
+        void fetchReports(reqPage);
       } catch (error) {
         console.error("Error deleting report", error);
         await sweetAlert.error("Error", "No se pudo eliminar el reporte.");
@@ -1467,13 +1480,24 @@ export const RequestsPage: React.FC = () => {
           areaFilter={areaFilter}
           shiftFilter={shiftFilter}
           onOpenReport={(reportNumber) => {
-            const rep = reports.find((r) => r.reportNumber === reportNumber);
-            // Abrir el detalle reemplaza la pantalla entera, así que el modal se cierra primero: si
-            // no, al volver de la novedad el calendario seguiría tapando la lista.
-            if (rep) {
-              setShowCompliance(false);
-              handleViewDetail(rep);
-            } else sweetAlert.error("Novedad no encontrada", `No se pudo abrir ${reportNumber}. Puede haber sido eliminada.`);
+            /*
+              Se busca por su número contra el server: `reports` es la página que se está viendo, y el
+              parte que se toca en el calendario de cumplimiento puede ser de cualquier fecha.
+            */
+            void activityReportsAPI
+              .list({ page: 1, limit: 1, search: reportNumber })
+              .then(({ rows }) => {
+                const rep = rows[0];
+                if (!rep) {
+                  void sweetAlert.error("Novedad no encontrada", `No se pudo abrir ${reportNumber}. Puede haber sido eliminada.`);
+                  return;
+                }
+                // Abrir el detalle reemplaza la pantalla entera, así que el modal se cierra primero: si
+                // no, al volver de la novedad el calendario seguiría tapando la lista.
+                setShowCompliance(false);
+                handleViewDetail(mapearParte(rep));
+              })
+              .catch(() => sweetAlert.error("Novedad no encontrada", `No se pudo abrir ${reportNumber}.`));
           }}
         />
         </div>
