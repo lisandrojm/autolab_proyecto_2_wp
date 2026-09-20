@@ -34,7 +34,6 @@ import { clientRoutes } from "./routes/clients.js";
 import { roleRoutes } from "./routes/roles.js";
 import { userRoutes } from "./routes/users.js";
 // Carga masiva de solicitudes: la plantilla y el import de la planilla.
-import solicitudesMasivasRoutes from "./routes/solicitudesMasivas.js";
 import { registroLinkRoutes } from "./routes/registroLinks.js";
 import { projectRoutes } from "./routes/projects.js";
 import { contratoMiembroRoutes } from "./routes/contratoMiembro.js";
@@ -231,7 +230,6 @@ app.use("/api/v1/secure", secureRoutes);
 app.use("/api/v1/clients", clientRoutes);
 app.use("/api/v1/roles", roleRoutes);
 app.use("/api/v1/users", userRoutes);
-app.use("/api/v1/solicitudes-masivas", solicitudesMasivasRoutes);
 app.use("/api/v1/registro-links", registroLinkRoutes);
 app.use("/api/v1/tenants", tenantRoutes);
 app.use("/api/v1/nomenclaturas", nomenclaturaRoutes);

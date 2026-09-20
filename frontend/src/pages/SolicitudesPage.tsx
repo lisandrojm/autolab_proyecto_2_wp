@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faChevronLeft, faChevronRight, faFileExcel } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -11,7 +11,6 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
-import { CargaMasivaModal } from "../components/solicitudes/CargaMasivaModal";
 // La pantalla del equipo, montada en modo «sólo aprobación»: de ahí sale el wizard de contratación.
 import { ProjectTeamPage } from "./ProjectTeamPage";
 
@@ -40,8 +39,6 @@ export const SolicitudesPage: React.FC = () => {
   const catalogos = useCatalogosDeSolicitudes();
   /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
   const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number } } | null>(null);
-  /** La ventana de carga masiva: bajar la plantilla, subirla y crear la tanda. */
-  const [cargaMasivaAbierta, setCargaMasivaAbierta] = useState(false);
   /** La solicitud que se está revisando: el detalle completo, antes de decidir. */
   const [revisando, setRevisando] = useState<SolicitudVista | null>(null);
   const ayuda = getHelp(CLAVE_AYUDA);
@@ -224,18 +221,6 @@ export const SolicitudesPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(CLAVE_AYUDA)}
       /*
-        CARGA MASIVA: acá y no en el proyecto, porque la planilla cruza proyectos.
-
-        Una tanda de altas es casi siempre de un equipo entero repartido en varias áreas, y a veces
-        en más de un proyecto. Adentro de Gestionar Equipo habría que subir una planilla por proyecto.
-      */
-      headerActions={
-        <button type="button" onClick={() => setCargaMasivaAbierta(true)} className="btn-secondary inline-flex items-center gap-2 whitespace-nowrap" title="Cargar varias solicitudes desde una planilla">
-          <FontAwesomeIcon icon={faFileExcel} className="h-3.5 w-3.5" />
-          Carga masiva
-        </button>
-      }
-      /*
         Los filtros van detrás del botón de embudo, en el modal "Filtros Avanzados", igual que en
         Contratos: `SearchAndFilters` ya trae la búsqueda, el botón, el modal, los chips de lo que
         está aplicado y el "Limpiar Todo". Sueltos arriba de la tabla ocupaban tres renglones para
@@ -346,7 +331,6 @@ export const SolicitudesPage: React.FC = () => {
         La ventana va FUERA del listado: la carga masiva es lo primero que se usa en una cuenta que
         todavía no tiene ninguna solicitud, y ahí lo que se dibuja es el estado vacío.
       */}
-      <CargaMasivaModal isOpen={cargaMasivaAbierta} onClose={() => setCargaMasivaAbierta(false)} onImportado={() => cargar(1)} />
     </PageLayout>
   );
 };

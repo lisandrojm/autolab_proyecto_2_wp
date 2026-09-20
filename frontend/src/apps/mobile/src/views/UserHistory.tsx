@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark, faFileExcel } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
@@ -20,9 +20,6 @@ import { contratosPorVencerAPI, ContratoPorVencer, DIAS_DE_AVISO_OPCIONES } from
 import { sweetAlert } from "../utils/sweetAlert";
 import AvisoNovedades from "../components/AvisoNovedades";
 import { useNovedades } from "../hooks/useNovedades";
-// La misma ventana de carga masiva del panel, con la ventana de la app como contenedor.
-import { CargaMasivaModal } from "../../../../components/solicitudes/CargaMasivaModal";
-import { Modal } from "../components/Modal";
 import { NOVEDADES_CONTRATACION } from "../../../../api/personnel";
 
 /*
@@ -62,8 +59,6 @@ interface UserHistoryProps {
 export default function UserHistory({ onNavigate }: UserHistoryProps) {
   const { users, loading, refetch } = useUserHistory();
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
-  /** La carga masiva: una planilla en vez de cargar el equipo de a una persona. */
-  const [cargaMasivaAbierta, setCargaMasivaAbierta] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -337,23 +332,6 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         icon={faUsers}
         titulo="Solicitud de Contratación"
         onBack={() => onNavigate("home")}
-        /*
-          LA CARGA MASIVA, ESCRITA Y ARRIBA.
-
-          Como botón flotante era un ícono gris al lado del «+»: ni se leía qué hacía ni se veía que
-          fuera otra cosa. Acá dice su nombre y está donde se mira al entrar a la sección.
-        */
-        acciones={
-          <button
-            type="button"
-            onClick={() => setCargaMasivaAbierta(true)}
-            title="Pedir varias altas desde una planilla"
-            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-[11px] font-bold text-blue-600 transition-colors active:bg-blue-500/20 dark:text-blue-400"
-          >
-            <FontAwesomeIcon icon={faFileExcel} className="h-3.5 w-3.5" />
-            Carga masiva
-          </button>
-        }
         info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Por vencer» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
       />
 
@@ -587,7 +565,6 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         </button>
       </div>
 
-      <CargaMasivaModal isOpen={cargaMasivaAbierta} onClose={() => setCargaMasivaAbierta(false)} onImportado={refetch} ModalComponente={Modal} />
 
       <UserRegistrationModal
         isOpen={showRegistrationModal}
