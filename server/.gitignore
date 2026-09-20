@@ -1,3 +1,6 @@
 
 # Respaldos puntuales antes de migraciones destructivas (no van al repo).
 backups/
+
+# Respaldos que dejan los scripts de migracion antes de escribir (traen ids y legajos reales).
+migraciones-respaldo/

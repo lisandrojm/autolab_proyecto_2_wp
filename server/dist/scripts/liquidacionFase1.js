@@ -37,7 +37,7 @@ import { MemosoftConcepto, CONCEPTOS_SEMILLA } from "../models/MemosoftConcepto.
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { reemplazarVigentes, validarEfecto } from "../utils/liquidacion/efectos.js";
 const CARPETA_RESPALDOS = path.resolve(process.cwd(), "migraciones-respaldo");
-import { MAPEO_SEMILLA, HORAS_EXTRA, MOTIVOS_QUE_NO_LIQUIDAN } from "../utils/liquidacion/mapeoSemilla.js";
+import { MAPEO_SEMILLA, HORAS_EXTRA, JORNAL_BASE, MOTIVOS_QUE_NO_LIQUIDAN } from "../utils/liquidacion/mapeoSemilla.js";
 import { claveDeMotivo } from "../utils/liquidacion/nombresDeMotivo.js";
 async function main() {
     if (process.argv.includes("--revertir"))
@@ -112,6 +112,7 @@ async function main() {
         aGuardar.push({ motivoId: String(motivo._id), nombre: motivo.name, anterior: motivo.memosoftEffects || [], lista: nuevos, noLiquida: noLiquidaPorClave.has(claveDeMotivo(motivo.name)) });
     }
     console.log(`\nHoras extra (regla global): ${HORAS_EXTRA.codigo50} al 50% y ${HORAS_EXTRA.codigo100} al 100%, en ${HORAS_EXTRA.param} como ${HORAS_EXTRA.unidad}.`);
+    console.log(`Día trabajado (regla global): ${JORNAL_BASE.codigo} en ${JORNAL_BASE.param}, sólo ${JORNAL_BASE.soloRegimen}s.`);
     console.log(`Motivos a configurar: ${aGuardar.length}   ·   con problemas: ${problemas}`);
     if (!aplicar) {
         console.log("\nNada se escribió. Con --aplicar se guarda.");
@@ -129,7 +130,9 @@ async function main() {
     }
     const config = await ActivityLogGeneralConfig.getOrCreateDefault(tenantId);
     respaldo.horasExtraAnterior = config.memosoftHorasExtra ?? null;
+    respaldo.jornalBaseAnterior = config.memosoftJornalBase ?? null;
     config.memosoftHorasExtra = { ...HORAS_EXTRA, vigenteDesde: desde };
+    config.memosoftJornalBase = { ...JORNAL_BASE, vigenteDesde: desde };
     await config.save();
     fs.mkdirSync(CARPETA_RESPALDOS, { recursive: true });
     const archivo = path.join(CARPETA_RESPALDOS, `liquidacion-fase1-${respaldo.fecha.replace(/[:.]/g, "-")}.json`);
@@ -149,7 +152,7 @@ async function deshacer(archivo) {
         await RequestConfig.updateOne({ _id: new Types.ObjectId(m.motivoId) }, { $set: { memosoftEffects: m.anterior || [] } });
     }
     console.log(`Motivos revertidos: ${respaldo.motivos.length}`);
-    await ActivityLogGeneralConfig.updateOne({ tenantId: new Types.ObjectId(respaldo.tenantId) }, { $set: { memosoftHorasExtra: respaldo.horasExtraAnterior ?? null } });
+    await ActivityLogGeneralConfig.updateOne({ tenantId: new Types.ObjectId(respaldo.tenantId) }, { $set: { memosoftHorasExtra: respaldo.horasExtraAnterior ?? null, memosoftJornalBase: respaldo.jornalBaseAnterior ?? null } });
     console.log("Horas extra revertidas.");
     await mongoose.disconnect();
 }

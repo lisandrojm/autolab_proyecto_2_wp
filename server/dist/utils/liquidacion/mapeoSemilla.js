@@ -52,11 +52,16 @@ export const HORAS_EXTRA = { codigo50: "0015", codigo100: "0016", param: "par1",
 /**
  * EL JORNAL DEL DÍA TRABAJADO, para el que vino y no pasó nada.
  *
- * Sin código por defecto: es una decisión de RRHH, no del motor. Está acá para que el verificador
- * pueda mostrar cuánto cambia la liquidación cuando se lo configura, que es lo que hace falta ver
- * para decidirlo.
+ * YA NO ES UNA SUPOSICIÓN. El archivo real de agosto lo separa sin ambigüedad: de 177 mensualizados
+ * ninguno tiene 0000, y de 69 jornaleros ninguno tiene 0017 ni 0001. El 0000 es el jornal del
+ * jornalero, y un mensualizado no cobra por día porque ya cobra el mes.
+ *
+ * Sin esto la liquidación de los jornaleros sale a menos de dos tercios: en agosto, 111 días de
+ * jornal en vez de 175.
  */
-export const JORNAL_BASE_SUGERIDO = { codigo: "0000", param: "par2", soloRegimen: "jornalero" };
+export const JORNAL_BASE = { codigo: "0000", param: "par2", soloRegimen: "jornalero" };
+/** Nombre viejo, para no romper al verificador. */
+export const JORNAL_BASE_SUGERIDO = JORNAL_BASE;
 /**
  * LOS MOTIVOS QUE, REVISADOS, NO LIQUIDAN NADA.
  *

@@ -105,6 +105,20 @@ async function main() {
   */
   const EQUIVALENCIAS: Record<string, string> = {
     "presente (adicional)": "otros presentes",
+    /*
+      RENOMBRES DEL 20/09/2026, PROBADOS POR `_id`, no deducidos por parecido.
+
+      El tipo 696e0afdee864e3d5ceec53d se llamaba "Cambios de Turno" en el relevamiento de esa
+      mañana y "Cambio de Turno" esa misma tarde; el 696e0afdee864e3d5ceec541 pasó de
+      "Compensatorios" a "Compensatorio". Mismo documento, nombre nuevo: son el mismo tipo, y los
+      556 renglones que guardan el texto viejo le pertenecen.
+
+      Esto NO es la tolerancia al plural que usa el motor de lectura: son dos entradas puntuales,
+      con evidencia, para dos renombres que pasaron. Si mañana renombran otro hay que agregarlo
+      a mano, que es justamente lo que obliga a mirar.
+    */
+    "cambios de turno": "cambio de turno",
+    compensatorios: "compensatorio",
   };
 
   console.log(`\nTipos en el ABM: ${tipos.length}`);

@@ -67,7 +67,12 @@ async function main() {
     const uri = env.MONGO_URI;
     if (!uri)
         throw new Error("Falta MONGO_URI en el entorno.");
-    await mongoose.connect(uri);
+    /*
+      LA BASE VA EXPLÍCITA. El URI termina en "/" y sin `dbName` mongoose cae en `test`: el script
+      reportaba "la colección no existe" para media docena de colecciones que sí existen, y cualquier
+      índice que hubiera creado habría ido a una base vacía. El resto de los scripts ya lo pasaban.
+    */
+    await mongoose.connect(uri, { dbName: env.MONGO_DB_NAME });
     const db = mongoose.connection.db;
     if (!db)
         throw new Error("No se pudo abrir la base.");
