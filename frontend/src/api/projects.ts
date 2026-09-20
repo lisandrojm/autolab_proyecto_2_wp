@@ -341,6 +341,18 @@ class ProjectsAPI {
    * choca contra el límite de 200 req/min, el interceptor la reintenta respetando `Retry-After`.
    */
   /**
+   * ¿Tengo áreas y turnos a cargo? Cuántas combinaciones área × turno, y en qué proyectos.
+   *
+   * Lo pregunta Novedades para no ofrecer la pestaña de carga a quien no tiene de quién hablar:
+   * «Cargar novedades» es un permiso, tener gente a cargo es otra cosa. El server contesta un
+   * número; no hace falta bajar los proyectos para saberlo.
+   */
+  async misAreasYTurnos(): Promise<{ combinaciones: number; proyectos: { _id: string; name: string }[] }> {
+    const { data } = await axios.get(`/projects/mis-areas-turnos`, { headers: this.getHeaders() });
+    return { combinaciones: Number(data?.combinaciones) || 0, proyectos: Array.isArray(data?.proyectos) ? data.proyectos : [] };
+  }
+
+  /**
    * Todos los proyectos visibles. Con `slim` viene sólo lo necesario para elegir uno de una lista y
    * el server devuelve todo en una sola página, así que ni siquiera se pagina.
    */

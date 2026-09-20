@@ -8,6 +8,7 @@ import { projectsAPI, Project } from '../../../../api/projects';
 import { areasAPI, Area } from '../../../../api/areas';
 import { shiftsAPI, Shift } from '../../../../api/shifts';
 import SectionHeader from '../components/SectionHeader';
+import { ViewType } from '../types';
 import ProyectoInfoModal from '../components/ProyectoInfoModal';
 import { etiquetaDeTurno } from '../../../../utils/jerarquiaTurnos';
 
@@ -32,7 +33,14 @@ interface Entrada {
  * La ficha es la misma que abre «Mis equipos» (`ProyectoInfoModal`), con un bloque más adelante: lo
  * que la persona tiene EN ESE proyecto, que es lo que antes se desplegaba en la tarjeta.
  */
-export default function Proyectos() {
+/**
+ * `onNavigate` es para el VOLVER del encabezado.
+ *
+ * Esta vista se abre desde la barra de abajo, así que técnicamente no se «entra» desde ningún lado.
+ * Pero el resto de las secciones tienen su flecha arriba a la izquierda, y no tenerla acá hace que
+ * la pantalla parezca a medio hacer: se vuelve al inicio, que es lo que se espera.
+ */
+export default function Proyectos({ onNavigate }: { onNavigate?: (view: ViewType) => void }) {
   const { profile, loading } = useProfile();
   const { user } = useAuthStore();
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -514,6 +522,7 @@ export default function Proyectos() {
     <SectionHeader
       icon={faBriefcase}
       titulo="Proyectos"
+      onBack={onNavigate ? () => onNavigate("home") : undefined}
       info={'Todos los proyectos a los que tenés acceso, no sólo en los que trabajás.\n\nTocá uno para ver su ficha completa: cliente, coordinador, sede, centro de costo, fecha de alta, empresas del contrato y del release, y todas sus áreas con sus turnos.\n\nEn los que tenés contrato o supervisás, la ficha arranca con lo tuyo: contrato, vigencia, horario y tu área y turno.'}
     />
   );

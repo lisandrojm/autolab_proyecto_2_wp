@@ -1116,8 +1116,11 @@ export const RolesPage: React.FC = () => {
                   >
                     {/*
                       APP MOBILE, AGRUPADA POR TEMA. Cada acción es una línea con para quién es: con
-                      «Novedades» partida en cargar (coordinador) y seguir el cumplimiento (supervisor),
-                      una lista plana de tildes ya no alcanzaba para entender qué se estaba dando.
+                      «Novedades» partida en cargar la asistencia y seguir el cumplimiento, una lista
+                      plana de tildes no alcanzaba para entender qué se estaba dando.
+
+                      Lo que abre una PESTAÑA de otra pantalla —y no una pantalla propia— va indentado
+                      debajo de ella (`dentroDe` en el catálogo).
                     */}
                     <div className="space-y-3">
                       {MOBILE_GRUPOS.map((grupo) => {
@@ -1130,18 +1133,32 @@ export const RolesPage: React.FC = () => {
                               {items.length > 1 && <BotonesSeleccion alcance={grupo} onTodos={() => marcarPermisos(permisosDelGrupo)} onLimpiar={() => limpiarPermisos(permisosDelGrupo)} />}
                             </div>
                             <div className="mt-2 flex flex-col gap-2">
-                              {items.map((item) => (
-                                <FilaPermiso
-                                  key={item.permiso}
-                                  label={item.label}
-                                  ayuda={item.ayuda}
-                                  checked={formData.permissions.includes(item.permiso)}
-                                  onToggle={() => togglePermission(item.permiso)}
-                                  color="indigo"
+                              {items.map((item) => {
+                                /*
+                                  Lo que abre una PESTAÑA de otra pantalla va indentado debajo de ella.
 
+                                  «Cumplimiento» dejó de ser una tarjeta del móvil: hoy es la segunda
+                                  pestaña de Novedades. En una lista plana los dos tildes se leían como dos
+                                  pantallas distintas, que es justo lo que ya no son. La indentación y la
+                                  línea dicen dónde va a aparecer.
 
-                                />
-                              ))}
+                                  Sigue siendo un tilde independiente: no se apaga al destildar al padre.
+                                  El rol Coordinador tiene Cumplimiento y NO carga novedades, y subordinarlo
+                                  lo dejaría sin su pantalla.
+                                */
+                                const anidado = !!(item as { dentroDe?: string }).dentroDe;
+                                return (
+                                  <div key={item.permiso} className={anidado ? "ml-3 border-l-2 border-gray-200 pl-3 dark:border-gray-700" : ""}>
+                                    <FilaPermiso
+                                      label={item.label}
+                                      ayuda={item.ayuda}
+                                      checked={formData.permissions.includes(item.permiso)}
+                                      onToggle={() => togglePermission(item.permiso)}
+                                      color="indigo"
+                                    />
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );

@@ -821,6 +821,51 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
     }
 });
 // GET /projects/count - Contar proyectos
+/*
+  GET /projects/mis-areas-turnos — ¿tengo dónde cargar novedades?
+
+  «Cargar novedades» es un permiso; TENER ÁREAS Y TURNOS A CARGO es otra cosa, y sin eso la pantalla
+  de novedades no tiene de quién hablar: se abre vacía, con un «+» que no lleva a ningún lado. La app
+  usa esto para no ofrecer esa pestaña a quien no tiene nada que reportar.
+
+  SE CUENTAN LAS COMBINACIONES ÁREA × TURNO, no los proyectos, con el mismo criterio que «Mis
+  equipos»: quien SUPERVISA un proyecto (`metadata.responsableId`) responde por todas las del
+  proyecto; quien COORDINA responde por las suyas (`coordinatorAssignments`).
+
+  Devuelve un número y nada más. La pregunta se podría contestar bajando los proyectos con sus
+  asignaciones —es lo que hace «Mis equipos»— pero eso es el listado pesado entero para decidir si se
+  dibuja una pestaña. Las dos consultas de abajo van por índices que ya existen.
+*/
+router.get("/projects/mis-areas-turnos", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const yo = await User.findById(req.user.userId).select("metadata.id").lean();
+        const idFrame = Number(yo?.metadata?.id);
+        const condiciones = [{ "coordinatorAssignments.userId": new Types.ObjectId(req.user.userId) }];
+        // Sin id de FRAME no hay con qué matchear `responsableId`: se pregunta sólo por lo que coordina.
+        if (Number.isFinite(idFrame))
+            condiciones.push({ "metadata.responsableId": idFrame });
+        const proyectos = await Project.find({ tenantId: req.tenantObjectId, $or: condiciones })
+            .select("name metadata.responsableId areasConfig coordinatorAssignments")
+            .lean();
+        let combinaciones = 0;
+        const proyectosConAlgo = [];
+        for (const p of proyectos) {
+            const supervisa = Number.isFinite(idFrame) && p.metadata?.responsableId != null && Number(p.metadata.responsableId) === idFrame;
+            const propias = supervisa
+                ? (p.areasConfig || []).reduce((n, ac) => n + (ac.shiftIds || []).length, 0)
+                : (p.coordinatorAssignments || []).filter((a) => String(a?.userId?._id || a?.userId || "") === String(req.user.userId) && a?.areaId && a?.shiftId).length;
+            if (propias > 0) {
+                combinaciones += propias;
+                proyectosConAlgo.push({ _id: String(p._id), name: p.name || "" });
+            }
+        }
+        res.json({ combinaciones, proyectos: proyectosConAlgo });
+    }
+    catch (error) {
+        console.error("Get mis areas y turnos error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 router.get("/projects/count", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const filter = { tenantId: req.tenantObjectId };

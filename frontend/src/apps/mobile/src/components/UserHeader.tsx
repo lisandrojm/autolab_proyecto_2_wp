@@ -55,14 +55,24 @@ export default function UserHeader({ user, perfil, className = "" }: UserHeaderP
 
   return (
     // Sin avatar: las iniciales no dicen nada que no diga el nombre y la pantalla tiene que quedar limpia.
-    <div className={`flex items-center gap-3 ${className}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{nombre}</h2>
-        {badgesDeJerarquia(user).map((b) => (
-          <span key={b.texto} className={`rounded border px-1 py-0.5 text-[9px] font-black uppercase tracking-wider ${b.clase}`}>
-            {b.texto}
-          </span>
-        ))}
+    <div className={`flex min-w-0 items-center gap-3 ${className}`}>
+      {/*
+        EL NOMBRE EN UN RENGLÓN Y LAS ETIQUETAS EN OTRO, siempre.
+
+        Estaban todos en la misma línea con `flex-wrap`, así que el corte dependía del largo del
+        nombre: uno corto dejaba las dos etiquetas arriba, uno largo empujaba una sola abajo, y quien
+        tiene las dos capacidades veía el encabezado partido de una forma distinta a la de su
+        compañero. En dos filas fijas siempre se lee igual.
+      */}
+      <div className="min-w-0">
+        <h2 className="truncate text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{nombre}</h2>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {badgesDeJerarquia(user).map((b) => (
+            <span key={b.texto} className={`rounded border px-1 py-0.5 text-[9px] font-black uppercase tracking-wider ${b.clase}`}>
+              {b.texto}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

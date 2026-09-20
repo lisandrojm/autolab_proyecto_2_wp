@@ -39,6 +39,18 @@ import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
 /** Importes de la escala, como se leen en un recibo. Sin número cargado, un guion: 0 no es «no sabemos». */
 const pesos = (n?: number): string => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n).toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 }) : "—");
 
+/**
+ * HOY, EN LA ZONA HORARIA DE QUIEN LO ESTÁ USANDO.
+ *
+ * No sale de `toISOString()`: eso da la fecha UTC, y en Argentina —UTC-3— después de las 21:00
+ * devuelve la de MAÑANA. Un calendario que bloquea el pasado con esa fecha deja de aceptar el día de
+ * hoy a partir de la noche, que es justo cuando se cargan las solicitudes del día siguiente.
+ */
+const fechaDeHoy = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 const fechaDeEscala = (v?: string | Date): string => {
   if (!v) return "—";
   const d = new Date(v as any);
@@ -2129,7 +2141,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           */}
           {porDiasSueltos ? (
             <div className="space-y-1">
-              <CustomMultiDatePicker label="Días que trabaja" value={formData.fechasTrabajadas} onChange={(d: string | string[]) => elegirDiasSueltos(Array.isArray(d) ? d : d ? [d] : [])} />
+              {/*
+                NO SE PUEDEN MARCAR DÍAS QUE YA PASARON.
+
+                Esto es un pedido de contratación: las jornadas que declara son las que la persona VA a
+                trabajar. Un día de la semana pasada no es algo que se pueda pedir —ya pasó— y elegirlo
+                terminaba en un alta que ARCA rechaza por declararse tarde.
+
+                Los días que ya estuvieran marcados se pueden sacar igual, aunque hayan quedado en el
+                pasado: el límite es sobre lo que se agrega (ver `CustomMultiDatePicker`).
+              */}
+              <CustomMultiDatePicker label="Días que trabaja" value={formData.fechasTrabajadas} onChange={(d: string | string[]) => elegirDiasSueltos(Array.isArray(d) ? d : d ? [d] : [])} minDate={fechaDeHoy()} />
               <p className="text-[11px] text-slate-400">
                 {formData.fechasTrabajadas.length > 0 ? (
                   <>
@@ -2341,7 +2363,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             >
               {categoriaElegida ? (
                 <>
-                  {categoriaElegida.data?.codigoArca && <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{categoriaElegida.data.codigoArca}</span>}
+                  {/* Sin el código de ARCA, igual que en la lista de abajo: acá tapaba el nombre. */}
                   <span className="truncate text-sm text-slate-900 dark:text-white">{categoriaElegida.name}</span>
                 </>
               ) : (
@@ -3048,18 +3070,36 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                       {/* Tocar la fila ELIGE, que es a lo que se viene. Ver la escala es el otro botón. */}
                       <button type="button" onClick={() => elegirCategoria(cat._id)} aria-pressed={elegida} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                         <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegida && <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</span>
-                        {cat.data?.codigoArca && <span className="font-mono text-xs text-blue-600 dark:text-blue-400">{cat.data.codigoArca}</span>}
+                        {/*
+                          SIN EL CÓDIGO DE ARCA. Acá iba «035292» delante de cada nombre.
+
+                          Es el código con el que la categoría viaja al TXT del organismo: lo necesita el
+                          alta, no quien la elige. Un coordinador no los conoce, así que leía seis dígitos
+                          que no le decían nada antes de llegar al nombre —lo único que sí distingue una
+                          categoría de otra— y en un teléfono se comía el ancho del renglón.
+
+                          El buscador SIGUE encontrándolas por código (ver `categoriasParaElegir`): quien
+                          lo tenga a mano lo puede pegar, sólo que ya no ocupa lugar en la lista.
+                        */}
                         <span className="min-w-0 flex-1 truncate text-sm font-medium">{cat.name}</span>
                       </button>
-                      {/* El grupo, y al lado qué pasa si se toca: abre la escala, no elige la categoría. */}
+                      {/* El grupo. Tocarlo abre la escala; NO elige la categoría, para eso es la fila. */}
                       <button
                         type="button"
                         onClick={() => setCategoriaDetalle(cat)}
                         aria-label={`Ver la escala de ${cat.name}`}
                         className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-slate-500 transition-colors active:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:active:bg-slate-800"
                       >
-                        <span className="text-[10px] font-bold uppercase tracking-wide">{grupo ? `Grupo ${grupo}` : "Sin grupo"}</span>
-                        <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">· Ver detalle</span>
+                        {/*
+                          «G4», no «Grupo 4 · Ver detalle».
+
+                          La flecha ya dice que abre algo, así que escribirlo al lado era repetir con
+                          palabras lo que el ícono hace —y ese texto era más largo que el dato—. En dos
+                          columnas angostas, el chip entero le comía el ancho al nombre de la categoría.
+
+                          «Sin grupo» se escribe entero: es una excepción y abreviarla no se entendería.
+                        */}
+                        <span className="text-[10px] font-bold uppercase tracking-wide">{grupo ? `G${grupo}` : "Sin grupo"}</span>
                         <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                       </button>
                     </div>

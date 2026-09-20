@@ -38,12 +38,17 @@ export const MOBILE_REGISTRO = "mobile_registro:view"; // Registro: link de regi
  *
  * `grupo` es el tema de la tarjeta en el editor (una acción nueva se suma como otra línea de su grupo)
  * y `ayuda` dice para quién es, que es lo que hace falta saber al tildar.
+ *
+ * `dentroDe` dice que esa acción no abre una pantalla propia sino una PESTAÑA de la del permiso
+ * padre. El editor la dibuja indentada debajo, para que se lea dónde va a aparecer. No la subordina:
+ * se puede tildar sola —el Coordinador tiene Cumplimiento y no carga novedades— y en ese caso la
+ * pantalla se abre mostrando únicamente esa pestaña.
  */
 export const MOBILE_ITEMS = [
-  { permiso: MOBILE_ACTIVITY_LOGS, label: "Cargar novedades", grupo: "Novedades", ayuda: "Carga la asistencia de las personas de sus áreas y turnos. Es del supervisor." },
-  // Mismo nombre que su tarjeta del móvil («Cumplimiento»): con dos nombres para lo mismo no se sabía qué tarjeta daba cada permiso.
-  { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Cumplimiento de novedades", grupo: "Novedades", ayuda: "Calendario de cumplimiento de sus supervisores: quién envió y a quién le falta. Es del coordinador." },
-  { permiso: MOBILE_TEAMS, label: "Mis equipos", grupo: "Equipo", ayuda: "Las áreas y turnos que tiene a cargo, con su gente." },
+  { permiso: MOBILE_ACTIVITY_LOGS, label: "Cargar novedades", grupo: "Novedades", ayuda: "Abre la pantalla Novedades, en la pestaña Historial: carga la asistencia de las personas de sus áreas y turnos. Es del supervisor." },
+  // Ya no es una tarjeta propia del móvil: es la otra pestaña de Novedades, por eso va `dentroDe`.
+  { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Cumplimiento de novedades", grupo: "Novedades", dentroDe: MOBILE_ACTIVITY_LOGS, ayuda: "Agrega a Novedades la pestaña Cumplimiento: quién envió las suyas y a quién le falta. Es del coordinador. Se puede dar solo: quien no carga novedades entra y ve únicamente esta pestaña." },
+  { permiso: MOBILE_TEAMS, label: "Mis equipos", grupo: "Equipo", ayuda: "Agrega «Equipos» a la barra de abajo de la app: las áreas y turnos que tiene a cargo, con su gente. Lo llevan las dos plantillas que trabajan con equipo, Supervisor y Coordinador." },
   { permiso: MOBILE_USERS, label: "Contratación", grupo: "Contratación", ayuda: "Pedir altas de personal." },
   { permiso: MOBILE_REGISTRO, label: "Registro", grupo: "Contratación", ayuda: "Compartir el link para que la gente se registre (vence según lo configurado en Usuarios → Link y se renueva solo) y ver, sin editar, quiénes se registraron." },
   { permiso: MOBILE_ORDERS, label: "Pedidos", grupo: "Personal", ayuda: "Sus propios pedidos." },

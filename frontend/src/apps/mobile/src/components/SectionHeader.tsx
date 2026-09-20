@@ -9,7 +9,11 @@ interface SectionHeaderProps {
   subtitulo?: string;
   /** Qué se hace en esta sección, en dos o tres oraciones. Se abre con la «i» al lado del título. */
   info: string;
-  /** Sin `onBack` no hay flecha: las vistas de la barra de abajo no tienen a dónde volver. */
+  /**
+   * Sin `onBack` no hay flecha. Hoy la llevan TODAS las secciones, incluidas las de la barra de
+   * abajo: técnicamente no se «entra» a ellas desde ningún lado, pero sin la flecha la pantalla se lee
+   * a medio hacer, y volver al inicio es lo que se espera al tocarla.
+   */
   onBack?: () => void;
   /** Un botón extra dentro del info, para lo que la sección ya tenía (p. ej. los datos de vacaciones). */
   extra?: { label: string; onClick: () => void };

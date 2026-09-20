@@ -10,10 +10,9 @@ import Proyectos from "./views/Proyectos";
 import Vacations from "./views/Vacations";
 import Orders from "./views/Orders";
 import Requests from "./views/Requests";
-import ActivityLogs from "./views/ActivityLogs";
+import Novedades from "./views/Novedades";
 import UserHistory from "./views/UserHistory";
 import MyTeams from "./views/MyTeams";
-import SeguimientoNovedades from "./views/SeguimientoNovedades";
 import Registro from "./views/Registro";
 import Notificaciones from "./views/Notificaciones";
 import { useAuthStore } from "../../../stores/authStore";
@@ -101,6 +100,7 @@ function App() {
       case "profile":
         return (
           <Profile
+            onBack={() => setCurrentView("home")}
             onChangePersonalData={() => {
               setOrdersInitialType("datos_personales");
               setCurrentView("orders");
@@ -108,21 +108,27 @@ function App() {
           />
         );
       case "proyectos":
-        return <Proyectos />;
+        return <Proyectos onNavigate={setCurrentView} />;
       case "vacations":
         return puede(MOBILE_VACATIONS) ? <Vacations onNavigate={setCurrentView} /> : inicio;
       case "orders":
         return puede(MOBILE_ORDERS) ? <Orders onNavigate={setCurrentView} initialCategoryType={ordersInitialType} onIntentConsumed={() => setOrdersInitialType(null)} /> : inicio;
       case "requests":
         return puede(MOBILE_USERS) ? <Requests onNavigate={setCurrentView} /> : inicio;
+      /*
+        Novedades es una pantalla con dos pestañas: cargar la asistencia y ver quién la cargó. Se
+        entra con CUALQUIERA de los dos permisos y adentro se muestra la que corresponda.
+      */
       case "activity_logs":
-        return puede(MOBILE_ACTIVITY_LOGS) ? <ActivityLogs onNavigate={setCurrentView} /> : inicio;
+        return puede(MOBILE_ACTIVITY_LOGS) || puede(MOBILE_ACTIVITY_COMPLIANCE) ? <Novedades onNavigate={setCurrentView} /> : inicio;
       case "user_history":
         return puede(MOBILE_USERS) ? <UserHistory onNavigate={setCurrentView} /> : inicio;
       case "my_teams":
         return puede(MOBILE_TEAMS) ? <MyTeams onNavigate={setCurrentView} /> : inicio;
+      // Cumplimiento dejó de ser una pantalla propia: es una pestaña. Se conserva para que los avisos
+      // y cualquier navegación vieja que apunte acá caigan en esa pestaña y no en el inicio.
       case "activity_compliance":
-        return puede(MOBILE_ACTIVITY_COMPLIANCE) ? <SeguimientoNovedades onNavigate={setCurrentView} /> : inicio;
+        return puede(MOBILE_ACTIVITY_COMPLIANCE) ? <Novedades onNavigate={setCurrentView} pestanaInicial="cumplimiento" /> : inicio;
       case "registro":
         return puede(MOBILE_REGISTRO) ? <Registro onNavigate={setCurrentView} /> : inicio;
       // Las notificaciones son de cualquiera que entre a la app: avisan sobre lo que ya puede ver.
@@ -171,7 +177,7 @@ function App() {
     <div className="w-full dark:bg-gray-900 flex justify-center">
       <div className="relative flex min-h-screen flex-col bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-display w-full xl:w-1/2">
         {renderView()}
-        <BottomNav currentView={currentView} onNavigate={setCurrentView} sinLeer={unreadCount} />
+        <BottomNav currentView={currentView} onNavigate={setCurrentView} sinLeer={unreadCount} puedeEquipos={puede(MOBILE_TEAMS)} />
       </div>
     </div>
   );

@@ -10,6 +10,15 @@ import { sweetAlert } from "../../../../utils/sweetAlert";
 
 interface SeguimientoNovedadesProps {
   onNavigate: (view: ViewType) => void;
+  /**
+   * Se está dibujando DENTRO de Novedades, como una de sus pestañas.
+   *
+   * Cumplimiento dejó de ser una tarjeta de la home: es el otro lado de la misma tarea —uno carga
+   * las novedades, el otro mira quién las cargó— y tenerlas separadas obligaba a salir al inicio
+   * para pasar de una a la otra. Embebida no dibuja su encabezado: el título, el volver y el ⓘ los
+   * pone Novedades, que es la pantalla en la que estás.
+   */
+  embebido?: boolean;
 }
 
 /**
@@ -66,7 +75,7 @@ const conteos = (c: CoordinatorCompliance) => {
   return { aTiempo, vencidas: c.expiredCount ?? Math.max(0, c.missingCount - aTiempo) };
 };
 
-export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedadesProps) {
+export default function SeguimientoNovedades({ onNavigate, embebido }: SeguimientoNovedadesProps) {
   const [mes, setMes] = useState(() => startOfMonth(new Date()));
   const [proyectoId, setProyectoId] = useState("");
   const [data, setData] = useState<ComplianceResponse | null>(null);
@@ -239,17 +248,19 @@ export default function SeguimientoNovedades({ onNavigate }: SeguimientoNovedade
   );
 
   return (
-    <div className="flex-1 pb-24">
-      {/* HEADER */}
-      <SectionHeader
-        icon={faCalendarCheck}
-        titulo="Cumplimiento"
-        subtitulo="Cumplimiento de tus supervisores"
-        onBack={() => onNavigate("home")}
-        info={"Seguí si tus supervisores cargan las novedades de su gente. El calendario muestra, día por día, quién las envió y a quién le falta.\n\nElegí un supervisor para ver su detalle y usá «Recordar» para avisarle a quien esté atrasado."}
-      />
+    <div className={embebido ? "" : "flex-1 pb-24"}>
+      {/* HEADER: sólo cuando se abre sola. Dentro de Novedades el encabezado ya está puesto. */}
+      {!embebido && (
+        <SectionHeader
+          icon={faCalendarCheck}
+          titulo="Cumplimiento"
+          subtitulo="Cumplimiento de tus supervisores"
+          onBack={() => onNavigate("home")}
+          info={"Seguí si tus supervisores cargan las novedades de su gente. El calendario muestra, día por día, quién las envió y a quién le falta.\n\nElegí un supervisor para ver su detalle y usá «Recordar» para avisarle a quien esté atrasado."}
+        />
+      )}
 
-      <div className="space-y-4 px-4 pt-4">
+      <div className={embebido ? "space-y-4" : "space-y-4 px-4 pt-4"}>
         {/*
           A QUIÉN SE REVISA, ARRIBA DE TODO: todo lo de abajo —mes, resumen, calendario— es de esa
           persona, así que primero se lee de quién es. Un botón que dice quién es y abre el menú para cambiarlo.

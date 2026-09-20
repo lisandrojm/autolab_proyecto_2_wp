@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
+/*
+  Cada tarjeta lleva EL ÍCONO DE SU SECCIÓN, el mismo que muestra su encabezado al entrar. Es lo que
+  hace que la tarjeta y la pantalla se lean como la misma cosa; con íconos elegidos aparte, entrar a
+  «Contratación» llevaba a una pantalla que arriba mostraba otro dibujo.
+*/
+import { faBell, faCalendar, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -11,7 +16,7 @@ import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { NOVEDADES_CONTRATACION, NOVEDAD_REGISTRO, ProfileData } from "../../../../api/personnel";
 import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
-import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
+import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 
 /** La notificación destacada arriba de las tarjetas, apagada hasta que vivan en la campanita. Ver el render. */
 const MOSTRAR_NOTIFICACION_DESTACADA = false;
@@ -22,7 +27,8 @@ const MOSTRAR_NOTIFICACION_DESTACADA = false;
  * tarjeta no reordena las demás.
  */
 // Registro va pegado a Contratación: son las dos formas de sumar gente.
-const ORDEN_DE_TARJETAS: ViewType[] = ["my_teams", "user_history", "registro", "activity_compliance", "activity_logs", "orders", "vacations"];
+// «Mis equipos» no está: vive en la barra de abajo (ver `components/BottomNav`), no en una tarjeta.
+const ORDEN_DE_TARJETAS: ViewType[] = ["user_history", "registro", "activity_logs", "orders", "vacations"];
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -103,51 +109,37 @@ export default function Home({ onNavigate }: HomeProps) {
     que la definía, así que la regla queda pareja para todos.
 
     Mientras el perfil se está cargando no se apaga nada: `profile` arranca en null y apagarlas ahí
-    mostraría "Sin contrato activo" a alguien que sí lo tiene, hasta que llegue la respuesta.
+    dejaría en gris, sin poder entrar, a alguien que sí tiene contrato —hasta que llegue la respuesta.
   */
   const sinContrato = !profileLoading && !hasActiveContract(profile);
 
   const novedadesAction = {
+    icon: faCalendar,
     // El permiso del rol se sigue llamando «Cargar novedades»; la tarjeta, corta, para que entre en el teléfono.
     title: "Novedades",
-    description: "La asistencia de tu gente",
     view: "activity_logs" as ViewType,
     disabled: false,
   };
 
   const vacationsAction = {
+    icon: faUmbrellaBeach,
     title: "Vacaciones",
-    description: "Solicitá tus días libres",
     view: "vacations" as ViewType,
     disabled: false,
-    /*       badge: "New", */
-    badgeBg: "bg-red-500",
-    badgeText: "text-white",
   };
 
   const ordersAction = {
+    icon: faShoppingCart,
     title: "Pedidos",
-    description: "Gestiona tus pedidos",
     view: "orders" as ViewType,
     disabled: false,
-    /*       badge: "Finish", */
-    badgeBg: "bg-blue-500",
-    badgeText: "text-white",
   };
 
   const userCreateAction = {
     // «Contratación» y no «Usuarios»: lo que se hace acá es pedir un alta, no administrar gente. El
     // nombre viejo prometía una pantalla de usuarios que esta no es.
+    icon: faUsers,
     title: "Contratación",
-    // «Solicitudes» a secas: «de alta» se confunde con el alta temprana de ARCA, que es otra cosa.
-    description:
-      porVencer > 0 ? (
-        <>
-          Solicitudes · <span className="font-bold text-amber-500">{porVencer} por vencer</span>
-        </>
-      ) : (
-        "Solicitudes"
-      ),
     view: "user_history" as ViewType,
     disabled: false,
     /*
@@ -160,54 +152,46 @@ export default function Home({ onNavigate }: HomeProps) {
     nuevos: nuevasContrataciones + porVencer,
   };
 
-  // «Equipos»: las áreas y turnos que la persona tiene a cargo, con su gente.
-  const equiposAction = {
-    title: "Equipos",
-    description: "Áreas, turnos y personas a cargo",
-    view: "my_teams" as ViewType,
-    disabled: false,
-  };
+  /*
+    «EQUIPOS» YA NO ES UNA TARJETA: está en la barra de abajo, al lado de Proyectos.
+
+    Es a lo que se entra y se vuelve varias veces por día —quién está en qué turno— y desde una
+    tarjeta del inicio eso eran dos toques cada vez. La barra la dibuja quien tenga el permiso
+    `MOBILE_TEAMS`, que es de las plantillas Supervisor y Coordinador.
+  */
 
   const quickActions: any[] = [];
 
-  if (puede(MOBILE_TEAMS)) {
-    quickActions.push(equiposAction);
-  }
 
   /*
-    NOVEDADES: CARGAR O SEGUIR.
+    NOVEDADES: UNA SOLA TARJETA CON DOS PESTAÑAS.
 
-    El coordinador carga las de su gente («Cargar novedades»); el supervisor sigue el cumplimiento de sus
-    coordinadores («Cumplimiento»). Cada tarjeta se llama SIEMPRE como su permiso en el editor de roles,
-    y no cambia de nombre según qué más tenga la persona: quien tiene dos roles (Supervisor y
-    Coordinador) ve las dos, y tiene que poder saber de cuál de sus roles sale cada una.
+    Cargar la asistencia y mirar quién la cargó son dos lados de la misma tarea: el supervisor la
+    carga, el coordinador controla que esté. Eran DOS tarjetas, y eso obligaba a volver al inicio
+    para pasar de una a la otra —justo lo que se hace cuando alguien no cargó: mirás el
+    cumplimiento, le avisás, volvés a mirar—. Ahora entran las dos por acá (ver `views/Novedades`).
+
+    Con UNO de los dos permisos alcanza para entrar: los roles no se superponen —el Supervisor
+    sólo tiene «Cargar novedades» y el Coordinador sólo «Cumplimiento»— y exigir el primero habría
+    dejado a todos los coordinadores sin su pantalla. Adentro, cada uno ve la pestaña que le toca.
+
+    Qué encuentra adentro depende de sus permisos, y eso lo explica la «i» de la sección.
   */
   const cargaNovedades = puede(MOBILE_ACTIVITY_LOGS);
-  if (cargaNovedades) {
+  const sigueCumplimiento = puede(MOBILE_ACTIVITY_COMPLIANCE);
+  if (cargaNovedades || sigueCumplimiento) {
     quickActions.push(novedadesAction);
-  }
-  if (puede(MOBILE_ACTIVITY_COMPLIANCE)) {
-    quickActions.push({
-      title: "Cumplimiento",
-      description: "De tus supervisores",
-      view: "activity_compliance" as ViewType,
-      disabled: false,
-    });
   }
 
   if (puede(MOBILE_ORDERS)) {
-    quickActions.push(sinContrato ? { ...ordersAction, disabled: true, description: "Sin contrato activo" } : ordersAction);
+    quickActions.push(sinContrato ? { ...ordersAction, disabled: true } : ordersAction);
   }
 
   if (puede(MOBILE_VACATIONS)) {
     const vacacionesDeshabilitadas = sinContrato || profile?.vacationsEnabled === false;
     quickActions.push(
       vacacionesDeshabilitadas
-        ? {
-            ...vacationsAction,
-            disabled: true,
-            description: sinContrato ? "Sin contrato activo" : "Módulo deshabilitado",
-          }
+        ? { ...vacationsAction, disabled: true }
         : vacationsAction,
     );
   }
@@ -218,7 +202,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
   // Registro: el link para que la gente de su área y turno se registre sola, y quiénes lo hicieron.
   if (puede(MOBILE_REGISTRO)) {
-    quickActions.push({ title: "Registro", description: "Link de registro y registrados", view: "registro" as ViewType, disabled: false, nuevos: nuevosRegistros });
+    quickActions.push({ icon: faLink, title: "Registro", view: "registro" as ViewType, disabled: false, nuevos: nuevosRegistros });
   }
 
   /*
@@ -243,9 +227,11 @@ export default function Home({ onNavigate }: HomeProps) {
   */
   const inactivo = usePermisoInactivo();
   const PERMISO_DE_VISTA: Partial<Record<ViewType, string>> = {
-    activity_logs: MOBILE_ACTIVITY_LOGS,
-    activity_compliance: MOBILE_ACTIVITY_COMPLIANCE,
-    my_teams: MOBILE_TEAMS,
+    /*
+      Novedades NO entra acá: la abren dos permisos distintos y apagarla por uno solo dejaría
+      «En desarrollo» a quien entra por el otro. Se resuelve abajo, mirando los dos.
+    */
+
     orders: MOBILE_ORDERS,
     vacations: MOBILE_VACATIONS,
     user_history: MOBILE_USERS,
@@ -255,8 +241,15 @@ export default function Home({ onNavigate }: HomeProps) {
     const i = ORDEN_DE_TARJETAS.indexOf(vista);
     return i === -1 ? ORDEN_DE_TARJETAS.length : i; // una vista nueva sin lugar asignado va al final
   };
+  // Novedades sólo se apaga si SUS DOS permisos están en desarrollo: con uno vivo, algo hay para ver.
+  const novedadesEnDesarrollo = (!cargaNovedades || inactivo(MOBILE_ACTIVITY_LOGS)) && (!sigueCumplimiento || inactivo(MOBILE_ACTIVITY_COMPLIANCE));
+  const enDesarrollo = (vista: ViewType) => (vista === "activity_logs" ? novedadesEnDesarrollo : inactivo(PERMISO_DE_VISTA[vista]));
   const acciones = quickActions
-    .map((action) => (inactivo(PERMISO_DE_VISTA[action.view as ViewType]) ? { ...action, disabled: true, description: "En desarrollo" } : action))
+    /*
+      Una función en desarrollo se ve APAGADA y nada más: sin el renglón que lo decía, la tarjeta
+      gris y sin respuesta al tocarla ya cuenta que todavía no está.
+    */
+    .map((action) => (enDesarrollo(action.view as ViewType) ? { ...action, disabled: true } : action))
     .sort((a, b) => posicion(a.view as ViewType) - posicion(b.view as ViewType));
 
   const handleLogout = () => {
@@ -315,27 +308,47 @@ export default function Home({ onNavigate }: HomeProps) {
                 }
               }}
               disabled={action.disabled}
-              className={`relative flex flex-col gap-1 rounded-xl border p-3 text-left shadow-sm transition-transform
+              /*
+                TODAS DEL MISMO ALTO Y CON EL MISMO AIRE ALREDEDOR.
+
+                `p-4` parejo en los cuatro lados: con el contenido en una sola línea, cualquier
+                diferencia entre el margen de arriba y el de los costados se ve enseguida.
+
+                `min-h` las iguala entre sí —una tarjeta de título corto quedaba más baja que la de al
+                lado y la grilla se veía desparramada— y `items-center` mantiene el contenido centrado
+                cuando un título ocupa dos renglones.
+              */
+              className={`relative flex min-h-[68px] items-center gap-2.5 rounded-xl border p-4 text-left shadow-sm transition-transform
                 ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
-              {/* BADGE */}
-              <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
               {/*
-                SIN ÍCONO Y CON EL CONTADOR AL LADO DEL TÍTULO.
+                ÍCONO CHICO A LA IZQUIERDA DEL NOMBRE.
 
-                Los íconos eran decoración: el título ya dice qué es cada tarjeta, y en dos columnas
-                angostas lo único que hacían era correrlo. El contador de novedades sin mirar estaba
-                colgado de la esquina con `absolute`, fuera de la tarjeta, y quedaba flotando sobre el
-                borde; acá va en la misma línea que el título, que es donde se lee.
-
-                `items-start` y no `items-center`: cuando el título ocupa dos renglones, el globo tiene
-                que quedar a la altura del primero, no centrado contra los dos.
+                El ícono acompaña al nombre, no compite con él: al tamaño del texto y pegado a la
+                izquierda se lee como parte del mismo bloque. Más grande, o arriba en su propia fila,
+                se vuelve el elemento principal de una tarjeta cuyo dato es el nombre.
               */}
-              <div className="flex min-w-0 items-start gap-2">
-                <h2 className="min-w-0 break-words text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
-                {(action as any).nuevos > 0 && <span className="mt-0.5 flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold leading-5 text-white">{(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}</span>}
-              </div>
-              <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">{action.description}</p>
+              <FontAwesomeIcon icon={action.icon} className={`h-4 w-4 shrink-0 ${action.disabled ? "text-slate-400 dark:text-slate-500" : "text-primary"}`} />
+              {/* Con contador, el título deja libre la esquina: si no, un nombre largo le pasa por debajo. */}
+              <h2 className={`min-w-0 break-words text-base font-bold leading-tight text-slate-900 dark:text-slate-100 ${(action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
+
+              {/*
+                CUÁNTO HAY SIN MIRAR: EN LA ESQUINA, CHICO Y VERDE.
+
+                Iba al final del renglón, empujando al nombre: en «Contratación» —el título más largo—
+                lo partía en dos o se salía de la tarjeta. En la esquina no le disputa el ancho a
+                nadie, y como la tarjeta ya no tiene nada más, no tapa ningún dato.
+
+                VERDE Y TRANSLÚCIDO, no naranja y macizo. El naranja se lee como un problema, y acá
+                nunca lo es: son cosas nuevas para mirar. El fondo al 20% deja ver el número sin que
+                el globo pese más que el nombre de la tarjeta; el color fuerte lo pone el texto, que
+                es lo que hay que leer.
+              */}
+              {(action as any).nuevos > 0 && (
+                <span className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
+                  {(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}
+                </span>
+              )}
             </button>
           );
         })}

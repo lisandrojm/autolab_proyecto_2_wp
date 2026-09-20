@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faClock, faUser, faMapMarkerAlt, faUniversity, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faClock, faUser, faMapMarkerAlt, faUniversity, faPenToSquare , faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../../../stores/authStore';
 import { sweetAlert } from '../utils/sweetAlert';
 import { useProfile } from '../hooks/useProfile';
@@ -21,7 +21,14 @@ const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) =
   </div>
 );
 
-export default function Profile({ onChangePersonalData }: { onChangePersonalData?: () => void }) {
+/**
+ * `onBack` es la flecha del encabezado.
+ *
+ * El Perfil se abre desde la barra de abajo, así que técnicamente no se «entra» desde ningún lado.
+ * Pero el resto de las secciones tienen su flecha arriba a la izquierda —y este encabezado ya copia
+ * el botón de salir de `SectionHeader`—: sin ella la pantalla parece a medio hacer.
+ */
+export default function Profile({ onChangePersonalData, onBack }: { onChangePersonalData?: () => void; onBack?: () => void }) {
   const { profile, stats, loading } = useProfile();
   const { user, logout } = useAuthStore();
 
@@ -153,6 +160,12 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
     <div className="flex-1 pb-24 px-4 pt-4 space-y-4 animate-in fade-in duration-500">
       {/* Compact Header Section */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-900/70 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        {/* Misma flecha, mismo tamaño y mismo lugar que en `SectionHeader`. */}
+        {onBack && (
+          <button onClick={onBack} aria-label="Volver" className="-ml-2 mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded transition-colors hover:bg-slate-200 dark:hover:bg-slate-800">
+            <FontAwesomeIcon icon={faArrowLeft} className="h-5 w-5 text-slate-900 dark:text-slate-100" />
+          </button>
+        )}
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Mi Perfil</h1>

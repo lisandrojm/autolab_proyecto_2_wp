@@ -43,6 +43,20 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
   };
 
   const handleDayClick = (day: Date) => {
+    const formattedDay = format(day, "yyyy-MM-dd");
+
+    /*
+      SACAR UN DÍA YA ELEGIDO SIEMPRE SE PUEDE, y va antes que cualquier control.
+
+      Los límites y las validaciones son sobre lo que se AGREGA. Al revisar algo cargado hace una
+      semana sus días ya son pasado: si el control también bloqueara quitarlos, quedarían clavados
+      ahí sin más salida que vaciar todo con «Limpiar».
+    */
+    if (tempSelection.includes(formattedDay)) {
+      setTempSelection(tempSelection.filter((d) => d !== formattedDay));
+      return;
+    }
+
     if (validateDate) {
       const { valid, message } = validateDate(day);
       if (!valid) {
@@ -53,19 +67,14 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
       }
     }
 
-    const formattedDay = format(day, "yyyy-MM-dd");
     if (minDate && isBefore(day, new Date(minDate)) && formattedDay !== minDate) return;
     if (maxDate && isAfter(day, new Date(maxDate)) && formattedDay !== maxDate) return;
 
-    if (tempSelection.includes(formattedDay)) {
-      setTempSelection(tempSelection.filter((d) => d !== formattedDay));
-    } else {
-      if (typeof remainingDays === "number" && tempSelection.length >= remainingDays) {
-        sweetAlert.warning("Límite excedido", `Solo tienes ${remainingDays} días disponibles.`);
-        return;
-      }
-      setTempSelection([...tempSelection, formattedDay].sort());
+    if (typeof remainingDays === "number" && tempSelection.length >= remainingDays) {
+      sweetAlert.warning("Límite excedido", `Solo tienes ${remainingDays} días disponibles.`);
+      return;
     }
+    setTempSelection([...tempSelection, formattedDay].sort());
   };
 
   const generateMonthDays = () => {
@@ -175,6 +184,9 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
                     const { valid } = validateDate(day);
                     if (!valid) isDisabled = true;
                   }
+
+                  // Un día ya elegido nunca se apaga: hay que poder sacarlo (ver `handleDayClick`).
+                  if (isSelected) isDisabled = false;
 
                   return (
                     <button

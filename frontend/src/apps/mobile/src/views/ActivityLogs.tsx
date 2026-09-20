@@ -135,6 +135,13 @@ interface WizardEntry {
 
 interface ActivityLogsProps {
   onNavigate: (view: ViewType) => void;
+  /**
+   * Se está dibujando como la pestaña «Historial» de Novedades (ver `views/Novedades.tsx`).
+   *
+   * El encabezado —título, volver, ⓘ— lo pone el contenedor: es una sola pantalla con dos
+   * pestañas, y repetirlo adentro dibujaría dos títulos.
+   */
+  embebido?: boolean;
 }
 
 const getProjectEndTime = (project: Project, dateStr: string): string => {
@@ -395,7 +402,7 @@ const isTwoDaysAgoLocal = (d: Date): boolean => {
          d.getFullYear() === twoDaysAgo.getFullYear();
 };
 
-export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
+export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
 
   const resolveEmployeeAreaAndShift = (emp: EmployeeOption) => {
@@ -2502,13 +2509,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   return (
-    <div className="flex-1 pb-24">
-      <SectionHeader
-        icon={faCalendar}
-        titulo="Novedades"
-        onBack={() => onNavigate("home")}
-        info={"Cargá las novedades de la gente de tus áreas y turnos: quién vino, ausencias, reemplazos, horas extra y bajas.\n\nElegí el día, completá lo que pasó y envialo. Cada día tiene que quedar enviado: si no, tu coordinador lo ve como pendiente."}
-      />
+    <div className={embebido ? "" : "flex-1 pb-24"}>
+      {/* Sólo cuando se abre sola: dentro de Novedades el encabezado ya está puesto. */}
+      {!embebido && (
+        <SectionHeader
+          icon={faCalendar}
+          titulo="Novedades"
+          onBack={() => onNavigate("home")}
+          info={"Cargá las novedades de la gente de tus áreas y turnos: quién vino, ausencias, reemplazos, horas extra y bajas.\n\nElegí el día, completá lo que pasó y envialo. Cada día tiene que quedar enviado: si no, tu coordinador lo ve como pendiente."}
+        />
+      )}
 
       <div className="px-4 pt-4">
         {/* User Info Header */}

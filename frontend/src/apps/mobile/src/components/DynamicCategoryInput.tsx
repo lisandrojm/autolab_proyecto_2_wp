@@ -41,7 +41,14 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  /*
+    HOY EN LA ZONA HORARIA DE QUIEN LO USA, no en UTC.
+
+    Salía de `toISOString()`, que da la fecha UTC: en Argentina —UTC-3— después de las 21:00
+    devolvía la de MAÑANA, así que el calendario dejaba de aceptar el día de hoy desde la noche.
+  */
+  const hoy = new Date();
+  const today = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
 
   const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
 
