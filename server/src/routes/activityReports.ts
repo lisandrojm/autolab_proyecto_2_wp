@@ -10,6 +10,7 @@ import { Role } from "../models/Role.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { MOBILE_ACTIVITY_COMPLIANCE } from "../utils/permisosMobile.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+import { applyEffects } from "../services/bancoDeDias.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 
@@ -60,6 +61,8 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const attendanceSchema = z.object({
   employeeId: z.string(),
+  // De qué tipo es el renglón. Es lo que mira el banco de días para saber qué cuenta mover.
+  typeId: z.string().optional(),
   status: z.string().optional(),
   absenceReason: z.string().optional(),
   replacementId: z.string().optional().or(z.literal("")),
@@ -276,6 +279,20 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       submittedAt: new Date(),
     });
 
+    /*
+      EL BANCO DE DÍAS SE ACTUALIZA DESPUÉS DE GUARDAR, Y NO PUEDE TUMBAR LA CARGA.
+
+      La novedad ya está guardada cuando esto corre. Si el banco fallara —una cuenta mal
+      configurada, Mongo lento—, lo que NO puede pasar es que el supervisor pierda el parte que
+      acaba de cargar: se registra el error y la respuesta sigue siendo la de siempre. El motor es
+      idempotente, así que reprocesar ese parte más tarde deja todo en su lugar.
+    */
+    try {
+      await applyEffects(report, "create", { tenantId: req.tenantObjectId!, createdBy: userId });
+    } catch (e) {
+      console.error("[BANCO DE DÍAS] No se pudieron aplicar los efectos del parte", String(report._id), e);
+    }
+
     res.status(201).json(report);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -439,6 +456,13 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
       return;
     }
 
+    // Borrar la novedad devuelve los días: se emiten las reversas de lo que había generado.
+    try {
+      await applyEffects(report, "delete", { tenantId: req.tenantObjectId!, createdBy: userId });
+    } catch (e) {
+      console.error("[BANCO DE DÍAS] No se pudieron revertir los efectos del parte", String(report._id), e);
+    }
+
     res.json({ message: "Reporte eliminado correctamente" });
   } catch (error) {
     console.error("Delete report error:", error);
@@ -474,11 +498,24 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const data = createReportSchema.parse(body);
 
-    const report = await Request.findOneAndUpdate(filter, data, { new: true });
+    /*
+      LA VERSIÓN SUBE CON CADA EDICIÓN.
+
+      Es lo que distingue «la misma novedad» de «la novedad corregida». Los movimientos del banco
+      guardan con qué versión se generaron, y de ahí sale que reprocesar no duplique días.
+    */
+    const report = await Request.findOneAndUpdate(filter, { ...data, $inc: { version: 1 } } as any, { new: true });
 
     if (!report) {
       res.status(404).json({ error: "Reporte no encontrado o no autorizado para editar" });
       return;
+    }
+
+    // Se revierte lo que había generado la versión anterior y se emite lo de la nueva.
+    try {
+      await applyEffects(report, "update", { tenantId: req.tenantObjectId!, createdBy: userId });
+    } catch (e) {
+      console.error("[BANCO DE DÍAS] No se pudieron recalcular los efectos del parte", String(report._id), e);
     }
 
     res.json(report);

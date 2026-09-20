@@ -95,6 +95,7 @@ import { vacationsRoutes } from "./routes/vacations.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
 import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
+import { leaveAccountsRouter, leaveBalancesRouter, leaveLedgerRouter } from "./routes/bancoDeDias.js";
 import { shiftRoutes } from "./routes/shifts.js";
 import { holidayRoutes } from "./routes/holidays.js";
 
@@ -318,6 +319,13 @@ app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
 app.use("/api/v1/request-config", RequestConfigRoutes);
 app.use("/api/v1/activity-reports", RequestRoutes);
+/*
+  EL BANCO DE DÍAS. Tres rutas porque son tres cosas distintas: la definición de las cuentas, el
+  saldo (que se calcula sumando) y los movimientos (el registro de lo que pasó).
+*/
+app.use("/api/v1/leave-accounts", leaveAccountsRouter);
+app.use("/api/v1/leave-balances", leaveBalancesRouter);
+app.use("/api/v1/leave-ledger", leaveLedgerRouter);
 app.use("/api/v1/shifts", shiftRoutes);
 app.use("/api/v1/holidays", holidayRoutes);
 

@@ -10,6 +10,8 @@ export interface IRequest extends Document {
     hasActivity: boolean;
     comments?: string;
     attendance: Types.DocumentArray<any>;
+    /** Cuántas veces se editó. Ver el comentario del schema: de acá sale la idempotencia del ledger. */
+    version: number;
     submittedAt: Date;
 }
 export declare const Request: mongoose.Model<IRequest, {}, {}, {}, mongoose.Document<unknown, {}, IRequest, {}, {}> & IRequest & Required<{
