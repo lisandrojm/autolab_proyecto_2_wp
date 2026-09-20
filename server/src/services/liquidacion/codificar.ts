@@ -142,6 +142,7 @@ export function codificarEvento(
     }
     const cantidad =
       efecto.fuente === "jornadas" ? evento.jornadas
+      : efecto.fuente === "horas_jornada" ? evento.horasDeJornada
       : efecto.fuente === "horas50" ? evento.he50
       : efecto.fuente === "horas100" ? evento.he100
       : Number(efecto.valorFijo || 0);

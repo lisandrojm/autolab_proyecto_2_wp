@@ -17,25 +17,28 @@ export const MAPEO_SEMILLA = {
         { conceptoCodigo: "0012", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Licencia por enfermedad, en días." },
         JORNAL_DEL_REEMPLAZANTE,
     ],
-    Vacaciones: [JORNAL_DEL_REEMPLAZANTE],
+    Vacaciones: [
+        { conceptoCodigo: "0601", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Licencia por vacaciones, en días. No descuenta del básico: el 0001 sigue en 30." },
+        JORNAL_DEL_REEMPLAZANTE,
+    ],
     "Sin Goce de Sueldo": [
         {
             conceptoCodigo: "0090",
             param: "par2",
-            unidad: "importe",
-            fuente: "manual",
+            unidad: "cantidad",
+            fuente: "jornadas",
             aplicaA: "titular",
-            nota: "PENDIENTE: el catálogo dice importe en par2, pero de un parte salen días. Confirmar con el estudio.",
+            nota: "En días. La leyenda decía importe; el caso de agosto trae 1, que como importe no existe.",
         },
         JORNAL_DEL_REEMPLAZANTE,
     ],
     Feriado: [
-        { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Feriado, en días." },
+        { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "horas_jornada", aplicaA: "titular", nota: "Feriado, en HORAS de la jornada de esa persona (6 en CC426, 10 y 13 en JSA, 4 en part-time)." },
         /*
-          Al reemplazante mensual se le paga el feriado; al jornalero, el jornal. Es la lectura de
-          "0017 o 0000 según régimen" de la tabla, y está marcada como supuesto a confirmar.
+          Al reemplazante mensual se le liquida el feriado; al jornalero, el jornal. Ya no es un supuesto:
+          en agosto, de 177 mensualizados ninguno tiene 0000 y de 69 jornaleros ninguno tiene 0017.
         */
-        { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "reemplazante", soloRegimen: "mensual", nota: "SUPUESTO: al mensual que cubre un feriado se le liquida el feriado." },
+        { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "horas_jornada", aplicaA: "reemplazante", soloRegimen: "mensual", nota: "El mensual no cobra por día: cubrir un feriado le genera 0017, en horas." },
         JORNAL_DEL_REEMPLAZANTE,
     ],
     "Horas Extras y Feriados": [],

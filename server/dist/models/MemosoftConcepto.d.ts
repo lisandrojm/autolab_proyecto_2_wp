@@ -50,12 +50,17 @@ export declare const MemosoftConcepto: Model<IMemosoftConcepto>;
  * más se editan desde la pantalla. Está acá y no en el script para que se pueda leer el catálogo
  * sin abrir una migración.
  *
- * DOS DE ESTOS ESTÁN EN DUDA y hay que confirmarlos con el estudio antes de emitirlos:
- *   · 0090 Licencia Sin Goce — la leyenda marca `par2` como importe, pero lo natural sería la
- *     cantidad de días. Queda como vino.
- *   · 0040 Ropa — idem.
- * Se cargan tal cual los mandaron: cambiar la semilla "porque tiene más sentido" es justo la clase
- * de arreglo silencioso que después nadie puede rastrear.
+ * LA LEYENDA DICE BIEN QUÉ COLUMNA USA CADA CONCEPTO, PERO NO SIEMPRE LA UNIDAD.
+ *
+ * Se confirmó contra el archivo real de agosto:
+ *
+ *   · 0090 Licencia Sin Goce — la leyenda decía importe en par2. El único caso de agosto (Prestes)
+ *     trae par2 = 1, y un importe de un peso no existe: son DÍAS. Corregido.
+ *   · 0099 Adelanto — la leyenda dice importe y ahí sí acierta: 100.000, 200.000, 250.000, 430.000.
+ *   · 0040 Ropa — SIGUE ABIERTA: no aparece ninguna vez en agosto, así que no hay con qué decidir.
+ *     Queda como vino, con el guard de magnitud de `validarEfecto` avisando si el número es chico.
+ *
+ * Nada se cambia "porque tiene más sentido": lo que se corrige es lo que el archivo real contradice.
  */
 export declare const CONCEPTOS_SEMILLA: {
     codigo: string;

@@ -65,28 +65,46 @@ async function main() {
 
   /* ── 2. El tipo por id en los renglones ya cargados ── */
   const tipos: any[] = await RequestConfig.find({ tenantId }).select("_id name").lean();
-  const normalizar = (x: string) => String(x).trim().toLowerCase();
-  const idPorNombre = new Map(tipos.map((t: any) => [normalizar(t.name), t._id]));
+  /*
+    NORMALIZA PARA COMPARAR, NO PARA ADIVINAR: mayúsculas, acentos y espacios de más.
+
+    NO toca el plural ni parecidos. "Compensatorios" y "Compensatorio" son textos distintos y acá
+    se tratan como distintos, aunque el motor de LECTURA los empareje: una cosa es mostrar bien un
+    parte viejo y otra es escribir un id en la base.
+  */
+  const normalizar = (x: string) => {
+    /*
+      SIN EXPRESIONES REGULARES, a propósito.
+
+      La versión anterior decía `.replace(/s+/g, " ")` —le faltaba la barra del `s`— y eso
+      reemplazaba LA LETRA "S". "Compensatorios" y "Compensatorio" terminaban los dos en
+      "compen atorio" y matcheaban: justo el falso positivo que este script existe para evitar.
+      Se detectó porque el conteo no cerraba, no porque algo fallara.
+    */
+    const base = String(x || "").toLowerCase().normalize("NFD");
+    let limpio = "";
+    for (const letra of base) {
+      const codigo = letra.charCodeAt(0);
+      if (codigo >= 0x0300 && codigo <= 0x036f) continue; // la marca de acento que NFD separó
+      limpio += codigo <= 32 ? " " : letra;
+    }
+    return limpio.split(" ").filter(Boolean).join(" ");
+  };
+
+  const idPorNombre = new Map<string, any>(tipos.map((t: any) => [normalizar(t.name), t._id]));
 
   /*
-    NOMBRES QUE QUEDARON ESCRITOS DISTINTO PERO SON EL MISMO TIPO.
+    EQUIVALENCIAS CONFIRMADAS A MANO. No son un parecido: son dos nombres para la misma cosa.
 
-    La app mobile, cuando suma a alguien que no es del proyecto y no eligió un tipo, escribe el
-    motivo como "Presente (Adicional)"; el tipo del ABM —y lo que muestra la web— se llama
-    "Otros Presentes". Son lo mismo, confirmado con el usuario. Sin esta equivalencia esos
-    renglones quedarían sin tipo y el banco de días no los vería nunca.
+    La app mobile, cuando suma a alguien que no es del proyecto sin elegir tipo, escribe
+    "Presente (Adicional)"; el ABM lo llama "Otros Presentes". Lo confirmó el usuario.
 
-    Sólo traduce para poder encontrar el tipo: no renombra nada. El texto de absenceReason se
-    deja tal cual quedó cargado ese día.
+    Cualquier cosa que no esté acá y no coincida EXACTO no se escribe: queda en null y se informa.
+    Un match aproximado que acierta el 99% deja el 1% atado al tipo equivocado, y eso no falla
+    nunca: queda mal para siempre y se liquida mal en silencio.
   */
   const EQUIVALENCIAS: Record<string, string> = {
     "presente (adicional)": "otros presentes",
-    "presente adicional": "otros presentes",
-    adicional: "otros presentes",
-  };
-  const buscarTipo = (motivo: string) => {
-    const clave = normalizar(motivo);
-    return idPorNombre.get(clave) || idPorNombre.get(EQUIVALENCIAS[clave] || "");
   };
 
   console.log(`\nTipos en el ABM: ${tipos.length}`);
@@ -115,11 +133,14 @@ async function main() {
       */
       if (!motivo) return r;
 
-      const id = buscarTipo(motivo);
+      const clave = normalizar(motivo);
+      const id = idPorNombre.get(clave) || (EQUIVALENCIAS[clave] ? idPorNombre.get(EQUIVALENCIAS[clave]) : undefined);
       if (!id) {
+        // NO SE ESCRIBE NADA: queda en null y sale en el informe.
         sinMapear.set(motivo, (sinMapear.get(motivo) || 0) + 1);
         return r;
       }
+
       mapeados++;
       tocado = true;
       return { ...r, typeId: id };
@@ -134,6 +155,9 @@ async function main() {
   if (sinMapear.size > 0) {
     console.log(`  SIN MAPEAR — el motivo no coincide con ningún tipo del ABM:`);
     [...sinMapear.entries()].sort((a, b) => b[1] - a[1]).forEach(([motivo, n]) => console.log(`      "${motivo}" → ${n} renglones`));
+    console.log("");
+    console.log("      Se dejan en null A PROPÓSITO. Para resolverlos: o se renombra el tipo del ABM al");
+    console.log("      texto que tienen los partes, o se agrega la equivalencia confirmada al script.");
   }
 
   if (!aplicar) {

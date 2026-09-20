@@ -60,6 +60,14 @@ export interface Evento {
     heSinDiscriminar: number;
     horarioDesde: string | null;
     horarioHasta: string | null;
+    /**
+     * CUÁNTAS HORAS DURA EL TURNO de esa persona ese día.
+     *
+     * Sale del horario base del renglón, que está cargado en 7.916 de los 7.938 que existen. Es lo
+     * que se liquida en 0017 Feriado y 0018 Día del gremio. Cero cuando no hay horario: sin dato no
+     * se inventa una jornada de ocho horas.
+     */
+    horasDeJornada: number;
     /** A quién cubre este evento, cuando es el del reemplazante. Para la planilla de control. */
     reemplazaA: string | null;
     notas: string | null;
@@ -91,6 +99,13 @@ export interface RenglonDeParte {
     scheduleOutTime?: string | null;
     notes?: string | null;
 }
+/**
+ * Las horas entre dos "HH:MM".
+ *
+ * Si la salida es menor o igual que la entrada, el turno CRUZA LA MEDIANOCHE y se le suman 24 h:
+ * "18:00 → 00:00" son seis horas, no menos veintidós. Son 1.984 renglones con ese turno.
+ */
+export declare function horasEntre(desde: string | null | undefined, hasta: string | null | undefined): number;
 /**
  * Convierte un parte entero en eventos.
  *

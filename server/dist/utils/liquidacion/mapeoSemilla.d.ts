@@ -8,22 +8,26 @@
  *
  * ── Tres cosas que NO son las de la tabla original, y por qué ──
  *
- * 1. VACACIONES NO SE MAPEA para el titular. La tabla dice "código a confirmar con Memosoft": los
- *    únicos códigos de vacaciones del catálogo son 0601 Plus Vacacional y 0701 No Gozadas, y
- *    ninguno es la licencia. Elegir uno porque son los que hay sería inventar un concepto.
+ * 1. VACACIONES VA A 0601, en días. Confirmado contra agosto: Palmieri 7, Zuccarello 7, Mania 14,
+ *    y en los tres el 0001 Sueldo Básico sigue en 30 días. Las vacaciones NO descuentan del básico:
+ *    se informan aparte con la cantidad de días, y el código en uso es 0601.
  *
  * 2. "HORAS EXTRAS Y FERIADOS" TAMPOCO. Las horas extra se liquidan haya o no novedad, así que son
  *    una regla global. Mapear además el motivo haría que un parte emitiera el 0015 dos veces.
  *    (Ese motivo, además, quedó del seed original y nunca se usó: cero renglones en la historia.)
  *
- * 3. SIN GOCE DE SUELDO VA COMO `manual`. El catálogo dice que 0090 lleva un IMPORTE en par2 y de
- *    un parte salen días. Hasta que el estudio lo confirme, el efecto existe pero no calcula.
+ * 3. SIN GOCE DE SUELDO VA EN DÍAS. El catálogo decía importe en par2; el único caso de agosto
+ *    trae par2 = 1, que como importe no existe. Ya no es manual: se calcula.
+ *
+ * 4. FERIADO SE LIQUIDA EN HORAS, no en días, y al reemplazante MENSUAL le corresponde 0017 —no el
+ *    jornal—. La separación en agosto es total: de 177 mensualizados ninguno tiene 0000, y de 69
+ *    jornaleros ninguno tiene 0017 ni 0001.
  */
 export type EfectoSemilla = {
     conceptoCodigo: string;
     param: "par1" | "par2";
     unidad: "cantidad" | "importe";
-    fuente: "jornadas" | "horas50" | "horas100" | "fijo" | "manual";
+    fuente: "jornadas" | "horas_jornada" | "horas50" | "horas100" | "fijo" | "manual";
     aplicaA: "titular" | "reemplazante";
     soloRegimen?: "mensual" | "jornalero" | null;
     nota?: string;

@@ -36,7 +36,7 @@ const requestConfigSchema = new Schema({
                 conceptoCodigo: { type: String, required: true, trim: true },
                 param: { type: String, enum: ["par1", "par2"], required: true },
                 unidad: { type: String, enum: ["cantidad", "importe"], required: true },
-                fuente: { type: String, enum: ["jornadas", "horas50", "horas100", "fijo", "manual"], required: true },
+                fuente: { type: String, enum: ["jornadas", "horas_jornada", "horas50", "horas100", "fijo", "manual"], required: true },
                 valorFijo: { type: Number },
                 aplicaA: { type: String, enum: ["titular", "reemplazante"], required: true },
                 soloRegimen: { type: String, enum: ["mensual", "jornalero", null], default: null },

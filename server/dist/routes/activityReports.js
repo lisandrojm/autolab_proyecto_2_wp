@@ -11,6 +11,7 @@ import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { MOBILE_ACTIVITY_COMPLIANCE } from "../utils/permisosMobile.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { applyEffects } from "../services/bancoDeDias.js";
+import { resolverTiposDeNovedad } from "../utils/liquidacion/resolverTipoDeNovedad.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 const router = Router();
@@ -280,6 +281,26 @@ router.post("/", async (req, res) => {
             });
         }
         const data = createReportSchema.parse(body);
+        /*
+          CADA RENGLÓN SE GUARDA CON SU `typeId`, o no se guarda.
+    
+          Ver `utils/liquidacion/resolverTipoDeNovedad.ts`. Se resuelve acá y no se le exige al cliente
+          porque la app mobile manda el texto, no el id: exigírselo obligaría a esperar una versión
+          nueva en los teléfonos para poder cargar un parte.
+    
+          Si un motivo no resuelve se corta ANTES de escribir. Guardarlo sin tipo es lo que dejó 7.938
+          renglones que hoy no se pueden liquidar sin adivinar.
+        */
+        const conTipo = await resolverTiposDeNovedad(req.tenantObjectId, data.attendance || []);
+        if (conTipo.sinResolver.length > 0) {
+            res.status(400).json({
+                error: "Hay novedades cuyo tipo no existe en la configuración",
+                detalle: conTipo.sinResolver.map((x) => `"${x.motivo}" (${x.renglones} renglón/es)`),
+                ayuda: "El tipo pudo haber sido renombrado o dado de baja. Revisá Configuración → Novedades → Tipos de ausencias.",
+            });
+            return;
+        }
+        data.attendance = conTipo.attendance;
         const report = await Request.create({
             tenantId: req.tenantObjectId,
             userId,
@@ -493,6 +514,26 @@ router.put("/:id", async (req, res) => {
             });
         }
         const data = createReportSchema.parse(body);
+        /*
+          CADA RENGLÓN SE GUARDA CON SU `typeId`, o no se guarda.
+    
+          Ver `utils/liquidacion/resolverTipoDeNovedad.ts`. Se resuelve acá y no se le exige al cliente
+          porque la app mobile manda el texto, no el id: exigírselo obligaría a esperar una versión
+          nueva en los teléfonos para poder cargar un parte.
+    
+          Si un motivo no resuelve se corta ANTES de escribir. Guardarlo sin tipo es lo que dejó 7.938
+          renglones que hoy no se pueden liquidar sin adivinar.
+        */
+        const conTipo = await resolverTiposDeNovedad(req.tenantObjectId, data.attendance || []);
+        if (conTipo.sinResolver.length > 0) {
+            res.status(400).json({
+                error: "Hay novedades cuyo tipo no existe en la configuración",
+                detalle: conTipo.sinResolver.map((x) => `"${x.motivo}" (${x.renglones} renglón/es)`),
+                ayuda: "El tipo pudo haber sido renombrado o dado de baja. Revisá Configuración → Novedades → Tipos de ausencias.",
+            });
+            return;
+        }
+        data.attendance = conTipo.attendance;
         /*
           LA VERSIÓN SUBE CON CADA EDICIÓN.
     

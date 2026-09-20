@@ -284,6 +284,23 @@ qué régimen.
 
 ## Correr una liquidación de punta a punta
 
+### 0. El orden de los scripts importa
+
+```bash
+cd server
+npx tsx src/scripts/indicesFaltantes.ts          # no toca datos y acelera todo lo demás
+npx tsx src/scripts/bancoDeDiasFase1.ts <t>      # el typeId de los renglones: lo más urgente
+npx tsx src/scripts/liquidacionFase0.ts <t>      # empresa, legajos y catálogo de conceptos
+npx tsx src/scripts/liquidacionFase1.ts <t>      # el mapeo, que necesita el catálogo cargado
+```
+
+**El de `typeId` es urgente por una razón fea, no por performance.** Mientras los renglones guarden
+el tipo sólo como texto y alguien renombre un tipo en el ABM, cada renglón que se escriba puede
+quedar atado al motivo equivocado — y eso no falla: queda mal para siempre y se liquida mal en
+silencio. Pasó el 20/09/2026 con "Compensatorios" → "Compensatorio".
+
+Todos arrancan en modo simulación y ninguno escribe sin `--aplicar`.
+
 ### 1. Preparar los datos (una sola vez)
 
 ```bash

@@ -54,9 +54,10 @@ motivoNoLiquida = false) {
             continue;
         }
         const cantidad = efecto.fuente === "jornadas" ? evento.jornadas
-            : efecto.fuente === "horas50" ? evento.he50
-                : efecto.fuente === "horas100" ? evento.he100
-                    : Number(efecto.valorFijo || 0);
+            : efecto.fuente === "horas_jornada" ? evento.horasDeJornada
+                : efecto.fuente === "horas50" ? evento.he50
+                    : efecto.fuente === "horas100" ? evento.he100
+                        : Number(efecto.valorFijo || 0);
         emitir(efecto.conceptoCodigo, efecto.param, cantidad, `${evento.motivoNombre || "novedad"}`);
     }
     /*

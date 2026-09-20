@@ -47,11 +47,17 @@ export interface IMemosoftEffect {
      * De dónde sale el número.
      *
      *   · `jornadas` — los días que abarca la novedad.
+     *   · `horas_jornada` — LAS HORAS DEL TURNO de esa persona ese día, de su horario base.
+     *                     Es lo que llevan 0017 Feriado y 0018 Día del gremio: se creía que eran días
+     *                     o un fijo de convenio, y el rastro del legajo 01407 en agosto mostró que no
+     *                     —6 hs en CC426, 10 y 13 en JSA, 4 en los part-time, que es exactamente la
+     *                     jornada de cada uno—. Por eso 63 de 70 personas tienen 0017 igual a 0018:
+     *                     es la misma jornada contada dos veces, una por feriado y otra por gremio.
      *   · `horas50` / `horas100` — las horas extra cargadas en el parte.
      *   · `fijo`     — siempre `valorFijo`.
      *   · `manual`   — el motor NO lo calcula: lo carga una persona. Va al anexo hasta que lo hagan.
      */
-    fuente: "jornadas" | "horas50" | "horas100" | "fijo" | "manual";
+    fuente: "jornadas" | "horas_jornada" | "horas50" | "horas100" | "fijo" | "manual";
     valorFijo?: number;
     /** A quién se le liquida: al que faltó o al que lo cubrió. */
     aplicaA: "titular" | "reemplazante";

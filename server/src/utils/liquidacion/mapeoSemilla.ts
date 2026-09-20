@@ -8,22 +8,26 @@
  *
  * ── Tres cosas que NO son las de la tabla original, y por qué ──
  *
- * 1. VACACIONES NO SE MAPEA para el titular. La tabla dice "código a confirmar con Memosoft": los
- *    únicos códigos de vacaciones del catálogo son 0601 Plus Vacacional y 0701 No Gozadas, y
- *    ninguno es la licencia. Elegir uno porque son los que hay sería inventar un concepto.
+ * 1. VACACIONES VA A 0601, en días. Confirmado contra agosto: Palmieri 7, Zuccarello 7, Mania 14,
+ *    y en los tres el 0001 Sueldo Básico sigue en 30 días. Las vacaciones NO descuentan del básico:
+ *    se informan aparte con la cantidad de días, y el código en uso es 0601.
  *
  * 2. "HORAS EXTRAS Y FERIADOS" TAMPOCO. Las horas extra se liquidan haya o no novedad, así que son
  *    una regla global. Mapear además el motivo haría que un parte emitiera el 0015 dos veces.
  *    (Ese motivo, además, quedó del seed original y nunca se usó: cero renglones en la historia.)
  *
- * 3. SIN GOCE DE SUELDO VA COMO `manual`. El catálogo dice que 0090 lleva un IMPORTE en par2 y de
- *    un parte salen días. Hasta que el estudio lo confirme, el efecto existe pero no calcula.
+ * 3. SIN GOCE DE SUELDO VA EN DÍAS. El catálogo decía importe en par2; el único caso de agosto
+ *    trae par2 = 1, que como importe no existe. Ya no es manual: se calcula.
+ *
+ * 4. FERIADO SE LIQUIDA EN HORAS, no en días, y al reemplazante MENSUAL le corresponde 0017 —no el
+ *    jornal—. La separación en agosto es total: de 177 mensualizados ninguno tiene 0000, y de 69
+ *    jornaleros ninguno tiene 0017 ni 0001.
  */
 export type EfectoSemilla = {
   conceptoCodigo: string;
   param: "par1" | "par2";
   unidad: "cantidad" | "importe";
-  fuente: "jornadas" | "horas50" | "horas100" | "fijo" | "manual";
+  fuente: "jornadas" | "horas_jornada" | "horas50" | "horas100" | "fijo" | "manual";
   aplicaA: "titular" | "reemplazante";
   soloRegimen?: "mensual" | "jornalero" | null;
   nota?: string;
@@ -49,25 +53,28 @@ export const MAPEO_SEMILLA: Record<string, EfectoSemilla[]> = {
     { conceptoCodigo: "0012", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Licencia por enfermedad, en días." },
     JORNAL_DEL_REEMPLAZANTE,
   ],
-  Vacaciones: [JORNAL_DEL_REEMPLAZANTE],
+  Vacaciones: [
+    { conceptoCodigo: "0601", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Licencia por vacaciones, en días. No descuenta del básico: el 0001 sigue en 30." },
+    JORNAL_DEL_REEMPLAZANTE,
+  ],
   "Sin Goce de Sueldo": [
     {
       conceptoCodigo: "0090",
       param: "par2",
-      unidad: "importe",
-      fuente: "manual",
+      unidad: "cantidad",
+      fuente: "jornadas",
       aplicaA: "titular",
-      nota: "PENDIENTE: el catálogo dice importe en par2, pero de un parte salen días. Confirmar con el estudio.",
+      nota: "En días. La leyenda decía importe; el caso de agosto trae 1, que como importe no existe.",
     },
     JORNAL_DEL_REEMPLAZANTE,
   ],
   Feriado: [
-    { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "titular", nota: "Feriado, en días." },
+    { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "horas_jornada", aplicaA: "titular", nota: "Feriado, en HORAS de la jornada de esa persona (6 en CC426, 10 y 13 en JSA, 4 en part-time)." },
     /*
-      Al reemplazante mensual se le paga el feriado; al jornalero, el jornal. Es la lectura de
-      "0017 o 0000 según régimen" de la tabla, y está marcada como supuesto a confirmar.
+      Al reemplazante mensual se le liquida el feriado; al jornalero, el jornal. Ya no es un supuesto:
+      en agosto, de 177 mensualizados ninguno tiene 0000 y de 69 jornaleros ninguno tiene 0017.
     */
-    { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "jornadas", aplicaA: "reemplazante", soloRegimen: "mensual", nota: "SUPUESTO: al mensual que cubre un feriado se le liquida el feriado." },
+    { conceptoCodigo: "0017", param: "par1", unidad: "cantidad", fuente: "horas_jornada", aplicaA: "reemplazante", soloRegimen: "mensual", nota: "El mensual no cobra por día: cubrir un feriado le genera 0017, en horas." },
     JORNAL_DEL_REEMPLAZANTE,
   ],
   "Horas Extras y Feriados": [],

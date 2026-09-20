@@ -1,5 +1,34 @@
 const n = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 /**
+ * Las horas entre dos "HH:MM".
+ *
+ * Si la salida es menor o igual que la entrada, el turno CRUZA LA MEDIANOCHE y se le suman 24 h:
+ * "18:00 → 00:00" son seis horas, no menos veintidós. Son 1.984 renglones con ese turno.
+ */
+export function horasEntre(desde, hasta) {
+    /*
+      SIN LOS DOS HORARIOS, CERO. Y hay que chequearlo ANTES de convertir.
+  
+      La primera versión partía el string y convertía: "" daba 0 en las dos puntas, el 0 de salida
+      quedaba "antes" del 0 de entrada, se le sumaban 24 horas y un renglón sin horario devolvía una
+      jornada de 24. Ese número habría entrado derecho en el 0017 del archivo.
+    */
+    const texto = (t) => String(t || "").trim();
+    if (!texto(desde) || !texto(hasta))
+        return 0;
+    const partes = (t) => t.split(":").map(Number);
+    const [hd, md] = partes(texto(desde));
+    const [hh, mh] = partes(texto(hasta));
+    if (!Number.isFinite(hd) || !Number.isFinite(hh))
+        return 0;
+    const inicio = hd * 60 + (Number.isFinite(md) ? md : 0);
+    let fin = hh * 60 + (Number.isFinite(mh) ? mh : 0);
+    // Salida menor o igual que la entrada: el turno cruza la medianoche.
+    if (fin <= inicio)
+        fin += 24 * 60;
+    return Math.round(((fin - inicio) / 60) * 100) / 100;
+}
+/**
  * Lo que sobra del total una vez descontado lo que sí está discriminado.
  *
  * Se resta en vez de usar el total tal cual porque los tres campos conviven: hay renglones con 6
@@ -42,6 +71,7 @@ export function normalizarParte(parte, datosDe) {
             heSinDiscriminar: sinDiscriminar(r.overtimeHours, r.overtimeHours50, r.overtimeHours100),
             horarioDesde: r.scheduleInTime || null,
             horarioHasta: r.scheduleOutTime || null,
+            horasDeJornada: horasEntre(r.scheduleInTime, r.scheduleOutTime),
             reemplazaA: null,
             notas: r.notes || null,
         });
@@ -69,6 +99,7 @@ export function normalizarParte(parte, datosDe) {
             heSinDiscriminar: sinDiscriminar(r.replacementOvertimeHours, r.replacementOvertimeHours50, r.replacementOvertimeHours100),
             horarioDesde: r.scheduleInTime || null,
             horarioHasta: r.scheduleOutTime || null,
+            horasDeJornada: horasEntre(r.scheduleInTime, r.scheduleOutTime),
             reemplazaA: titular.apellidoYNombre || String(r.employeeId),
             notas: r.notes || null,
         });

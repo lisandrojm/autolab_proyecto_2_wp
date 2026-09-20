@@ -64,6 +64,17 @@ export function efectosVigentesEn(efectos: IMemosoftEffect[], fecha: string, con
   });
 }
 
+/** Las fuentes cuyo número sale de contar algo del parte, y por lo tanto nunca son pesos. */
+const FUENTES_QUE_CUENTAN = new Set(["jornadas", "horas_jornada", "horas50", "horas100"]);
+
+/**
+ * Por debajo de esto, un "importe" es sospechoso.
+ *
+ * Está calibrado con lo que se vio: los adelantos reales de agosto van de 100.000 a 430.000, y los
+ * valores que resultaron ser días eran 1, 7 y 14. Mil deja muchísimo margen para los dos lados.
+ */
+const UMBRAL_DE_IMPORTE = 1000;
+
 /**
  * SI EL EFECTO SE PUEDE EMITIR CONTRA EL CATÁLOGO.
  *
@@ -96,6 +107,25 @@ export function validarEfecto(efecto: IMemosoftEffect, concepto: ConceptoConocid
 
   if (efecto.fuente === "fijo" && (efecto.valorFijo == null || Number.isNaN(Number(efecto.valorFijo)))) {
     return `El efecto de ${efecto.conceptoCodigo} es de valor fijo pero no tiene valor.`;
+  }
+
+  /*
+    UN IMPORTE QUE SALE DE CONTAR DÍAS U HORAS NO ES UN IMPORTE.
+
+    La leyenda del catálogo acierta siempre en QUÉ COLUMNA usa cada concepto, pero no siempre en la
+    unidad: 0090 venía marcado como importe y el caso real traía un 1. Un peso de licencia no existe.
+    Con 0040 Ropa pasa lo mismo y todavía no hay un caso con qué decidir.
+
+    Por eso: si el número se calcula a partir del parte —días, horas, una jornada— no puede ser un
+    importe. Y un valor fijo declarado como importe por debajo de ${UMBRAL_DE_IMPORTE} se avisa, porque
+    es mucho más probable que sean días mal etiquetados que una suma de dinero de tres pesos.
+  */
+  if (efecto.unidad === "importe" && FUENTES_QUE_CUENTAN.has(efecto.fuente)) {
+    return `${efecto.conceptoCodigo} (${concepto.descripcion}) está declarado como importe, pero "${efecto.fuente}" cuenta días u horas. Si el archivo real trae números chicos, la unidad es cantidad.`;
+  }
+
+  if (efecto.unidad === "importe" && efecto.fuente === "fijo" && Number(efecto.valorFijo) < UMBRAL_DE_IMPORTE) {
+    return `${efecto.conceptoCodigo} (${concepto.descripcion}) dice importe pero el valor es ${efecto.valorFijo}. Un importe de esa magnitud es sospechoso de ser en realidad una cantidad de días.`;
   }
 
   if (efecto.vigenteHasta && efecto.vigenteDesde && efecto.vigenteHasta < efecto.vigenteDesde) {

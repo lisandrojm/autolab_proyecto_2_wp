@@ -229,3 +229,43 @@ describe("liquidación · etapa 3: agregar", () => {
         assert.equal(hojaDe(jornalero, "2030 S.R.L.", "La Nación"), "2030 CC426 La Nación Jornaleros");
     });
 });
+describe("liquidación · feriado y día del gremio se liquidan en HORAS", () => {
+    const eventoDe = (renglon) => normalizarParte(parte([renglon]), padron)[0];
+    it("la jornada sale del horario base", () => {
+        /*
+          Es el hallazgo del legajo 01407 en agosto: 0017 y 0018 no son días ni un fijo de convenio, son
+          las horas del turno. CC426 tiene 6, JSA 10 y 13, los part-time 4.
+        */
+        const evento = eventoDe({ _id: "r1", employeeId: "ana", status: "present", scheduleInTime: "06:00", scheduleOutTime: "12:00" });
+        assert.equal(evento.horasDeJornada, 6);
+    });
+    it("un turno que cruza la medianoche no da horas negativas", () => {
+        // "18:00 → 00:00" son seis horas. Son 1.984 renglones con ese turno.
+        const evento = eventoDe({ _id: "r1", employeeId: "ana", status: "present", scheduleInTime: "18:00", scheduleOutTime: "00:00" });
+        assert.equal(evento.horasDeJornada, 6);
+    });
+    it("sin horario no se inventa una jornada", () => {
+        const evento = eventoDe({ _id: "r1", employeeId: "ana", status: "present" });
+        assert.equal(evento.horasDeJornada, 0);
+    });
+    it("el feriado emite las horas de la jornada, no un día", () => {
+        const evento = eventoDe({ _id: "r1", employeeId: "ana", status: "absent", absenceReason: "Feriado", scheduleInTime: "06:00", scheduleOutTime: "12:00" });
+        const { lineas } = codificarEvento(evento, [efecto({ conceptoCodigo: "0017", fuente: "horas_jornada" })], SIN_REGLAS);
+        assert.equal(lineas[0].par1, 6, "seis horas de turno, no un día");
+    });
+    it("al reemplazante mensual de un feriado le toca 0017, no el jornal", () => {
+        /*
+          En agosto la separación es total: de 177 mensualizados ninguno tiene 0000, y de 69 jornaleros
+          ninguno tiene 0017. Un mensual no cobra por día.
+        */
+        const eventos = normalizarParte(parte([{ _id: "r1", employeeId: "beto", status: "absent", absenceReason: "Feriado", replacementId: "ana", scheduleInTime: "06:00", scheduleOutTime: "12:00" }]), padron);
+        const efectos = [
+            efecto({ conceptoCodigo: "0017", fuente: "horas_jornada", aplicaA: "reemplazante", soloRegimen: "mensual" }),
+            efecto({ conceptoCodigo: "0000", param: "par2", fuente: "jornadas", aplicaA: "reemplazante", soloRegimen: "jornalero" }),
+        ];
+        // Ana es mensual: cubre el feriado de Beto.
+        const { lineas } = codificarEvento(eventos[1], efectos, SIN_REGLAS);
+        assert.deepEqual(lineas.map((l) => l.conceptoCodigo), ["0017"]);
+        assert.equal(lineas[0].par1, 6);
+    });
+});
