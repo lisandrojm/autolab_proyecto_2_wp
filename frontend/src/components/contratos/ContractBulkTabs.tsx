@@ -46,7 +46,16 @@ const conveniosApi = createSimpleCatalogApi('/convenios');
  */
 const CONTRACTS_OVERVIEW_CACHE = 'contracts-overview:';
 /** Clave de los contratos en el estado de envío de documentación (pestaña Generar Documentos). */
-const claveCacheEnvio = (estado: string) => `${CONTRACTS_OVERVIEW_CACHE}envio:${estado}`;
+/*
+  EL ÁMBITO ES PARTE DE LA CLAVE.
+
+  Estas pantallas ya no piden «todos los contratos del tenant» para descartarlos en el navegador:
+  le pasan al server el cliente y el proyecto elegidos. Dos ámbitos distintos son dos respuestas
+  distintas, así que si compartieran clave, elegir un proyecto mostraría lo que se guardó del
+  anterior.
+*/
+const ambito = (clientId: string, projectId: string) => `c=${clientId || "*"}:p=${projectId || "*"}`;
+const claveCacheEnvio = (estado: string, clientId = "", projectId = "") => `${CONTRACTS_OVERVIEW_CACHE}envio:${estado}:${ambito(clientId, projectId)}`;
 
 const FILAS_POR_PAGINA = 25;
 
@@ -1454,11 +1463,22 @@ export const ContractBulkAfipTab: React.FC<{
         setLoading(false);
         return Promise.resolve();
       }
-      const key = `${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosPedidos.join(',')}`;
+      /*
+        EL CLIENTE Y EL PROYECTO VAN AL SERVER, no al filtro de abajo.
+
+        Se pedían los contratos impositivos de TODO el tenant (`limit: 5000`) y el proyecto se
+        descartaba acá, en `matchesCommonFilters`. Entrando desde Gestionar Equipo con un proyecto de
+        65 personas eso eran 12,6 s y 1,1 MB —865 vínculos, 7462 contratos barridos— para quedarse con
+        65: acotando la consulta, 661 ms y 55 KB.
+
+        Los filtros siguen aplicándose abajo igual que siempre (son un no-op para estos dos): lo que
+        cambia es que lo que no se va a mostrar tampoco se pide.
+      */
+      const key = `${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosPedidos.join(',')}:${ambito(filterClientId, filterProjectId)}`;
       if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
       setLoading(true);
       setLoadError('');
-      return cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, estados: estadosPedidos }))
+      return cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, estados: estadosPedidos, clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
         .then((res) => setRows(res.rows))
         .catch((e: any) => {
           setRows([]);
@@ -1466,7 +1486,7 @@ export const ContractBulkAfipTab: React.FC<{
         })
         .finally(() => setLoading(false));
     },
-    [estadosImpositivos, estadosPedidos, estadoEnvioDoc],
+    [estadosImpositivos, estadosPedidos, estadoEnvioDoc, filterClientId, filterProjectId],
   );
 
   useEffect(() => {
@@ -1485,13 +1505,13 @@ export const ContractBulkAfipTab: React.FC<{
       if (!patch) return load(true);
       const esLaFila = (r: ContractOverviewRow) => r._id === record._id && r.contractIndex === record.contractIndex;
       setRows((prev) => prev.map((r) => (esLaFila(r) ? { ...r, ...patch } : r)));
-      updateRefCache<{ rows: ContractOverviewRow[] }>(`${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosPedidos.join(',')}`, (data) => ({
+      updateRefCache<{ rows: ContractOverviewRow[] }>(`${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosPedidos.join(',')}:${ambito(filterClientId, filterProjectId)}`, (data) => ({
         ...data,
         rows: (data.rows || []).map((r) => (esLaFila(r) ? { ...r, ...patch } : r)),
       }));
       return Promise.resolve();
     },
-    [load, estadosPedidos],
+    [load, estadosPedidos, filterClientId, filterProjectId],
   );
 
   const handleDownloadContract = (record: ContractOverviewRow, empresaId?: string) => downloadContractRow(record, contratoFrames, empresaId);
@@ -3602,7 +3622,11 @@ export const ContractBulkFirmaTab: React.FC<{
     return cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config())
       .then(async (cfg) => {
         const estado = cfg?.estadoEnvioDocNombre || '';
-        const res = estado ? await cachedFetch(claveCacheEnvio(estado), () => usersAPI.listContractsOverview({ limit: 5000, estados: [estado] })) : { rows: [] as ContractOverviewRow[] };
+        // El cliente y el proyecto elegidos van al server (ver `ambito`): sin eso, elegir un proyecto
+        // de 65 personas igual barría los 7462 contratos del tenant para descartarlos acá.
+        const res = estado
+          ? await cachedFetch(claveCacheEnvio(estado, filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 5000, estados: [estado], clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
+          : { rows: [] as ContractOverviewRow[] };
         setRows(res.rows);
         setConfig(cfg);
       })
@@ -3610,7 +3634,7 @@ export const ContractBulkFirmaTab: React.FC<{
         /* noop */
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [filterClientId, filterProjectId]);
 
   useEffect(() => {
     load();
@@ -3622,13 +3646,13 @@ export const ContractBulkFirmaTab: React.FC<{
       if (!patch) return load(true);
       const esLaFila = (r: ContractOverviewRow) => r._id === record._id && r.contractIndex === record.contractIndex;
       setRows((prev) => prev.map((r) => (esLaFila(r) ? { ...r, ...patch } : r)));
-      if (config?.estadoEnvioDocNombre) updateRefCache<{ rows: ContractOverviewRow[] }>(claveCacheEnvio(config.estadoEnvioDocNombre), (data) => ({
+      if (config?.estadoEnvioDocNombre) updateRefCache<{ rows: ContractOverviewRow[] }>(claveCacheEnvio(config.estadoEnvioDocNombre, filterClientId, filterProjectId), (data) => ({
         ...data,
         rows: (data.rows || []).map((r) => (esLaFila(r) ? { ...r, ...patch } : r)),
       }));
       return Promise.resolve();
     },
-    [load, config],
+    [load, config, filterClientId, filterProjectId],
   );
 
   // Trámite impositivo de ORIGEN del contrato (por su tipo/plantilla, no por el estado actual —
