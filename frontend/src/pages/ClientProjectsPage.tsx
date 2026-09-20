@@ -58,7 +58,8 @@ export const ClientProjectsPage: React.FC = () => {
     // Fetch shifts once on component mount
     shiftsAPI.getAll().then(setAvailableShifts).catch(console.error);
     areasAPI.listAll().then(setAvailableAreas).catch(console.error);
-    companiesAPI.list().then(setCompanies).catch(console.error);
+    // `slim`: de la empresa sólo se dibuja la razón social; la ficha entera son 15 KB por empleadora.
+    companiesAPI.list({ slim: true }).then(setCompanies).catch(console.error);
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);

@@ -258,6 +258,21 @@ export interface IUserMetadata {
    * Los cambios se guardan YA RESUELTOS A TEXTO, no como ids: es el registro de lo que se decidió
    * ese día. Si mañana renombran el área o la empresa, lo que se le mostró a esa persona no cambia.
    */
+  /**
+   * SE CORRIGIÓ DESPUÉS DE UN RECHAZO Y SE VOLVIÓ A ENVIAR.
+   *
+   * Un rechazo no es el final: se dice qué faltaba justamente para que se pueda arreglar. Pero la
+   * solicitud corregida volvía a la bandeja idéntica a una nueva, y quien la había rechazado no
+   * tenía cómo saber que era la suya —ni si lo que objetó se corrigió—.
+   *
+   * `motivoAnterior` es lo que se le había objetado: se guarda acá porque al volver a pendiente el
+   * motivo del rechazo se borra (si no, quedaría colgado de una solicitud que ya nadie objetó).
+   */
+  solicitudReenviada?: {
+    veces?: number;
+    el?: Date;
+    motivoAnterior?: string;
+  };
   solicitudRevision?: {
     cambios?: { campo: string; pedido: string; aprobado: string }[];
     comentario?: string;
@@ -437,6 +452,12 @@ const userSchema = new Schema<IUser>(
       solicitudMotivoRechazo: { type: String },
       solicitudRechazadaPor: { type: Schema.Types.ObjectId, ref: "User" },
       solicitudRechazadaEl: { type: Date },
+      // Ver el comentario de la interfaz: una rechazada que se corrige y se vuelve a mandar.
+      solicitudReenviada: {
+        veces: Number,
+        el: Date,
+        motivoAnterior: String,
+      },
       // Ver el comentario de la interfaz: se guarda en texto, no en ids.
       solicitudRevision: {
         cambios: [{ _id: false, campo: String, pedido: String, aprobado: String }],

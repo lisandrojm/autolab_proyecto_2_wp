@@ -407,6 +407,8 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                 quien aprobó dejó explicado— no lo lee nunca, y el mismo error se carga de nuevo.
               */
               const revision: any = meta.solicitudRevision || null;
+              /** Se rechazó, se corrigió y volvió a la bandeja (ver `solicitudReenviada`). */
+              const reenviada: any = meta.solicitudReenviada?.el ? meta.solicitudReenviada : null;
               const cantidadDeCambios = revision?.cambios?.length || 0;
               const hayRevision = cantidadDeCambios > 0 || !!revision?.comentario;
 
@@ -430,6 +432,12 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                           {novedades.esNuevo(user._id) && <span className="rounded bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">Nueva</span>}
                           {/* Renueva un contrato que vencía: no es un ingreso nuevo. */}
                           {meta.esRenovacion && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
+                          {/* Ya se corrigió después de un rechazo: la que está esperando es la corregida. */}
+                          {reenviada && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                              Corregida{(reenviada.veces || 1) > 1 ? ` ×${reenviada.veces}` : ""}
+                            </span>
+                          )}
                           {/* Se aprobó con correcciones: el detalle dice cuáles y por qué (ver `solicitudRevision`). */}
                           {hayRevision && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faCommentDots, faTriangleExclamation , faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faCommentDots, faTriangleExclamation , faPenToSquare , faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { usersAPI, User } from "../../api/users";
 import { companiesAPI, Company } from "../../api/companies";
@@ -158,7 +158,8 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     const guardar = <T,>(set: (v: T) => void) => (v: T) => {
       if (vivo) set(v);
     };
-    companiesAPI.list().then(guardar(setEmpresas)).catch(() => {});
+    // `slim`: el detalle sólo muestra la razón social de la empleadora del contrato.
+    companiesAPI.list({ slim: true }).then(guardar(setEmpresas)).catch(() => {});
     contratosAPI.list().then(guardar(setContratos)).catch(() => {});
     areasAPI.listAll().then(guardar(setAreas)).catch(() => {});
     shiftsAPI.getAll().then(guardar(setTurnos)).catch(() => {});
@@ -259,6 +260,17 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   const estado: EstadoSolicitud = (m.solicitudStatus as EstadoSolicitud) || solicitud?.estado || "pendiente";
   const proyectosAMostrar = proyectos && proyectos.length > 0 ? proyectos : proyectosPropios;
   const puedeDecidir = estado === "pendiente" && !cargando && !!detalle;
+  /*
+    UNA RECHAZADA TAMBIÉN SE EDITA.
+
+    Un rechazo dice qué faltaba justamente para que se pueda arreglar; si sólo se pudiera corregir
+    una pendiente, la única salida sería cargarla de nuevo desde cero. Guardarla la devuelve a
+    pendiente sola (ver `solicitudReenviada` en el server), así que el botón dice eso y no «editar»:
+    quien la corrige tiene que saber que con guardar ya la volvió a mandar.
+  */
+  const puedeEditar = (estado === "pendiente" || estado === "rechazada") && !cargando && !!detalle;
+  /** Se corrigió después de un rechazo y volvió a la bandeja (ver `solicitudReenviada`). */
+  const reenviada: { veces?: number; el?: string; motivoAnterior?: string } | null = m.solicitudReenviada || null;
 
   return (
     <Modal
@@ -288,9 +300,9 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                 {cancelando ? "Cancelando…" : "Cancelar solicitud"}
               </button>
             )}
-            {puedeDecidir && onEditar && solicitud && (
+            {puedeEditar && onEditar && solicitud && (
               <button onClick={() => onEditar(solicitud)} className="px-3 py-2 text-sm font-semibold rounded-lg border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                Editar solicitud
+                {estado === "rechazada" ? "Corregir y reenviar" : "Editar solicitud"}
               </button>
             )}
             {puedeDecidir && onRechazar && solicitud && (
@@ -331,6 +343,31 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                   <span className="whitespace-pre-wrap">{m.solicitudMotivoRechazo}</span>
                 </span>
               </p>
+              {/* Un rechazo no es el final: se dice acá mismo cómo seguir, que es el botón de abajo. */}
+              {puedeEditar && onEditar && <p className="mt-1.5 pl-[22px] text-[11px] opacity-80">Corregilo y volvé a enviarla con «Corregir y reenviar».</p>}
+            </div>
+          )}
+
+          {/*
+            YA SE CORRIGIÓ DESPUÉS DE UN RECHAZO.
+
+            Para quien la recibe: esta solicitud no es nueva, es una que se rechazó y se arregló. Sin
+            decirlo vuelve a la bandeja idéntica a cualquier otra y quien la había rechazado no tiene
+            cómo saber si lo que objetó se corrigió. Por eso va también lo que se había objetado: el
+            motivo del rechazo se borra al volver a pendiente, pero la pregunta sigue siendo esa.
+          */}
+          {reenviada?.el && (
+            <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-800 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-200">
+              <p className="flex items-start gap-2 font-bold">
+                <FontAwesomeIcon icon={faRotateLeft} className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Se corrigió y se volvió a enviar{(reenviada.veces || 1) > 1 ? ` (${reenviada.veces} veces)` : ""} · {fecha(reenviada.el)}
+              </p>
+              {reenviada.motivoAnterior && (
+                <p className="mt-1.5 pl-[22px] text-[13px]">
+                  <span className="font-semibold">Se había rechazado por: </span>
+                  <span className="whitespace-pre-wrap italic">{reenviada.motivoAnterior}</span>
+                </p>
+              )}
             </div>
           )}
 

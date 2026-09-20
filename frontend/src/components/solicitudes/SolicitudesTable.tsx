@@ -71,6 +71,14 @@ export interface SolicitudVista {
   esRenovacion?: boolean;
   /** Por qué se rechazó. Se muestra en la fila: es lo que hay que corregir para volver a pedirla. */
   motivoRechazo?: string | null;
+  /**
+   * SE RECHAZÓ, SE CORRIGIÓ Y VOLVIÓ. Cuántas veces y qué se había objetado la última.
+   *
+   * Esta solicitud no es nueva: vuelve a la bandeja porque alguien arregló lo que se le marcó. Sin
+   * decirlo se lee igual que cualquier otra pendiente, y quien la había rechazado no tiene cómo
+   * saber que es la suya ni si lo que objetó está corregido.
+   */
+  reenviada?: { veces?: number; el?: string; motivoAnterior?: string } | null;
 }
 
 /** Adapta un `User` con `metadata.isSolicitud` a la forma de la tabla. */
@@ -94,6 +102,7 @@ export const solicitudDesdeUser = (u: any): SolicitudVista => {
     comentarios: m.comentarios ?? null,
     solicitudUserId: m.solicitudUserId ? String(m.solicitudUserId) : null,
     motivoRechazo: m.solicitudMotivoRechazo ?? null,
+    reenviada: m.solicitudReenviada?.el ? m.solicitudReenviada : null,
     esRenovacion: !!m.esRenovacion,
   };
 };
@@ -250,6 +259,18 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         {s.nombre}
                         {/* Extiende un contrato que estaba por vencer: no es un ingreso nuevo. */}
                         {s.esRenovacion && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
+                        {/*
+                          Se rechazó y volvió corregida: no es una solicitud nueva. El detalle dice qué
+                          se había objetado, que es la pregunta de quien la vuelve a mirar.
+                        */}
+                        {s.reenviada && (
+                          <span
+                            title={s.reenviada.motivoAnterior ? `Se había rechazado por: ${s.reenviada.motivoAnterior}` : "Se corrigió después de un rechazo"}
+                            className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                          >
+                            Corregida{(s.reenviada.veces || 1) > 1 ? ` ×${s.reenviada.veces}` : ""}
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-500 truncate">{formatFechaSolicitud(s.creadaEl)}</p>
                       {/*

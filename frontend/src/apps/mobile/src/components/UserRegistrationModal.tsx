@@ -135,6 +135,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const etiquetaProyecto = (p: Project) => (typeof p.clientId === "object" && p.clientId?.name ? `${p.clientId.name} | ${p.name}` : p.name);
   /** Catálogo de empresas y de convenios, para resolver nombres y la cadena proyecto → empresa → CCT. */
   const [companies, setCompanies] = useState<Company[]>([]);
+  /** Ya contestó el catálogo de empleadoras (haya traído algo o no). Ver el campo «Empresa que contrata». */
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   /*
     LAS PERSONAS LAS BUSCA EL SERVER, NO EL TELÉFONO.
@@ -222,9 +224,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   useEffect(() => {
     // Aparte de la carga grande y con su propio catch: si esto falla, el alta tiene que poder
     // enviarse igual — sin empresa elegida, no rota.
-    void Promise.all([companiesAPI.list().catch(() => [] as Company[]), conveniosApi.list().catch(() => [] as SimpleCatalogItem[])]).then(([cs, cv]) => {
+    /*
+      `slim`: de cada empleadora sólo hace falta con qué se contrata —nombre, CUIT y convenios
+      registrados—. La ficha completa son 15 KB por empresa, y 13 de ellos son el padrón de obras
+      sociales que esta pantalla no mira: 45 KB y 384 ms para pintar un nombre.
+    */
+    void Promise.all([companiesAPI.list({ slim: true }).catch(() => [] as Company[]), conveniosApi.list().catch(() => [] as SimpleCatalogItem[])]).then(([cs, cv]) => {
       setCompanies(cs);
       setConvenios(cv);
+      setEmpresasCargadas(true);
     });
   }, []);
 
@@ -367,6 +375,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     tal cual para no trabarla; si la persona ya se registró, conviene elegirla.
   */
   const personaRegistrada = !!selectedUser || !!(editingUser?.metadata as any)?.solicitudUserId;
+  /** Se está corrigiendo una solicitud RECHAZADA: guardarla la vuelve a mandar. */
+  const eraRechazada = (editingUser?.metadata as any)?.solicitudStatus === "rechazada";
   const nombreLegado = !!editingUser && !personaRegistrada && !!formData.fullName;
   const sinPersona = !personaRegistrada && !nombreLegado;
 
@@ -1486,6 +1496,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   // Tiempo indeterminado: sin fecha de baja se cuenta sobre el mes del alta (ver `periodoDeCalculo`).
   const indeterminado = !!contratoElegido?.data?.esTiempoIndeterminado;
   const periodo = useMemo(() => periodoDeCalculo(formData.startDate, formData.dueDate, indeterminado), [formData.startDate, formData.dueDate, indeterminado]);
+
+  /*
+    Cambiar a tiempo indeterminado BORRA la fecha de baja que hubiera quedado cargada.
+
+    Esconder el campo sin limpiarlo dejaría la fecha vieja viajando en la solicitud: no se ve, no se
+    puede corregir, y llega al alta como si alguien la hubiera puesto a propósito.
+  */
+  useEffect(() => {
+    // `porDiasSueltos` queda afuera: ahí las fechas las fija el calendario, y limpiarlas sería pelearle.
+    if (indeterminado && !porDiasSueltos && formData.dueDate) setFormData((p) => ({ ...p, dueDate: "" }));
+  }, [indeterminado, porDiasSueltos, formData.dueDate]);
   const jornadasCalculadas = useMemo(
     () => (formData.diasRotativos ? null : jornadasDelCalendario(periodo.desde, periodo.hasta, formData.diasSemana)),
     [formData.diasRotativos, periodo, formData.diasSemana],
@@ -1679,7 +1700,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           roles_frame: formData.roleFrameIds,
           categoriaSatId: esServicios ? undefined : formData.categoriaSatId,
           startDate: formData.startDate,
-          dueDate: formData.dueDate,
+          // Un tiempo indeterminado no tiene fecha de baja: viaja vacía aunque el formulario traiga una.
+          dueDate: indeterminado && !porDiasSueltos ? "" : formData.dueDate,
           // Lo que se liquida. De dónde salió viaja al lado, para auditarlo sin recalcular.
           workdaysCount: Number(formData.workdaysCount),
           // El calculado se guarda SIEMPRE, haya ajuste o no: las reglas del calendario pueden cambiar.
@@ -1738,7 +1760,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
       if (editingUser) {
         await usersAPI.update(editingUser._id, submitData as any);
-        sweetAlert.success("Solicitud actualizada", "La solicitud de alta ha sido actualizada correctamente.");
+        // Corregir una RECHAZADA la devuelve a pendiente sola (ver `solicitudReenviada` en el server):
+        // el aviso lo dice, porque guardar acá ya es volver a mandarla y no hay ningún paso más.
+        if (eraRechazada) sweetAlert.success("Solicitud reenviada", "Se corrigió y volvió a quedar pendiente de aprobación.");
+        else sweetAlert.success("Solicitud actualizada", "La solicitud de alta ha sido actualizada correctamente.");
       } else {
         await usersAPI.create(submitData as any);
         if (renovacion) sweetAlert.success("Renovación enviada", "La solicitud de renovación quedó pendiente de aprobación.");
@@ -1821,7 +1846,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             Cancelar
           </button>
           <button onClick={handleSubmit} disabled={submitting} className="flex-1 rounded h-12 bg-blue-500 text-white font-medium shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-            {submitting ? "Cargando..." : editingUser ? "Actualizar Solicitud" : renovacion ? "Enviar Renovación" : "Enviar Solicitud"}
+            {submitting ? "Cargando..." : eraRechazada ? "Corregir y Reenviar" : editingUser ? "Actualizar Solicitud" : renovacion ? "Enviar Renovación" : "Enviar Solicitud"}
             <FontAwesomeIcon icon={faCheck} />
           </button>
         </div>
@@ -2005,6 +2030,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </label>
             {formData.projectIds.length === 0 ? (
               <p className="text-xs text-slate-400 py-2">Elegí primero el proyecto: la empleadora sale de las que ese proyecto tiene asignadas.</p>
+            ) : !empresasCargadas || projects.length === 0 ? (
+              /*
+                TODAVÍA NO SE SABE, así que no se dice nada.
+
+                Acá aparecía «Ese proyecto no tiene empresa del contrato asignada» mientras el catálogo
+                de empleadoras seguía viajando: el proyecto sí la tenía, y el formulario afirmaba lo
+                contrario. Un dato que falta y un dato que no llegó no son lo mismo.
+              */
+              <p className="text-xs text-slate-400 py-2">Buscando la empleadora del proyecto…</p>
             ) : empresasDelProyecto.length === 0 ? (
               <p className="text-xs text-amber-600 dark:text-amber-400 py-2">Ese proyecto no tiene empresa del contrato asignada. Sin eso, el alta no sabe con qué CUIT se contrata.</p>
             ) : empresasDelProyecto.length === 1 ? (
@@ -2114,9 +2148,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <div className="space-y-1">
                 <CustomDatePicker label="Desde" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
               </div>
-              <div className="space-y-1">
-                <CustomDatePicker label="Hasta" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
-              </div>
+              {/*
+                TIEMPO INDETERMINADO: NO HAY «HASTA».
+
+                No es que el dato sea opcional: es que no existe. Un contrato de tiempo indeterminado
+                no tiene fecha de baja —por eso se llama así—, y el campo vacío invitaba a inventar
+                una, que después viajaba al alta como si alguien la hubiera decidido.
+
+                Las jornadas no dependen de esto: con tiempo indeterminado se cuentan sobre el mes del
+                alta (ver `periodoDeCalculo`), que es lo que explica el aviso de más abajo. El alta del
+                panel hace lo mismo desde siempre.
+              */}
+              {indeterminado ? (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hasta</p>
+                  <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">Sin fecha de baja</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <CustomDatePicker label="Hasta" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
+                </div>
+              )}
             </div>
           )}
           {/* Se dice apenas pasa, no al enviar: con el fin antes del inicio no hay jornadas que calcular. */}

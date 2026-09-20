@@ -134,6 +134,12 @@ const userSchema = new Schema({
         solicitudMotivoRechazo: { type: String },
         solicitudRechazadaPor: { type: Schema.Types.ObjectId, ref: "User" },
         solicitudRechazadaEl: { type: Date },
+        // Ver el comentario de la interfaz: una rechazada que se corrige y se vuelve a mandar.
+        solicitudReenviada: {
+            veces: Number,
+            el: Date,
+            motivoAnterior: String,
+        },
         // Ver el comentario de la interfaz: se guarda en texto, no en ids.
         solicitudRevision: {
             cambios: [{ _id: false, campo: String, pedido: String, aprobado: String }],

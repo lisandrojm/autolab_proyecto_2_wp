@@ -151,9 +151,24 @@ const normalizar = (data: Record<string, any>): Record<string, any> => {
 };
 
 // GET /companies
+/*
+  `?slim=true`: SÓLO CON QUÉ SE CONTRATA.
+
+  La ficha entera de una empleadora son ~15 KB, y 13 de ellos son `obrasSocialesIds`: el padrón de
+  obras sociales que ese CUIT tiene registrado ante ARCA. Lo necesitan el ABM y el chequeo de
+  completitud; un selector de «con qué empresa se contrata» no lo mira nunca.
+
+  Con tres empleadoras eso eran 45 KB y 384 ms para pintar un nombre —medido contra la base—, y el
+  formulario mientras tanto decía «ese proyecto no tiene empresa asignada», que no era cierto.
+
+  Es opt-in a propósito: quien no lo pide sigue recibiendo la ficha completa, como siempre.
+*/
+const CAMPOS_SLIM = "razonSocial cuit convenioIds";
+
 router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    const items = await Company.find().sort({ razonSocial: 1 }).lean();
+    const slim = _req.query.slim === "true";
+    const items = await Company.find().select(slim ? CAMPOS_SLIM : "").sort({ razonSocial: 1 }).lean();
     // Se sirven los dos nombres mientras haya consumidores del viejo. El que manda es el nuevo: si
     // el documento ya migró, `obraSocialId` es un espejo de solo lectura.
     res.json(items.map((c: any) => ({ ...c, obraSocialId: c.obraSocialDefaultId ?? c.obraSocialId ?? null, obraSocialDefaultId: c.obraSocialDefaultId ?? c.obraSocialId ?? null })));

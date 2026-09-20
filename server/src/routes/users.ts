@@ -1533,7 +1533,7 @@ const permisoParaCrearUsuario = (req: AuthenticatedRequest, res: Response, next:
 
   Cualquier otro caso sigue pidiendo `admin_users:view`, como antes.
 */
-const permisoSobreSolicitudPropia = (opciones: { soloCancelar?: boolean; incluirCerradas?: boolean } = {}) => async (req: AuthenticatedRequest & TenantRequest, res: Response, next: NextFunction) => {
+const permisoSobreSolicitudPropia = (opciones: { soloCancelar?: boolean; incluirCerradas?: boolean; incluirRechazadas?: boolean } = {}) => async (req: AuthenticatedRequest & TenantRequest, res: Response, next: NextFunction) => {
   const admin = requirePermission("admin_users:view");
   try {
     if (!Types.ObjectId.isValid(String(req.params.id))) return admin(req, res, next);
@@ -1541,12 +1541,18 @@ const permisoSobreSolicitudPropia = (opciones: { soloCancelar?: boolean; incluir
     const m = objetivo?.metadata || {};
     const estado = String(m.solicitudStatus || (m.isSolicitud ? "pendiente" : ""));
     /*
-      Editar y cancelar son sobre una PENDIENTE. Borrar (`incluirCerradas`) va también sobre una
-      rechazada o cancelada —es justo lo que hay que poder limpiar del historial—, pero nunca sobre
-      una APROBADA: eso ya es una contratación con contrato, y borrarla queda para el panel (cae en
-      el `admin` de abajo).
+      Cancelar es sobre una PENDIENTE. Borrar (`incluirCerradas`) va también sobre una rechazada o
+      cancelada —es justo lo que hay que poder limpiar del historial—, pero nunca sobre una APROBADA:
+      eso ya es una contratación con contrato, y borrarla queda para el panel (cae en el `admin` de
+      abajo).
+
+      EDITAR (`incluirRechazadas`) alcanza además a una RECHAZADA. Un rechazo dice qué faltaba
+      justamente para que se pueda arreglar: si corregirla exigiera el permiso del panel, la única
+      salida desde la app sería cargar la solicitud de nuevo desde cero, perdiendo el rechazo y todo
+      lo que ya estaba bien. Al guardarla, el handler la devuelve a pendiente (ver `solicitudReenviada`).
     */
-    const alcanzada = opciones.incluirCerradas ? !!estado && estado !== "aprobada" : m.isSolicitud === true && estado === "pendiente";
+    const editables = opciones.incluirRechazadas ? ["pendiente", "rechazada"] : ["pendiente"];
+    const alcanzada = opciones.incluirCerradas ? !!estado && estado !== "aprobada" : m.isSolicitud === true && editables.includes(estado);
     const propia = !m.solicitudCreadaPor || String(m.solicitudCreadaPor) === String(req.user!.userId);
     const accionPermitida = !opciones.soloCancelar || String((req.body || {}).status || "") === "cancelada";
     if (alcanzada && propia && accionPermitida) {
@@ -2040,7 +2046,7 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
 });
 
 // PATCH /users/:id - Actualizar usuario
-router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudPropia(), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudPropia({ incluirRechazadas: true }), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = updateUserSchema.parse(req.body);
     normalizarRolesFrame((data as any).metadata);
@@ -2192,11 +2198,39 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
       aprobación, el registro público): se arrastran del documento actual cuando no vienen en el body.
     */
     if ((data as any).metadata && currentUser.metadata) {
-      const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "registro"];
+      const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "solicitudReenviada", "solicitudRevision", "registro"];
       deGestion.forEach((campo) => {
         const actual = (currentUser.metadata as any)[campo];
         if ((data as any).metadata[campo] === undefined && actual !== undefined) (data as any).metadata[campo] = actual;
       });
+    }
+
+    /*
+      CORREGIR UNA RECHAZADA ES VOLVER A MANDARLA.
+
+      No hay un botón aparte de «reenviar»: guardar YA ES el reenvío. Un paso más sólo serviría para
+      que alguien corrija la solicitud, cierre, y la deje corregida pero rechazada sin que nadie la
+      vuelva a mirar.
+
+      El motivo del rechazo se borra —queda de una decisión que ya no está vigente— pero se guarda
+      en `solicitudReenviada.motivoAnterior`: quien la reciba tiene que poder ver qué había objetado
+      y si eso es lo que se corrigió.
+    */
+    const eraRechazada = String((currentUser.metadata as any)?.solicitudStatus || "") === "rechazada";
+    const seReenvia = eraRechazada && (data as any).metadata;
+    if (seReenvia) {
+      const meta = (data as any).metadata as any;
+      const anterior: any = (currentUser.metadata as any)?.solicitudReenviada || {};
+      meta.solicitudStatus = "pendiente";
+      meta.isSolicitud = true;
+      meta.solicitudMotivoRechazo = "";
+      meta.solicitudRechazadaPor = null;
+      meta.solicitudRechazadaEl = null;
+      meta.solicitudReenviada = {
+        veces: Number(anterior.veces || 0) + 1,
+        el: new Date(),
+        motivoAnterior: String((currentUser.metadata as any)?.solicitudMotivoRechazo || "").slice(0, 1000),
+      };
     }
 
     // Preparar updateData
@@ -2257,6 +2291,26 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
+    }
+    /*
+      UNA SOLICITUD CORREGIDA VUELVE A ESPERAR RESOLUCIÓN, así que hay que avisar.
+
+      Va a quien tiene que aprobarla —volvió a la bandeja— y también a quien la pidió, que puede no
+      ser quien la corrigió. Sin el aviso, una rechazada que se arregla se queda esperando a que
+      alguien pase de casualidad por la pantalla.
+    */
+    if (seReenvia) {
+      const m: any = user.metadata || {};
+      const aprobadores = await responsablesDeProyectos(req.tenantObjectId!, [...((m.projectIds || []) as any[]), ...((user.projectIds || []) as any[])]);
+      await notificar({
+        tenantId: req.tenantObjectId!,
+        destinatarios: [m.solicitudCreadaPor, ...aprobadores],
+        type: NOVEDAD_SOLICITUD_REABIERTA,
+        title: "Solicitud corregida",
+        refId: user._id as Types.ObjectId,
+        message: `${nombreDePersona(user)}: se corrigió lo que se había rechazado y volvió a quedar pendiente.`,
+        excepto: req.user!.userId,
+      });
     }
 
     res.json(user);

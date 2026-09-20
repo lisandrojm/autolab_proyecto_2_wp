@@ -513,7 +513,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setSelectedMemberForDetail(user);
     if (detailRefsLoaded) return;
     // Carga perezosa de plantillas de contrato, releases y empresas (puede fallar por permisos → listas vacías)
-    const [cf, rel, emp] = await Promise.all([contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]), releasesAPI.getAll().catch(() => [] as Release[]), companiesAPI.list().catch(() => [] as Company[])]);
+    const [cf, rel, emp] = await Promise.all([contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]), releasesAPI.getAll().catch(() => [] as Release[]), // `slim`: acá la empresa es un nombre en un desplegable de descarga, no su ficha de ARCA.
+      companiesAPI.list({ slim: true }).catch(() => [] as Company[])]);
     setContratoFrames(cf);
     setReleases(rel);
     setCompanies(emp);

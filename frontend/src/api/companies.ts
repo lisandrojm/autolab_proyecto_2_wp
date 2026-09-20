@@ -121,8 +121,15 @@ export const CAMPO_IDS_DE_VINCULO: Record<TipoVinculoArca, keyof Company> = {
 };
 
 class CompaniesAPI {
-  async list(): Promise<Company[]> {
-    const { data } = await axios.get('/companies');
+  /**
+   * Las empleadoras.
+   *
+   * `slim`: sólo razón social, CUIT y convenios registrados —con qué se contrata—. Es lo que
+   * necesita un selector; la ficha completa pesa 15 KB por empresa, de los cuales 13 son el padrón
+   * de obras sociales que sólo miran el ABM y el chequeo de completitud de ARCA.
+   */
+  async list(params: { slim?: boolean } = {}): Promise<Company[]> {
+    const { data } = await axios.get(params.slim ? '/companies?slim=true' : '/companies');
     return Array.isArray(data) ? data : [];
   }
 
