@@ -70,6 +70,17 @@ const userSchema = new Schema({
         estadoId: Number,
         inHouse: Boolean,
         numeroLegajoTango: String,
+        /* El legajo de Memosoft, uno por empresa. Ver la interfaz para por qué no es uno solo. */
+        legajosPorEmpresa: {
+            type: [
+                {
+                    _id: false,
+                    empresaId: { type: Schema.Types.ObjectId, ref: "Company", required: true },
+                    legajo: { type: String, required: true, trim: true },
+                },
+            ],
+            default: undefined,
+        },
         afiliadoAlSindicato: Boolean,
         sindicatoIds: [String],
         rutaImagen: String,

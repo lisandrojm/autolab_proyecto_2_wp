@@ -127,6 +127,18 @@ export interface IUserMetadata {
   estadoId?: number | null;
   inHouse?: boolean | null;
   numeroLegajoTango?: string | null;
+  /**
+   * EL LEGAJO, QUE ES POR EMPRESA Y NO POR PERSONA.
+   *
+   * En Memosoft el legajo identifica a alguien DENTRO de una empresa: el 00001 de 2030 y el 00001
+   * de FZERO son dos personas distintas. En la base esto ya pasa: hay 21 legajos compartidos por
+   * personas diferentes (medido el 2026-09-20), que no son un error de carga sino el mismo número
+   * usado por dos empleadoras.
+   *
+   * Por eso el legajo cuelga de la empresa. `numeroLegajoTango` queda como está —es de donde salen
+   * estos valores y hay código que lo lee—, pero para liquidar manda esta lista.
+   */
+  legajosPorEmpresa?: { empresaId: Types.ObjectId; legajo: string }[] | null;
   afiliadoAlSindicato?: boolean | null;
   /**
    * A qué sindicato/s está afiliado/a. Guarda los `_id` del catálogo `Sindicato`.
@@ -387,6 +399,17 @@ const userSchema = new Schema<IUser>(
       estadoId: Number,
       inHouse: Boolean,
       numeroLegajoTango: String,
+      /* El legajo de Memosoft, uno por empresa. Ver la interfaz para por qué no es uno solo. */
+      legajosPorEmpresa: {
+        type: [
+          {
+            _id: false,
+            empresaId: { type: Schema.Types.ObjectId, ref: "Company", required: true },
+            legajo: { type: String, required: true, trim: true },
+          },
+        ],
+        default: undefined,
+      },
       afiliadoAlSindicato: Boolean,
       sindicatoIds: [String],
       rutaImagen: String,

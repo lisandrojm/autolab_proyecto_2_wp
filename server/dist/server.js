@@ -87,6 +87,7 @@ import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
 import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
 import { leaveAccountsRouter, leaveBalancesRouter, leaveLedgerRouter } from "./routes/bancoDeDias.js";
+import { liquidacionRouter } from "./routes/liquidacion.js";
 import { shiftRoutes } from "./routes/shifts.js";
 import { holidayRoutes } from "./routes/holidays.js";
 import { userProjectRoutes } from "./routes/userProjects.js";
@@ -294,6 +295,8 @@ app.use("/api/v1/activity-reports", RequestRoutes);
 app.use("/api/v1/leave-accounts", leaveAccountsRouter);
 app.use("/api/v1/leave-balances", leaveBalancesRouter);
 app.use("/api/v1/leave-ledger", leaveLedgerRouter);
+// Liquidación de novedades a Memosoft (fase 0: padrón y catálogo de conceptos).
+app.use("/api/v1/liquidacion", liquidacionRouter);
 app.use("/api/v1/shifts", shiftRoutes);
 app.use("/api/v1/holidays", holidayRoutes);
 app.use("/api/v1/user-projects", userProjectRoutes);

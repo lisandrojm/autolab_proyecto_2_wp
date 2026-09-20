@@ -269,3 +269,81 @@ Para que el **botón de deploy** aparezca correctamente, sigue estos pasos:
 ## ✅ **Listo:** el botón de deploy debería estar visible y funcional.
 
 ---
+
+---
+
+# Liquidación de novedades a Memosoft
+
+Convierte los partes diarios de asistencia en el archivo de importación de Memosoft, el sistema de
+sueldos. Memosoft corre en escritorio y **no tiene API**: el XLSX es el contrato de integración, así
+que nada de esto escribe en Memosoft ni automatiza su interfaz.
+
+Se construye por fases. **Hoy está terminada la fase 0**, que no calcula ningún concepto todavía:
+resuelve quién entra en un período, con qué legajo, en qué empresa, en qué centro de costo y bajo
+qué régimen.
+
+## Correr una liquidación de punta a punta
+
+### 1. Preparar los datos (una sola vez)
+
+```bash
+cd server
+npx tsx src/scripts/liquidacionFase0.ts <tenantId>              # simula: no escribe nada
+npx tsx src/scripts/liquidacionFase0.ts <tenantId> --aplicar    # aplica y deja respaldo
+```
+
+En modo simulación imprime la tabla de resolución agrupada por nombre de contrato distinto —26
+nombres para 7.462 contratos—, así que se revisa 26 veces y no 7.462. **Mirar esa tabla antes de
+aplicar**: lo que dice `SIN RESOLVER` se carga a mano, porque el motor no adivina.
+
+`--aplicar` deja un JSON de respaldo en `server/migraciones-respaldo/` y lo dice al terminar. Para
+volver atrás:
+
+```bash
+npx tsx src/scripts/liquidacionFase0.ts --revertir "<archivo de respaldo>"
+```
+
+### 2. Mirar el padrón del período
+
+```
+GET /api/v1/liquidacion/padron?periodo=2026-08
+GET /api/v1/liquidacion/padron?periodo=2026-08&regimen=mensual
+GET /api/v1/liquidacion/validacion?periodo=2026-08
+```
+
+Filtros: `periodo` (obligatorio, `AAAA-MM`), `empresaId`, `ccCodigo`, `tipoContratoId`, `projectId`,
+`rolFrame`, `regimen`. Piden `admin_contracts:view`.
+
+Devuelve `filas` con lo resuelto y `excepciones` con lo que no. **Las dos cosas siempre**: un padrón
+que sólo muestra lo que salió bien esconde exactamente lo que hay que ir a arreglar. `/validacion` es
+el mismo cálculo agrupado por motivo, para mirar antes de liquidar sin bajarse las 582 filas.
+
+Desde la línea de comandos, sin levantar el server:
+
+```bash
+npx tsx src/scripts/verificarPadron.ts <tenantId> 2026-08
+```
+
+### 3. El catálogo de conceptos
+
+```
+GET /api/v1/liquidacion/conceptos?empresaId=<id>
+```
+
+Los 29 códigos de Memosoft con, para cada uno, cuál de los dos parámetros usa y si lo que va ahí es
+una cantidad de días o un importe. Es **por empresa**: los códigos de 2030 y FZERO no son un
+estándar de Memosoft.
+
+## Tests
+
+```bash
+npm run test:liquidacion
+```
+
+Las dos funciones que deciden en qué hoja del archivo cae cada persona —`empresaDelContrato` y
+`regimenDelContrato`— con los nombres de contrato reales como casos.
+
+## Lo que todavía no está
+
+Fases 1 a 5: el mapeo configurable de motivo → concepto, el motor de cálculo, los tres archivos
+(planilla de control, import y anexo de excepciones) y el cruce con el reloj presencial.
