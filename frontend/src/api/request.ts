@@ -130,10 +130,14 @@ export interface ParteConAsistencia {
   /** Aparte del nombre, para armar «Noche (18:00 - 00:00)» igual que el listado de Novedades. */
   shiftStartTime?: string;
   shiftEndTime?: string;
+  /** El comentario del supervisor sobre la novedad entera: uno por (coordinador, proyecto, día). */
+  comments?: string;
   attendance: {
     employeeId: string;
     status: string;
     absenceReason: string;
+    /** La observación sobre ESA persona ese día. Distinta de `comments`, que es del parte entero. */
+    notes?: string;
     overtimeHours: number;
     overtimeHours50: number;
     overtimeHours100: number;

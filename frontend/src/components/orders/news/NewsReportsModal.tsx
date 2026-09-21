@@ -9,6 +9,8 @@ import { User, UserProjectMetadata } from "../../../api/users";
 import { infoAPI, InfoItem } from "../../../api/info";
 import { categoriaSatAPI } from "../../../api/categoriasSat";
 import { roleFrameAPI } from "../../../api/roleFrames";
+import { areasAPI } from "../../../api/areas";
+import { shiftsAPI } from "../../../api/shifts";
 import { activityReportsAPI, FiltrosDePersonas, ParteConAsistencia } from "../../../api/request";
 import { isContractVigente } from "../../team/ContractCard";
 import { getContratoActivo } from "../../../utils/contratoVigencia";
@@ -92,6 +94,14 @@ interface EmployeeStats {
        */
       area?: string;
       turno?: string;
+      /**
+       * Los dos textos libres del día, separados porque son de distinto autor y alcance:
+       * `nota` es la observación sobre ESTA persona, `comentarioParte` el del supervisor sobre la
+       * novedad entera —y ese se repite en todas las filas de ese parte, que es lo correcto: el
+       * comentario aplica al día, no a cada uno—.
+       */
+      nota?: string;
+      comentarioParte?: string;
     }
   >;
 }
@@ -651,7 +661,21 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState("");
   const [filtroVigencia, setFiltroVigencia] = useState("");
   const [filtroEstadoContrato, setFiltroEstadoContrato] = useState("");
-  const [filtroAreaTurno, setFiltroAreaTurno] = useState("");
+  /**
+   * ÁREA Y TURNO: DOS FILTROS, Y CADA UNO DE A VARIOS.
+   *
+   * Era UNO solo y de a uno, con opciones combinadas («Técnica · Mañana»). Dos problemas: no se
+   * podía preguntar «toda Técnica» sin correr el reporte una vez por turno, ni «todos los de la
+   * noche» sin correrlo una vez por área; y como el combo salía del área/turno del PARTE —que casi
+   * siempre viene NULL—, ofrecía unas pocas combinaciones que no eran las que muestra la columna.
+   *
+   * Ahora son dos listas independientes, de la misma fuente que la columna (el contrato), y se
+   * cruzan: elegir Técnica y Noche deja las filas que tienen Técnica Y tienen Noche.
+   */
+  const [areasSeleccionadas, setAreasSeleccionadas] = useState<string[]>([]);
+  const [turnosSeleccionados, setTurnosSeleccionados] = useState<string[]>([]);
+  const alternarArea = (a: string) => setAreasSeleccionadas((p) => (p.includes(a) ? p.filter((x) => x !== a) : [...p, a]));
+  const alternarTurno = (t: string) => setTurnosSeleccionados((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
   const [filtroReemplazo, setFiltroReemplazo] = useState("");
   const [filtroRol, setFiltroRol] = useState("");
 
@@ -728,6 +752,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [sedesCatalogo, setSedesCatalogo] = useState<InfoItem[]>([]);
   const [categoriasCatalogo, setCategoriasCatalogo] = useState<{ _id: string; name: string; data?: { id?: number } }[]>([]);
   const [rolesCatalogo, setRolesCatalogo] = useState<{ _id: string; name: string; data?: { id?: number } }[]>([]);
+  /**
+   * Áreas y turnos, para la columna «Área | Turno».
+   *
+   * Van aparte de los otros cuatro porque no salen de `Info`: tienen ABM propio (`/areas`,
+   * `/shifts`). Del turno hace falta además el horario, que es parte de cómo se lo nombra en toda la
+   * app: «Noche (18:00 - 00:00)».
+   */
+  const [areasCatalogo, setAreasCatalogo] = useState<{ _id: string; name: string }[]>([]);
+  const [turnosCatalogo, setTurnosCatalogo] = useState<{ _id: string; name: string; startTime?: string; endTime?: string }[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -740,6 +773,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     void infoAPI.listByType("sede").then(setSedesCatalogo).catch(() => setSedesCatalogo([]));
     void categoriaSatAPI.list().then((c: any) => setCategoriasCatalogo(c)).catch(() => setCategoriasCatalogo([]));
     void roleFrameAPI.list().then((r: any) => setRolesCatalogo(r)).catch(() => setRolesCatalogo([]));
+    void areasAPI.listAll().then((a: any) => setAreasCatalogo(a)).catch(() => setAreasCatalogo([]));
+    void shiftsAPI.getAll().then((s: any) => setTurnosCatalogo(s)).catch(() => setTurnosCatalogo([]));
   }, [isOpen]);
 
   /** id → nombre, para los campos que el contrato guarda solo como id. */
@@ -753,6 +788,56 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     () => ({ categoria: porId(categoriasCatalogo), rol: porId(rolesCatalogo), sede: porId(sedesCatalogo), tipo: nombreTipoPorId }),
     [categoriasCatalogo, rolesCatalogo, sedesCatalogo, nombreTipoPorId],
   );
+
+  /**
+   * EL ÁREA Y EL TURNO DE UNA FILA, desde sus contratos.
+   *
+   * No salen del parte. El `areaId`/`shiftId` del parte casi siempre viene NULL —un coordinador
+   * carga UNA novedad por proyecto y día aunque coordine tres turnos, y el detalle por persona va
+   * en `attendance[]`—, así que la columna quedaba en «-» para todo el mundo. Donde el dato existe
+   * de verdad es en el contrato: `areaShiftAssignments`, un área con sus turnos.
+   *
+   * Es la misma fuente que dibuja los badges del listado de Novedades, que resuelve por persona
+   * contra el padrón. Acá sale más directo porque la fila YA es una persona en un proyecto.
+   *
+   * Los ids pueden venir poblados (`{_id, name}`) o crudos, según el endpoint: se contemplan los
+   * dos, como en el resto de la app.
+   */
+  const areaTurnoDeContratos = useMemo(() => {
+    const nombreArea = new Map(areasCatalogo.map((a) => [String(a._id), a.name]));
+    const turnoPorId = new Map(turnosCatalogo.map((t) => [String(t._id), t]));
+    const idDe = (v: any) => String((typeof v === "object" && v ? v._id : v) || "");
+
+    return (contratos: any[]) => {
+      const areas: string[] = [];
+      const turnos: string[] = [];
+
+      const sumarArea = (v: any) => {
+        const nombre = (typeof v === "object" && v?.name) || nombreArea.get(idDe(v));
+        if (nombre && !areas.includes(nombre)) areas.push(nombre);
+      };
+      const sumarTurno = (v: any) => {
+        const poblado = typeof v === "object" && v ? v : undefined;
+        const t: any = poblado?.name ? poblado : turnoPorId.get(idDe(v));
+        if (!t?.name) return;
+        const etiqueta = `${t.name}${t.startTime && t.endTime ? ` (${t.startTime} - ${t.endTime})` : ""}`;
+        if (!turnos.includes(etiqueta)) turnos.push(etiqueta);
+      };
+
+      for (const c of contratos || []) {
+        for (const asignacion of c?.areaShiftAssignments || []) {
+          sumarArea(asignacion.areaId);
+          (asignacion.shiftIds || []).forEach(sumarTurno);
+        }
+        /* Los sueltos del contrato. El padrón los manda aparte de `areaShiftAssignments` —los
+           importados traen uno u otro, no siempre los dos—, así que dejarlos afuera vaciaba la
+           columna justo para los contratos que vienen de FRAME. */
+        sumarArea(c?.areaId);
+        sumarTurno(c?.shiftId);
+      }
+      return { areas, turnos };
+    };
+  }, [areasCatalogo, turnosCatalogo]);
   /**
    * ROL/ES EMPRESA: VARIOS A LA VEZ.
    *
@@ -1026,8 +1111,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           contractType,
           contractAlta,
           contractBaja,
-          areas: [],
-          turnos: [],
+          /* De los MISMOS contratos que el resto de la fila (ver `areaTurnoDeContratos`), igual que
+             la columna Horario Base: son varios cuando la persona trabaja en dos áreas o turnos. */
+          ...areaTurnoDeContratos(targetList),
           dailyAttendance: {},
         });
       });
@@ -1163,8 +1249,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             contractType,
             contractAlta,
             contractBaja,
-            areas: [],
-            turnos: [],
+            // Ídem arriba: esta rama también crea filas, así que también tiene que traerlos.
+            ...areaTurnoDeContratos(targets),
             dailyAttendance: {},
           });
         }
@@ -1243,6 +1329,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         stats.dailyAttendance[dateKey] = {
           area: sumarAlDia(stats.dailyAttendance[dateKey]?.area, areaDelParte),
           turno: sumarAlDia(stats.dailyAttendance[dateKey]?.turno, turnoDelParte),
+          /* Mismo criterio que el área: dos partes el mismo día suman sus textos en vez de que el
+             segundo borre al primero. */
+          nota: sumarAlDia(stats.dailyAttendance[dateKey]?.nota, (record.notes || "").trim()),
+          comentarioParte: sumarAlDia(stats.dailyAttendance[dateKey]?.comentarioParte, (report.comments || "").trim()),
           status: record.status,
           reason: record.absenceReason || (record.status === "late" ? "Tardanza" : undefined),
           overtimeHours: ot,
@@ -1300,6 +1390,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       solo se sabe después de contarlas—, y porque así el pie de la tabla sigue sumando exactamente
       lo que se ve.
     */
+    /* Se cruzan, no se suman: Técnica + Noche son las filas que tienen Técnica Y tienen Noche. Dentro
+       de cada lista, en cambio, alcanza con cualquiera. */
+    if (areasSeleccionadas.length > 0) {
+      results = results.filter((s) => s.areas.some((a) => areasSeleccionadas.includes(a)));
+    }
+    if (turnosSeleccionados.length > 0) {
+      results = results.filter((s) => s.turnos.some((t) => turnosSeleccionados.includes(t)));
+    }
     if (rolesEmpresaSeleccionados.length > 0) {
       results = results.filter((s) => (s.userProjectsData || []).some((up) => !!up.nombre_rol_frame && rolesEmpresaSeleccionados.includes(up.nombre_rol_frame)));
     }
@@ -1308,7 +1406,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas, economiaPorFila]);
+  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas, economiaPorFila, areaTurnoDeContratos, areasSeleccionadas, turnosSeleccionados]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1363,7 +1461,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (!isOpen || !dateFrom || !dateTo) return;
     let vigente = true;
 
-    const hayFiltro = !!(filtroEstadoUsuario || filtroVigencia || filtroEstadoContrato || filtroAreaTurno || filtroReemplazo || filtroRol);
+    const hayFiltro = !!(filtroEstadoUsuario || filtroVigencia || filtroEstadoContrato || filtroReemplazo || filtroRol);
     setFiltrandoEnServidor(true);
 
     activityReportsAPI
@@ -1371,7 +1469,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         estadoUsuario: filtroEstadoUsuario,
         vigencia: filtroVigencia,
         estadoContrato: filtroEstadoContrato,
-        areaTurno: filtroAreaTurno,
+        // Área y turno ya no viajan: se resuelven acá, contra el contrato (ver `areasSeleccionadas`).
         reemplazo: filtroReemplazo,
         rol: filtroRol,
         /*
@@ -1401,12 +1499,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     return () => {
       vigente = false;
     };
-  }, [isOpen, dateFrom, dateTo, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol, showActiveTableOnly]);
+  }, [isOpen, dateFrom, dateTo, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroReemplazo, filtroRol, showActiveTableOnly]);
 
   const universoDelPeriodo = useMemo(() => {
     const proyectos = new Map<string, string>();
     const roles = new Set<string>();
     const tipos = new Set<string>();
+    const areas = new Set<string>();
+    const turnos = new Set<string>();
     const empleados = new Set<string>();
 
     let start: Date;
@@ -1415,7 +1515,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       start = parseISO(dateFrom + "T00:00:00");
       end = parseISO(dateTo + "T23:59:59");
     } catch {
-      return { proyectos: [], roles: [], tipos: [] };
+      return { proyectos: [], roles: [], tipos: [], areas: [], turnos: [] };
     }
 
     // Del período entero, no de la página del listado: si no, el selector de Proyecto listaba los
@@ -1437,6 +1537,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       if (!empleados.has(String(u._id))) continue;
       for (const up of ((u.metadata?.projects || []) as UserProjectMetadata[])) {
         if (up.nombre_rol_frame) roles.add(up.nombre_rol_frame);
+        /* Las opciones de Área y Turno salen de la MISMA fuente que la columna «Área | Turno»
+           (`areaTurnoDeContratos`). Antes las mandaba el server leyendo el área/turno del parte, que
+           casi siempre viene NULL: el desplegable ofrecía unas pocas combinaciones que no eran las
+           que la tabla mostraba, así que filtrar por una y leer la columna no coincidían. */
+        const delVinculo = areaTurnoDeContratos(up.contracts || []);
+        delVinculo.areas.forEach((a) => areas.add(a));
+        delVinculo.turnos.forEach((t) => turnos.add(t));
         for (const c of up.contracts || []) {
           // El mismo fallback que la columna «Tipo»: el nombre propio, y si no vino, el catálogo.
           const nombre = c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || "";
@@ -1450,8 +1557,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       proyectos: Array.from(proyectos, ([id, name]) => ({ id, name })).sort((a, b) => ordenar(a.name, b.name)),
       roles: Array.from(roles).sort(ordenar),
       tipos: Array.from(tipos).sort(ordenar),
+      areas: Array.from(areas).sort(ordenar),
+      turnos: Array.from(turnos).sort(ordenar),
     };
-  }, [partesDelPeriodo, dateFrom, dateTo, allUsers, nombreTipoPorId]);
+  }, [partesDelPeriodo, dateFrom, dateTo, allUsers, nombreTipoPorId, areaTurnoDeContratos]);
 
   const rolesEmpresaDisponibles = universoDelPeriodo.roles;
 
@@ -1469,11 +1578,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         !!filtroEstadoUsuario,
         !!filtroVigencia,
         !!filtroEstadoContrato,
-        !!filtroAreaTurno,
+        areasSeleccionadas.length > 0,
+        turnosSeleccionados.length > 0,
         !!filtroReemplazo,
         !!filtroRol,
       ].filter(Boolean).length,
-    [projectFilter, tiposSeleccionados, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol],
+    [projectFilter, tiposSeleccionados, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, areasSeleccionadas, turnosSeleccionados, filtroReemplazo, filtroRol],
   );
 
   /**
@@ -1494,7 +1604,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (filtroEstadoUsuario) chips.push({ key: "estadoUsuario", label: "Usuarios", valor: filtroEstadoUsuario === "active" ? "Activos" : "Inactivos", quitar: () => setFiltroEstadoUsuario("") });
     if (filtroVigencia) chips.push({ key: "vigencia", label: "Contratos", valor: filtroVigencia === "vigente" ? "Vigentes" : "No vigentes", quitar: () => setFiltroVigencia("") });
     if (filtroRol) chips.push({ key: "rol", label: "Rol", valor: filtroRol, quitar: () => setFiltroRol("") });
-    if (filtroAreaTurno) chips.push({ key: "areaTurno", label: "Área/Turno", valor: opcionesServidor.areasTurnos.find((a) => a.value === filtroAreaTurno)?.label || filtroAreaTurno, quitar: () => setFiltroAreaTurno("") });
+    for (const a of areasSeleccionadas) chips.push({ key: `area:${a}`, label: "Área", valor: a, quitar: () => alternarArea(a) });
+    for (const t of turnosSeleccionados) chips.push({ key: `turno:${t}`, label: "Turno", valor: t, quitar: () => alternarTurno(t) });
     if (filtroEstadoContrato) chips.push({ key: "estadoContrato", label: "Estado", valor: filtroEstadoContrato, quitar: () => setFiltroEstadoContrato("") });
     if (filtroReemplazo) chips.push({ key: "reemplazo", label: "Reemplazo", valor: filtroReemplazo === "con" ? "Con reemplazo" : "Sin reemplazo", quitar: () => setFiltroReemplazo("") });
     /* Un chip por rol elegido, igual que los tipos. La `key` lleva prefijo propio: «Rol/es» de
@@ -1506,7 +1617,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     // Este entra al revés que el resto: lo que se anota es haberlo APAGADO, porque el default es ON.
     if (!showActiveTableOnly) chips.push({ key: "activos", label: "Incluye", valor: "Contratos no vigentes", quitar: () => setShowActiveTableOnly(true) });
     return chips;
-  }, [projectFilter, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol, opcionesServidor]);
+  }, [projectFilter, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, areasSeleccionadas, turnosSeleccionados, filtroReemplazo, filtroRol, opcionesServidor]);
 
   const limpiarFiltros = () => {
     setProjectFilter("all");
@@ -1520,7 +1631,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     setFiltroEstadoUsuario("");
     setFiltroVigencia("");
     setFiltroEstadoContrato("");
-    setFiltroAreaTurno("");
+    setAreasSeleccionadas([]);
+    setTurnosSeleccionados([]);
     setFiltroReemplazo("");
     setFiltroRol("");
   };
@@ -1741,8 +1853,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     const dates = eachDayOfInterval({ start: parseISO(dateFrom), end: parseISO(dateTo) });
     const daysMap: Record<string, string> = { Monday: "Lun", Tuesday: "Mar", Wednesday: "Mie", Thursday: "Jue", Friday: "Vie", Saturday: "Sab", Sunday: "Dom" };
 
-    // Área y Turno van pegados al Proyecto, como en la tabla. Acá son los de ESE día, no los del período.
-    const headers = ["Empleado", "Proyecto", "Área", "Turno", "Fecha", "Día", "Estado", "Motivo", "Hs Extras", "H. Entrada OT", "H. Salida OT", "% HS"];
+    /*
+      Área y Turno van pegados al Proyecto, como en la tabla. Acá son los de ESE día, no los del período.
+
+      Los dos comentarios van al final y en columnas separadas porque son cosas distintas:
+      «Observación» es sobre esa persona ese día, «Comentario del parte» es el del supervisor sobre
+      la novedad entera —y por eso se repite en todas las filas de ese día, que es lo que significa—.
+      Últimos y no al lado del nombre: son texto largo y libre, y en el medio empujan las columnas
+      que se leen de un vistazo fuera de la pantalla.
+    */
+    const headers = ["Empleado", "Proyecto", "Área", "Turno", "Fecha", "Día", "Estado", "Motivo", "Hs Extras", "H. Entrada OT", "H. Salida OT", "% HS", "Observación", "Comentario del parte"];
     const rows: any[] = [];
 
     statsByEmployee.forEach((s) => {
@@ -1751,7 +1871,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         const attendance = s.dailyAttendance[dateKey];
         const shortDay = daysMap[format(date, "EEEE")] || format(date, "eee");
 
-        rows.push([s.employeeName, s.rowProjectName || "S/P", attendance?.area || "-", attendance?.turno || "-", format(date, "dd/MM/yyyy"), shortDay, attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro", attendance?.reason || "-", attendance?.overtimeHours || 0, attendance?.entryTime || "-", attendance?.exitTime || "-", attendance?.pct ? `${attendance.pct}%` : "-"]);
+        rows.push([s.employeeName, s.rowProjectName || "S/P", attendance?.area || "-", attendance?.turno || "-", format(date, "dd/MM/yyyy"), shortDay, attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro", attendance?.reason || "-", attendance?.overtimeHours || 0, attendance?.entryTime || "-", attendance?.exitTime || "-", attendance?.pct ? `${attendance.pct}%` : "-", attendance?.nota || "-", attendance?.comentarioParte || "-"]);
       });
       // Add divider row between employees
       rows.push(Array(headers.length).fill(""));
@@ -1763,7 +1883,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
     // Styling
-    const colWidths = [25, 20, 18, 26, 12, 8, 12, 25, 10, 12, 12, 8];
+    // Los dos de texto libre, anchos: si no, Excel los muestra cortados y hay que abrir cada celda.
+    const colWidths = [25, 20, 18, 26, 12, 8, 12, 25, 10, 12, 12, 8, 40, 40];
     ws["!cols"] = colWidths.map((w) => ({ wch: w }));
 
     const wb = XLSX.utils.book_new();
@@ -2067,19 +2188,41 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Área / Turno</label>
-                <select value={filtroAreaTurno} onChange={(e) => setFiltroAreaTurno(e.target.value)} className="input-field w-full">
-                  <option value="">Todas las áreas/turnos</option>
-                  {opcionesServidor.areasTurnos.map((a) => (
-                    <option key={a.value} value={a.value}>
-                      {a.label}
-                    </option>
-                  ))}
-                </select>
-                {/* Sale del PARTE, no de la asignación del proyecto: acá interesa dónde trabajó esos días. */}
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">El área y el turno de las novedades del período.</p>
-              </div>
+              {/*
+                ÁREA Y TURNO, SEPARADOS. Ver `areasSeleccionadas` para por qué dejaron de ser un
+                único desplegable de combinaciones.
+              */}
+              <SelectorBadges
+                etiqueta="Área/s"
+                tituloModal="Áreas"
+                descripcion="qué áreas entran en el reporte"
+                placeholder="Buscar área…"
+                permitirTodos
+                zIndex={110}
+                items={universoDelPeriodo.areas.map((a) => ({ id: a, nombre: a }))}
+                value={areasSeleccionadas}
+                onChange={setAreasSeleccionadas}
+                textoVacio={universoDelPeriodo.areas.length === 0 ? "No hay áreas en el período." : "Elegir áreas…"}
+                ayuda={areasSeleccionadas.length === 0 ? "Sin elegir ninguna entran todas." : undefined}
+              />
+
+              <SelectorBadges
+                etiqueta="Turno/s"
+                tituloModal="Turnos"
+                descripcion="qué turnos entran en el reporte"
+                placeholder="Buscar turno…"
+                permitirTodos
+                zIndex={110}
+                items={universoDelPeriodo.turnos.map((t) => ({ id: t, nombre: t }))}
+                value={turnosSeleccionados}
+                onChange={setTurnosSeleccionados}
+                textoVacio={universoDelPeriodo.turnos.length === 0 ? "No hay turnos en el período." : "Elegir turnos…"}
+                ayuda={
+                  turnosSeleccionados.length === 0
+                    ? "Sin elegir ninguno entran todos. Con área y turno puestos, entran las filas que tienen las dos cosas."
+                    : undefined
+                }
+              />
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado de contrato</label>

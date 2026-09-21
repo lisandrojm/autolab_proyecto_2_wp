@@ -465,7 +465,11 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
         // El área y el turno son DEL PARTE, no de la ficha: es dónde y en qué turno se trabajó ese
         // día. El mismo criterio que usa el filtro «Área / Turno» (ver `filtrosDeNovedades`).
         "date projectId areaId shiftId " +
-          "attendance.employeeId attendance.status attendance.absenceReason " +
+          // Los dos textos libres que el reporte exporta, que son cosas distintas: `comments` es UNO
+          // por novedad (el del supervisor, el que cuenta la columna «Comentarios» del listado) y
+          // `attendance.notes` es la observación de ESA persona ese día, que carga el móvil.
+          "comments " +
+          "attendance.employeeId attendance.status attendance.absenceReason attendance.notes " +
           "attendance.overtimeHours attendance.overtimeHours50 attendance.overtimeHours100 " +
           "attendance.inTime attendance.outTime",
       )
@@ -499,10 +503,12 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
         // de Novedades: «Noche (18:00 - 00:00)».
         shiftStartTime: turno?.startTime || "",
         shiftEndTime: turno?.endTime || "",
+        comments: p.comments || "",
         attendance: (p.attendance || []).map((a: any) => ({
           employeeId: String(a.employeeId || ""),
           status: a.status,
           absenceReason: a.absenceReason || "",
+          notes: a.notes || "",
           overtimeHours: a.overtimeHours || 0,
           overtimeHours50: a.overtimeHours50 || 0,
           overtimeHours100: a.overtimeHours100 || 0,

@@ -13,6 +13,8 @@ import { MOBILE_ACTIVITY_COMPLIANCE } from "../utils/permisosMobile.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
+import { Area } from "../models/Area.js";
+import { Shift } from "../models/Shift.js";
 const router = Router();
 /** Los nombres que la pantalla muestra de cada parte. `populate` sobre objetos planos: la agregación no los trae sola. */
 const POPULADOS = [
@@ -434,35 +436,59 @@ router.get("/asistencias-del-periodo", async (req, res) => {
             return;
         }
         const partes = await Request.find({ tenantId: req.tenantObjectId, date: { $gte: desde, $lte: hasta } })
-            .select("date projectId " +
-            "attendance.employeeId attendance.status attendance.absenceReason " +
+            .select(
+        // El área y el turno son DEL PARTE, no de la ficha: es dónde y en qué turno se trabajó ese
+        // día. El mismo criterio que usa el filtro «Área / Turno» (ver `filtrosDeNovedades`).
+        "date projectId areaId shiftId " +
+            // Los dos textos libres que el reporte exporta, que son cosas distintas: `comments` es UNO
+            // por novedad (el del supervisor, el que cuenta la columna «Comentarios» del listado) y
+            // `attendance.notes` es la observación de ESA persona ese día, que carga el móvil.
+            "comments " +
+            "attendance.employeeId attendance.status attendance.absenceReason attendance.notes " +
             "attendance.overtimeHours attendance.overtimeHours50 attendance.overtimeHours100 " +
             "attendance.inTime attendance.outTime")
             .lean();
         /*
-          El nombre del proyecto se resuelve con un `find` aparte y no con un `populate`: son unas pocas
-          decenas de proyectos repetidos en centenares de partes, y poblarlos manda el mismo nombre una
-          vez por parte.
+          Los nombres se resuelven con un `find` aparte y no con un `populate`: son unas pocas decenas de
+          proyectos, áreas y turnos repetidos en centenares de partes, y poblarlos manda el mismo nombre
+          una vez por parte.
         */
         const ids = [...new Set(partes.map((p) => String(p.projectId || "")).filter(Boolean))];
-        const proyectos = await Project.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("name").lean();
+        const [proyectos, areas, turnos] = await Promise.all([
+            Project.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("name").lean(),
+            Area.find({ tenantId: req.tenantObjectId }).select("name").lean(),
+            Shift.find({ tenantId: req.tenantObjectId }).select("name startTime endTime").lean(),
+        ]);
         const nombreDeProyecto = new Map(proyectos.map((p) => [String(p._id), p.name]));
-        res.json(partes.map((p) => ({
-            date: p.date,
-            projectIdRaw: String(p.projectId || ""),
-            projectName: nombreDeProyecto.get(String(p.projectId || "")) || "Sin Proyecto",
-            attendance: (p.attendance || []).map((a) => ({
-                employeeId: String(a.employeeId || ""),
-                status: a.status,
-                absenceReason: a.absenceReason || "",
-                overtimeHours: a.overtimeHours || 0,
-                overtimeHours50: a.overtimeHours50 || 0,
-                overtimeHours100: a.overtimeHours100 || 0,
-                // El reporte los llama «entrada/salida de las extras»; en el parte son `inTime`/`outTime`.
-                overtimeEntryTime: a.inTime || undefined,
-                overtimeExitTime: a.outTime || undefined,
-            })),
-        })));
+        const nombreDeArea = new Map(areas.map((a) => [String(a._id), a.name]));
+        const turnoPorId = new Map(turnos.map((t) => [String(t._id), t]));
+        res.json(partes.map((p) => {
+            const turno = turnoPorId.get(String(p.shiftId || ""));
+            return {
+                date: p.date,
+                projectIdRaw: String(p.projectId || ""),
+                projectName: nombreDeProyecto.get(String(p.projectId || "")) || "Sin Proyecto",
+                areaName: nombreDeArea.get(String(p.areaId || "")) || "",
+                shiftName: turno?.name || "",
+                // El horario viaja aparte del nombre para que la etiqueta se arme igual que en el listado
+                // de Novedades: «Noche (18:00 - 00:00)».
+                shiftStartTime: turno?.startTime || "",
+                shiftEndTime: turno?.endTime || "",
+                comments: p.comments || "",
+                attendance: (p.attendance || []).map((a) => ({
+                    employeeId: String(a.employeeId || ""),
+                    status: a.status,
+                    absenceReason: a.absenceReason || "",
+                    notes: a.notes || "",
+                    overtimeHours: a.overtimeHours || 0,
+                    overtimeHours50: a.overtimeHours50 || 0,
+                    overtimeHours100: a.overtimeHours100 || 0,
+                    // El reporte los llama «entrada/salida de las extras»; en el parte son `inTime`/`outTime`.
+                    overtimeEntryTime: a.inTime || undefined,
+                    overtimeExitTime: a.outTime || undefined,
+                })),
+            };
+        }));
     }
     catch (error) {
         console.error("Asistencias del período error:", error);
