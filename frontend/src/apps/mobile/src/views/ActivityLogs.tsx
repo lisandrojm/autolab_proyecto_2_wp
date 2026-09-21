@@ -1126,22 +1126,25 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
 
   const { profile, stats } = useProfile();
 
-  const filteredReports = useMemo(() => {
-    if (!profile) return [];
-    const myUserIds = [profile.userId, profile._id].filter(Boolean).map((id) => String(id));
-    return reports.filter((report) => {
-      const reportUserId = typeof report.userId === "object" && report.userId ? report.userId._id || report.userId.id : report.userId;
-      if (reportUserId && myUserIds.includes(String(reportUserId))) {
-        return true;
-      }
-      if (typeof report.userId === "object" && report.userId?.email && profile.email) {
-        if (String(report.userId.email).toLowerCase() === String(profile.email).toLowerCase()) {
-          return true;
-        }
-      }
-      return false;
-    });
-  }, [reports, profile]);
+  /*
+    EL RECORTE LO HACE EL SERVER, NO ESTA PANTALLA.
+
+    Acá había un segundo filtro que volvía a quedarse sólo con las novedades cuyo `userId` coincidía
+    con el perfil, comparando contra `profile.userId`, `profile._id` y el email. Era redundante —el
+    endpoint ya recorta con `?mine=1`— y tenía dos problemas serios:
+
+     1. ARRANCABA DEVOLVIENDO VACÍO. `if (!profile) return []`: mientras `/profile` no contestara, la
+        lista mostraba «No has enviado novedades recientes.», que es una AFIRMACIÓN sobre los datos,
+        no un «cargando». Si el perfil fallaba o tardaba, el historial quedaba vacío para siempre
+        aunque las novedades ya estuvieran en memoria. Verificado contra la base: Sebastián Omar
+        Soria tiene 111 novedades y el endpoint se las devuelve bien.
+     2. ROMPÍA «Las que superviso». Por definición esas novedades las cargó otro, así que este filtro
+        las descartaba todas: la opción habría quedado siempre vacía.
+
+    Se muestra lo que el server contestó. Quién puede ver qué se decide en un solo lugar —el
+    endpoint, que es donde se puede hacer cumplir— y no acá, donde sólo se puede esconder.
+  */
+  const filteredReports = reports;
 
   const isMyAssignment = useCallback(
     (asm: any) => {
@@ -3879,7 +3882,16 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                     })()}
                     {report.areaId ? (typeof report.areaId === "string" ? "" : ` - ${report.areaId.name}`) : ""}
                   </h4>
-                  <div className="text-sm text-slate-500 mb-3">{new Date(report.date + "T00:00:00").toLocaleDateString()}</div>
+                  <div className="text-sm text-slate-500 mb-3">
+                    {new Date(report.date + "T00:00:00").toLocaleDateString()}
+                    {/* Quién la cargó: sólo mirando las del equipo, donde es lo que distingue una
+                        fila de otra. En «Mías» sobra, son todas de la misma persona. */}
+                    {alcanceHistorial === "supervisadas" &&
+                      (() => {
+                        const autor = typeof report.userId === "object" && report.userId ? `${report.userId.firstName || ""} ${report.userId.lastName || ""}`.trim() : "";
+                        return autor ? <span className="ml-2 text-slate-400">· {autor}</span> : null;
+                      })()}
+                  </div>
 
                   <div className="flex items-center justify-between text-xs text-slate-400">
                     <span>
