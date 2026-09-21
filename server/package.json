@@ -8,6 +8,7 @@
     "predev": "npm run kill",
     "dev": "dotenv -e .env.development -- tsx watch src/server.ts",
     "prod": "dotenv -e .env.production -- tsx src/server.ts",
+    "local": "dotenv -e .env.production -v PORT=8080 -v USE_HTTPS=false -- tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "convenios": "tsx src/scripts/convenios/conveniosToXlsx.ts",
     "start": "node dist/server.js",
