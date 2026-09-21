@@ -647,6 +647,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    */
   const [partesDelPeriodo, setPartesDelPeriodo] = useState<ParteConAsistencia[]>([]);
   const [cargandoAsistencias, setCargandoAsistencias] = useState(false);
+  /**
+   * EL REPORTE NO PUEDE DECIR CERO CUANDO LO QUE PASA ES QUE NO SABE.
+   *
+   * Si la asistencia no llega, todas las columnas dan 0 y la tabla se lee como "no hubo novedades",
+   * que es una afirmación sobre el mes. Pasó de verdad: el reporte mostró 0 presentes y 0 ausentes
+   * durante horas con los partes cargados, y nada en la pantalla lo desmentía.
+   */
+  const [falloAsistencias, setFalloAsistencias] = useState(false);
+  const [falloFiltros, setFalloFiltros] = useState(false);
 
   /** La misma clave que arma el server (ver `claveDeFila`). */
   const claveDeFila = (userId: string, proyectoNormalizado: string) => `${userId}::${proyectoNormalizado}`;
@@ -1206,11 +1215,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     setCargandoAsistencias(true);
     activityReportsAPI
       .asistenciasDelPeriodo(dateFrom, dateTo)
-      .then((p) => vivo && setPartesDelPeriodo(p))
+      .then((p) => {
+        if (!vivo) return;
+        setPartesDelPeriodo(p);
+        setFalloAsistencias(false);
+      })
       .catch((e) => {
         if (!vivo) return;
         console.error("No se pudo traer la asistencia del período", e);
         setPartesDelPeriodo([]);
+        setFalloAsistencias(true);
       })
       .finally(() => vivo && setCargandoAsistencias(false));
     return () => {
@@ -1244,12 +1258,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         if (!vigente) return;
         setOpcionesServidor(r.opciones);
         setClavesPermitidas(hayFiltro ? new Set(r.claves) : null);
+        setFalloFiltros(false);
       })
       .catch((e) => {
         if (!vigente) return;
         console.error("No se pudieron resolver los filtros", e);
-        // Ante un error NO se recorta: mostrar de menos sin avisar es peor que mostrar de más.
+        // Ante un error NO se recorta, PERO SE AVISA: sin el cartel, la tabla se ve igual que si
+        // el filtro hubiera andado y devuelto todo, y eso es una respuesta equivocada sin señal.
         setClavesPermitidas(null);
+        setFalloFiltros(true);
       })
       .finally(() => vigente && setFiltrandoEnServidor(false));
 
@@ -2117,6 +2134,23 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               </div>
             </div>
           </Modal>
+
+          {/*
+            CUANDO EL SERVER NO CONTESTA, SE DICE.
+
+            Sin esto la pantalla miente sin darse cuenta: los números de asistencia quedan en 0 y los
+            filtros no recortan, y las dos cosas se ven exactamente igual que "este mes no pasó nada"
+            y "el filtro anduvo y no sacó a nadie". Es lo que hizo perder más tiempo de todo esto.
+          */}
+          {(falloAsistencias || falloFiltros) && (
+            <div className="mb-3 rounded border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-800 dark:text-red-300">
+              <div className="font-bold">Este reporte está incompleto.</div>
+              <ul className="mt-1 list-disc pl-5 space-y-0.5">
+                {falloAsistencias && <li>No se pudo traer la asistencia del período: las columnas de presentes, ausentes y horas extra están en cero porque no se sabe, no porque no haya.</li>}
+                {falloFiltros && <li>No se pudieron resolver los filtros de contrato: la tabla se muestra SIN recortar, así que puede haber filas que el filtro debería haber sacado.</li>}
+              </ul>
+            </div>
+          )}
 
           {/* Table */}
           <div className="flex-1 overflow-auto rounded border border-gray-200 dark:border-gray-700 min-h-0">
