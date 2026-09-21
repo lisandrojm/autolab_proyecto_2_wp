@@ -283,6 +283,15 @@ export const RequestsPage: React.FC = () => {
   const [reports, setReports] = useState<ActivityReport[]>([]);
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  /*
+    EL DIRECTORIO TIENE SU PROPIA ESPERA, y hay que mostrarla.
+
+    `loading` cubre las novedades, pero el modal de Reportes arma sus filas recorriendo `allUsers`:
+    con el directorio todavía en camino la tabla sale vacía y decía "No se encontraron registros",
+    que afirma que no hay nada cuando lo que pasa es que todavía no llegó. Son 22 segundos contra
+    Atlas, así que la ventana es larga y se ve siempre.
+  */
+  const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
   const [allProjects, setAllProjects] = useState<{ id: string; name: string; areasConfig?: any[] }[]>([]);
   const [allAreas, setAllAreas] = useState<{ id: string; name: string }[]>([]);
   const [allShifts, setAllShifts] = useState<{ id: string; name: string }[]>([]);
@@ -403,10 +412,13 @@ export const RequestsPage: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
+      setCargandoUsuarios(true);
       const users = await usersAPI.getDirectory();
       setAllUsers(users);
     } catch (e) {
       console.error("Error loading users", e);
+    } finally {
+      setCargandoUsuarios(false);
     }
   };
 
@@ -1570,7 +1582,7 @@ export const RequestsPage: React.FC = () => {
         </div>
       </Modal>
 
-      <NewsReportsModal isOpen={showReportsModal} onClose={() => { setShowReportsModal(false); setReportsInitialProject(""); }} reports={reports as any} allUsers={allUsers} allProjects={allProjects} initialProjectFilter={reportsInitialProject} />
+      <NewsReportsModal isOpen={showReportsModal} onClose={() => { setShowReportsModal(false); setReportsInitialProject(""); }} reports={reports as any} allUsers={allUsers} allProjects={allProjects} initialProjectFilter={reportsInitialProject} cargando={loading || cargandoUsuarios} />
     </PageLayout>
   );
 };

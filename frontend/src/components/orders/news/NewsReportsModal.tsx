@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines, faChevronLeft, faChevronRight, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines, faChevronLeft, faChevronRight, faFilter, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../../ui/Modal";
 import { User, UserProjectMetadata } from "../../../api/users";
 import { infoAPI, InfoItem } from "../../../api/info";
@@ -43,6 +43,14 @@ interface NewsReportsModalProps {
   allProjects: { id: string; name: string }[];
   /** Si se provee, al abrir el modal se preselecciona este proyecto (por _id) en el filtro de Proyecto. */
   initialProjectFilter?: string;
+  /**
+   * La pantalla TODAVÍA está trayendo las novedades.
+   *
+   * Hace falta acá porque sin esto una tabla vacía se lee igual esté cargando o no, y el modal
+   * decía "No se encontraron registros para el mes y filtros seleccionados" mientras los datos
+   * venían en camino: el mensaje afirma que no hay nada, que es distinto de todavía no sé.
+   */
+  cargando?: boolean;
 }
 
 interface EmployeeStats {
@@ -596,7 +604,7 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
   );
 };
 
-export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers, allProjects, initialProjectFilter }) => {
+export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers, allProjects, initialProjectFilter, cargando = false }) => {
   const navigate = useNavigate();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
@@ -2156,7 +2164,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 {statsByEmployee.length === 0 && (
                   <tr>
                     <td colSpan={19} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
-                      No se encontraron registros para el mes y filtros seleccionados.
+                      {cargando ? (
+                        <span className="inline-flex items-center gap-2 not-italic">
+                          <FontAwesomeIcon icon={faSpinner} spin />
+                          Cargando novedades…
+                        </span>
+                      ) : (
+                        "No se encontraron registros para el mes y filtros seleccionados."
+                      )}
                     </td>
                   </tr>
                 )}
