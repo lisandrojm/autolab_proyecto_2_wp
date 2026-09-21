@@ -1854,10 +1854,25 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
       .populate({
         path: "metadata.projects",
         model: UserProject,
+        /*
+          EL TIPO DE CONTRATO TIENE QUE VIAJAR, aunque cueste.
+
+          Al recortar los contratos quedaron afuera `nombre_contrato` y `tipo_contrato_id`, y con
+          ellos el filtro "Tipo de contrato" del modal de Reportes: la lista de tipos se arma
+          leyendo esos dos campos de cada contrato, así que quedaba SIEMPRE vacía y la pantalla
+          decía "Ningún contrato del período tiene tipo cargado" con 7.462 contratos que sí lo
+          tienen. No fallaba nada: simplemente el filtro no existía.
+
+          Medido contra la base: los dos campos suman 454 KB y 4,4 s sobre los 2,2 MB y 22,7 s que
+          este endpoint ya costaba. Es caro y se paga igual, porque un filtro que miente es peor que
+          uno lento. Lo que hay que atacar es el tamaño del directorio entero, no seguir sacándole
+          campos que la pantalla necesita.
+        */
         select:
           "projectId areaId nombre_proyecto nombre_rol_frame " +
           "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
-          "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments",
+          "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments " +
+          "contracts.nombre_contrato contracts.tipo_contrato_id",
       })
       .sort({ firstName: 1, lastName: 1 })
       .lean();
