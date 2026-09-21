@@ -119,6 +119,17 @@ export interface ParteConAsistencia {
   date: string;
   projectIdRaw: string;
   projectName: string;
+  /**
+   * El área y el turno DEL PARTE: dónde y en qué turno se trabajó ese día, no lo que dice la ficha.
+   *
+   * Es el mismo criterio del filtro «Área / Turno», y por eso la columna del reporte y el filtro no
+   * pueden contradecirse. Vacío cuando el parte no los tiene cargados.
+   */
+  areaName?: string;
+  shiftName?: string;
+  /** Aparte del nombre, para armar «Noche (18:00 - 00:00)» igual que el listado de Novedades. */
+  shiftStartTime?: string;
+  shiftEndTime?: string;
   attendance: {
     employeeId: string;
     status: string;

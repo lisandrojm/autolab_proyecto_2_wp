@@ -311,7 +311,20 @@ export const ContractStatesTab: React.FC = () => {
     }
   };
 
-  const nombreTipoContrato = (id: string) => contratoFrames.find((cf) => String(cf._id) === String(id))?.name || 'Tipo eliminado';
+  /**
+   * LOS TIPOS QUE TODAVÍA EXISTEN, de los que el estado tiene guardados.
+   *
+   * Los `contratoFrameIds` sobreviven al borrado de la plantilla que apuntan, así que la lista
+   * guardada termina llena de punteros a la nada. Antes cada uno de esos se dibujaba como un badge
+   * «Tipo eliminado»: en el tenant demo eran nueve por tarjeta, más que los tipos reales, y la
+   * pregunta que la tarjeta contesta —¿en qué tipos se ofrece este estado?— quedaba tapada por
+   * ruido que además no se puede accionar desde acá.
+   *
+   * Se filtran para mostrar. NO se tocan los datos: quién los limpia es el ABM de tipos, y borrarlos
+   * al pasar por esta pantalla cambiaría en qué tipos se ofrece el estado sin que nadie lo pida.
+   */
+  const tiposVigentes = (ids: string[]) =>
+    ids.map((id) => contratoFrames.find((cf) => String(cf._id) === String(id))).filter((cf): cf is ContratoFrameItem => !!cf);
 
   /**
    * Tipos de contrato que ya tomó OTRO estado impositivo: un tipo puede tener un solo estado
@@ -511,7 +524,7 @@ export const ContractStatesTab: React.FC = () => {
                           estado={estado}
                           index={index}
                           isReorderMode={isReorderMode}
-                          nombreTipoContrato={nombreTipoContrato}
+                          tiposVigentes={tiposVigentes}
                           abrirEditar={abrirEditar}
                           eliminar={eliminar}
                           onEnableReorder={handleStartReorder}
@@ -530,7 +543,7 @@ export const ContractStatesTab: React.FC = () => {
               {isReorderMode ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {mostrar.map((estado) => (
-                    <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} nombreTipoContrato={nombreTipoContrato} abrirEditar={abrirEditar} eliminar={eliminar} />
+                    <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} tiposVigentes={tiposVigentes} abrirEditar={abrirEditar} eliminar={eliminar} />
                   ))}
                 </div>
               ) : (
@@ -557,7 +570,7 @@ export const ContractStatesTab: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                           {delGrupo.map((estado) => (
-                            <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} nombreTipoContrato={nombreTipoContrato} abrirEditar={abrirEditar} eliminar={eliminar} />
+                            <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} tiposVigentes={tiposVigentes} abrirEditar={abrirEditar} eliminar={eliminar} />
                           ))}
                         </div>
                       </section>
@@ -857,15 +870,19 @@ export const ContractStatesTab: React.FC = () => {
 interface SortableEstadoProps {
   estado: InfoItem;
   isReorderMode: boolean;
-  nombreTipoContrato: (id: string) => string;
+  /** Los tipos que siguen existiendo, de los ids guardados en el estado (ver `tiposVigentes`). */
+  tiposVigentes: (ids: string[]) => ContratoFrameItem[];
   abrirEditar: (estado: InfoItem) => void;
   eliminar: (estado: InfoItem) => void;
 }
 
-const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnableReorder: () => void }> = ({ estado, index, isReorderMode, nombreTipoContrato, abrirEditar, eliminar, onEnableReorder }) => {
+const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnableReorder: () => void }> = ({ estado, index, isReorderMode, tiposVigentes, abrirEditar, eliminar, onEnableReorder }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id, disabled: !isReorderMode });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 1 : 0 };
-  const tipos = estado.data?.contratoFrameIds || [];
+  /* Los guardados y, de esos, los que todavía existen: la diferencia entre los dos es lo que
+     decide si la tarjeta dice «todos los tipos» o no dice nada (ver abajo). */
+  const idsGuardados = estado.data?.contratoFrameIds || [];
+  const tipos = tiposVigentes(idsGuardados);
 
   return (
     <tr
@@ -913,13 +930,27 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
       <td className="px-4 py-3">{estado.data?.etiquetaSecundaria ? <EstadoSecundarioBadge estado={estado} className="text-[10px]" /> : <span className="text-xs text-gray-400">—</span>}</td>
       <td className="px-4 py-3">
         {tipos.length === 0 ? (
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">Todos los tipos</span>
+          /*
+            SIN TIPOS GUARDADOS ES «TODOS»; CON TIPOS QUE YA NO EXISTEN, NO.
+
+            La lista vacía significa «no está restringido a ninguno», y por eso se ofrece en todos.
+            Pero un estado que guardó tres tipos y los tres se borraron NO quedó sin restricción:
+            quedó restringido a tres cosas que no existen, y no se ofrece en ninguna parte. Decirle
+            «Todos los tipos» sería afirmar exactamente lo contrario de lo que hace.
+          */
+          idsGuardados.length > 0 ? (
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 italic" title="Los tipos de contrato que tenía guardados ya no existen">
+              Sin tipos vigentes
+            </span>
+          ) : (
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">Todos los tipos</span>
+          )
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            {tipos.map((id) => (
-              <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
+            {tipos.map((cf) => (
+              <span key={cf._id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
                 <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
-                {nombreTipoContrato(id)}
+                {cf.name}
               </span>
             ))}
           </div>
@@ -947,11 +978,14 @@ const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: 
   </div>
 );
 
-const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMode, nombreTipoContrato, abrirEditar, eliminar }) => {
+const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMode, tiposVigentes, abrirEditar, eliminar }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id, disabled: !isReorderMode });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 1 : 0 };
   const color = colorEfectivo(estado);
-  const tipos = estado.data?.contratoFrameIds || [];
+  /* Los guardados y, de esos, los que todavía existen: la diferencia entre los dos es lo que
+     decide si la tarjeta dice «todos los tipos» o no dice nada (ver abajo). */
+  const idsGuardados = estado.data?.contratoFrameIds || [];
+  const tipos = tiposVigentes(idsGuardados);
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
@@ -965,8 +999,20 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
           <BadgePreview texto={estado.name} color={color} esImpositivo={!!estado.data?.esImpositivo} className="self-start" />
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
-              ({tipos.length || 'Todos'})
+            {/* Cuenta los VIGENTES: el contador decía (15) sobre una tarjeta donde nueve de esos
+                quince eran punteros a tipos borrados. «Todos» solo cuando no hay nada guardado,
+                por lo mismo que abajo. */}
+            <span
+              className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0"
+              title={
+                tipos.length > 0
+                  ? `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`
+                  : idsGuardados.length > 0
+                    ? 'Los tipos de contrato que tenía guardados ya no existen'
+                    : 'Se ofrece en todos los tipos de contrato'
+              }
+            >
+              ({tipos.length > 0 ? tipos.length : idsGuardados.length > 0 ? 0 : 'Todos'})
             </span>
             {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
             {estado.data?.esSistema ? <ChipSistema /> : null}
@@ -979,13 +1025,20 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
 
         <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/60">
           {tipos.length === 0 ? (
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 pt-2">Disponible en todos los tipos de contrato</span>
+            /* Ídem la vista de tabla: «todos» solo si no había nada guardado. */
+            idsGuardados.length > 0 ? (
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 italic pt-2" title="Los tipos de contrato que tenía guardados ya no existen">
+                Sin tipos de contrato vigentes
+              </span>
+            ) : (
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 pt-2">Disponible en todos los tipos de contrato</span>
+            )
           ) : (
             <div className="flex flex-wrap gap-1.5 pt-2">
-              {tipos.map((id) => (
-                <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
+              {tipos.map((cf) => (
+                <span key={cf._id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
                   <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
-                  {nombreTipoContrato(id)}
+                  {cf.name}
                 </span>
               ))}
             </div>
