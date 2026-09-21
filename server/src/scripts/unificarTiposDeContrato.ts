@@ -3,10 +3,16 @@
  * UNIFICAR LOS NOMBRES DE TIPO DE CONTRATO A LOS DEL CATÁLOGO
  * ═══════════════════════════════════════════════════════════════════════════
  *
- *   npx tsx src/scripts/unificarTiposDeContrato.ts            # reporte, no escribe nada
- *   npx tsx src/scripts/unificarTiposDeContrato.ts --aplicar  # lo escribe
+ *   npx tsx src/scripts/unificarTiposDeContrato.ts                      # reporte, no escribe nada
+ *   npx tsx src/scripts/unificarTiposDeContrato.ts --aplicar            # lo escribe
+ *   npx tsx src/scripts/unificarTiposDeContrato.ts --deshacer <archivo> # lo vuelve atrás
  *
  * (con NODE_ENV=production para ir contra la base de producción)
+ *
+ * Antes de escribir deja en `migraciones-respaldo/` el valor viejo de cada campo que toca, contrato
+ * por contrato. No es un backup de la base: es exactamente lo que hace falta para deshacer ESTO, y
+ * `--deshacer` lo aplica al revés. Un `updateOne` sobre un subdocumento de un array no se puede
+ * revertir de otra forma que sabiendo qué había.
  *
  * ── El problema ──
  *
@@ -45,9 +51,14 @@
  * Y el resto del nombre —lo que sobra después del tipo— tiene que ser una empresa conocida o nada.
  * Si sobra algo que no se sabe qué es, NO SE TOCA: es información que alguien puso ahí.
  */
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import mongoose, { Types } from "mongoose";
 import "../config/env.js";
 import { env } from "../config/env.js";
+
+const CARPETA_RESPALDO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../migraciones-respaldo");
 
 /** minúsculas, sin tildes, espacios colapsados. Para comparar, nunca para guardar. */
 const norm = (s: unknown): string =>
@@ -131,10 +142,60 @@ function resolver(nombre: string, catalogo: string[]): Resuelto | null {
   return null;
 }
 
+/** Una línea del respaldo: qué había en ese campo de ese contrato antes de tocarlo. */
+interface Deshacer {
+  vinculo: string;
+  campo: string;
+  antes: any;
+}
+
+/** Vuelve cada campo al valor que tenía. `undefined` significa que el campo no existía: se saca. */
+async function deshacer(db: any, archivo: string) {
+  const ruta = path.isAbsolute(archivo) ? archivo : path.resolve(CARPETA_RESPALDO, archivo);
+  const lineas: Deshacer[] = JSON.parse(fs.readFileSync(ruta, "utf8"));
+  console.log(`Deshaciendo ${lineas.length} campos desde ${ruta}\n`);
+
+  const porVinculo = new Map<string, Deshacer[]>();
+  for (const l of lineas) {
+    if (!porVinculo.has(l.vinculo)) porVinculo.set(l.vinculo, []);
+    porVinculo.get(l.vinculo)!.push(l);
+  }
+
+  let vinculos = 0;
+  for (const [vinculo, suyas] of porVinculo) {
+    const set: Record<string, any> = {};
+    const unset: Record<string, ""> = {};
+    for (const l of suyas) {
+      if (l.antes === undefined) unset[l.campo] = "";
+      else set[l.campo] = l.antes;
+    }
+    const cambio: any = {};
+    if (Object.keys(set).length) cambio.$set = set;
+    if (Object.keys(unset).length) cambio.$unset = unset;
+    await db.collection("users_&_projects").updateOne({ _id: new Types.ObjectId(vinculo) }, cambio);
+    vinculos += 1;
+  }
+  console.log(`Listo: ${lineas.length} campos vueltos atrás en ${vinculos} vínculos.`);
+}
+
 async function main() {
   const aplicar = process.argv.includes("--aplicar");
+  const archivoDeshacer = process.argv[process.argv.indexOf("--deshacer") + 1];
   await mongoose.connect(env.MONGO_URI, { dbName: env.MONGO_DB_NAME });
   const db = mongoose.connection.db!;
+
+  if (process.argv.includes("--deshacer")) {
+    if (!archivoDeshacer || archivoDeshacer.startsWith("--")) {
+      console.error("Falta el archivo de respaldo: --deshacer tipos-de-contrato-<sello>.json");
+      await mongoose.disconnect();
+      process.exit(1);
+    }
+    console.log(`Base: ${db.databaseName}\n`);
+    await deshacer(db, archivoDeshacer);
+    await mongoose.disconnect();
+    return;
+  }
+
   console.log(`Base: ${db.databaseName}${aplicar ? "" : "   (reporte: no se escribe nada)"}\n`);
 
   /* ── El catálogo, tal como lo muestra Configuración → Contratos → Tipos ── */
@@ -203,16 +264,24 @@ async function main() {
 
   let tocados = 0;
   let renglones = 0;
+  const respaldo: Deshacer[] = [];
+
   for (const v of vinculos as any[]) {
     const cambios: Record<string, any> = {};
+    /** Anota el valor viejo junto con el nuevo: el respaldo se arma escribiendo, no en otra pasada. */
+    const cambiar = (campo: string, nuevo: any, antes: any) => {
+      cambios[campo] = nuevo;
+      respaldo.push({ vinculo: String(v._id), campo, antes });
+    };
+
     (v.contracts || []).forEach((c: any, i: number) => {
       const r = porNombre.get(c?.nombre_contrato);
       if (!r) return;
 
-      if (c.nombre_contrato !== r.tipo) cambios[`contracts.${i}.nombre_contrato`] = r.tipo;
+      if (c.nombre_contrato !== r.tipo) cambiar(`contracts.${i}.nombre_contrato`, r.tipo, c.nombre_contrato);
 
       const idCanonico = ID_CANONICO[norm(r.tipo)];
-      if (idCanonico !== undefined && c.tipo_contrato_id !== idCanonico) cambios[`contracts.${i}.tipo_contrato_id`] = idCanonico;
+      if (idCanonico !== undefined && c.tipo_contrato_id !== idCanonico) cambiar(`contracts.${i}.tipo_contrato_id`, idCanonico, c.tipo_contrato_id);
 
       /*
         La empresa sólo se ESCRIBE, nunca se pisa: si el contrato ya tiene una cargada a mano, esa
@@ -220,9 +289,9 @@ async function main() {
         alguien que la eligió del desplegable.
       */
       if (r.empresa && !c.empresaContratoId && !c.nombre_empresa_contrato) {
-        cambios[`contracts.${i}.nombre_empresa_contrato`] = r.empresa;
+        cambiar(`contracts.${i}.nombre_empresa_contrato`, r.empresa, c.nombre_empresa_contrato);
         const id = idDeEmpresa.get(r.empresa);
-        if (id) cambios[`contracts.${i}.empresaContratoId`] = id;
+        if (id) cambiar(`contracts.${i}.empresaContratoId`, id, c.empresaContratoId);
       }
     });
 
@@ -232,7 +301,18 @@ async function main() {
     renglones += Object.keys(cambios).length;
   }
 
+  /*
+    El respaldo se escribe DESPUÉS y no antes a propósito: sólo lista lo que realmente cambió. Un
+    respaldo de lo que se pensaba cambiar deshace cosas que nunca pasaron.
+  */
+  fs.mkdirSync(CARPETA_RESPALDO, { recursive: true });
+  const sello = new Date().toISOString().replace(/[:.]/g, "-");
+  const archivo = path.join(CARPETA_RESPALDO, `tipos-de-contrato-${sello}.json`);
+  fs.writeFileSync(archivo, JSON.stringify(respaldo, null, 1), "utf8");
+
   console.log(`\nListo: ${renglones} campos escritos en ${tocados} vínculos.`);
+  console.log(`Respaldo: ${archivo}`);
+  console.log(`Para volver atrás: npx tsx src/scripts/unificarTiposDeContrato.ts --deshacer ${path.basename(archivo)}`);
   await mongoose.disconnect();
 }
 
