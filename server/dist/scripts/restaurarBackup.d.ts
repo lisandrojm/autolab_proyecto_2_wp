@@ -1,1 +1,1 @@
-export {};
+import "../config/env.js";

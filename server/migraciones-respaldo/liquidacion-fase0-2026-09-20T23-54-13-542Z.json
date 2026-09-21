@@ -1,0 +1,668 @@
+{
+  "fecha": "2026-09-20T23:54:13.542Z",
+  "tenantId": "696e0afdee864e3d5ceec539",
+  "conceptosCreados": [],
+  "empresasEnContratos": [],
+  "legajos": [
+    {
+      "userId": "6a84954915ceabf99964a24d",
+      "anterior": null
+    },
+    {
+      "userId": "6a84954615ceabf999649a31",
+      "anterior": null
+    },
+    {
+      "userId": "6a6bef17ede0ee17df762fc9",
+      "anterior": null
+    },
+    {
+      "userId": "6a6bef14ede0ee17df762974",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b25586db5eb54e985651a",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24c66db5eb54e98329f2",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24c56db5eb54e98329b5",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24c26db5eb54e9832799",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24c16db5eb54e98325e7",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24bd6db5eb54e9832267",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24b96db5eb54e9832031",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24b86db5eb54e9831ff5",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24b76db5eb54e9831e12",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24b56db5eb54e9831bec",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24ac6db5eb54e9830f87",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24ab6db5eb54e9830c2c",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24a16db5eb54e982ff92",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24a06db5eb54e982fc24",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b249a6db5eb54e982f48b",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24976db5eb54e982f0a5",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24926db5eb54e982e87a",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24926db5eb54e982e6e7",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b248e6db5eb54e982dd80",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b248d6db5eb54e982dd64",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b248a6db5eb54e982d570",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24886db5eb54e982d1da",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24886db5eb54e982d1c6",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24846db5eb54e982c4e1",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b247c6db5eb54e982ad25",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b247b6db5eb54e982acfe",
+      "anterior": null
+    },
+    {
+      "userId": "6a6b24796db5eb54e982ab65",
+      "anterior": null
+    },
+    {
+      "userId": "6a591b5d40ebfaac03e29ee1",
+      "anterior": null
+    },
+    {
+      "userId": "6a590afc787c184a430d6946",
+      "anterior": null
+    },
+    {
+      "userId": "6a590af8787c184a430d6775",
+      "anterior": null
+    },
+    {
+      "userId": "6a590af7787c184a430d6753",
+      "anterior": null
+    },
+    {
+      "userId": "6a590af4787c184a430d65c0",
+      "anterior": null
+    },
+    {
+      "userId": "6a590af3787c184a430d6455",
+      "anterior": null
+    },
+    {
+      "userId": "6a590af1787c184a430d62f4",
+      "anterior": null
+    },
+    {
+      "userId": "6a590aef787c184a430d62d8",
+      "anterior": null
+    },
+    {
+      "userId": "6a590aed787c184a430d6292",
+      "anterior": null
+    },
+    {
+      "userId": "6a590aeb787c184a430d625c",
+      "anterior": null
+    },
+    {
+      "userId": "6a590aea787c184a430d60fe",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ae9787c184a430d60db",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ae7787c184a430d5f48",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ae5787c184a430d5daa",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ae4787c184a430d5d49",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ae1787c184a430d5a3e",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ae0787c184a430d579b",
+      "anterior": null
+    },
+    {
+      "userId": "6a590adc787c184a430d5623",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ad9787c184a430d547f",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ad6787c184a430d521c",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ad4787c184a430d4f43",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ad2787c184a430d4ca8",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ad0787c184a430d4ae4",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ace787c184a430d4979",
+      "anterior": null
+    },
+    {
+      "userId": "6a590acb787c184a430d4800",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ac3787c184a430d41f5",
+      "anterior": null
+    },
+    {
+      "userId": "6a590ac1787c184a430d3de4",
+      "anterior": null
+    },
+    {
+      "userId": "6a590abc787c184a430d3b76",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c072091d8701abc7884e5",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c058f80db2623ba4dcb1e",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c058e80db2623ba4dcb08",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c058d80db2623ba4dcaeb",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c057080db2623ba4da05f",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c056d80db2623ba4d9da1",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c056b80db2623ba4d9aea",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c056980db2623ba4d95a7",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c056580db2623ba4d8e9d",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c056480db2623ba4d8e89",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c056280db2623ba4d8909",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c055c80db2623ba4d7db6",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c055980db2623ba4d7985",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c055180db2623ba4d64eb",
+      "anterior": null
+    },
+    {
+      "userId": "6a4c055080db2623ba4d64de",
+      "anterior": null
+    },
+    {
+      "userId": "6a46996f7edc747f9d9e0160",
+      "anterior": null
+    },
+    {
+      "userId": "6a46996e7edc747f9d9e0147",
+      "anterior": null
+    },
+    {
+      "userId": "6a46996c7edc747f9d9dfec1",
+      "anterior": null
+    },
+    {
+      "userId": "6a4699677edc747f9d9dfd23",
+      "anterior": null
+    },
+    {
+      "userId": "6a4699667edc747f9d9dfcdb",
+      "anterior": null
+    },
+    {
+      "userId": "6a4699657edc747f9d9dfb63",
+      "anterior": null
+    },
+    {
+      "userId": "6a4699647edc747f9d9df9e7",
+      "anterior": null
+    },
+    {
+      "userId": "6a37eff641dee016a0dec84d",
+      "anterior": null
+    },
+    {
+      "userId": "6a37eff541dee016a0dec845",
+      "anterior": null
+    },
+    {
+      "userId": "6a37eff541dee016a0dec83b",
+      "anterior": null
+    },
+    {
+      "userId": "6a2eb9ce6109de7346cc7ee4",
+      "anterior": null
+    },
+    {
+      "userId": "6964250b888f8216c8488c74",
+      "anterior": null
+    },
+    {
+      "userId": "6964250a888f8216c8488c6d",
+      "anterior": null
+    },
+    {
+      "userId": "69642499888f8216c84889a2",
+      "anterior": null
+    },
+    {
+      "userId": "6964246c888f8216c8488878",
+      "anterior": null
+    },
+    {
+      "userId": "6964240f888f8216c8488613",
+      "anterior": null
+    },
+    {
+      "userId": "6964240d888f8216c8488607",
+      "anterior": null
+    },
+    {
+      "userId": "696423e6888f8216c8488504",
+      "anterior": null
+    },
+    {
+      "userId": "696423da888f8216c84884bb",
+      "anterior": null
+    },
+    {
+      "userId": "696423d2888f8216c848848a",
+      "anterior": null
+    },
+    {
+      "userId": "69642275888f8216c8487aff",
+      "anterior": null
+    },
+    {
+      "userId": "6964226e888f8216c8487ac8",
+      "anterior": null
+    },
+    {
+      "userId": "69642267888f8216c8487a9b",
+      "anterior": null
+    },
+    {
+      "userId": "69642267888f8216c8487a98",
+      "anterior": null
+    },
+    {
+      "userId": "69642257888f8216c8487a2b",
+      "anterior": null
+    },
+    {
+      "userId": "69642250888f8216c84879f7",
+      "anterior": null
+    },
+    {
+      "userId": "6964224f888f8216c84879f0",
+      "anterior": null
+    },
+    {
+      "userId": "6964224b888f8216c84879d5",
+      "anterior": null
+    },
+    {
+      "userId": "6964224a888f8216c84879ce",
+      "anterior": null
+    },
+    {
+      "userId": "69642248888f8216c84879c0",
+      "anterior": null
+    },
+    {
+      "userId": "69642248888f8216c84879b9",
+      "anterior": null
+    },
+    {
+      "userId": "69642244888f8216c848799d",
+      "anterior": null
+    },
+    {
+      "userId": "69642242888f8216c848798c",
+      "anterior": null
+    },
+    {
+      "userId": "69642241888f8216c8487985",
+      "anterior": null
+    },
+    {
+      "userId": "6964223e888f8216c848796d",
+      "anterior": null
+    },
+    {
+      "userId": "6964223c888f8216c848795c",
+      "anterior": null
+    },
+    {
+      "userId": "6964223a888f8216c848794b",
+      "anterior": null
+    },
+    {
+      "userId": "69642238888f8216c848793a",
+      "anterior": null
+    },
+    {
+      "userId": "69642237888f8216c8487933",
+      "anterior": null
+    },
+    {
+      "userId": "69642236888f8216c8487925",
+      "anterior": null
+    },
+    {
+      "userId": "69642233888f8216c8487910",
+      "anterior": null
+    },
+    {
+      "userId": "69642232888f8216c8487909",
+      "anterior": null
+    },
+    {
+      "userId": "69642231888f8216c84878fb",
+      "anterior": null
+    },
+    {
+      "userId": "69642230888f8216c84878f4",
+      "anterior": null
+    },
+    {
+      "userId": "6964222e888f8216c84878e6",
+      "anterior": null
+    },
+    {
+      "userId": "6964222a888f8216c84878ce",
+      "anterior": null
+    },
+    {
+      "userId": "69642228888f8216c84878bd",
+      "anterior": null
+    },
+    {
+      "userId": "69642226888f8216c84878a8",
+      "anterior": null
+    },
+    {
+      "userId": "69642225888f8216c84878a1",
+      "anterior": null
+    },
+    {
+      "userId": "69642223888f8216c8487890",
+      "anterior": null
+    },
+    {
+      "userId": "69642222888f8216c8487889",
+      "anterior": null
+    },
+    {
+      "userId": "69642220888f8216c848787b",
+      "anterior": null
+    },
+    {
+      "userId": "6964221f888f8216c8487874",
+      "anterior": null
+    },
+    {
+      "userId": "6964221d888f8216c8487866",
+      "anterior": null
+    },
+    {
+      "userId": "69642218888f8216c8487838",
+      "anterior": null
+    },
+    {
+      "userId": "69642217888f8216c8487831",
+      "anterior": null
+    },
+    {
+      "userId": "69642214888f8216c8487817",
+      "anterior": null
+    },
+    {
+      "userId": "69642211888f8216c84877fb",
+      "anterior": null
+    },
+    {
+      "userId": "69642210888f8216c84877f4",
+      "anterior": null
+    },
+    {
+      "userId": "6964220f888f8216c84877e6",
+      "anterior": null
+    },
+    {
+      "userId": "6964220b888f8216c84877c4",
+      "anterior": null
+    },
+    {
+      "userId": "69642207888f8216c84877a1",
+      "anterior": null
+    },
+    {
+      "userId": "69642206888f8216c848779a",
+      "anterior": null
+    },
+    {
+      "userId": "69642202888f8216c848777b",
+      "anterior": null
+    },
+    {
+      "userId": "696421fd888f8216c848774f",
+      "anterior": null
+    },
+    {
+      "userId": "696421f8888f8216c8487733",
+      "anterior": null
+    },
+    {
+      "userId": "696421f8888f8216c848772c",
+      "anterior": null
+    },
+    {
+      "userId": "696421f3888f8216c8487709",
+      "anterior": null
+    },
+    {
+      "userId": "696421f3888f8216c8487702",
+      "anterior": null
+    },
+    {
+      "userId": "696421f0888f8216c84876ea",
+      "anterior": null
+    },
+    {
+      "userId": "696421ed888f8216c84876cf",
+      "anterior": null
+    },
+    {
+      "userId": "696421ec888f8216c84876c8",
+      "anterior": null
+    },
+    {
+      "userId": "696421e9888f8216c84876ad",
+      "anterior": null
+    },
+    {
+      "userId": "696421e8888f8216c84876a6",
+      "anterior": null
+    },
+    {
+      "userId": "696421e5888f8216c848768a",
+      "anterior": null
+    },
+    {
+      "userId": "696421e4888f8216c8487683",
+      "anterior": null
+    },
+    {
+      "userId": "696421e3888f8216c848767c",
+      "anterior": null
+    },
+    {
+      "userId": "696421df888f8216c8487656",
+      "anterior": null
+    },
+    {
+      "userId": "696421de888f8216c848764f",
+      "anterior": null
+    },
+    {
+      "userId": "696421da888f8216c8487630",
+      "anterior": null
+    },
+    {
+      "userId": "696421d3888f8216c848760b",
+      "anterior": null
+    },
+    {
+      "userId": "696421d3888f8216c8487604",
+      "anterior": null
+    },
+    {
+      "userId": "696421d2888f8216c84875fd",
+      "anterior": null
+    },
+    {
+      "userId": "696421cc888f8216c84875d7",
+      "anterior": null
+    },
+    {
+      "userId": "696421c7888f8216c84875aa",
+      "anterior": null
+    },
+    {
+      "userId": "696421c6888f8216c84875a3",
+      "anterior": null
+    },
+    {
+      "userId": "696421bf888f8216c8487569",
+      "anterior": null
+    },
+    {
+      "userId": "696421be888f8216c8487562",
+      "anterior": null
+    },
+    {
+      "userId": "696421b6888f8216c8487521",
+      "anterior": null
+    },
+    {
+      "userId": "6964218d888f8216c84873ec",
+      "anterior": null
+    },
+    {
+      "userId": "6964218c888f8216c84873e5",
+      "anterior": null
+    }
+  ]
+}

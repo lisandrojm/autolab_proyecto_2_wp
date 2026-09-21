@@ -1,0 +1,47 @@
+{
+  "fecha": "2026-09-20T23:46:07.422Z",
+  "tenantId": "696e0afdee864e3d5ceec539",
+  "motivos": [
+    {
+      "motivoId": "6a120cd51b224958c10a847f",
+      "nombre": "Franco",
+      "anterior": []
+    },
+    {
+      "motivoId": "696e0afdee864e3d5ceec53d",
+      "nombre": "Cambio de Turno",
+      "anterior": []
+    },
+    {
+      "motivoId": "696e0afdee864e3d5ceec541",
+      "nombre": "Compensatorio",
+      "anterior": []
+    },
+    {
+      "motivoId": "696e0afeee864e3d5ceec547",
+      "nombre": "Enfermedad",
+      "anterior": []
+    },
+    {
+      "motivoId": "696e0afeee864e3d5ceec54b",
+      "nombre": "Vacaciones",
+      "anterior": []
+    },
+    {
+      "motivoId": "696e0afeee864e3d5ceec54f",
+      "nombre": "Sin Goce de Sueldo",
+      "anterior": []
+    },
+    {
+      "motivoId": "6a31bdcb8f6bb6cfe132deaf",
+      "nombre": "Feriado",
+      "anterior": []
+    },
+    {
+      "motivoId": "6aa995900ecdb256ffee9ba2",
+      "nombre": "Renuncia",
+      "anterior": []
+    }
+  ],
+  "horasExtraAnterior": null
+}

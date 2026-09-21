@@ -1,0 +1,24 @@
+{
+  "fecha": "2026-09-20T23:48:41.613Z",
+  "tenantId": "696e0afdee864e3d5ceec539",
+  "motivos": [
+    {
+      "motivoId": "696e0afdee864e3d5ceec53d",
+      "nombre": "Cambio de Turno",
+      "anterior": []
+    },
+    {
+      "motivoId": "6aa995900ecdb256ffee9ba2",
+      "nombre": "Renuncia",
+      "anterior": []
+    }
+  ],
+  "horasExtraAnterior": {
+    "codigo50": "0015",
+    "codigo100": "0016",
+    "param": "par1",
+    "unidad": "cantidad",
+    "vigenteDesde": "2026-05-21"
+  },
+  "jornalBaseAnterior": null
+}
