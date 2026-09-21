@@ -125,6 +125,21 @@ const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): numbe
 
 // Contract Detail Sub-Modal
 // Improved isActiveContract to check for status and period overlap
+/**
+ * La clave con la que se agrupa un proyecto. Sube a nivel de módulo porque la usan dos cosas que
+ * tienen que coincidir: el armado de las filas y la lista de opciones del filtro de Proyecto. Con
+ * una copia en cada lado, el filtro ofrecía claves que ninguna fila tenía.
+ *
+ * OJO: no colapsa «LN+» con «426_LN+» —sólo saca espacios, guiones y guiones bajos—, así que el
+ * nombre del parte y el del vínculo son claves distintas. Por eso la asistencia se cruza por id
+ * primero (ver `filaPorProyectoId`) y sólo cae al nombre cuando el vínculo no tiene id.
+ */
+const normalizeProjectName = (name: string) =>
+  (name || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s\-_]/g, "");
+
 const isActiveContract = (contract: any, periodStart?: Date, periodEnd?: Date) => {
   if (!contract.fecha_alta_contrato) return false;
 
@@ -619,14 +634,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const navigate = useNavigate();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
-  const [projectFilter, setProjectFilter] = useState("all");
+  /**
+   * PROYECTO/S: VARIOS A LA VEZ. Vacío = todos.
+   *
+   * Era uno solo, y comparar dos producciones —o sumar las tres de un mismo cliente— obligaba a
+   * correr el reporte una vez por proyecto y sumar a mano los totales del pie, que es justamente lo
+   * que la pantalla está para evitar.
+   */
+  const [proyectosSeleccionados, setProyectosSeleccionados] = useState<string[]>([]);
+  const alternarProyecto = (id: string) => setProyectosSeleccionados((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  // Preselecciona el proyecto en el filtro cuando el modal se abre con un proyecto indicado (shortcut desde Proyectos).
-  useEffect(() => {
-    if (isOpen && initialProjectFilter && initialProjectFilter.trim()) {
-      setProjectFilter(initialProjectFilter);
-    }
-  }, [isOpen, initialProjectFilter]);
   const [searchTerm, setSearchTerm] = useState("");
   const [contractModal, setContractModal] = useState<{ open: boolean; employeeName: string; data: UserProjectMetadata[] }>({ open: false, employeeName: "", data: [] });
   const [totalDetail, setTotalDetail] = useState<{ open: boolean; stats: EmployeeStats | null }>({ open: false, stats: null });
@@ -660,7 +677,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   */
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState("");
   const [filtroVigencia, setFiltroVigencia] = useState("");
-  const [filtroEstadoContrato, setFiltroEstadoContrato] = useState("");
   /**
    * ÁREA Y TURNO: DOS FILTROS, Y CADA UNO DE A VARIOS.
    *
@@ -676,8 +692,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [turnosSeleccionados, setTurnosSeleccionados] = useState<string[]>([]);
   const alternarArea = (a: string) => setAreasSeleccionadas((p) => (p.includes(a) ? p.filter((x) => x !== a) : [...p, a]));
   const alternarTurno = (t: string) => setTurnosSeleccionados((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
-  const [filtroReemplazo, setFiltroReemplazo] = useState("");
-  const [filtroRol, setFiltroRol] = useState("");
 
   const [opcionesServidor, setOpcionesServidor] = useState<FiltrosDePersonas["opciones"]>({ roles: [], tipos: [], estados: [], areasTurnos: [] });
   /**
@@ -856,7 +870,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   /** «Solo los que tienen»: cada uno recorta a las filas con al menos un caso. */
   const [soloConAusencias, setSoloConAusencias] = useState(false);
   const [soloConExtras, setSoloConExtras] = useState(false);
-  const [soloConTarde, setSoloConTarde] = useState(false);
 
   // Paginación client-side de la tabla de empleados (alivia el render de tablas grandes).
   const REPORT_PAGE_SIZE = 25;
@@ -902,13 +915,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     const employeeMap = new Map<string, EmployeeStats>();
     const start = parseISO(dateFrom + "T00:00:00");
     const end = parseISO(dateTo + "T23:59:59");
-
-    // Helper to normalize project names for consistent keys
-    const normalizeProjectName = (name: string) =>
-      (name || "")
-        .trim()
-        .toUpperCase()
-        .replace(/[\s\-_]/g, "");
 
     const getLocalMidnight = (dateString: string) => {
       if (!dateString) return null;
@@ -1015,12 +1021,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         */
         if (clavesPermitidas && !clavesPermitidas.has(claveDeFila(userIdStr, normName))) return;
 
-        // Project Filter check
-        if (projectFilter !== "all") {
-          const filterProj = allProjects.find((p) => p.id === projectFilter);
-          const filterNorm = normalizeProjectName(filterProj?.name || "");
-          if (projectId !== projectFilter && normName !== filterNorm) return;
-        }
+        /* El filtro guarda la MISMA clave con la que se agrupa la fila, así que alcanza con mirar
+           si está: nada de resolver ids contra nombres, que era de donde salían los proyectos que
+           el desplegable ofrecía y ninguna fila tenía. */
+        if (proyectosSeleccionados.length > 0 && !proyectosSeleccionados.includes(normName)) return;
 
         // Active Contract filter
         const activeContracts = allContracts.filter((c) => isActiveContract(c, start, end));
@@ -1133,8 +1137,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         return;
       }
 
-      if (projectFilter !== "all" && report.projectIdRaw !== projectFilter) return;
-
       report.attendance.forEach((record) => {
         const empIdStr = String(record.employeeId || "");
         if (!empIdStr) return;
@@ -1149,6 +1151,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         const delPadron = filaPorProyectoId.get(`${empIdStr}::${report.projectIdRaw || ""}`);
         const normReportProjName = delPadron?.normName || normalizeProjectName(reportProjName);
         const mapKey = delPadron?.mapKey || `${empIdStr}-${normReportProjName}`;
+
+        /* El recorte por proyecto va acá y no arriba: recién con el vínculo resuelto se sabe en qué
+           clave cae este parte, y es esa la que el filtro guarda. Aplicado al parte entero se
+           comparaba un id contra una clave y no coincidía nunca. */
+        if (proyectosSeleccionados.length > 0 && !proyectosSeleccionados.includes(normReportProjName)) return;
 
         // Fallback Initialization (if not in roster or skipped previously)
         if (!employeeMap.has(mapKey)) {
@@ -1403,10 +1410,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     }
     if (soloConAusencias) results = results.filter((s) => s.absences > 0);
     if (soloConExtras) results = results.filter((s) => s.overtimeHours > 0);
-    if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas, economiaPorFila, areaTurnoDeContratos, areasSeleccionadas, turnosSeleccionados]);
+  }, [partesDelPeriodo, dateFrom, dateTo, proyectosSeleccionados, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, clavesPermitidas, economiaPorFila, areaTurnoDeContratos, areasSeleccionadas, turnosSeleccionados]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1461,17 +1467,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (!isOpen || !dateFrom || !dateTo) return;
     let vigente = true;
 
-    const hayFiltro = !!(filtroEstadoUsuario || filtroVigencia || filtroEstadoContrato || filtroReemplazo || filtroRol);
+    const hayFiltro = !!(filtroEstadoUsuario || filtroVigencia);
     setFiltrandoEnServidor(true);
 
     activityReportsAPI
       .filtrosDePersonas(dateFrom, dateTo, {
         estadoUsuario: filtroEstadoUsuario,
         vigencia: filtroVigencia,
-        estadoContrato: filtroEstadoContrato,
         // Área y turno ya no viajan: se resuelven acá, contra el contrato (ver `areasSeleccionadas`).
-        reemplazo: filtroReemplazo,
-        rol: filtroRol,
         /*
           El interruptor «solo con contrato activo» decide si la fila mira los contratos del período
           o todos, y con eso CAMBIA CUÁL RIGE. Si no viajara, el server elegiría un contrato y la
@@ -1499,10 +1502,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     return () => {
       vigente = false;
     };
-  }, [isOpen, dateFrom, dateTo, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroReemplazo, filtroRol, showActiveTableOnly]);
+  }, [isOpen, dateFrom, dateTo, filtroEstadoUsuario, filtroVigencia, showActiveTableOnly]);
 
   const universoDelPeriodo = useMemo(() => {
-    const proyectos = new Map<string, string>();
     const roles = new Set<string>();
     const tipos = new Set<string>();
     const areas = new Set<string>();
@@ -1515,7 +1517,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       start = parseISO(dateFrom + "T00:00:00");
       end = parseISO(dateTo + "T23:59:59");
     } catch {
-      return { proyectos: [], roles: [], tipos: [], areas: [], turnos: [] };
+      return { roles: [], tipos: [], areas: [], turnos: [] };
     }
 
     // Del período entero, no de la página del listado: si no, el selector de Proyecto listaba los
@@ -1526,7 +1528,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       } catch {
         continue;
       }
-      if (report.projectIdRaw) proyectos.set(report.projectIdRaw, report.projectName);
       for (const rec of report.attendance || []) {
         if (rec.employeeId) empleados.add(String(rec.employeeId));
       }
@@ -1554,7 +1555,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
     const ordenar = (a: string, b: string) => a.localeCompare(b, "es", { sensitivity: "base" });
     return {
-      proyectos: Array.from(proyectos, ([id, name]) => ({ id, name })).sort((a, b) => ordenar(a.name, b.name)),
       roles: Array.from(roles).sort(ordenar),
       tipos: Array.from(tipos).sort(ordenar),
       areas: Array.from(areas).sort(ordenar),
@@ -1564,26 +1564,82 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
   const rolesEmpresaDisponibles = universoDelPeriodo.roles;
 
+  /**
+   * LOS PROYECTOS QUE EL FILTRO PUEDE OFRECER — los de las FILAS, no los de las novedades.
+   *
+   * Salía de `partesDelPeriodo`, o sea sólo los proyectos que tuvieron novedades cargadas. Pero la
+   * tabla dibuja una fila por persona y VÍNCULO, tenga o no asistencia ese mes: por eso el
+   * desplegable mostraba un solo «LN+» mientras la columna Proyectos listaba «426_LN+» y
+   * «99_PRODUCTORA», y esos dos no se podían filtrar.
+   *
+   * Se arma con la MISMA clave con la que se agrupan las filas (`normalizeProjectName` del
+   * `nombre_proyecto` del vínculo) y muestra el mismo texto que la columna. Filtrar por lo que se
+   * ve y ver lo que se filtra es la única forma de que el conteo del pie cierre.
+   *
+   * Los partes suman sólo los proyectos que NINGÚN vínculo trae: un parte puede existir para un
+   * proyecto en el que nadie del padrón tiene contrato, y esa fila igual aparece.
+   */
+  const proyectosDelReporte = useMemo(() => {
+    const porClave = new Map<string, { clave: string; nombre: string; id?: string }>();
+    const clavesPorId = new Map<string, string>();
+
+    for (const u of allUsers || []) {
+      for (const up of ((u.metadata?.projects || []) as UserProjectMetadata[])) {
+        const raw = (up.nombre_proyecto || "").trim();
+        const id = String((typeof up.projectId === "object" ? (up.projectId as any)?._id : up.projectId) || "");
+        // El mismo descarte que hace el armado de filas: sin nombre y sin id no dibuja nada.
+        const clave = normalizeProjectName(raw || "Desconocido");
+        if (clave === "DESCONOCIDO" && !id) continue;
+        if (id) clavesPorId.set(id, clave);
+        if (!porClave.has(clave)) porClave.set(clave, { clave, nombre: raw || "Desconocido", id: id || undefined });
+      }
+    }
+
+    for (const report of partesDelPeriodo) {
+      const id = String(report.projectIdRaw || "");
+      if (id && clavesPorId.has(id)) continue; // ya está, con el nombre del vínculo
+      const nombre = (report.projectName || "").trim();
+      if (!nombre) continue;
+      const clave = normalizeProjectName(nombre);
+      if (!porClave.has(clave)) porClave.set(clave, { clave, nombre, id: id || undefined });
+    }
+
+    return [...porClave.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }));
+  }, [allUsers, partesDelPeriodo]);
+
+  /*
+    Preselecciona el proyecto cuando el modal se abre desde el atajo de Proyectos.
+
+    Llega un `_id` y el filtro guarda la clave de agrupación, así que hay que traducirlo contra la
+    lista de opciones — que se arma cuando terminó de cargar el padrón, no al abrir. Por eso el
+    efecto depende de ella y no sólo de `isOpen`.
+
+    Sólo pisa una selección VACÍA: si no, al llegar el padrón volvería a imponer el proyecto del
+    atajo sobre lo que la persona ya eligió a mano.
+  */
+  useEffect(() => {
+    if (!isOpen || !initialProjectFilter?.trim()) return;
+    const clave = proyectosDelReporte.find((p) => p.id === initialProjectFilter)?.clave;
+    if (!clave) return;
+    setProyectosSeleccionados((previos) => (previos.length === 0 ? [clave] : previos));
+  }, [isOpen, initialProjectFilter, proyectosDelReporte]);
+
   /** Cuántos filtros del modal están puestos. Es lo que se muestra en el badge del botón. */
   const filtrosActivos = useMemo(
     () =>
       [
-        projectFilter !== "all",
+        proyectosSeleccionados.length > 0,
         tiposSeleccionados.length > 0,
         rolesEmpresaSeleccionados.length > 0,
         !showActiveTableOnly,
         soloConAusencias,
         soloConExtras,
-        soloConTarde,
         !!filtroEstadoUsuario,
         !!filtroVigencia,
-        !!filtroEstadoContrato,
         areasSeleccionadas.length > 0,
         turnosSeleccionados.length > 0,
-        !!filtroReemplazo,
-        !!filtroRol,
       ].filter(Boolean).length,
-    [projectFilter, tiposSeleccionados, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, areasSeleccionadas, turnosSeleccionados, filtroReemplazo, filtroRol],
+    [proyectosSeleccionados, tiposSeleccionados, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados],
   );
 
   /**
@@ -1597,44 +1653,36 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    */
   const chipsDeFiltros = useMemo(() => {
     const chips: { key: string; label: string; valor: string; quitar: () => void }[] = [];
-    if (projectFilter !== "all") chips.push({ key: "proyecto", label: "Proyecto", valor: allProjects.find((p) => p.id === projectFilter)?.name || projectFilter, quitar: () => setProjectFilter("all") });
+    for (const clave of proyectosSeleccionados) chips.push({ key: `proyecto:${clave}`, label: "Proyecto", valor: proyectosDelReporte.find((p) => p.clave === clave)?.nombre || clave, quitar: () => alternarProyecto(clave) });
     // Un chip por tipo tildado: con varios puestos, uno solo que dijera «3 tipos» obliga a abrir el modal para saber cuáles.
     for (const t of tiposSeleccionados) chips.push({ key: `tipo:${t}`, label: "Tipo", valor: t, quitar: () => alternarTipo(t) });
     /* Los del server, cada uno con su forma de sacarlo sin abrir el modal. */
     if (filtroEstadoUsuario) chips.push({ key: "estadoUsuario", label: "Usuarios", valor: filtroEstadoUsuario === "active" ? "Activos" : "Inactivos", quitar: () => setFiltroEstadoUsuario("") });
     if (filtroVigencia) chips.push({ key: "vigencia", label: "Contratos", valor: filtroVigencia === "vigente" ? "Vigentes" : "No vigentes", quitar: () => setFiltroVigencia("") });
-    if (filtroRol) chips.push({ key: "rol", label: "Rol", valor: filtroRol, quitar: () => setFiltroRol("") });
     for (const a of areasSeleccionadas) chips.push({ key: `area:${a}`, label: "Área", valor: a, quitar: () => alternarArea(a) });
     for (const t of turnosSeleccionados) chips.push({ key: `turno:${t}`, label: "Turno", valor: t, quitar: () => alternarTurno(t) });
-    if (filtroEstadoContrato) chips.push({ key: "estadoContrato", label: "Estado", valor: filtroEstadoContrato, quitar: () => setFiltroEstadoContrato("") });
-    if (filtroReemplazo) chips.push({ key: "reemplazo", label: "Reemplazo", valor: filtroReemplazo === "con" ? "Con reemplazo" : "Sin reemplazo", quitar: () => setFiltroReemplazo("") });
     /* Un chip por rol elegido, igual que los tipos. La `key` lleva prefijo propio: «Rol/es» de
        plataforma ya usa "rol", y con los dos puestos React veía dos chips con la misma key. */
     for (const r of rolesEmpresaSeleccionados) chips.push({ key: `rolEmpresa:${r}`, label: "Rol Empresa", valor: r, quitar: () => alternarRolEmpresa(r) });
     if (soloConAusencias) chips.push({ key: "ausencias", label: "Solo", valor: "Con ausencias", quitar: () => setSoloConAusencias(false) });
     if (soloConExtras) chips.push({ key: "extras", label: "Solo", valor: "Con horas extra", quitar: () => setSoloConExtras(false) });
-    if (soloConTarde) chips.push({ key: "tarde", label: "Solo", valor: "Con llegadas tarde", quitar: () => setSoloConTarde(false) });
     // Este entra al revés que el resto: lo que se anota es haberlo APAGADO, porque el default es ON.
     if (!showActiveTableOnly) chips.push({ key: "activos", label: "Incluye", valor: "Contratos no vigentes", quitar: () => setShowActiveTableOnly(true) });
     return chips;
-  }, [projectFilter, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, areasSeleccionadas, turnosSeleccionados, filtroReemplazo, filtroRol, opcionesServidor]);
+  }, [proyectosSeleccionados, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados, opcionesServidor, proyectosDelReporte]);
 
   const limpiarFiltros = () => {
-    setProjectFilter("all");
+    setProyectosSeleccionados([]);
     setTiposSeleccionados([]);
     setRolesEmpresaSeleccionados([]);
     // «Contratos activos» vuelve a ON: es el default y lo que evita filas de gente sin contrato.
     setShowActiveTableOnly(true);
     setSoloConAusencias(false);
     setSoloConExtras(false);
-    setSoloConTarde(false);
     setFiltroEstadoUsuario("");
     setFiltroVigencia("");
-    setFiltroEstadoContrato("");
     setAreasSeleccionadas([]);
     setTurnosSeleccionados([]);
-    setFiltroReemplazo("");
-    setFiltroRol("");
   };
 
   // Paginación de la tabla (los totales del pie siguen calculándose sobre TODO statsByEmployee).
@@ -1647,7 +1695,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   // Volver a la página 1 cuando cambian filtros/apertura, y no quedar fuera de rango.
   useEffect(() => {
     setReportPage(1);
-  }, [dateFrom, dateTo, projectFilter, searchTerm, showActiveTableOnly, tiposSeleccionados, isOpen]);
+  }, [dateFrom, dateTo, proyectosSeleccionados, searchTerm, showActiveTableOnly, tiposSeleccionados, isOpen]);
   useEffect(() => {
     if (reportPage > reportTotalPages) setReportPage(reportTotalPages);
   }, [reportPage, reportTotalPages]);
@@ -1663,9 +1711,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   }, [dateFrom, dateTo]);
 
   const activeProjectName = useMemo(() => {
-    if (projectFilter === "all") return "Todos los Proyectos";
-    return allProjects.find((p) => p.id === projectFilter)?.name || "Filtro activo";
-  }, [projectFilter, allProjects]);
+    if (proyectosSeleccionados.length === 0) return "Todos los Proyectos";
+    const nombres = proyectosSeleccionados.map((clave) => proyectosDelReporte.find((p) => p.clave === clave)?.nombre || clave);
+    // Con más de dos, los nombres no entran en el encabezado y el conteo dice lo mismo en menos lugar.
+    return nombres.length <= 2 ? nombres.join(" + ") : `${nombres.length} proyectos`;
+  }, [proyectosSeleccionados, proyectosDelReporte]);
 
   const totalAbsences = statsByEmployee.reduce((acc, curr) => acc + curr.absences, 0);
   const totalOvertime50 = statsByEmployee.reduce((acc, curr) => acc + curr.overtime50, 0);
@@ -2132,18 +2182,21 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 pt-2 border-t border-gray-200 dark:border-gray-700">Filtros por Categoría</p>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Proyecto</label>
-                <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="input-field w-full">
-                  <option value="all">Todos los proyectos</option>
-                  {universoDelPeriodo.proyectos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Solo los que tuvieron novedades en el período.</p>
-              </div>
+              {/* Mismo gesto que Tipo de contrato y Rol/es Empresa: la lista puede tener decenas de
+                  proyectos y dentro del desplegable no se podía buscar. */}
+              <SelectorBadges
+                etiqueta="Proyecto/s"
+                tituloModal="Proyectos"
+                descripcion="qué proyectos entran en el reporte"
+                placeholder="Buscar proyecto…"
+                permitirTodos
+                zIndex={110}
+                items={proyectosDelReporte.map((p) => ({ id: p.clave, nombre: p.nombre }))}
+                value={proyectosSeleccionados}
+                onChange={setProyectosSeleccionados}
+                textoVacio={proyectosDelReporte.length === 0 ? "No hay proyectos para el período." : "Elegir proyectos…"}
+                ayuda={proyectosSeleccionados.length === 0 ? "Sin elegir ninguno entran todos." : undefined}
+              />
 
               {/*
                 TIPO DE CONTRATO: VARIOS A LA VEZ, EN SU PROPIA VENTANA.
@@ -2201,20 +2254,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 ayuda={rolesEmpresaSeleccionados.length === 0 ? "Sin elegir ninguno entran todos." : undefined}
               />
 
-              <div className="space-y-1.5">
-                {/* El OTRO rol: el de plataforma (`user.roles`), que resuelve el server. Nada que ver
-                    con el de arriba, que es el del proyecto. */}
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Rol/es de plataforma</label>
-                <select value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)} className="input-field w-full">
-                  <option value="">Todos los roles</option>
-                  {opcionesServidor.roles.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {/*
                 ÁREA Y TURNO, SEPARADOS. Ver `areasSeleccionadas` para por qué dejaron de ser un
                 único desplegable de combinaciones.
@@ -2251,39 +2290,22 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 }
               />
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado de contrato</label>
-                <select value={filtroEstadoContrato} onChange={(e) => setFiltroEstadoContrato(e.target.value)} className="input-field w-full">
-                  <option value="">Todos los estados</option>
-                  {opcionesServidor.estados.map((x) => (
-                    <option key={x} value={x}>
-                      {x}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Reemplazo</label>
-                <select value={filtroReemplazo} onChange={(e) => setFiltroReemplazo(e.target.value)} className="input-field w-full">
-                  <option value="">Con y sin reemplazo</option>
-                  <option value="con">Con reemplazo</option>
-                  <option value="sin">Sin reemplazo</option>
-                </select>
-              </div>
-
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Mostrar solo</p>
                 {/*
-                  Los tres recortes que contestan las preguntas con las que se abre el reporte: quién
-                  faltó, quién hizo horas extra y quién llegó tarde. Se combinan entre sí —«faltó Y
-                  además hizo extras» es una pregunta legítima— así que son switches y no opciones
-                  excluyentes.
+                  Los dos recortes que contestan las preguntas con las que se abre el reporte: quién
+                  faltó y quién hizo horas extra. Se combinan entre sí —«faltó Y además hizo extras»
+                  es una pregunta legítima— así que son switches y no opciones excluyentes.
+
+                  Había un tercero, «Con llegadas tarde», y se sacó porque no podía dar nunca un
+                  resultado: se apoyaba en `status: "late"`, un valor que el enum admite pero que
+                  NINGUNA pantalla escribe —el móvil sólo carga presente o ausente—. Medido contra la
+                  base: 5.775 `present`, 2.177 `absent`, CERO `late`. Un filtro que siempre devuelve
+                  la tabla vacía se lee como que no hay datos, no como que no existe el dato.
                 */}
                 {[
                   { on: soloConAusencias, set: setSoloConAusencias, label: "Con ausencias", hint: "Solo quienes tuvieron al menos una falta en el período." },
                   { on: soloConExtras, set: setSoloConExtras, label: "Con horas extra", hint: "Solo quienes registraron horas extra." },
-                  { on: soloConTarde, set: setSoloConTarde, label: "Con llegadas tarde", hint: "Solo quienes llegaron tarde al menos una vez." },
                 ].map((f) => (
                   <label key={f.label} className="flex items-center justify-between gap-3 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
                     <span className="min-w-0">
@@ -2875,7 +2897,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       </Modal>
 
       {/* Contract Detail Sub-Modal */}
-      <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ ...contractModal, open: false })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} filterProjectId={projectFilter !== "all" ? projectFilter : undefined} zIndex={100} periodStart={parseISO(dateFrom + "T00:00:00")} periodEnd={parseISO(dateTo + "T23:59:59")} nombresPorId={nombresPorId} />
+      <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ ...contractModal, open: false })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} /* El detalle de contratos se recorta a UN proyecto: con varios elegidos no hay uno solo al que acotar, así que se muestran todos. */
+        filterProjectId={proyectosSeleccionados.length === 1 ? proyectosDelReporte.find((p) => p.clave === proyectosSeleccionados[0])?.id : undefined} zIndex={100} periodStart={parseISO(dateFrom + "T00:00:00")} periodEnd={parseISO(dateTo + "T23:59:59")} nombresPorId={nombresPorId} />
       <TotalDetailModal isOpen={totalDetail.open} onClose={() => setTotalDetail({ open: false, stats: null })} stats={totalDetail.stats} glossary={glossary} zIndex={110} />
       <DailyDetailModal isOpen={dailyDetailModal.open} onClose={() => setDailyDetailModal({ open: false, stats: null })} stats={dailyDetailModal.stats} dateFrom={dateFrom} dateTo={dateTo} zIndex={120} />
     </>

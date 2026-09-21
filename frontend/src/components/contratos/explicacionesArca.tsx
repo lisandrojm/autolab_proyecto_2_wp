@@ -143,6 +143,11 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
         <p>
           Se manda con <strong>2 decimales implícitos</strong>: $785.955,27 va como <span className="font-mono">000000078595527</span>. Podés verlo formateado en "Cómo queda en el archivo".
         </p>
+        <p className="text-amber-600 dark:text-amber-400">
+          <strong>A confirmar.</strong> El diseño de 130 posiciones no aclara los decimales; los centavos se deducen del formato de 85, que parte el importe en
+          entero y decimal. Si un alta aceptada por ARCA mostrara <strong>pesos enteros</strong>, hay que cambiarlo — la diferencia es un sueldo cien veces más
+          grande. Se cambia en un solo lugar: <span className="font-mono">RETRIBUCION_EN_CENTAVOS</span> en <span className="font-mono">afipTxt.ts</span>.
+        </p>
       </>
     ),
   },

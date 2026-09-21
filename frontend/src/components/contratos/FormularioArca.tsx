@@ -356,7 +356,10 @@ const VALORES_FIJOS: Array<{ etiqueta: string; valor: string; nota: string }> = 
   { etiqueta: "Puesto desempeñado", valor: "en blanco", nota: "el registro de 130 lo deja vacío" },
   { etiqueta: "Situación de revista", valor: "en blanco", nota: "el registro de 130 lo deja vacío" },
   { etiqueta: "Trab. agropecuario", valor: "N", nota: "posición 16, siempre N" },
-  { etiqueta: "Lic. COVID / CCG", valor: "0", nota: "posición 130, siempre 0" },
+  // Decía «siempre 0» y era lo que ARCA rechazaba: en un ALTA la marca COVID no se informa, igual
+  // que Rectificación. Ver `NO_INFORMABLES_EN_ALTA` en afipTxt.ts.
+  { etiqueta: "Lic. COVID / CCG", valor: "en blanco", nota: "posición 130, no se informa en un alta" },
+  { etiqueta: "Rectificación", valor: "en blanco", nota: "posiciones 89-90, solo se informa al rectificar" },
 ];
 
 const ValoresFijos: React.FC = () => {

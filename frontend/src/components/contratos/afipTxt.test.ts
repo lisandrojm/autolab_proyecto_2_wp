@@ -124,7 +124,6 @@ describe("buildAltaRecord — invariantes del registro", () => {
     assert.equal(tramo(record, 1, 2), "01", "tipo de registro");
     assert.equal(tramo(record, 3, 4), "AT", "código de movimiento (alta)");
     assert.equal(tramo(record, 16, 16), "N", "marca trabajador agropecuario");
-    assert.equal(tramo(record, 89, 90), "00", "rectificación");
   });
 
   it("ubica CUIL, fechas, obra social y códigos del tipo de contrato", () => {
@@ -151,6 +150,11 @@ describe("buildAltaRecord — invariantes del registro", () => {
     assert.equal(tramo(record, 91, 100), " ".repeat(10), "convenio colectivo");
     assert.equal(tramo(record, 110, 119), " ".repeat(10), "fecha suspensión");
     assert.equal(tramo(record, 120, 129), " ".repeat(10), "formulario agropecuario");
+    // Estos dos iban con ceros por ser «constantes del formato», y son los que produjeron el
+    // rechazo: «En un ALTA no debe informar … Marca de Rectificación» y «Marca de Covid Tipo de
+    // Contrato CCG no permitido para la fecha de inicio».
+    assert.equal(tramo(record, 89, 90), "  ", "rectificación");
+    assert.equal(tramo(record, 130, 130), " ", "marca COVID / CCG");
   });
 });
 
@@ -358,12 +362,24 @@ describe("describirRegistro — la vista previa no puede mentir", () => {
 });
 
 describe("buildAltaTxt", () => {
-  it("separa los registros con CRLF", () => {
+  it("separa los registros con LF, cierra con LF y no deja ningún CR", () => {
     const cat = catalogos();
     const registros = [buildAltaRecord(fila(), cat)!, buildAltaRecord(fila({ categoria_sat_id: 12 }), cat)!];
-    const lineas = buildAltaTxt(registros).split("\r\n");
+    const txt = buildAltaTxt(registros);
+
+    // Un CR suelto le suma un caracter al registro: la línea mide 131 donde el validador espera 130,
+    // y el rechazo no habla del CR sino de que algún campo está mal.
+    assert.ok(!txt.includes("\r"), "el archivo no debe tener CR");
+    assert.ok(txt.endsWith("\n"), "el archivo termina con un salto de línea");
+    assert.ok(!txt.endsWith("\n\n"), "un solo salto al final, no dos");
+
+    const lineas = txt.split("\n").filter(Boolean);
     assert.equal(lineas.length, 2);
     lineas.forEach((l) => assert.equal(l.length, 130));
+  });
+
+  it("sin registros devuelve un archivo vacío, no un salto de línea suelto", () => {
+    assert.equal(buildAltaTxt([]), "");
   });
 
   it("el lote completo, armado como lo arma la pantalla, omite los contratos incompletos", () => {
@@ -375,7 +391,7 @@ describe("buildAltaTxt", () => {
     const registros = filas.map((f) => buildAltaRecord(f, cat)).filter((r): r is string => r !== null);
 
     assert.equal(registros.length, 2, "el contrato sin CUIT no debería estar");
-    const lineas = buildAltaTxt(registros).split("\r\n");
+    const lineas = buildAltaTxt(registros).split("\n").filter(Boolean);
     assert.equal(lineas.length, 2);
     lineas.forEach((l) => assert.equal(l.length, 130));
   });
@@ -408,11 +424,32 @@ describe("LAYOUT_ALTA (la tabla de la pantalla «Cómo funciona»)", () => {
   it("marca como constante o en blanco todo lo que no se pide al operador", () => {
     // Es la respuesta a "¿hay que cargar el agropecuario?" y "¿y la situación de revista?".
     const porNombre = (n: string) => LAYOUT_ALTA.find((c) => c.nombre.includes(n))!;
+    // Ojo: "agropecuario" en minúscula matchea «Marca trabajador agropecuario» (pos. 16), que sí es
+    // una constante del formato. El «N° Formulario Agropecuario» (120-129) va en blanco y se
+    // verifica abajo, por posición.
     assert.equal(porNombre("agropecuario").tipo, "constante");
-    assert.equal(porNombre("COVID").tipo, "constante");
     assert.equal(porNombre("Puesto desempeñado").tipo, "en_blanco");
     assert.equal(porNombre("Convenio Colectivo").tipo, "en_blanco");
     assert.equal(porNombre("Fecha fin").tipo, "condicional");
+  });
+
+  it("documenta como «en blanco» las ocho posiciones que un alta no puede informar", () => {
+    // La tabla de la pantalla y la regla del generador tienen que decir lo mismo: si acá dijera
+    // «constante 00», alguien leyendo la documentación concluiría que el archivo lleva un cero.
+    for (const [desde, hasta] of [
+      [46, 47],
+      [48, 57],
+      [85, 88],
+      [89, 90],
+      [91, 100],
+      [110, 119],
+      [120, 129],
+      [130, 130],
+    ] as const) {
+      const doc = LAYOUT_ALTA.find((c) => c.desde === desde && c.hasta === hasta)!;
+      assert.ok(doc, `falta ${desde}-${hasta} en la documentación`);
+      assert.equal(doc.tipo, "en_blanco", `${doc.nombre} (${desde}-${hasta})`);
+    }
   });
 });
 
@@ -742,5 +779,125 @@ describe("cascada de defaults de ARCA — contrato, empleadora, instalación", (
     // Y el que SÍ es de la empleadora entra: lo que se descarta es el ajeno, no el mecanismo.
     const propio = cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021", sucursalId: SUCURSAL_ID }, { sucursalId: "sucursal-de-otra-empresa" });
     assert.match(resolveAfipValues(sinDomicilio, propio).nombreSucursal, /ZAPIOLA/);
+  });
+});
+
+/*
+  EL CASO QUE ARCA RECHAZÓ.
+
+  Es el alta real que volvió con los dos errores de la Simplificación Registral:
+
+    «En un ALTA no debe informar: Situación de Baja, Fecha de Telegrama de Renuncia, Marca de
+     Rectificación, Fecha de suspensión servicios temporarios y Número Formulario Agropecuario.»
+    «Marca de Covid Tipo de Contrato CCG no permitido para la fecha de inicio.»
+
+  Los dos salían de campos escritos como constantes del formato: «00» en Rectificación (89-90) y
+  «0» en Marca COVID (130). Este bloque los fija por índice para que no vuelvan a aparecer.
+*/
+const CASO_REAL = {
+  cuil: "20363972609",
+  modalidad: "022",
+  inicio: "2026-07-04",
+  obraSocial: "120900",
+  sucursal: "00003",
+  actividad: "591110",
+  categoria: "035358",
+  tipoServicio: "000",
+};
+
+const EMPRESA_CASO = "6a7f000000000000000000e2";
+const SUCURSAL_CASO = "6a7f000000000000000000s2";
+
+const catalogosCasoReal = (): AfipCatalogs =>
+  ({
+    categorias: [{ _id: "cr", externalId: CASO_REAL.categoria, name: "Técnico", data: { id: 77, numeroCategoria: 7, nombre: "Técnico", codigoAfip: 35358, convenio: "0131/75", sueldoBruto: 1234567.89 } }],
+    tipos: [{ _id: "tr", name: "Eventual — plazo determinado", data: { afipModalidadContrato: CASO_REAL.modalidad, afipTipoServicio: CASO_REAL.tipoServicio, afipModalidadLiquidacion: "1" } }],
+    obrasSociales: [{ _id: "osr", externalId: CASO_REAL.obraSocial, name: "OSPIC", data: { id: 42 } }],
+    sedes: [],
+    empresas: [{ _id: EMPRESA_CASO, obraSocialId: 42, sucursalActividades: [{ sucursalId: SUCURSAL_CASO, actividades: [{ codigo: CASO_REAL.actividad, descripcion: "PRODUCCIÓN AUDIOVISUAL" }] }], sucursalIds: [SUCURSAL_CASO], convenioIds: ["cvr"] }],
+    sucursales: [{ _id: SUCURSAL_CASO, codigo: CASO_REAL.sucursal, domicilio: "SARMIENTO 1113", actividades: [{ codigo: CASO_REAL.actividad, descripcion: "PRODUCCIÓN AUDIOVISUAL" }] }],
+    convenios: [{ _id: "cvr", externalId: "0131/75", name: "AUDIOVISUAL", obraSocialDefaultId: 42 }],
+  }) as unknown as AfipCatalogs;
+
+/** `fin` aparte: el alta original traía fin = inicio, que es el otro problema del caso. */
+const filaCasoReal = (fin: string): ContractOverviewRow =>
+  ({
+    _id: "rr",
+    userId: "ur",
+    userName: "CASO REAL",
+    cuit: CASO_REAL.cuil,
+    categoria_sat_id: 77,
+    nombre_contrato: "Eventual — plazo determinado",
+    fecha_alta_contrato: CASO_REAL.inicio,
+    fecha_baja_contrato: fin,
+    empresaContratoId: EMPRESA_CASO,
+    sucursalArcaId: SUCURSAL_CASO,
+    osId: null,
+    obraSocialNoFigura: true,
+    obraSocialConstatadaEn: "arca",
+    obraSocialConstatadaEl: "2026-07-01T00:00:00.000Z",
+  }) as unknown as ContractOverviewRow;
+
+describe("caso real rechazado por ARCA (CUIL 20363972609, modalidad 022)", () => {
+  // Con una fecha de fin VÁLIDA: lo que se valida acá son las posiciones, no las fechas.
+  const record = () => buildAltaRecord(filaCasoReal("2026-12-31"), catalogosCasoReal())!;
+
+  it("los índices exactos que ARCA rechazaba van en blanco", () => {
+    const linea = record();
+    // Índices 0-based, como los pidió el reporte del rechazo.
+    assert.equal(linea.slice(88, 90), "  ", "89-90 Rectificación");
+    assert.equal(linea[129], " ", "130 Marca COVID / tipo de contrato CCG");
+    assert.equal(linea.length, 130);
+  });
+
+  it("ninguna de las ocho posiciones no informables trae contenido", () => {
+    const linea = record();
+    for (const [desde, hasta] of [
+      [46, 47],
+      [48, 57],
+      [85, 88],
+      [89, 90],
+      [91, 100],
+      [110, 119],
+      [120, 129],
+      [130, 130],
+    ] as const) {
+      assert.equal(tramo(linea, desde, hasta), " ".repeat(hasta - desde + 1), `${desde}-${hasta} debe ir en blanco`);
+    }
+  });
+
+  it("los datos del caso caen en su posición", () => {
+    const linea = record();
+    assert.equal(tramo(linea, 3, 4), "AT");
+    assert.equal(tramo(linea, 5, 15), CASO_REAL.cuil);
+    assert.equal(tramo(linea, 17, 19), CASO_REAL.modalidad);
+    assert.equal(tramo(linea, 20, 29), "2026/07/04");
+    assert.equal(tramo(linea, 40, 45), CASO_REAL.obraSocial);
+    assert.equal(tramo(linea, 74, 78), CASO_REAL.sucursal);
+    assert.equal(tramo(linea, 79, 84), CASO_REAL.actividad);
+    assert.equal(tramo(linea, 101, 106), CASO_REAL.categoria);
+    assert.equal(tramo(linea, 107, 109), CASO_REAL.tipoServicio);
+  });
+
+  it("el archivo de una sola línea mide 130 + un LF, sin CR", () => {
+    const txt = buildAltaTxt([record()]);
+    assert.equal(txt.length, 131);
+    assert.equal(txt, `${record()}\n`);
+    assert.ok(!txt.includes("\r"));
+  });
+
+  /*
+    El OTRO problema del alta original, que el validador de ARCA no señala.
+
+    Venía con fin = inicio = 2026/07/04 en una modalidad a plazo determinado: son dos fechas bien
+    escritas, así que el formato pasa, y lo que queda registrado es una relación laboral de cero
+    días. Mejor no generar el archivo que dar de alta algo que después hay que rectificar.
+  */
+  it("fin igual al inicio en un plazo determinado no genera registro", () => {
+    assert.equal(buildAltaRecord(filaCasoReal(CASO_REAL.inicio), catalogosCasoReal()), null);
+  });
+
+  it("fin anterior al inicio tampoco", () => {
+    assert.equal(buildAltaRecord(filaCasoReal("2026-07-03"), catalogosCasoReal()), null);
   });
 });
