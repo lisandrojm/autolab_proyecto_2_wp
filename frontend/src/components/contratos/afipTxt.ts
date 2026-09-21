@@ -101,6 +101,20 @@ export const fechaAfip = (s: string): string => {
   return "";
 };
 
+/**
+ * La fecha de fin no es POSTERIOR a la de inicio. Las dos ya normalizadas a `AAAA/MM/DD`.
+ *
+ * Vive acá y no dentro del generador porque la usan DOS lugares que tienen que decir lo mismo: el
+ * armado del registro (que sin esto escribiría un alta de cero días) y el chequeo de completitud
+ * que la pantalla muestra. Cuando la regla estaba en uno solo, el panel decía «4 de 4 completos»
+ * mientras el campo salía vacío en la vista previa, que es la peor combinación posible: afirma que
+ * está listo y no dice qué arreglar.
+ *
+ * Se compara como texto: `AAAA/MM/DD` ordena igual alfabética que cronológicamente, así que no hace
+ * falta construir fechas y la zona horaria no puede correr un día.
+ */
+export const finNoPosteriorAlInicio = (inicioAfip: string, finAfip: string): boolean => !!inicioAfip && !!finAfip && finAfip <= inicioAfip;
+
 /** De dónde sale el contenido de un campo del registro. */
 export type ClaseCampo =
   /** Constante del formato (tipo de registro, movimiento, rectificación…). */
@@ -191,15 +205,14 @@ export function describirRegistro(row: ContractOverviewRow, cat: AfipCatalogs): 
   const exigeFechaFin = MODALIDADES_PLAZO_DETERMINADO.includes(v.modalidadContrato);
   const prohibeFechaFin = MODALIDADES_TIEMPO_INDETERMINADO.includes(v.modalidadContrato);
   /*
-    En un contrato a plazo determinado, la fecha de fin tiene que ser POSTERIOR a la de inicio.
+    La fecha de fin tiene que ser POSTERIOR a la de inicio: con las dos en el mismo día el archivo
+    pasa el validador de formato —son dos fechas bien escritas— y da de alta una relación laboral
+    que dura cero días. El error aparece después, cuando ya está registrada.
 
-    Con las dos en el mismo día el archivo pasa el validador de formato —son dos fechas bien
-    escritas— y da de alta una relación laboral que dura cero días. El error aparece después, cuando
-    ya está registrada. Se compara como texto porque `AAAA/MM/DD` ordena igual alfabética que
-    cronológicamente, y así no entra la zona horaria a decidir un día.
+    La misma regla la aplica el chequeo de completitud (ver `finNoPosteriorAlInicio`), para que la
+    pantalla no diga «completo» sobre un campo que acá sale vacío.
   */
-  const finAnteriorOInvalido = !!fechaInicio && !!fechaFin && fechaFin <= fechaInicio;
-  const fechaFinOk = !fechaFinInvalida && !(exigeFechaFin && !fechaFin) && !(prohibeFechaFin && !!fechaFin) && !finAnteriorOInvalido;
+  const fechaFinOk = !fechaFinInvalida && !(exigeFechaFin && !fechaFin) && !(prohibeFechaFin && !!fechaFin) && !finNoPosteriorAlInicio(fechaInicio, fechaFin);
 
   const dato = (desde: number, hasta: number, nombre: string, contenido: string | null, checkKey?: string): CampoRegistro => ({
     desde,

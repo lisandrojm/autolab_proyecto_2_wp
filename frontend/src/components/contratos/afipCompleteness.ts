@@ -6,7 +6,7 @@ import { InfoItem } from "../../api/info";
 import { conCascada, DefaultsArca, OrigenValorArca } from "./cascadaArca";
 import { ArcaSucursal } from "../../api/arcaSucursales";
 import { cuitEsValido } from "../../utils/cuit";
-import { fechaAfip } from "./afipTxt";
+import { fechaAfip, finNoPosteriorAlInicio } from "./afipTxt";
 import { estadoGeneraAltaTemprana } from "./altaTemprana";
 import { claveEstado } from "../../utils/estadoClave";
 
@@ -704,6 +704,24 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     checks.push(mk("fechaFin", "Fecha de fin", "contrato", "", "falta", `La modalidad ${v.modalidadContrato} es a plazo determinado: ARCA exige fecha de fin.`));
   } else if (prohibeFin && v.fechaFin) {
     checks.push(mk("fechaFin", "Fecha de fin", "contrato", v.fechaFin, "error", `La modalidad ${v.modalidadContrato} es por tiempo indeterminado: la fecha de fin tiene que ir en blanco.`));
+  } else if (finNoPosteriorAlInicio(fechaAfip(v.fechaInicio), fechaAfip(v.fechaFin))) {
+    /*
+      Mismo día, o fin antes del inicio. Es la única forma de estar «mal» teniendo las dos fechas
+      bien escritas, y por eso hay que decirlo acá: el archivo pasaría el validador de formato de
+      ARCA y registraría una relación laboral de cero días.
+
+      El mensaje repite las dos fechas porque el error no se ve mirando una sola.
+    */
+    checks.push(
+      mk(
+        "fechaFin",
+        "Fecha de fin",
+        "contrato",
+        v.fechaFin,
+        "error",
+        `La fecha de fin (${fechaAfip(v.fechaFin)}) tiene que ser posterior a la de inicio (${fechaAfip(v.fechaInicio)}): así como está, el contrato duraría cero días.`,
+      ),
+    );
   } else {
     /*
       Vacía y correcta. `noAplica` distingue las DOS formas de llegar acá: con una modalidad

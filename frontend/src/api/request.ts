@@ -33,12 +33,29 @@ export interface ActivityReport {
   tenantId: string;
   createdAt?: string;
   updatedAt?: string;
+  /**
+   * LOS NÚMEROS YA CONTADOS POR EL SERVER.
+   *
+   * El listado NO manda `attendance` —lo saca con un `$project` porque eran 4,5 MB— y en su lugar
+   * manda estos contadores. `attendance` sigue declarado arriba porque el detalle de UN parte sí lo
+   * trae; en la lista viene `undefined`, así que quien la recorra tiene que contemplarlo.
+   */
+  registros?: number;
+  ausentes?: number;
+  reemplazos?: number;
+  conHorasExtra?: number;
+  sumaHorasExtra?: number;
 }
 
 export const activityReportsAPI = {
   /** `mine`: fuerza que devuelva SOLO los reportes propios, aunque quien pide sea Admin (ver mobile
    *  "Mis Novedades" — sin esto, un admin dispara un fetch de todo el historial del tenant). */
-  getAll: async (params?: { mine?: boolean }) => {
+  /**
+   * `mine` son las que cargó la persona; `alcance: "supervisadas"`, las de los proyectos que tiene a
+   * cargo (las haya cargado quien las haya cargado). Son excluyentes: el conmutador «Mías / Las que
+   * superviso» manda una o la otra.
+   */
+  getAll: async (params?: { mine?: boolean; alcance?: "supervisadas" }) => {
     const response = await axiosClient.get<ActivityReport[]>("/activity-reports", { params });
     return response.data;
   },

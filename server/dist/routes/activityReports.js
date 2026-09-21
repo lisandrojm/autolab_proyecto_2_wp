@@ -98,7 +98,33 @@ router.get("/", async (req, res) => {
         // del tenant solo para filtrarlo a "las mías" en el cliente. El panel de admin en desktop
         // (RequestsPage) sigue pidiendo sin este parámetro y ve todo, como siempre.
         const forceOwn = req.query.mine === "1" || req.query.mine === "true";
-        if (!isAdmin || forceOwn) {
+        /*
+          `?alcance=supervisadas`: las novedades de los proyectos que la persona tiene A CARGO, sin
+          importar quién las cargó.
+    
+          Es lo que pide el conmutador «Mías / Las que superviso» de la app. Un coordinador que revisa a
+          diez supervisores no carga novedades él, así que «Mis novedades» le daba siempre vacío y el
+          historial de su equipo no estaba en ninguna pantalla — el tab Cumplimiento muestra si se
+          enviaron, no QUÉ se envió.
+    
+          Se apoya en el MISMO permiso y el mismo alcance que Cumplimiento (`alcanceCumplimiento`): quien
+          puede ver si su equipo cumplió puede ver lo que mandó. Sin ese permiso es 403, no una lista
+          recortada en silencio.
+        */
+        const pideSupervisadas = req.query.alcance === "supervisadas";
+        if (pideSupervisadas) {
+            const alcance = await alcanceCumplimiento(req);
+            if (!alcance) {
+                res.status(403).json({ error: "No autorizado" });
+                return;
+            }
+            // `{}` es el admin: ve todo el tenant. Con `projectIds`, se acota — y un array vacío (nadie a
+            // cargo) devuelve cero, que es la respuesta correcta y no «todas».
+            if (alcance.projectIds) {
+                filter.projectId = { $in: alcance.projectIds.map((id) => new mongoose.Types.ObjectId(id)) };
+            }
+        }
+        else if (!isAdmin || forceOwn) {
             filter.userId = userId;
         }
         /*
@@ -232,7 +258,21 @@ router.get("/", async (req, res) => {
             });
             return;
         }
-        const reports = await Request.aggregate([{ $match: filter }, { $sort: { date: -1, createdAt: -1 } }, numeros, { $project: { attendance: 0 } }]);
+        /*
+          El historial supervisado se corta en 200.
+    
+          Las propias de una persona son decenas y no hay nada que acotar, pero las de un coordinador con
+          diez supervisores a cargo son cientos y esta rama no pagina. Doscientas cubren varios meses de
+          «lo último que mandó el equipo», que es para lo que se mira; el análisis del período entero va
+          por el reporte de Novedades del panel.
+        */
+        const reports = await Request.aggregate([
+            { $match: filter },
+            { $sort: { date: -1, createdAt: -1 } },
+            ...(pideSupervisadas ? [{ $limit: 200 }] : []),
+            numeros,
+            { $project: { attendance: 0 } },
+        ]);
         await Request.populate(reports, POPULADOS);
         res.json(reports);
     }

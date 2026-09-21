@@ -901,3 +901,45 @@ describe("caso real rechazado por ARCA (CUIL 20363972609, modalidad 022)", () =>
     assert.equal(buildAltaRecord(filaCasoReal("2026-07-03"), catalogosCasoReal()), null);
   });
 });
+
+/*
+  LA PANTALLA Y EL ARCHIVO NO PUEDEN CONTRADECIRSE.
+
+  El panel «Datos ARCA» mostraba «4 de 4 completos · Listo para la carga masiva» sobre un contrato
+  cuya fecha de fin salía vacía en la vista previa del registro. Pasaba porque la regla de «el fin
+  tiene que ser posterior al inicio» vivía sólo en el generador y no en los checks que la pantalla
+  lee: uno decía que faltaba algo y el otro que estaba todo bien.
+
+  Es el peor modo de fallar de esta pantalla — afirma que está listo y no dice qué arreglar — así
+  que la invariante se fija acá: si no se puede armar el registro, el resumen NO puede decir que
+  está completo.
+*/
+describe("coherencia entre el resumen de la pantalla y el registro", () => {
+  const casos: Array<{ nombre: string; fin: string }> = [
+    { nombre: "fin igual al inicio", fin: CASO_REAL.inicio },
+    { nombre: "fin anterior al inicio", fin: "2026-07-03" },
+  ];
+
+  for (const { nombre, fin } of casos) {
+    it(`${nombre}: no arma registro y el resumen no dice «completo»`, () => {
+      const f = filaCasoReal(fin);
+      const cat = catalogosCasoReal();
+
+      assert.equal(buildAltaRecord(f, cat), null, "no debería generarse el registro");
+
+      const r = resolveAfip(f, cat);
+      assert.equal(r.completo, false, "el resumen no puede decir que está completo");
+      assert.equal(resumenArca(r).tono, "error");
+
+      const check = r.checks.find((c) => c.key === "fechaFin")!;
+      assert.equal(check.estado, "error");
+      assert.match(check.detalle || "", /posterior a la de inicio/);
+    });
+  }
+
+  it("con una fecha de fin válida, el resumen sí dice que está completo", () => {
+    const r = resolveAfip(filaCasoReal("2026-12-31"), catalogosCasoReal());
+    assert.equal(r.completo, true);
+    assert.ok(buildAltaRecord(filaCasoReal("2026-12-31"), catalogosCasoReal()));
+  });
+});

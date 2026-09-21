@@ -22,7 +22,12 @@ import { InfoModal } from "../../../../components/ui/InfoModal";
 import { overtimeUtils, splitOvertime } from "../../../../utils/overtimeUtils";
 
 import { esContratoVigente, getContratoActivo } from "../../../../utils/contratoVigencia";
-import { coordinaAreas } from "../../../../utils/permisosMobile";
+import { coordinaAreas, MOBILE_ACTIVITY_COMPLIANCE } from "../../../../utils/permisosMobile";
+import { useAuthStore } from "../../../../stores/authStore";
+import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
+
+/** De quién son las novedades del historial: las que cargó la persona, o las de su equipo. */
+type AlcanceHistorial = "mias" | "supervisadas";
 
 interface EmployeeOption {
   id: string;
@@ -838,6 +843,15 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [reports, setReports] = useState<ActivityReport[]>([]);
+
+  /* De quién son las novedades que se listan. Ver `fetchReports`. */
+  const { user: usuarioActual } = useAuthStore();
+  const permisoInactivo = usePermisoInactivo();
+  // Mismo criterio que `Novedades.tsx`: el permiso tiene que estar Y no estar marcado «en desarrollo».
+  const puedeVerSupervisadas = (usuarioActual?.permissions || []).includes(MOBILE_ACTIVITY_COMPLIANCE) && !permisoInactivo(MOBILE_ACTIVITY_COMPLIANCE);
+  const [alcanceHistorial, setAlcanceHistorial] = useState<AlcanceHistorial>("mias");
+  /* El salto automático a «las que superviso» ocurre una sola vez por montaje. */
+  const autoSaltoHechoRef = useRef(false);
   const [fullProjectData, setFullProjectData] = useState<Project | null>(null);
   const [allVacations, setAllVacations] = useState<any[]>([]);
 
@@ -1058,12 +1072,36 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
     }
   };
 
-  const fetchReports = async () => {
+  /*
+    DE QUIÉN SON LAS NOVEDADES QUE SE LISTAN.
+
+    «mias» pide `?mine=1` — las propias, aunque quien mire sea Admin. «supervisadas» pide las de los
+    proyectos que tiene a cargo, sin importar quién las cargó, y necesita el mismo permiso que
+    Cumplimiento (el server contesta 403 si no lo tiene).
+
+    Existe porque un coordinador que revisa a diez supervisores no carga novedades él: esta pantalla
+    le daba siempre vacío y el historial de su equipo no estaba en ningún lado — el tab Cumplimiento
+    dice si se enviaron, no QUÉ se envió.
+  */
+  const fetchReports = async (alcance: AlcanceHistorial = alcanceHistorial) => {
     setIsLoadingReports(true);
     try {
-      // "Mis Novedades": siempre las propias, aunque el usuario sea Admin (ver activityReports.ts).
-      const data = await activityReportsAPI.getAll({ mine: true });
+      const data = await activityReportsAPI.getAll(alcance === "supervisadas" ? { alcance: "supervisadas" } : { mine: true });
       setReports(data);
+
+      /*
+        Sin novedades propias y con equipo a cargo, se pasa solo a las supervisadas.
+
+        Es el caso de todo coordinador: abrir siempre en una lista vacía que además es correcta —él
+        no cargó ninguna— deja la pantalla sin nada que mostrar y sin pista de dónde está lo que vino
+        a ver. El salto ocurre UNA vez (`autoSaltoHechoRef`): si después elige «Mías» a mano, se
+        respeta.
+      */
+      if (alcance === "mias" && data.length === 0 && puedeVerSupervisadas && !autoSaltoHechoRef.current) {
+        autoSaltoHechoRef.current = true;
+        setAlcanceHistorial("supervisadas");
+        void fetchReports("supervisadas");
+      }
     } catch (e) {
       console.error("Error loading reports", e);
     } finally {
@@ -3771,7 +3809,34 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
           </div>
         )}
 
-        <h3 className="text-lg font-bold mb-4">Historial de Novedades</h3>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">Historial de Novedades</h3>
+          {/* Sólo para quien tiene equipo a cargo: para el resto sería un conmutador de una opción. */}
+          {puedeVerSupervisadas && (
+            <div className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800/60">
+              {(
+                [
+                  { id: "mias", label: "Mías" },
+                  { id: "supervisadas", label: "Las que superviso" },
+                ] as const
+              ).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => {
+                    // A mano manda: se corta el salto automático para que no lo vuelva a mover.
+                    autoSaltoHechoRef.current = true;
+                    setAlcanceHistorial(o.id);
+                    void fetchReports(o.id);
+                  }}
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition-colors ${alcanceHistorial === o.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* List of Reports */}
         <div className="space-y-3">
@@ -3821,6 +3886,22 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                       {(() => {
                         if (!report.hasActivity) return "Sin novedades";
 
+                        /*
+                          EL LISTADO NO TRAE `attendance`: el server lo saca con un `$project` (eran
+                          4,5 MB) y manda los contadores ya calculados. Recorrerlo sin más reventaba
+                          en cuanto un parte tuviera novedades —`undefined.forEach`—; no se notaba
+                          sólo porque quien miraba esta pantalla no tenía ninguno.
+
+                          Con el detalle se arma el desglose por motivo; sin él, los números del
+                          server, que son los mismos que cuenta el panel.
+                        */
+                        if (!report.attendance) {
+                          const partes: string[] = [];
+                          if (report.ausentes) partes.push(`${report.ausentes} ausente${report.ausentes === 1 ? "" : "s"}`);
+                          if (report.conHorasExtra) partes.push(`${report.conHorasExtra} con horas extra`);
+                          return partes.length > 0 ? partes.join(", ") : "Sin novedades";
+                        }
+
                         const counts: Record<string, number> = {};
                         let hasAnomalies = false;
 
@@ -3847,7 +3928,11 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                   </div>
                 );
               })}
-              {filteredReports.length === 0 && <div className="text-center text-gray-500 py-8">No has enviado novedades recientes.</div>}
+              {filteredReports.length === 0 && (
+                <div className="text-center text-gray-500 py-8">
+                  {alcanceHistorial === "supervisadas" ? "Nadie de tus proyectos envió novedades recientes." : "No has enviado novedades recientes."}
+                </div>
+              )}
             </>
           )}
         </div>

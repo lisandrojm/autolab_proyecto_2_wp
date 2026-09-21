@@ -81,10 +81,18 @@ export default function Novedades({ onNavigate, pestanaInicial }: NovedadesProps
     };
   }, [puedeCargar]);
 
-  const disponibles: Pestana[] = [...(puedeVerCumplimiento ? (["cumplimiento"] as const) : []), ...(tieneDondeCargar ? (["historial"] as const) : [])];
+  /*
+    EL ORDEN IMPORTA DOS VECES: es el de las pestañas en pantalla y el que decide en cuál se abre
+    (`disponibles[0]`). Por eso se cambian juntos — con la barra en un orden y el default en otro,
+    la pantalla abre en la segunda pestaña y parece que se movió sola.
+
+    «Mis novedades» va primero: es lo que la persona viene a hacer —cargar la suya—, mientras que
+    Cumplimiento es la vista de control, que mira menos gente y con menos frecuencia.
+  */
+  const disponibles: Pestana[] = [...(tieneDondeCargar ? (["historial"] as const) : []), ...(puedeVerCumplimiento ? (["cumplimiento"] as const) : [])];
 
   /*
-    Arranca en la que pidieron si la tiene; si no, en la primera disponible —que es Cumplimiento
+    Arranca en la que pidieron si la tiene; si no, en la primera disponible —que es Mis novedades
     cuando están las dos—. `activa` vuelve a caer en la inicial si la elegida dejó de estar.
   */
   const inicial: Pestana = pestanaInicial && disponibles.includes(pestanaInicial) ? pestanaInicial : disponibles[0] || "cumplimiento";
@@ -108,8 +116,8 @@ export default function Novedades({ onNavigate, pestanaInicial }: NovedadesProps
           <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
             {(
               [
-                { id: "cumplimiento", label: "Cumplimiento" },
                 { id: "historial", label: "Mis novedades" },
+                { id: "cumplimiento", label: "Cumplimiento" },
               ] as const
             ).map((t) => (
               <button
