@@ -103,9 +103,16 @@ export const activityReportsAPI = {
 };
 
 export interface FiltrosDePersonas {
-  /** Los ids que pasan los filtros. El modal se queda con esas filas. */
-  userIds: string[];
-  /** Cuántas personas aparecen en el período, antes de filtrar. */
+  /**
+   * Las FILAS que pasan los filtros, como `userId::PROYECTONORMALIZADO`.
+   *
+   * Son filas y no personas porque la tabla dibuja una fila por persona y proyecto, y el contrato
+   * —con su vigencia, su tipo y su estado— es el de ESE proyecto: la misma persona puede estar
+   * vigente en uno y no en el otro. Contestando personas, un contrato vigente en cualquier lado
+   * dejaba pasar todas sus filas, incluidas las que dicen NO VIGENTE.
+   */
+  claves: string[];
+  /** Cuántas filas puede llegar a dibujar la tabla, antes de filtrar. */
   total: number;
   opciones: {
     roles: string[];

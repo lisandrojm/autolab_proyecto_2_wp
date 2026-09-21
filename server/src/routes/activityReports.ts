@@ -522,6 +522,8 @@ router.get("/filtros-de-personas", async (req: AuthenticatedRequest & TenantRequ
       areaTurno: req.query.areaTurno ? String(req.query.areaTurno) : "",
       reemplazo: (req.query.reemplazo as any) || "",
       rol: req.query.rol ? String(req.query.rol) : "",
+      // El interruptor de la tabla: cambia qué contrato rige en cada fila, así que tiene que viajar.
+      soloContratoActivo: req.query.soloContratoActivo !== "0",
     });
 
     res.json(resultado);

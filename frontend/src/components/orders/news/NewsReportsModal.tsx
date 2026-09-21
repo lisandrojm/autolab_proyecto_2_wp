@@ -647,12 +647,20 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
   const [opcionesServidor, setOpcionesServidor] = useState<FiltrosDePersonas["opciones"]>({ roles: [], tipos: [], estados: [], areasTurnos: [] });
   /**
-   * Los ids que pasan. `null` = no hay ninguno de estos filtros puesto, así que no se recorta nada.
+   * Las FILAS que pasan, como `userId::PROYECTONORMALIZADO`. `null` = no hay ninguno de estos
+   * filtros puesto, así que no se recorta nada.
    *
-   * Es `null` y no un array vacío a propósito: vacío significa "ninguno pasa", que es un resultado
-   * legítimo, y confundirlo con "todavía no sé" vaciaría la tabla mientras carga.
+   * Son filas y no personas porque el contrato que decide la vigencia, el tipo y el estado es el de
+   * ESA fila —esa persona en ESE proyecto—. Recortando por persona, alguien con un contrato vigente
+   * en otro proyecto pasaba entero y su fila NO VIGENTE quedaba en la tabla con «Vigentes» puesto.
+   *
+   * Es `null` y no un conjunto vacío a propósito: vacío significa "ninguna pasa", que es un
+   * resultado legítimo, y confundirlo con "todavía no sé" vaciaría la tabla mientras carga.
    */
-  const [idsPermitidos, setIdsPermitidos] = useState<Set<string> | null>(null);
+  const [clavesPermitidas, setClavesPermitidas] = useState<Set<string> | null>(null);
+
+  /** La misma clave que arma el server (ver `claveDeFila`). */
+  const claveDeFila = (userId: string, proyectoNormalizado: string) => `${userId}::${proyectoNormalizado}`;
   const [filtrandoEnServidor, setFiltrandoEnServidor] = useState(false);
   /*
     FILTROS AVANZADOS, EN UNA VENTANA APARTE.
@@ -805,15 +813,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     allUsers.forEach((user) => {
       if (!user._id) return;
       const userIdStr = user._id.toString();
-
-      /*
-        EL RECORTE DE LOS FILTROS DEL SERVER, aplicado una sola vez por persona.
-
-        Va acá arriba y no adentro del bucle de proyectos porque estos filtros son de la PERSONA
-        —su contrato vigente, su estado, su rol—, no de cada fila: filtrarlo más abajo lo evaluaría
-        varias veces para la misma gente y podría dejar media persona en la tabla.
-      */
-      if (idsPermitidos && !idsPermitidos.has(userIdStr)) return;
       const userProjects = user.metadata?.projects || [];
 
       // Group metadata by normalized project name to merge contracts/IDs
@@ -845,6 +844,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       // Process each unique project for this user
       groupedProjects.forEach((group, normName) => {
         const { originalName, projectId, allContracts } = group;
+
+        /*
+          EL RECORTE DE LOS FILTROS DEL SERVER, por FILA.
+
+          Va acá y no arriba con la persona porque vigencia, tipo, estado y reemplazo salen del
+          contrato de ESTE proyecto: la misma persona puede estar vigente en uno y no en el otro.
+        */
+        if (clavesPermitidas && !clavesPermitidas.has(claveDeFila(userIdStr, normName))) return;
 
         // Project Filter check
         if (projectFilter !== "all") {
@@ -964,6 +971,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
         // Fallback Initialization (if not in roster or skipped previously)
         if (!employeeMap.has(mapKey)) {
+          // El mismo recorte que arriba: esta rama también crea filas, así que también tiene que filtrar.
+          if (clavesPermitidas && !clavesPermitidas.has(claveDeFila(empIdStr, normReportProjName))) return;
           const user = usersMap.get(empIdStr);
           const userProjects = user?.metadata?.projects || [];
 
@@ -1169,7 +1178,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, idsPermitidos]);
+  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1208,24 +1217,30 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         areaTurno: filtroAreaTurno,
         reemplazo: filtroReemplazo,
         rol: filtroRol,
+        /*
+          El interruptor «solo con contrato activo» decide si la fila mira los contratos del período
+          o todos, y con eso CAMBIA CUÁL RIGE. Si no viajara, el server elegiría un contrato y la
+          tabla mostraría otro, que es exactamente el bug que tenía esto.
+        */
+        soloContratoActivo: showActiveTableOnly ? "1" : "0",
       })
       .then((r) => {
         if (!vigente) return;
         setOpcionesServidor(r.opciones);
-        setIdsPermitidos(hayFiltro ? new Set(r.userIds) : null);
+        setClavesPermitidas(hayFiltro ? new Set(r.claves) : null);
       })
       .catch((e) => {
         if (!vigente) return;
         console.error("No se pudieron resolver los filtros", e);
         // Ante un error NO se recorta: mostrar de menos sin avisar es peor que mostrar de más.
-        setIdsPermitidos(null);
+        setClavesPermitidas(null);
       })
       .finally(() => vigente && setFiltrandoEnServidor(false));
 
     return () => {
       vigente = false;
     };
-  }, [isOpen, dateFrom, dateTo, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol]);
+  }, [isOpen, dateFrom, dateTo, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol, showActiveTableOnly]);
 
   const universoDelPeriodo = useMemo(() => {
     const proyectos = new Map<string, string>();
