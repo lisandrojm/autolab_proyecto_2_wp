@@ -381,6 +381,127 @@ router.post("/compliance/remind", async (req: AuthenticatedRequest & TenantReque
 });
 
 /*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  LAS RUTAS CON NOMBRE VAN ANTES QUE `/:id`. NO ES ESTILO: SI VAN DESPUÉS, NO EXISTEN.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+
+  Express prueba en orden de registro, así que `/:id` matchea CUALQUIER segmento: pedir
+  `/activity-reports/asistencias-del-periodo` entraba al handler del detalle con
+  id = "asistencias-del-periodo", Mongoose reventaba al castearlo a ObjectId y salía un 500.
+
+  Pasó con las dos rutas de este archivo y costó caro, porque desde el navegador se ve igual que
+  "el server no tiene el endpoint": el reporte mostraba todo en cero y los filtros no recortaban.
+*/
+
+/**
+ * LOS MISMOS FILTROS DE GESTIONAR EQUIPO, SOBRE EL PERÍODO.
+ *
+ * Devuelve quiénes pasan y qué poner en cada desplegable. Ver `services/filtrosDeNovedades.ts`:
+ * se resuelve en el server porque vigencia, tipo, estado impositivo y reemplazo dependen del
+ * contrato que rige, y calcularlos en el navegador obligaba a bajarse los contratos de las 1.577
+ * personas del tenant.
+ */
+router.get("/filtros-de-personas", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const desde = String(req.query.desde || "");
+    const hasta = String(req.query.hasta || "");
+    if (!DATE_RE.test(desde) || !DATE_RE.test(hasta) || desde > hasta) {
+      res.status(400).json({ error: "Parámetros 'desde'/'hasta' inválidos (AAAA-MM-DD, desde<=hasta)" });
+      return;
+    }
+
+    const resultado = await resolverFiltrosDeNovedades(req.tenantObjectId!, {
+      desde,
+      hasta,
+      estadoUsuario: (req.query.estadoUsuario as any) || "",
+      vigencia: (req.query.vigencia as any) || "",
+      tipoContrato: req.query.tipoContrato ? String(req.query.tipoContrato) : "",
+      estadoContrato: req.query.estadoContrato ? String(req.query.estadoContrato) : "",
+      areaTurno: req.query.areaTurno ? String(req.query.areaTurno) : "",
+      reemplazo: (req.query.reemplazo as any) || "",
+      rol: req.query.rol ? String(req.query.rol) : "",
+      // El interruptor de la tabla: cambia qué contrato rige en cada fila, así que tiene que viajar.
+      soloContratoActivo: req.query.soloContratoActivo !== "0",
+    });
+
+    res.json(resultado);
+  } catch (error) {
+    console.error("Filtros de personas error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * LA ASISTENCIA DE TODO EL PERÍODO, para el reporte de Novedades.
+ *
+ * ── Por qué existe ──
+ *
+ * El modal armaba sus números recorriendo el prop `reports`, que es LA PÁGINA del listado: 25
+ * partes, y encima sin `attendance` —el listado lo saca a propósito (ver el `$project` de arriba:
+ * traía 4,5 MB para dibujar cinco números por fila)—. O sea que el bucle que cuenta presentes,
+ * ausentes y horas extra no iteraba NADA: todas las columnas de asistencia daban 0. Ángel Eduardo
+ * Bustos figuraba con 0 asistencias en septiembre teniendo el parte del 18 cargado y presente.
+ *
+ * Arreglarlo devolviéndole `attendance` al listado sería pagar esos 4,5 MB en la pantalla de
+ * Novedades, que no los usa. Esto es lo contrario: un endpoint que trae SÓLO la asistencia, de
+ * TODOS los partes del período —no de una página— y sólo los ocho campos que el reporte cuenta.
+ *
+ * Los nombres de la gente no viajan: el reporte ya los tiene del padrón, y poblarlos sería repetir
+ * 1.500 veces los mismos cincuenta nombres.
+ */
+router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const desde = String(req.query.desde || "");
+    const hasta = String(req.query.hasta || "");
+    if (!DATE_RE.test(desde) || !DATE_RE.test(hasta) || desde > hasta) {
+      res.status(400).json({ error: "Parámetros 'desde'/'hasta' inválidos (AAAA-MM-DD, desde<=hasta)" });
+      return;
+    }
+
+    const partes: any[] = await Request.find({ tenantId: req.tenantObjectId, date: { $gte: desde, $lte: hasta } })
+      .select(
+        "date projectId " +
+          "attendance.employeeId attendance.status attendance.absenceReason " +
+          "attendance.overtimeHours attendance.overtimeHours50 attendance.overtimeHours100 " +
+          "attendance.inTime attendance.outTime",
+      )
+      .lean();
+
+    /*
+      El nombre del proyecto se resuelve con un `find` aparte y no con un `populate`: son unas pocas
+      decenas de proyectos repetidos en centenares de partes, y poblarlos manda el mismo nombre una
+      vez por parte.
+    */
+    const ids = [...new Set(partes.map((p) => String(p.projectId || "")).filter(Boolean))];
+    const proyectos = await Project.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("name").lean();
+    const nombreDeProyecto = new Map((proyectos as any[]).map((p: any) => [String(p._id), p.name]));
+
+    res.json(
+      partes.map((p) => ({
+        date: p.date,
+        projectIdRaw: String(p.projectId || ""),
+        projectName: nombreDeProyecto.get(String(p.projectId || "")) || "Sin Proyecto",
+        attendance: (p.attendance || []).map((a: any) => ({
+          employeeId: String(a.employeeId || ""),
+          status: a.status,
+          absenceReason: a.absenceReason || "",
+          overtimeHours: a.overtimeHours || 0,
+          overtimeHours50: a.overtimeHours50 || 0,
+          overtimeHours100: a.overtimeHours100 || 0,
+          // El reporte los llama «entrada/salida de las extras»; en el parte son `inTime`/`outTime`.
+          overtimeEntryTime: a.inTime || undefined,
+          overtimeExitTime: a.outTime || undefined,
+        })),
+      })),
+    );
+  } catch (error) {
+    console.error("Asistencias del período error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+/*
   UN PARTE, CON SU DETALLE DE ASISTENCIA.
 
   QUIÉN PUEDE ABRIRLO ES LO MISMO QUE DECIDE QUIÉN LO VE EN LA LISTA: el admin, cualquiera del
@@ -493,111 +614,5 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
+
 export { router as RequestRoutes };
-
-/**
- * LOS MISMOS FILTROS DE GESTIONAR EQUIPO, SOBRE EL PERÍODO.
- *
- * Devuelve quiénes pasan y qué poner en cada desplegable. Ver `services/filtrosDeNovedades.ts`:
- * se resuelve en el server porque vigencia, tipo, estado impositivo y reemplazo dependen del
- * contrato que rige, y calcularlos en el navegador obligaba a bajarse los contratos de las 1.577
- * personas del tenant.
- */
-router.get("/filtros-de-personas", async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const desde = String(req.query.desde || "");
-    const hasta = String(req.query.hasta || "");
-    if (!DATE_RE.test(desde) || !DATE_RE.test(hasta) || desde > hasta) {
-      res.status(400).json({ error: "Parámetros 'desde'/'hasta' inválidos (AAAA-MM-DD, desde<=hasta)" });
-      return;
-    }
-
-    const resultado = await resolverFiltrosDeNovedades(req.tenantObjectId!, {
-      desde,
-      hasta,
-      estadoUsuario: (req.query.estadoUsuario as any) || "",
-      vigencia: (req.query.vigencia as any) || "",
-      tipoContrato: req.query.tipoContrato ? String(req.query.tipoContrato) : "",
-      estadoContrato: req.query.estadoContrato ? String(req.query.estadoContrato) : "",
-      areaTurno: req.query.areaTurno ? String(req.query.areaTurno) : "",
-      reemplazo: (req.query.reemplazo as any) || "",
-      rol: req.query.rol ? String(req.query.rol) : "",
-      // El interruptor de la tabla: cambia qué contrato rige en cada fila, así que tiene que viajar.
-      soloContratoActivo: req.query.soloContratoActivo !== "0",
-    });
-
-    res.json(resultado);
-  } catch (error) {
-    console.error("Filtros de personas error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-/**
- * LA ASISTENCIA DE TODO EL PERÍODO, para el reporte de Novedades.
- *
- * ── Por qué existe ──
- *
- * El modal armaba sus números recorriendo el prop `reports`, que es LA PÁGINA del listado: 25
- * partes, y encima sin `attendance` —el listado lo saca a propósito (ver el `$project` de arriba:
- * traía 4,5 MB para dibujar cinco números por fila)—. O sea que el bucle que cuenta presentes,
- * ausentes y horas extra no iteraba NADA: todas las columnas de asistencia daban 0. Ángel Eduardo
- * Bustos figuraba con 0 asistencias en septiembre teniendo el parte del 18 cargado y presente.
- *
- * Arreglarlo devolviéndole `attendance` al listado sería pagar esos 4,5 MB en la pantalla de
- * Novedades, que no los usa. Esto es lo contrario: un endpoint que trae SÓLO la asistencia, de
- * TODOS los partes del período —no de una página— y sólo los ocho campos que el reporte cuenta.
- *
- * Los nombres de la gente no viajan: el reporte ya los tiene del padrón, y poblarlos sería repetir
- * 1.500 veces los mismos cincuenta nombres.
- */
-router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const desde = String(req.query.desde || "");
-    const hasta = String(req.query.hasta || "");
-    if (!DATE_RE.test(desde) || !DATE_RE.test(hasta) || desde > hasta) {
-      res.status(400).json({ error: "Parámetros 'desde'/'hasta' inválidos (AAAA-MM-DD, desde<=hasta)" });
-      return;
-    }
-
-    const partes: any[] = await Request.find({ tenantId: req.tenantObjectId, date: { $gte: desde, $lte: hasta } })
-      .select(
-        "date projectId " +
-          "attendance.employeeId attendance.status attendance.absenceReason " +
-          "attendance.overtimeHours attendance.overtimeHours50 attendance.overtimeHours100 " +
-          "attendance.inTime attendance.outTime",
-      )
-      .lean();
-
-    /*
-      El nombre del proyecto se resuelve con un `find` aparte y no con un `populate`: son unas pocas
-      decenas de proyectos repetidos en centenares de partes, y poblarlos manda el mismo nombre una
-      vez por parte.
-    */
-    const ids = [...new Set(partes.map((p) => String(p.projectId || "")).filter(Boolean))];
-    const proyectos = await Project.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("name").lean();
-    const nombreDeProyecto = new Map((proyectos as any[]).map((p: any) => [String(p._id), p.name]));
-
-    res.json(
-      partes.map((p) => ({
-        date: p.date,
-        projectIdRaw: String(p.projectId || ""),
-        projectName: nombreDeProyecto.get(String(p.projectId || "")) || "Sin Proyecto",
-        attendance: (p.attendance || []).map((a: any) => ({
-          employeeId: String(a.employeeId || ""),
-          status: a.status,
-          absenceReason: a.absenceReason || "",
-          overtimeHours: a.overtimeHours || 0,
-          overtimeHours50: a.overtimeHours50 || 0,
-          overtimeHours100: a.overtimeHours100 || 0,
-          // El reporte los llama «entrada/salida de las extras»; en el parte son `inTime`/`outTime`.
-          overtimeEntryTime: a.inTime || undefined,
-          overtimeExitTime: a.outTime || undefined,
-        })),
-      })),
-    );
-  } catch (error) {
-    console.error("Asistencias del período error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
