@@ -1272,7 +1272,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const totalEmployees = statsByEmployee.length;
 
   const handleExport = () => {
-    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Tipo de Contrato", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
     const rows = statsByEmployee.map((s) => {
       const salaryDivisor = glossary.salaryDivisorPercentage || 150;
       const baseHour = s.sueldoMano / salaryDivisor;
@@ -1295,6 +1295,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       const salaryMonto = s.sueldoJornada * (s.cantidadJornadasLaborales - s.absences);
       return [
         `"${s.employeeName}"`,
+        // Va segundo, pegado al nombre: contesta "¿y este cómo cobra?" antes de mirar la plata.
+        `"${s.contractType || ""}"`,
         s.sueldoJornada,
         s.sueldoMano,
         normalHora.toFixed(2),
@@ -1335,7 +1337,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   };
 
   const handleExportXLS = () => {
-    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Tipo de Contrato", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
 
     const rows = statsByEmployee.map((s) => {
       const salaryDivisor = glossary.salaryDivisorPercentage || 150;
@@ -1359,6 +1361,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       const salaryMonto = s.sueldoJornada * (s.cantidadJornadasLaborales - s.absences);
       return [
         s.employeeName,
+        // Va segundo, pegado al nombre: contesta "¿y este cómo cobra?" antes de mirar la plata.
+        s.contractType || "",
         s.sueldoJornada,
         s.sueldoMano,
         Number(normalHora.toFixed(2)),
@@ -1914,6 +1918,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     Base
                   </th>
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Contrato</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">Tipo de Contrato</th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Asistencias: Pres | Aus</th>
                   {/* «Detalle» porque la columna no trae un total —eso está en Hs. 50% y Hs. 100%—
                       sino día por día: la fecha, el tramo horario y el recargo de cada uno. */}
@@ -2025,16 +2030,32 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                                 <span className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">
                                   <span className="text-gray-400 dark:text-gray-500">Baja:</span> {s.contractBaja ? s.contractBaja.substring(0, 10).split("-").reverse().join("/") : "—"}
                                 </span>
-                                {s.contractType && (
-                                  <span className="text-[10px] leading-tight text-gray-600 dark:text-gray-300 max-w-[120px] truncate" title={s.contractType}>
-                                    {s.contractType}
-                                  </span>
-                                )}
                               </div>
                               <button onClick={() => handleOpenContract(s)} className="text-gray-400 hover:text-blue-500 transition-colors p-1 shrink-0" title={`Ver los ${s.userProjectsData.length} contrato(s) de esta persona`}>
                                 <FontAwesomeIcon icon={faFileContract} className="text-xs" />
                               </button>
                             </div>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        {/*
+                          EL TIPO DE CONTRATO, EN SU PROPIA COLUMNA.
+
+                          Estaba metido adentro de la celda «Contrato», truncado a 120 píxeles y
+                          debajo de tres datos más: con nombres como "Plazo fijo 5x10 2030 SRL +
+                          Release JSA FZERO" no se leía ninguno. Y hasta que `nombre_contrato` volvió
+                          a viajar en `/users/directory` estaba siempre vacío, así que en los hechos
+                          la columna no existía.
+
+                          Es el tipo del ÚLTIMO contrato, el mismo que muestra el estado de al lado y
+                          el mismo con el que filtra «Tipo de contrato»: los tres leen `contractType`.
+                        */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          {s.contractType ? (
+                            <span className="text-[11px] text-gray-700 dark:text-gray-200 max-w-[220px] block truncate" title={s.contractType}>
+                              {s.contractType}
+                            </span>
                           ) : (
                             <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
                           )}
@@ -2134,7 +2155,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 })}
                 {statsByEmployee.length === 0 && (
                   <tr>
-                    <td colSpan={18} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
+                    <td colSpan={19} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
                       No se encontraron registros para el mes y filtros seleccionados.
                     </td>
                   </tr>
@@ -2152,6 +2173,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <td className="py-2.5 px-3"></td> {/* Proyectos */}
                     <td className="py-2.5 px-3"></td> {/* Horario Base */}
                     <td className="py-2.5 px-3"></td> {/* Contrato */}
+                    <td className="py-2.5 px-3"></td> {/* Tipo de Contrato */}
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2 font-bold">
                         <span className="text-green-600 dark:text-green-400" title="Total Presentes">
