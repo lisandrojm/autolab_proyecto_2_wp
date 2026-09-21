@@ -1582,7 +1582,7 @@ export const RequestsPage: React.FC = () => {
         </div>
       </Modal>
 
-      <NewsReportsModal isOpen={showReportsModal} onClose={() => { setShowReportsModal(false); setReportsInitialProject(""); }} reports={reports as any} allUsers={allUsers} allProjects={allProjects} initialProjectFilter={reportsInitialProject} cargando={loading || cargandoUsuarios} />
+      <NewsReportsModal isOpen={showReportsModal} onClose={() => { setShowReportsModal(false); setReportsInitialProject(""); }} allUsers={allUsers} allProjects={allProjects} initialProjectFilter={reportsInitialProject} cargando={loading || cargandoUsuarios} />
     </PageLayout>
   );
 };

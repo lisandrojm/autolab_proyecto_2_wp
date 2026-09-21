@@ -100,7 +100,36 @@ export const activityReportsAPI = {
     const response = await axiosClient.get<FiltrosDePersonas>(`/activity-reports/filtros-de-personas?${params.toString()}`);
     return response.data;
   },
+
+  /**
+   * La asistencia de TODOS los partes del período, para el reporte de Novedades.
+   *
+   * El listado (`list`) manda una PÁGINA y sin `attendance` —lo saca a propósito, son 4,5 MB—, así
+   * que el reporte no puede contar presentes, ausentes ni horas extra con eso: le daba 0 a todo el
+   * mundo. Esto trae sólo los ocho campos que el reporte cuenta, de todo el período.
+   */
+  asistenciasDelPeriodo: async (desde: string, hasta: string) => {
+    const response = await axiosClient.get<ParteConAsistencia[]>(`/activity-reports/asistencias-del-periodo?desde=${desde}&hasta=${hasta}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
 };
+
+/** Un parte del período con su asistencia, tal como la cuenta el reporte de Novedades. */
+export interface ParteConAsistencia {
+  date: string;
+  projectIdRaw: string;
+  projectName: string;
+  attendance: {
+    employeeId: string;
+    status: string;
+    absenceReason: string;
+    overtimeHours: number;
+    overtimeHours50: number;
+    overtimeHours100: number;
+    overtimeEntryTime?: string;
+    overtimeExitTime?: string;
+  }[];
+}
 
 export interface FiltrosDePersonas {
   /**

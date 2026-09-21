@@ -8,38 +8,16 @@ import { User, UserProjectMetadata } from "../../../api/users";
 import { infoAPI, InfoItem } from "../../../api/info";
 import { categoriaSatAPI } from "../../../api/categoriasSat";
 import { roleFrameAPI } from "../../../api/roleFrames";
-import { activityReportsAPI, FiltrosDePersonas } from "../../../api/request";
+import { activityReportsAPI, FiltrosDePersonas, ParteConAsistencia } from "../../../api/request";
 import { isContractVigente } from "../../team/ContractCard";
 import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
 import * as XLSX from "xlsx";
 
-// This works with the already-formatted data from RequestsPage
-interface FormattedReport {
-  id: string;
-  reportNumber?: string;
-  date: string;
-  projectIdRaw?: string;
-  projectName: string;
-  submittedBy: string;
-  attendance: {
-    id: string;
-    employeeId: any;
-    employeeName: string;
-    status: string;
-    overtimeHours: number;
-    hasOvertime: boolean;
-    absenceReason?: string;
-    replacementName?: string;
-    [key: string]: any;
-  }[];
-  [key: string]: any;
-}
 
 interface NewsReportsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  reports: FormattedReport[];
   allUsers: User[];
   allProjects: { id: string; name: string }[];
   /** Si se provee, al abrir el modal se preselecciona este proyecto (por _id) en el filtro de Proyecto. */
@@ -605,7 +583,7 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
   );
 };
 
-export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers, allProjects, initialProjectFilter, cargando = false }) => {
+export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, allUsers, allProjects, initialProjectFilter, cargando = false }) => {
   const navigate = useNavigate();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
@@ -658,6 +636,17 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    * resultado legítimo, y confundirlo con "todavía no sé" vaciaría la tabla mientras carga.
    */
   const [clavesPermitidas, setClavesPermitidas] = useState<Set<string> | null>(null);
+
+  /**
+   * LOS PARTES DEL PERÍODO, CON SU ASISTENCIA.
+   *
+   * No se usa el prop `reports`: ese es LA PÁGINA del listado —25 partes— y encima viene sin
+   * `attendance`, porque el listado lo saca a propósito (eran 4,5 MB para dibujar cinco números por
+   * fila). Contando sobre eso, TODAS las columnas de asistencia daban 0: Ángel Eduardo Bustos
+   * figuraba con 0 asistencias en septiembre teniendo el parte del 18 cargado y presente.
+   */
+  const [partesDelPeriodo, setPartesDelPeriodo] = useState<ParteConAsistencia[]>([]);
+  const [cargandoAsistencias, setCargandoAsistencias] = useState(false);
 
   /** La misma clave que arma el server (ver `claveDeFila`). */
   const claveDeFila = (userId: string, proyectoNormalizado: string) => `${userId}::${proyectoNormalizado}`;
@@ -949,8 +938,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       });
     });
 
-    // 2. Process Attendance Reports
-    reports.forEach((report) => {
+    /*
+      2. La asistencia, de TODOS los partes del período.
+
+      De `partesDelPeriodo` y no del prop `reports`: ese es la página del listado —25 partes— y sin
+      `attendance`, así que este bucle no iteraba nada y todas las columnas daban 0.
+    */
+    partesDelPeriodo.forEach((report) => {
       try {
         const reportDate = parseISO(report.date + "T00:00:00");
         if (!isWithinInterval(reportDate, { start, end })) return;
@@ -961,9 +955,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       if (projectFilter !== "all" && report.projectIdRaw !== projectFilter) return;
 
       report.attendance.forEach((record) => {
-        const rawId = typeof record.employeeId === "object" ? record.employeeId?._id : record.employeeId;
-        if (!rawId) return;
-        const empIdStr = rawId.toString();
+        const empIdStr = String(record.employeeId || "");
+        if (!empIdStr) return;
 
         const reportProjName = report.projectName || allProjects.find((p) => p.id === (report.projectIdRaw || ""))?.name || "Sin Proyecto";
         const normReportProjName = normalizeProjectName(reportProjName);
@@ -1036,7 +1029,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
           employeeMap.set(mapKey, {
             employeeId: empIdStr,
-            employeeName: record.employeeName || (user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "Desconocido"),
+            // El nombre sale del padrón: el parte manda ids, no nombres (repetirlos era mandar los mismos cincuenta 1.500 veces).
+            employeeName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Sin Nombre" : "Desconocido",
             absences: 0,
             absenceDetails: {},
             overtimeHours: 0,
@@ -1099,8 +1093,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
           const res = splitOvertime(
             report.date,
-            record.overtimeEntryTime,
-            record.overtimeExitTime,
+            record.overtimeEntryTime || "",
+            record.overtimeExitTime || "",
             ot,
             glossary,
             activeContract?.hora_inicio || undefined,
@@ -1178,7 +1172,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas]);
+  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1202,6 +1196,28 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     `vigente` corta las respuestas viejas: con el período abierto se tipea rápido y una respuesta
     lenta de un filtro anterior pisaba a la de uno nuevo.
   */
+  /*
+    La asistencia del período, cada vez que cambia el período. `vivo` descarta las respuestas viejas:
+    se tipea rápido sobre las fechas y una respuesta lenta de un rango anterior pisaba a la nueva.
+  */
+  useEffect(() => {
+    if (!isOpen || !dateFrom || !dateTo) return;
+    let vivo = true;
+    setCargandoAsistencias(true);
+    activityReportsAPI
+      .asistenciasDelPeriodo(dateFrom, dateTo)
+      .then((p) => vivo && setPartesDelPeriodo(p))
+      .catch((e) => {
+        if (!vivo) return;
+        console.error("No se pudo traer la asistencia del período", e);
+        setPartesDelPeriodo([]);
+      })
+      .finally(() => vivo && setCargandoAsistencias(false));
+    return () => {
+      vivo = false;
+    };
+  }, [isOpen, dateFrom, dateTo]);
+
   useEffect(() => {
     if (!isOpen || !dateFrom || !dateTo) return;
     let vigente = true;
@@ -1257,7 +1273,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       return { proyectos: [], roles: [], tipos: [] };
     }
 
-    for (const report of reports || []) {
+    // Del período entero, no de la página del listado: si no, el selector de Proyecto listaba los
+    // proyectos de 25 partes y faltaban los demás.
+    for (const report of partesDelPeriodo) {
       try {
         if (!isWithinInterval(parseISO(report.date + "T00:00:00"), { start, end })) continue;
       } catch {
@@ -1265,8 +1283,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       }
       if (report.projectIdRaw) proyectos.set(report.projectIdRaw, report.projectName);
       for (const rec of report.attendance || []) {
-        const raw = typeof rec.employeeId === "object" ? rec.employeeId?._id : rec.employeeId;
-        if (raw) empleados.add(String(raw));
+        if (rec.employeeId) empleados.add(String(rec.employeeId));
       }
     }
 
@@ -1289,7 +1306,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       roles: Array.from(roles).sort(ordenar),
       tipos: Array.from(tipos).sort(ordenar),
     };
-  }, [reports, dateFrom, dateTo, allUsers, nombreTipoPorId]);
+  }, [partesDelPeriodo, dateFrom, dateTo, allUsers, nombreTipoPorId]);
 
   const rolesFrameDisponibles = universoDelPeriodo.roles;
 
@@ -2368,7 +2385,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 {statsByEmployee.length === 0 && (
                   <tr>
                     <td colSpan={19} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
-                      {cargando ? (
+                      {cargando || cargandoAsistencias ? (
                         <span className="inline-flex items-center gap-2 not-italic">
                           <FontAwesomeIcon icon={faSpinner} spin />
                           Cargando novedades…
