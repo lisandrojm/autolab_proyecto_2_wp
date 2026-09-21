@@ -143,6 +143,15 @@ export interface FiltrosDePersonas {
   claves: string[];
   /** Cuántas filas puede llegar a dibujar la tabla, antes de filtrar. */
   total: number;
+  /**
+   * La plata de cada fila, por su clave. Sale del MISMO contrato que la fila muestra.
+   *
+   * De acá salen S. Jornada, S. Mano, P. Hora, P. Hora Extra y el monto. El padrón
+   * (`/users/directory`) no manda los sueldos —serían dos números por cada uno de los 7.462
+   * contratos del tenant, sobre un endpoint que ya cuesta 27 s—, así que sin esto las seis columnas
+   * mostraban "-" y los totales del pie daban $0.
+   */
+  economia: Record<string, { sueldoJornada: number; sueldoMano: number }>;
   opciones: {
     roles: string[];
     tipos: string[];

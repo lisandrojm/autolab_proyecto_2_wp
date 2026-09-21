@@ -648,6 +648,17 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [clavesPermitidas, setClavesPermitidas] = useState<Set<string> | null>(null);
 
   /**
+   * LA PLATA DE CADA FILA, del server.
+   *
+   * De acá salen S. Jornada, S. Mano, P. Hora, P. Hora Extra y el monto. El padrón no manda los
+   * sueldos —serían dos números por cada uno de los 7.462 contratos del tenant, sobre un endpoint
+   * que ya cuesta 27 s—, así que las seis columnas mostraban "-" y los totales del pie daban $0.
+   *
+   * Vienen del MISMO contrato que elige la fila, así que no pueden discrepar de lo que ella muestra.
+   */
+  const [economiaPorFila, setEconomiaPorFila] = useState<FiltrosDePersonas["economia"]>({});
+
+  /**
    * LOS PARTES DEL PERÍODO, CON SU ASISTENCIA.
    *
    * No se usa el prop `reports`: ese es LA PÁGINA del listado —25 partes— y encima viene sin
@@ -933,8 +944,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           // recién después el más reciente. La columna y el detalle tienen que resolverlo igual, o la
           // fila resume un contrato y el modal muestra otro.
           const last = (getContratoActivo(targetList as any[]) as any) || targetList[targetList.length - 1];
-          sueldoJornada = last.sueldo_jornada || 0;
-          sueldoMano = last.sueldo_mano || 0;
+          /*
+            Los sueldos del server (ver `economiaPorFila`). El contrato del padrón no los trae; si
+            algún día los trajera, el `||` deja que ganen los de acá, que son del mismo contrato.
+          */
+          const plata = economiaPorFila[claveDeFila(userIdStr, normName)];
+          sueldoJornada = plata?.sueldoJornada || last.sueldo_jornada || 0;
+          sueldoMano = plata?.sueldoMano || last.sueldo_mano || 0;
           if (last.hora_inicio && last.hora_fin) {
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
           }
@@ -1067,8 +1083,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           if (targets.length > 0) {
             // Ídem: el que rige, no el último del array (ver arriba).
             const last = (getContratoActivo(targets as any[]) as any) || targets[targets.length - 1];
-            sueldoJornada = last.sueldo_jornada || 0;
-            sueldoMano = last.sueldo_mano || 0;
+            // Ídem arriba: los sueldos vienen del server.
+            const plata = economiaPorFila[claveDeFila(empIdStr, normReportProjName)];
+            sueldoJornada = plata?.sueldoJornada || last.sueldo_jornada || 0;
+            sueldoMano = plata?.sueldoMano || last.sueldo_mano || 0;
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
             // El nombre propio manda; si no vino, se resuelve por `tipo_contrato_id`.
           contractType = last.nombre_contrato || nombreTipoPorId.get(String(last.tipo_contrato_id ?? "")) || "";
@@ -1225,7 +1243,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas]);
+  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas, economiaPorFila]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1302,6 +1320,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         if (!vigente) return;
         setOpcionesServidor(r.opciones);
         setClavesPermitidas(hayFiltro ? new Set(r.claves) : null);
+        setEconomiaPorFila(r.economia || {});
         setFalloFiltros(false);
       })
       .catch((e) => {

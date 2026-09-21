@@ -105,6 +105,19 @@ interface ContratoDeLaFila {
   tipo_contrato_id: any;
   nombre_estado_empleado: string;
   reemplazo: any;
+  /*
+    LOS SUELDOS VIAJAN ACÁ Y NO EN EL DIRECTORIO.
+
+    De ellos sale TODA la plata del reporte: sueldo por jornada, sueldo en mano, precio hora, precio
+    hora extra al 50 y al 100, y el monto de cada fila. Sin ellos las seis columnas muestran «-» y
+    los totales del pie dan $0, que es lo que estaba pasando.
+
+    El directorio no los manda —y no conviene que lo haga: son dos números por cada uno de los 7.462
+    contratos del tenant, sobre un endpoint que ya cuesta 27 s—. Acá son dos números por FILA, unas
+    novecientas, y salen del mismo contrato que la fila muestra, así que no pueden discrepar.
+  */
+  sueldo_jornada: number;
+  sueldo_mano: number;
 }
 
 interface Fila {
@@ -134,6 +147,8 @@ async function filasConSuContrato(desde: string, hasta: string, soloDelPeriodo: 
     tipo_contrato_id: "$contracts.tipo_contrato_id",
     nombre_estado_empleado: { $ifNull: ["$contracts.nombre_estado_empleado", ""] },
     reemplazo: "$contracts.reemplazo",
+    sueldo_jornada: { $ifNull: [{ $toDouble: { $ifNull: ["$contracts.sueldo_jornada", 0] } }, 0] },
+    sueldo_mano: { $ifNull: [{ $toDouble: { $ifNull: ["$contracts.sueldo_mano", 0] } }, 0] },
   };
 
   const hoy = hoyArgentina();
@@ -216,6 +231,8 @@ async function filasConSuContrato(desde: string, hasta: string, soloDelPeriodo: 
           tipo_contrato_id: f.elegido.tipo_contrato_id,
           nombre_estado_empleado: String(f.elegido.nombre_estado_empleado || "").trim(),
           reemplazo: f.elegido.reemplazo,
+          sueldo_jornada: Number(f.elegido.sueldo_jornada) || 0,
+          sueldo_mano: Number(f.elegido.sueldo_mano) || 0,
         }
       : null,
   }));
@@ -229,15 +246,21 @@ const estaVigente = (c: ContratoDeLaFila | null): boolean => {
   return !c.baja || c.baja >= hoy;
 };
 
+/** Lo que cada fila necesita del contrato y el padrón no manda. */
+export interface EconomiaDeLaFila {
+  sueldoJornada: number;
+  sueldoMano: number;
+}
+
 export async function resolverFiltrosDeNovedades(
   tenantId: Types.ObjectId,
   filtros: FiltrosDeNovedades,
-): Promise<{ claves: string[]; opciones: OpcionesDeFiltro; total: number }> {
+): Promise<{ claves: string[]; opciones: OpcionesDeFiltro; total: number; economia: Record<string, EconomiaDeLaFila> }> {
   const soloDelPeriodo = filtros.soloContratoActivo !== false;
 
   /* ── 1. Las filas, con su contrato ── */
   const filas = await filasConSuContrato(filtros.desde, filtros.hasta, soloDelPeriodo);
-  if (filas.length === 0) return { claves: [], opciones: { roles: [], tipos: [], estados: [], areasTurnos: [] }, total: 0 };
+  if (filas.length === 0) return { claves: [], opciones: { roles: [], tipos: [], estados: [], areasTurnos: [] }, total: 0, economia: {} };
 
   /* ── 2. El área y el turno en que cada persona trabajó esos días, del parte ── */
   const partes: any[] = await Request.find({ tenantId, date: { $gte: filtros.desde, $lte: filtros.hasta } })
@@ -329,10 +352,22 @@ export async function resolverFiltrosDeNovedades(
     return true;
   });
 
+  /*
+    La plata de TODAS las filas que la tabla puede dibujar, no sólo de las que pasan el filtro: el
+    recorte se aplica en el navegador y la fila tiene que saber su sueldo antes de que se decida si
+    entra. Son dos números por fila.
+  */
+  const economia: Record<string, EconomiaDeLaFila> = {};
+  for (const f of delTenant) {
+    if (!f.contrato) continue;
+    economia[f.clave] = { sueldoJornada: f.contrato.sueldo_jornada, sueldoMano: f.contrato.sueldo_mano };
+  }
+
   const ordenar = (a: string, b: string) => a.localeCompare(b, "es", { sensitivity: "base" });
   return {
     claves: pasan.map((f) => f.clave),
     total: delTenant.length,
+    economia,
     opciones: {
       roles: [...roles].sort(ordenar),
       tipos: [...tipos].sort(ordenar),
