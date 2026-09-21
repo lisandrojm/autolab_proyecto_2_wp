@@ -96,6 +96,39 @@ export interface ProblemaDeMapeo {
   problema: string;
 }
 
+export interface Corrida {
+  _id?: string;
+  periodo: string;
+  versionMapeo: string;
+  hashLineas: string;
+  createdAt?: string;
+  resumen: { partes: number; eventos: number; lineas: number; personas: number; hojas: number; excepciones: number; bloqueantes: number };
+}
+
+/**
+ * Baja un XLSX que arma el server.
+ *
+ * Va por `axios` y no por un `<a href>` porque la descarga necesita el token y la cabecera de
+ * tenant, que un link pelado no manda. El nombre del archivo lo decide el server y viaja en
+ * `Content-Disposition`.
+ */
+async function descargar(url: string, params: Record<string, any>, nombrePorDefecto: string) {
+  const respuesta = await axiosClient.get(url, { params, responseType: "blob" });
+
+  const cabecera = String(respuesta.headers["content-disposition"] || "");
+  const marca = cabecera.split("filename=")[1];
+  const nombre = marca ? marca.replace(/["']/g, "").trim() : nombrePorDefecto;
+
+  const enlace = document.createElement("a");
+  enlace.href = URL.createObjectURL(respuesta.data);
+  enlace.download = nombre;
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  // Sin esto el blob queda en memoria hasta que se recargue la página.
+  URL.revokeObjectURL(enlace.href);
+}
+
 export const liquidacionAPI = {
   getMapeo: async (fecha?: string) => {
     const response = await axiosClient.get<Mapeo>("/liquidacion/mapeo", { params: fecha ? { fecha } : {} });
@@ -114,10 +147,46 @@ export const liquidacionAPI = {
     return response.data;
   },
 
+  crearConcepto: async (datos: Partial<ConceptoMemosoft>) => {
+    const response = await axiosClient.post<ConceptoMemosoft>("/liquidacion/conceptos", datos);
+    return response.data;
+  },
+
+  /** El código y la empresa NO se pueden cambiar: son la identidad del concepto. El server los ignora. */
+  actualizarConcepto: async (id: string, datos: Partial<ConceptoMemosoft>) => {
+    const response = await axiosClient.patch<ConceptoMemosoft>(`/liquidacion/conceptos/${id}`, datos);
+    return response.data;
+  },
+
+  borrarConcepto: async (id: string) => {
+    await axiosClient.delete(`/liquidacion/conceptos/${id}`);
+  },
+
   getConceptos: async (empresaId?: string) => {
     const response = await axiosClient.get<ConceptoMemosoft[]>("/liquidacion/conceptos", { params: empresaId ? { empresaId } : {} });
     return response.data;
   },
+
+  /** Calcula el período sin guardar nada. Para ver qué va a salir antes de bajarlo. */
+  previsualizarCorrida: async (periodo: string, filtros: Record<string, any> = {}) => {
+    const response = await axiosClient.post<Corrida>("/liquidacion/corridas?previsualizar=1", { periodo, ...filtros });
+    return response.data;
+  },
+
+  /** Calcula y GUARDA la corrida. Es lo que deja registro de qué se entregó. */
+  correrYGuardar: async (periodo: string, filtros: Record<string, any> = {}) => {
+    const response = await axiosClient.post<Corrida>("/liquidacion/corridas", { periodo, ...filtros });
+    return response.data;
+  },
+
+  descargarPlanilla: (periodo: string, filtros: Record<string, any> = {}) =>
+    descargar("/liquidacion/planilla", { periodo, ...filtros }, `novedades-${periodo}.xlsx`),
+
+  descargarAnexo: (corridaId: string) => descargar(`/liquidacion/corridas/${corridaId}/anexo`, {}, "excepciones.xlsx"),
+
+  /** `forzar` sólo cuando alguien decidió bajarlo con excepciones bloqueantes, sabiendo qué baja. */
+  descargarImport: (corridaId: string, forzar = false) =>
+    descargar(`/liquidacion/corridas/${corridaId}/import`, forzar ? { forzar: 1 } : {}, "memosoft.xlsx"),
 
   getPadron: async (periodo: string, filtros: Record<string, string | number | undefined> = {}) => {
     const response = await axiosClient.get<Padron>("/liquidacion/padron", { params: { periodo, ...filtros } });

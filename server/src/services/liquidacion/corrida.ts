@@ -6,6 +6,8 @@ import { MemosoftConcepto } from "../../models/MemosoftConcepto.js";
 import { ActivityLogGeneralConfig } from "../../models/ActivityLogGeneralConfig.js";
 import { LiquidacionCorrida, ILineaCorrida, IExcepcionCorrida } from "../../models/LiquidacionCorrida.js";
 import { Project } from "../../models/Project.js";
+import { Area } from "../../models/Area.js";
+import { Shift } from "../../models/Shift.js";
 import { limitesDelPeriodo } from "../../utils/liquidacion/contratos.js";
 import { armarPadron, FiltrosPadron } from "./padron.js";
 import { normalizarParte, Evento, DatosDePersona } from "./normalizar.js";
@@ -49,6 +51,13 @@ export interface OpcionesDeCorrida extends FiltrosPadron {
   versionMapeo?: string;
   /** Si `false`, calcula y devuelve sin guardar. Sirve para previsualizar. */
   persistir?: boolean;
+  /**
+   * Devolver además el detalle evento por evento, para armar la planilla de control.
+   *
+   * No se guarda en la corrida: son 2.000 filas por mes y sólo hacen falta cuando alguien baja el
+   * archivo. Guardarlas engordaría cada documento para algo que se usa una vez.
+   */
+  detalle?: boolean;
 }
 
 export async function correrLiquidacion(tenantId: Types.ObjectId, periodo: string, createdBy: Types.ObjectId, opciones: OpcionesDeCorrida = {}) {
@@ -65,6 +74,13 @@ export async function correrLiquidacion(tenantId: Types.ObjectId, periodo: strin
   ]);
 
   const nombreProyecto = new Map(proyectos.map((p: any) => [String(p._id), p.name]));
+
+  /* Áreas y turnos: sólo para la planilla de control, que los muestra por nombre. */
+  const [areas, turnos] = opciones.detalle
+    ? await Promise.all([Area.find({ tenantId }).select("name").lean(), Shift.find({ tenantId }).select("name").lean()])
+    : [[], []];
+  const nombreArea = new Map((areas as any[]).map((a: any) => [String(a._id), a.name]));
+  const nombreTurno = new Map((turnos as any[]).map((t: any) => [String(t._id), t.name]));
 
   /*
     EL PADRÓN SE INDEXA POR (persona, proyecto) Y TAMBIÉN POR PERSONA SOLA.
@@ -96,13 +112,15 @@ export async function correrLiquidacion(tenantId: Types.ObjectId, periodo: strin
   if (opciones.projectId) filtroPartes.projectId = new Types.ObjectId(opciones.projectId);
 
   const partes: any[] = await Request.find(filtroPartes)
-    .select("date projectId areaId shiftId attendance")
+    .select("date projectId areaId shiftId reportNumber attendance")
     .sort({ date: 1 })
     .lean();
 
   /* ── 3. Normalizar ── */
+  const numeroDeParte = new Map<string, string>();
   const eventos: Evento[] = [];
   for (const parte of partes) {
+    if (parte.reportNumber) numeroDeParte.set(String(parte._id), parte.reportNumber);
     eventos.push(
       ...normalizarParte(
         {
@@ -140,6 +158,8 @@ export async function correrLiquidacion(tenantId: Types.ObjectId, periodo: strin
 
   const lineas: Linea[] = [];
   const exclusiones: Exclusion[] = [];
+  /* Qué conceptos salió de cada evento. Es lo que la planilla muestra en su última columna. */
+  const conceptosPorEvento = new Map<string, string[]>();
   for (const evento of eventos) {
     const efectos =
       (evento.motivoId ? efectosPorMotivo.get(evento.motivoId) : undefined) ||
@@ -152,6 +172,12 @@ export async function correrLiquidacion(tenantId: Types.ObjectId, periodo: strin
     const r = codificarEvento(evento, efectos as any, globales, noLiquida);
     lineas.push(...r.lineas);
     exclusiones.push(...r.exclusiones);
+    if (opciones.detalle && r.lineas.length) {
+      conceptosPorEvento.set(
+        evento.id,
+        r.lineas.map((l) => `${l.conceptoCodigo} (${l.par1 || l.par2})`),
+      );
+    }
   }
 
   /* ── 5. Agregar ── */
@@ -233,8 +259,21 @@ export async function correrLiquidacion(tenantId: Types.ObjectId, periodo: strin
     hashLineas,
   };
 
-  if (opciones.persistir === false) return corrida;
+  /* El detalle viaja aparte del documento: no se guarda, se usa y se descarta. */
+  const detalle = opciones.detalle
+    ? eventos.map((e) => ({
+        ...e,
+        empresaNombre: e.empresaId ? nombreEmpresa.get(e.empresaId) || null : null,
+        areaNombre: e.areaId ? nombreArea.get(e.areaId) || null : null,
+        turnoNombre: e.turnoId ? nombreTurno.get(e.turnoId) || null : null,
+        reportNumber: numeroDeParte.get(e.activityReportId) || null,
+        conceptos: conceptosPorEvento.get(e.id) || [],
+      }))
+    : undefined;
+
+  if (opciones.persistir === false) return { ...corrida, detalle } as any;
 
   // Reliquidar NO pisa: siempre es un documento nuevo.
-  return (await LiquidacionCorrida.create(corrida)).toObject();
+  const guardada = (await LiquidacionCorrida.create(corrida)).toObject();
+  return { ...guardada, detalle } as any;
 }

@@ -3,10 +3,11 @@ import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen, faCalendarCheck, faEye, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen, faCalendarCheck, faEye, faChevronLeft, faChevronRight, faFileExcel } from "@fortawesome/free-solid-svg-icons";
 import { NewsReportsModal } from "../components/orders/news/NewsReportsModal";
 import { ComplianceView } from "../components/activity_logs/ComplianceView";
 import { PageLayout } from "../components/ui/PageLayout";
+import { LiquidacionModal } from "../components/activity_logs/LiquidacionModal";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
@@ -295,6 +296,7 @@ export const RequestsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
+  const [showLiquidacion, setShowLiquidacion] = useState(false);
   const [reportsInitialProject, setReportsInitialProject] = useState("");
 
   /*
@@ -1195,6 +1197,15 @@ export const RequestsPage: React.FC = () => {
             <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
             <span className="hidden sm:block">Reportes</span>
           </button>
+
+          {/*
+            De acá salen los dos archivos del mes: el de novedades y el import de Memosoft.
+            Va en Novedades y no en una pantalla aparte porque es de donde salen los datos.
+          */}
+          <button onClick={() => setShowLiquidacion(true)} className="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2 text-sm font-semibold" aria-label="Liquidación" title="Sacar los archivos del período">
+            <FontAwesomeIcon icon={faFileExcel} className="h-4 w-4" />
+            <span className="hidden sm:block">Liquidación</span>
+          </button>
         </div>
       }
       searchAndFilters={
@@ -1571,6 +1582,7 @@ export const RequestsPage: React.FC = () => {
       </Modal>
 
       <NewsReportsModal isOpen={showReportsModal} onClose={() => { setShowReportsModal(false); setReportsInitialProject(""); }} reports={reports as any} allUsers={allUsers} allProjects={allProjects} initialProjectFilter={reportsInitialProject} />
+      <LiquidacionModal isOpen={showLiquidacion} onClose={() => setShowLiquidacion(false)} />
     </PageLayout>
   );
 };

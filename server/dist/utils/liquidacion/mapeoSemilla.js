@@ -43,7 +43,14 @@ export const MAPEO_SEMILLA = {
     ],
     "Horas Extras y Feriados": [],
     "Otros Presentes": [
-        { conceptoCodigo: "0000", param: "par2", unidad: "cantidad", fuente: "jornadas", aplicaA: "reemplazante", nota: "Alguien que no es del proyecto vino a trabajar: cobra el jornal." },
+        /*
+          SÓLO JORNALEROS, igual que el resto de los jornales.
+    
+          La tabla original no lo acotaba y el archivo generado le puso un 0000 a un mensualizado. El
+          archivo REAL de agosto no tiene un solo 0000 en las hojas de mensuales: de 177, ninguno. Un
+          mensualizado ya cobra el mes, así que cubrir un día no le agrega un jornal.
+        */
+        { conceptoCodigo: "0000", param: "par2", unidad: "cantidad", fuente: "jornadas", aplicaA: "reemplazante", soloRegimen: "jornalero", nota: "Alguien que no es del proyecto vino a trabajar: cobra el jornal. Sólo jornaleros." },
     ],
     Renuncia: [],
 };

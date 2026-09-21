@@ -418,7 +418,54 @@ npm run test:liquidacion-efectos   # qué efectos rigen ese día, si el mapeo es
 npm run test:liquidacion-motor     # normalizar, codificar y agregar
 ```
 
+### 6. Sacar los archivos del mes
+
+**Novedades → botón "Liquidación".** Período, régimen, y tres descargas:
+
+| Archivo | Qué es |
+|---|---|
+| **Novedades del período** | Un renglón por día y por persona: horarios, motivo, horas extra, y qué conceptos generó cada uno. Es el que se mira cuando un número no cierra. |
+| **Import de Memosoft** | Las seis columnas exactas, una hoja por empresa × centro de costo × régimen. |
+| **Anexo de excepciones** | Lo que no se pudo resolver solo, con la persona y el motivo. |
+
+**El import no se descarga si hay excepciones bloqueantes.** Un archivo con gente sin legajo o sin
+empresa se importa igual y liquida mal: es peor que no tenerlo, porque parece que está bien. Se
+puede forzar para mirarlo, avisando qué se está bajando.
+
+Bajar el import o el anexo deja registrada una corrida con su fecha, sus filtros y el hash de sus
+líneas. Reliquidar el mismo mes **no pisa** la anterior.
+
+Desde la línea de comandos:
+
+```
+GET  /api/v1/liquidacion/planilla?periodo=2026-08
+POST /api/v1/liquidacion/corridas            { "periodo": "2026-08" }
+GET  /api/v1/liquidacion/corridas/<id>/import
+GET  /api/v1/liquidacion/corridas/<id>/anexo
+```
+
+### 7. El catálogo de conceptos
+
+**Configuración → Novedades → Liquidación → "Conceptos de Memosoft".** Para cada código, cuál de
+los dos parámetros usa y si lo que va ahí son días u horas o pesos. Es por empresa.
+
+El código de un concepto **no se edita**: es su identidad y los mapeos lo referencian por ahí. Para
+corregir uno se desactiva el viejo y se crea el nuevo. Y un concepto que algún motivo esté usando no
+se puede borrar, sólo desactivar.
+
+## Contra qué se valida
+
+```bash
+npx tsx src/scripts/compararConAgosto.ts <tenantId>
+```
+
+Compara lo que produce el motor contra el archivo real de agosto de 2026
+(`src/fixtures/agosto2026Memosoft.ts`), emparejando por legajo. No busca que dé igual: busca que
+cada diferencia esté explicada.
+
 ## Lo que todavía no está
 
-Fases 3 a 5: los tres archivos XLSX (planilla de control, import y anexo de excepciones) y el cruce
-con el reloj presencial. El cálculo ya está; falta escribirlo en disco.
+- **0501 S.A.C. Proporcional, 0001 Sueldo Básico, 0018 Día del gremio y 0019 Adicional F**: el
+  archivo real los tiene y el motor no los genera. Los dos primeros son derivables; 0018 necesita
+  la fecha en el calendario de feriados, que hoy está casi vacío.
+- El cruce con el reloj presencial (fase 4 del plan).

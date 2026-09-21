@@ -5,6 +5,7 @@ import { liquidacionAPI, ConceptoMemosoft, MemosoftEffect, MotivoConMapeo, Probl
 import { companiesAPI } from '../../api/companies';
 import { activityLogTypesAPI } from '../../api/requestConfig';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { ConceptosMemosoft } from './ConceptosMemosoft';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -291,6 +292,21 @@ export const MapeoMemosoft: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/*
+        EL CATÁLOGO VA PRIMERO, aunque se toque menos.
+
+        Sin conceptos cargados no se puede mapear nada —los selectores quedan vacíos— así que es el
+        primer lugar al que hay que ir, y ponerlo abajo obligaba a buscarlo.
+      */}
+      <details className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <summary className="cursor-pointer select-none px-4 py-2.5 bg-white dark:bg-gray-900 text-sm font-semibold text-gray-800 dark:text-gray-100">
+          Conceptos de Memosoft
+        </summary>
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+          <ConceptosMemosoft />
+        </div>
+      </details>
 
       {/* ─────────── El día trabajado: la otra regla global ─────────── */}
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800/40">

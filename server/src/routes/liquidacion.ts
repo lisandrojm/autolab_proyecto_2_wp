@@ -10,6 +10,7 @@ import { efectosVigentesEn, validarEfecto, reemplazarVigentes } from "../utils/l
 import { armarPadron, FiltrosPadron } from "../services/liquidacion/padron.js";
 import { correrLiquidacion } from "../services/liquidacion/corrida.js";
 import { LiquidacionCorrida } from "../models/LiquidacionCorrida.js";
+import { generarImportMemosoft, generarAnexoDeExcepciones, generarPlanillaDeControl } from "../services/liquidacion/exportar.js";
 import { Regimen } from "../utils/liquidacion/contratos.js";
 
 /**
@@ -282,6 +283,184 @@ liquidacionRouter.get("/corridas/:id", requirePermission("admin_contracts:view")
     res.json(corrida);
   } catch (error) {
     console.error("Ver corrida error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* ═══════════════════════════ Los archivos ═══════════════════════════ */
+
+/** Cabeceras de descarga de un XLSX, en un solo lugar para que los tres salgan iguales. */
+const mandarXlsx = (res: any, nombre: string, contenido: Buffer) => {
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename="${nombre}"`);
+  // Sin esto el navegador no puede leer el nombre del archivo cuando la API está en otro dominio.
+  res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+  res.send(contenido);
+};
+
+/**
+ * EL IMPORT DE MEMOSOFT.
+ *
+ * NO SE DESCARGA SI HAY EXCEPCIONES BLOQUEANTES. Un archivo con gente sin legajo o sin empresa se
+ * importa igual y liquida mal: es peor que no tenerlo, porque parece que está bien.
+ *
+ * `?forzar=1` lo baja de todos modos, para poder mirarlo mientras se resuelven las excepciones. La
+ * respuesta dice cuántas hay para que quien lo fuerce sepa qué está bajando.
+ */
+liquidacionRouter.get("/corridas/:id/import", requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const corrida: any = await LiquidacionCorrida.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).lean();
+    if (!corrida) return res.status(404).json({ error: "Corrida no encontrada" });
+
+    const bloqueantes = (corrida.excepciones || []).filter((e: any) => e.bloqueante);
+    if (bloqueantes.length > 0 && String(req.query.forzar || "") !== "1") {
+      const porMotivo = new Map<string, number>();
+      bloqueantes.forEach((e: any) => porMotivo.set(e.motivo, (porMotivo.get(e.motivo) || 0) + 1));
+      return res.status(409).json({
+        error: `Hay ${bloqueantes.length} excepción(es) que impiden generar el import.`,
+        ayuda: "Revisalas en el anexo. Se puede descargar igual para mirarlo, pero ese archivo liquida mal.",
+        porMotivo: [...porMotivo.entries()].map(([motivo, cantidad]) => ({ motivo, cantidad })),
+      });
+    }
+
+    mandarXlsx(res, `memosoft-${corrida.periodo}.xlsx`, await generarImportMemosoft(corrida));
+  } catch (error) {
+    console.error("Generar import Memosoft error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/** El anexo de excepciones. Siempre se puede bajar: es la lista de lo que hay que arreglar. */
+liquidacionRouter.get("/corridas/:id/anexo", requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const corrida: any = await LiquidacionCorrida.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).lean();
+    if (!corrida) return res.status(404).json({ error: "Corrida no encontrada" });
+
+    mandarXlsx(res, `excepciones-${corrida.periodo}.xlsx`, await generarAnexoDeExcepciones(corrida));
+  } catch (error) {
+    console.error("Generar anexo error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * LA PLANILLA DE CONTROL, un renglón por día × persona.
+ *
+ * Se calcula en el momento a partir de los partes y NO se guarda: son unas 2.000 filas por mes y
+ * sólo hacen falta cuando alguien baja el archivo. Es un reporte de los registros, no de la corrida.
+ */
+liquidacionRouter.get("/planilla", requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const q = filtrosSchema.parse(req.query);
+    const corrida: any = await correrLiquidacion(req.tenantObjectId!, q.periodo, new Types.ObjectId(req.user!.userId), {
+      empresaId: q.empresaId,
+      ccCodigo: q.ccCodigo,
+      tipoContratoId: q.tipoContratoId,
+      projectId: q.projectId,
+      rolFrame: q.rolFrame,
+      regimen: q.regimen as Regimen | undefined,
+      persistir: false,
+      detalle: true,
+    });
+
+    mandarXlsx(res, `novedades-${q.periodo}.xlsx`, await generarPlanillaDeControl(corrida.detalle || [], q.periodo));
+  } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ error: "Filtros inválidos", details: error.errors });
+    console.error("Generar planilla de control error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* ═══════════════════════ ABM del catálogo de conceptos ═══════════════════════ */
+
+const conceptoSchema = z.object({
+  empresaId: z.string(),
+  codigo: z.string().min(1).max(8),
+  descripcion: z.string().min(1),
+  usaPar1: z.boolean().optional(),
+  usaPar2: z.boolean().optional(),
+  unidadPar1: z.enum(["cantidad", "importe"]).nullable().optional(),
+  unidadPar2: z.enum(["cantidad", "importe"]).nullable().optional(),
+  activo: z.boolean().optional(),
+});
+
+/**
+ * El código se guarda con CUATRO DÍGITOS y ceros a la izquierda.
+ *
+ * Quien lo carga escribe "17" y quiere decir "0017". Normalizarlo acá y no confiar en cómo lo
+ * tipearon evita tener el mismo concepto dos veces con dos escrituras distintas.
+ */
+const normalizarCodigo = (codigo: string) => {
+  const limpio = String(codigo).trim();
+  return /^\d+$/.test(limpio) ? limpio.padStart(4, "0") : limpio.toUpperCase();
+};
+
+liquidacionRouter.post("/conceptos", requirePermission(PERMISO_MAPEO), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const datos = conceptoSchema.parse(req.body);
+    if (!Types.ObjectId.isValid(datos.empresaId)) return res.status(400).json({ error: "Empresa inválida" });
+
+    const concepto = await MemosoftConcepto.create({
+      ...datos,
+      codigo: normalizarCodigo(datos.codigo),
+      empresaId: new Types.ObjectId(datos.empresaId),
+      tenantId: req.tenantObjectId,
+    });
+    res.status(201).json(concepto);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) return res.status(400).json({ error: "Datos inválidos", details: error.errors });
+    if (error?.code === 11000) return res.status(409).json({ error: "Esa empresa ya tiene un concepto con ese código." });
+    console.error("Crear concepto Memosoft error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+liquidacionRouter.patch("/conceptos/:id", requirePermission(PERMISO_MAPEO), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const datos = conceptoSchema.partial().parse(req.body);
+    /*
+      EL CÓDIGO Y LA EMPRESA NO SE CAMBIAN. Son la identidad del concepto: los mapeos ya guardados
+      lo referencian por código, y moverlo los dejaría apuntando a otra cosa sin avisar. Para
+      corregir un código se desactiva el viejo y se crea el nuevo.
+    */
+    delete (datos as any).codigo;
+    delete (datos as any).empresaId;
+
+    const concepto = await MemosoftConcepto.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { $set: datos }, { new: true });
+    if (!concepto) return res.status(404).json({ error: "Concepto no encontrado" });
+    res.json(concepto);
+  } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ error: "Datos inválidos", details: error.errors });
+    console.error("Editar concepto Memosoft error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * NO SE BORRA UN CONCEPTO QUE ALGÚN MOTIVO ESTÁ USANDO.
+ *
+ * Los efectos lo referencian por código; borrarlo los deja emitiendo algo que ya no existe en el
+ * catálogo, y la validación recién lo descubre la próxima vez que alguien guarde ese motivo. Se
+ * desactiva, que es lo mismo para el día a día y no rompe lo configurado.
+ */
+liquidacionRouter.delete("/conceptos/:id", requirePermission(PERMISO_MAPEO), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const concepto: any = await MemosoftConcepto.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).select("codigo").lean();
+    if (!concepto) return res.status(404).json({ error: "Concepto no encontrado" });
+
+    const enUso = await RequestConfig.countDocuments({ tenantId: req.tenantObjectId, "memosoftEffects.conceptoCodigo": concepto.codigo });
+    if (enUso > 0) {
+      return res.status(409).json({
+        error: `El concepto ${concepto.codigo} lo usan ${enUso} motivo(s) de novedad.`,
+        ayuda: "Desactivalo en vez de borrarlo, o sacalo primero del mapeo de esos motivos.",
+        sugerencia: "desactivar",
+      });
+    }
+
+    await MemosoftConcepto.deleteOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+    res.json({ message: "Concepto eliminado" });
+  } catch (error) {
+    console.error("Borrar concepto Memosoft error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
