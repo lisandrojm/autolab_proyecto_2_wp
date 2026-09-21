@@ -14,10 +14,9 @@ interface CustomMultiDatePickerProps {
   validateDate?: (date: Date) => { valid: boolean; message?: string };
   disabled?: boolean;
   remainingDays?: number;
-  getNextWorkingDay?: (date: Date) => Date;
 }
 
-export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ label, value, onChange, minDate, maxDate, validateDate, disabled, remainingDays, getNextWorkingDay }) => {
+export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ label, value, onChange, minDate, maxDate, validateDate, disabled, remainingDays }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
   const [tempSelection, setTempSelection] = useState<string[]>([]);
@@ -94,34 +93,6 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
     setIsOpen(false);
   };
 
-  const returnDates = (() => {
-    if (tempSelection.length === 0) return [];
-
-    const dates: Date[] = [];
-    const seen = new Set<string>();
-
-    for (const dateStr of tempSelection) {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      const dateObj = new Date(y, m - 1, d);
-      const nextDay = getNextWorkingDay
-        ? getNextWorkingDay(dateObj)
-        : (() => {
-            const next = new Date(dateObj);
-            next.setDate(next.getDate() + 1);
-            if (next.getDay() === 6) next.setDate(next.getDate() + 2);
-            else if (next.getDay() === 0) next.setDate(next.getDate() + 1);
-            return next;
-          })();
-
-      const nextDayStr = format(nextDay, "yyyy-MM-dd");
-      if (!tempSelection.includes(nextDayStr) && !seen.has(nextDayStr)) {
-        dates.push(nextDay);
-        seen.add(nextDayStr);
-      }
-    }
-
-    return dates;
-  })();
 
   const formatSelectionLabel = () => {
     if (selectedDates.length === 0) return "Seleccionar fechas...";
@@ -208,30 +179,6 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
                   );
                 })}
               </div>
-
-              {tempSelection.length > 0 && returnDates.length > 0 && (
-                <div className="mb-4 bg-[#11231a] rounded-lg p-3 text-sm text-[#4ade80] flex items-center justify-center gap-2 border border-[#1b3a2a]">
-                  <p className="font-semibold tracking-wide text-center">
-                    {returnDates.length === 1 ? (
-                      <>
-                        Volvés a trabajar el{" "}
-                        <strong className="capitalize">
-                          {format(returnDates[0], "eeee d 'de' MMMM", { locale: es })}.<br />
-                        </strong>
-                      </>
-                    ) : (
-                      <>
-                        Volvés a trabajar los días:
-                        <br />
-                        <strong className="capitalize">
-                          {returnDates.map((date) => format(date, "eeee d 'de' MMMM", { locale: es })).join(", ")}.<br />
-                        </strong>
-                      </>
-                    )}
-                    <span className="font-normal mt-1 block">Si corresponde a tu jornada laboral.</span>
-                  </p>
-                </div>
-              )}
 
               {typeof remainingDays === "number" && (
                 <div className="flex border-t border-slate-200 dark:border-slate-800 pt-4 mb-4">

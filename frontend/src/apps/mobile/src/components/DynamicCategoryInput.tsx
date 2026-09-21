@@ -212,7 +212,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           return (
             <div className="space-y-3">
               <div>
-                <CustomMultiDatePicker label="Fecha" value={dynamicValue || []} onChange={(newDates) => onDynamicValueChange(newDates)} minDate={today} validateDate={validateDate} disabled={typeof remainingDays === "number" && remainingDays <= 0} remainingDays={remainingDays} getNextWorkingDay={getNextWorkingDay} />
+                <CustomMultiDatePicker label="Fecha" value={dynamicValue || []} onChange={(newDates) => onDynamicValueChange(newDates)} minDate={today} validateDate={validateDate} disabled={typeof remainingDays === "number" && remainingDays <= 0} remainingDays={remainingDays} />
                 {typeof remainingDays === "number" && remainingDays <= 0 && <p className="text-xs text-red-600 dark:text-red-400 mt-1">No tienes días disponibles.</p>}
               </div>
 
