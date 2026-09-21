@@ -69,10 +69,16 @@ export interface OpcionesDeFiltro {
         label: string;
     }[];
 }
+/** Lo que cada fila necesita del contrato y el padrón no manda. */
+export interface EconomiaDeLaFila {
+    sueldoJornada: number;
+    sueldoMano: number;
+}
 export declare function resolverFiltrosDeNovedades(tenantId: Types.ObjectId, filtros: FiltrosDeNovedades): Promise<{
     claves: string[];
     opciones: OpcionesDeFiltro;
     total: number;
+    economia: Record<string, EconomiaDeLaFila>;
 }>;
 /** La clave de fila que espera `claves`, para que el front la arme igual. */
 export declare const claveDeFila: (userId: string, nombreProyecto: string) => string;
