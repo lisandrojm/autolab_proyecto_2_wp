@@ -603,7 +603,17 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [showCalcInfo, setShowCalcInfo] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showActiveTableOnly, setShowActiveTableOnly] = useState(true);
-  const [contractTypeFilter, setContractTypeFilter] = useState("all");
+  /**
+   * TIPO DE CONTRATO: VARIOS A LA VEZ.
+   *
+   * Vacío = todos. Era uno solo, y con doce tipos en la lista la pregunta habitual —«los tres
+   * plazo fijo», «todos los Eventual»— no se podía hacer: había que mirar el reporte tres veces y
+   * sumar a mano.
+   *
+   * Una fila entra si ALGUNO de sus contratos es de alguno de los tipos tildados.
+   */
+  const [tiposSeleccionados, setTiposSeleccionados] = useState<string[]>([]);
+  const alternarTipo = (tipo: string) => setTiposSeleccionados((previos) => (previos.includes(tipo) ? previos.filter((t) => t !== tipo) : [...previos, tipo]));
 
   /*
     LOS FILTROS QUE RESUELVE EL SERVER — los mismos que Gestionar Equipo.
@@ -725,7 +735,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (isOpen) {
       setGlossary(overtimeUtils.getGlossary());
       setShowActiveTableOnly(true);
-      setContractTypeFilter("all");
+      setTiposSeleccionados([]);
       setShowStats(false);
     }
   }, [isOpen]);
@@ -807,6 +817,24 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       return coveredDates.size;
     };
 
+    /*
+      ═══════════════════════════════════════════════════════════════════════════════════════════
+      DE (PERSONA, PROYECTO) A LA FILA, POR ID DE PROYECTO Y NO POR NOMBRE.
+      ═══════════════════════════════════════════════════════════════════════════════════════════
+
+      Las filas del padrón se agrupan por el nombre que guarda el VÍNCULO (`nombre_proyecto`), y la
+      asistencia llega con el nombre que tiene el PROYECTO. No son el mismo texto: 369 de los 867
+      vínculos guardan el prefijo numérico —«426_LN+» contra «LN+», y LN+ solo son 256—.
+
+      Buscando por nombre normalizado, «426LN+» no encontraba nunca a «LN+»: la asistencia no hallaba
+      su fila, caía al camino de respaldo, ahí tampoco encontraba contratos (los busca por el mismo
+      nombre) y se descartaba. Presentes, ausentes y horas extra quedaban en cero para casi todos.
+
+      El id de proyecto lo tienen los dos lados y es exacto. El nombre queda de respaldo para los
+      vínculos viejos que no tienen id.
+    */
+    const filaPorProyectoId = new Map<string, { mapKey: string; normName: string }>();
+
     // 1. Initialize from User Roster (Full Metadata Check)
     allUsers.forEach((user) => {
       if (!user._id) return;
@@ -837,6 +865,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         }
         const group = groupedProjects.get(normName)!;
         if (up.contracts) group.allContracts.push(...up.contracts);
+
+        // Por dónde va a entrar la asistencia. Se anota acá, mientras se tiene el vínculo con su id.
+        const idProyecto = String((typeof up.projectId === "object" ? up.projectId?._id : up.projectId) || "");
+        if (idProyecto) filaPorProyectoId.set(`${userIdStr}::${idProyecto}`, { mapKey: `${userIdStr}-${normName}`, normName });
       });
 
       // Process each unique project for this user
@@ -866,11 +898,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         if (showActiveTableOnly && activeCount === 0) return;
 
         // Contract Type Filter check
-        if (contractTypeFilter !== "all") {
+        if (tiposSeleccionados.length > 0) {
           const targetsForFilter = showActiveTableOnly ? activeContracts : allContracts;
           // Mismo fallback que la columna: comparar solo contra `nombre_contrato` no encontraba nada en
           // los contratos importados, que traen el tipo en `tipo_contrato_id` y el nombre vacío.
-          const hasType = targetsForFilter.some((c) => (c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || "") === contractTypeFilter);
+          const hasType = targetsForFilter.some((c) => tiposSeleccionados.includes(c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || ""));
           if (!hasType) return;
         }
 
@@ -968,8 +1000,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         if (!empIdStr) return;
 
         const reportProjName = report.projectName || allProjects.find((p) => p.id === (report.projectIdRaw || ""))?.name || "Sin Proyecto";
-        const normReportProjName = normalizeProjectName(reportProjName);
-        const mapKey = `${empIdStr}-${normReportProjName}`;
+
+        /*
+          POR ID PRIMERO. El nombre del parte y el del vínculo no son el mismo texto («LN+» contra
+          «426_LN+»), así que buscar por nombre dejaba la asistencia sin fila. Si la persona tiene un
+          vínculo con ESTE proyecto, esa es su fila, se llame como se llame.
+        */
+        const delPadron = filaPorProyectoId.get(`${empIdStr}::${report.projectIdRaw || ""}`);
+        const normReportProjName = delPadron?.normName || normalizeProjectName(reportProjName);
+        const mapKey = delPadron?.mapKey || `${empIdStr}-${normReportProjName}`;
 
         // Fallback Initialization (if not in roster or skipped previously)
         if (!employeeMap.has(mapKey)) {
@@ -985,12 +1024,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           let activeCount = 0;
           let contractSchedules: string[] = [];
 
-          // Find matches in metadata by name
+          /*
+            Los contratos de esa persona en ese proyecto: por id, y por nombre sólo si el vínculo no
+            tiene id. Buscarlos sólo por nombre era la segunda mitad del mismo problema — no los
+            encontraba, la fila quedaba con cero contratos activos y se descartaba entera.
+          */
           const matchContracts: any[] = [];
           userProjects.forEach((up) => {
-            if (normalizeProjectName(up.nombre_proyecto || "") === normReportProjName) {
-              if (up.contracts) matchContracts.push(...up.contracts);
-            }
+            const idDelVinculo = String((typeof up.projectId === "object" ? (up.projectId as any)?._id : up.projectId) || "");
+            const coincide = idDelVinculo ? idDelVinculo === String(report.projectIdRaw || "") : normalizeProjectName(up.nombre_proyecto || "") === normReportProjName;
+            if (coincide && up.contracts) matchContracts.push(...up.contracts);
           });
 
           const activeContracts = matchContracts.filter((c) => isActiveContract(c, start, end));
@@ -1000,11 +1043,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           if (showActiveTableOnly && activeCount === 0) return;
 
           // Contract Type Filter check
-          if (contractTypeFilter !== "all") {
+          if (tiposSeleccionados.length > 0) {
             const targetsForFilter = showActiveTableOnly ? activeContracts : matchContracts;
             // Mismo fallback que la columna: comparar solo contra `nombre_contrato` no encontraba nada en
-          // los contratos importados, que traen el tipo en `tipo_contrato_id` y el nombre vacío.
-          const hasType = targetsForFilter.some((c) => (c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || "") === contractTypeFilter);
+            // los contratos importados, que traen el tipo en `tipo_contrato_id` y el nombre vacío.
+            const hasType = targetsForFilter.some((c) => tiposSeleccionados.includes(c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || ""));
             if (!hasType) return;
           }
 
@@ -1091,12 +1134,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
         if (ot > 0 && h50 === 0 && h100 === 0) {
           // Retrieve active contract's schedule on report date to perform schedule-aware split
+          // (mismo criterio que arriba: por id de proyecto, y por nombre sólo si el vínculo no tiene id)
           const userProjects = stats.userProjectsData || [];
           const matchContracts: any[] = [];
           userProjects.forEach((up) => {
-            if (normalizeProjectName(up.nombre_proyecto || "") === normReportProjName) {
-              if (up.contracts) matchContracts.push(...up.contracts);
-            }
+            const idDelVinculo = String((typeof up.projectId === "object" ? (up.projectId as any)?._id : up.projectId) || "");
+            const coincide = idDelVinculo ? idDelVinculo === String(report.projectIdRaw || "") : normalizeProjectName(up.nombre_proyecto || "") === normReportProjName;
+            if (coincide && up.contracts) matchContracts.push(...up.contracts);
           });
           const activeContract = getActiveContractForDate(matchContracts, report.date);
 
@@ -1181,7 +1225,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas]);
+  }, [partesDelPeriodo, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, clavesPermitidas]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1332,7 +1376,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     () =>
       [
         projectFilter !== "all",
-        contractTypeFilter !== "all",
+        tiposSeleccionados.length > 0,
         rolFrameFilter !== "all",
         !showActiveTableOnly,
         soloConAusencias,
@@ -1345,7 +1389,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         !!filtroReemplazo,
         !!filtroRol,
       ].filter(Boolean).length,
-    [projectFilter, contractTypeFilter, rolFrameFilter, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol],
+    [projectFilter, tiposSeleccionados, rolFrameFilter, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol],
   );
 
   /**
@@ -1360,7 +1404,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const chipsDeFiltros = useMemo(() => {
     const chips: { key: string; label: string; valor: string; quitar: () => void }[] = [];
     if (projectFilter !== "all") chips.push({ key: "proyecto", label: "Proyecto", valor: allProjects.find((p) => p.id === projectFilter)?.name || projectFilter, quitar: () => setProjectFilter("all") });
-    if (contractTypeFilter !== "all") chips.push({ key: "tipo", label: "Tipo", valor: contractTypeFilter, quitar: () => setContractTypeFilter("all") });
+    // Un chip por tipo tildado: con varios puestos, uno solo que dijera «3 tipos» obliga a abrir el modal para saber cuáles.
+    for (const t of tiposSeleccionados) chips.push({ key: `tipo:${t}`, label: "Tipo", valor: t, quitar: () => alternarTipo(t) });
     /* Los del server, cada uno con su forma de sacarlo sin abrir el modal. */
     if (filtroEstadoUsuario) chips.push({ key: "estadoUsuario", label: "Usuarios", valor: filtroEstadoUsuario === "active" ? "Activos" : "Inactivos", quitar: () => setFiltroEstadoUsuario("") });
     if (filtroVigencia) chips.push({ key: "vigencia", label: "Contratos", valor: filtroVigencia === "vigente" ? "Vigentes" : "No vigentes", quitar: () => setFiltroVigencia("") });
@@ -1375,11 +1420,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     // Este entra al revés que el resto: lo que se anota es haberlo APAGADO, porque el default es ON.
     if (!showActiveTableOnly) chips.push({ key: "activos", label: "Incluye", valor: "Contratos no vigentes", quitar: () => setShowActiveTableOnly(true) });
     return chips;
-  }, [projectFilter, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol, opcionesServidor]);
+  }, [projectFilter, tiposSeleccionados, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol, opcionesServidor]);
 
   const limpiarFiltros = () => {
     setProjectFilter("all");
-    setContractTypeFilter("all");
+    setTiposSeleccionados([]);
     setRolFrameFilter("all");
     // «Contratos activos» vuelve a ON: es el default y lo que evita filas de gente sin contrato.
     setShowActiveTableOnly(true);
@@ -1404,7 +1449,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   // Volver a la página 1 cuando cambian filtros/apertura, y no quedar fuera de rango.
   useEffect(() => {
     setReportPage(1);
-  }, [dateFrom, dateTo, projectFilter, searchTerm, showActiveTableOnly, contractTypeFilter, isOpen]);
+  }, [dateFrom, dateTo, projectFilter, searchTerm, showActiveTableOnly, tiposSeleccionados, isOpen]);
   useEffect(() => {
     if (reportPage > reportTotalPages) setReportPage(reportTotalPages);
   }, [reportPage, reportTotalPages]);
@@ -1857,20 +1902,43 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Solo los que tuvieron novedades en el período.</p>
               </div>
 
+              {/*
+                TIPO DE CONTRATO: LISTA DE TILDES, NO DESPLEGABLE.
+
+                Son doce tipos y las preguntas reales son de a varios: «los tres plazo fijo», «todos
+                los Eventual». Con un desplegable de a uno había que correr el reporte tres veces y
+                sumar a mano. Nada tildado = todos, que es como se abre.
+              */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato</label>
-                <select value={contractTypeFilter} onChange={(e) => setContractTypeFilter(e.target.value)} className="input-field w-full">
-                  <option value="all">Todos los tipos</option>
-                  {/* Del server: son los tipos del contrato que RIGE de cada uno, no los de todo su historial. */}
-                  {opcionesServidor.tipos.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                {opcionesServidor.tipos.length === 0 && !filtrandoEnServidor && (
-                  <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún contrato del período tiene tipo cargado.</p>
+                <div className="flex items-baseline justify-between ml-1">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Tipo de contrato</label>
+                  {tiposSeleccionados.length > 0 && (
+                    <button type="button" onClick={() => setTiposSeleccionados([])} className="text-[10px] font-semibold text-gray-400 hover:text-red-500 transition-colors underline underline-offset-2">
+                      Todos
+                    </button>
+                  )}
+                </div>
+                {opcionesServidor.tipos.length > 0 ? (
+                  <div className="max-h-52 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+                    {/* Del server: son los tipos del contrato que RIGE de cada uno, no los de todo su historial. */}
+                    {opcionesServidor.tipos.map((t) => (
+                      <label key={t} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={tiposSeleccionados.includes(t)}
+                          onChange={() => alternarTipo(t)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300 leading-tight">{t}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  !filtrandoEnServidor && <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún contrato del período tiene tipo cargado.</p>
                 )}
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                  {tiposSeleccionados.length === 0 ? "Sin tildar ninguno entran todos." : `${tiposSeleccionados.length} de ${opcionesServidor.tipos.length} tildados.`}
+                </p>
               </div>
 
               <div className="space-y-1.5">
