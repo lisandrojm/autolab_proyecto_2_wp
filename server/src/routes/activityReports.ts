@@ -134,7 +134,21 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
         filter.projectId = { $in: alcance.projectIds.map((id) => new mongoose.Types.ObjectId(id)) };
       }
     } else if (!isAdmin || forceOwn) {
-      filter.userId = userId;
+      /*
+        ObjectId, NO el string del token. Este `filter` termina en un `aggregate`, y `$match` NO
+        castea: se lo pasa crudo a Mongo, donde `"696..."` (string) nunca es igual a
+        ObjectId("696..."). Medido contra la base: el mismo `$match` con string devuelve 0 y con
+        ObjectId devuelve los 111 partes de la persona.
+
+        Antes esto era un `find()`, que sí castea por el tipo del schema, y por eso funcionaba. Al
+        pasar la consulta a agregación —para contar ausentes y horas extra del lado del server— el
+        casteo dejó de ocurrir y «Mis novedades» quedó vacío para TODOS: no falla, contesta cero, que
+        se lee como «no cargaste ninguna».
+
+        El resto de los ids del filtro ya venían casteados (`tenantId`, y `soloId()` para
+        proyecto/área/turno); éste era el único que quedaba como texto.
+      */
+      filter.userId = new mongoose.Types.ObjectId(userId);
     }
 
     /*
