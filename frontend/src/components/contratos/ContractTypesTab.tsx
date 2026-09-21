@@ -923,18 +923,21 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
             </div>
 
             {/*
-              LÍMITES DE LA JORNADA: cuántas horas por jornada y cuántos días por semana admite este tipo
+              LÍMITES DE LA JORNADA: cuántos días por semana y cuántas horas por jornada admite este tipo
               (un «6x6»). Opcionales —vacío es «sin límite»— y son la base para acotar la solicitud de
               contratación. El server valida los rangos.
+
+              LOS DÍAS VAN PRIMERO porque así se lee el nombre del tipo: un «5x7» son 5 días de 7 horas.
+              Al revés, los dos campos quedaban cruzados respecto del título que está arriba.
             */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Horas por jornada</label>
-                <input type="number" min={1} max={24} step="0.5" className="input-field w-full" value={form.horasPorJornada} onChange={(e) => setForm((p) => ({ ...p, horasPorJornada: e.target.value }))} placeholder="Sin límite" />
-              </div>
-              <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Días por semana</label>
                 <input type="number" min={1} max={7} step={1} className="input-field w-full" value={form.diasPorSemana} onChange={(e) => setForm((p) => ({ ...p, diasPorSemana: e.target.value }))} placeholder="Sin límite" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Horas por jornada</label>
+                <input type="number" min={1} max={24} step="0.5" className="input-field w-full" value={form.horasPorJornada} onChange={(e) => setForm((p) => ({ ...p, horasPorJornada: e.target.value }))} placeholder="Sin límite" />
               </div>
             </div>
             <p className="-mt-2 ml-1 text-[11px] text-gray-500 dark:text-gray-400">Vacío = sin límite. Sirven para acotar la solicitud de contratación de este tipo de contrato.</p>
