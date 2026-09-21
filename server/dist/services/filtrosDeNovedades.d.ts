@@ -1,27 +1,43 @@
 import { Types } from "mongoose";
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * LOS MISMOS FILTROS DE GESTIONAR EQUIPO, PERO SOBRE UN PERÍODO
+ * LOS FILTROS DEL REPORTE DE NOVEDADES
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Gestionar Equipo filtra en el SERVER (ver `resolveProjectTeamFilterIds` en `routes/users.ts`),
- * porque vigencia, tipo, estado impositivo y reemplazo dependen del contrato que rige y eso no se
- * puede escribir como query de Mongo. El modal de Reportes de Novedades necesitaba lo mismo, y
- * hacerlo en el navegador exigía bajarse los contratos de las 1.577 personas del tenant.
+ * Vigencia, tipo, estado impositivo y reemplazo dependen del CONTRATO QUE RIGE, y elegir ese
+ * contrato es una regla con desempates que no se puede escribir como query de Mongo. Se resuelve
+ * acá y viajan unos pocos KB, en vez de los contratos de las 1.577 personas del tenant.
  *
- * Por eso esto devuelve DOS COSAS Y NADA MÁS:
+ * ── Lo que hay que tener presente, porque es de donde salieron todos los bugs ──
  *
- *   · `userIds`: quiénes pasan los filtros. El modal se queda con esas filas.
- *   · `opciones`: qué poner en cada desplegable, sacado de la gente del período y no del sistema
- *     entero — igual que el resto de los filtros del modal.
+ * LA UNIDAD DE ESTE REPORTE ES LA FILA, NO LA PERSONA. Cada fila es una persona EN UN PROYECTO, y
+ * su contrato es el que rige EN ESE PROYECTO DENTRO DEL PERÍODO. La misma persona puede tener dos
+ * filas: vigente en un proyecto y no vigente en el otro.
  *
- * Son unos pocos KB contra los 2,7 MB del directorio, y el criterio no puede divergir del de
- * Gestionar Equipo porque las dos puntas usan las mismas funciones: `getContratoActivo` para elegir
- * el contrato y `claveEstado` para comparar estados.
+ * La primera versión de esto contestaba una lista de personas, con el contrato que rige HOY entre
+ * TODOS sus proyectos. Elegía otro contrato que el que muestra la fila, así que:
  *
- * LA DIFERENCIA CON GESTIONAR EQUIPO, a propósito: el área y el turno salen del PARTE, no de la
- * configuración del proyecto. Acá se está mirando dónde trabajó esa persona esos días, que es la
- * pregunta de una novedad; allá se mira dónde está asignada, que es la de un equipo.
+ *   · con «Vigentes» puesto quedaban filas NO VIGENTE — la persona tenía un contrato vigente en
+ *     otro proyecto y eso la dejaba pasar entera, con todas sus filas;
+ *   · el desplegable «Tipo de contrato» salía vacío o incompleto: listaba los tipos de la gente que
+ *     aparece en los PARTES (91 personas) mientras la tabla dibuja a todo el que tiene contrato en
+ *     el período (189 filas), así que había filas cuyo tipo no se podía elegir.
+ *
+ * Por eso esto devuelve CLAVES DE FILA (`userId::PROYECTONORMALIZADO`) y las opciones salen de esas
+ * mismas filas: lo que se puede elegir es exactamente lo que está en la tabla.
+ *
+ * ── El mismo criterio que la tabla, campo por campo ──
+ *
+ * El contrato de la fila se elige con la regla de `getContratoActivo` del front: entre los vigentes
+ * manda el de tiempo indeterminado, después el más reciente por alta y, a igualdad, por carga; sin
+ * vigentes, el más reciente de todos. Si se toca allá, hay que tocar acá.
+ *
+ * Los proyectos se agrupan por NOMBRE NORMALIZADO y no por id, igual que la tabla: hay vínculos
+ * distintos con el mismo proyecto escrito de otra forma, y la tabla los junta en una fila.
+ *
+ * LA EXCEPCIÓN, a propósito: el área y el turno salen del PARTE, no de la configuración del
+ * proyecto. Acá se mira dónde trabajó esa persona esos días, que es la pregunta de una novedad;
+ * en Gestionar Equipo se mira dónde está asignada, que es la de un equipo.
  */
 export interface FiltrosDeNovedades {
     desde: string;
@@ -35,6 +51,14 @@ export interface FiltrosDeNovedades {
     reemplazo?: "con" | "sin" | "";
     /** Nombre del rol de plataforma, tal como se muestra. */
     rol?: string;
+    /**
+     * El interruptor «Mostrar solo los que tienen contrato activo» de la tabla.
+     *
+     * Prendido (el valor por omisión, y como se abre el modal) la fila mira sólo los contratos que
+     * pisan el período; apagado mira todos los de la persona en ese proyecto. Tiene que venir de
+     * afuera porque cambia QUÉ CONTRATO rige, y con él la vigencia, el tipo y el estado.
+     */
+    soloContratoActivo?: boolean;
 }
 export interface OpcionesDeFiltro {
     roles: string[];
@@ -46,7 +70,9 @@ export interface OpcionesDeFiltro {
     }[];
 }
 export declare function resolverFiltrosDeNovedades(tenantId: Types.ObjectId, filtros: FiltrosDeNovedades): Promise<{
-    userIds: string[];
+    claves: string[];
     opciones: OpcionesDeFiltro;
     total: number;
 }>;
+/** La clave de fila que espera `claves`, para que el front la arme igual. */
+export declare const claveDeFila: (userId: string, nombreProyecto: string) => string;

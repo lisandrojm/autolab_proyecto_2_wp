@@ -1,5 +1,111 @@
 import { Types } from "mongoose";
 /**
+ * Normaliza una fecha de contrato ADENTRO de Mongo, igual que `fechaISO` de `contratoVigencia`:
+ * "YYYY-MM-DD...", "DD/MM/YYYY" y "DD-MM-YYYY" → "YYYY-MM-DD"; vacío, "null", "-" o lo que no sea
+ * texto → "". (En JS un Date pasado por `String()` tampoco matchea ningún formato, así que también da "".)
+ */
+export declare const fechaISOExpr: (campo: string) => {
+    $let: {
+        vars: {
+            t: {
+                $cond: (string | {
+                    $eq: (string | {
+                        $type: string;
+                    })[];
+                    $trim?: undefined;
+                } | {
+                    $trim: {
+                        input: string;
+                    };
+                    $eq?: undefined;
+                })[];
+            };
+        };
+        in: {
+            $switch: {
+                branches: ({
+                    case: {
+                        $in: (string[] | {
+                            $toLower: string;
+                        })[];
+                        $regexMatch?: undefined;
+                    };
+                    then: string;
+                } | {
+                    case: {
+                        $regexMatch: {
+                            input: string;
+                            regex: RegExp;
+                        };
+                        $in?: undefined;
+                    };
+                    then: {
+                        $substrCP: (string | number)[];
+                    };
+                })[];
+                default: {
+                    $let: {
+                        vars: {
+                            p: {
+                                $split: (string | {
+                                    $cond: (string | {
+                                        $gt: (number | {
+                                            $indexOfCP: string[];
+                                        })[];
+                                    })[];
+                                })[];
+                            };
+                        };
+                        in: {
+                            $cond: (string | {
+                                $and: ({
+                                    $eq: (number | {
+                                        $size: string;
+                                    })[];
+                                } | {
+                                    $eq: (number | {
+                                        $strLenCP: {
+                                            $arrayElemAt: (string | number)[];
+                                        };
+                                    })[];
+                                })[];
+                                $concat?: undefined;
+                            } | {
+                                $concat: (string | {
+                                    $arrayElemAt: (string | number)[];
+                                    $cond?: undefined;
+                                } | {
+                                    $cond: ({
+                                        $eq: (number | {
+                                            $strLenCP: {
+                                                $arrayElemAt: (string | number)[];
+                                            };
+                                        })[];
+                                        $concat?: undefined;
+                                        $arrayElemAt?: undefined;
+                                    } | {
+                                        $concat: (string | {
+                                            $arrayElemAt: (string | number)[];
+                                        })[];
+                                        $eq?: undefined;
+                                        $arrayElemAt?: undefined;
+                                    } | {
+                                        $arrayElemAt: (string | number)[];
+                                        $eq?: undefined;
+                                        $concat?: undefined;
+                                    })[];
+                                    $arrayElemAt?: undefined;
+                                })[];
+                                $and?: undefined;
+                            })[];
+                        };
+                    };
+                };
+            };
+        };
+    };
+};
+/**
  * `camposExtra`: campos del contrato que además hacen falta. La tabla de Gestionar Equipo pide una
  * docena —tipo, reemplazo, horario, jornadas, empresas— porque los muestra en sus columnas. Se piden
  * explícitos y no «todo el contrato» para que el peso de esto no crezca cada vez que alguien agrega

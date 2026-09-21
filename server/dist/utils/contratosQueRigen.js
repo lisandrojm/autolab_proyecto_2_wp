@@ -5,7 +5,7 @@ import UserProject from "../models/UserProject.js";
  * "YYYY-MM-DD...", "DD/MM/YYYY" y "DD-MM-YYYY" → "YYYY-MM-DD"; vacío, "null", "-" o lo que no sea
  * texto → "". (En JS un Date pasado por `String()` tampoco matchea ningún formato, así que también da "".)
  */
-const fechaISOExpr = (campo) => ({
+export const fechaISOExpr = (campo) => ({
     $let: {
         vars: { t: { $cond: [{ $eq: [{ $type: campo }, "string"] }, { $trim: { input: campo } }, ""] } },
         in: {
