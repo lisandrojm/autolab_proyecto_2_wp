@@ -1119,9 +1119,30 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
   }, [reports, selectedProjectId, reportDate]);
 
   // View Report Handler
-  const handleViewReport = (report: ActivityReport) => {
-    setViewingReport(report);
+  /**
+   * ABRIR EL DETALLE PIDE EL PARTE COMPLETO.
+   *
+   * El del listado viene SIN `attendance` —el server lo saca con un `$project` porque eran 4,5 MB—,
+   * y el detalle es justamente la lista de personas: `viewingReport.attendance.map(...)` reventaba
+   * con «Cannot read properties of undefined (reading 'map')» y se llevaba puesta la pantalla
+   * entera. No se notaba mientras el historial estaba vacío y no había en qué hacer click.
+   *
+   * Se abre con lo que ya se tiene —así el modal aparece al instante, con proyecto y fecha— y se
+   * completa cuando llega el detalle. Si la llamada falla, el modal se cierra y se avisa: mejor eso
+   * que un modal a medias que parece decir que el parte no tiene a nadie.
+   */
+  const handleViewReport = async (report: ActivityReport) => {
+    setViewingReport({ ...report, attendance: report.attendance || [] });
     setShowDetailModal(true);
+    if (report.attendance) return;
+    try {
+      const completo = await activityReportsAPI.getById(report._id);
+      setViewingReport({ ...completo, attendance: completo.attendance || [] });
+    } catch (e) {
+      console.error("No se pudo traer el detalle del parte", e);
+      setShowDetailModal(false);
+      sweetAlert.error("No se pudo abrir la novedad", "No llegó el detalle del parte. Probá de nuevo en un momento.");
+    }
   };
 
   const { profile, stats } = useProfile();
