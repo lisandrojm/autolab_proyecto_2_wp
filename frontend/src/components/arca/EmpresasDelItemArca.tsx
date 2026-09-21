@@ -59,6 +59,71 @@ export const EmpresasDelItemArca: React.FC<Props> = ({ tipo, itemId, itemLabel, 
     return empresas.filter((e) => `${e.razonSocial} ${e.cuit || ''}`.toLowerCase().includes(texto));
   }, [empresas, q]);
 
+  /** Lo que se ve ahora: con el buscador puesto, las acciones en masa operan sobre eso y no sobre todo. */
+  const visiblesAsignadas = visibles.filter((e) => asignadas.includes(e._id));
+  const visiblesSinAsignar = visibles.filter((e) => !asignadas.includes(e._id));
+  const filtrando = q.trim().length > 0;
+  /** Cualquier acción en masa bloquea todos los switches, no uno. */
+  const TODAS = '__todas__';
+
+  /**
+   * REGISTRARLO EN TODAS DE UNA. Una sola llamada, no una por empresa: `setVinculos` ya recibe la
+   * lista completa de las que quedan, así que mandar el conjunto entero es un request y un estado
+   * consistente, en vez de N requests que pueden cortarse por la mitad.
+   */
+  const registrarEnTodas = async () => {
+    if (visiblesSinAsignar.length === 0) return;
+    setGuardando(TODAS);
+    try {
+      const nuevas = [...new Set([...asignadas, ...visiblesSinAsignar.map((e) => e._id)])];
+      const r = await companiesAPI.setVinculos(tipo, itemId, nuevas);
+      await onGuardado();
+      const extra = r.limpiezas > 0 ? ' Se limpiaron valores por defecto que ya no correspondían.' : '';
+      sweetAlert.success('Guardado', `Se registró ${itemLabel} en ${visiblesSinAsignar.length} empresa(s).${extra}`);
+    } catch (err: any) {
+      sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo registrar en todas las empresas.');
+    } finally {
+      setGuardando('');
+    }
+  };
+
+  /**
+   * QUITARLO DE TODAS. Va con UNA confirmación que junta los avisos de cada empresa, no con una por
+   * empresa: encadenar diez diálogos se contesta que sí sin leer ninguno, que es justo lo contrario
+   * de para qué está el aviso. Y el aviso importa: desvincular no rompe nada hoy, rompe cuando esos
+   * contratos generen el TXT y ARCA los rechace.
+   */
+  const quitarDeTodas = async () => {
+    if (visiblesAsignadas.length === 0) return;
+
+    if (confirmarQuitar) {
+      // Texto plano con saltos de línea: `sweetAlert.confirm` usa `text`, no `html`, así que
+      // cualquier etiqueta se vería literal.
+      const avisos: string[] = [];
+      for (const empresa of visiblesAsignadas) {
+        const aviso = await confirmarQuitar(empresa);
+        if (aviso) avisos.push(`${empresa.razonSocial}: ${aviso}`);
+      }
+      const detalle = avisos.length > 0 ? avisos.join('\n') : `Se le quitará a: ${visiblesAsignadas.map((e) => e.razonSocial).join(', ')}.`;
+      const r = await sweetAlert.confirm(`¿Quitárselo a ${visiblesAsignadas.length} empresa(s)?`, detalle, 'Sí, quitarlo');
+      if (!r.isConfirmed) return;
+    }
+
+    setGuardando(TODAS);
+    try {
+      const aQuitar = new Set(visiblesAsignadas.map((e) => e._id));
+      const nuevas = asignadas.filter((x) => !aQuitar.has(x));
+      const r = await companiesAPI.setVinculos(tipo, itemId, nuevas);
+      await onGuardado();
+      const extra = r.limpiezas > 0 ? ' Se quitaron también los valores por defecto que eran éste.' : '';
+      sweetAlert.success('Guardado', `Se quitó ${itemLabel} de ${aQuitar.size} empresa(s).${extra}`);
+    } catch (err: any) {
+      sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo quitar de todas las empresas.');
+    } finally {
+      setGuardando('');
+    }
+  };
+
   const alternar = async (empresa: Company, tiene: boolean) => {
     if (tiene && confirmarQuitar) {
       const aviso = await confirmarQuitar(empresa);
@@ -99,6 +164,48 @@ export const EmpresasDelItemArca: React.FC<Props> = ({ tipo, itemId, itemLabel, 
         </div>
       )}
 
+      {/*
+        EL CONTEO Y LAS DOS ACCIONES EN MASA.
+
+        «Seleccionar todas» es el gesto habitual —un ítem que se declara ante todas las empleadoras—
+        y hacerlo switch por switch son diez clicks y diez requests. «Quitar todas» va al lado porque
+        es la misma operación al revés, pero pide confirmación: dar de alta de más no rompe nada, dar
+        de baja sí (ver `quitarDeTodas`).
+
+        Cada botón aparece sólo cuando tiene algo para hacer: con todas prendidas, «Seleccionar
+        todas» no haría nada y ofrecerlo es prometer un cambio que no ocurre.
+      */}
+      {visibles.length > 0 && (
+        <div className="flex items-center justify-between gap-3 px-1">
+          <span className="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
+            {visiblesAsignadas.length} de {visibles.length}
+            {filtrando && ' (filtradas)'}
+          </span>
+          <div className="flex items-center gap-3">
+            {visiblesSinAsignar.length > 0 && (
+              <button
+                type="button"
+                onClick={registrarEnTodas}
+                disabled={!!guardando}
+                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline underline-offset-2 disabled:opacity-50"
+              >
+                {filtrando ? `Seleccionar las ${visiblesSinAsignar.length} filtradas` : 'Seleccionar todas'}
+              </button>
+            )}
+            {visiblesAsignadas.length > 0 && (
+              <button
+                type="button"
+                onClick={quitarDeTodas}
+                disabled={!!guardando}
+                className="text-[11px] font-semibold text-gray-400 hover:text-red-500 underline underline-offset-2 disabled:opacity-50"
+              >
+                {filtrando ? 'Quitar las filtradas' : 'Quitar todas'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
         {visibles.length === 0 ? (
           <p className="px-3 py-4 text-xs text-gray-400 italic">No hay ninguna empresa que coincida.</p>
@@ -112,13 +219,16 @@ export const EmpresasDelItemArca: React.FC<Props> = ({ tipo, itemId, itemLabel, 
                   <span className="block text-[11px] font-mono text-gray-400">{e.cuit || '—'}</span>
                 </span>
                 {/* Mismo switch que el resto de la app: un check se lee como «seleccionar de una
-                    lista» y esto es prender o apagar una relación. */}
+                    lista» y esto es prender o apagar una relación.
+
+                    Se deshabilita con CUALQUIER guardado en curso, no sólo el suyo: cada cambio
+                    manda la lista completa de vínculos, así que dos a la vez se pisarían. */}
                 <button
                   type="button"
                   role="switch"
                   aria-checked={tiene}
                   aria-label={`${tiene ? 'Quitar' : 'Registrar'} ${itemLabel} en ${e.razonSocial}`}
-                  disabled={guardando === e._id}
+                  disabled={!!guardando}
                   onClick={() => alternar(e, tiene)}
                   className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${tiene ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
                 >

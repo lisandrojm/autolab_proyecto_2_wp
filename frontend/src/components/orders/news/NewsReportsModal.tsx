@@ -1681,8 +1681,27 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const grandTotal = totalSalaries + totalCost;
   const totalEmployees = statsByEmployee.length;
 
+  /**
+   * LOS COMENTARIOS DE TODO EL PERÍODO, para las exportaciones de una fila por persona.
+   *
+   * El detalle diario tiene una fila por día y ahí cada comentario va en su renglón. El consolidado
+   * tiene UNA fila por persona, así que los del mes entero se juntan en una celda, cada uno con su
+   * fecha adelante: sin la fecha son un párrafo sin anclaje, y con ella se puede cruzar contra el
+   * día de la novedad.
+   *
+   * Se repiten a propósito. El comentario del parte es uno por novedad, o sea que aparece igual en
+   * todas las personas de ese día; se deja así porque es lo que explica qué pasó ese día, y buscarlo
+   * en otra exportación para entender una fila es peor que leerlo dos veces.
+   */
+  const comentariosDelPeriodo = (s: EmployeeStats, campo: "nota" | "comentarioParte") =>
+    Object.entries(s.dailyAttendance)
+      .filter(([, d]) => (d[campo] || "").trim().length > 0)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([fecha, d]) => `${format(parseISO(fecha + "T00:00:00"), "dd/MM")}: ${d[campo]}`)
+      .join(" | ");
+
   const handleExport = () => {
-    const headers = ["Empleado", "Tipo de Contrato", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Áreas", "Turnos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Tipo de Contrato", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Áreas", "Turnos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total", "Observaciones", "Comentarios del parte"];
     const rows = statsByEmployee.map((s) => {
       const salaryDivisor = glossary.salaryDivisorPercentage || 150;
       const baseHour = s.sueldoMano / salaryDivisor;
@@ -1730,6 +1749,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         `"${otDetail}"`,
         (m50 + m100).toFixed(2),
         (salaryMonto + m50 + m100).toFixed(2),
+        /* Al final y no al lado del nombre: son texto largo y en el medio empujan fuera de la
+           pantalla las columnas que se leen de un vistazo. */
+        `"${comentariosDelPeriodo(s, "nota").replace(/"/g, '""')}"`,
+        `"${comentariosDelPeriodo(s, "comentarioParte").replace(/"/g, '""')}"`,
       ];
     });
 
@@ -1752,7 +1775,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   };
 
   const handleExportXLS = () => {
-    const headers = ["Empleado", "Tipo de Contrato", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Áreas", "Turnos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Tipo de Contrato", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Áreas", "Turnos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total", "Observaciones", "Comentarios del parte"];
 
     const rows = statsByEmployee.map((s) => {
       const salaryDivisor = glossary.salaryDivisorPercentage || 150;
@@ -1799,29 +1822,33 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         otDetail,
         Number((m50 + m100).toFixed(2)),
         Number((salaryMonto + m50 + m100).toFixed(2)),
+        // Ídem el CSV: al final, que es donde el texto largo no estorba.
+        comentariosDelPeriodo(s, "nota"),
+        comentariosDelPeriodo(s, "comentarioParte"),
       ];
     });
 
-    // Add totals row
+    /*
+      LA FILA DE TOTALES, UNA CELDA POR COLUMNA.
+
+      Estaba armada contando cuántos `""` poner y le faltaban dos: los totales caían corridos y
+      «Días Presente» quedaba bajo «Jornadas», «Ausencias» bajo «Proyectos» y la plata dos columnas
+      antes de la suya. Se leía como si fueran los totales de otra cosa.
+
+      Ahora se arma desde los mismos `headers`: cada total dice A QUÉ COLUMNA pertenece, así que
+      agregar una columna no vuelve a desalinear nada.
+    */
     const totalMontoSueldos = statsByEmployee.reduce((a, c) => a + c.sueldoJornada * (c.cantidadJornadasLaborales - c.absences), 0);
-    rows.push([
-      `TOTALES (${totalEmployees} empleados)`,
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      statsByEmployee.reduce((a, c) => a + c.daysPresent, 0),
-      totalAbsences,
-      "",
-      totalOvertime50,
-      totalOvertime100,
-      "", // Detail column empty for total
-      Number(totalCost.toFixed(2)),
-      Number((totalMontoSueldos + totalCost).toFixed(2)),
-    ] as any);
+    const totalesPorColumna: Record<string, string | number> = {
+      Empleado: `TOTALES (${totalEmployees} empleados)`,
+      "Días Presente": statsByEmployee.reduce((a, c) => a + c.daysPresent, 0),
+      Ausencias: totalAbsences,
+      "Hs. 50%": totalOvertime50,
+      "Hs. 100%": totalOvertime100,
+      "Monto Extras": Number(totalCost.toFixed(2)),
+      "Monto Total": Number((totalMontoSueldos + totalCost).toFixed(2)),
+    };
+    rows.push(headers.map((h) => totalesPorColumna[h] ?? "") as any);
 
     const introRows = [
       ["Fecha Desde", dateFrom],
