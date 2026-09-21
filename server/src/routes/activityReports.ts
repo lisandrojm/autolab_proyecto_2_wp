@@ -6,6 +6,7 @@ import { Notification } from "../models/Notification.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { computeCompliance } from "../services/complianceService.js";
+import { resolverFiltrosDeNovedades } from "../services/filtrosDeNovedades.js";
 import { Role } from "../models/Role.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { MOBILE_ACTIVITY_COMPLIANCE } from "../utils/permisosMobile.js";
@@ -493,3 +494,39 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
 });
 
 export { router as RequestRoutes };
+
+/**
+ * LOS MISMOS FILTROS DE GESTIONAR EQUIPO, SOBRE EL PERÍODO.
+ *
+ * Devuelve quiénes pasan y qué poner en cada desplegable. Ver `services/filtrosDeNovedades.ts`:
+ * se resuelve en el server porque vigencia, tipo, estado impositivo y reemplazo dependen del
+ * contrato que rige, y calcularlos en el navegador obligaba a bajarse los contratos de las 1.577
+ * personas del tenant.
+ */
+router.get("/filtros-de-personas", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const desde = String(req.query.desde || "");
+    const hasta = String(req.query.hasta || "");
+    if (!DATE_RE.test(desde) || !DATE_RE.test(hasta) || desde > hasta) {
+      res.status(400).json({ error: "Parámetros 'desde'/'hasta' inválidos (AAAA-MM-DD, desde<=hasta)" });
+      return;
+    }
+
+    const resultado = await resolverFiltrosDeNovedades(req.tenantObjectId!, {
+      desde,
+      hasta,
+      estadoUsuario: (req.query.estadoUsuario as any) || "",
+      vigencia: (req.query.vigencia as any) || "",
+      tipoContrato: req.query.tipoContrato ? String(req.query.tipoContrato) : "",
+      estadoContrato: req.query.estadoContrato ? String(req.query.estadoContrato) : "",
+      areaTurno: req.query.areaTurno ? String(req.query.areaTurno) : "",
+      reemplazo: (req.query.reemplazo as any) || "",
+      rol: req.query.rol ? String(req.query.rol) : "",
+    });
+
+    res.json(resultado);
+  } catch (error) {
+    console.error("Filtros de personas error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});

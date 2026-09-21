@@ -8,6 +8,7 @@ import { User, UserProjectMetadata } from "../../../api/users";
 import { infoAPI, InfoItem } from "../../../api/info";
 import { categoriaSatAPI } from "../../../api/categoriasSat";
 import { roleFrameAPI } from "../../../api/roleFrames";
+import { activityReportsAPI, FiltrosDePersonas } from "../../../api/request";
 import { isContractVigente } from "../../team/ContractCard";
 import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
@@ -625,6 +626,34 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [showStats, setShowStats] = useState(false);
   const [showActiveTableOnly, setShowActiveTableOnly] = useState(true);
   const [contractTypeFilter, setContractTypeFilter] = useState("all");
+
+  /*
+    LOS FILTROS QUE RESUELVE EL SERVER — los mismos que Gestionar Equipo.
+
+    Vigencia, estado impositivo y reemplazo dependen del contrato que RIGE, y elegir ese contrato es
+    una regla con desempates (ver `getContratoActivo`). Calcularlo acá obligaba a bajarse los
+    contratos de las 1.577 personas del tenant: 2,7 MB y 22 segundos. El server contesta quiénes
+    pasan y qué va en cada desplegable en 3 KB.
+
+    Y sobre todo: el criterio es el MISMO que el de Gestionar Equipo porque es el mismo código. Dos
+    implementaciones de "cuál es el contrato vigente" divergen el día que alguien toca una sola.
+  */
+  const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState("");
+  const [filtroVigencia, setFiltroVigencia] = useState("");
+  const [filtroEstadoContrato, setFiltroEstadoContrato] = useState("");
+  const [filtroAreaTurno, setFiltroAreaTurno] = useState("");
+  const [filtroReemplazo, setFiltroReemplazo] = useState("");
+  const [filtroRol, setFiltroRol] = useState("");
+
+  const [opcionesServidor, setOpcionesServidor] = useState<FiltrosDePersonas["opciones"]>({ roles: [], tipos: [], estados: [], areasTurnos: [] });
+  /**
+   * Los ids que pasan. `null` = no hay ninguno de estos filtros puesto, así que no se recorta nada.
+   *
+   * Es `null` y no un array vacío a propósito: vacío significa "ninguno pasa", que es un resultado
+   * legítimo, y confundirlo con "todavía no sé" vaciaría la tabla mientras carga.
+   */
+  const [idsPermitidos, setIdsPermitidos] = useState<Set<string> | null>(null);
+  const [filtrandoEnServidor, setFiltrandoEnServidor] = useState(false);
   /*
     FILTROS AVANZADOS, EN UNA VENTANA APARTE.
 
@@ -776,6 +805,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     allUsers.forEach((user) => {
       if (!user._id) return;
       const userIdStr = user._id.toString();
+
+      /*
+        EL RECORTE DE LOS FILTROS DEL SERVER, aplicado una sola vez por persona.
+
+        Va acá arriba y no adentro del bucle de proyectos porque estos filtros son de la PERSONA
+        —su contrato vigente, su estado, su rol—, no de cada fila: filtrarlo más abajo lo evaluaría
+        varias veces para la misma gente y podría dejar media persona en la tabla.
+      */
+      if (idsPermitidos && !idsPermitidos.has(userIdStr)) return;
       const userProjects = user.metadata?.projects || [];
 
       // Group metadata by normalized project name to merge contracts/IDs
@@ -1131,7 +1169,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConTarde) results = results.filter((s) => s.lateDays > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde]);
+  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, idsPermitidos]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1145,6 +1183,50 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    * conjuntos. NO depende de los filtros aplicados —solo del período— porque si dependiera, elegir un
    * proyecto borraría del selector a los demás y no habría forma de cambiar de opinión.
    */
+  /*
+    LE PREGUNTA AL SERVER QUIÉNES PASAN, cada vez que cambian el período o alguno de estos filtros.
+
+    Se pide SIEMPRE —aunque no haya filtro puesto— porque la respuesta también trae las opciones de
+    cada desplegable, y esas tienen que existir antes de que alguien pueda elegir una. Sin filtros
+    el recorte queda en `null` y no se descarta ninguna fila.
+
+    `vigente` corta las respuestas viejas: con el período abierto se tipea rápido y una respuesta
+    lenta de un filtro anterior pisaba a la de uno nuevo.
+  */
+  useEffect(() => {
+    if (!isOpen || !dateFrom || !dateTo) return;
+    let vigente = true;
+
+    const hayFiltro = !!(filtroEstadoUsuario || filtroVigencia || filtroEstadoContrato || filtroAreaTurno || filtroReemplazo || filtroRol);
+    setFiltrandoEnServidor(true);
+
+    activityReportsAPI
+      .filtrosDePersonas(dateFrom, dateTo, {
+        estadoUsuario: filtroEstadoUsuario,
+        vigencia: filtroVigencia,
+        estadoContrato: filtroEstadoContrato,
+        areaTurno: filtroAreaTurno,
+        reemplazo: filtroReemplazo,
+        rol: filtroRol,
+      })
+      .then((r) => {
+        if (!vigente) return;
+        setOpcionesServidor(r.opciones);
+        setIdsPermitidos(hayFiltro ? new Set(r.userIds) : null);
+      })
+      .catch((e) => {
+        if (!vigente) return;
+        console.error("No se pudieron resolver los filtros", e);
+        // Ante un error NO se recorta: mostrar de menos sin avisar es peor que mostrar de más.
+        setIdsPermitidos(null);
+      })
+      .finally(() => vigente && setFiltrandoEnServidor(false));
+
+    return () => {
+      vigente = false;
+    };
+  }, [isOpen, dateFrom, dateTo, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol]);
+
   const universoDelPeriodo = useMemo(() => {
     const proyectos = new Map<string, string>();
     const roles = new Set<string>();
@@ -1198,8 +1280,23 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
   /** Cuántos filtros del modal están puestos. Es lo que se muestra en el badge del botón. */
   const filtrosActivos = useMemo(
-    () => [projectFilter !== "all", contractTypeFilter !== "all", rolFrameFilter !== "all", !showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde].filter(Boolean).length,
-    [projectFilter, contractTypeFilter, rolFrameFilter, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde],
+    () =>
+      [
+        projectFilter !== "all",
+        contractTypeFilter !== "all",
+        rolFrameFilter !== "all",
+        !showActiveTableOnly,
+        soloConAusencias,
+        soloConExtras,
+        soloConTarde,
+        !!filtroEstadoUsuario,
+        !!filtroVigencia,
+        !!filtroEstadoContrato,
+        !!filtroAreaTurno,
+        !!filtroReemplazo,
+        !!filtroRol,
+      ].filter(Boolean).length,
+    [projectFilter, contractTypeFilter, rolFrameFilter, showActiveTableOnly, soloConAusencias, soloConExtras, soloConTarde, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol],
   );
 
   /**
@@ -1215,6 +1312,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     const chips: { key: string; label: string; valor: string; quitar: () => void }[] = [];
     if (projectFilter !== "all") chips.push({ key: "proyecto", label: "Proyecto", valor: allProjects.find((p) => p.id === projectFilter)?.name || projectFilter, quitar: () => setProjectFilter("all") });
     if (contractTypeFilter !== "all") chips.push({ key: "tipo", label: "Tipo", valor: contractTypeFilter, quitar: () => setContractTypeFilter("all") });
+    /* Los del server, cada uno con su forma de sacarlo sin abrir el modal. */
+    if (filtroEstadoUsuario) chips.push({ key: "estadoUsuario", label: "Usuarios", valor: filtroEstadoUsuario === "active" ? "Activos" : "Inactivos", quitar: () => setFiltroEstadoUsuario("") });
+    if (filtroVigencia) chips.push({ key: "vigencia", label: "Contratos", valor: filtroVigencia === "vigente" ? "Vigentes" : "No vigentes", quitar: () => setFiltroVigencia("") });
+    if (filtroRol) chips.push({ key: "rol", label: "Rol", valor: filtroRol, quitar: () => setFiltroRol("") });
+    if (filtroAreaTurno) chips.push({ key: "areaTurno", label: "Área/Turno", valor: opcionesServidor.areasTurnos.find((a) => a.value === filtroAreaTurno)?.label || filtroAreaTurno, quitar: () => setFiltroAreaTurno("") });
+    if (filtroEstadoContrato) chips.push({ key: "estadoContrato", label: "Estado", valor: filtroEstadoContrato, quitar: () => setFiltroEstadoContrato("") });
+    if (filtroReemplazo) chips.push({ key: "reemplazo", label: "Reemplazo", valor: filtroReemplazo === "con" ? "Con reemplazo" : "Sin reemplazo", quitar: () => setFiltroReemplazo("") });
     if (rolFrameFilter !== "all") chips.push({ key: "rol", label: "Rol", valor: rolFrameFilter, quitar: () => setRolFrameFilter("all") });
     if (soloConAusencias) chips.push({ key: "ausencias", label: "Solo", valor: "Con ausencias", quitar: () => setSoloConAusencias(false) });
     if (soloConExtras) chips.push({ key: "extras", label: "Solo", valor: "Con horas extra", quitar: () => setSoloConExtras(false) });
@@ -1222,7 +1326,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     // Este entra al revés que el resto: lo que se anota es haberlo APAGADO, porque el default es ON.
     if (!showActiveTableOnly) chips.push({ key: "activos", label: "Incluye", valor: "Contratos no vigentes", quitar: () => setShowActiveTableOnly(true) });
     return chips;
-  }, [projectFilter, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects]);
+  }, [projectFilter, contractTypeFilter, rolFrameFilter, soloConAusencias, soloConExtras, soloConTarde, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, filtroEstadoContrato, filtroAreaTurno, filtroReemplazo, filtroRol, opcionesServidor]);
 
   const limpiarFiltros = () => {
     setProjectFilter("all");
@@ -1233,6 +1337,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     setSoloConAusencias(false);
     setSoloConExtras(false);
     setSoloConTarde(false);
+    setFiltroEstadoUsuario("");
+    setFiltroVigencia("");
+    setFiltroEstadoContrato("");
+    setFiltroAreaTurno("");
+    setFiltroReemplazo("");
+    setFiltroRol("");
   };
 
   // Paginación de la tabla (los totales del pie siguen calculándose sobre TODO statsByEmployee).
@@ -1524,49 +1634,35 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         }
       >
         <div className="flex flex-col h-full space-y-5 p-6">
-          <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+          <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
             {/*
-              Primera fila: EL PERÍODO, que es lo que define qué se está mirando.
+              TODO EL RECORTE EN UN SOLO RENGLÓN: las dos fechas, el buscador y el botón de filtros.
 
-              Las dos fechas juntas ocupan la MITAD del ancho, no el total: un campo de fecha muestra
-              diez caracteres, así que estirado a 900px es casi todo espacio vacío con un dato en la
-              punta. A la mitad siguen siendo cómodos de apuntar y la fila deja de parecer un formulario
-              a medio llenar.
+              Estaban en dos filas —el período arriba, el buscador abajo— y entre las dos se comían
+              un renglón entero de una tabla que ya scrollea. Un campo de fecha muestra diez
+              caracteres y el buscador es un nombre, no una frase: los cuatro entran holgados a lo
+              ancho y lo que se gana va a las filas, que es lo que se vino a mirar.
+
+              El período y los chips quedan pegados a la derecha con `ml-auto`, y en pantalla
+              angosta bajan solos (`flex-wrap`) sin romper nada.
             */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:w-1/2">
-              <div className="space-y-1">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1 w-[150px]">
                 <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Desde</label>
                 <div className="relative">
                   <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
                 </div>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 w-[150px]">
                 <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Hasta</label>
                 <div className="relative">
                   <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
                 </div>
               </div>
 
-            </div>
-            {/*
-              SEGUNDA FILA: BUSCAR, FILTRAR Y VER QUÉ QUEDÓ FILTRADO — todo junto.
-
-              El buscador y el botón de filtros están pegados a los chips que muestran el resultado de
-              usarlos: se filtra y se ve aparecer el chip en la misma línea. Antes el buscador vivía
-              arriba, con las fechas, y los chips abajo, así que la acción y su efecto quedaban en dos
-              renglones distintos.
-
-              Arriba queda solo el período, que no es un recorte sino la definición de qué se mira.
-
-              En pantalla angosta el bloque de la derecha baja solo (`flex-wrap`) y el buscador se
-              queda con el ancho completo, que es el que más se usa.
-            */}
-            <div className="flex flex-wrap items-end justify-between gap-4 pt-1">
-              {/* El buscador no necesita todo el ancho: es un nombre, no una frase. Acotado, deja
-                  lugar al contexto de la derecha en vez de empujarlo a otro renglón. */}
               <div className="space-y-1 w-full sm:w-auto">
                 <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Buscar Empleado</label>
                 <div className="flex items-center gap-2">
@@ -1592,7 +1688,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* `ml-auto` lo empuja a la derecha del renglón; sin lugar, baja solo a la línea de abajo. */}
+              <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
                 <div className="flex items-center gap-2 bg-white dark:bg-gray-800/50 px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
                   <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Período</span>
                   <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{formattedMonthLabel}</span>
@@ -1656,6 +1753,48 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             }
           >
             <div className="space-y-5">
+              {/*
+                MISMA ESTRUCTURA QUE GESTIONAR EQUIPO: dos grupos de opciones excluyentes arriba y
+                los desplegables de categoría abajo.
+
+                Es la misma gente y las mismas preguntas desde dos pantallas distintas; que el filtro
+                esté en otro lugar y con otro nombre obliga a reaprenderlo cada vez.
+              */}
+              {[
+                {
+                  titulo: "Estado de usuarios",
+                  valor: filtroEstadoUsuario,
+                  set: setFiltroEstadoUsuario,
+                  opciones: [
+                    { label: "Usuarios Activos", value: "active" },
+                    { label: "Usuarios Inactivos", value: "inactive" },
+                    { label: "Todos los usuarios", value: "" },
+                  ],
+                },
+                {
+                  titulo: "Contratos",
+                  valor: filtroVigencia,
+                  set: setFiltroVigencia,
+                  opciones: [
+                    { label: "Vigentes", value: "vigente" },
+                    { label: "No Vigentes", value: "novigente" },
+                    { label: "Todos los contratos", value: "" },
+                  ],
+                },
+              ].map((grupo) => (
+                <div key={grupo.titulo} className="space-y-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">{grupo.titulo}</p>
+                  {grupo.opciones.map((o) => (
+                    <label key={o.label} className="flex items-center justify-between gap-3 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
+                      <span className="text-sm text-gray-700 dark:text-gray-200">{o.label}</span>
+                      <input type="radio" checked={grupo.valor === o.value} onChange={() => grupo.set(o.value)} className="h-4 w-4 accent-blue-600" />
+                    </label>
+                  ))}
+                </div>
+              ))}
+
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 pt-2 border-t border-gray-200 dark:border-gray-700">Filtros por Categoría</p>
+
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Proyecto</label>
                 <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="input-field w-full">
@@ -1673,13 +1812,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato</label>
                 <select value={contractTypeFilter} onChange={(e) => setContractTypeFilter(e.target.value)} className="input-field w-full">
                   <option value="all">Todos los tipos</option>
-                  {universoDelPeriodo.tipos.map((t) => (
+                  {/* Del server: son los tipos del contrato que RIGE de cada uno, no los de todo su historial. */}
+                  {opcionesServidor.tipos.map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
                 </select>
-                {universoDelPeriodo.tipos.length === 0 && <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún contrato del período tiene tipo cargado.</p>}
+                {opcionesServidor.tipos.length === 0 && !filtrandoEnServidor && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún contrato del período tiene tipo cargado.</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -1691,6 +1833,53 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                       {r}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Rol/es</label>
+                <select value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)} className="input-field w-full">
+                  <option value="">Todos los roles</option>
+                  {opcionesServidor.roles.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Área / Turno</label>
+                <select value={filtroAreaTurno} onChange={(e) => setFiltroAreaTurno(e.target.value)} className="input-field w-full">
+                  <option value="">Todas las áreas/turnos</option>
+                  {opcionesServidor.areasTurnos.map((a) => (
+                    <option key={a.value} value={a.value}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+                {/* Sale del PARTE, no de la asignación del proyecto: acá interesa dónde trabajó esos días. */}
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">El área y el turno de las novedades del período.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado de contrato</label>
+                <select value={filtroEstadoContrato} onChange={(e) => setFiltroEstadoContrato(e.target.value)} className="input-field w-full">
+                  <option value="">Todos los estados</option>
+                  {opcionesServidor.estados.map((x) => (
+                    <option key={x} value={x}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Reemplazo</label>
+                <select value={filtroReemplazo} onChange={(e) => setFiltroReemplazo(e.target.value)} className="input-field w-full">
+                  <option value="">Con y sin reemplazo</option>
+                  <option value="con">Con reemplazo</option>
+                  <option value="sin">Sin reemplazo</option>
                 </select>
               </div>
 

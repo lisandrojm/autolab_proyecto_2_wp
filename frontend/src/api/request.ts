@@ -84,4 +84,33 @@ export const activityReportsAPI = {
     const response = await axiosClient.put<ActivityReport>(`/activity-reports/${id}`, data);
     return response.data;
   },
+
+  /**
+   * LOS MISMOS FILTROS DE GESTIONAR EQUIPO, RESUELTOS EN EL SERVER.
+   *
+   * Devuelve QUIÉNES pasan y QUÉ va en cada desplegable, y nada más: 3 KB contra los 2,7 MB del
+   * directorio. Vigencia, tipo, estado impositivo y reemplazo dependen del contrato que rige, así
+   * que calcularlos acá obligaba a bajarse los contratos de las 1.577 personas del tenant.
+   */
+  filtrosDePersonas: async (desde: string, hasta: string, filtros: Record<string, string | undefined> = {}) => {
+    const params = new URLSearchParams({ desde, hasta });
+    Object.entries(filtros).forEach(([k, v]) => {
+      if (v) params.set(k, v);
+    });
+    const response = await axiosClient.get<FiltrosDePersonas>(`/activity-reports/filtros-de-personas?${params.toString()}`);
+    return response.data;
+  },
 };
+
+export interface FiltrosDePersonas {
+  /** Los ids que pasan los filtros. El modal se queda con esas filas. */
+  userIds: string[];
+  /** Cuántas personas aparecen en el período, antes de filtrar. */
+  total: number;
+  opciones: {
+    roles: string[];
+    tipos: string[];
+    estados: string[];
+    areasTurnos: { value: string; label: string }[];
+  };
+}
