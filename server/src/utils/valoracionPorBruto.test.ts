@@ -15,10 +15,14 @@ import assert from "node:assert/strict";
 
 import { valorarPorBruto, CategoriaParaValorar } from "./valoracionPorBruto.js";
 
-const PLATA = { _id: "plata", orden: 1 };
+/* El `orden` 1 es el nivel MÁS ALTO (como quedó en producción: Oro 1, Plata 2). */
+const PLATINO = { _id: "platino", orden: 1 };
 const ORO = { _id: "oro", orden: 2 };
-const BRONCE = { _id: "bronce", orden: 0 };
-const PLATINO = { _id: "platino", orden: 3 };
+const PLATA = { _id: "plata", orden: 3 };
+const BRONCE = { _id: "bronce", orden: 4 };
+/** Las dos de producción, con sus `orden` reales. */
+const ORO_PROD = { _id: "oro", orden: 1 };
+const PLATA_PROD = { _id: "plata", orden: 2 };
 
 const cat = (id: string, bruto: number | null, convenio = "0634/11"): CategoriaParaValorar => ({ id, convenio, bruto });
 const nivelDe = (r: Map<string, { valoracionId: string | null }>, id: string) => r.get(id)?.valoracionId ?? null;
@@ -35,6 +39,16 @@ describe("valorarPorBruto — de menor a mayor", () => {
     // Si se tomara el orden de la lista, pasar [ORO, PLATA] daría la barata en Oro.
     const r = valorarPorBruto([cat("a", 100), cat("b", 200)], [ORO, PLATA]);
     assert.equal(nivelDe(r, "a"), "plata");
+  });
+
+  it("ORDEN 1 ES EL NIVEL MÁS ALTO: con Oro 1 y Plata 2, la barata es Plata", () => {
+    /*
+      Es la convención que quedó en producción (se ordenó Oro arriba). Leído al revés —1 como el
+      nivel más bajo— la categoría más barata de cada función se habría ofrecido como Oro.
+    */
+    const r = valorarPorBruto([cat("barata", 100), cat("cara", 200)], [ORO_PROD, PLATA_PROD]);
+    assert.equal(nivelDe(r, "barata"), "plata");
+    assert.equal(nivelDe(r, "cara"), "oro");
   });
 
   it("mismo bruto, mismo nivel: dos empatadas en la más barata son las dos Plata", () => {

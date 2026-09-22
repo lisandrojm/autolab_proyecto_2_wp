@@ -45,7 +45,8 @@ export const ValorarPorBruto: React.FC<{ onAplicado?: () => void }> = ({ onAplic
     const n = nivel(id);
     return n ? <ChipValoracion nombre={n.name} color={n.color} /> : <span className="text-[11px] text-gray-400">sin valorar</span>;
   };
-  const escala = [...(plan?.niveles || [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+  // `orden` 1 es el nivel más alto: de menor a mayor es del `orden` más grande al más chico.
+  const escala = [...(plan?.niveles || [])].sort((a, b) => (b.orden ?? 0) - (a.orden ?? 0));
 
   const aplicar = async () => {
     if (!plan || plan.categorias === 0) return;

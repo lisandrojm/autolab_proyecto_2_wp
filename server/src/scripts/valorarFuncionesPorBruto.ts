@@ -59,7 +59,8 @@ async function valorarFuncionesPorBruto() {
     const plan = await planValoracionPorBruto(tenant._id as any, { incluirValoradas: force });
     const nombre = new Map(plan.niveles.map((n) => [n._id, n.name]));
     const etiqueta = (id: string | null) => (id ? nombre.get(id) || "?" : "sin valorar");
-    console.log(`📊 Niveles, de menor a mayor: ${[...plan.niveles].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((n) => n.name).join(" < ") || "ninguno"}\n`);
+    // `orden` 1 es el nivel más alto: de menor a mayor es del `orden` más grande al más chico.
+    console.log(`📊 Niveles, de menor a mayor: ${[...plan.niveles].sort((a, b) => (b.orden ?? 0) - (a.orden ?? 0)).map((n) => n.name).join(" < ") || "ninguno"}\n`);
 
     for (const f of plan.funciones) {
       console.log(`🔧 ${f.funcion}`);

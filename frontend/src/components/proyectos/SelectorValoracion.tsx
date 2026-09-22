@@ -12,8 +12,8 @@ import { ChipValoracion } from "./ChipValoracion";
  * así que la lista decía «Oro / Plata» en gris y el color aparecía recién después de elegir. Acá
  * cada opción es el mismo tag que se ve en proyectos y al contratar.
  *
- * Las opciones van de MAYOR A MENOR nivel (por `orden`): es el orden en que se lee una jerarquía,
- * y el mismo en que se miran las categorías, de la más cara a la más barata.
+ * Las opciones van de MAYOR A MENOR nivel, en el mismo orden que la pantalla de Valoraciones
+ * (`orden` 1 es el más alto: Oro arriba).
  *
  * La lista se dibuja en un portal con posición fija: vive adentro de tablas con `overflow-x-auto` y
  * de modales, que la recortarían.
@@ -30,7 +30,7 @@ export const SelectorValoracion: React.FC<{
   const lista = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; minWidth: number } | null>(null);
 
-  const opciones = [...valoraciones].sort((a, b) => Number(b.orden ?? 0) - Number(a.orden ?? 0));
+  const opciones = [...valoraciones].sort((a, b) => Number(a.orden ?? Number.MAX_SAFE_INTEGER) - Number(b.orden ?? Number.MAX_SAFE_INTEGER));
   const actual = valoraciones.find((v) => v._id === valor);
 
   useLayoutEffect(() => {

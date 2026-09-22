@@ -6,7 +6,7 @@
  *
  * La regla, dentro de cada convenio de la función, de MENOR A MAYOR:
  *   - los brutos distintos se ordenan de menor a mayor;
- *   - el más barato toma el nivel más bajo (menor `orden`), el siguiente el que sigue, y así;
+ *   - el más barato toma el nivel más bajo, el siguiente el que sigue, y así;
  *   - si hay más brutos que niveles, los que sobran quedan en el nivel más alto;
  *   - dos categorías con el MISMO bruto reciben el mismo nivel.
  *
@@ -51,8 +51,13 @@ const brutoValido = (b: number | null | undefined): b is number => typeof b === 
 
 export function valorarPorBruto(categorias: CategoriaParaValorar[], niveles: NivelParaValorar[]): Map<string, ValoracionSugerida> {
   const resultado = new Map<string, ValoracionSugerida>();
-  // De menor a mayor nivel. Sin `orden` van al final: no se puede afirmar que sean los más bajos.
-  const escala = [...niveles].sort((a, b) => (a.orden ?? Number.POSITIVE_INFINITY) - (b.orden ?? Number.POSITIVE_INFINITY));
+  /*
+    La escala, de MENOR A MAYOR nivel. En Valoraciones el `orden` 1 es el nivel MÁS ALTO —Oro arriba,
+    como se lee un podio—, así que el más bajo es el de `orden` más grande: se ordena al revés.
+    Sin `orden` van al principio, entre los bajos: no se puede afirmar que sean de los altos, y
+    ponerlos arriba les daría las categorías más caras por un dato que falta.
+  */
+  const escala = [...niveles].sort((a, b) => (b.orden ?? Number.POSITIVE_INFINITY) - (a.orden ?? Number.POSITIVE_INFINITY));
 
   if (escala.length === 0) {
     for (const c of categorias) resultado.set(c.id, { valoracionId: null, motivo: "no hay valoraciones activas" });

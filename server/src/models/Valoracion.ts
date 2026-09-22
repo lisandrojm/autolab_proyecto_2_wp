@@ -34,7 +34,9 @@ export interface IValoracion extends Document {
     nombre?: string;
   };
   /**
-   * La jerarquía, de menor a mayor (1 = la más baja). No es decorativo: es el orden en que
+   * La jerarquía, de MAYOR a menor: 1 es el nivel más alto (Oro arriba, como un podio). Decide qué
+   * categorías le tocan a cada valoración por bruto —la de `orden` más grande, las más baratas—, y es
+   * el orden en que
    * `resolverValoracion` recorre los rangos, así que dos valoraciones con el mismo `orden` dejan el
    * resultado a merced del orden de Mongo.
    */

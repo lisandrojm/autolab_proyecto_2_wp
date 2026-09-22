@@ -173,7 +173,16 @@ interface SimpleCatalogManagerProps {
     label: string;
     /** Qué dibujar en el encabezado, si hace falta más que el texto de `label` (ej.: un «Limpiar»). */
     encabezado?: React.ReactNode;
-    render: (item: SimpleCatalogItem) => React.ReactNode;
+    /**
+     * `todos` es el catálogo completo: para lo que depende de los demás registros (ej. Valoraciones →
+     * qué categorías le tocan a un nivel según su lugar en el orden).
+     */
+    render: (item: SimpleCatalogItem, todos: SimpleCatalogItem[]) => React.ReactNode;
+    /**
+     * Pegada a la derecha de ese campo en vez de al final. Para cuando se lee junto a él: en
+     * Valoraciones, «Categorías · bruto» al lado de las columnas del margen del proyecto.
+     */
+    despuesDe?: string;
   }>;
   /**
    * Filtro destacado de dos estados, para catálogos donde el universo no es lo que se trabaja.
@@ -1240,9 +1249,16 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 )}
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                 {columnasVisibles.map((f) => (
-                    <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                      {f.columnLabel || f.label}
-                    </th>
+                    <React.Fragment key={f.key}>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{f.columnLabel || f.label}</th>
+                      {columnasCalculadas
+                        .filter((c) => c.despuesDe === f.key)
+                        .map((c) => (
+                          <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                            {c.encabezado ?? c.label}
+                          </th>
+                        ))}
+                    </React.Fragment>
                   ))}
                 {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
                     lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
@@ -1256,7 +1272,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                   se busca con el ojo recorriendo siempre el mismo borde de la tabla, y para eso tiene
                   que estar en la misma posición en todas.
                 */}
-                {columnasCalculadas.map((c) => (
+                {columnasCalculadas
+                  .filter((c) => !c.despuesDe || !columnasVisibles.some((f) => f.key === c.despuesDe))
+                  .map((c) => (
                   <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                     {c.encabezado ?? c.label}
                   </th>
@@ -1293,14 +1311,23 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     es texto largo.
                   */}
                   {columnasVisibles.map((f) => (
-                      <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                        {f.type === 'estado' ? interruptorEstado(f, item) : celdaExtra(f, item)}
-                      </td>
+                      <React.Fragment key={f.key}>
+                        <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{f.type === 'estado' ? interruptorEstado(f, item) : celdaExtra(f, item)}</td>
+                        {columnasCalculadas
+                          .filter((c) => c.despuesDe === f.key)
+                          .map((c) => (
+                            <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                              {c.render(item, items)}
+                            </td>
+                          ))}
+                      </React.Fragment>
                     ))}
                   {showExternalId && <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>}
-                  {columnasCalculadas.map((c) => (
+                  {columnasCalculadas
+                    .filter((c) => !c.despuesDe || !columnasVisibles.some((f) => f.key === c.despuesDe))
+                    .map((c) => (
                     <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {c.render(item)}
+                      {c.render(item, items)}
                     </td>
                   ))}
                   <td className="px-5 py-3 text-sm text-right">
