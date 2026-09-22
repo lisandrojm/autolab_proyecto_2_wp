@@ -157,7 +157,12 @@ export const centrosCostoPorCodigo = async (codAuxiliar: string): Promise<Centro
  * server contesta el detalle por empresa: con tres Tango distintos, «salió bien» no alcanza.
  */
 export const sincronizarCentrosCostoTango = async (): Promise<ResultadoSyncTango> => {
-  const { data } = await axios.post("/centros-costo/sincronizar-tango", {});
+  /*
+    Tres minutos y no los 60 s de siempre: son varias consultas a Tango, cada una con su propio
+    timeout de 30 s. Con el corte general, cuando Tango no responde la pantalla se rendía antes de que
+    el server contestara cuál empresa falló y por qué — que es justo lo que hace falta saber.
+  */
+  const { data } = await axios.post("/centros-costo/sincronizar-tango", {}, { timeout: 180000 });
   return data;
 };
 

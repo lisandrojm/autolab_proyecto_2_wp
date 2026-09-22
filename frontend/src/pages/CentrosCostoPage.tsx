@@ -449,7 +449,7 @@ export const CentrosCostoPage: React.FC = () => {
       else sweetAlert.error("No se pudo sincronizar", `${r.message}\n\n${detalle}`);
       setRecarga((n) => n + 1);
     } catch (e: any) {
-      sweetAlert.error("No se pudo sincronizar", e?.response?.data?.error || "Probá de nuevo en un momento.");
+      sweetAlert.error("No se pudo sincronizar", e?.response?.data?.error || e?.message || "Probá de nuevo en un momento.");
     } finally {
       setSincronizando(false);
     }

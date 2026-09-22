@@ -53,6 +53,23 @@ export interface ResultadoSync {
 }
 
 /**
+ * Por qué no se pudo hablar con Tango, en palabras de quien tiene que ir a arreglarlo.
+ *
+ * «timeout of 30000ms exceeded» no dice qué hacer. Lo que casi siempre pasó es que el túnel se cayó:
+ * el 19/9/2026 el cliente de frp del lado de Tango se desconectó, el puerto quedó sin nadie atrás y
+ * cada consulta esperaba los 30 s enteros. Así se dice, con la dirección que hay que revisar.
+ */
+function explicarFallaTango(e: any, empresa: { tangoApiUrl?: string }): string {
+  const donde = TangoApi.baseDe(empresa);
+  if (e?.response?.status) return `Tango contestó HTTP ${e.response.status} (${donde}).`;
+  if (e?.code === "ECONNABORTED" || e?.code === "ETIMEDOUT" || /timeout/i.test(String(e?.message || ""))) {
+    return `Tango no respondió a tiempo (${donde}): el túnel a Tango puede estar caído. Hay que revisar el cliente de frp en el servidor de Tango.`;
+  }
+  if (e?.code === "ECONNREFUSED") return `Nadie atiende en ${donde}: el túnel a Tango no está levantado.`;
+  return `No se pudo consultar Tango (${donde}): ${String(e?.message || "error de red").replace(/\.+$/, "")}.`;
+}
+
+/**
  * Sincroniza una empresa.
  *
  * Exportada aparte para poder correr una sola —cuando una falló y las demás ya están— sin repetir
@@ -68,7 +85,7 @@ export async function sincronizarEmpresa(empresa: { _id?: Types.ObjectId | strin
   try {
     sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, empresa.tangoId, empresa.tangoToken, empresa.tangoApiUrl);
   } catch (e: any) {
-    return { ...base, errores: [`No se pudo consultar Tango: ${e?.response?.status ? `HTTP ${e.response.status}` : e?.message || "error de red"}.`] };
+    return { ...base, errores: [explicarFallaTango(e, empresa)] };
   }
 
   const leido = leerRegistroAuxiliares(sobre);
@@ -165,19 +182,30 @@ export async function sincronizarCentrosCostoDesdeTango(): Promise<ResultadoSync
     Tango, separados por coma, y el NOMBRE se le pregunta a Tango (proceso 1050): copiarlo a mano
     garantiza que algún día digan cosas distintas.
   */
-  const extras: any[] = [];
-  for (const id of String(process.env.TANGO_EMPRESAS_EXTRA || "").split(",").map((x) => x.trim()).filter(Boolean)) {
-    if (empleadoras.some((e) => String(e.tangoId) === id)) continue; // ya entra como empleadora
-    const nombre = await tangoApi.getNombreEmpresa(id);
-    extras.push({ _id: null, razonSocial: nombre || `Empresa de Tango ${id}`, tangoId: id });
-  }
+  const idsExtra = String(process.env.TANGO_EMPRESAS_EXTRA || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .filter((id) => !empleadoras.some((e) => String(e.tangoId) === id)); // ya entra como empleadora
 
-  const empresas = [...empleadoras, ...extras];
+  /*
+    EN PARALELO, NO UNA DETRÁS DE OTRA.
 
-  const resultados: ResultadoEmpresa[] = [];
-  for (const e of empresas) {
-    const r = await sincronizarEmpresa(e);
-    resultados.push(r);
+    Iban en fila, y con Tango caído cada consulta esperaba su timeout (30 s): tres empleadoras, el
+    nombre de la extra y la extra sumaban dos minutos y medio. El navegador corta a los 60 s, así que
+    la pantalla decía «probá de nuevo» sin llegar nunca a mostrar QUÉ empresa falló ni por qué.
+
+    Cada empresa escribe sólo lo suyo (su `empresaTangoId`), así que no se pisan. La extra necesita el
+    nombre ANTES de sincronizar —se guarda en cada centro—: se averigua mientras corren las empleadoras.
+  */
+  const [deEmpleadoras, extras] = await Promise.all([
+    Promise.all(empleadoras.map((e) => sincronizarEmpresa(e))),
+    Promise.all(idsExtra.map(async (id) => ({ _id: null, razonSocial: (await tangoApi.getNombreEmpresa(id)) || `Empresa de Tango ${id}`, tangoId: id }))),
+  ]);
+  const deExtras = await Promise.all(extras.map((e) => sincronizarEmpresa(e)));
+
+  const resultados: ResultadoEmpresa[] = [...deEmpleadoras, ...deExtras];
+  for (const r of resultados) {
     console.log(`[CENTROS-COSTO-SYNC] ${r.empresa}: ${r.ok ? `${r.total} centros (${r.creados} nuevos, ${r.actualizados} actualizados, ${r.inhabilitados} dados de baja)` : `FALLÓ · ${r.errores[0] || "sin detalle"}`}`);
   }
 

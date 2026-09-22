@@ -5,7 +5,7 @@ import { categoriaSatAPI, CategoriaSatItem, esElegible } from '../../api/categor
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
-import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -120,6 +120,9 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   /** Cobertura por función, para el aviso del listado. */
   const [cobertura, setCobertura] = useState<Map<string, CoberturaFuncion>>(new Map());
   const [catSearch, setCatSearch] = useState('');
+  // El selector de categorías va en su propia ventana, como Rol/es Empresa en la ficha del usuario:
+  // adentro del formulario la lista tenía 240 px de alto para cientos de categorías.
+  const [categoriasOpen, setCategoriasOpen] = useState(false);
 
   // View Mode Logic
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
@@ -237,6 +240,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     setFormName('');
     setSelectedCategorias([]);
     setCatSearch('');
+    setCategoriasOpen(false);
     setShowModal(true);
   };
 
@@ -271,6 +275,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
 
     setSelectedCategorias(asociadas);
     setCatSearch('');
+    setCategoriasOpen(false);
     setShowModal(true);
   };
 
@@ -638,18 +643,21 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Categorías * {selectedCategorias.length > 0 ? <span className="font-normal text-gray-500 dark:text-gray-400">({selectedCategorias.length})</span> : null}
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategorias([])}
-                  disabled={selectedCategorias.length === 0}
-                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-                >
-                  Limpiar
-                </button>
+                {/* Con algo elegido alcanza un «+» al lado del nombre, que abre la misma ventana. */}
+                {selectedCategorias.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCategoriasOpen(true)}
+                    aria-label="Agregar o quitar categorías"
+                    className="inline-flex items-center justify-center px-1.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  >
+                    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               {/* Lo elegido va ARRIBA del buscador: adentro lo haría crecer de alto y se leería como
                   texto ya escrito en el campo. Mismo criterio que Rol/es Empresa y Sindicatos. */}
@@ -660,17 +668,16 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                   ))}
                 </div>
               )}
-              <div className="relative mb-2">
-                <input type="text" value={catSearch} onChange={(e) => setCatSearch(e.target.value)} className="input-field w-full pl-9 pr-8 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar por nombre, código ARCA o convenio..." />
-                <div className="absolute inset-y-0 left-3 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <FontAwesomeIcon icon={faSearch} className="h-4 w-4" />
-                </div>
-                {catSearch && (
-                  <button type="button" onClick={() => setCatSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+              {/*
+                El buscador ancho SOLO cuando no hay nada elegido. Con categorías puestas, repetía la
+                invitación a elegir debajo de lo ya elegido; para agregar está el «+» de arriba.
+              */}
+              {selectedCategorias.length === 0 && (
+                <button type="button" onClick={() => setCategoriasOpen(true)} className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
+                  <span className="text-gray-400 dark:text-gray-500">Elegí una o más categorías…</span>
+                  <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                </button>
+              )}
 
               {conveniosSeleccionados.length > 1 && (
                 <div className="mb-2 flex items-start gap-2 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-2.5">
@@ -681,77 +688,137 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                 </div>
               )}
 
-              {/*
-                `pt-0` y fondo OPACO, las dos cosas por el encabezado sticky de adentro:
 
-                - Con `p-3`, esos 12px de padding scrollean por encima del sticky —que se pega al
-                  borde del área de contenido— y dejaban una franja donde las filas pasaban sin que
-                  nada las tapara. El aire de arriba lo pone ahora el propio encabezado.
-                - `dark:bg-gray-900/50` es medio transparente. Un encabezado sticky con ese fondo deja
-                  ver el contenido pasando por debajo, que es justo lo que un sticky viene a evitar.
-              */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 pb-3 pt-0 max-h-60 overflow-y-auto space-y-3 bg-gray-50 dark:bg-gray-900">
-                {totalParaSelect === 0 ? (
-                  <p className="text-sm text-gray-500 italic p-2">No se encontraron categorías</p>
-                ) : (
-                  gruposParaSelect.map((grupo) => (
-                    <div key={grupo.convenio}>
-                      {/* El convenio como encabezado: es el nivel del que cuelga la categoría, no una etiqueta más. */}
-                      <div className="sticky top-0 z-10 flex items-center gap-2 px-1.5 pt-3 pb-1 mb-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                        <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400">{grupo.convenio}</span>
-                        <span className="text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
-                      </div>
-                      {grupo.cats.map((cat) => {
-                        const isChecked = idsElegidos.has(cat._id);
-                        return (
-                          <div key={cat._id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded transition-colors">
-                            <label className="flex flex-1 min-w-0 items-center gap-2 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => {
-                                  if (isChecked) {
-                                    setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== cat._id));
-                                  } else {
-                                    setSelectedCategorias([...selectedCategorias, { categoryId: cat._id, valoracionId: null }]);
-                                  }
-                                }}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-                                <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{cat.data?.codigoArca || '——————'}</span> · {cat.data?.nombre || cat.name}
-                              </span>
-                            </label>
-                            {/*
-                              El select SÓLO cuando la categoría está tildada: sin tildar no hay
-                              asociación que valorar, y un control activo sobre algo que no está
-                              elegido promete una decisión que no se guarda en ningún lado.
-                            */}
-                            {isChecked && valoraciones.length > 0 && (
-                              <select
-                                value={valoracionDe(cat._id)}
-                                onChange={(e) => ponerValoracion(cat._id, e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                title={`Valoración de ${cat.data?.nombre || cat.name} en esta función`}
-                                className="shrink-0 text-[11px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 px-1.5 py-0.5"
-                              >
-                                <option value="">Sin valorar</option>
-                                {valoraciones.map((v) => (
-                                  <option key={v._id} value={v._id}>
-                                    {String(v.name)}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* El selector de categorías, en su propia ventana: acá la lista tiene lugar para respirar. */}
+      {showModal && categoriasOpen && (
+        <Modal
+          isOpen={categoriasOpen}
+          onClose={() => setCategoriasOpen(false)}
+          title="Categorías"
+          subtitle={`${selectedCategorias.length} seleccionada(s) · las que se ofrecen al contratar para ${formName.trim() || 'esta función'}`}
+          size="lg"
+          zIndex={90}
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <button type="button" onClick={() => setSelectedCategorias([])} disabled={selectedCategorias.length === 0} className="btn-secondary">
+                Limpiar
+              </button>
+              <button type="button" onClick={() => setCategoriasOpen(false)} className="btn-primary">
+                Listo
+              </button>
+            </div>
+          }
+        >
+          {/* Alto fijo: atado al contenido, filtrar encogía la ventana y «Listo» se movía debajo del
+              cursor. Lo que scrollea es la lista, no la ventana. */}
+          <div className="h-[60vh] flex flex-col">
+            {categoriasElegidas.length > 0 && (
+              // Arriba y fuera del scroll: lo elegido queda a la vista mientras se recorre la lista.
+              // Con tope de alto, para que veinte categorías no se coman la ventana.
+              <div className="flex flex-wrap gap-1.5 mb-3 shrink-0 max-h-24 overflow-y-auto">
+                {categoriasElegidas.map((c) => (
+                  <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} valoracion={c.valoracion} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
+                ))}
+              </div>
+            )}
+                {conveniosSeleccionados.length > 1 && (
+                  <div className="mb-3 shrink-0 flex items-start gap-2 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-2.5">
+                    <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>
+                      Estás mezclando categorías de <strong>{conveniosSeleccionados.join(' y ')}</strong>. Una empleadora solo puede dar de alta categorías de los convenios que tiene habilitados: si se elige la del convenio equivocado, ARCA rechaza el alta y el error no se ve hasta que devuelve el archivo.
+                    </span>
+                  </div>
+                )}
+
+                <div className="relative mb-3 shrink-0">
+                  <input type="text" autoFocus value={catSearch} onChange={(e) => setCatSearch(e.target.value)} className="input-field w-full pl-10 pr-8 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar por nombre, código ARCA o convenio..." />
+                  {/* La lupa ocupa de 12 a 28 px y el texto arranca en 40: con `left-3 pl-3` la lupa
+                      terminaba en 40 y el placeholder quedaba pegado a ella. */}
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <FontAwesomeIcon icon={faSearch} className="h-4 w-4" />
+                  </div>
+                  {catSearch && (
+                    <button type="button" onClick={() => setCatSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                      <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/*
+                  `pt-0` y fondo OPACO, las dos cosas por el encabezado sticky de adentro:
+
+                  - Con `p-3`, esos 12px de padding scrollean por encima del sticky —que se pega al
+                    borde del área de contenido— y dejaban una franja donde las filas pasaban sin que
+                    nada las tapara. El aire de arriba lo pone ahora el propio encabezado.
+                  - `dark:bg-gray-900/50` es medio transparente. Un encabezado sticky con ese fondo deja
+                    ver el contenido pasando por debajo, que es justo lo que un sticky viene a evitar.
+                */}
+                <div className="flex-1 min-h-0 border border-gray-200 dark:border-gray-700 rounded-lg px-3 pb-3 pt-0 overflow-y-auto space-y-3 bg-gray-50 dark:bg-gray-900">
+                  {totalParaSelect === 0 ? (
+                    <p className="text-sm text-gray-500 italic p-2">No se encontraron categorías</p>
+                  ) : (
+                    gruposParaSelect.map((grupo) => (
+                      <div key={grupo.convenio}>
+                        {/* El convenio como encabezado: es el nivel del que cuelga la categoría, no una etiqueta más. */}
+                        <div className="sticky top-0 z-10 flex items-center gap-2 px-1.5 pt-3 pb-1 mb-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                          <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400">{grupo.convenio}</span>
+                          <span className="text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
+                        </div>
+                        {grupo.cats.map((cat) => {
+                          const isChecked = idsElegidos.has(cat._id);
+                          return (
+                            <div key={cat._id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded transition-colors">
+                              <label className="flex flex-1 min-w-0 items-center gap-2 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    if (isChecked) {
+                                      setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== cat._id));
+                                    } else {
+                                      setSelectedCategorias([...selectedCategorias, { categoryId: cat._id, valoracionId: null }]);
+                                    }
+                                  }}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                                  <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{cat.data?.codigoArca || '——————'}</span> · {cat.data?.nombre || cat.name}
+                                </span>
+                              </label>
+                              {/*
+                                El select SÓLO cuando la categoría está tildada: sin tildar no hay
+                                asociación que valorar, y un control activo sobre algo que no está
+                                elegido promete una decisión que no se guarda en ningún lado.
+                              */}
+                              {isChecked && valoraciones.length > 0 && (
+                                <select
+                                  value={valoracionDe(cat._id)}
+                                  onChange={(e) => ponerValoracion(cat._id, e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={`Valoración de ${cat.data?.nombre || cat.name} en esta función`}
+                                  className="shrink-0 text-[11px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 px-1.5 py-0.5"
+                                >
+                                  <option value="">Sin valorar</option>
+                                  {valoraciones.map((v) => (
+                                    <option key={v._id} value={v._id}>
+                                      {String(v.name)}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))
+                  )}
+                </div>
+          </div>
         </Modal>
       )}
     </div>
