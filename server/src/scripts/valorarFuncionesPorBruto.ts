@@ -1,39 +1,21 @@
 import "dotenv/config";
-import { Types } from "mongoose";
 import { connectDB, disconnectDB } from "../config/db.js";
 import { Tenant } from "../models/Tenant.js";
-import { RoleFrame } from "../models/RoleFrame.js";
-import { CategoriaSat } from "../models/CategoriaSat.js";
-import { Valoracion } from "../models/Valoracion.js";
+import { planValoracionPorBruto, aplicarPlan } from "../services/valorarFunciones.js";
 
 /**
  * VALORA LAS CATEGORÍAS DE TODAS LAS FUNCIONES (Roles Empresa) SEGÚN SU BRUTO.
  *
- * La regla, dentro de cada función y cada convenio:
- *   - la categoría de MENOR bruto → la valoración BAJA (la de menor `orden`: Plata); si varias
- *     empatan en el mínimo, todas;
- *   - las demás → la valoración ALTA (la de mayor `orden`: Oro);
- *   - si no hay elección por precio —una sola categoría, o todas con el mismo bruto— el convenio
- *     queda SIN VALORAR.
- *
- * Lo último no es un detalle. Valorar como Plata la única categoría de una función haría que un
- * proyecto Oro no tuviera ninguna de su nivel: el server le exige motivo a cada alta (422) por una
- * categoría que igual era la única posible. Sin valorar, el modo permisivo la ofrece y el alta la
- * elige sola, que es exactamente lo que tiene que pasar cuando no hay nada que elegir.
+ * La regla —de menor a mayor: la más barata de cada convenio toma el nivel más bajo, la siguiente
+ * el que sigue y las que sobran el más alto— vive en `utils/valoracionPorBruto.ts`, con sus tests.
+ * Este script y la acción «Valorar por bruto» de la pantalla de Valoraciones usan la misma, vía
+ * `services/valorarFunciones.ts`: no hay una segunda copia que se desalinee.
  *
  * Existe porque, hasta que una función tiene categorías valoradas, el alta de un contrato está en
  * modo permisivo: ofrece todas y no elige ninguna. Con 82 de 83 funciones sin valorar, un proyecto
  * Plata no se notaba en ningún lado. Hacerlo a mano en Roles Empresa es lo mismo, función por
  * función; esto lo hace de una vez con un criterio escrito, y después cada función sigue siendo
  * editable a mano.
- *
- * POR CONVENIO Y NO POR FUNCIÓN ENTERA: al contratar, el filtro de convenio va ANTES que el de
- * valoración (lo exige ARCA). Si la barata de la función fuera de un convenio que la empleadora no
- * tiene, un proyecto Plata con el otro convenio se quedaría sin opción Plata.
- *
- * El bruto sale del CATÁLOGO vigente (`categorias-sat`), no de la copia guardada en la función: esa
- * copia es de cuando se asoció la categoría y puede ser de una paritaria anterior. Si el catálogo no
- * lo tiene, se usa la copia.
  *
  * NO TOCA las funciones que ya tienen alguna categoría valorada —eso lo hizo una persona, a
  * propósito— salvo con FORCE=true. Tampoco agrega ni quita categorías: sólo escribe `valoracionId`.
@@ -50,8 +32,6 @@ import { Valoracion } from "../models/Valoracion.js";
  * Uso: TENANT_SLUG=demo-tenant npm run valorar:funciones:dry
  *      TENANT_SLUG=demo-tenant npm run valorar:funciones
  */
-
-type Asignacion = { categoriaId: number; nombre: string; convenio: string; bruto: number | null; valoracion: "baja" | "alta" | null; motivo?: string };
 
 const formatoPlata = (n: number | null) => (n == null ? "sin bruto" : `$${Math.round(n).toLocaleString("es-AR")}`);
 
@@ -76,124 +56,26 @@ async function valorarFuncionesPorBruto() {
     console.log(`🏢 Tenant: ${tenant.name} (slug=${tenant.slug})`);
     console.log(aplicar ? "✍️  APLICAR=true: se va a escribir." : "🧪 En seco: no se escribe nada (APLICAR=true para escribir).");
 
-    /*
-      La regla es de DOS niveles. Con tres o más no está definido qué recibe el del medio, y
-      adivinarlo acá sería decidir sueldos con un criterio que nadie escribió: se frena.
-    */
-    const valoraciones = await Valoracion.find({ tenantId: tenant._id, activo: { $ne: false } })
-      .select("name orden")
-      .sort({ orden: 1 })
-      .lean();
-    if (valoraciones.length !== 2) {
-      console.error(`❌ La regla es para exactamente 2 valoraciones activas y hay ${valoraciones.length}: ${valoraciones.map((v) => v.name).join(", ") || "ninguna"}.`);
-      process.exit(1);
+    const plan = await planValoracionPorBruto(tenant._id as any, { incluirValoradas: force });
+    const nombre = new Map(plan.niveles.map((n) => [n._id, n.name]));
+    const etiqueta = (id: string | null) => (id ? nombre.get(id) || "?" : "sin valorar");
+    console.log(`📊 Niveles, de menor a mayor: ${[...plan.niveles].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((n) => n.name).join(" < ") || "ninguno"}\n`);
+
+    for (const f of plan.funciones) {
+      console.log(`🔧 ${f.funcion}`);
+      for (const c of f.cambios) console.log(`     ${(c.convenio || "(sin convenio)").padEnd(9)} ${c.nombre.padEnd(46)} ${formatoPlata(c.bruto).padStart(14)}  ${etiqueta(c.antes)} → ${etiqueta(c.despues)}${c.motivo ? ` (${c.motivo})` : ""}`);
     }
-    const [baja, alta] = valoraciones;
-    console.log(`📊 Baja = «${baja.name}» (la de menor bruto) · Alta = «${alta.name}» (las demás)\n`);
-
-    const catalogo = await CategoriaSat.find({}).select("data.id data.nombre data.convenio data.sueldoBruto").lean();
-    const delCatalogo = new Map(catalogo.map((c: any) => [Number(c.data?.id), c.data]));
-
-    const funciones = await RoleFrame.find({ "data.categoriasSat.0": { $exists: true } })
-      .select("name data.categoriasSat")
-      .sort({ name: 1 })
-      .lean();
-
-    let aValorar = 0;
-    let salteadas = 0;
-    let categoriasBaja = 0;
-    let categoriasAlta = 0;
-    let sinValorar = 0;
-    let sinEleccion = 0;
-    const operaciones: any[] = [];
-
-    for (const funcion of funciones as any[]) {
-      const asociadas: any[] = funcion.data?.categoriasSat || [];
-      if (!force && asociadas.some((c) => c?.valoracionId)) {
-        salteadas++;
-        console.log(`⏭️  ${funcion.name}: ya tiene categorías valoradas a mano, no se toca.`);
-        continue;
-      }
-
-      const asignaciones: Asignacion[] = asociadas.map((c) => {
-        const vigente = delCatalogo.get(Number(c.id));
-        const bruto = Number(vigente?.sueldoBruto ?? c.sueldoBruto);
-        return {
-          categoriaId: Number(c.id),
-          nombre: String(vigente?.nombre || c.nombre || c.id),
-          convenio: String(vigente?.convenio || "").trim(),
-          bruto: Number.isFinite(bruto) && bruto > 0 ? bruto : null,
-          valoracion: null,
-        };
-      });
-
-      const porConvenio = new Map<string, Asignacion[]>();
-      for (const a of asignaciones) porConvenio.set(a.convenio, [...(porConvenio.get(a.convenio) || []), a]);
-
-      for (const grupo of porConvenio.values()) {
-        const conBruto = grupo.filter((a) => a.bruto != null);
-        // Sin bruto no se puede decir si es la barata: queda sin valorar y se informa, en vez de
-        // caer en «alta» por descarte.
-        for (const a of grupo.filter((x) => x.bruto == null)) a.motivo = "sin bruto en el catálogo";
-        const minimo = Math.min(...conBruto.map((a) => a.bruto as number));
-        if (!conBruto.some((a) => (a.bruto as number) > minimo)) {
-          for (const a of conBruto) a.motivo = conBruto.length === 1 ? "única del convenio: no hay qué elegir" : "todas con el mismo bruto: no hay una más barata";
-          continue;
-        }
-        for (const a of conBruto) a.valoracion = a.bruto === minimo ? "baja" : "alta";
-      }
-
-      if (!asignaciones.some((a) => a.valoracion)) {
-        sinEleccion++;
-        console.log(`➖ ${funcion.name}: ${asignaciones.map((a) => `${a.nombre} (${a.motivo})`).join(", ")} → queda sin valorar.`);
-        continue;
-      }
-      aValorar++;
-      console.log(`🔧 ${funcion.name}`);
-      for (const [convenio, grupo] of porConvenio) {
-        console.log(`     ${convenio || "(sin convenio)"}`);
-        for (const a of [...grupo].sort((x, y) => (x.bruto ?? Infinity) - (y.bruto ?? Infinity))) {
-          const destino = a.valoracion === "baja" ? baja.name : a.valoracion === "alta" ? alta.name : `sin valorar (${a.motivo})`;
-          console.log(`        ${a.nombre.padEnd(48)} ${formatoPlata(a.bruto).padStart(14)}  → ${destino}`);
-          if (a.valoracion === "baja") categoriasBaja++;
-          else if (a.valoracion === "alta") categoriasAlta++;
-          else sinValorar++;
-
-          if (a.valoracion) {
-            /*
-              Una actualización POR CATEGORÍA con arrayFilters, y no reescribir el array entero: si
-              alguien edita la función en Roles Empresa mientras esto corre, reescribir el array le
-              pisaría los cambios. Así sólo se toca el `valoracionId` de esa entrada.
-            */
-            operaciones.push({
-              updateOne: {
-                filter: { _id: funcion._id },
-                update: { $set: { "data.categoriasSat.$[c].valoracionId": new Types.ObjectId(String(a.valoracion === "baja" ? baja._id : alta._id)) } },
-                arrayFilters: [{ "c.id": a.categoriaId }],
-              },
-            });
-          }
-        }
-      }
-    }
+    for (const n of plan.salteadas) console.log(`⏭️  ${n}: ya tiene categorías valoradas, no se toca (FORCE=true para revalorarla).`);
 
     console.log("\n── Resumen ──");
-    console.log(`Funciones con categorías: ${funciones.length}`);
-    console.log(`  a valorar: ${aValorar} · sin elección por precio (quedan sin valorar): ${sinEleccion} · salteadas (ya valoradas a mano): ${salteadas}`);
-    console.log(`Categorías de las funciones a valorar → ${baja.name}: ${categoriasBaja} · ${alta.name}: ${categoriasAlta} · sin valorar: ${sinValorar}`);
+    console.log(`Funciones con cambios: ${plan.funciones.length} · categorías: ${plan.operaciones.length} · salteadas: ${plan.salteadas.length}`);
 
     if (!aplicar) {
       console.log("\n🧪 En seco: no se escribió nada.");
       return;
     }
-    if (operaciones.length === 0) {
-      console.log("\nNada para escribir.");
-      return;
-    }
-    // Mongoose no castea dentro de arrayFilters: el ObjectId va armado a mano arriba y esto va
-    // directo a la colección.
-    const resultado = await RoleFrame.collection.bulkWrite(operaciones, { ordered: false });
-    console.log(`\n✅ Escrito: ${resultado.modifiedCount} categoría(s) valorada(s) en ${aValorar} función(es).`);
+    const escritas = await aplicarPlan(plan);
+    console.log(`\n✅ Escrito: ${escritas} categoría(s) en ${plan.funciones.length} función(es).`);
   } finally {
     await disconnectDB();
   }

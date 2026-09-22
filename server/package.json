@@ -65,7 +65,7 @@
     "nomenclatura:medir": "dotenv -e .env.production -- tsx src/scripts/medirNomenclatura.ts",
     "tipos-servicio:grupo": "dotenv -e .env.production -- tsx src/scripts/backfillGrupoTipoServicio.ts",
     "test:additive": "tsx --test src/utils/additiveSync.test.ts",
-    "test:valoracion": "tsx --test src/utils/valoracionAutomatica.test.ts",
+    "test:valoracion": "tsx --test src/utils/valoracionAutomatica.test.ts src/utils/valoracionPorBruto.test.ts",
     "test:constancia": "tsx --test src/utils/constanciaPdf.test.ts",
     "test:obras-sociales": "tsx --test src/services/obrasSocialesLoteService.test.ts",
     "test:nomenclatura": "tsx --test src/utils/nomenclatura.test.ts",

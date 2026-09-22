@@ -8,6 +8,8 @@ import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
+import { SelectorValoracion } from '../proyectos/SelectorValoracion';
+import { valoracionesPorBrutoAPI, ValoracionSugerida } from '../../api/valoraciones';
 import { sweetAlert } from '../../utils/sweetAlert';
 
 const valoracionesApi = createSimpleCatalogApi('/valoraciones');
@@ -111,12 +113,72 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   const [selectedCategorias, setSelectedCategorias] = useState<CategoriaAsociada[]>([]);
   const idsElegidos = useMemo(() => new Set(selectedCategorias.map((c) => c.categoryId)), [selectedCategorias]);
   const valoracionDe = (categoryId: string) => selectedCategorias.find((c) => c.categoryId === categoryId)?.valoracionId || '';
-  const ponerValoracion = (categoryId: string, valoracionId: string) =>
+
+  /*
+    LA VALORACIÓN POR DEFECTO SALE DEL BRUTO, y lo elegido a mano se respeta.
+
+    Al tildar una categoría, el server sugiere su nivel con la regla de siempre (de menor a mayor: la
+    más barata de su convenio, el nivel más bajo) y se pone sola. Pero no en todas: `manuales` son las
+    que alguien eligió en el desplegable, más las que ya venían valoradas al abrir la función —eso lo
+    decidió una persona, o la regla, antes—. Esas no se tocan; si no coinciden con el bruto, la fila
+    lo dice y se alinean con un clic.
+
+    Se pide por CONJUNTO cada vez que cambia lo tildado: «la más barata» es relativa a las otras, así
+    que agregar una más barata cambia la sugerencia de las demás.
+  */
+  const [manuales, setManuales] = useState<Set<string>>(new Set());
+  const manualesRef = React.useRef(manuales);
+  manualesRef.current = manuales;
+  const [sugerencias, setSugerencias] = useState<Record<string, ValoracionSugerida>>({});
+
+  const ponerValoracion = (categoryId: string, valoracionId: string) => {
+    setManuales((prev) => new Set(prev).add(categoryId));
     setSelectedCategorias((prev) => prev.map((c) => (c.categoryId === categoryId ? { ...c, valoracionId: valoracionId || null } : c)));
+  };
+  /** Vuelve una categoría a lo que dice el bruto, y la deja otra vez en manos de la regla. */
+  const aplicarSugerencia = (categoryId: string) => {
+    const s = sugerencias[categoryId];
+    if (!s) return;
+    setManuales((prev) => {
+      const n = new Set(prev);
+      n.delete(categoryId);
+      return n;
+    });
+    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId === categoryId ? { ...c, valoracionId: s.valoracionId } : c)));
+  };
+  const aplicarTodasLasSugerencias = () => {
+    setManuales(new Set());
+    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId in sugerencias ? { ...c, valoracionId: sugerencias[c.categoryId].valoracionId } : c)));
+  };
+  const difiereDelBruto = (categoryId: string, valoracionId: string) => categoryId in sugerencias && (sugerencias[categoryId].valoracionId || '') !== valoracionId;
 
   /** Las valoraciones del tenant, para los selects. Sólo las activas: son para contratos nuevos. */
   const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
   const valoracionPorId = useMemo(() => new Map(valoraciones.map((v) => [v._id, v])), [valoraciones]);
+  const clavesElegidas = useMemo(() => [...idsElegidos].sort().join(','), [idsElegidos]);
+  useEffect(() => {
+    if (!showModal || !clavesElegidas || valoraciones.length === 0) {
+      setSugerencias({});
+      return;
+    }
+    let vigente = true;
+    // Un respiro antes de pedir: tildando varias seguidas, alcanza con una consulta al final.
+    const espera = setTimeout(async () => {
+      try {
+        const s = await valoracionesPorBrutoAPI.sugerir(clavesElegidas.split(','));
+        if (!vigente) return;
+        setSugerencias(s);
+        setSelectedCategorias((prev) => prev.map((c) => (manualesRef.current.has(c.categoryId) || !(c.categoryId in s) ? c : { ...c, valoracionId: s[c.categoryId].valoracionId })));
+      } catch {
+        // Sin sugerencia el formulario sigue andando a mano, que es como andaba antes.
+      }
+    }, 250);
+    return () => {
+      vigente = false;
+      clearTimeout(espera);
+    };
+  }, [clavesElegidas, showModal, valoraciones.length]);
+
   /** Cobertura por función, para el aviso del listado. */
   const [cobertura, setCobertura] = useState<Map<string, CoberturaFuncion>>(new Map());
   const [catSearch, setCatSearch] = useState('');
@@ -239,6 +301,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     setEditingRole(null);
     setFormName('');
     setSelectedCategorias([]);
+    setManuales(new Set());
     setCatSearch('');
     setCategoriasOpen(false);
     setShowModal(true);
@@ -274,6 +337,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
       .map((cat) => ({ categoryId: cat._id, valoracionId: valoracionPorLegacyId.get(Number(cat.data?.id)) ?? null }));
 
     setSelectedCategorias(asociadas);
+    // Lo que ya venía valorado lo decidió alguien (o la regla, antes): la sugerencia no lo pisa.
+    setManuales(new Set(asociadas.filter((a) => a.valoracionId).map((a) => a.categoryId)));
     setCatSearch('');
     setCategoriasOpen(false);
     setShowModal(true);
@@ -376,14 +441,31 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         const codigo = String(c.data?.codigoArca || '').trim();
         const nombre = c.data?.nombre || c.name || 'Sin nombre';
         const v = sel.valoracionId ? valoracionPorId.get(sel.valoracionId) : undefined;
+        const bruto = Number(c.data?.sueldoBruto);
         return {
           id: c._id,
           label: codigo ? `${codigo} · ${nombre}` : nombre,
+          codigo,
+          nombre,
+          bruto: Number.isFinite(bruto) && bruto > 0 ? bruto : null,
           convenio: String(c.data?.convenio || '').trim(),
+          valoracionId: sel.valoracionId || '',
           valoracion: v ? { name: String(v.name), color: String(v.color || '') } : undefined,
         };
       });
   }, [allCategories, selectedCategorias, valoracionPorId]);
+
+  /*
+    LA LISTA DEL FORMULARIO: por convenio y, adentro, de la más barata a la más cara.
+
+    La valoración de una categoría se decide mirando su sueldo —la más barata de cada convenio es la
+    de nivel bajo—, así que el orden por bruto deja la decisión a la vista: la primera de cada
+    convenio es la candidata a Plata. En el orden en que se fueron tildando había que ir a buscarla.
+  */
+  const filasElegidas = useMemo(
+    () => [...categoriasElegidas].sort((a, b) => a.convenio.localeCompare(b.convenio) || (a.bruto ?? Infinity) - (b.bruto ?? Infinity) || a.nombre.localeCompare(b.nombre)),
+    [categoriasElegidas],
+  );
 
   /** Los CCT de lo que está tildado ahora mismo: avisa antes de guardar, no después. */
   const conveniosSeleccionados = useMemo(() => {
@@ -658,14 +740,66 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                     <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
                   </button>
                 )}
+                {filasElegidas.some((c) => difiereDelBruto(c.id, c.valoracionId)) && (
+                  <button type="button" onClick={aplicarTodasLasSugerencias} className="ml-auto text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline" title="Pone en cada categoría la valoración que le corresponde por su bruto, también en las elegidas a mano">
+                    Valorar todas por bruto
+                  </button>
+                )}
               </div>
               {/* Lo elegido va ARRIBA del buscador: adentro lo haría crecer de alto y se leería como
                   texto ya escrito en el campo. Mismo criterio que Rol/es Empresa y Sindicatos. */}
-              {categoriasElegidas.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {categoriasElegidas.map((c) => (
-                    <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} valoracion={c.valoracion} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
-                  ))}
+              {/*
+                Las elegidas como LISTA y no como badges: la valoración se ve y se cambia en la misma
+                fila, al lado del sueldo que la justifica. Con badges había que abrir el selector y
+                buscar la categoría en la lista entera para cambiarle el nivel.
+              */}
+              {filasElegidas.length > 0 && (
+                <div className="mb-2 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
+                      <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <th className="px-3 py-2 text-left">Convenio</th>
+                        <th className="px-3 py-2 text-left">Categoría</th>
+                        <th className="px-3 py-2 text-right">Bruto</th>
+                        <th className="px-3 py-2 text-left">Valoración</th>
+                        <th className="px-2 py-2 w-8" aria-label="Quitar" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {filasElegidas.map((c) => (
+                        <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                          <td className="px-3 py-2 font-mono text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{c.convenio || <span className="font-sans text-red-600 dark:text-red-400">sin convenio</span>}</td>
+                          <td className="px-3 py-2 text-gray-800 dark:text-gray-200">
+                            {c.codigo && <span className="font-mono text-[11px] text-gray-500 dark:text-gray-400 mr-1.5">{c.codigo}</span>}
+                            {c.nombre}
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">{c.bruto != null ? `$${Math.round(c.bruto).toLocaleString('es-AR')}` : '—'}</td>
+                          <td className="px-3 py-2">
+                            {valoraciones.length > 0 ? (
+                              <>
+                                <SelectorValoracion valoraciones={valoraciones} valor={c.valoracionId} onChange={(id) => ponerValoracion(c.id, id)} etiqueta={`Valoración de ${c.nombre} en esta función`} />
+                                {/* La regla, a la vista: si lo elegido no coincide con el bruto, se ofrece alinearlo; si el bruto no alcanza para decidir, se dice por qué. */}
+                                {difiereDelBruto(c.id, c.valoracionId) ? (
+                                  <button type="button" onClick={() => aplicarSugerencia(c.id)} className="mt-1 block text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                                    Por bruto: {sugerencias[c.id].valoracionId ? String(valoracionPorId.get(sugerencias[c.id].valoracionId as string)?.name || '?') : 'sin valorar'}
+                                  </button>
+                                ) : !c.valoracionId && sugerencias[c.id]?.motivo ? (
+                                  <span className="mt-1 block text-[10px] text-gray-500 dark:text-gray-400">Sin valorar: {sugerencias[c.id].motivo}</span>
+                                ) : null}
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <button type="button" onClick={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} title={`Quitar ${c.nombre}`} aria-label={`Quitar ${c.nombre}`} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                              <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
               {/*
@@ -796,20 +930,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                                 elegido promete una decisión que no se guarda en ningún lado.
                               */}
                               {isChecked && valoraciones.length > 0 && (
-                                <select
-                                  value={valoracionDe(cat._id)}
-                                  onChange={(e) => ponerValoracion(cat._id, e.target.value)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  title={`Valoración de ${cat.data?.nombre || cat.name} en esta función`}
-                                  className="shrink-0 text-[11px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 px-1.5 py-0.5"
-                                >
-                                  <option value="">Sin valorar</option>
-                                  {valoraciones.map((v) => (
-                                    <option key={v._id} value={v._id}>
-                                      {String(v.name)}
-                                    </option>
-                                  ))}
-                                </select>
+                                <SelectorValoracion valoraciones={valoraciones} valor={valoracionDe(cat._id)} onChange={(id) => ponerValoracion(cat._id, id)} etiqueta={`Valoración de ${cat.data?.nombre || cat.name} en esta función`} />
                               )}
                             </div>
                           );
