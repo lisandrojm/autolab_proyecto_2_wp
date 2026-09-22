@@ -1706,8 +1706,22 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
       return;
     }
 
+    /*
+      EL FILTRO VA EN LA CONSULTA, no en el `for` de abajo: traer todos los vínculos del proyecto con
+      sus contratos enteros eran 2,8 MB para 426_LN+ (hay vínculos de 120 KB) y la ruta tardaba ~30 s
+      contra Atlas, para quedarse con dos filas. Ahora viajan sólo los vínculos con algún contrato de
+      OTRA valoración, y de cada contrato sólo lo que la tabla muestra.
+
+      `$elemMatch` y no `"contracts.valoracion_id": { $nin: … }`: sobre un array, `$nin` pide que
+      NINGÚN contrato tenga la valoración del proyecto, y dejaba afuera a quien tiene uno alineado y
+      otro no — justo el caso de una renovación.
+    */
     const [ups, valoraciones] = await Promise.all([
-      UserProject.find({ projectId }).select("userId nombre_proyecto contracts").lean(),
+      UserProject.find({ projectId, contracts: { $elemMatch: { valoracion_id: { $nin: [null, new Types.ObjectId(delProyecto)] } } } })
+        .select(
+          "userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato",
+        )
+        .lean(),
       Valoracion.find({ tenantId: req.tenantObjectId }).select("name color").lean(),
     ]);
     const nombreValoracion = new Map((valoraciones as any[]).map((v) => [String(v._id), String(v.name)]));

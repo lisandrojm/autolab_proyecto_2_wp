@@ -47,6 +47,27 @@ interface IContract {
     nombre_proyecto: string;
     nombre_estado_empleado: string;
     nombre_categoria_sat: string;
+    /**
+     * La valoración con la que se contrató, y su nombre COPIADO al momento del alta.
+     *
+     * Misma convención que `nombre_categoria_sat`: el nombre se congela porque el contrato tiene que
+     * poder explicarse a sí mismo años después, aunque la valoración se haya renombrado o apagado.
+     * El id queda para cruzar contra la del proyecto y detectar desalineados.
+     */
+    valoracion_id?: Types.ObjectId | string | null;
+    nombre_valoracion?: string;
+    /**
+     * Por qué se eligió una categoría de OTRA valoración que la del proyecto.
+     *
+     * El filtro del front es comodidad; la regla la hace cumplir el server, que rechaza con 422 salvo
+     * que venga esto. Se guarda quién y cuándo además del motivo: un salteo sin autor es un dato que
+     * no se le puede reclamar a nadie, y es exactamente la clase de decisión que después se discute.
+     */
+    valoracionOverride?: {
+        motivo: string;
+        por: Types.ObjectId | string;
+        at: Date;
+    };
     nombre_contrato: string;
     nombre_sede: string;
     nombre_rol_frame: string;

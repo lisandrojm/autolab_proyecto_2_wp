@@ -5,6 +5,8 @@ import { Model } from "mongoose";
  * `{ externalId, name, data: { id, nombre } }` (Bancos, Obras Sociales,
  * Centros de Costos, etc). Mismo patrón global que Categorías SAT:
  * sin tenantId, solo `authenticateToken`, con plantilla + import Excel.
+ *
+ * Con `tenantScoped` el catálogo pasa a ser de cada productora en vez de global (ver ese campo).
  */
 export interface SimpleCatalogConfig {
     /** Etiqueta singular para mensajes de error, ej. "Banco". */
@@ -101,5 +103,21 @@ export interface SimpleCatalogConfig {
      * válido. Por defecto no se transforma: el resto de los catálogos no se ve afectado.
      */
     sanitizeExternalId?: (value: string) => string;
+    /**
+     * El catálogo es DE CADA TENANT, no global.
+     *
+     * Los catálogos de este factory nacieron globales porque son el nomenclador de ARCA: el organismo
+     * publica los mismos bancos y las mismas obras sociales para todo el mundo, así que no tiene
+     * sentido una copia por productora. Las valoraciones comerciales no son eso — «Oro» con su rango
+     * de presupuesto es la política de UNA empresa — y compartirlas significaría que tocar un rango
+     * acá le mueve los contratos a otra.
+     *
+     * Con el flag: `requireTenant` en todas las rutas, `tenantId` en el filtro del listado, en el alta
+     * y en los upserts, y las búsquedas por id pasan a mirar también el tenant — si no, un id ajeno se
+     * edita o se borra igual, que es el modo de fallar que hace inútil el resto del recorte.
+     *
+     * APAGADO POR DEFECTO: los seis catálogos que ya lo usan se comportan exactamente igual.
+     */
+    tenantScoped?: boolean;
 }
 export declare function createSimpleCatalogRouter(model: Model<any>, config: SimpleCatalogConfig): Router;

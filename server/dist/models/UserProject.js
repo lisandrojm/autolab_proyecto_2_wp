@@ -33,6 +33,13 @@ const contractSchema = new Schema({
     nombre_proyecto: { type: String },
     nombre_estado_empleado: { type: String },
     nombre_categoria_sat: { type: String },
+    valoracion_id: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
+    nombre_valoracion: { type: String },
+    valoracionOverride: {
+        motivo: { type: String },
+        por: { type: Schema.Types.ObjectId, ref: "User" },
+        at: { type: Date },
+    },
     nombre_contrato: { type: String },
     nombre_sede: { type: String },
     nombre_rol_frame: { type: String },

@@ -79,6 +79,43 @@ export interface IProject extends Document {
     endDate?: Date;
     objectives: string[];
     targetAudience?: string;
+    /**
+     * EL PRESUPUESTO DEL PROYECTO. Contexto, no criterio.
+     *
+     * Es un campo NUEVO: hasta acá el repo no guardaba presupuesto en ningún lado. NO decide la
+     * valoración — eso lo hace el margen — pero se guarda porque es el número con el que se habla del
+     * proyecto y el que da sentido al porcentaje.
+     */
+    presupuesto?: number | null;
+    /** En qué moneda está ese número. Sin esto, comparar presupuestos entre proyectos es adivinar. */
+    presupuestoMoneda?: string;
+    /**
+     * EL MARGEN, EN PORCENTAJE. Es lo que decide la valoración.
+     *
+     * Un proyecto grande con margen flaco no puede pagar las categorías caras, y uno chico con buen
+     * margen sí: el volumen no dice nada sobre lo que se puede pagar.
+     *
+     * HOY SE CARGA A MANO en la ficha del proyecto. Está previsto que en algún momento lo provea el
+     * presupuestador/planificador; cuando eso pase, lo que cambia es quién escribe este campo, no la
+     * regla que lo consume (`resolverValoracion`) ni nada de lo que cuelga de ella.
+     *
+     * Opcional: sin margen cargado el proyecto cae en la valoración por defecto y se contrata como
+     * antes.
+     */
+    margen?: number | null;
+    /**
+     * La valoración que rige. La calcula `resolverValoracion` a partir del margen, salvo que alguien
+     * la haya fijado a mano (ver `valoracionManual`).
+     */
+    valoracionId?: Types.ObjectId | null;
+    /**
+     * La valoración la puso una persona, no el cálculo.
+     *
+     * Existe porque el recálculo automático tiene que poder correr sin pisar una decisión: un proyecto
+     * puede ser Oro por acuerdo comercial aunque su margen diga Plata, y que eso se revierta solo
+     * al editar cualquier otro campo sería peor que no tener cálculo automático.
+     */
+    valoracionManual?: boolean;
     createdBy: string;
     createdAt: Date;
     updatedAt: Date;

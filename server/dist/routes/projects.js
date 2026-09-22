@@ -9,6 +9,9 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
+import { Valoracion } from "../models/Valoracion.js";
+import { RoleFrame } from "../models/RoleFrame.js";
+import { resolverValoracion } from "../utils/valoracionAutomatica.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
 import { CentroCosto } from "../models/CentroCosto.js";
@@ -243,6 +246,16 @@ const createProjectSchema = z.object({
     }),
     objectives: z.array(z.string()).default([]),
     targetAudience: z.string().optional().nullable(),
+    /*
+      El presupuesto y su valoración. `null` es un valor que se GUARDA —«le borré el presupuesto»— y es
+      distinto de no mandar la clave, que es «no lo toques»: sin esa diferencia no habría forma de
+      dejar un proyecto sin presupuesto una vez cargado.
+    */
+    presupuesto: z.number().nullable().optional(),
+    presupuestoMoneda: z.string().optional(),
+    margen: z.number().nullable().optional(),
+    valoracionId: z.string().nullable().optional(),
+    valoracionManual: z.boolean().optional(),
     assignedUsers: z.array(z.string()).optional(),
     vacationConfig: z
         .object({
@@ -1231,6 +1244,34 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
             if (updateData.metadata.centroCostoId !== undefined)
                 currentProject.metadata.centroCostoId = updateData.metadata.centroCostoId;
         }
+        /*
+          LA VALORACIÓN SE RECALCULA, SALVO QUE ALGUIEN LA HAYA FIJADO.
+    
+          Corre después de aplicar el resto del update para leer el MARGEN ya actualizado, y sólo cuando
+          el proyecto no está en manual: un proyecto puede ser Oro por acuerdo comercial aunque su margen
+          diga Plata, y que eso se revierta solo al editar el nombre sería peor que no tener cálculo
+          automático.
+    
+          Es el margen y no el presupuesto: un proyecto grande con margen flaco no puede pagar las
+          categorías caras.
+    
+          Mandar `valoracionId` explícitamente ES fijarla a mano: el cliente está diciendo cuál quiere.
+          Mandar `valoracionManual: false` es lo contrario —volver al automático— y por eso se recalcula
+          en el acto, sin esperar a la próxima edición del margen.
+        */
+        const pidieronValoracion = req.body.valoracionId !== undefined;
+        if (pidieronValoracion) {
+            currentProject.valoracionManual = true;
+        }
+        const vuelveAlAutomatico = updateData.valoracionManual === false;
+        if (!currentProject.valoracionManual || vuelveAlAutomatico) {
+            const valoraciones = await Valoracion.find({ tenantId: req.tenantObjectId, activo: { $ne: false } })
+                .select("_id orden margenDesde margenHasta esDefault activo")
+                .lean();
+            const elegida = resolverValoracion(currentProject.margen ?? null, valoraciones);
+            currentProject.valoracionId = elegida ? elegida._id : null;
+            currentProject.valoracionManual = false;
+        }
         // Re-verify clientId/externalId relation if needed
         if (updateData.clientId) {
             const updatedClient = await Client.findById(updateData.clientId);
@@ -1423,6 +1464,187 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
         res.status(500).json({ error: "Internal server error" });
     }
 });
+/**
+ * ¿LA CATEGORÍA CORRESPONDE A LA VALORACIÓN DEL PROYECTO?
+ *
+ * La usan las DOS rutas que escriben la categoría de un contrato: el alta del wizard
+ * (`assign-member`) y la corrección puntual (`.../categoria-sat`). Estaba sólo en la primera, y esa
+ * segunda ruta era un camino completo para saltear la regla sin que nada lo notara: se daba de alta
+ * con la categoría correcta y después se la cambiaba por otra desde «Datos ARCA».
+ *
+ * El filtro del front es COMODIDAD. La regla vive acá porque es el único lugar donde se puede hacer
+ * cumplir: un POST a mano, un cliente viejo o una pestaña abierta desde antes se saltean cualquier
+ * filtro de pantalla.
+ *
+ * Se rechaza con 422 y no con 400: el cuerpo está bien formado, lo que no se puede es aceptar esa
+ * combinación. La excepción es el escape manual, que tiene que venir con MOTIVO — un salteo sin
+ * explicación es exactamente lo que después nadie puede reconstruir.
+ *
+ * Sólo aplica con las dos puntas: proyecto valorado Y la función valoró esa categoría. Si falta
+ * cualquiera, no hay nada que contrastar y pasa como siempre (el modo permisivo del despliegue).
+ */
+const revisarValoracion = async (args) => {
+    const motivo = String(args.motivo || "").trim();
+    const delProyectoId = args.valoracionProyecto ? String(args.valoracionProyecto) : "";
+    const rolId = Number(args.rolFrameId);
+    const catId = Number(args.categoriaSatId);
+    let deLaCategoriaId = "";
+    let nombreFuncion = "";
+    if (Number.isFinite(rolId) && Number.isFinite(catId)) {
+        const rol = await RoleFrame.findOne({ "data.rol.id": rolId }).select("name data.categoriasSat").lean();
+        const asociada = (rol?.data?.categoriasSat || []).find((c) => Number(c?.id) === catId);
+        if (asociada?.valoracionId) {
+            deLaCategoriaId = String(asociada.valoracionId);
+            nombreFuncion = String(rol?.name || "");
+        }
+    }
+    const desalineada = !!delProyectoId && !!deLaCategoriaId && deLaCategoriaId !== delProyectoId;
+    // El nombre se busca acá, donde se puede esperar: `aGuardar` es sincrónico a propósito, para que
+    // el que llama no tenga que acordarse de un `await` más en medio del armado del contrato.
+    const nombreDeLaCategoria = deLaCategoriaId ? String((await Valoracion.findById(deLaCategoriaId).select("name").lean())?.name || "") : "";
+    if (desalineada && !motivo) {
+        const [delProyecto, deLaCategoria] = await Promise.all([Valoracion.findById(delProyectoId).select("name").lean(), Valoracion.findById(deLaCategoriaId).select("name").lean()]);
+        return {
+            rechazo: {
+                error: `La categoría es de valoración «${deLaCategoria?.name || "?"}» y el proyecto es «${delProyecto?.name || "?"}». Si corresponde igual, hay que elegirla a mano y dejar el motivo.`,
+                valoracionProyecto: delProyecto?.name || null,
+                valoracionCategoria: deLaCategoria?.name || null,
+                funcion: nombreFuncion,
+            },
+            aGuardar: () => ({}),
+        };
+    }
+    /* Lo que se escribe EN EL CONTRATO: el id para cruzarlo después, y el nombre CONGELADO al momento
+       del alta — misma convención que `nombre_categoria_sat`, para que el contrato pueda explicarse a
+       sí mismo aunque la valoración se renombre o se apague. */
+    return {
+        rechazo: null,
+        aGuardar: (porUserId) => {
+            const campos = {};
+            if (deLaCategoriaId) {
+                campos.valoracion_id = deLaCategoriaId;
+                campos.nombre_valoracion = nombreDeLaCategoria;
+            }
+            if (motivo)
+                campos.valoracionOverride = { motivo: motivo.slice(0, 500), por: porUserId, at: new Date() };
+            return campos;
+        },
+    };
+};
+/**
+ * GET /projects/:projectId/contratos-desalineados
+ *
+ * Los contratos cuya valoración NO coincide con la del proyecto.
+ *
+ * CAMBIAR EL MARGEN NO REESCRIBE CONTRATOS, y esta ruta existe justamente porque no lo hace: un
+ * contrato ya generado tiene una categoría, una escala y un sueldo que alguien pactó. Recalcularlo
+ * en silencio le cambiaría el sueldo a gente ya contratada, que es el peor resultado posible de una
+ * corrección de presupuesto.
+ *
+ * Así que se LISTAN, con lo necesario para decidir uno por uno: quién, qué contrato, con qué
+ * valoración quedó y cuál tiene ahora el proyecto. Los que se saltearon a propósito —con override—
+ * vienen marcados y con su motivo: no son un problema a resolver, son una decisión ya tomada.
+ */
+router.get("/projects/:projectId/contratos-desalineados", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("name valoracionId").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const delProyecto = project.valoracionId ? String(project.valoracionId) : "";
+        // Sin valoración en el proyecto no hay contra qué comparar: no es que esté todo alineado, es que
+        // la pregunta no aplica. Se dice explícitamente en vez de contestar una lista vacía.
+        if (!delProyecto) {
+            res.json({ proyecto: project.name, valoracionProyecto: null, sinValorar: true, contratos: [] });
+            return;
+        }
+        const [ups, valoraciones] = await Promise.all([
+            UserProject.find({ projectId }).select("userId nombre_proyecto contracts").lean(),
+            Valoracion.find({ tenantId: req.tenantObjectId }).select("name color").lean(),
+        ]);
+        const nombreValoracion = new Map(valoraciones.map((v) => [String(v._id), String(v.name)]));
+        // Primero se arma la lista y DESPUÉS se buscan los nombres, sólo de los que quedaron en ella: ver
+        // el comentario de la búsqueda al revés, más abajo.
+        const desalineados = [];
+        for (const up of ups) {
+            (up.contracts || []).forEach((c, indice) => {
+                const delContrato = c?.valoracion_id ? String(c.valoracion_id) : "";
+                // Un contrato SIN valoración no está desalineado: es anterior a la feature, o su función no
+                // estaba valorada. Marcarlo como problema sería inventar trabajo sobre datos que nunca se
+                // pidieron.
+                if (!delContrato || delContrato === delProyecto)
+                    return;
+                desalineados.push({ up, contrato: c, indice, delContrato });
+            });
+        }
+        /*
+          Sólo ids VÁLIDOS. Hay vínculos persona↔proyecto sin `userId` (huérfanos de FRAME), y
+          `String(undefined)` da el texto "undefined", que `filter(Boolean)` deja pasar y el `$in` convierte
+          en un CastError: la ruta entera contestaba 500 por un solo documento roto entre cientos. Se vio
+          recién contra 426_LN+, con 214 personas; en un proyecto chico no aparecía.
+        */
+        const vinculos = [...new Set(desalineados.map((d) => d.up))];
+        const userIds = [...new Set(vinculos.map((up) => (up.userId ? String(up.userId) : "")).filter((id) => mongoose.Types.ObjectId.isValid(id)))];
+        const usuarios = userIds.length > 0 ? await User.find({ _id: { $in: userIds } }).select("firstName lastName email").lean() : [];
+        const nombrePersona = new Map(usuarios.map((u) => [String(u._id), `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email]));
+        /*
+          EL VÍNCULO TAMBIÉN VA AL REVÉS: `User.metadata.projects` apunta al `_id` del UserProject.
+    
+          Hay vínculos con `userId` vacío (en la base de desarrollo, los 214 de 426_LN+) y la persona se
+          encuentra por el otro lado. Sin este respaldo la columna «Persona» salía en blanco, que es
+          justo el dato que hace falta para ir a revisar el contrato.
+    
+          Se busca SÓLO por los desalineados, no por todos los vínculos del proyecto: `metadata.projects`
+          no tiene índice, y con los 214 la consulta recorría la colección de usuarios entera y la ruta
+          tardaba ~30 s. Los desalineados son un puñado; la mayoría de las veces, ninguno.
+        */
+        const upSinUsuario = vinculos.filter((up) => !up.userId).map((up) => up._id);
+        const nombrePorUp = new Map();
+        if (upSinUsuario.length > 0) {
+            const porElOtroLado = await User.find({ tenantId: req.tenantObjectId, "metadata.projects": { $in: upSinUsuario } })
+                .select("firstName lastName email metadata.projects")
+                .lean();
+            for (const u of porElOtroLado) {
+                const nombre = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email;
+                for (const ref of u.metadata?.projects || [])
+                    nombrePorUp.set(String(ref), nombre);
+            }
+        }
+        const contratos = desalineados.map(({ up, contrato: c, indice, delContrato }) => ({
+            // El UserProject siempre existe; el `userId`, no (ver arriba). Es lo que identifica la fila.
+            userProjectId: String(up._id),
+            userId: up.userId ? String(up.userId) : null,
+            persona: (up.userId ? nombrePersona.get(String(up.userId)) : nombrePorUp.get(String(up._id))) || "",
+            contratoIndex: indice,
+            categoria: c.nombre_categoria_sat || "",
+            funcion: c.nombre_rol_frame || "",
+            desde: c.fecha_alta_contrato || "",
+            hasta: c.fecha_baja_contrato || "",
+            // El nombre GUARDADO en el contrato primero: es el que regía cuando se firmó, y puede
+            // diferir del actual si la valoración se renombró.
+            valoracionContrato: c.nombre_valoracion || nombreValoracion.get(delContrato) || "",
+            valoracionProyecto: nombreValoracion.get(delProyecto) || "",
+            conOverride: !!c.valoracionOverride?.motivo,
+            motivoOverride: c.valoracionOverride?.motivo || null,
+        }));
+        res.json({
+            proyecto: project.name,
+            valoracionProyecto: nombreValoracion.get(delProyecto) || null,
+            sinValorar: false,
+            total: contratos.length,
+            /* Los que se saltearon a propósito, aparte: mezclar una decisión auditada con un desalineado
+               sin explicar obligaría a revisar de nuevo lo que ya se revisó. */
+            conOverride: contratos.filter((c) => c.conOverride).length,
+            contratos: contratos.sort((a, b) => Number(a.conOverride) - Number(b.conOverride) || a.persona.localeCompare(b.persona)),
+        });
+    }
+    catch (error) {
+        console.error("Get contratos desalineados error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // POST /projects/:projectId/assign-member - Specialized endpoint for the wizard
 router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
@@ -1450,6 +1672,25 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             isValidId(contract.areaId) ? Area.findById(contract.areaId).lean() : Promise.resolve(null),
             isValidId(contract.shiftId) ? Shift.findById(contract.shiftId).lean() : Promise.resolve(null),
         ]);
+        /*
+          ── LA VALORACIÓN, REVALIDADA ACÁ ──
+    
+          El filtro del front es COMODIDAD: recorta la lista para que no haya que pensar. La regla vive
+          acá porque es el único lugar donde se puede hacer cumplir — un POST a mano, un cliente viejo o
+          una pestaña abierta desde antes se saltean cualquier filtro de pantalla.
+    
+          Se rechaza con 422 y no con 400: el cuerpo está bien formado, lo que no se puede es aceptar esa
+          combinación. La excepción es el escape manual, que tiene que venir con MOTIVO — un salteo sin
+          explicación es exactamente la clase de decisión que después nadie puede reconstruir.
+    
+          Sólo aplica cuando hay las dos puntas: proyecto valorado Y la función valoró esa categoría. Si
+          falta cualquiera de las dos, no hay nada que contrastar y el alta pasa como siempre (es el modo
+          permisivo con el que esto se despliega).
+        */
+        const veredicto = await revisarValoracion({ valoracionProyecto: project.valoracionId, rolFrameId: contract.rol_frame_id, categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
+        if (veredicto.rechazo)
+            return res.status(422).json(veredicto.rechazo);
+        Object.assign(contract, veredicto.aGuardar(req.user.userId));
         // --- Validation: Check for overlapping shifts in OTHER projects only ---
         // Sanitize optional reference IDs (empty string -> null) to avoid BSON casting errors
         const sanitizeId = (id) => (id === "" || id === undefined) ? null : id;
@@ -2533,6 +2774,24 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
             return;
         }
         const contrato = up.contracts[idx];
+        /*
+          LA MISMA REGLA QUE EL ALTA. Esta ruta era el camino para saltearla: se daba de alta con la
+          categoría correcta y después se la cambiaba desde «Datos ARCA», sin pasar por ningún control.
+    
+          El motivo viaja en el body igual que en el wizard; sin él, 422.
+        */
+        const proyectoConValoracion = await Project.findById(projectId).select("valoracionId").lean();
+        const veredicto = await revisarValoracion({
+            valoracionProyecto: proyectoConValoracion?.valoracionId,
+            rolFrameId: contrato.rol_frame_id,
+            categoriaSatId: categoriaSatId,
+            motivo: req.body?.valoracionOverride?.motivo,
+        });
+        if (veredicto.rechazo) {
+            res.status(422).json(veredicto.rechazo);
+            return;
+        }
+        const camposDeValoracion = veredicto.aGuardar(req.user.userId);
         const jornada = Number(contrato.sueldo_jornada || 0);
         const sueldo_neto = Number(Number(cat.data?.neto ?? 0).toFixed(2));
         const sueldo_bruto = Number(Number(cat.data?.sueldoBruto ?? 0).toFixed(2));
@@ -2540,6 +2799,7 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
         const diferencia_diaria_neto = Number((jornada - sueldo_diario_neto).toFixed(2));
         up.contracts[idx] = {
             ...contrato.toObject(),
+            ...camposDeValoracion,
             categoria_sat_id: categoriaSatId,
             nombre_categoria_sat: cat.name || "",
             sueldo_neto,

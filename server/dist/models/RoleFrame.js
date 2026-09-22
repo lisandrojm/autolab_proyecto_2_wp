@@ -8,6 +8,7 @@ const roleFrameSchema = new Schema({
         },
         categoriasSat: [
             {
+                valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
                 id: { type: Number },
                 numeroCategoria: { type: Number },
                 sueldoBruto: { type: Number },
