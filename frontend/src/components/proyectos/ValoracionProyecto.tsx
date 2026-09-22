@@ -7,6 +7,7 @@ import { Modal } from "../ui/Modal";
 import { projectsAPI, Project, ContratosDesalineados } from "../../api/projects";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { formatearFechaCalendario } from "../../utils/fechas";
 
 const valoracionesApi = createSimpleCatalogApi("/valoraciones");
 
@@ -273,8 +274,8 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
                           </td>
                           <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{c.valoracionProyecto || "—"}</td>
                           <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {c.desde || "—"}
-                            {c.hasta ? ` → ${c.hasta}` : ""}
+                            {formatearFechaCalendario(c.desde)}
+                            {c.hasta ? ` → ${formatearFechaCalendario(c.hasta)}` : ""}
                           </td>
                         </tr>
                       ))}
