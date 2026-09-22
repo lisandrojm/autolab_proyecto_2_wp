@@ -8,7 +8,8 @@ export interface RoleFrameItem {
       id: number;
       nombre: string;
     };
-    categoriasSat: any[];
+    /** Cada ítem es la copia de la categoría + lo de la asociación: `valoracionId`. */
+    categoriasSat: Array<{ id?: number; nombre?: string; codigoAfip?: number; sueldoBruto?: number; valoracionId?: string | null; [k: string]: unknown }>;
   };
   name: string;
   createdAt: string;

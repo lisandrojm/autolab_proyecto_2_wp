@@ -30,9 +30,9 @@ const nivelesActivos = async (tenantId: Types.ObjectId | string): Promise<Nivel[
  */
 export async function sugerirPorBruto(tenantId: Types.ObjectId | string, categoriaIds: string[]): Promise<Record<string, ValoracionSugerida>> {
   const ids = categoriaIds.filter((id) => Types.ObjectId.isValid(id));
-  const [niveles, categorias] = await Promise.all([nivelesActivos(tenantId), CategoriaSat.find({ _id: { $in: ids } }).select("data.convenio data.sueldoBruto").lean()]);
+  const [niveles, categorias] = await Promise.all([nivelesActivos(tenantId), CategoriaSat.find({ _id: { $in: ids } }).select("name data.nombre data.convenio data.sueldoBruto").lean()]);
   const r = valorarPorBruto(
-    (categorias as any[]).map((c) => ({ id: String(c._id), convenio: String(c.data?.convenio || "").trim(), bruto: c.data?.sueldoBruto })),
+    (categorias as any[]).map((c) => ({ id: String(c._id), convenio: String(c.data?.convenio || "").trim(), bruto: c.data?.sueldoBruto, nombre: String(c.data?.nombre || c.name || "") })),
     niveles,
   );
   return Object.fromEntries(r);
@@ -98,7 +98,7 @@ export async function planValoracionPorBruto(tenantId: Types.ObjectId | string, 
       return { c, vigente, bruto: Number(vigente?.sueldoBruto ?? c.sueldoBruto) };
     });
     const sugerido = valorarPorBruto(
-      filas.map(({ c, vigente, bruto }) => ({ id: String(c.id), convenio: String(vigente?.convenio || "").trim(), bruto })),
+      filas.map(({ c, vigente, bruto }) => ({ id: String(c.id), convenio: String(vigente?.convenio || "").trim(), bruto, nombre: String(vigente?.nombre || c.nombre || "") })),
       niveles,
     );
 

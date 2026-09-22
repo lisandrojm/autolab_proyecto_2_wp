@@ -9,6 +9,8 @@ import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch,
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
 import { SelectorValoracion } from '../proyectos/SelectorValoracion';
+import { estiloValoracion } from '../proyectos/ChipValoracion';
+import { useThemeStore } from '../../stores/themeStore';
 import { valoracionesPorBrutoAPI, ValoracionSugerida } from '../../api/valoraciones';
 import { sweetAlert } from '../../utils/sweetAlert';
 
@@ -20,7 +22,9 @@ const valoracionesApi = createSimpleCatalogApi('/valoraciones');
  * `onQuitar` lo convierte en removible, para el formulario. El mismo badge que usan las tarjetas del
  * listado: es la misma cosa mostrada en dos lados, y dos versiones terminan divergiendo.
  */
-const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; valoracion?: { name: string; color?: string }; onQuitar?: () => void }> = ({ label, convenio, valoracion, onQuitar }) => (
+const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; valoracion?: { name: string; color?: string }; onQuitar?: () => void }> = ({ label, convenio, valoracion, onQuitar }) => {
+  const oscuro = useThemeStore((st) => st.theme) === 'dark';
+  return (
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
     <FontAwesomeIcon icon={faLayerGroup} className="h-2.5 w-2.5" />
     {convenio && <span className="font-mono opacity-70">{convenio}</span>}
@@ -28,11 +32,7 @@ const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; valoracion
     {/* El nivel, pegado a la categoría: es lo que decide si esta categoría se ofrece o no en un
         proyecto, así que leerlo aparte obligaría a cruzar dos listas de memoria. */}
     {valoracion && (
-      <span
-        className="ml-0.5 px-1 rounded-sm font-bold border"
-        style={valoracion.color ? { color: valoracion.color, borderColor: valoracion.color, backgroundColor: `${valoracion.color}1a` } : undefined}
-        title={`Valoración: ${valoracion.name}`}
-      >
+      <span className="ml-0.5 px-1 rounded-sm font-bold border" style={estiloValoracion(valoracion.color, oscuro)} title={`Valoración: ${valoracion.name}`}>
         {valoracion.name}
       </span>
     )}
@@ -42,7 +42,8 @@ const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; valoracion
       </button>
     )}
   </span>
-);
+  );
+};
 
 /**
  * Aviso de función que mezcla convenios.
@@ -286,12 +287,20 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
    * (`numeroCategoria`) es el del GRUPO salarial — lo compartían decenas de categorías distintas, así
    * que como etiqueta no identificaba nada. Lo que identifica es el código de ARCA de 6 dígitos.
    */
-  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; convenio: string }> =>
+  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; nombre: string; convenio: string; valoracion?: { name: string; color?: string } }> =>
     (role.data?.categoriasSat || []).map((c: any, i: number) => {
       const vigente = catalogoPorId.get(String(c.id));
       const codigo = String(vigente?.data?.codigoArca || '').trim();
       const nombre = vigente?.data?.nombre || vigente?.name || c.nombre || c.name || 'Sin nombre';
-      return { key: `${c.id ?? i}`, label: codigo ? `${codigo} · ${nombre}` : nombre, convenio: String(vigente?.data?.convenio || '').trim() };
+      // El nivel de CADA categoría, no el de la función: es lo que decide a qué proyecto se le ofrece.
+      const v = c.valoracionId ? valoracionPorId.get(String(c.valoracionId)) : undefined;
+      return {
+        key: `${c.id ?? i}`,
+        label: codigo ? `${codigo} · ${nombre}` : nombre,
+        nombre,
+        convenio: String(vigente?.data?.convenio || '').trim(),
+        valoracion: v ? { name: String(v.name), color: String(v.color || '') } : undefined,
+      };
     });
 
   /** Los CCT distintos a los que apunta la función. Más de uno es el problema que hay que ver. */
@@ -552,7 +561,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                     {categoriasDe(role).map((c) => (
-                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} />
+                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} valoracion={c.valoracion} />
                     ))}
                   </>
                 )}
@@ -598,7 +607,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                             {categoriasDe(role).map((c) => (
-                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} />
+                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} valoracion={c.valoracion} />
                             ))}
                           </>
                         )}

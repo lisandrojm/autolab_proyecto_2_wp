@@ -76,7 +76,7 @@ export const contratoVariables: GrupoVariables[] = [
   },
   {
     grupo: "Categoría",
-    vars: ["{{catSatNumero}}", "{{categoriaSat}}"],
+    vars: ["{{catSatNumero}}", "{{categoriaSat}}", "{{convenio}}", "{{codigoArca}}"],
   },
   {
     grupo: "Empresa (se toma del proyecto)",

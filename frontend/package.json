@@ -24,7 +24,8 @@
     "test:asistente-version": "tsx --test src/api/asistente.test.ts",
     "test:webhook-url": "tsx --test src/utils/urlWebhook.test.ts",
     "test:cbu": "tsx --test src/utils/cbu.test.ts",
-    "test:cascada-arca": "tsx --test src/components/contratos/cascadaArca.test.ts"
+    "test:cascada-arca": "tsx --test src/components/contratos/cascadaArca.test.ts",
+    "test:dias": "tsx --test src/components/contratos/diasDeTrabajo.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

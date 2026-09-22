@@ -21,7 +21,8 @@ import { InfoModal } from '../components/ui/InfoModal';
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { getImageUrl } from '../utils/imageHelpers';
-import { useValoraciones } from '../components/proyectos/ChipValoracion';
+import { badgesDeValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
+import { useThemeStore } from '../stores/themeStore';
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
 
 const HELP_KEY = 'clientProjects' as const;
@@ -75,6 +76,7 @@ export const ClientProjectsPage: React.FC = () => {
   // La valoración va aparte de `formData`: es un modo (automática / fijada) y lo que se manda al
   // guardar depende de cómo estaba (ver `cambiosDeValoracion`).
   const valoraciones = useValoraciones();
+  const temaOscuro = useThemeStore((st) => st.theme) === 'dark';
   const [valoracionElegida, setValoracionElegida] = useState('');
 
   // form state
@@ -941,6 +943,8 @@ export const ClientProjectsPage: React.FC = () => {
                       text: client?.name || 'Cliente',
                       variant: 'cyan',
                     },
+                    // La valoración, si tiene: es lo que decide qué categorías se le ofrecen al contratar.
+                    ...badgesDeValoracion(project, valoraciones, temaOscuro),
                   ],
                   badgesPosition: 'top',
                 }}

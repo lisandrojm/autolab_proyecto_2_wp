@@ -258,6 +258,12 @@ export function getDummyDocVariables(): Record<string, string> {
     // Contrato / proyecto
     nombreProyecto: "426_LN+",
     nombreCliente: "REELSHORT",
+    // Categoría y encuadre: sin valores de ejemplo, la previsualización mostraba «{{convenio}}» literal.
+    catSatNumero: "3",
+    categoriaSat: "Operador de Cámaras",
+    nombreCategoriaSat: "Operador de Cámaras",
+    convenio: "0634/11",
+    codigoArca: "035313",
     rolFrame: "Musicalizador",
     nombreRolFrame: "Musicalizador",
     nombreContrato: "Jornada 2030 SRL",

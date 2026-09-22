@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
@@ -29,6 +29,22 @@ export const DIAS_SEMANA = [
   { indice: 5, corto: "Vi", largo: "Viernes" },
   { indice: 6, corto: "Sá", largo: "Sábado" },
 ] as const;
+
+/**
+ * LA SEMANA DE SIEMPRE PARA 5, 6 Y 7 DÍAS: lunes a viernes, lunes a sábado, y toda.
+ *
+ * Con esas tres cantidades los días casi nunca son otros, y tildarlos uno por uno cada vez es pedir
+ * cinco clics para escribir lo obvio. Debajo de 5 no se adivina nada: trabajar tres días puede ser
+ * lunes-miércoles-viernes o martes-jueves-sábado, y elegir por quien carga sería inventar el dato.
+ *
+ * `null` = no hay una semana estándar para esa cantidad.
+ */
+export const semanaEstandar = (jornadas: number): number[] | null => {
+  if (jornadas === 5) return [1, 2, 3, 4, 5];
+  if (jornadas === 6) return [1, 2, 3, 4, 5, 6];
+  if (jornadas === 7) return [0, 1, 2, 3, 4, 5, 6];
+  return null;
+};
 
 /**
  * Cuántos días se pueden marcar como máximo.
@@ -153,6 +169,20 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
   const ayuda = mobile ? "text-[11px] text-slate-400" : "text-[10px] text-gray-400 ml-1";
   const error = "text-[11px] font-medium text-red-600 dark:text-red-400 ml-0.5";
 
+  /*
+    La semana estándar también cuando la cantidad ya venía puesta y no hay ningún día marcado: pasa al
+    abrir el formulario, donde los 5 días por semana los trae el tipo de contrato y los días quedaban
+    todos en blanco con el aviso «0 de 5 elegidos».
+
+    Sólo con la lista VACÍA: lo que alguien ya eligió no se pisa. En rotativo tampoco, que ahí los días
+    marcados son entre los que rota y no los que trabaja.
+  */
+  useEffect(() => {
+    if (rotativos || dias.length > 0) return;
+    const estandar = semanaEstandar(jornadas);
+    if (estandar) onDias(estandar);
+  }, [jornadas, rotativos, dias.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const alternarDia = (indice: number) => {
     if (dias.includes(indice)) return onDias(dias.filter((d) => d !== indice));
     // Se frena al tope en vez de dejar marcar y avisar después: el límite es la regla, no un aviso.
@@ -197,7 +227,9 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
               afirmando algo que la propia cantidad contradice. En rotativo no se recorta: el pool
               puede ser más grande que las jornadas, que es justamente el punto.
             */
-            if (!rotativos && dias.length > n) onDias(dias.slice(0, n));
+            const estandar = semanaEstandar(n);
+            if (!rotativos && estandar) onDias(estandar);
+            else if (!rotativos && dias.length > n) onDias(dias.slice(0, n));
           }}
           className={`${input} ${errorDiasPorSemana ? "border-red-400 dark:border-red-700" : ""}`}
           placeholder="Ej: 5"

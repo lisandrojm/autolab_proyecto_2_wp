@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useThemeStore } from '../stores/themeStore';
-import { ChipValoracionDelProyecto, estiloValoracion, idValoracionDe, tituloValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
+import { badgesDeValoracion, ChipValoracionDelProyecto, idValoracionDe, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
@@ -163,7 +163,6 @@ export const ProjectsPage: React.FC = () => {
   const valoraciones = useValoraciones();
   const temaOscuro = useThemeStore((s) => s.theme) === 'dark';
   const [filtroValoracion, setFiltroValoracion] = useState('');
-  const valoracionPorId = useMemo(() => new Map(valoraciones.map((v) => [v._id, v])), [valoraciones]);
 
   const clientMap = useMemo(() => {
     const map = new Map<string, Client>();
@@ -440,19 +439,7 @@ export const ProjectsPage: React.FC = () => {
                       variant: 'cyan',
                     },
                     // La valoración, si tiene: es lo que decide qué categorías se le ofrecen al contratar.
-                    ...(() => {
-                      const v = valoracionPorId.get(idValoracionDe(project.valoracionId));
-                      if (!v) return [];
-                      const color = String(v.color || '');
-                      return [
-                        {
-                          text: `${String(v.name)}${project.valoracionManual ? ' *' : ''}`,
-                          className: color ? 'border font-bold' : 'border font-bold border-gray-400 text-gray-600 dark:text-gray-300',
-                          style: estiloValoracion(color, temaOscuro),
-                          title: tituloValoracion(String(v.name), project.valoracionManual),
-                        },
-                      ];
-                    })(),
+                    ...badgesDeValoracion(project, valoraciones, temaOscuro),
                   ],
                   badgesPosition: 'top',
                 }}

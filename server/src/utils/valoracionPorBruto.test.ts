@@ -24,7 +24,7 @@ const BRONCE = { _id: "bronce", orden: 4 };
 const ORO_PROD = { _id: "oro", orden: 1 };
 const PLATA_PROD = { _id: "plata", orden: 2 };
 
-const cat = (id: string, bruto: number | null, convenio = "0634/11"): CategoriaParaValorar => ({ id, convenio, bruto });
+const cat = (id: string, bruto: number | null, convenio = "0634/11"): CategoriaParaValorar => ({ id, convenio, bruto, nombre: id });
 const nivelDe = (r: Map<string, { valoracionId: string | null }>, id: string) => r.get(id)?.valoracionId ?? null;
 
 describe("valorarPorBruto — de menor a mayor", () => {
@@ -51,11 +51,23 @@ describe("valorarPorBruto — de menor a mayor", () => {
     assert.equal(nivelDe(r, "cara"), "oro");
   });
 
-  it("mismo bruto, mismo nivel: dos empatadas en la más barata son las dos Plata", () => {
-    const r = valorarPorBruto([cat("apuntador", 5460313), cat("tira", 5460313), cat("unitario", 6066032)], [PLATA, ORO]);
-    assert.equal(nivelDe(r, "apuntador"), "plata");
-    assert.equal(nivelDe(r, "tira"), "plata");
-    assert.equal(nivelDe(r, "unitario"), "oro");
+  it("EMPATADAS EN EL BRUTO: ocupan niveles seguidos, no comparten uno", () => {
+    /*
+      El caso real es Sonidista: Compaginador Musical y Operador de Sonido cobran lo mismo y
+      Microfonista menos. Compartiendo nivel, con tres niveles Oro quedaba vacío y un proyecto Oro
+      no tenía ninguna categoría que ofrecer.
+    */
+    const r = valorarPorBruto([cat("operador", 1481790), cat("compaginador", 1481790), cat("microfonista", 1166371)], [ORO, PLATA, BRONCE]);
+    assert.equal(nivelDe(r, "microfonista"), "bronce");
+    assert.equal(nivelDe(r, "compaginador"), "plata", "entre las dos que cobran igual, desempata el nombre");
+    assert.equal(nivelDe(r, "operador"), "oro");
+  });
+
+  it("el desempate por nombre no depende del orden en que llegan", () => {
+    const a = valorarPorBruto([cat("compaginador", 100), cat("operador", 100)], [ORO, PLATA]);
+    const b = valorarPorBruto([cat("operador", 100), cat("compaginador", 100)], [ORO, PLATA]);
+    assert.deepEqual([nivelDe(a, "compaginador"), nivelDe(a, "operador")], ["plata", "oro"]);
+    assert.deepEqual([nivelDe(b, "compaginador"), nivelDe(b, "operador")], ["plata", "oro"]);
   });
 
   it("con cuatro niveles escala sola: Bronce, Plata, Oro, Platino", () => {
@@ -77,10 +89,10 @@ describe("valorarPorBruto — lo que queda sin valorar", () => {
     assert.match(r.get("unica")?.motivo || "", /única/);
   });
 
-  it("todas al mismo bruto: no hay una más barata", () => {
+  it("dos al mismo bruto SÍ se valoran: ocupan los dos niveles más bajos", () => {
     const r = valorarPorBruto([cat("a", 1000), cat("b", 1000)], [PLATA, ORO]);
-    assert.equal(nivelDe(r, "a"), null);
-    assert.match(r.get("a")?.motivo || "", /mismo/);
+    assert.equal(nivelDe(r, "a"), "plata");
+    assert.equal(nivelDe(r, "b"), "oro");
   });
 
   it("sin bruto no se valora, y no arrastra a las demás", () => {

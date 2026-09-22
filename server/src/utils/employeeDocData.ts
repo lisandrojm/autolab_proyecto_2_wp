@@ -315,6 +315,13 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
   // Número de categoría SAT (lookup por el id externo guardado en el contrato)
   let catSatNumero = "";
   let catSatNombre = c.nombre_categoria_sat || "";
+  /*
+    El CONVENIO y el CÓDIGO DE ARCA salen del catálogo, no del contrato: el contrato guarda el id y
+    el nombre de la categoría, y el encuadre no se puede explicar sin decir de qué convenio es ni con
+    qué código se declaró.
+  */
+  let catSatConvenio = "";
+  let catSatCodigoArca = "";
   if (c.categoria_sat_id != null) {
     try {
       // Resuelve contra el modelo nuevo (Categoria + su grupo) con fallback a la tabla vieja.
@@ -324,6 +331,8 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
       if (cat) {
         catSatNumero = String((cat as any).data?.numeroCategoria ?? (cat as any).data?.id ?? "");
         catSatNombre = catSatNombre || (cat as any).name || (cat as any).data?.nombre || "";
+        catSatConvenio = String((cat as any).data?.convenio || "").trim();
+        catSatCodigoArca = String((cat as any).data?.codigoArca || "").trim();
       }
     } catch {
       /* sin categoría → queda vacío */
@@ -413,6 +422,8 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
     catSatNumero,
     categoriaSat: catSatNombre,
     nombreCategoriaSat: catSatNombre,
+    convenio: catSatConvenio,
+    codigoArca: catSatCodigoArca,
 
     // ── Sueldos ──
     SueldoJornada: num(sueldoJornadaNum),

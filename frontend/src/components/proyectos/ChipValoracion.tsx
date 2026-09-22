@@ -84,6 +84,27 @@ export const ChipValoracion: React.FC<{ nombre: string; color?: string; manual?:
   );
 };
 
+/**
+ * El tag como badge de una TARJETA (`Card`), que recibe texto y estilo en vez de componentes.
+ *
+ * Devuelve una lista para poder desparramarla (`...`) entre los otros badges: vacía si el proyecto no
+ * está valorado, que es lo mismo que no ponerlo.
+ */
+export const badgesDeValoracion = (project: Pick<Project, "valoracionId" | "valoracionManual"> | null | undefined, valoraciones: SimpleCatalogItem[], oscuro: boolean) => {
+  const id = idValoracionDe(project?.valoracionId);
+  const v = id ? valoraciones.find((x) => x._id === id) : undefined;
+  if (!v) return [];
+  const color = String(v.color || "");
+  return [
+    {
+      text: `${String(v.name)}${project?.valoracionManual ? " *" : ""}`,
+      className: color ? "border font-bold" : "border font-bold border-gray-400 text-gray-600 dark:text-gray-300",
+      style: estiloValoracion(color, oscuro),
+      title: tituloValoracion(String(v.name), project?.valoracionManual),
+    },
+  ];
+};
+
 /** El tag de un proyecto, resuelto. No dibuja nada si el proyecto no está valorado. */
 export const ChipValoracionDelProyecto: React.FC<{ project: Pick<Project, "valoracionId" | "valoracionManual">; valoraciones: SimpleCatalogItem[]; className?: string }> = ({ project, valoraciones, className }) => {
   const v = useValoracionDelProyecto(project, valoraciones);

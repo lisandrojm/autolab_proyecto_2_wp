@@ -5,10 +5,15 @@
  * la CATEGORÍA, de su sueldo: dentro de una función, la más barata es la de nivel bajo.
  *
  * La regla, dentro de cada convenio de la función, de MENOR A MAYOR:
- *   - los brutos distintos se ordenan de menor a mayor;
- *   - el más barato toma el nivel más bajo, el siguiente el que sigue, y así;
- *   - si hay más brutos que niveles, los que sobran quedan en el nivel más alto;
- *   - dos categorías con el MISMO bruto reciben el mismo nivel.
+ *   - las categorías se ordenan de la más barata a la más cara;
+ *   - la primera toma el nivel más bajo, la siguiente el que sigue, y así;
+ *   - si hay más categorías que niveles, las que sobran quedan en el nivel más alto.
+ *
+ * EMPATADAS EN EL BRUTO: TAMBIÉN OCUPAN NIVELES SEGUIDOS, en el orden de la escala. Compartían nivel
+ * —«si cobran lo mismo, valen lo mismo»— y eso dejaba niveles sin nadie: Sonidista tiene Compaginador
+ * Musical y Operador de Sonido en $1.481.789,76 y Microfonista más abajo, así que con tres niveles
+ * Oro quedaba vacío y un proyecto Oro no tenía qué ofrecer. Entre dos que cobran igual, el desempate
+ * es el NOMBRE, para que la sugerencia sea siempre la misma la pida quien la pida.
  *
  * Con Plata y Oro: la más barata Plata, el resto Oro. Un proyecto Plata recibe sola la más barata
  * —que es para lo que existe esto— y uno Oro elige entre las caras. Con Bronce y Platino la regla
@@ -18,12 +23,11 @@
  * valoración (lo exige ARCA). Si la más barata de la función fuera de otro convenio, un proyecto
  * Plata que contrata por éste se quedaría sin opción de su nivel.
  *
- * QUEDA SIN VALORAR —y se dice por qué— lo que no tiene elección por precio:
- *   - una categoría sin bruto: no se puede decir si es la barata;
- *   - un convenio con una sola categoría, o con todas al mismo bruto. Valorarla como Plata dejaría a
- *     un proyecto Oro sin ninguna de su nivel, y el server le exigiría motivo en cada alta por una
- *     categoría que igual era la única posible. Sin valorar, el modo permisivo la ofrece y el alta
- *     la elige sola.
+ * QUEDA SIN VALORAR —y se dice por qué— lo que no tiene nada que elegir:
+ *   - una categoría sin bruto: no se puede ubicar en la escala;
+ *   - un convenio con UNA SOLA categoría. Valorarla dejaría a los demás niveles sin ninguna, y el
+ *     server pediría motivo en cada alta por una categoría que igual era la única posible. Sin
+ *     valorar, el modo permisivo la ofrece y el alta la elige sola.
  *
  * Una sola implementación, del lado del server: la usan el formulario de Roles Empresa (que la pide
  * para sugerir) y el script que la aplica a todas las funciones. Dos copias —una en cada lado—
@@ -34,6 +38,8 @@ export interface CategoriaParaValorar {
   id: string;
   convenio: string;
   bruto: number | null | undefined;
+  /** Sólo para desempatar dos que cobran lo mismo. Sin nombre, desempata el id. */
+  nombre?: string;
 }
 
 export interface NivelParaValorar {
@@ -70,19 +76,17 @@ export function valorarPorBruto(categorias: CategoriaParaValorar[], niveles: Niv
   for (const grupo of porConvenio.values()) {
     for (const c of grupo) if (!brutoValido(c.bruto)) resultado.set(c.id, { valoracionId: null, motivo: "no tiene bruto en el catálogo" });
 
-    const distintos = [...new Set(grupo.map((c) => c.bruto).filter(brutoValido))].sort((a, b) => a - b);
-    if (distintos.length < 2) {
-      const motivo = distintos.length === 0 ? "no tiene bruto en el catálogo" : grupo.filter((c) => brutoValido(c.bruto)).length === 1 ? "es la única de su convenio: no hay qué elegir" : "todas las de su convenio cobran lo mismo";
-      for (const c of grupo) if (brutoValido(c.bruto)) resultado.set(c.id, { valoracionId: null, motivo });
+    // De la más barata a la más cara; entre dos que cobran igual, por nombre (y por id si tampoco hay).
+    const ordenadas = grupo.filter((c) => brutoValido(c.bruto)).sort((a, b) => (a.bruto as number) - (b.bruto as number) || (a.nombre || "").localeCompare(b.nombre || "") || a.id.localeCompare(b.id));
+    if (ordenadas.length < 2) {
+      for (const c of ordenadas) resultado.set(c.id, { valoracionId: null, motivo: "es la única de su convenio: no hay qué elegir" });
       continue;
     }
 
-    for (const c of grupo) {
-      if (!brutoValido(c.bruto)) continue;
-      const puesto = distintos.indexOf(c.bruto);
+    ordenadas.forEach((c, puesto) => {
       const nivel = escala[Math.min(puesto, escala.length - 1)];
       resultado.set(c.id, { valoracionId: String(nivel._id) });
-    }
+    });
   }
   return resultado;
 }
