@@ -6,7 +6,7 @@ import UserProject from "../models/UserProject.js";
 import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
-import { sugerirPorBruto, planValoracionPorBruto, aplicarPlan } from "../services/valorarFunciones.js";
+import { sugerirPorBruto } from "../services/valorarFunciones.js";
 
 /**
  * ABM de valoraciones comerciales (Plata, Oro…).
@@ -207,13 +207,13 @@ router.post("/bulk", requireTenant, authenticateToken, (_req, res) => {
   ── LAS CATEGORÍAS SE VALORAN POR BRUTO ──
 
   El proyecto toma su valoración del margen; la categoría, de su sueldo (la regla, con sus tests, en
-  `utils/valoracionPorBruto.ts`). Estas tres rutas la exponen:
+  `utils/valoracionPorBruto.ts`). `sugerir` la expone para el formulario de Roles Empresa, que la
+  pide con lo que tiene tildado y la pone sola en lo que nadie eligió a mano. Se pide por CONJUNTO
+  porque «la más barata» es relativa a las otras.
 
-  - `sugerir`: para el formulario de Roles Empresa, que la pide con lo que tiene tildado y la pone
-    sola en lo que nadie eligió a mano. Se pide por CONJUNTO porque «la más barata» es relativa.
-  - `plan`: qué cambiaría en todas las funciones. No escribe: es lo que se muestra antes de confirmar.
-  - `aplicar`: lo escribe. Recalcula el plan acá en vez de aceptar uno del cliente — lo que se escribe
-    en la base lo decide el server, no un cuerpo que pudo armarse a mano.
+  Aplicarla a TODAS las funciones de una vez —cuando se agrega un nivel, por ejemplo— es el script
+  `valorarFuncionesPorBruto` (con modo en seco). Hubo un botón para eso en la pantalla y se sacó: en
+  el día a día no tenía nada que hacer, porque cada función ya se valora sola al editarla.
 */
 router.post("/por-bruto/sugerir", requireTenant, authenticateToken, async (req: Req, res: Response) => {
   try {
@@ -222,27 +222,6 @@ router.post("/por-bruto/sugerir", requireTenant, authenticateToken, async (req: 
   } catch (error) {
     console.error("Sugerir valoración por bruto error:", error);
     res.status(500).json({ error: "No se pudo calcular la valoración por bruto." });
-  }
-});
-
-router.post("/por-bruto/plan", requireTenant, authenticateToken, async (req: Req, res: Response) => {
-  try {
-    const { operaciones, ...plan } = await planValoracionPorBruto(req.tenantObjectId!, { incluirValoradas: (req.body as { incluirValoradas?: unknown })?.incluirValoradas === true });
-    res.json({ ...plan, categorias: operaciones.length });
-  } catch (error) {
-    console.error("Plan de valoración por bruto error:", error);
-    res.status(500).json({ error: "No se pudo armar el plan de valoración." });
-  }
-});
-
-router.post("/por-bruto/aplicar", requireTenant, authenticateToken, async (req: Req, res: Response) => {
-  try {
-    const plan = await planValoracionPorBruto(req.tenantObjectId!, { incluirValoradas: (req.body as { incluirValoradas?: unknown })?.incluirValoradas === true });
-    const categorias = await aplicarPlan(plan);
-    res.json({ funciones: plan.funciones.length, categorias, salteadas: plan.salteadas.length });
-  } catch (error) {
-    console.error("Aplicar valoración por bruto error:", error);
-    res.status(500).json({ error: "No se pudo aplicar la valoración por bruto. Puede haber quedado aplicada en parte: volvé a ver el plan, que muestra lo que falta." });
   }
 });
 

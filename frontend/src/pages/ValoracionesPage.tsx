@@ -3,7 +3,6 @@ import { faRankingStar } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 import { ChipValoracion } from "../components/proyectos/ChipValoracion";
-import { ValorarPorBruto } from "../components/valoraciones/ValorarPorBruto";
 
 const valoracionesApi = createSimpleCatalogApi("/valoraciones");
 
@@ -79,8 +78,6 @@ export const ValoracionesPage: React.FC = () => (
     */
     permiteImportExcel={false}
     helpKey="valoraciones"
-    // El margen valora el PROYECTO; el bruto, las CATEGORÍAS. Esto aplica la segunda regla a todas las funciones.
-    accionesEncabezado={<ValorarPorBruto />}
     // La otra mitad de la valoración, al lado del margen del proyecto: qué categorías le tocan por bruto.
     columnasCalculadas={[{ label: "Categorías · bruto", despuesDe: "margenHasta", render: (item, todos) => <span className="whitespace-nowrap text-xs">{categoriasQueLeTocan(item, todos)}</span> }]}
     /*

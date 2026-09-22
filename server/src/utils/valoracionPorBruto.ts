@@ -26,8 +26,8 @@
  *     la elige sola.
  *
  * Una sola implementación, del lado del server: la usan el formulario de Roles Empresa (que la pide
- * para sugerir) y la acción de Valoraciones que la aplica a todas las funciones. Dos copias —una en
- * cada lado— terminarían diciendo cosas distintas.
+ * para sugerir) y el script que la aplica a todas las funciones. Dos copias —una en cada lado—
+ * terminarían diciendo cosas distintas.
  */
 
 export interface CategoriaParaValorar {

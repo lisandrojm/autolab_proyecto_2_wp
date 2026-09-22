@@ -8,9 +8,9 @@ import { valorarPorBruto, ValoracionSugerida } from "../utils/valoracionPorBruto
  * La regla de `valorarPorBruto` aplicada a datos reales: las funciones de Roles Empresa, el catálogo
  * de categorías y las valoraciones del tenant.
  *
- * La usan tres lugares, y por eso vive acá y no en cada uno: el formulario de Roles Empresa (que pide
- * sugerencias mientras se tildan categorías), la acción «Valorar por bruto» de la pantalla de
- * Valoraciones y el script `valorarFuncionesPorBruto`.
+ * La usan dos lugares, y por eso vive acá y no en cada uno: el formulario de Roles Empresa (que pide
+ * sugerencias mientras se tildan categorías) y el script `valorarFuncionesPorBruto`, que la aplica a
+ * todas las funciones de una vez.
  *
  * El bruto sale del CATÁLOGO vigente, no de la copia guardada en la función: esa copia es de cuando
  * se asoció la categoría y puede ser de una paritaria anterior.

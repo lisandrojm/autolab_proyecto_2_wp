@@ -8,7 +8,7 @@ import { planValoracionPorBruto, aplicarPlan } from "../services/valorarFuncione
  *
  * La regla —de menor a mayor: la más barata de cada convenio toma el nivel más bajo, la siguiente
  * el que sigue y las que sobran el más alto— vive en `utils/valoracionPorBruto.ts`, con sus tests.
- * Este script y la acción «Valorar por bruto» de la pantalla de Valoraciones usan la misma, vía
+ * Este script y la sugerencia del formulario de Roles Empresa usan la misma, vía
  * `services/valorarFunciones.ts`: no hay una segunda copia que se desalinee.
  *
  * Existe porque, hasta que una función tiene categorías valoradas, el alta de un contrato está en
