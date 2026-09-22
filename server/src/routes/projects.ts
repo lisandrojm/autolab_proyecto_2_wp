@@ -1712,14 +1712,29 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
     ]);
     const nombreValoracion = new Map((valoraciones as any[]).map((v) => [String(v._id), String(v.name)]));
 
+    // Primero se arma la lista y DESPUÉS se buscan los nombres, sólo de los que quedaron en ella: ver
+    // el comentario de la búsqueda al revés, más abajo.
+    const desalineados: Array<{ up: any; contrato: any; indice: number; delContrato: string }> = [];
+    for (const up of ups as any[]) {
+      (up.contracts || []).forEach((c: any, indice: number) => {
+        const delContrato = c?.valoracion_id ? String(c.valoracion_id) : "";
+        // Un contrato SIN valoración no está desalineado: es anterior a la feature, o su función no
+        // estaba valorada. Marcarlo como problema sería inventar trabajo sobre datos que nunca se
+        // pidieron.
+        if (!delContrato || delContrato === delProyecto) return;
+        desalineados.push({ up, contrato: c, indice, delContrato });
+      });
+    }
+
     /*
       Sólo ids VÁLIDOS. Hay vínculos persona↔proyecto sin `userId` (huérfanos de FRAME), y
       `String(undefined)` da el texto "undefined", que `filter(Boolean)` deja pasar y el `$in` convierte
       en un CastError: la ruta entera contestaba 500 por un solo documento roto entre cientos. Se vio
       recién contra 426_LN+, con 214 personas; en un proyecto chico no aparecía.
     */
-    const userIds = [...new Set((ups as any[]).map((up) => (up.userId ? String(up.userId) : "")).filter((id) => mongoose.Types.ObjectId.isValid(id)))];
-    const usuarios = await User.find({ _id: { $in: userIds } }).select("firstName lastName email").lean();
+    const vinculos = [...new Set(desalineados.map((d) => d.up))];
+    const userIds = [...new Set(vinculos.map((up) => (up.userId ? String(up.userId) : "")).filter((id) => mongoose.Types.ObjectId.isValid(id)))];
+    const usuarios = userIds.length > 0 ? await User.find({ _id: { $in: userIds } }).select("firstName lastName email").lean() : [];
     const nombrePersona = new Map((usuarios as any[]).map((u) => [String(u._id), `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email]));
 
     /*
@@ -1728,42 +1743,40 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
       Hay vínculos con `userId` vacío (en la base de desarrollo, los 214 de 426_LN+) y la persona se
       encuentra por el otro lado. Sin este respaldo la columna «Persona» salía en blanco, que es
       justo el dato que hace falta para ir a revisar el contrato.
+
+      Se busca SÓLO por los desalineados, no por todos los vínculos del proyecto: `metadata.projects`
+      no tiene índice, y con los 214 la consulta recorría la colección de usuarios entera y la ruta
+      tardaba ~30 s. Los desalineados son un puñado; la mayoría de las veces, ninguno.
     */
-    const upSinUsuario = (ups as any[]).filter((up) => !up.userId).map((up) => up._id);
+    const upSinUsuario = vinculos.filter((up) => !up.userId).map((up) => up._id);
     const nombrePorUp = new Map<string, string>();
     if (upSinUsuario.length > 0) {
-      const porElOtroLado = await User.find({ "metadata.projects": { $in: upSinUsuario } }).select("firstName lastName email metadata.projects").lean();
+      const porElOtroLado = await User.find({ tenantId: req.tenantObjectId, "metadata.projects": { $in: upSinUsuario } })
+        .select("firstName lastName email metadata.projects")
+        .lean();
       for (const u of porElOtroLado as any[]) {
         const nombre = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email;
         for (const ref of u.metadata?.projects || []) nombrePorUp.set(String(ref), nombre);
       }
     }
 
-    const contratos: any[] = [];
-    for (const up of ups as any[]) {
-      (up.contracts || []).forEach((c: any, indice: number) => {
-        const delContrato = c?.valoracion_id ? String(c.valoracion_id) : "";
-        // Un contrato SIN valoración no está desalineado: es anterior a la feature, o su función no
-        // estaba valorada. Marcarlo como problema sería inventar trabajo sobre datos que nunca se
-        // pidieron.
-        if (!delContrato || delContrato === delProyecto) return;
-        contratos.push({
-          userId: String(up.userId),
-          persona: (up.userId ? nombrePersona.get(String(up.userId)) : nombrePorUp.get(String(up._id))) || "",
-          contratoIndex: indice,
-          categoria: c.nombre_categoria_sat || "",
-          funcion: c.nombre_rol_frame || "",
-          desde: c.fecha_alta_contrato || "",
-          hasta: c.fecha_baja_contrato || "",
-          // El nombre GUARDADO en el contrato primero: es el que regía cuando se firmó, y puede
-          // diferir del actual si la valoración se renombró.
-          valoracionContrato: c.nombre_valoracion || nombreValoracion.get(delContrato) || "",
-          valoracionProyecto: nombreValoracion.get(delProyecto) || "",
-          conOverride: !!c.valoracionOverride?.motivo,
-          motivoOverride: c.valoracionOverride?.motivo || null,
-        });
-      });
-    }
+    const contratos = desalineados.map(({ up, contrato: c, indice, delContrato }) => ({
+      // El UserProject siempre existe; el `userId`, no (ver arriba). Es lo que identifica la fila.
+      userProjectId: String(up._id),
+      userId: up.userId ? String(up.userId) : null,
+      persona: (up.userId ? nombrePersona.get(String(up.userId)) : nombrePorUp.get(String(up._id))) || "",
+      contratoIndex: indice,
+      categoria: c.nombre_categoria_sat || "",
+      funcion: c.nombre_rol_frame || "",
+      desde: c.fecha_alta_contrato || "",
+      hasta: c.fecha_baja_contrato || "",
+      // El nombre GUARDADO en el contrato primero: es el que regía cuando se firmó, y puede
+      // diferir del actual si la valoración se renombró.
+      valoracionContrato: c.nombre_valoracion || nombreValoracion.get(delContrato) || "",
+      valoracionProyecto: nombreValoracion.get(delProyecto) || "",
+      conOverride: !!c.valoracionOverride?.motivo,
+      motivoOverride: (c.valoracionOverride?.motivo as string | undefined) || null,
+    }));
 
     res.json({
       proyecto: (project as any).name,
