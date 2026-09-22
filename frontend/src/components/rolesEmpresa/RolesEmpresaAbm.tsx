@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
+import { roleFrameAPI, RoleFrameItem, CategoriaAsociada, CoberturaFuncion } from '../../api/roleFrames';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { categoriaSatAPI, CategoriaSatItem, esElegible } from '../../api/categoriasSat';
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -9,17 +10,30 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
 
+const valoracionesApi = createSimpleCatalogApi('/valoraciones');
+
 /**
  * Badge de categoría: código de ARCA + nombre, con el convenio del que cuelga.
  *
  * `onQuitar` lo convierte en removible, para el formulario. El mismo badge que usan las tarjetas del
  * listado: es la misma cosa mostrada en dos lados, y dos versiones terminan divergiendo.
  */
-const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; onQuitar?: () => void }> = ({ label, convenio, onQuitar }) => (
+const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; valoracion?: { name: string; color?: string }; onQuitar?: () => void }> = ({ label, convenio, valoracion, onQuitar }) => (
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
     <FontAwesomeIcon icon={faLayerGroup} className="h-2.5 w-2.5" />
     {convenio && <span className="font-mono opacity-70">{convenio}</span>}
     {label}
+    {/* El nivel, pegado a la categoría: es lo que decide si esta categoría se ofrece o no en un
+        proyecto, así que leerlo aparte obligaría a cruzar dos listas de memoria. */}
+    {valoracion && (
+      <span
+        className="ml-0.5 px-1 rounded-sm font-bold border"
+        style={valoracion.color ? { color: valoracion.color, borderColor: valoracion.color, backgroundColor: `${valoracion.color}1a` } : undefined}
+        title={`Valoración: ${valoracion.name}`}
+      >
+        {valoracion.name}
+      </span>
+    )}
     {onQuitar && (
       <button type="button" onClick={onQuitar} title={`Quitar ${label}`} aria-label={`Quitar ${label}`} className="ml-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
         <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
@@ -40,6 +54,27 @@ const AvisoConveniosMezclados: React.FC<{ convenios: string[] }> = ({ convenios 
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-800" title={`Esta función apunta a categorías de ${convenios.join(' y ')}. Una empleadora tiene que tener habilitado el convenio de la categoría que se elija: si no lo tiene, ARCA rechaza el alta.`}>
     <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
     {convenios.length} convenios
+  </span>
+);
+
+/**
+ * Aviso de función que no cubre todas las valoraciones.
+ *
+ * Mismo formato que `AvisoConveniosMezclados` —recuento afuera, detalle en el `title`— porque es la
+ * misma clase de problema: algo que recién se va a notar al armar un contrato, cuando el selector de
+ * categoría no ofrezca nada para ese proyecto. Verlo acá es poder arreglarlo antes de que haya
+ * alguien esperando el alta.
+ *
+ * En ámbar y no en rojo: una función sin cubrir no genera un rechazo de ARCA como los convenios
+ * mezclados. Es un hueco comercial, no un dato inválido.
+ */
+const AvisoValoracionesFaltantes: React.FC<{ cubre: string[]; faltan: string[] }> = ({ cubre, faltan }) => (
+  <span
+    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+    title={`Esta función cubre ${cubre.length > 0 ? cubre.join(' y ') : 'ninguna valoración'}. Le falta${faltan.length === 1 ? '' : 'n'} ${faltan.join(' y ')}: un proyecto de ese nivel no va a encontrar ninguna categoría para ofrecer.`}
+  >
+    <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+    {cubre.length} de {cubre.length + faltan.length} valoraciones
   </span>
 );
 
@@ -65,7 +100,25 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   const [showModal, setShowModal] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleFrameItem | null>(null);
   const [formName, setFormName] = useState('');
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  /*
+    LAS CATEGORÍAS ELEGIDAS, CON SU VALORACIÓN.
+
+    Era `string[]` y pasó a esto porque la valoración es una propiedad de la ASOCIACIÓN función ↔
+    categoría, no de la categoría: el mismo código de ARCA puede ser Oro acá y Plata en otra función.
+    `valoracionId: null` es «sin valorar», un estado válido — hasta que se cargue, el filtro de
+    contratación no se aplica y todo sigue funcionando como antes.
+  */
+  const [selectedCategorias, setSelectedCategorias] = useState<CategoriaAsociada[]>([]);
+  const idsElegidos = useMemo(() => new Set(selectedCategorias.map((c) => c.categoryId)), [selectedCategorias]);
+  const valoracionDe = (categoryId: string) => selectedCategorias.find((c) => c.categoryId === categoryId)?.valoracionId || '';
+  const ponerValoracion = (categoryId: string, valoracionId: string) =>
+    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId === categoryId ? { ...c, valoracionId: valoracionId || null } : c)));
+
+  /** Las valoraciones del tenant, para los selects. Sólo las activas: son para contratos nuevos. */
+  const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
+  const valoracionPorId = useMemo(() => new Map(valoraciones.map((v) => [v._id, v])), [valoraciones]);
+  /** Cobertura por función, para el aviso del listado. */
+  const [cobertura, setCobertura] = useState<Map<string, CoberturaFuncion>>(new Map());
   const [catSearch, setCatSearch] = useState('');
 
   // View Mode Logic
@@ -119,9 +172,37 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     }
   };
 
+  /*
+    Valoraciones y cobertura, cada una con su catch.
+
+    Si no llegan, el ABM tiene que seguir funcionando exactamente como antes: sin valoraciones el
+    select no se dibuja y `selectedCategorias` guarda `valoracionId: null`, que es «sin valorar» y
+    el estado con el que convive todo lo ya cargado. Tirar la pantalla abajo por un catálogo nuevo
+    sería frenar la contratación por una función que todavía nadie usa.
+  */
+  const fetchValoraciones = async () => {
+    try {
+      setValoraciones(await valoracionesApi.list({ activo: 'true' }));
+    } catch (error) {
+      console.error('Error fetching valoraciones:', error);
+      setValoraciones([]);
+    }
+  };
+
+  const fetchCobertura = async () => {
+    try {
+      setCobertura(new Map((await roleFrameAPI.cobertura()).map((c) => [c._id, c])));
+    } catch (error) {
+      console.error('Error fetching cobertura:', error);
+      setCobertura(new Map());
+    }
+  };
+
   useEffect(() => {
     fetchRoles();
     fetchCategories();
+    fetchValoraciones();
+    fetchCobertura();
   }, []);
 
   const filteredRoles = useMemo(() => {
@@ -154,7 +235,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   const openCreate = () => {
     setEditingRole(null);
     setFormName('');
-    setSelectedCategoryIds([]);
+    setSelectedCategorias([]);
     setCatSearch('');
     setShowModal(true);
   };
@@ -174,16 +255,21 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     const associatedIds = categoriasGuardadas.map((c: any) => c.id).filter((id: any) => id !== undefined && id !== null);
     const associatedNames = categoriasGuardadas.map((c: any) => c.nombre || c.name).filter(Boolean);
 
-    const ids = allCategories
+    /* La valoración viene en la MISMA entrada de `categoriasSat` que la categoría, así que se
+       resuelve por `data.id` (el legacy) y no por el `_id` del catálogo, que ahí no está. */
+    const valoracionPorLegacyId = new Map<number, string | null>(
+      ((selectedRole?.data?.categoriasSat as any[]) || role.data?.categoriasSat || []).map((c: any) => [Number(c?.id), c?.valoracionId ? String(c.valoracionId) : null]),
+    );
+    const asociadas: CategoriaAsociada[] = allCategories
       .filter((cat) => {
         if (associatedIds.length > 0) return cat.data?.id !== undefined && associatedIds.includes(cat.data.id);
         // Fallback para roles guardados antes de que `categoriasSat` tuviera `id` (legado).
         const catName = cat.data?.nombre || cat.name;
         return associatedNames.includes(catName);
       })
-      .map((cat) => cat._id);
+      .map((cat) => ({ categoryId: cat._id, valoracionId: valoracionPorLegacyId.get(Number(cat.data?.id)) ?? null }));
 
-    setSelectedCategoryIds(ids);
+    setSelectedCategorias(asociadas);
     setCatSearch('');
     setShowModal(true);
   };
@@ -197,7 +283,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     try {
       const payload = {
         name: formName.trim(),
-        categoryIds: selectedCategoryIds,
+        categorias: selectedCategorias,
       };
 
       if (editingRole) {
@@ -209,6 +295,9 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
       }
       setShowModal(false);
       fetchRoles();
+      // La cobertura cambia con lo que se acaba de guardar: sin esto el aviso del listado seguiría
+      // mostrando el hueco que la persona acaba de tapar.
+      fetchCobertura();
     } catch (error: any) {
       const message = error.response?.data?.error || 'Error al guardar la función';
       sweetAlert.error('Error', message);
@@ -274,22 +363,28 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
    */
   const categoriasElegidas = useMemo(() => {
     const porId = new Map(allCategories.map((c) => [c._id, c]));
-    return selectedCategoryIds
-      .map((id) => porId.get(id))
-      .filter(Boolean)
-      .map((cat) => {
+    return selectedCategorias
+      .map((sel) => ({ sel, cat: porId.get(sel.categoryId) }))
+      .filter((x) => !!x.cat)
+      .map(({ sel, cat }) => {
         const c = cat as CategoriaSatItem;
         const codigo = String(c.data?.codigoArca || '').trim();
         const nombre = c.data?.nombre || c.name || 'Sin nombre';
-        return { id: c._id, label: codigo ? `${codigo} · ${nombre}` : nombre, convenio: String(c.data?.convenio || '').trim() };
+        const v = sel.valoracionId ? valoracionPorId.get(sel.valoracionId) : undefined;
+        return {
+          id: c._id,
+          label: codigo ? `${codigo} · ${nombre}` : nombre,
+          convenio: String(c.data?.convenio || '').trim(),
+          valoracion: v ? { name: String(v.name), color: String(v.color || '') } : undefined,
+        };
       });
-  }, [allCategories, selectedCategoryIds]);
+  }, [allCategories, selectedCategorias, valoracionPorId]);
 
   /** Los CCT de lo que está tildado ahora mismo: avisa antes de guardar, no después. */
   const conveniosSeleccionados = useMemo(() => {
     const porMongoId = new Map(allCategories.map((c) => [c._id, String(c.data?.convenio || '').trim() || 'sin convenio']));
-    return [...new Set(selectedCategoryIds.map((id) => porMongoId.get(id)).filter(Boolean) as string[])];
-  }, [allCategories, selectedCategoryIds]);
+    return [...new Set(selectedCategorias.map((c) => porMongoId.get(c.categoryId)).filter(Boolean) as string[])];
+  }, [allCategories, selectedCategorias]);
 
   return (
     <div className="space-y-4">
@@ -365,6 +460,10 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                 ) : (
                   <>
                     {conveniosDe(role).length > 1 && <AvisoConveniosMezclados convenios={conveniosDe(role)} />}
+                    {(() => {
+                      const c = cobertura.get(role._id);
+                      return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
+                    })()}
                     {categoriasDe(role).map((c) => (
                       <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} />
                     ))}
@@ -407,6 +506,10 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                         ) : (
                           <>
                             {conveniosDe(role).length > 1 && <AvisoConveniosMezclados convenios={conveniosDe(role)} />}
+                    {(() => {
+                      const c = cobertura.get(role._id);
+                      return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
+                    })()}
                             {categoriasDe(role).map((c) => (
                               <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} />
                             ))}
@@ -459,6 +562,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Convenio</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Cód. ARCA</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Nombre</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Valoración</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Bruto</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Neto</th>
                       </tr>
@@ -474,6 +578,20 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                             <td className="px-4 py-2 text-xs font-mono text-gray-600 dark:text-gray-400">{convenio || <span className="text-red-600 dark:text-red-400 font-sans font-semibold">sin convenio</span>}</td>
                             <td className="px-4 py-2 text-xs font-mono text-gray-600 dark:text-gray-400">{vigente?.data?.codigoArca || <span className="text-red-600 dark:text-red-400 font-sans font-semibold">sin código</span>}</td>
                             <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 font-medium">{vigente?.data?.nombre || vigente?.name || cat.nombre}</td>
+                            {/* Entre el nombre y la plata a propósito: es lo que explica POR QUÉ esa
+                                categoría cuesta lo que cuesta, y leerlo después del importe llega tarde. */}
+                            <td className="px-4 py-2 text-xs">
+                              {(() => {
+                                const v = cat.valoracionId ? valoracionPorId.get(String(cat.valoracionId)) : undefined;
+                                if (!v) return <span className="text-gray-400 dark:text-gray-600">sin valorar</span>;
+                                const color = String(v.color || '');
+                                return (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold border text-[11px]" style={color ? { color, borderColor: color, backgroundColor: `${color}1a` } : undefined}>
+                                    {String(v.name)}
+                                  </span>
+                                );
+                              })()}
+                            </td>
                             <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.sueldoBruto ?? cat.sueldoBruto)?.toLocaleString()}</td>
                             <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.neto ?? cat.neto)?.toLocaleString()}</td>
                           </tr>
@@ -522,12 +640,12 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Categorías * {selectedCategoryIds.length > 0 ? <span className="font-normal text-gray-500 dark:text-gray-400">({selectedCategoryIds.length})</span> : null}
+                  Categorías * {selectedCategorias.length > 0 ? <span className="font-normal text-gray-500 dark:text-gray-400">({selectedCategorias.length})</span> : null}
                 </label>
                 <button
                   type="button"
-                  onClick={() => setSelectedCategoryIds([])}
-                  disabled={selectedCategoryIds.length === 0}
+                  onClick={() => setSelectedCategorias([])}
+                  disabled={selectedCategorias.length === 0}
                   className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
                 >
                   Limpiar
@@ -538,7 +656,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
               {categoriasElegidas.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {categoriasElegidas.map((c) => (
-                    <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} onQuitar={() => setSelectedCategoryIds(selectedCategoryIds.filter((id) => id !== c.id))} />
+                    <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} valoracion={c.valoracion} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
                   ))}
                 </div>
               )}
@@ -584,25 +702,48 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                         <span className="text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
                       </div>
                       {grupo.cats.map((cat) => {
-                        const isChecked = selectedCategoryIds.includes(cat._id);
+                        const isChecked = idsElegidos.has(cat._id);
                         return (
-                          <label key={cat._id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded transition-colors select-none">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {
-                                if (isChecked) {
-                                  setSelectedCategoryIds(selectedCategoryIds.filter((id) => id !== cat._id));
-                                } else {
-                                  setSelectedCategoryIds([...selectedCategoryIds, cat._id]);
-                                }
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{cat.data?.codigoArca || '——————'}</span> · {cat.data?.nombre || cat.name}
-                            </span>
-                          </label>
+                          <div key={cat._id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded transition-colors">
+                            <label className="flex flex-1 min-w-0 items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== cat._id));
+                                  } else {
+                                    setSelectedCategorias([...selectedCategorias, { categoryId: cat._id, valoracionId: null }]);
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                                <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{cat.data?.codigoArca || '——————'}</span> · {cat.data?.nombre || cat.name}
+                              </span>
+                            </label>
+                            {/*
+                              El select SÓLO cuando la categoría está tildada: sin tildar no hay
+                              asociación que valorar, y un control activo sobre algo que no está
+                              elegido promete una decisión que no se guarda en ningún lado.
+                            */}
+                            {isChecked && valoraciones.length > 0 && (
+                              <select
+                                value={valoracionDe(cat._id)}
+                                onChange={(e) => ponerValoracion(cat._id, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                title={`Valoración de ${cat.data?.nombre || cat.name} en esta función`}
+                                className="shrink-0 text-[11px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 px-1.5 py-0.5"
+                              >
+                                <option value="">Sin valorar</option>
+                                {valoraciones.map((v) => (
+                                  <option key={v._id} value={v._id}>
+                                    {String(v.name)}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                         );
                       })}
                     </div>

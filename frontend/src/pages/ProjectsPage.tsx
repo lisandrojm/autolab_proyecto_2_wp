@@ -1,4 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
+
+const valoracionesApi = createSimpleCatalogApi('/valoraciones');
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
@@ -147,6 +150,30 @@ export const ProjectsPage: React.FC = () => {
     }
   };
 
+  /*
+    Las valoraciones del tenant: para pintar el chip y para el filtro.
+
+    Sólo nombre y color — el nivel de cada proyecto lo resolvió el SERVER y viene en
+    `project.valoracionId`. Acá no se recalcula nada: una segunda implementación de la regla diría
+    algo distinto de lo guardado el día que los rangos cambien.
+  */
+  const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
+  const [filtroValoracion, setFiltroValoracion] = useState('');
+  useEffect(() => {
+    void valoracionesApi
+      .list()
+      .then((v) => setValoraciones(Array.isArray(v) ? v : []))
+      .catch(() => setValoraciones([]));
+  }, []);
+
+  const valoracionPorId = useMemo(() => new Map(valoraciones.map((v) => [v._id, v])), [valoraciones]);
+  /** El id de la valoración de un proyecto, venga poblada o pelada. */
+  const idValoracionDe = (p: Project): string => {
+    const ref = (p as any).valoracionId;
+    if (!ref) return '';
+    return typeof ref === 'object' ? String(ref._id || '') : String(ref);
+  };
+
   const clientMap = useMemo(() => {
     const map = new Map<string, Client>();
     clients.forEach((c) => map.set(c._id, c));
@@ -154,9 +181,11 @@ export const ProjectsPage: React.FC = () => {
   }, [clients]);
 
   const filteredProjects = useMemo(() => {
-    if (!searchTerm) return projects;
+    // El filtro por valoración va ANTES del buscador: es un recorte del conjunto, no una búsqueda.
+    const base = filtroValoracion ? projects.filter((p) => idValoracionDe(p) === filtroValoracion) : projects;
+    if (!searchTerm) return base;
     const lowerSearch = searchTerm.toLowerCase();
-    return projects.filter((p) => {
+    return base.filter((p) => {
 
       /*
         El centro de costo también entra en la búsqueda.
@@ -174,7 +203,7 @@ export const ProjectsPage: React.FC = () => {
         fuzzyMatch(centro, lowerSearch)
       );
     });
-  }, [projects, searchTerm, clientMap]);
+  }, [projects, searchTerm, clientMap, filtroValoracion]);
 
   const handleProjectClick = (project: Project) => {
     const cId = typeof project.clientId === 'object' ? project.clientId._id : project.clientId;
@@ -344,6 +373,22 @@ export const ProjectsPage: React.FC = () => {
           <div className="flex-1 w-full">
             <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, cliente o centro de costo..." />
           </div>
+          {/* Sólo si hay valoraciones cargadas: un filtro de una sola opción no es una elección. */}
+          {valoraciones.length > 0 && (
+            <select
+              value={filtroValoracion}
+              onChange={(e) => setFiltroValoracion(e.target.value)}
+              title="Filtrar por valoración"
+              className="shrink-0 px-3 py-2 rounded-md text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200"
+            >
+              <option value="">Todas las valoraciones</option>
+              {valoraciones.map((v) => (
+                <option key={v._id} value={v._id}>
+                  {String(v.name)}
+                </option>
+              ))}
+            </select>
+          )}
           {isXXL && (
             <div className="flex items-center gap-2 shrink-0">
               <button onClick={() => setViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
@@ -567,6 +612,7 @@ export const ProjectsPage: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valoración</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
                   {/* Junto a Sede y con el mismo badge violeta que la ficha y la lista por cliente:
                       es el mismo dato y tiene que reconocerse igual en las tres pantallas. */}
@@ -615,6 +661,25 @@ export const ProjectsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${statusColors[project.status] || statusColors.archived}`}>{statusLabel[project.status] || project.status}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {(() => {
+                          const v = valoracionPorId.get(idValoracionDe(project));
+                          if (!v) return <span className="text-xs text-gray-400 dark:text-gray-600">—</span>;
+                          const color = String(v.color || '');
+                          return (
+                            <span
+                              className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold border whitespace-nowrap"
+                              style={color ? { color, borderColor: color, backgroundColor: `${color}1a` } : undefined}
+                              title={(project as any).valoracionManual ? 'Fijada manualmente' : 'Calculada según el presupuesto'}
+                            >
+                              {String(v.name)}
+                              {/* El asterisco marca que la puso una persona: sin esto, un nivel que
+                                  no coincide con el presupuesto se lee como un error de cálculo. */}
+                              {(project as any).valoracionManual ? <span className="ml-1 opacity-70">*</span> : null}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600 dark:text-gray-400">{sedeName}</span>

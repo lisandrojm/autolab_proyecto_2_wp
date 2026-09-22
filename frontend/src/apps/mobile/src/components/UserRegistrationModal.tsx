@@ -1335,7 +1335,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     `utils/seleccionConvenioCategoria.ts`. Con varios oficios elegidos se SUMAN sus categorías: un
     Animador 2D que además es Asistente de Cámara puede entrar por cualquiera de los dos.
   */
-  const { categorias: categoriasOfrecidasLista, rolNoTieneCategoriasDelConvenio } = useMemo(
+  const { categorias: categoriasOfrecidasLista, rolNoTieneCategoriasDelConvenio, ocultasPorValoracion, rolNoTieneCategoriasDeLaValoracion } = useMemo(
     () =>
       categoriasOfrecidas({
         rolesFrame: roleFrames.filter((rf) => formData.roleFrameIds.includes(rf._id)),
@@ -1344,8 +1344,22 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         categorias: categoriasSat,
         verTodasDelConvenio,
         categoriaElegidaId: categoriasSat.find((c) => c._id === formData.categoriaSatId)?.data?.id,
+        /*
+          La valoración del proyecto elegido.
+
+          Una solicitud puede pedir varios proyectos, y en ese caso `proyectoElegido` es el primero:
+          no hay una valoración única que aplicar. Se deja pasar sin filtrar —el alta real la hace
+          después el wizard, que sí trabaja contra UN proyecto y revalida contra el server— en vez de
+          recortar con el criterio del primero de la lista, que sería adivinar.
+        */
+        valoracionProyecto:
+          formData.projectIds.length === 1 && proyectoElegido?.valoracionId
+            ? typeof proyectoElegido.valoracionId === "object"
+              ? String((proyectoElegido.valoracionId as any)._id)
+              : String(proyectoElegido.valoracionId)
+            : "",
       }),
-    [roleFrames, formData.roleFrameIds, convenioCct, codigosEmpleadora, categoriasSat, verTodasDelConvenio, formData.categoriaSatId],
+    [roleFrames, formData.roleFrameIds, convenioCct, codigosEmpleadora, categoriasSat, verTodasDelConvenio, formData.categoriaSatId, formData.projectIds, proyectoElegido],
   );
 
   /*
@@ -3049,6 +3063,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         >
           <div className="space-y-3">
             {rolNoTieneCategoriasDelConvenio && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">El rol empresa de esta persona no tiene categorías de este convenio, así que se muestran todas las del convenio.</p>}
+
+            {/* La valoración va DESPUÉS del convenio, que es el orden en que se aplican: primero lo
+                que ARCA no acepta, después lo que no corresponde a este proyecto. */}
+            {rolNoTieneCategoriasDeLaValoracion && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                El rol empresa no tiene categorías de la valoración de este proyecto, así que se muestran todas.
+              </p>
+            )}
+            {ocultasPorValoracion > 0 && (
+              <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">Se ocultaron {ocultasPorValoracion} de otra valoración: no corresponden al nivel de este proyecto.</p>
+            )}
 
             {!verTodasDelConvenio && !rolNoTieneCategoriasDelConvenio && (
               <button type="button" onClick={() => setVerTodasDelConvenio(true)} className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400">

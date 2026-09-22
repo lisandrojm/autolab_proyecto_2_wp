@@ -1,6 +1,17 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 interface ICategoriaSat {
+  /**
+   * La VALORACIÓN de esta categoría DENTRO DE ESTA FUNCIÓN (Plata, Oro…).
+   *
+   * Vive en la asociación y no en el catálogo `categorias` porque el mismo código de ARCA puede ser
+   * Oro en una función y Plata en otra: lo que cambia es lo que la productora paga por ese puesto,
+   * no la categoría del convenio.
+   *
+   * OPCIONAL: ausente = «sin valorar», y el filtro de contratación no se aplica (modo permisivo).
+   * Es lo que permite desplegar esto sin frenar la contratación mientras se cargan las valoraciones.
+   */
+  valoracionId?: mongoose.Types.ObjectId | null;
   id: number;
   numeroCategoria: number;
   sueldoBruto: number;
@@ -39,6 +50,7 @@ const roleFrameSchema = new Schema<IRoleFrame>(
       },
       categoriasSat: [
         {
+          valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
           id: { type: Number },
           numeroCategoria: { type: Number },
           sueldoBruto: { type: Number },

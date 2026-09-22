@@ -1,6 +1,14 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+/*
+  `?.` y no `.`: fuera de Vite —en los tests, que corren con `tsx --test`— `import.meta.env` no
+  existe y leerle una propiedad tira `Cannot read properties of undefined`. Eso rompía el módulo AL
+  IMPORTARLO, así que cualquier test de lógica pura que tocara la capa de api (aunque más no fuera
+  por una función de una línea como `esElegible`) moría antes de correr una sola aserción.
+
+  En el navegador no cambia nada: Vite siempre lo define.
+*/
+const API_BASE = import.meta.env?.VITE_API_URL;
 
 // Crear instancia de Axios con configuración base
 const axiosInstance = axios.create({

@@ -29,6 +29,13 @@ export interface CategoriaOfrecida {
   numeroCategoria: number | string;
   /** El código de ARCA de 6 dígitos, canónico y con sus ceros. Es lo que identifica a la categoría. */
   codigoArca: string;
+  /**
+   * La valoración de esta categoría EN ESTA FUNCIÓN. `null`/ausente = sin valorar.
+   *
+   * Viaja desde `RoleFrame.data.categoriasSat[].valoracionId` y no desde el catálogo: el mismo
+   * código de ARCA puede ser Oro en una función y Plata en otra.
+   */
+  valoracionId?: string | null;
 }
 
 export interface ConvenioOfrecido {
@@ -99,6 +106,15 @@ export interface CategoriasOfrecidas {
   ocultasPorFiltroConvenio: number;
   /** La función FRAME tiene categorías, pero ninguna de este convenio: el cruce daría vacío. */
   rolNoTieneCategoriasDelConvenio: boolean;
+  /** Las que dejó afuera la valoración del proyecto. Se destraban con «Elegir de todas formas». */
+  ocultasPorValoracion: number;
+  /**
+   * La función tiene categorías VALORADAS, pero ninguna de la valoración del proyecto.
+   *
+   * Calca a `rolNoTieneCategoriasDelConvenio`: se sale del filtro y se avisa, en vez de devolver una
+   * lista vacía. Una lista vacía sin explicación se lee como un problema de la pantalla.
+   */
+  rolNoTieneCategoriasDeLaValoracion: boolean;
 }
 
 /**
@@ -115,6 +131,8 @@ export const categoriasOfrecidas = ({
   categorias,
   verTodasDelConvenio,
   categoriaElegidaId,
+  valoracionProyecto,
+  verTodasLasValoraciones = false,
 }: {
   rolesFrame: RoleFrameItem[];
   convenioElegido: string;
@@ -122,6 +140,10 @@ export const categoriasOfrecidas = ({
   categorias: CategoriaSatItem[];
   verTodasDelConvenio: boolean;
   categoriaElegidaId?: string | number;
+  /** La valoración del PROYECTO. Vacío = el proyecto no está valorado y no se filtra por esto. */
+  valoracionProyecto?: string;
+  /** El escape manual: muestra todas y deja elegir una de otra valoración (se audita al guardar). */
+  verTodasLasValoraciones?: boolean;
 }): CategoriasOfrecidas => {
   // El convenio de cada categoría vive SOLO en el catálogo: la copia denormalizada de las funciones
   // FRAME no lo guarda, así que todo lo que use el CCT se resuelve contra este mapa por `data.id`.
@@ -133,6 +155,7 @@ export const categoriasOfrecidas = ({
       nombre: c.nombre,
       numeroCategoria: c.numeroCategoria ?? c.id,
       codigoArca: "",
+      valoracionId: c.valoracionId ? String(c.valoracionId) : null,
     })),
   );
 
@@ -185,6 +208,34 @@ export const categoriasOfrecidas = ({
     ocultasPorFiltroConvenio = antes - list.length;
   }
 
+  /*
+    ── LA VALORACIÓN, ÚLTIMA DE LA CADENA ──
+
+    El orden es función → convenios de la empleadora → convenio elegido → VALORACIÓN, y no es
+    arbitrario: los tres primeros son de ARCA y el organismo RECHAZA el alta si se los saltea. La
+    valoración es comercial — si se aplicara antes, podría dejar pasar una categoría de un convenio
+    que la empleadora no registró, y ese archivo vuelve rebotado.
+
+    MODO PERMISIVO. Si NINGUNA categoría de la función tiene valoración cargada, el filtro no se
+    aplica: es el estado en el que está todo hasta que alguien termine de valorar las funciones, y
+    frenar la contratación por un dato que todavía no se cargó sería peor que no tener la feature.
+
+    SALIDA CON AVISO. Si la función SÍ tiene categorías valoradas pero ninguna de la valoración del
+    proyecto, se sale del filtro y se avisa, igual que con `rolNoTieneCategoriasDelConvenio`. Una
+    lista vacía sin explicación se lee como un error de la pantalla, no como un dato que falta.
+  */
+  let ocultasPorValoracion = 0;
+  const algunaValorada = list.some((c) => !!c.valoracionId);
+  const rolNoTieneCategoriasDeLaValoracion = !!valoracionProyecto && algunaValorada && !list.some((c) => c.valoracionId === valoracionProyecto);
+
+  if (valoracionProyecto && algunaValorada && !verTodasLasValoraciones && !rolNoTieneCategoriasDeLaValoracion) {
+    const antes = list.length;
+    // Una categoría SIN valorar dentro de una función que sí valoró otras queda afuera: no se puede
+    // afirmar que corresponda a este nivel, y ofrecerla sería decidir por quien no la cargó.
+    list = list.filter((c) => c.valoracionId === valoracionProyecto);
+    ocultasPorValoracion = antes - list.length;
+  }
+
   // La categoría ya elegida se muestra siempre, aunque el filtro la haya sacado: esconderla convertiría
   // un contrato mal cargado en una lista vacía, sin decir qué tenía.
   if (categoriaElegidaId && !list.some((c) => String(c.id) === String(categoriaElegidaId))) {
@@ -197,9 +248,11 @@ export const categoriasOfrecidas = ({
   // de las funciones FRAME lo guarda como número, así que se re-resuelve contra el catálogo, donde
   // está canónico con sus ceros.
   const codigoPorId = new Map(categorias.map((c) => [String(c.data?.id), String(c.data?.codigoArca || "").trim()]));
+  // `...c` primero: conserva `valoracionId`, que sólo existe en la copia de la función y no en el
+  // catálogo. Invertirlo lo borraría acá, en la última línea, después de haber filtrado bien.
   const conCodigo = list.map((c) => ({ ...c, codigoArca: codigoPorId.get(String(c.id)) || "" }));
 
-  return { categorias: conCodigo, ocultasPorConvenio, ocultasPorFiltroConvenio, rolNoTieneCategoriasDelConvenio };
+  return { categorias: conCodigo, ocultasPorConvenio, ocultasPorFiltroConvenio, rolNoTieneCategoriasDelConvenio, ocultasPorValoracion, rolNoTieneCategoriasDeLaValoracion };
 };
 
 /** El CCT al que pertenece una categoría, por su `data.id`. Vacío si no lo declara. */

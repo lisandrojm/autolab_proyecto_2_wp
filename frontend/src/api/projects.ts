@@ -20,6 +20,32 @@ export interface Client {
 
 // Removed WorkSchedule types
 
+/** Un contrato cuya valoración quedó distinta de la del proyecto. */
+export interface ContratoDesalineado {
+  userId: string;
+  persona: string;
+  contratoIndex: number;
+  categoria: string;
+  funcion: string;
+  desde: string;
+  hasta: string;
+  valoracionContrato: string;
+  valoracionProyecto: string;
+  /** Se salteó a propósito, con motivo: es una decisión ya tomada, no un problema a resolver. */
+  conOverride: boolean;
+  motivoOverride: string | null;
+}
+
+export interface ContratosDesalineados {
+  proyecto: string;
+  valoracionProyecto: string | null;
+  /** El proyecto no está valorado: la pregunta no aplica (distinto de «no hay ninguno»). */
+  sinValorar: boolean;
+  total?: number;
+  conOverride?: number;
+  contratos: ContratoDesalineado[];
+}
+
 export interface Project {
   _id: string;
 
@@ -48,6 +74,20 @@ export interface Project {
   createdAt: string;
   objectives?: string[];
   targetAudience?: string;
+  /**
+   * El presupuesto, el margen y la valoración comercial que sale del margen.
+   *
+   * `valoracionId` la calcula el SERVER (`resolverValoracion`) a partir del MARGEN, no esta pantalla:
+   * la regla vive en un solo lugar y acá sólo se muestra lo resuelto. Por eso no hay vista previa
+   * mientras se tipea — el nivel se ve al guardar—. Ver `server/src/utils/valoracionAutomatica.ts`.
+   */
+  presupuesto?: number | null;
+  presupuestoMoneda?: string;
+  /** El margen, en PORCENTAJE. Es lo que decide la valoración; el presupuesto es contexto. */
+  margen?: number | null;
+  valoracionId?: string | { _id: string; name?: string; color?: string } | null;
+  /** La valoración la fijó una persona: el recálculo automático no la pisa. */
+  valoracionManual?: boolean;
   assignedUsers?: string[] | any[];
   updatedAt: string;
   vacationConfig?: {
@@ -479,6 +519,12 @@ class ProjectsAPI {
         };
       };
       turnos?: string[];
+      /* La valoración. Mandar `valoracionId` la FIJA a mano; `valoracionManual: false` vuelve al
+         cálculo por margen, y el server recalcula en el acto. */
+      presupuesto?: number | null;
+      margen?: number | null;
+      valoracionId?: string | null;
+      valoracionManual?: boolean;
       areasConfig?: {
         areaId: string;
         shiftIds: string[];
@@ -574,6 +620,15 @@ class ProjectsAPI {
   }
 
   /** `approveSolicitud`: el id de la solicitud que se está aprobando (el contrato va en `userId`, que es la persona real). */
+  /**
+   * Los contratos cuya valoración no coincide con la del proyecto. Se LISTAN, no se corrigen: cambiar
+   * el margen no le reescribe el sueldo a gente ya contratada. Ver la ruta en el server.
+   */
+  async contratosDesalineados(projectId: string): Promise<ContratosDesalineados> {
+    const { data } = await axios.get(`/projects/${projectId}/contratos-desalineados`, { headers: this.getHeaders() });
+    return data;
+  }
+
   async assignMember(projectId: string, data: { userId: string; contract: any; isUpdate?: boolean; contractIndex?: number; approveSolicitud?: string | boolean }): Promise<void> {
     await axios.post(`/projects/${projectId}/assign-member`, data, {
       headers: this.getHeaders(),

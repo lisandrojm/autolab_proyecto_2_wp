@@ -4,6 +4,9 @@ import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
+
+const valoracionesApi = createSimpleCatalogApi("/valoraciones");
 import { shiftsAPI, Shift } from "../api/shifts";
 
 import { useAuthStore } from "../stores/authStore";
@@ -11,6 +14,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 
 import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
+import { ValoracionProyecto } from "../components/proyectos/ValoracionProyecto";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { InfoModal } from "../components/ui/InfoModal";
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
@@ -80,6 +84,11 @@ export const ProjectDetailPage: React.FC = () => {
     releaseEmpresas: [] as string[],
     objectives: [""],
     targetAudience: "",
+    /* Como texto y no como number: el input filtra al escribir y el vacío tiene que poder viajar
+       como `null` («le saqué el presupuesto»), que `Number("")` convertiría en 0. */
+    presupuesto: "",
+    /* El margen, en porcentaje. Es lo que DECIDE la valoración; el presupuesto es contexto. */
+    margen: "",
     turnos: [] as string[],
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     vacationConfig: {
@@ -124,6 +133,8 @@ export const ProjectDetailPage: React.FC = () => {
         releaseEmpresas: data.releaseEmpresas || [],
         objectives: data.objectives?.length ? data.objectives : [""],
         targetAudience: data.targetAudience || "",
+        presupuesto: data.presupuesto == null ? "" : String(data.presupuesto),
+        margen: data.margen == null ? "" : String(data.margen),
         turnos: (data.turnos || []).map((t: any) => (typeof t === "string" ? t : (t as any)._id)),
         areasConfig: (data.areasConfig || []).map((ac: any) => ({
           areaId: typeof ac.areaId === "string" ? ac.areaId : ac.areaId._id,
@@ -233,6 +244,43 @@ export const ProjectDetailPage: React.FC = () => {
     }
   }, [loading, project, location.state, navigate, location.pathname]);
 
+  /*
+    Las valoraciones del tenant, sólo para PINTAR el chip: nombre y color.
+
+    La resolución la hizo el server —el proyecto ya viene con su `valoracionId`— y acá no se vuelve
+    a calcular nada. Es a propósito: una segunda implementación de la regla en el front terminaría
+    diciendo algo distinto de lo que el server guardó. Ver `server/src/utils/valoracionAutomatica.ts`.
+  */
+  const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
+  useEffect(() => {
+    void valoracionesApi
+      .list()
+      .then((v) => setValoraciones(Array.isArray(v) ? v : []))
+      .catch(() => setValoraciones([]));
+  }, []);
+
+  const valoracionDelProyecto = useMemo(() => {
+    const ref = project?.valoracionId;
+    if (!ref) return null;
+    // Puede venir poblada o como id pelado, según el endpoint.
+    if (typeof ref === "object") return { name: String((ref as any).name || ""), color: String((ref as any).color || "") };
+    const v = valoraciones.find((x) => x._id === String(ref));
+    return v ? { name: String(v.name), color: String(v.color || "") } : null;
+  }, [project?.valoracionId, valoraciones]);
+
+  /** Devuelve el proyecto al cálculo por presupuesto. El server recalcula en el acto. */
+  const volverAlCalculoAutomatico = async () => {
+    if (!project) return;
+    try {
+      await projectsAPI.updateProject(project._id, { valoracionManual: false } as any);
+      await fetchProject();
+      sweetAlert.success("Listo", "La valoración vuelve a calcularse según el presupuesto.");
+    } catch (error) {
+      console.error("Error volviendo al cálculo automático:", error);
+      sweetAlert.error("Error", "No se pudo volver al cálculo automático.");
+    }
+  };
+
   const openManageTeam = () => {
     if (project) {
       navigate(`/projects/${project._id}/team`);
@@ -259,6 +307,10 @@ export const ProjectDetailPage: React.FC = () => {
         ...projectForm,
         objectives: projectForm.objectives.filter((o) => o.trim()),
         areasConfig: projectForm.areasConfig,
+        // Vacío = `null` (sin presupuesto), que NO es 0. El server recalcula la valoración con esto.
+        presupuesto: projectForm.presupuesto.trim() === "" ? null : Number(projectForm.presupuesto),
+        // Ídem: vacío = `null` («sin margen»), que no es 0 — 0 es trabajar sin ganancia.
+        margen: projectForm.margen.trim() === "" ? null : Number(projectForm.margen),
       };
 
       await projectsAPI.updateProject(project._id, payload);
@@ -438,6 +490,40 @@ export const ProjectDetailPage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
                   <textarea value={projectForm.description} onChange={(e) => setProjectForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del proyecto..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presupuesto</label>
+                  {/* Se filtra al ESCRIBIR, como el resto de los numéricos del repo: `type="number"`
+                      deja pegar «12a» y muestra el campo vacío sin decir por qué. */}
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={projectForm.presupuesto}
+                    onChange={(e) => setProjectForm((p) => ({ ...p, presupuesto: e.target.value.replace(/\D/g, "") }))}
+                    className="input-field"
+                    placeholder="Sin presupuesto cargado"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Contexto del proyecto. La valoración NO sale de acá, sino del margen.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Margen (%)</label>
+                  {/* Admite coma y la normaliza a punto: «12,5» es como se escribe un decimal acá. */}
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={projectForm.margen}
+                    onChange={(e) => {
+                      const crudo = e.target.value.replace(",", ".").replace(/(?!^-)[^0-9.]/g, "");
+                      const partes = crudo.split(".");
+                      setProjectForm((p) => ({ ...p, margen: partes.length > 2 ? `${partes[0]}.${partes.slice(1).join("")}` : crudo }));
+                    }}
+                    className="input-field"
+                    placeholder="Sin margen cargado"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    De acá sale la valoración del proyecto, y con ella qué categorías se ofrecen al armar un contrato. Se recalcula al guardar. Por ahora se carga a mano; más adelante lo va a
+                    traer el presupuestador.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
@@ -732,6 +818,45 @@ export const ProjectDetailPage: React.FC = () => {
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
                   <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Descripción</h4>
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{project.description || "Sin descripción proporcionada."}</p>
+                </div>
+
+                {/*
+                  PRESUPUESTO Y VALORACIÓN, JUNTOS.
+
+                  Separados no se entienden: el nivel no es una etiqueta suelta sino la consecuencia
+                  del monto, y de él sale qué categorías se van a ofrecer al contratar. La leyenda
+                  dice CÓMO se llegó a ese nivel, que es la pregunta que aparece cuando no es el
+                  esperado.
+                */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
+                  <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Margen y valoración</h4>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                      {project.presupuesto == null ? <span className="text-gray-400 dark:text-gray-600">Sin presupuesto</span> : `$${Number(project.presupuesto).toLocaleString("es-AR")}`}
+                    </span>
+                    {/* El margen es lo que manda: va primero en la lectura visual, con el signo. */}
+                    <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
+                      {project.margen == null ? <span className="font-normal text-gray-400 dark:text-gray-600">sin margen</span> : `${project.margen}% de margen`}
+                    </span>
+                    {valoracionDelProyecto ? (
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-bold border"
+                        style={valoracionDelProyecto.color ? { color: valoracionDelProyecto.color, borderColor: valoracionDelProyecto.color, backgroundColor: `${valoracionDelProyecto.color}1a` } : undefined}
+                      >
+                        {valoracionDelProyecto.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 dark:text-gray-600">Sin valorar</span>
+                    )}
+                  </div>
+                  <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    {project.valoracionManual ? "Fijada manualmente: el recálculo por margen no la toca." : "Calculada según el margen."}
+                  </p>
+                  {project.valoracionManual && (
+                    <button type="button" onClick={volverAlCalculoAutomatico} className="mt-2 text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
+                      Volver al cálculo automático
+                    </button>
+                  )}
                 </div>
 
                 {/* Horario de Trabajo - OCULTO
@@ -1196,6 +1321,10 @@ export const ProjectDetailPage: React.FC = () => {
             ],
           }}
         />
+
+        {/* Card: Valoración. Al lado del equipo porque es lo que decide qué categorías se le ofrecen
+            a cada persona que se sume, y por lo tanto cuánto cobra. */}
+        <ValoracionProyecto project={project} onGuardado={fetchProject} />
 
         {/* Card 3: Novedades del Proyecto (mismo atajo que el botón Novedades de la card principal) */}
         <Card

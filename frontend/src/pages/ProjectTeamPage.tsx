@@ -415,6 +415,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [convenioFiltro, setConvenioFiltro] = useState<string>("");
   /** Ignora el filtro por función Frame y ofrece TODAS las categorías del convenio elegido. */
   const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
+  /*
+    EL ESCAPE MANUAL de la valoración, con su motivo.
+
+    El filtro es estricto: sin esto, una categoría de otro nivel no se puede elegir ni cuando
+    corresponde —un acuerdo puntual, un puesto que se paga distinto—. Se abre a pedido, y lo que se
+    elija así viaja con el motivo y queda auditado en el contrato (el server lo exige: sin motivo
+    contesta 422).
+  */
+  const [verTodasLasValoraciones, setVerTodasLasValoraciones] = useState(false);
+  const [motivoValoracion, setMotivoValoracion] = useState("");
   /** Aviso inline cuando el cambio de convenio dejó sin efecto la categoría que estaba elegida. */
   const [avisoConvenio, setAvisoConvenio] = useState("");
 
@@ -1366,6 +1376,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setConvenioFiltro(nuevo);
     // El escape hatch es por convenio: al cambiar de convenio vuelve a su default.
     setVerTodasDelConvenio(false);
+    setVerTodasLasValoraciones(false);
+    setMotivoValoracion("");
     setAvisoConvenio("");
     if (!nuevo || !wizardData.categoria_sat_id) return;
     const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
@@ -1384,6 +1396,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     ocultasPorConvenio: categoriasOcultasPorConvenio,
     ocultasPorFiltroConvenio,
     rolNoTieneCategoriasDelConvenio,
+    ocultasPorValoracion,
+    rolNoTieneCategoriasDeLaValoracion,
   } = useMemo(
     () =>
       categoriasOfrecidas({
@@ -1394,9 +1408,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         categorias: allCategoriasSat,
         verTodasDelConvenio,
         categoriaElegidaId: wizardData.categoria_sat_id,
+        // La del PROYECTO: es la que define qué categorías corresponden a este trabajo.
+        valoracionProyecto: project?.valoracionId ? (typeof project.valoracionId === "object" ? String((project.valoracionId as any)._id) : String(project.valoracionId)) : "",
+        verTodasLasValoraciones,
       }),
-    [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio],
+    [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio, project?.valoracionId, verTodasLasValoraciones],
   );
+
+  /*
+    UNA SOLA CANDIDATA SE ELIGE SOLA.
+
+    Con el filtro de valoración puesto, lo habitual es que quede una: pedir que la elijan de una
+    lista de uno es pedir un click para confirmar lo único posible. No pisa una elección previa ni
+    corre mientras se está viendo la lista completa por el escape manual.
+  */
+  useEffect(() => {
+    if (verTodasLasValoraciones || wizardData.categoria_sat_id) return;
+    if (availableCategoriasSat.length !== 1) return;
+    setWizardData((prev) => ({ ...prev, categoria_sat_id: String(availableCategoriasSat[0].id) }));
+  }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id]);
 
   /*
     EL OFICIO QUE SE AGREGA DESDE EL BUSCADOR, y que la persona todavía no tiene en su ficha.
@@ -2096,6 +2126,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
     setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || "").trim());
     setVerTodasDelConvenio(false);
+    setVerTodasLasValoraciones(false);
+    setMotivoValoracion("");
     setAvisoConvenio("");
 
     // Reset wizard data with pulled data or defaults
@@ -2291,6 +2323,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           tipo_contrato_id: wizardData.tipo_contrato_id ? Number(wizardData.tipo_contrato_id) : null,
           nombre_rol_frame: rfSel?.name || "",
           rol_frame_id: Number(wizardData.rol_frame_id),
+          /*
+            El salteo de valoración, con su motivo. Sólo viaja si se abrió el escape manual: el
+            server lo EXIGE cuando la categoría no es de la valoración del proyecto (contesta 422
+            sin él) y lo guarda con quién y cuándo. Sin escape abierto no hay nada que justificar.
+          */
+          valoracionOverride: verTodasLasValoraciones && motivoValoracion.trim() ? { motivo: motivoValoracion.trim() } : undefined,
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
           dias_por_semana: wizardData.dias_por_semana,
           dias_semana: wizardData.dias_semana,
@@ -4343,6 +4381,46 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ""}
                       {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ""}
                     </p>
+                  )}
+
+                  {/*
+                    LA VALORACIÓN: lo que quedó afuera, y el escape.
+
+                    Va abajo de los avisos de convenio porque es el último filtro de la cadena, y se
+                    lee en ese orden: primero lo que ARCA no acepta, después lo que no corresponde a
+                    este proyecto. Nunca deja una lista vacía sin explicar — si la función no tiene
+                    ninguna de esta valoración, el filtro se salta solo y lo dice.
+                  */}
+                  {rolNoTieneCategoriasDeLaValoracion && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">
+                      La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene ninguna categoría de la
+                      valoración de este proyecto; se muestran todas.
+                    </p>
+                  )}
+
+                  {ocultasPorValoracion > 0 && !verTodasLasValoraciones && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      Se ocultaron {ocultasPorValoracion} de otra valoración.{" "}
+                      <button type="button" onClick={() => setVerTodasLasValoraciones(true)} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
+                        Elegir de todas formas
+                      </button>
+                    </p>
+                  )}
+
+                  {verTodasLasValoraciones && (
+                    <div className="ml-1 mt-1 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/30">
+                      <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Estás viendo categorías de otras valoraciones.</p>
+                      {/* El motivo es OBLIGATORIO y lo exige el server (422 sin él): un salteo sin
+                          explicación es justo lo que después nadie puede reconstruir. */}
+                      <input
+                        type="text"
+                        value={motivoValoracion}
+                        onChange={(e) => setMotivoValoracion(e.target.value)}
+                        maxLength={200}
+                        placeholder="Motivo (obligatorio si elegís una de otra valoración)"
+                        className="mt-1.5 w-full rounded border border-amber-300 bg-white px-2 py-1 text-[11px] text-gray-800 dark:border-amber-800 dark:bg-gray-900 dark:text-gray-100"
+                      />
+                    </div>
                   )}
                 </div>
 

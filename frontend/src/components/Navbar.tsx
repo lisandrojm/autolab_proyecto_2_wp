@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar } from '@fortawesome/free-solid-svg-icons';
 import { usePermisoInactivo } from '../stores/permisosInactivosStore';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
@@ -454,6 +454,11 @@ export const MobileNavbar: React.FC = () => {
       // Queda SUELTO en Configuración, no adentro del subgrupo ARCA: Convenios está ahí por ser un
       // nomenclador del organismo, y este catálogo es propio de la plataforma. Ver `configPaths`.
       if (hasPermission('config_sindicatos:view') || hasPermission('config_convenios:view')) base.push({ path: '/sindicatos', icon: faPeopleGroup, label: 'Sindicatos', scope: 'global' });
+      // `config_valoraciones:view` es nuevo y los roles están congelados en la base: hasta que se
+      // tilde se muestra a quien ya administra Roles Empresa, que es donde se valora cada categoría
+      // y por lo tanto quien necesita este catálogo. Suelto en Configuración y NO en el subgrupo
+      // ARCA: es una decisión comercial de la productora, no un nomenclador del organismo.
+      if (hasPermission('config_valoraciones:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/valoraciones', icon: faRankingStar, label: 'Valoraciones', scope: 'global' });
       // `config_paises_residencia:view` es nuevo y los roles están congelados en la base: hasta que se
       // tilde, se muestra a quien ya administra Entidades Financieras, el otro catálogo propio que
       // alimenta los datos de la persona (registro y ficha). Suelto en Configuración, como Sindicatos.
@@ -630,7 +635,7 @@ export const MobileNavbar: React.FC = () => {
     // Ojo: los paths de los grupos (Plantillas, ARCA, Documentos, Usuarios) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
     // «/clients» y «/centros-costo» ya NO están acá: se mudaron a Admin GENERAL (ver `generalAlFinal`).
-    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/bancos', '/sindicatos', '/paises-residencia', '/contratos', '/releases-tipos', '/admin/sedes'];
+    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/bancos', '/sindicatos', '/valoraciones', '/paises-residencia', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const, permiso: 'config_profile:view' };

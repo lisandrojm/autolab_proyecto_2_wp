@@ -29,7 +29,34 @@ export interface CatalogExtraField {
     en el formulario. AUSENTE CUENTA COMO SÍ, así los registros cargados antes de que existiera el
     campo no se apagan solos. `options` pone los rótulos: `[{value:'true'}, {value:'false'}]`.
   */
-  type?: 'text' | 'select' | 'ref' | 'estado';
+  /*
+    `numero` es un importe o un entero (ej. Valoraciones → `orden`, `montoDesde`). Va aparte de
+    `text` porque el vacío TIENE sentido propio: un rango sin tope no es «0», es «sin tope», y el
+    server lo guarda como `null`. El input filtra al escribir en vez de usar `type="number"`, que
+    deja pegar «12a» y muestra el campo vacío sin decir por qué.
+  */
+  type?: 'text' | 'select' | 'ref' | 'estado' | 'numero';
+  /**
+   * Sólo `estado`: si tenerlo apagado hace que el REGISTRO ENTERO cuente como inactivo (se agrisa en
+   * la tabla). Por defecto sí, que es el caso de `activo` en Bancos.
+   *
+   * Hace falta apagarlo cuando el sí/no no habla de si el registro se ofrece, sino de una marca
+   * entre varios: en Valoraciones, `esDefault` es exclusiva —una sola la tiene— así que con el
+   * default todas las demás se dibujaban en gris, como si estuvieran dadas de baja.
+   */
+  marcaInactivo?: boolean;
+  /**
+   * Con qué valor arranca el campo al CREAR. Por defecto un `estado` arranca encendido, que es lo
+   * correcto para `activo` —lo que se da de alta se ofrece— pero no para una marca exclusiva: en
+   * Valoraciones, `esDefault` encendido haría que cada valoración nueva le robe la default a la que
+   * la tenía, sin que nadie lo pida.
+   */
+  valorInicial?: string;
+  /**
+   * Sólo `numero`: admite coma/punto decimal (ej. un margen de 12,5 %). Por defecto sólo enteros,
+   * que es lo que corresponde a un `orden` o a un código.
+   */
+  decimales?: boolean;
   /** Opciones para type "select" y "ref". El value es lo que se persiste; el label lo que se muestra. */
   /**
    * `oculta`: la opción existe —la columna y el filtro la muestran con su nombre— pero el formulario
@@ -351,7 +378,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [saving, setSaving] = useState(false);
 
   // Valor por defecto de un campo extra al crear (primer option del select, o "").
-  const defaultExtra = (f: CatalogExtraField): string => (f.type === 'estado' ? 'true' : f.type === 'select' && f.options && f.options.length > 0 ? (f.options.find((o) => !o.oculta) || f.options[0]).value : '');
+  const defaultExtra = (f: CatalogExtraField): string => (f.valorInicial !== undefined ? f.valorInicial : f.type === 'estado' ? 'true' : f.type === 'select' && f.options && f.options.length > 0 ? (f.options.find((o) => !o.oculta) || f.options[0]).value : '');
   /** El valor de formulario de un campo del registro. Para `ref` es el id, venga poblado o pelado. */
   const idDeRef = (f: CatalogExtraField, valor: unknown): string => {
     if (f.type === 'estado') return valor === false ? 'false' : 'true';
@@ -368,6 +395,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     const v = value == null ? '' : String(value);
     if (!v) return '—';
     if (f.type === 'select' || f.type === 'ref') return f.options?.find((o) => o.value === v)?.label ?? v;
+    // Con separador de miles: un rango de presupuesto sin puntos se lee mal y es donde un cero de
+    // más o de menos pasa desapercibido.
+    if (f.type === 'numero') return Number.isFinite(Number(v)) ? Number(v).toLocaleString('es-AR') : v;
     return v;
   };
 
@@ -395,6 +425,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
    * usuario que salió mal.
    */
   const [loadError, setLoadError] = useState<string | null>(null);
+  /** El código HTTP del error de carga: un 404 y un servidor caído se explican distinto. */
+  const [loadErrorStatus, setLoadErrorStatus] = useState<number | null>(null);
 
   const load = async (valorFiltro = filtroServidorValor) => {
     setLoading(true);
@@ -412,6 +444,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       // está roto.
       const status = err?.response?.status;
       setLoadError(status ? `No se pudieron cargar los registros de ${entityLabel} (HTTP ${status}).` : `No se pudieron cargar los registros de ${entityLabel}: no hubo respuesta del servidor.`);
+      setLoadErrorStatus(status ?? null);
     } finally {
       setLoading(false);
     }
@@ -594,8 +627,17 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       }
       setShowModal(false);
       await load();
-    } catch {
-      sweetAlert.error('Error', 'No se pudo guardar el registro.');
+    } catch (e) {
+      /*
+        EL MOTIVO LO PONE EL SERVER, NO ESTA PANTALLA.
+
+        Acá se descartaba la respuesta y se mostraba siempre «No se pudo guardar el registro.», que no
+        dice qué corregir. Los catálogos contestan errores accionables —qué clave sobra, con qué
+        rango se pisa— y quedaban invisibles: el formulario se veía roto y el motivo estaba en la
+        pestaña de red.
+      */
+      const delServer = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      sweetAlert.error('No se pudo guardar', delServer || 'No se pudo guardar el registro.');
     } finally {
       setSaving(false);
     }
@@ -691,7 +733,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     );
   };
 
-  const estaInactivo = (item: SimpleCatalogItem) => extraFields.some((f) => (f.type === 'estado' && item[f.key] === false) || !!opcionOcultaDe(f, item));
+  const estaInactivo = (item: SimpleCatalogItem) => extraFields.some((f) => (f.type === 'estado' && f.marcaInactivo !== false && item[f.key] === false) || !!opcionOcultaDe(f, item));
 
   const handleDownloadTemplate = async () => {
     try {
@@ -871,7 +913,20 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{loadError}</p>
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">No es que el catálogo esté vacío: la consulta no llegó a responder. Si el problema sigue, revisá que el servidor esté levantado.</p>
+            {/*
+              EL 404 NO ES «EL SERVIDOR ESTÁ CAÍDO».
+
+              Un servidor caído no contesta nada. Uno que contesta 404 está levantado y dice que esa
+              ruta no la conoce — casi siempre porque el frontend es más nuevo que el backend al que
+              le está hablando (se corrió `npm run prod`, que apunta al VPS, antes de deployar el
+              server). El texto viejo mandaba a revisar si estaba levantado, que es justo lo que no
+              hay que revisar.
+            */}
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+              {loadErrorStatus === 404
+                ? 'El servidor respondió, pero no conoce esta ruta: el backend al que apunta esta pantalla todavía no tiene esta versión. Hay que deployar el server (o correr el front en modo desarrollo contra el server local).'
+                : 'No es que el catálogo esté vacío: la consulta no llegó a responder. Si el problema sigue, revisá que el servidor esté levantado.'}
+            </p>
             <button type="button" onClick={() => void load()} className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
               Reintentar
             </button>
@@ -1072,6 +1127,28 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     </button>
                   ) : f.type === 'ref' ? (
                     <RefField campo={f} valor={extraValues[f.key] ?? ''} onChange={(v) => setExtraValues((prev) => ({ ...prev, [f.key]: v }))} />
+                  ) : f.type === 'numero' ? (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={extraValues[f.key] ?? ''}
+                      /* Se filtra al ESCRIBIR, mismo criterio que el id externo de abajo: el signo va
+                         adelante y sólo una vez, para poder corregir un monto en negativo. */
+                      /* Se filtra al ESCRIBIR, mismo criterio que el id externo. La coma se acepta
+                         y se normaliza a punto: es como se escribe un decimal en castellano, y
+                         rechazarla obliga a descubrir por qué no entra. */
+                      onChange={(e) =>
+                        setExtraValues((prev) => {
+                          const crudo = f.decimales ? e.target.value.replace(',', '.') : e.target.value;
+                          const permitido = f.decimales ? crudo.replace(/(?!^-)[^0-9.]/g, '') : crudo.replace(/(?!^-)[^0-9]/g, '');
+                          // Un solo punto: «1.2.3» no es un número y dejarlo entrar lo manda roto al server.
+                          const partes = permitido.split('.');
+                          return { ...prev, [f.key]: partes.length > 2 ? `${partes[0]}.${partes.slice(1).join('')}` : permitido };
+                        })
+                      }
+                      placeholder={f.placeholder}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
+                    />
                   ) : (
                     <input type="text" value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
                   )}

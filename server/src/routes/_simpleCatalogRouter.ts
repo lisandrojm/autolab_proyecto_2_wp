@@ -3,12 +3,15 @@ import multer from "multer";
 import xlsx from "xlsx";
 import mongoose, { Model } from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
+import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
 /**
  * Factory de router CRUD para catálogos simples de FRAME con forma
  * `{ externalId, name, data: { id, nombre } }` (Bancos, Obras Sociales,
  * Centros de Costos, etc). Mismo patrón global que Categorías SAT:
  * sin tenantId, solo `authenticateToken`, con plantilla + import Excel.
+ *
+ * Con `tenantScoped` el catálogo pasa a ser de cada productora en vez de global (ver ese campo).
  */
 export interface SimpleCatalogConfig {
   /** Etiqueta singular para mensajes de error, ej. "Banco". */
@@ -92,6 +95,22 @@ export interface SimpleCatalogConfig {
    * válido. Por defecto no se transforma: el resto de los catálogos no se ve afectado.
    */
   sanitizeExternalId?: (value: string) => string;
+  /**
+   * El catálogo es DE CADA TENANT, no global.
+   *
+   * Los catálogos de este factory nacieron globales porque son el nomenclador de ARCA: el organismo
+   * publica los mismos bancos y las mismas obras sociales para todo el mundo, así que no tiene
+   * sentido una copia por productora. Las valoraciones comerciales no son eso — «Oro» con su rango
+   * de presupuesto es la política de UNA empresa — y compartirlas significaría que tocar un rango
+   * acá le mueve los contratos a otra.
+   *
+   * Con el flag: `requireTenant` en todas las rutas, `tenantId` en el filtro del listado, en el alta
+   * y en los upserts, y las búsquedas por id pasan a mirar también el tenant — si no, un id ajeno se
+   * edita o se borra igual, que es el modo de fallar que hace inútil el resto del recorte.
+   *
+   * APAGADO POR DEFECTO: los seis catálogos que ya lo usan se comportan exactamente igual.
+   */
+  tenantScoped?: boolean;
 }
 
 /**
@@ -148,6 +167,15 @@ export function createSimpleCatalogRouter(
   const router = Router();
   const upload = multer({ storage: multer.memoryStorage() });
 
+  /*
+    La cadena de middlewares de cada ruta. Con `tenantScoped` se antepone `requireTenant`, que
+    resuelve el header y deja `req.tenantObjectId`; sin el flag la lista queda igual que siempre.
+  */
+  const guardias = config.tenantScoped ? [requireTenant, authenticateToken] : [authenticateToken];
+
+  /** El recorte por tenant que va en TODA consulta de este catálogo. `{}` cuando es global. */
+  const delTenant = (req: AuthenticatedRequest): Record<string, unknown> => (config.tenantScoped ? { tenantId: (req as AuthenticatedRequest & TenantRequest).tenantObjectId } : {});
+
   /**
    * Las claves que este catálogo sabe guardar. Todo lo demás es un error del cliente.
    *
@@ -181,10 +209,11 @@ export function createSimpleCatalogRouter(
    * Se setean las claves de `data` una por una en lugar de reemplazar el objeto: si se pisara entero,
    * reimportar borraría los campos que no vienen en la carga (ej. la marca de obra social por defecto).
    */
-  const construirUpserts = (parsed: Array<{ externalId: string; nombre: string; extras: Record<string, unknown> }>) =>
+  const construirUpserts = (parsed: Array<{ externalId: string; nombre: string; extras: Record<string, unknown> }>, tenant: Record<string, unknown>) =>
     parsed.map((item) => {
       const idNum = item.externalId ? Number(item.externalId) : undefined;
       const set: Record<string, unknown> = {
+        ...tenant,
         name: item.nombre,
         externalId: item.externalId,
         "data.nombre": item.nombre,
@@ -195,7 +224,10 @@ export function createSimpleCatalogRouter(
         updateOne: {
           // Por `externalId` cuando lo hay: es la identidad del registro en el nomenclador y lo que
           // hace que reimportar sea idempotente en vez de duplicar todo.
-          filter: item.externalId ? { externalId: item.externalId } : { name: item.nombre },
+          //
+          // El tenant va EN EL FILTRO, no sólo en el `$set`: sin eso, importar un nombre que otra
+          // productora ya tiene actualizaría el registro ajeno en vez de crear el propio.
+          filter: { ...tenant, ...(item.externalId ? { externalId: item.externalId } : { name: item.nombre }) },
           update: { $set: set },
           upsert: true,
         },
@@ -203,11 +235,11 @@ export function createSimpleCatalogRouter(
     });
 
   // GET / - listar
-  router.get("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.get("/", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Solo los declarados en `filtrosPermitidos`; el resto de la query se ignora. Un catálogo sin
       // esa lista se comporta exactamente como antes.
-      const filtro: Record<string, unknown> = {};
+      const filtro: Record<string, unknown> = { ...delTenant(req) };
       for (const campo of config.filtrosPermitidos || []) {
         const valor = req.query[campo];
         if (valor === undefined) continue;
@@ -224,7 +256,7 @@ export function createSimpleCatalogRouter(
   });
 
   // GET /template - descargar plantilla Excel
-  router.get("/template", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
+  router.get("/template", ...guardias, async (_req: AuthenticatedRequest, res: Response) => {
     try {
       const samples = config.sampleNames && config.sampleNames.length > 0 ? config.sampleNames : ["Ejemplo 1", "Ejemplo 2"];
       const extraHeaders = (config.extraStringFields || []).map((f) => f.excelHeader || f.key);
@@ -251,7 +283,7 @@ export function createSimpleCatalogRouter(
   });
 
   // POST /import - importar desde Excel (upsert por externalId, si no por name)
-  router.post("/import", authenticateToken, upload.single("file"), async (req: AuthenticatedRequest, res: Response) => {
+  router.post("/import", ...guardias, upload.single("file"), async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.file) {
         res.status(400).json({ error: "Debe subir un archivo de Excel" });
@@ -318,7 +350,7 @@ export function createSimpleCatalogRouter(
         return;
       }
 
-      const bulkOps = construirUpserts(parsed);
+      const bulkOps = construirUpserts(parsed, delTenant(req));
 
       let processed = 0;
       if (bulkOps.length > 0) {
@@ -348,7 +380,7 @@ export function createSimpleCatalogRouter(
    *
    * Body: `{ items: [{ nombre, externalId?, ...extras }] }`.
    */
-  router.post("/bulk", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.post("/bulk", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { items } = req.body as { items?: Array<Record<string, unknown>> };
       if (!Array.isArray(items)) {
@@ -403,7 +435,7 @@ export function createSimpleCatalogRouter(
         return;
       }
 
-      const result = await model.bulkWrite(construirUpserts(parsed));
+      const result = await model.bulkWrite(construirUpserts(parsed, delTenant(req)));
       res.json({
         message: "Carga masiva completada",
         count: (result.upsertedCount || 0) + (result.modifiedCount || 0) + (result.matchedCount || 0),
@@ -418,7 +450,7 @@ export function createSimpleCatalogRouter(
   });
 
   // POST / - crear manualmente
-  router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.post("/", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const sobran = clavesDeMas(req.body);
       if (sobran.length > 0) {
@@ -433,6 +465,7 @@ export function createSimpleCatalogRouter(
       const cleanExternalId = externalId ? (config.sanitizeExternalId ? config.sanitizeExternalId(String(externalId).trim()) : String(externalId).trim()) : "";
       const idNum = cleanExternalId ? Number(cleanExternalId) : undefined;
       const newItem: SimpleCatalogDoc = {
+        ...delTenant(req),
         name: nombre.trim(),
         externalId: cleanExternalId,
         data: { id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined, nombre: nombre.trim() },
@@ -466,7 +499,7 @@ export function createSimpleCatalogRouter(
   });
 
   // PUT /:id - actualizar
-  router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.put("/:id", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const sobran = clavesDeMas(req.body);
@@ -476,7 +509,9 @@ export function createSimpleCatalogRouter(
       }
       const { nombre, externalId } = req.body as { nombre?: string; externalId?: string };
 
-      const item = await model.findById(id);
+      // `findOne` con el tenant y no `findById`: con el id de otra productora, un `findById` lo
+      // encuentra y lo edita igual, y el recorte del listado pasa a ser decorativo.
+      const item = await model.findOne({ _id: id, ...delTenant(req) });
       if (!item) {
         res.status(404).json({ error: `${config.entityLabel} no encontrado` });
         return;
@@ -525,10 +560,10 @@ export function createSimpleCatalogRouter(
   });
 
   // DELETE /:id - eliminar
-  router.delete("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.delete("/:id", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const result = await model.deleteOne({ _id: id });
+      const result = await model.deleteOne({ _id: id, ...delTenant(req) });
       if (result.deletedCount === 0) {
         res.status(404).json({ error: `${config.entityLabel} no encontrado` });
         return;

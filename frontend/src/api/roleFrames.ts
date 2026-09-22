@@ -33,6 +33,30 @@ export interface FuncionRota {
   motivos: string[];
 }
 
+/**
+ * Una categoría asociada a una función, con su valoración.
+ *
+ * Reemplaza al `categoryIds: string[]` de antes: la valoración es una propiedad de la ASOCIACIÓN
+ * —el mismo código de ARCA puede ser Oro en una función y Plata en otra— y en una lista de ids no
+ * había dónde ponerla. `null` es «sin valorar», que es un estado válido: el filtro de contratación
+ * no se aplica hasta que la función tenga sus categorías valoradas.
+ */
+export interface CategoriaAsociada {
+  categoryId: string;
+  valoracionId?: string | null;
+}
+
+/** Cobertura de valoraciones de una función: qué niveles puede atender y cuáles no. */
+export interface CoberturaFuncion {
+  _id: string;
+  nombre: string;
+  categorias: number;
+  sinValorar: number;
+  cubre: Array<{ _id: string; name: string; orden: number | null; color: string }>;
+  faltan: Array<{ _id: string; name: string; orden: number | null; color: string }>;
+  totalValoraciones: number;
+}
+
 class RoleFrameAPI {
   async list(): Promise<RoleFrameItem[]> {
     const { data } = await axios.get("/role-frames");
@@ -45,13 +69,19 @@ class RoleFrameAPI {
     return data;
   }
 
-  async create(payload: { name: string; categoryIds: string[] }): Promise<RoleFrameItem> {
+  async create(payload: { name: string; categorias: CategoriaAsociada[] }): Promise<RoleFrameItem> {
     const { data } = await axios.post("/role-frames", payload);
     return data;
   }
 
-  async update(id: string, payload: { name?: string; categoryIds?: string[] }): Promise<RoleFrameItem> {
+  async update(id: string, payload: { name?: string; categorias?: CategoriaAsociada[] }): Promise<RoleFrameItem> {
     const { data } = await axios.put(`/role-frames/${id}`, payload);
+    return data;
+  }
+
+  /** Por función: qué valoraciones cubre y cuáles le faltan, según las del tenant. */
+  async cobertura(): Promise<CoberturaFuncion[]> {
+    const { data } = await axios.get("/role-frames/cobertura");
     return data;
   }
 
