@@ -268,13 +268,13 @@ export const ProjectDetailPage: React.FC = () => {
     return v ? { name: String(v.name), color: String(v.color || "") } : null;
   }, [project?.valoracionId, valoraciones]);
 
-  /** Devuelve el proyecto al cálculo por presupuesto. El server recalcula en el acto. */
+  /** Devuelve el proyecto al cálculo por margen. El server recalcula en el acto. */
   const volverAlCalculoAutomatico = async () => {
     if (!project) return;
     try {
       await projectsAPI.updateProject(project._id, { valoracionManual: false } as any);
       await fetchProject();
-      sweetAlert.success("Listo", "La valoración vuelve a calcularse según el presupuesto.");
+      sweetAlert.success("Listo", "La valoración vuelve a calcularse según el margen.");
     } catch (error) {
       console.error("Error volviendo al cálculo automático:", error);
       sweetAlert.error("Error", "No se pudo volver al cálculo automático.");

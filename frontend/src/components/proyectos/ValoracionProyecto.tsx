@@ -257,7 +257,7 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                       {desalineados.contratos.map((c) => (
-                        <tr key={`${c.userId}-${c.contratoIndex}`} className={c.conOverride ? "opacity-70" : ""}>
+                        <tr key={`${c.userProjectId}-${c.contratoIndex}`} className={c.conOverride ? "opacity-70" : ""}>
                           <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{c.persona || "—"}</td>
                           <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                             {c.funcion || "—"} · {c.categoria || "—"}

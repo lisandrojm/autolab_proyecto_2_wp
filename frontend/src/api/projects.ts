@@ -22,7 +22,9 @@ export interface Client {
 
 /** Un contrato cuya valoración quedó distinta de la del proyecto. */
 export interface ContratoDesalineado {
-  userId: string;
+  /** Identifica la fila: el vínculo siempre existe, el `userId` no (hay huérfanos de FRAME). */
+  userProjectId: string;
+  userId: string | null;
   persona: string;
   contratoIndex: number;
   categoria: string;
@@ -278,6 +280,14 @@ function normalizeProject(raw: any): Project {
     metadata: raw?.metadata,
     metadataResolutions: raw?.metadataResolutions,
     metadataUserCount: typeof raw?.metadataUserCount === "number" ? raw.metadataUserCount : Array.isArray(raw?.assignedUsers) ? raw.assignedUsers.length : 0,
+    /* Esta función es una LISTA BLANCA: lo que no se copia acá no llega a ninguna pantalla, aunque
+       el server lo mande. Faltaban los cinco de la valoración y todo se veía «Sin valorar» —la ficha
+       y la columna del listado— con el proyecto ya valorado en la base. */
+    presupuesto: typeof raw?.presupuesto === "number" ? raw.presupuesto : null,
+    presupuestoMoneda: raw?.presupuestoMoneda ?? undefined,
+    margen: typeof raw?.margen === "number" ? raw.margen : null,
+    valoracionId: raw?.valoracionId ?? null,
+    valoracionManual: raw?.valoracionManual === true,
   };
 }
 

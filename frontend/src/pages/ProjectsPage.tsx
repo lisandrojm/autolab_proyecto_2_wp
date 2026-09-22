@@ -671,7 +671,7 @@ export const ProjectsPage: React.FC = () => {
                             <span
                               className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold border whitespace-nowrap"
                               style={color ? { color, borderColor: color, backgroundColor: `${color}1a` } : undefined}
-                              title={(project as any).valoracionManual ? 'Fijada manualmente' : 'Calculada según el presupuesto'}
+                              title={(project as any).valoracionManual ? 'Fijada manualmente' : 'Calculada según el margen'}
                             >
                               {String(v.name)}
                               {/* El asterisco marca que la puso una persona: sin esto, un nivel que
