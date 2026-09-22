@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
-
-const valoracionesApi = createSimpleCatalogApi('/valoraciones');
+import { ChipValoracionDelProyecto, estiloValoracion, idValoracionDe, tituloValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
@@ -157,22 +155,9 @@ export const ProjectsPage: React.FC = () => {
     `project.valoracionId`. Acá no se recalcula nada: una segunda implementación de la regla diría
     algo distinto de lo guardado el día que los rangos cambien.
   */
-  const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
+  const valoraciones = useValoraciones();
   const [filtroValoracion, setFiltroValoracion] = useState('');
-  useEffect(() => {
-    void valoracionesApi
-      .list()
-      .then((v) => setValoraciones(Array.isArray(v) ? v : []))
-      .catch(() => setValoraciones([]));
-  }, []);
-
   const valoracionPorId = useMemo(() => new Map(valoraciones.map((v) => [v._id, v])), [valoraciones]);
-  /** El id de la valoración de un proyecto, venga poblada o pelada. */
-  const idValoracionDe = (p: Project): string => {
-    const ref = (p as any).valoracionId;
-    if (!ref) return '';
-    return typeof ref === 'object' ? String(ref._id || '') : String(ref);
-  };
 
   const clientMap = useMemo(() => {
     const map = new Map<string, Client>();
@@ -182,7 +167,7 @@ export const ProjectsPage: React.FC = () => {
 
   const filteredProjects = useMemo(() => {
     // El filtro por valoración va ANTES del buscador: es un recorte del conjunto, no una búsqueda.
-    const base = filtroValoracion ? projects.filter((p) => idValoracionDe(p) === filtroValoracion) : projects;
+    const base = filtroValoracion ? projects.filter((p) => idValoracionDe(p.valoracionId) === filtroValoracion) : projects;
     if (!searchTerm) return base;
     const lowerSearch = searchTerm.toLowerCase();
     return base.filter((p) => {
@@ -444,6 +429,20 @@ export const ProjectsPage: React.FC = () => {
                       text: (typeof project.clientId === 'object' ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || 'Cliente Desconocido',
                       variant: 'cyan',
                     },
+                    // La valoración, si tiene: es lo que decide qué categorías se le ofrecen al contratar.
+                    ...(() => {
+                      const v = valoracionPorId.get(idValoracionDe(project.valoracionId));
+                      if (!v) return [];
+                      const color = String(v.color || '');
+                      return [
+                        {
+                          text: `${String(v.name)}${project.valoracionManual ? ' *' : ''}`,
+                          className: color ? 'border font-bold' : 'border font-bold border-gray-400 text-gray-600 dark:text-gray-300',
+                          style: estiloValoracion(color),
+                          title: tituloValoracion(String(v.name), project.valoracionManual),
+                        },
+                      ];
+                    })(),
                   ],
                   badgesPosition: 'top',
                 }}
@@ -663,23 +662,11 @@ export const ProjectsPage: React.FC = () => {
                         <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${statusColors[project.status] || statusColors.archived}`}>{statusLabel[project.status] || project.status}</span>
                       </td>
                       <td className="px-6 py-4">
-                        {(() => {
-                          const v = valoracionPorId.get(idValoracionDe(project));
-                          if (!v) return <span className="text-xs text-gray-400 dark:text-gray-600">—</span>;
-                          const color = String(v.color || '');
-                          return (
-                            <span
-                              className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold border whitespace-nowrap"
-                              style={color ? { color, borderColor: color, backgroundColor: `${color}1a` } : undefined}
-                              title={(project as any).valoracionManual ? 'Fijada manualmente' : 'Calculada según el margen'}
-                            >
-                              {String(v.name)}
-                              {/* El asterisco marca que la puso una persona: sin esto, un nivel que
-                                  no coincide con el presupuesto se lee como un error de cálculo. */}
-                              {(project as any).valoracionManual ? <span className="ml-1 opacity-70">*</span> : null}
-                            </span>
-                          );
-                        })()}
+                        {idValoracionDe(project.valoracionId) ? (
+                          <ChipValoracionDelProyecto project={project} valoraciones={valoraciones} className="py-1 rounded-md" />
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600 dark:text-gray-400">{sedeName}</span>

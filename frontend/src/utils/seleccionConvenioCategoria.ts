@@ -115,6 +115,14 @@ export interface CategoriasOfrecidas {
    * lista vacía. Una lista vacía sin explicación se lee como un problema de la pantalla.
    */
   rolNoTieneCategoriasDeLaValoracion: boolean;
+  /**
+   * El proyecto está valorado pero la función NO: ninguna de sus categorías tiene valoración, así
+   * que el modo permisivo las ofrece todas y no se elige ninguna sola.
+   *
+   * Se informa porque en silencio parece una falla del filtro: con el proyecto en Plata, quien abre
+   * el desplegable espera ver la categoría de Plata elegida, y lo que ve es la lista completa.
+   */
+  rolSinValorar: boolean;
 }
 
 /**
@@ -227,6 +235,7 @@ export const categoriasOfrecidas = ({
   let ocultasPorValoracion = 0;
   const algunaValorada = list.some((c) => !!c.valoracionId);
   const rolNoTieneCategoriasDeLaValoracion = !!valoracionProyecto && algunaValorada && !list.some((c) => c.valoracionId === valoracionProyecto);
+  const rolSinValorar = !!valoracionProyecto && rolesFrame.length > 0 && list.length > 0 && !algunaValorada;
 
   if (valoracionProyecto && algunaValorada && !verTodasLasValoraciones && !rolNoTieneCategoriasDeLaValoracion) {
     const antes = list.length;
@@ -252,7 +261,7 @@ export const categoriasOfrecidas = ({
   // catálogo. Invertirlo lo borraría acá, en la última línea, después de haber filtrado bien.
   const conCodigo = list.map((c) => ({ ...c, codigoArca: codigoPorId.get(String(c.id)) || "" }));
 
-  return { categorias: conCodigo, ocultasPorConvenio, ocultasPorFiltroConvenio, rolNoTieneCategoriasDelConvenio, ocultasPorValoracion, rolNoTieneCategoriasDeLaValoracion };
+  return { categorias: conCodigo, ocultasPorConvenio, ocultasPorFiltroConvenio, rolNoTieneCategoriasDelConvenio, ocultasPorValoracion, rolNoTieneCategoriasDeLaValoracion, rolSinValorar };
 };
 
 /** El CCT al que pertenece una categoría, por su `data.id`. Vacío si no lo declara. */

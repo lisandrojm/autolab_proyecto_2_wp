@@ -76,6 +76,12 @@ interface PageLayoutProps {
     variant?: BadgeStateVariant;
   };
 
+  /**
+   * Contenido libre al lado del título, para un tag cuyo color es un DATO y no una variante (la
+   * valoración de un proyecto: Oro, Plata… con el color de su catálogo). Los `badge*` de arriba sólo
+   * aceptan las variantes fijas de BADGE_CLASSES.
+   */
+  titleBadge?: React.ReactNode;
   infoModal?: InfoModalControlledProps;
   showInfoIcon?: boolean;
   shouldShowInfo?: boolean;
@@ -124,7 +130,7 @@ const BADGE_CLASSES: Record<BadgeVariant, string> = {
   info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
 };
 
-export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, sinVolver = false, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, stickySearchAndFilters = false, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
+export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, titleBadge, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, sinVolver = false, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, stickySearchAndFilters = false, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
   const shouldShowInfoButton = shouldShowInfo ?? (!!infoModal || showInfoIcon || !!subtitle);
 
   /**
@@ -269,6 +275,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                             </div>
                           )}
                           {badgeState && <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeState.variant ?? 'default']}`}>{badgeState.text}</span>}
+                          {titleBadge}
                         </div>
                         {shouldShowInfoButton && (
                           <button type="button" onClick={() => infoModal?.onOpen?.()} className="inline-flex items-center justify-center rounded" title="Ver información" aria-label="Ver información">

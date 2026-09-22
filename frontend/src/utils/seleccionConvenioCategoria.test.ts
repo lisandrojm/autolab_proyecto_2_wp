@@ -80,6 +80,13 @@ describe('categoriasOfrecidas — el filtro por valoración', () => {
     assert.deepEqual(ids(r), [1, 2]);
     assert.equal(r.ocultasPorValoracion, 0);
     assert.equal(r.rolNoTieneCategoriasDeLaValoracion, false);
+    assert.equal(r.rolSinValorar, true, 'tiene que avisarse: en silencio parece que el filtro no anduvo');
+  });
+
+  it('rolSinValorar sólo se prende con el proyecto valorado y la función sin valorar', () => {
+    assert.equal(categoriasOfrecidas({ ...base, valoracionProyecto: ORO }).rolSinValorar, false, 'la función está valorada');
+    const sinValorar = rol([{ id: 1, nombre: 'Director de Programas' }]);
+    assert.equal(categoriasOfrecidas({ ...base, rolesFrame: [sinValorar] }).rolSinValorar, false, 'el proyecto no está valorado: no hay nada que explicar');
   });
 
   it('la función valoró, pero ninguna es de la valoración del proyecto: avisa y NO deja lista vacía', () => {

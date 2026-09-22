@@ -1,15 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRankingStar, faTriangleExclamation, faRotateLeft, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Card } from "../ui/Card";
 import { Modal } from "../ui/Modal";
 import { projectsAPI, Project, ContratosDesalineados } from "../../api/projects";
-import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { formatearFechaCalendario } from "../../utils/fechas";
-
-const valoracionesApi = createSimpleCatalogApi("/valoraciones");
+import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from "./ChipValoracion";
 
 /**
  * LA VALORACIÓN DEL PROYECTO, A LA VISTA.
@@ -26,23 +24,6 @@ const valoracionesApi = createSimpleCatalogApi("/valoraciones");
  * regla en el front terminaría diciendo algo distinto el día que cambien los rangos.
  */
 
-/** El id de la valoración, venga poblada o pelada. */
-const idDe = (ref: Project["valoracionId"]): string => (!ref ? "" : typeof ref === "object" ? String(ref._id || "") : String(ref));
-
-/** El chip del nivel, con su color. Es el mismo en la tarjeta, en el modal y en los desalineados. */
-const ChipValoracion: React.FC<{ nombre: string; color?: string; manual?: boolean }> = ({ nombre, color, manual }) => (
-  <span
-    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border whitespace-nowrap"
-    style={color ? { color, borderColor: color, backgroundColor: `${color}1a` } : undefined}
-    title={manual ? "Fijada manualmente" : "Calculada según el margen"}
-  >
-    {nombre}
-    {/* El asterisco marca que la puso una persona: un nivel que no coincide con el margen, sin
-        esta marca, se lee como un error de cálculo. */}
-    {manual ? <span className="ml-1 opacity-70">*</span> : null}
-  </span>
-);
-
 /** Filtra al escribir y normaliza la coma: «12,5» es como se escribe un decimal acá. */
 const soloDecimal = (v: string) => {
   const crudo = v.replace(",", ".").replace(/(?!^-)[^0-9.]/g, "");
@@ -53,20 +34,13 @@ const soloDecimal = (v: string) => {
 export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => void | Promise<void> }> = ({ project, onGuardado }) => {
   const navigate = useNavigate();
   const [abierto, setAbierto] = useState(false);
-  const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
+  const valoraciones = useValoraciones();
   const [desalineados, setDesalineados] = useState<ContratosDesalineados | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   // El formulario arranca con lo guardado, como texto: el vacío tiene que poder viajar como `null`.
   const [margen, setMargen] = useState("");
   const [presupuesto, setPresupuesto] = useState("");
-
-  useEffect(() => {
-    void valoracionesApi
-      .list()
-      .then((v) => setValoraciones(Array.isArray(v) ? v : []))
-      .catch(() => setValoraciones([]));
-  }, []);
 
   /*
     Los desalineados se piden al montar y no al abrir: el número va en la TARJETA, que es donde tiene
@@ -80,7 +54,7 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
     }
   };
   // Se recarga cuando cambia la valoración: es lo que mueve qué contratos quedan desalineados.
-  const valoracionActualId = idDe(project.valoracionId);
+  const valoracionActualId = idValoracionDe(project.valoracionId);
   useEffect(() => {
     void cargarDesalineados();
   }, [project._id, valoracionActualId]);
@@ -91,11 +65,7 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
     setAbierto(true);
   };
 
-  const actual = useMemo(() => {
-    const id = idDe(project.valoracionId);
-    const v = valoraciones.find((x) => x._id === id);
-    return v ? { id, nombre: String(v.name), color: String(v.color || "") } : null;
-  }, [project.valoracionId, valoraciones]);
+  const actual = useValoracionDelProyecto(project, valoraciones);
 
   /* Sólo las activas para FIJAR: una apagada no se ofrece en altas nuevas, así que elegirla a mano
      sería contradecir esa decisión. La que ya tiene el proyecto se muestra aunque esté apagada. */

@@ -4,9 +4,7 @@ import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
-import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
-
-const valoracionesApi = createSimpleCatalogApi("/valoraciones");
+import { ChipValoracion, useValoraciones, useValoracionDelProyecto } from "../components/proyectos/ChipValoracion";
 import { shiftsAPI, Shift } from "../api/shifts";
 
 import { useAuthStore } from "../stores/authStore";
@@ -251,22 +249,8 @@ export const ProjectDetailPage: React.FC = () => {
     a calcular nada. Es a propósito: una segunda implementación de la regla en el front terminaría
     diciendo algo distinto de lo que el server guardó. Ver `server/src/utils/valoracionAutomatica.ts`.
   */
-  const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
-  useEffect(() => {
-    void valoracionesApi
-      .list()
-      .then((v) => setValoraciones(Array.isArray(v) ? v : []))
-      .catch(() => setValoraciones([]));
-  }, []);
-
-  const valoracionDelProyecto = useMemo(() => {
-    const ref = project?.valoracionId;
-    if (!ref) return null;
-    // Puede venir poblada o como id pelado, según el endpoint.
-    if (typeof ref === "object") return { name: String((ref as any).name || ""), color: String((ref as any).color || "") };
-    const v = valoraciones.find((x) => x._id === String(ref));
-    return v ? { name: String(v.name), color: String(v.color || "") } : null;
-  }, [project?.valoracionId, valoraciones]);
+  const valoraciones = useValoraciones();
+  const valoracionDelProyecto = useValoracionDelProyecto(project, valoraciones);
 
   /** Devuelve el proyecto al cálculo por margen. El server recalcula en el acto. */
   const volverAlCalculoAutomatico = async () => {
@@ -434,6 +418,8 @@ export const ProjectDetailPage: React.FC = () => {
     // Sólo el nombre en el título: se llega desde Proyectos y el ícono ya dice qué es.
     <PageLayout
       title={project.name}
+      // Al lado del nombre: es lo que decide qué categorías se ofrecen al contratar en este proyecto.
+      titleBadge={valoracionDelProyecto ? <ChipValoracion nombre={valoracionDelProyecto.nombre} color={valoracionDelProyecto.color} manual={project.valoracionManual} className="text-sm px-2.5" /> : undefined}
       badge={sedeName ? { text: sedeName, variant: "default" } : undefined}
       faIcon={{ icon: faBriefcase }}
       clientMiniAvatar={{
@@ -839,12 +825,7 @@ export const ProjectDetailPage: React.FC = () => {
                       {project.margen == null ? <span className="font-normal text-gray-400 dark:text-gray-600">sin margen</span> : `${project.margen}% de margen`}
                     </span>
                     {valoracionDelProyecto ? (
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-bold border"
-                        style={valoracionDelProyecto.color ? { color: valoracionDelProyecto.color, borderColor: valoracionDelProyecto.color, backgroundColor: `${valoracionDelProyecto.color}1a` } : undefined}
-                      >
-                        {valoracionDelProyecto.name}
-                      </span>
+                      <ChipValoracion nombre={valoracionDelProyecto.nombre} color={valoracionDelProyecto.color} manual={project.valoracionManual} />
                     ) : (
                       <span className="text-xs text-gray-400 dark:text-gray-600">Sin valorar</span>
                     )}

@@ -19,6 +19,12 @@ interface CardBadge {
   variant?: "default" | "success" | "warning" | "blue" | "info" | "green" | "social" | "cyan" | "destructive";
   icon?: IconDefinition;
   className?: string;
+  /**
+   * Para los badges cuyo color es un DATO y no una variante: la valoración de un proyecto trae el
+   * suyo (Oro, Plata…) cargado en su catálogo, y no hay clase de Tailwind que lo represente.
+   */
+  style?: React.CSSProperties;
+  title?: string;
 }
 
 interface CardAvatar {
@@ -175,7 +181,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
     return (
       <div className="flex flex-wrap gap-2 w-full">
         {header.badges.map((badge, index) => (
-          <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
+          <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`} style={badge.style} title={badge.title}>
             {badge.icon && <FontAwesomeIcon icon={badge.icon} className="h-3 w-3" />}
             <span className="text-nowrap">{badge.text}</span>
           </span>

@@ -54,6 +54,7 @@ import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { fuzzyMatch } from "../utils/searchHelpers";
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
 import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from "../utils/seleccionConvenioCategoria";
+import { ChipValoracion, useValoraciones, useValoracionDelProyecto } from "../components/proyectos/ChipValoracion";
 import { cachedFetch } from "../utils/refCache";
 
 const HELP_KEY = "projectTeam" as const;
@@ -307,6 +308,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // Data
   const [project, setProject] = useState<Project | null>(null);
+  // Sólo para el tag: el filtro de categorías usa el id, que ya viene en el proyecto.
+  const valoraciones = useValoraciones();
+  const valoracionDelProyecto = useValoracionDelProyecto(project, valoraciones);
+  const tagValoracion = valoracionDelProyecto ? <ChipValoracion nombre={valoracionDelProyecto.nombre} color={valoracionDelProyecto.color} manual={project?.valoracionManual} /> : null;
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   // --- Paginación server-side del Equipo (misma lógica que Usuarios) ---
@@ -1398,6 +1403,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     rolNoTieneCategoriasDelConvenio,
     ocultasPorValoracion,
     rolNoTieneCategoriasDeLaValoracion,
+    rolSinValorar,
   } = useMemo(
     () =>
       categoriasOfrecidas({
@@ -3753,13 +3759,20 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         subtitle={
           selectedUserForWizard ? (
             <div className="flex flex-col gap-0.5">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{project?.name}</span>
+              {/* La valoración al lado del proyecto: es la que decide qué categorías se ofrecen abajo. */}
+              <span className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{project?.name}</span>
+                {tagValoracion}
+              </span>
               <p className="text-base font-black text-blue-600 dark:text-blue-400 uppercase tracking-tight">
                 {selectedUserForWizard.firstName} {selectedUserForWizard.lastName}
               </p>
             </div>
           ) : (
-            project?.name
+            <span className="flex items-center gap-2">
+              {project?.name}
+              {tagValoracion}
+            </span>
           )
         }
         size="xl"
@@ -4398,6 +4411,19 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </p>
                   )}
 
+                  {/* El modo permisivo, dicho: sin esto parece que el filtro no anduvo. Nueva
+                      pestaña para no perder lo cargado en el formulario. */}
+                  {rolSinValorar && valoracionDelProyecto && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» todavía no tiene categorías valoradas: se ofrecen
+                      todas, sin filtrar por la valoración del proyecto ({valoracionDelProyecto.nombre}). Para que se ofrezca y se elija sola la de {valoracionDelProyecto.nombre},{" "}
+                      <a href="/roles-empresa" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
+                        valorala en Roles Empresa
+                      </a>
+                      .
+                    </p>
+                  )}
+
                   {ocultasPorValoracion > 0 && !verTodasLasValoraciones && (
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
                       Se ocultaron {ocultasPorValoracion} de otra valoración.{" "}
@@ -4855,6 +4881,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   return (
     <PageLayout
       title="Gestionar Equipo"
+      titleBadge={tagValoracion}
       itemCount={displayedCount}
       subtitle="Agrega o quita miembros del equipo"
       onBack={() => navigate(-1)}
