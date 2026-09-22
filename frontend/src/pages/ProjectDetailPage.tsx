@@ -5,6 +5,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
 import { ChipValoracion, useValoraciones, useValoracionDelProyecto } from "../components/proyectos/ChipValoracion";
+import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from "../components/proyectos/CampoValoracion";
 import { shiftsAPI, Shift } from "../api/shifts";
 
 import { useAuthStore } from "../stores/authStore";
@@ -224,8 +225,13 @@ export const ProjectDetailPage: React.FC = () => {
 
   /* ------------------------------- Actions -------------------------------- */
 
+  // La valoración va aparte de `projectForm`: es un modo (automática / fijada) y lo que se manda al
+  // guardar depende de cómo estaba (ver `cambiosDeValoracion`).
+  const [valoracionElegida, setValoracionElegida] = useState("");
+
   const openEditProject = () => {
     if (!project) return;
+    setValoracionElegida(valorInicialValoracion(project));
     setModalMode("editProject");
     setIsAddingArea(false);
     setConfiguringAreaId(null);
@@ -295,6 +301,7 @@ export const ProjectDetailPage: React.FC = () => {
         presupuesto: projectForm.presupuesto.trim() === "" ? null : Number(projectForm.presupuesto),
         // Ídem: vacío = `null` («sin margen»), que no es 0 — 0 es trabajar sin ganancia.
         margen: projectForm.margen.trim() === "" ? null : Number(projectForm.margen),
+        ...cambiosDeValoracion(valoracionElegida, project),
       };
 
       await projectsAPI.updateProject(project._id, payload);
@@ -511,6 +518,7 @@ export const ProjectDetailPage: React.FC = () => {
                     traer el presupuestador.
                   </p>
                 </div>
+                <CampoValoracion valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={project} />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   <div>

@@ -56,6 +56,12 @@ export const ValoracionesPage: React.FC = () => (
       que no se puede hacer y hacerlo descubrir con un error.
     */
     permiteImportExcel={false}
+    helpKey="valoraciones"
+    /*
+      El orden ES la jerarquía: arriba el nivel más bajo. Es lo que lee el script que valora las
+      funciones por bruto para saber cuál es la «baja» (la más barata) y cuál la «alta».
+    */
+    ordenable={{ campo: "orden", ayuda: "Arriba el nivel más bajo: queda con orden 1." }}
     extraFields={[
       {
         key: "orden",
@@ -96,6 +102,7 @@ export const ValoracionesPage: React.FC = () => (
         label: "Color",
         type: "color",
         paleta: METALES,
+        letraMuestra: "V",
         // El mismo tag que se ve en proyectos y al contratar: lo que se previsualiza es lo que sale.
         vistaPrevia: (color, nombre) => <ChipValoracion nombre={nombre.trim() || "Valoración"} color={color || undefined} />,
         showColumn: true,

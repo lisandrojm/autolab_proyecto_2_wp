@@ -8,6 +8,7 @@ import { Client } from "../models/Client.js";
 import { Role } from "../models/Role.js";
 import { buildAdditiveSet, findNewContracts, USER_FRAME_WHITELIST, USERPROJECT_FRAME_WHITELIST, } from "../utils/additiveSync.js";
 import { resolveRoleFrameRefs } from "../utils/roleFrameSync.js";
+import { valoracionParaMargen } from "./valoracionDelTenant.js";
 export class ExternalApiService {
     api;
     token = null;
@@ -104,6 +105,9 @@ export class ExternalApiService {
         const existingExt = new Set(existing.map((p) => Number(p.externalId)));
         // createdBy es un String requerido; el sync automático puede correr como "system".
         const createdBy = executedBy === "system" ? "system" : String(executedBy);
+        // Los proyectos que llegan de FRAME no traen margen: nacen con la valoración POR DEFECTO, igual
+        // que un alta a mano. Una sola consulta para toda la corrida, no una por proyecto.
+        const valoracionDeAlta = await valoracionParaMargen(tenantObjectId, null);
         let created = 0;
         for (const fp of frameProjects) {
             const extId = Number(fp.id);
@@ -131,6 +135,8 @@ export class ExternalApiService {
                     createdBy,
                     externalId: extId,
                     assignedUsers: [],
+                    valoracionId: valoracionDeAlta,
+                    valoracionManual: false,
                     metadata: {
                         id: extId,
                         nombre: fp.nombre,

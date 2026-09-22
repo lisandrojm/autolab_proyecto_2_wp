@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faTriangleExclamation, faFilter, faCheck, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faTriangleExclamation, faFilter, faCheck, faCircleInfo, faGripVertical, faMultiply } from '@fortawesome/free-solid-svg-icons';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { PageLayout } from '../ui/PageLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Card } from '../ui/Card';
@@ -47,6 +50,12 @@ export interface CatalogExtraField {
    * para cualquier otro—; la paleta es para que los de siempre salgan siempre iguales.
    */
   paleta?: Array<{ hex: string; label: string }>;
+  /**
+   * Sólo `color`: la letra de cada muestra de la paleta (por defecto «A», como en Estados). El nombre
+   * del color queda en el tooltip y no en el botón: en Valoraciones, un botón que dice «Plata»
+   * mientras se edita «Oro» se lee como elegir el NIVEL, no el color.
+   */
+  letraMuestra?: string;
   /**
    * Sólo `color`: cómo se ve el registro con ese color. Se usa en el «Así se va a ver» del formulario
    * y en la celda de la tabla. Recibe el color (vacío si no hay uno válido) y el nombre del registro.
@@ -227,6 +236,15 @@ interface SimpleCatalogManagerProps {
    */
   resumen?: (items: SimpleCatalogItem[]) => React.ReactNode;
   /**
+   * Habilita «Ordenar»: arrastrar las filas y guardar la posición en `campo` (1, 2, 3…), igual que
+   * en Configuración → Estados. Con esto la lista también se muestra en ese orden y no por nombre.
+   *
+   * Se guarda con el PUT de siempre, mandando sólo `campo`: pasa por las mismas validaciones que una
+   * edición a mano (en Valoraciones, la de rangos) y no hace falta un endpoint aparte.
+   * `ayuda` es la línea que se lee mientras se arrastra: qué significa quedar arriba.
+   */
+  ordenable?: { campo: string; ayuda?: string };
+  /**
    * ¿Este catálogo se carga por Excel? Default `true`.
    *
    * En `false` desaparecen «Plantilla» e «Importar Excel» del encabezado. Es para los catálogos que
@@ -323,10 +341,11 @@ const SelectorColor: React.FC<{ campo: CatalogExtraField; valor: string; nombre:
               onClick={() => onChange(c.hex)}
               title={`${c.label} (${c.hex})`}
               aria-pressed={elegido}
-              className={`h-8 px-2.5 rounded-lg border-2 text-xs font-bold transition-all ${elegido ? 'border-gray-900 dark:border-white scale-105' : 'border-transparent'}`}
+              aria-label={c.label}
+              className={`w-8 h-8 rounded-lg border-2 transition-all ${elegido ? 'border-gray-900 dark:border-white scale-110' : 'border-transparent'}`}
               style={{ backgroundColor: conAlpha(c.hex, 0.2), color: colorTextoBadge(c.hex, oscuro) }}
             >
-              {c.label}
+              <span className="text-sm font-black">{campo.letraMuestra || 'A'}</span>
             </button>
           );
         })}
@@ -352,6 +371,26 @@ const SelectorColor: React.FC<{ campo: CatalogExtraField; valor: string; nombre:
       {/* Recién con los siete caracteres: antes es alguien escribiendo, no un error. */}
       {valor.length >= 7 && !valido && <p className="text-[11px] text-amber-600 dark:text-amber-400">«{valor}» no es un color: tiene que ser # y seis dígitos (ej. #d4af37).</p>}
     </div>
+  );
+};
+
+/** Una fila que se arrastra en el modo «Ordenar». */
+const FilaParaOrdenar: React.FC<{ item: SimpleCatalogItem; posicion: number; columnas: Array<{ key: string; render: (it: SimpleCatalogItem) => React.ReactNode }> }> = ({ item, posicion, columnas }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item._id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 1 : 0 };
+  return (
+    <tr ref={setNodeRef} style={style} {...attributes} {...listeners} className="bg-blue-50/50 dark:bg-blue-900/10 cursor-grab active:cursor-grabbing">
+      <td className="px-4 py-3 text-center text-blue-600 dark:text-blue-400 w-14">
+        <FontAwesomeIcon icon={faGripVertical} className="h-4 w-4" />
+      </td>
+      <td className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 w-14">{posicion}</td>
+      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+      {columnas.map((c) => (
+        <td key={c.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
+          {c.render(item)}
+        </td>
+      ))}
+    </tr>
   );
 };
 
@@ -410,7 +449,7 @@ const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v
   );
 };
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, nombreLabel = 'Nombre', permiteImportExcel = true, accionesEncabezado, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, nombreLabel = 'Nombre', permiteImportExcel = true, accionesEncabezado, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen, ordenable }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [filtroServidorValor, setFiltroServidorValor] = useState(filtroServidor?.valorInicial || '');
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
@@ -617,9 +656,63 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const itemsFiltrados = recorteCliente ? buscados.filter(recorteCliente) : buscados;
   const base = filtroDestacado && soloDestacados ? destacados : itemsFiltrados;
 
+  /*
+    CON «ORDENAR», LA LISTA VA EN ESE ORDEN y no por nombre (que es como la manda el server). Si no,
+    se ordena, se guarda, y la tabla vuelve a mostrar Oro antes que Plata: el orden guardado no se
+    vería en ningún lado. Los que no tienen posición van al final, por nombre.
+  */
+  const posicionDe = (it: SimpleCatalogItem): number => {
+    const n = Number((it as Record<string, unknown>)[ordenable?.campo || '']);
+    return (it as Record<string, unknown>)[ordenable?.campo || ''] == null || !Number.isFinite(n) ? Number.POSITIVE_INFINITY : n;
+  };
+  const porPosicion = (a: SimpleCatalogItem, b: SimpleCatalogItem) => posicionDe(a) - posicionDe(b) || String(a.name).localeCompare(String(b.name));
+
   // `base` ya viene con la búsqueda aplicada (ver `buscados`): volver a filtrar acá sería hacer dos
   // veces el mismo recorrido sobre los 2.669 de Convenios, en cada tecla.
-  const filtered = base;
+  const filtered = ordenable ? [...base].sort(porPosicion) : base;
+
+  /*
+    EL MODO «ORDENAR». `null` = no se está ordenando.
+
+    Se ordena SIEMPRE la lista completa, nunca el resultado de la búsqueda o de un filtro: numerar
+    1, 2, 3 sobre lo que se ve le pisaría la posición a lo que quedó oculto. Por eso al entrar se
+    limpia la búsqueda y la barra de búsqueda se reemplaza por la ayuda.
+  */
+  // Las columnas de la tabla, sin la del orden cuando es `ordenable`: esa va adelante, fija.
+  const columnasVisibles = extraFields.filter((f) => f.showColumn && f.key !== ordenable?.campo);
+  const [ordenando, setOrdenando] = useState<SimpleCatalogItem[] | null>(null);
+  const [guardandoOrden, setGuardandoOrden] = useState(false);
+  const sensoresOrden = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const empezarAOrdenar = () => {
+    setSearch('');
+    setOrdenando([...items].sort(porPosicion));
+  };
+  const alSoltar = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setOrdenando((prev) => {
+      if (!prev) return prev;
+      return arrayMove(prev, prev.findIndex((it) => it._id === active.id), prev.findIndex((it) => it._id === over.id));
+    });
+  };
+  const guardarOrden = async () => {
+    if (!ordenando || !ordenable) return;
+    // Sólo los que cambiaron de lugar: cada PUT pasa por las validaciones del catálogo, y mandar los
+    // que quedaron igual sería validar de nuevo lo que ya está bien.
+    const cambios = ordenando.map((it, i) => ({ it, posicion: i + 1 })).filter(({ it, posicion }) => posicionDe(it) !== posicion);
+    setGuardandoOrden(true);
+    try {
+      for (const { it, posicion } of cambios) await api.update(it._id, { [ordenable.campo]: posicion });
+      setOrdenando(null);
+      sweetAlert.success('Orden guardado', cambios.length ? 'El nuevo orden se guardó con éxito.' : 'No había nada que cambiar.');
+    } catch (e) {
+      const delServer = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      sweetAlert.error('No se pudo guardar el orden', delServer || 'Intentá de nuevo en un momento.');
+    } finally {
+      setGuardandoOrden(false);
+      await load();
+    }
+  };
 
   /*
     SE PAGINA LO QUE SE DIBUJA, NO LO QUE SE BUSCA.
@@ -919,6 +1012,11 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       {extraSuperior && <div className="mb-4">{extraSuperior}</div>}
       {resumen && <div className="mb-4">{resumen(items)}</div>}
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+        {ordenando ? (
+          <p className="w-full text-sm text-gray-500 dark:text-gray-400 italic px-1">
+            Arrastrá para reordenar. {ordenable?.ayuda || 'El de arriba queda primero.'} La búsqueda se deshabilita mientras tanto.
+          </p>
+        ) : (
         <div className="flex w-full max-w-md items-center gap-2">
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Buscar ${entityLabel}...`} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
           {camposFiltrables.length > 0 && (
@@ -932,7 +1030,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             </button>
           )}
         </div>
-        {filtroServidor && (
+        )}
+        {filtroServidor && !ordenando && (
           <select
             value={filtroServidorValor}
             onChange={(e) => {
@@ -964,7 +1063,25 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               </button>
             </div>
           )}
-          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+          {ordenable &&
+            (ordenando ? (
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setOrdenando(null)} disabled={guardandoOrden} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-sm flex items-center gap-2 disabled:opacity-50">
+                  <FontAwesomeIcon icon={faMultiply} />
+                  Cancelar
+                </button>
+                <button type="button" onClick={() => void guardarOrden()} disabled={guardandoOrden} className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-all text-sm flex items-center gap-2 disabled:opacity-50">
+                  <FontAwesomeIcon icon={faCheck} />
+                  {guardandoOrden ? 'Guardando…' : 'Guardar Orden'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={empezarAOrdenar} disabled={items.length < 2 || loading} title="Ordenar" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                <FontAwesomeIcon icon={faGripVertical} />
+                <span>Ordenar</span>
+              </button>
+            ))}
+          {isLarge && !ordenando && <ViewToggle value={viewMode} onChange={setViewMode} />}
         </div>
       </div>
 
@@ -989,7 +1106,40 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
         </div>
       )}
 
-      {loading ? (
+      {ordenando ? (
+        // La tabla de siempre no: esa pagina, tiene el interruptor de Estado activo y las acciones.
+        // Acá sólo se arrastra, sobre la lista completa.
+        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+          <DndContext sensors={sensoresOrden} collisionDetection={closestCenter} onDragEnd={alSoltar}>
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900/50">
+                <tr>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Ordenar</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Orden</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                  {columnasVisibles.map((f) => (
+                      <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                        {f.columnLabel || f.label}
+                      </th>
+                    ))}
+                </tr>
+              </thead>
+              <SortableContext items={ordenando.map((it) => it._id)} strategy={verticalListSortingStrategy}>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                  {ordenando.map((item, i) => (
+                    <FilaParaOrdenar
+                      key={item._id}
+                      item={item}
+                      posicion={i + 1}
+                      columnas={columnasVisibles.map((f) => ({ key: f.key, render: (it) => (f.type === 'estado' ? extraDisplay(f, it[f.key]) : celdaExtra(f, it)) }))}
+                    />
+                  ))}
+                </tbody>
+              </SortableContext>
+            </table>
+          </DndContext>
+        </div>
+      ) : loading ? (
         <LoadingSpinner />
       ) : loadError ? (
         <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-6 flex items-start gap-3">
@@ -1080,10 +1230,16 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
+                {/* Con «Ordenar», las dos primeras columnas son las de Configuración → Estados: el
+                    agarre (que también activa el modo) y la posición. */}
+                {ordenable && (
+                  <>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Ordenar</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Orden</th>
+                  </>
+                )}
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                {extraFields
-                  .filter((f) => f.showColumn)
-                  .map((f) => (
+                {columnasVisibles.map((f) => (
                     <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                       {f.columnLabel || f.label}
                     </th>
@@ -1111,6 +1267,23 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {visibles.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  {ordenable && (
+                    <>
+                      <td className="px-4 py-3 text-center w-14">
+                        <button
+                          type="button"
+                          onClick={empezarAOrdenar}
+                          disabled={items.length < 2}
+                          title="Clic para activar el modo ordenar"
+                          aria-label="Activar el modo ordenar"
+                          className="text-gray-400 dark:text-gray-600 hover:text-blue-500 disabled:cursor-not-allowed disabled:hover:text-gray-400"
+                        >
+                          <FontAwesomeIcon icon={faGripVertical} className="h-4 w-4" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 w-14">{Number.isFinite(posicionDe(item)) ? posicionDe(item) : '—'}</td>
+                    </>
+                  )}
                   <td className={`px-5 py-3 text-sm font-medium ${estaInactivo(item) ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>{item.name}</td>
                   {/*
                     Los valores de un `extraField` son etiquetas de catálogo —«2 — DISCONTINUOS»,
@@ -1119,9 +1292,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     columna se ensancha lo que haga falta; el ancho lo absorbe la de Nombre, que sí
                     es texto largo.
                   */}
-                  {extraFields
-                    .filter((f) => f.showColumn)
-                    .map((f) => (
+                  {columnasVisibles.map((f) => (
                       <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {f.type === 'estado' ? interruptorEstado(f, item) : celdaExtra(f, item)}
                       </td>
@@ -1149,7 +1320,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       )}
 
       {/* Uno solo para las tres vistas: es el mismo control sobre el mismo conjunto. */}
-      {!loading && !loadError && <Paginador total={filtered.length} pagina={pagina} onCambiar={setPagina} entidadPlural={`${entityLabel}s`} />}
+      {!loading && !loadError && !ordenando && <Paginador total={filtered.length} pagina={pagina} onCambiar={setPagina} entidadPlural={`${entityLabel}s`} />}
         </>
       )}
 

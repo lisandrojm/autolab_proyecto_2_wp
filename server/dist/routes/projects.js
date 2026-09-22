@@ -11,7 +11,7 @@ import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { Valoracion } from "../models/Valoracion.js";
 import { RoleFrame } from "../models/RoleFrame.js";
-import { resolverValoracion } from "../utils/valoracionAutomatica.js";
+import { valoracionParaMargen } from "../services/valoracionDelTenant.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
 import { CentroCosto } from "../models/CentroCosto.js";
@@ -797,6 +797,20 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
             createdBy: req.user.userId,
             assignedUsers: [new Types.ObjectId(req.user.userId)],
         });
+        /*
+          LA VALORACIÓN CON LA QUE NACE.
+    
+          Elegida en el formulario → queda FIJADA a mano: es alguien diciendo cuál quiere, y un margen
+          cargado después no la tiene que mover. Si no, automática: la del margen y, sin margen —lo normal
+          en un alta—, la POR DEFECTO del tenant, que es para lo que existe esa marca.
+        */
+        if (data.valoracionId) {
+            project.valoracionManual = true;
+        }
+        else {
+            project.valoracionId = (await valoracionParaMargen(req.tenantObjectId, data.margen));
+            project.valoracionManual = false;
+        }
         // Ensure metadata is populated correctly as requested
         const now = new Date();
         project.metadata = {
@@ -1265,11 +1279,7 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
         }
         const vuelveAlAutomatico = updateData.valoracionManual === false;
         if (!currentProject.valoracionManual || vuelveAlAutomatico) {
-            const valoraciones = await Valoracion.find({ tenantId: req.tenantObjectId, activo: { $ne: false } })
-                .select("_id orden margenDesde margenHasta esDefault activo")
-                .lean();
-            const elegida = resolverValoracion(currentProject.margen ?? null, valoraciones);
-            currentProject.valoracionId = elegida ? elegida._id : null;
+            currentProject.valoracionId = (await valoracionParaMargen(req.tenantObjectId, currentProject.margen));
             currentProject.valoracionManual = false;
         }
         // Re-verify clientId/externalId relation if needed

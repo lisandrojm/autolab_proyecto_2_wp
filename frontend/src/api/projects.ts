@@ -432,6 +432,10 @@ class ProjectsAPI {
         areaId: string;
         shiftIds: string[];
       }[];
+      /* Mandarla la deja FIJADA a mano. Sin ella nace automática: la del margen y, sin margen, la
+         valoración por defecto (la resuelve el server). */
+      valoracionId?: string;
+      margen?: number | null;
     },
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {

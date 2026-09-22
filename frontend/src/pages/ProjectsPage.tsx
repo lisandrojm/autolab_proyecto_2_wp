@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useThemeStore } from '../stores/themeStore';
 import { ChipValoracionDelProyecto, estiloValoracion, idValoracionDe, tituloValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
+import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
@@ -53,6 +54,9 @@ export const ProjectsPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  // Aparte de `formData`: no es un campo más del proyecto sino un modo (automática / fijada), y lo
+  // que se manda al guardar depende de cómo estaba (ver `cambiosDeValoracion`).
+  const [valoracionElegida, setValoracionElegida] = useState('');
   const [creating, setCreating] = useState(false);
   const [selectedClientId, setSelectedClientIdLocal] = useState('');
   const [availableSedes, setAvailableSedes] = useState<any[]>([]);
@@ -210,6 +214,7 @@ export const ProjectsPage: React.FC = () => {
     setSelectedAreaId('');
     setIsAddingArea(false);
     setConfiguringAreaId(null);
+    setValoracionElegida('');
     setFormData({
       name: '',
       description: '',
@@ -237,6 +242,7 @@ export const ProjectsPage: React.FC = () => {
     setEditingProject(project);
     const cId = typeof project.clientId === 'object' ? project.clientId._id : project.clientId;
     setSelectedClientIdLocal(cId || '');
+    setValoracionElegida(valorInicialValoracion(project));
     setFormData({
       name: project.name || '',
       description: project.description || '',
@@ -311,11 +317,13 @@ export const ProjectsPage: React.FC = () => {
       if (modalMode === 'edit' && editingProject) {
         await projectsAPI.updateProject(editingProject._id, {
           ...formData,
+          ...cambiosDeValoracion(valoracionElegida, editingProject),
         } as any);
         sweetAlert.success('Proyecto actualizado', 'El proyecto se ha actualizado correctamente');
       } else {
         await projectsAPI.createProject(selectedClientId, {
           ...formData,
+          ...cambiosDeValoracion(valoracionElegida),
         } as any);
         sweetAlert.success('Proyecto creado', 'El proyecto se ha creado correctamente');
       }
@@ -782,6 +790,8 @@ export const ProjectsPage: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
               <div>
