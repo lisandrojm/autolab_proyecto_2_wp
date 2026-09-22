@@ -167,6 +167,8 @@ export interface ContractOverviewRow {
   obraSocialNoFigura?: boolean;
   /** Lo devolvió ARCA: el campo va en modo lectura y el server rechaza sobrescribirlo (409). */
   obraSocialBloqueada?: boolean;
+  /** La función con la que se contrató: de ella sale la valoración de cada categoría. */
+  rol_frame_id?: number | null;
   categoria_sat_id?: number | null;
   sede_id?: number | null;
   tipo_contrato_id?: number | null;

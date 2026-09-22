@@ -10,6 +10,7 @@ import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
 import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
+import { ChipValoracion, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
 // El mismo calendario de Vacaciones: se pintan los días de a uno.
@@ -1375,6 +1376,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   }, [categoriasOfrecidasLista, categoriasSat]);
 
 
+  /*
+    EL NIVEL DE CADA CATEGORÍA (Oro, Plata…), para verlo mientras se elige.
+
+    La lista de arriba (`categoriasOfrecidasLista`) ya trae el `valoracionId` de la asociación
+    función ↔ categoría; acá se le pone el nombre y el color. Sin esto hay que elegir una para recién
+    después enterarse de si corresponde al nivel del proyecto.
+  */
+  const valoraciones = useValoraciones();
+  const nivelDeCategoria = useMemo(() => {
+    const porDataId = new Map(categoriasOfrecidasLista.map((c) => [String(c.id), String(c.valoracionId || "")]));
+    return (cat: CategoriaSatItem) => {
+      const id = porDataId.get(String(cat.data?.id));
+      const v = id ? valoraciones.find((x) => String(x._id) === id) : undefined;
+      return v ? { nombre: String(v.name), color: String(v.color || "") } : null;
+    };
+  }, [categoriasOfrecidasLista, valoraciones]);
+
   /** Lo que muestra la ventana de categorías: las ofrecidas, filtradas por el buscador. */
   const categoriasParaElegir = useMemo(() => (categoriaBusqueda.trim() ? categoriasDisponibles.filter((c) => fuzzyMatch(c.name, categoriaBusqueda) || String(c.data?.codigoArca || "").includes(categoriaBusqueda.trim())) : categoriasDisponibles), [categoriasDisponibles, categoriaBusqueda]);
 
@@ -2379,6 +2397,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 <>
                   {/* Sin el código de ARCA, igual que en la lista de abajo: acá tapaba el nombre. */}
                   <span className="truncate text-sm text-slate-900 dark:text-white">{categoriaElegida.name}</span>
+                  {(() => {
+                    const n = nivelDeCategoria(categoriaElegida);
+                    return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : null;
+                  })()}
                 </>
               ) : (
                 <>
@@ -3107,6 +3129,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                           lo tenga a mano lo puede pegar, sólo que ya no ocupa lugar en la lista.
                         */}
                         <span className="min-w-0 flex-1 truncate text-sm font-medium">{cat.name}</span>
+                        {/* El nivel, pegado al nombre: es lo que decide si corresponde al proyecto. */}
+                        {(() => {
+                          const n = nivelDeCategoria(cat);
+                          return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : null;
+                        })()}
                       </button>
                       {/* El grupo. Tocarlo abre la escala; NO elige la categoría, para eso es la fila. */}
                       <button

@@ -25,6 +25,8 @@ import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
 import { resolveAfip, resolveAfipValues, esResuelto, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
+import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
+import { useValoraciones } from '../proyectos/ChipValoracion';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
@@ -533,7 +535,7 @@ const ActividadSelectCell: React.FC<{ record: ContractOverviewRow; valores: Afip
   );
 };
 
-const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, cat, convenio, onGuardado }) => {
+const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; nivelDeCategoria?: (rolFrameId: unknown, categoriaDataId: unknown) => string; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, cat, convenio, nivelDeCategoria, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
   const efectivo = valores.convenioCategoria || convenio;
 
@@ -576,6 +578,12 @@ const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: Afip
       {categorias.map((c: any) => (
         <option key={String(c.data?.id)} value={String(c.data?.id ?? '')}>
           {c.data?.codigoArca || c.data?.codigoAfip} — {c.name}
+          {/* El nivel, en el texto: un `<option>` no admite colores, y sin esto hay que elegir la
+              categoría para recién después saber con qué valoración quedó el contrato. */}
+          {(() => {
+            const n = nivelDeCategoria?.(record.rol_frame_id, c.data?.id) || '';
+            return n ? ` · ${n}` : '';
+          })()}
         </option>
       ))}
     </select>
@@ -1417,6 +1425,36 @@ export const ContractBulkAfipTab: React.FC<{
   // `estados` entra al catálogo para que el TXT derive el alta temprana del estado del contrato y no
   // del switch que se eliminó. `allEstados` ya estaba en scope: es la misma lista que arma las bandejas.
   const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales]);
+
+  /*
+    EL NIVEL (Oro, Plata…) DE CADA CATEGORÍA, PARA VERLO AL ELEGIRLA.
+
+    La valoración no es de la categoría sino de la ASOCIACIÓN función ↔ categoría: la misma categoría
+    de ARCA puede ser Oro en una función y Plata en otra. Por eso hacen falta las dos cosas —las
+    funciones y los niveles— y por eso el nivel se resuelve con el `rol_frame_id` del contrato de cada
+    fila, no con la categoría sola.
+  */
+  const [rolesFrame, setRolesFrame] = useState<RoleFrameItem[]>([]);
+  const valoracionesCatalogo = useValoraciones();
+  useEffect(() => {
+    void roleFrameAPI
+      .list()
+      .then(setRolesFrame)
+      .catch(() => setRolesFrame([]));
+  }, []);
+  const nivelDeCategoria = useMemo(() => {
+    const porRol = new Map<string, Map<string, string>>();
+    for (const rf of rolesFrame) {
+      const porCategoria = new Map<string, string>();
+      for (const c of (rf.data?.categoriasSat as any[]) || []) if (c?.valoracionId) porCategoria.set(String(c.id), String(c.valoracionId));
+      porRol.set(String(rf.data?.rol?.id ?? ""), porCategoria);
+    }
+    return (rolFrameId: unknown, categoriaDataId: unknown) => {
+      const id = porRol.get(String(rolFrameId ?? ""))?.get(String(categoriaDataId ?? ""));
+      const v = id ? valoracionesCatalogo.find((x) => String(x._id) === id) : undefined;
+      return v ? String(v.name) : "";
+    };
+  }, [rolesFrame, valoracionesCatalogo]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
@@ -2810,7 +2848,7 @@ export const ContractBulkAfipTab: React.FC<{
                           />
                         </td>
                         <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                          <CategoriaSelectCell record={r} valores={resolveAfipValues(r, afipCat)} cat={afipCat} convenio={convenioFila[rowKey(r)] || ''} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                          <CategoriaSelectCell record={r} valores={resolveAfipValues(r, afipCat)} cat={afipCat} convenio={convenioFila[rowKey(r)] || ''} nivelDeCategoria={nivelDeCategoria} onGuardado={(patch) => aplicarCambio(r, patch)} />
                         </td>
                       </>
                     )}

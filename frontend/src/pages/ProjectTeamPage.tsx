@@ -4383,9 +4383,45 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       <option key={c.id} value={c.id}>
                         {c.codigoArca ? `${c.codigoArca} — ` : ""}
                         {c.nombre}
+                        {/* El nivel, en el texto de la opción: un `<option>` no admite colores, y sin
+                            esto hay que elegir la categoría para recién ahí saber si corresponde al
+                            proyecto. El tag con su color va abajo, ya con la categoría elegida. */}
+                        {(() => {
+                          const v = valoraciones.find((x) => String(x._id) === String(c.valoracionId || ""));
+                          return v ? ` · ${String(v.name)}` : "";
+                        })()}
                       </option>
                     ))}
                   </select>
+                  {/*
+                    EL NIVEL DE LA CATEGORÍA ELEGIDA, CON SU COLOR, Y SI COINCIDE CON EL DEL PROYECTO.
+
+                    Es la comparación que decide si el encuadre corresponde, y estaba a medias: el
+                    proyecto muestra su tag en el encabezado del alta y la categoría no mostraba
+                    ninguno, así que había que acordarse de memoria de cuál era cuál. Se dice también
+                    con palabras: Oro y Plata, en chico, se parecen demasiado.
+                  */}
+                  {(() => {
+                    if (!wizardData.categoria_sat_id) return null;
+                    const elegida = availableCategoriasSat.find((c: any) => String(c.id) === String(wizardData.categoria_sat_id));
+                    if (!elegida) return null;
+                    const idCat = String(elegida.valoracionId || "");
+                    const v = valoraciones.find((x) => String(x._id) === idCat);
+                    if (!v) return <p className="ml-1 mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">Esta categoría no tiene valoración cargada en la función.</p>;
+                    const coincide = !!valoracionProyectoId && idCat === valoracionProyectoId;
+                    return (
+                      <p className="ml-1 mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <ChipValoracion nombre={String(v.name)} color={String(v.color || "")} />
+                        {valoracionProyectoId ? (
+                          <span className={coincide ? "text-emerald-600 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}>
+                            {coincide ? "coincide con la valoración del proyecto" : `el proyecto es ${valoracionDelProyecto?.nombre || "de otra valoración"}`}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 dark:text-gray-400">el proyecto no está valorado</span>
+                        )}
+                      </p>
+                    );
+                  })()}
                   {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
                   {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
 
