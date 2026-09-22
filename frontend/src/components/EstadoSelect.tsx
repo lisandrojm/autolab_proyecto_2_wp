@@ -91,8 +91,8 @@ export const estadoColorPorDefecto = (name: string): string => ESTADO_COLOR_HEX[
 export const estadoLabel = (name: string): string => labelFor(name);
 
 /** #rrggbb → rgba con la transparencia pedida. El ABM solo elige el color del texto. */
-const conAlpha = (hex: string, alpha: number): string => {
-  const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
+export const conAlpha = (hex: string, alpha: number): string => {
+  const m = /^#([0-9a-f]{6})$/i.exec((hex || "").trim());
   if (!m) return "transparent";
   const n = parseInt(m[1], 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;

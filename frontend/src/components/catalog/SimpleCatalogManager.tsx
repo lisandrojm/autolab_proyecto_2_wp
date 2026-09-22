@@ -12,6 +12,8 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { fuzzyMatch } from '../../utils/searchHelpers';
 import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { getHelp, hasHelp, HelpKey } from '../../data/help/helpContent';
+import { colorTextoBadge, conAlpha } from '../EstadoSelect';
+import { useThemeStore } from '../../stores/themeStore';
 
 /** Descriptor de un campo extra propio de un catálogo (además de nombre / ID externo). */
 export interface CatalogExtraField {
@@ -35,7 +37,21 @@ export interface CatalogExtraField {
     server lo guarda como `null`. El input filtra al escribir en vez de usar `type="number"`, que
     deja pegar «12a» y muestra el campo vacío sin decir por qué.
   */
-  type?: 'text' | 'select' | 'ref' | 'estado' | 'numero';
+  /*
+    `color` es un #rrggbb con paleta sugerida y vista previa, como el de Configuración → Estados. En
+    la tabla se ve el resultado (`vistaPrevia`) y no el hex: «#d4af37» no le dice nada a nadie.
+  */
+  type?: 'text' | 'select' | 'ref' | 'estado' | 'numero' | 'color';
+  /**
+   * Sólo `color`: los colores sugeridos, como botones. El valor sigue siendo libre —hay un selector
+   * para cualquier otro—; la paleta es para que los de siempre salgan siempre iguales.
+   */
+  paleta?: Array<{ hex: string; label: string }>;
+  /**
+   * Sólo `color`: cómo se ve el registro con ese color. Se usa en el «Así se va a ver» del formulario
+   * y en la celda de la tabla. Recibe el color (vacío si no hay uno válido) y el nombre del registro.
+   */
+  vistaPrevia?: (color: string, nombre: string) => React.ReactNode;
   /**
    * Sólo `estado`: si tenerlo apagado hace que el REGISTRO ENTERO cuente como inactivo (se agrisa en
    * la tabla). Por defecto sí, que es el caso de `activo` en Bancos.
@@ -282,6 +298,63 @@ interface SimpleCatalogManagerProps {
  * server traduce a `null`. Si en vez de eso se omitiera la clave, desvincular sería imposible —el
  * server dejaría el valor anterior— y limpiar el campo se vería como que no pasó nada.
  */
+/** Un color que el resto de la app sabe dibujar: `#` y seis dígitos hexadecimales. */
+const esColorValido = (v: string) => /^#[0-9a-f]{6}$/i.test(v.trim());
+
+/**
+ * Selector para `type: 'color'`: la paleta como botones, un color libre y la vista previa.
+ *
+ * Calca el de Configuración → Estados: se elige el color de la TIPOGRAFÍA y el fondo sale de ese
+ * mismo color translúcido. Cada botón ya se dibuja así, para que elegir sea ver el resultado y no
+ * imaginarlo a partir de un cuadrado de color.
+ */
+const SelectorColor: React.FC<{ campo: CatalogExtraField; valor: string; nombre: string; onChange: (v: string) => void }> = ({ campo, valor, nombre, onChange }) => {
+  const oscuro = useThemeStore((st) => st.theme) === 'dark';
+  const valido = esColorValido(valor);
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {(campo.paleta || []).map((c) => {
+          const elegido = valor.trim().toLowerCase() === c.hex.toLowerCase();
+          return (
+            <button
+              key={c.hex}
+              type="button"
+              onClick={() => onChange(c.hex)}
+              title={`${c.label} (${c.hex})`}
+              aria-pressed={elegido}
+              className={`h-8 px-2.5 rounded-lg border-2 text-xs font-bold transition-all ${elegido ? 'border-gray-900 dark:border-white scale-105' : 'border-transparent'}`}
+              style={{ backgroundColor: conAlpha(c.hex, 0.2), color: colorTextoBadge(c.hex, oscuro) }}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+        <label className="flex items-center gap-2 ml-1">
+          {/* El nativo sólo acepta un #rrggbb completo: con el campo vacío arranca en gris, sin guardarlo. */}
+          <input type="color" value={valido ? valor.trim() : '#9ca3af'} onChange={(e) => onChange(e.target.value)} className="w-8 h-8 rounded-lg bg-transparent cursor-pointer" title="Color personalizado" />
+          <input
+            type="text"
+            value={valor}
+            onChange={(e) => onChange(e.target.value.trim())}
+            placeholder={campo.placeholder || '#rrggbb'}
+            maxLength={7}
+            className="w-24 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 font-mono text-xs text-gray-900 dark:text-white"
+          />
+        </label>
+      </div>
+      {campo.vistaPrevia && (
+        <div className="flex items-center gap-2 pt-1">
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">Así se va a ver:</span>
+          {campo.vistaPrevia(valido ? valor.trim() : '', nombre)}
+        </div>
+      )}
+      {/* Recién con los siete caracteres: antes es alguien escribiendo, no un error. */}
+      {valor.length >= 7 && !valido && <p className="text-[11px] text-amber-600 dark:text-amber-400">«{valor}» no es un color: tiene que ser # y seis dígitos (ej. #d4af37).</p>}
+    </div>
+  );
+};
+
 const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v: string) => void }> = ({ campo, valor, onChange }) => {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState('');
@@ -609,6 +682,12 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       sweetAlert.error(`Falta ${missing.label.toLowerCase()}`, `El campo "${missing.label}" es obligatorio.`);
       return;
     }
+    // Un color mal escrito se guardaría igual —es texto— y después se dibujaría sin color, sin avisar.
+    const colorMalo = extraFields.find((f) => f.type === 'color' && String(extraValues[f.key] ?? '').trim() && !esColorValido(String(extraValues[f.key])));
+    if (colorMalo) {
+      sweetAlert.error(`${colorMalo.label} inválido`, 'Tiene que ser # y seis dígitos (ej. #d4af37), o quedar vacío.');
+      return;
+    }
     const extraPayload = Object.fromEntries(extraFields.map((f) => [f.key, String(extraValues[f.key] ?? '').trim()]));
     /*
       Con el campo oculto el id NO viaja, y la diferencia importa al EDITAR: mandarlo como `''`
@@ -711,6 +790,10 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
 
   /** Una celda de campo extra: su valor y, si es una opción inactiva, el «i» amarillo que lo explica. */
   const celdaExtra = (f: CatalogExtraField, item: SimpleCatalogItem) => {
+    if (f.type === 'color' && f.vistaPrevia) {
+      const color = String(item[f.key] ?? '').trim();
+      return f.vistaPrevia(esColorValido(color) ? color : '', String(item.name ?? ''));
+    }
     const texto = extraDisplay(f, item[f.key]);
     const oculta = opcionOcultaDe(f, item);
     if (!oculta) return texto;
@@ -946,7 +1029,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 // Los nombres de catálogo son largos y se parecen entre sí: ver `titleLines` en Card.
                 titleLines: 2 as const,
                 icon,
-                badges: [...extraFields.filter((f) => f.showColumn && (f.type === 'estado' || item[f.key])).map((f) => ({ text: `${extraDisplay(f, item[f.key])}${opcionOcultaDe(f, item) ? ' (inactivo)' : ''}`, variant: 'cyan' as const })), ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
+                badges: [...extraFields.filter((f) => f.showColumn && f.type !== 'color' && (f.type === 'estado' || item[f.key])).map((f) => ({ text: `${extraDisplay(f, item[f.key])}${opcionOcultaDe(f, item) ? ' (inactivo)' : ''}`, variant: 'cyan' as const })), ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
@@ -1127,6 +1210,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     </button>
                   ) : f.type === 'ref' ? (
                     <RefField campo={f} valor={extraValues[f.key] ?? ''} onChange={(v) => setExtraValues((prev) => ({ ...prev, [f.key]: v }))} />
+                  ) : f.type === 'color' ? (
+                    <SelectorColor campo={f} valor={extraValues[f.key] ?? ''} nombre={nombre} onChange={(v) => setExtraValues((prev) => ({ ...prev, [f.key]: v }))} />
                   ) : f.type === 'numero' ? (
                     <input
                       type="text"

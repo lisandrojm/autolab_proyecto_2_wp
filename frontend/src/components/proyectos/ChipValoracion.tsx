@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import type { Project } from "../../api/projects";
+import { colorTextoBadge, conAlpha } from "../EstadoSelect";
+import { useThemeStore } from "../../stores/themeStore";
 
 const valoracionesApi = createSimpleCatalogApi("/valoraciones");
 
@@ -52,20 +54,35 @@ export const useValoracionDelProyecto = (project: Pick<Project, "valoracionId"> 
     return v ? { id, nombre: String(v.name), color: String(v.color || "") } : null;
   }, [project?.valoracionId, valoraciones]);
 
-/** El color del tag, que es un dato del catálogo. Sin color cargado, lo pone quien lo dibuja. */
-export const estiloValoracion = (color?: string): React.CSSProperties | undefined => (color ? { color, borderColor: color, backgroundColor: `${color}1a` } : undefined);
+/**
+ * El color del tag, que es un dato del catálogo. Sin color cargado, lo pone quien lo dibuja.
+ *
+ * Mismo tratamiento que los badges de Estados: el color cargado es el de la TIPOGRAFÍA, aclarado u
+ * oscurecido según el tema para que se lea, y el fondo es ese color translúcido. Pintar el texto con
+ * el hex tal cual dejaba a Plata (#9ca3af) gris sobre gris en el tema claro, y a Oro apenas visible.
+ */
+export const estiloValoracion = (color: string | undefined, oscuro: boolean): React.CSSProperties | undefined =>
+  color && /^#[0-9a-f]{6}$/i.test(color.trim()) ? { color: colorTextoBadge(color, oscuro), backgroundColor: conAlpha(color, 0.14), borderColor: conAlpha(color, 0.35) } : undefined;
 
 export const tituloValoracion = (nombre: string, manual?: boolean) => (manual ? `Valoración ${nombre}: fijada manualmente` : `Valoración ${nombre}: calculada según el margen`);
 
 /** El tag, con su color. `manual` agrega el asterisco de «fijada a mano». */
-export const ChipValoracion: React.FC<{ nombre: string; color?: string; manual?: boolean; className?: string }> = ({ nombre, color, manual, className = "" }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border whitespace-nowrap ${className}`} style={estiloValoracion(color)} title={tituloValoracion(nombre, manual)}>
-    {nombre}
-    {/* El asterisco marca que la puso una persona: un nivel que no coincide con el margen, sin
-        esta marca, se lee como un error de cálculo. */}
-    {manual ? <span className="ml-1 opacity-70">*</span> : null}
-  </span>
-);
+export const ChipValoracion: React.FC<{ nombre: string; color?: string; manual?: boolean; className?: string }> = ({ nombre, color, manual, className = "" }) => {
+  const oscuro = useThemeStore((s) => s.theme) === "dark";
+  const estilo = estiloValoracion(color, oscuro);
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border whitespace-nowrap ${estilo ? "" : "border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300"} ${className}`}
+      style={estilo}
+      title={tituloValoracion(nombre, manual)}
+    >
+      {nombre}
+      {/* El asterisco marca que la puso una persona: un nivel que no coincide con el margen, sin
+          esta marca, se lee como un error de cálculo. */}
+      {manual ? <span className="ml-1 opacity-70">*</span> : null}
+    </span>
+  );
+};
 
 /** El tag de un proyecto, resuelto. No dibuja nada si el proyecto no está valorado. */
 export const ChipValoracionDelProyecto: React.FC<{ project: Pick<Project, "valoracionId" | "valoracionManual">; valoraciones: SimpleCatalogItem[]; className?: string }> = ({ project, valoraciones, className }) => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useThemeStore } from '../stores/themeStore';
 import { ChipValoracionDelProyecto, estiloValoracion, idValoracionDe, tituloValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
@@ -156,6 +157,7 @@ export const ProjectsPage: React.FC = () => {
     algo distinto de lo guardado el día que los rangos cambien.
   */
   const valoraciones = useValoraciones();
+  const temaOscuro = useThemeStore((s) => s.theme) === 'dark';
   const [filtroValoracion, setFiltroValoracion] = useState('');
   const valoracionPorId = useMemo(() => new Map(valoraciones.map((v) => [v._id, v])), [valoraciones]);
 
@@ -438,7 +440,7 @@ export const ProjectsPage: React.FC = () => {
                         {
                           text: `${String(v.name)}${project.valoracionManual ? ' *' : ''}`,
                           className: color ? 'border font-bold' : 'border font-bold border-gray-400 text-gray-600 dark:text-gray-300',
-                          style: estiloValoracion(color),
+                          style: estiloValoracion(color, temaOscuro),
                           title: tituloValoracion(String(v.name), project.valoracionManual),
                         },
                       ];

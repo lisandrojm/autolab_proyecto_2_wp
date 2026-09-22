@@ -2,8 +2,22 @@ import React from "react";
 import { faRankingStar } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
+import { ChipValoracion } from "../components/proyectos/ChipValoracion";
 
 const valoracionesApi = createSimpleCatalogApi("/valoraciones");
+
+/**
+ * Los metales de siempre, de menor a mayor. Plata y Oro son los hex que ya tienen cargados las
+ * valoraciones existentes: si la paleta usara otros, abrir una para editarla no marcaría su color
+ * como elegido. Platino va azulado a propósito: el platino real es casi igual a la plata, y dos
+ * niveles que no se distinguen a simple vista no sirven como tag.
+ */
+const METALES = [
+  { hex: "#cd7f32", label: "Bronce" },
+  { hex: "#9ca3af", label: "Plata" },
+  { hex: "#d4af37", label: "Oro" },
+  { hex: "#8ea9c1", label: "Platino" },
+];
 
 /**
  * Valoraciones: el nivel comercial (Plata, Oro…) que cruza el MARGEN de un proyecto con la escala
@@ -80,11 +94,14 @@ export const ValoracionesPage: React.FC = () => (
       {
         key: "color",
         label: "Color",
-        type: "text",
+        type: "color",
+        paleta: METALES,
+        // El mismo tag que se ve en proyectos y al contratar: lo que se previsualiza es lo que sale.
+        vistaPrevia: (color, nombre) => <ChipValoracion nombre={nombre.trim() || "Valoración"} color={color || undefined} />,
         showColumn: true,
         columnLabel: "Color",
         placeholder: "#d4af37",
-        ayuda: "Con qué color se muestra el chip del nivel. Vacío = lo elige la pantalla.",
+        ayuda: "El color del tag del nivel en proyectos y al contratar. Vacío = gris neutro.",
       },
       {
         key: "esDefault",
