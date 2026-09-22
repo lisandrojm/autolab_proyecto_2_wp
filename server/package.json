@@ -24,6 +24,8 @@
     "diag:missing-members": "dotenv -e .env.production -- tsx src/scripts/diagnoseMissingProjectMembers.ts",
     "backfill:roles-frame:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillUserRolesFrame.ts",
     "backfill:roles-frame": "dotenv -e .env.production -- tsx src/scripts/backfillUserRolesFrame.ts",
+    "valorar:funciones:dry": "dotenv -e .env.production -- tsx src/scripts/valorarFuncionesPorBruto.ts",
+    "valorar:funciones": "dotenv -e .env.production -v APLICAR=true -- tsx src/scripts/valorarFuncionesPorBruto.ts",
     "fix:reemplazo-areas:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillReplacementAreaShifts.ts",
     "fix:reemplazo-areas": "dotenv -e .env.production -- tsx src/scripts/backfillReplacementAreaShifts.ts",
     "empresas:obras-sociales:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarObrasSocialesPorEmpresa.ts",

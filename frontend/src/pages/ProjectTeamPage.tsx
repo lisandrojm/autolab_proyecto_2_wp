@@ -54,7 +54,7 @@ import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { fuzzyMatch } from "../utils/searchHelpers";
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
 import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from "../utils/seleccionConvenioCategoria";
-import { ChipValoracion, useValoraciones, useValoracionDelProyecto } from "../components/proyectos/ChipValoracion";
+import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from "../components/proyectos/ChipValoracion";
 import { cachedFetch } from "../utils/refCache";
 
 const HELP_KEY = "projectTeam" as const;
@@ -1435,6 +1435,26 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id]);
 
   /*
+    LA CATEGORÍA ELEGIDA ES DE OTRA VALORACIÓN que la del proyecto: pide motivo, se llegue como se llegue.
+
+    No sólo por «Elegir de todas formas». Cuando la función no tiene NINGUNA categoría del nivel del
+    proyecto, el filtro se sale solo y ofrece las de otro nivel —para no dejar la lista vacía—, pero
+    el server igual exige el motivo (422). La caja sólo aparecía con el escape abierto, así que en
+    ese caso el alta quedaba trabada: el error pedía un motivo que no había dónde cargar.
+
+    Se decide igual que en el server (`revisarValoracion`): por la valoración de la categoría EN
+    ESTA FUNCIÓN, que es donde se carga. Una categoría sin valorar no está desalineada.
+  */
+  const valoracionProyectoId = idValoracionDe(project?.valoracionId);
+  const categoriaElegidaDeOtraValoracion = useMemo(() => {
+    if (!valoracionProyectoId || !wizardData.categoria_sat_id) return false;
+    const rol = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
+    const asociada = ((rol?.data?.categoriasSat as any[]) || []).find((c) => String(c?.id) === String(wizardData.categoria_sat_id));
+    const deLaCategoria = asociada?.valoracionId ? String(asociada.valoracionId) : "";
+    return !!deLaCategoria && deLaCategoria !== valoracionProyectoId;
+  }, [valoracionProyectoId, allRoleFrames, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
+
+  /*
     EL OFICIO QUE SE AGREGA DESDE EL BUSCADOR, y que la persona todavía no tiene en su ficha.
 
     Vive aparte de `wizardData` porque no es un dato del contrato: es lo que hay que sumarle a la ficha
@@ -2133,7 +2153,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || "").trim());
     setVerTodasDelConvenio(false);
     setVerTodasLasValoraciones(false);
-    setMotivoValoracion("");
+    // Al editar un contrato que ya se eligió de otra valoración, su motivo viene cargado: el server lo
+    // vuelve a pedir en cada guardado, y hacerlo tipear de nuevo para cambiar un horario no aporta nada.
+    // Sólo con un contrato puntual de ESTE proyecto: el de otro proyecto no justifica nada acá.
+    setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ""));
     setAvisoConvenio("");
 
     // Reset wizard data with pulled data or defaults
@@ -2254,6 +2277,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (horarioExcedidoWizard) faltan.push(`Horario dentro de las ${limiteHorasWizard} h por jornada del contrato`);
     if (erroresJornadasWizard.jornadas) faltan.push("Cantidad de jornadas");
     if (erroresJornadasWizard.motivo || erroresJornadasWizard.nota) faltan.push("Motivo del ajuste de jornadas");
+    // Lo exige el server; frenarlo acá dice QUÉ falta en vez de mostrar el 422 después de guardar.
+    if (categoriaElegidaDeOtraValoracion && !motivoValoracion.trim()) faltan.push("Motivo de la categoría de otra valoración");
     /*
       LOS DÍAS QUE TRABAJA SON OBLIGATORIOS, no una sugerencia.
 
@@ -2334,7 +2359,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             server lo EXIGE cuando la categoría no es de la valoración del proyecto (contesta 422
             sin él) y lo guarda con quién y cuándo. Sin escape abierto no hay nada que justificar.
           */
-          valoracionOverride: verTodasLasValoraciones && motivoValoracion.trim() ? { motivo: motivoValoracion.trim() } : undefined,
+          valoracionOverride: categoriaElegidaDeOtraValoracion && motivoValoracion.trim() ? { motivo: motivoValoracion.trim() } : undefined,
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
           dias_por_semana: wizardData.dias_por_semana,
           dias_semana: wizardData.dias_semana,
@@ -4433,9 +4458,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </p>
                   )}
 
-                  {verTodasLasValoraciones && (
+                  {(verTodasLasValoraciones || categoriaElegidaDeOtraValoracion) && (
                     <div className="ml-1 mt-1 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/30">
-                      <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Estás viendo categorías de otras valoraciones.</p>
+                      <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                        {categoriaElegidaDeOtraValoracion
+                          ? `La categoría elegida no es de la valoración del proyecto${valoracionDelProyecto ? ` (${valoracionDelProyecto.nombre})` : ""}: contá por qué.`
+                          : "Estás viendo categorías de otras valoraciones."}
+                      </p>
                       {/* El motivo es OBLIGATORIO y lo exige el server (422 sin él): un salteo sin
                           explicación es justo lo que después nadie puede reconstruir. */}
                       <input

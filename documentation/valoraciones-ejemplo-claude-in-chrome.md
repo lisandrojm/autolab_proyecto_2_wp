@@ -27,7 +27,7 @@ Reglas que vas a ver en acción:
 
 - **Decide el margen, no el presupuesto.** El presupuesto se carga pero no define el nivel.
 - **Rangos semiabiertos:** «hasta 20» no incluye el 20. Con Plata hasta 20 y Oro desde 20, un margen de 20 % cae en Oro. Dos valoraciones activas no pueden tener rangos que se pisen: la pantalla lo rechaza.
-- **La categoría «más barata» no se calcula sola.** La elegís vos en Roles Empresa: mirás la columna **Bruto** de la función y a la de menor bruto le ponés Plata.
+- **La categoría «más barata» se marca en Roles Empresa**, no se calcula al contratar. El 22/9/2026 se valoraron de una vez 36 funciones con esta regla: dentro de cada convenio, la de menor **Bruto** = Plata y las demás = Oro (script `valorar:funciones`). Las 46 funciones con una sola categoría, o con todas al mismo bruto, quedaron **sin valorar a propósito**: no hay elección por precio, y el alta elige sola la única que hay.
 - **Modo permisivo:** si una función no tiene ninguna categoría valorada, no se filtra nada; se comporta como siempre. Por eso cargar valoraciones no frena la contratación de las funciones que todavía no se valoraron.
 - **Una categoría «Sin valorar»** dentro de una función que sí tiene otras valoradas **no se ofrece** en un proyecto valorado.
 - Si la función tiene categorías valoradas pero **ninguna de la valoración del proyecto**, se muestran todas con un aviso, nunca una lista vacía.
@@ -99,6 +99,8 @@ Hacé clic en la función para abrir su detalle. La tabla muestra **Convenio · 
 > **Pedile confirmación al usuario:** «Voy a usar el proyecto X y la función Y, con estas categorías: …». Seguí recién cuando confirme.
 
 ### Paso 3: Valorar las categorías de la función
+
+**La mayoría ya está valorada.** Si en el detalle la columna **Valoración** ya muestra Plata en la más barata de cada convenio y Oro en el resto, **no toques nada**: anotalo y seguí con el paso 4. Hacé lo que sigue solo si la función está «sin valorar» y tiene al menos dos categorías con distinto Bruto.
 
 1. En `/roles-empresa`, tocá el **ícono de editar (lápiz)** de la función.
 2. Se abre el formulario con «Nombre de la Función *» y la lista **«Categorías \*»**. Cada categoría tildada tiene al lado un desplegable con **Sin valorar / Plata / Oro**.

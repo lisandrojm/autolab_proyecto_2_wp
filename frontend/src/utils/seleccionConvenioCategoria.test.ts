@@ -85,8 +85,13 @@ describe('categoriasOfrecidas — el filtro por valoración', () => {
 
   it('rolSinValorar sólo se prende con el proyecto valorado y la función sin valorar', () => {
     assert.equal(categoriasOfrecidas({ ...base, valoracionProyecto: ORO }).rolSinValorar, false, 'la función está valorada');
-    const sinValorar = rol([{ id: 1, nombre: 'Director de Programas' }]);
+    const sinValorar = rol([
+      { id: 1, nombre: 'Director de Programas' },
+      { id: 2, nombre: 'Jefe de Producción' },
+    ]);
     assert.equal(categoriasOfrecidas({ ...base, rolesFrame: [sinValorar] }).rolSinValorar, false, 'el proyecto no está valorado: no hay nada que explicar');
+    const unaSola = rol([{ id: 1, nombre: 'Director de Programas' }]);
+    assert.equal(categoriasOfrecidas({ ...base, rolesFrame: [unaSola], valoracionProyecto: ORO }).rolSinValorar, false, 'con una sola categoría se elige sola: no hay nada que explicar');
   });
 
   it('la función valoró, pero ninguna es de la valoración del proyecto: avisa y NO deja lista vacía', () => {

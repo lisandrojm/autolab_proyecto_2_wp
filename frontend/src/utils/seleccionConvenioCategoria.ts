@@ -235,7 +235,8 @@ export const categoriasOfrecidas = ({
   let ocultasPorValoracion = 0;
   const algunaValorada = list.some((c) => !!c.valoracionId);
   const rolNoTieneCategoriasDeLaValoracion = !!valoracionProyecto && algunaValorada && !list.some((c) => c.valoracionId === valoracionProyecto);
-  const rolSinValorar = !!valoracionProyecto && rolesFrame.length > 0 && list.length > 0 && !algunaValorada;
+  // Con una sola no hay nada que explicar: el alta la elige sola, igual que si estuviera valorada.
+  const rolSinValorar = !!valoracionProyecto && rolesFrame.length > 0 && list.length > 1 && !algunaValorada;
 
   if (valoracionProyecto && algunaValorada && !verTodasLasValoraciones && !rolNoTieneCategoriasDeLaValoracion) {
     const antes = list.length;
