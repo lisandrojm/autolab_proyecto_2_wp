@@ -1689,104 +1689,140 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
 // cluster), cada una cachea por su cuenta: la inconsistencia entre instancias con un TTL de este
 // tamaño es aceptable acá (roster de un reporte, no un dato transaccional).
 const DIRECTORY_CACHE_TTL_MS = 90_000;
+/** Hasta acá una copia vencida se sirve igual, refrescando por detrás. Más vieja que esto, se espera. */
+const DIRECTORY_STALE_MS = 15 * 60_000;
 const directoryCache = new Map();
+/**
+ * La consulta del directorio, sin caché ni HTTP: lo que tarda 20-30 s cuando no hay nada cacheado.
+ *
+ * Está afuera del handler para poder llamarla también en segundo plano, cuando se refresca una copia
+ * vencida mientras al que preguntó ya se le contestó con la anterior.
+ */
+const consultarDirectorio = async (tenantObjectId, status) => {
+    const filter = { tenantId: tenantObjectId };
+    if (status === "inactive") {
+        filter["metadata.activo"] = { $ne: true };
+    }
+    else if (status === "all") {
+        // No filter on activo - return all users
+    }
+    else {
+        // Default: active only
+        filter["metadata.activo"] = true;
+    }
+    // Ningún consumidor de este directory (RequestsPage.tsx, mobile ActivityLogs.tsx) lee
+    // areaId POBLADO de metadata.projects (solo el areaId crudo, como id) —
+    // ese sub-populate triple, multiplicado por cada proyecto de cada uno de los ~1500+ usuarios
+    // del tenant, era puro costo sin uso. `/users` (el endpoint completo) sigue poblándolos para
+    // quien sí los necesite.
+    //
+    // `contracts` también se acota a los campos que realmente se leen (vigencia + área/turno): hay
+    // UserProject con hasta ~95 contratos históricos, cada uno con decenas de campos (sueldos, URLs
+    // de PDFs, el JSON crudo de la consulta a AFIP, etc.) que nadie mira desde este directory — solo
+    // infla el payload y fue lo que estaba causando timeouts. El historial completo sigue disponible
+    // desde `/users` o `/users/:id` para quien sí lo necesite.
+    /*
+      `metadata` VIENE RECORTADA, y esto es lo que hacía lento al directorio.
+  
+      Estaba pidiendo el subdocumento ENTERO: cuarenta campos por persona —domicilio, CBU, número de
+      cuenta, CUIT, fecha de nacimiento, obra social— por cada uno de los ~1400 usuarios del tenant.
+      Medido contra la base: 1.4 MB de respuesta, de los cuales 1.1 MB eran esos campos que ninguna
+      de las dos pantallas que consumen este endpoint llega a leer. El tiempo de este endpoint es
+      proporcional a los bytes, así que era más de la mitad de la espera.
+  
+      Los consumidores (`RequestsPage.tsx` y la vista Novedades del móvil) leen exactamente dos cosas
+      de `metadata`: `activo` y `projects`. Se agregan `id` y `fullName`, que pesan nada y son como se
+      matchea a la gente que viene de FRAME y a las solicitudes sin nombre cargado.
+  
+      Si una pantalla necesita otro campo de la ficha, lo pide a `/users/:id`: este endpoint es un
+      roster, no la ficha de nadie.
+    */
+    const users = await User.find(filter)
+        .select("firstName lastName email projectIds roles metadata.activo metadata.id metadata.fullName metadata.projects")
+        // `roles` con nombre y permisos: mobile los necesita para distinguir a los coordinadores al
+        // armar el roster de novedades —hoy por permiso, antes por el nombre del rol—. Es un array chico
+        // de refs con unos pocos strings, cuesta bastante menos que lo de arriba.
+        .populate({ path: "roles", select: "name permissions", model: Role })
+        .populate("projectIds", "name")
+        .populate({
+        path: "metadata.projects",
+        model: UserProject,
+        /*
+          EL TIPO DE CONTRATO TIENE QUE VIAJAR, aunque cueste.
+  
+          Al recortar los contratos quedaron afuera `nombre_contrato` y `tipo_contrato_id`, y con
+          ellos el filtro "Tipo de contrato" del modal de Reportes: la lista de tipos se arma
+          leyendo esos dos campos de cada contrato, así que quedaba SIEMPRE vacía y la pantalla
+          decía "Ningún contrato del período tiene tipo cargado" con 7.462 contratos que sí lo
+          tienen. No fallaba nada: simplemente el filtro no existía.
+  
+          Medido contra la base: los dos campos suman 454 KB y 4,4 s sobre los 2,2 MB y 22,7 s que
+          este endpoint ya costaba. Es caro y se paga igual, porque un filtro que miente es peor que
+          uno lento. Lo que hay que atacar es el tamaño del directorio entero, no seguir sacándole
+          campos que la pantalla necesita.
+        */
+        select: "projectId areaId nombre_proyecto nombre_rol_frame " +
+            "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
+            "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments " +
+            "contracts.nombre_contrato contracts.tipo_contrato_id",
+    })
+        .sort({ firstName: 1, lastName: 1 })
+        .lean();
+    return users;
+};
+/**
+ * Una sola consulta en vuelo por clave.
+ *
+ * Sin esto, cinco personas abriendo Novedades a la vez con la caché fría disparaban cinco veces la
+ * misma consulta de 30 s contra Mongo: se estorban entre ellas y tardan todas más. Acá la primera la
+ * dispara y las otras cuatro esperan el mismo resultado.
+ */
+const directorioEnVuelo = new Map();
+const traerDirectorio = (cacheKey, tenantObjectId, status) => {
+    const enVuelo = directorioEnVuelo.get(cacheKey);
+    if (enVuelo)
+        return enVuelo;
+    const pedido = consultarDirectorio(tenantObjectId, status)
+        .then((users) => {
+        directoryCache.set(cacheKey, { at: Date.now(), data: users });
+        return users;
+    })
+        .finally(() => directorioEnVuelo.delete(cacheKey));
+    directorioEnVuelo.set(cacheKey, pedido);
+    return pedido;
+};
 router.get("/directory", requireTenant, authenticateToken, async (req, res) => {
     try {
         const status = req.query.status;
         const cacheKey = `${req.tenantObjectId}:${status || "active"}`;
         const cached = directoryCache.get(cacheKey);
-        if (cached && Date.now() - cached.at < DIRECTORY_CACHE_TTL_MS) {
+        const edad = cached ? Date.now() - cached.at : Infinity;
+        // Fresca: se contesta y listo.
+        if (cached && edad < DIRECTORY_CACHE_TTL_MS) {
             res.json(cached.data);
             return;
         }
-        const filter = { tenantId: req.tenantObjectId };
-        if (status === "inactive") {
-            filter["metadata.activo"] = { $ne: true };
-        }
-        else if (status === "all") {
-            // No filter on activo - return all users
-        }
-        else {
-            // Default: active only
-            filter["metadata.activo"] = true;
-        }
-        // Ningún consumidor de este directory (RequestsPage.tsx, mobile ActivityLogs.tsx) lee
-        // areaId POBLADO de metadata.projects (solo el areaId crudo, como id) —
-        // ese sub-populate triple, multiplicado por cada proyecto de cada uno de los ~1500+ usuarios
-        // del tenant, era puro costo sin uso. `/users` (el endpoint completo) sigue poblándolos para
-        // quien sí los necesite.
-        //
-        // `contracts` también se acota a los campos que realmente se leen (vigencia + área/turno): hay
-        // UserProject con hasta ~95 contratos históricos, cada uno con decenas de campos (sueldos, URLs
-        // de PDFs, el JSON crudo de la consulta a AFIP, etc.) que nadie mira desde este directory — solo
-        // infla el payload y fue lo que estaba causando timeouts. El historial completo sigue disponible
-        // desde `/users` o `/users/:id` para quien sí lo necesite.
         /*
-          `metadata` VIENE RECORTADA, y esto es lo que hacía lento al directorio.
+          VENCIDA PERO NO VIEJA: se contesta con la que hay y se refresca por detrás.
     
-          Estaba pidiendo el subdocumento ENTERO: cuarenta campos por persona —domicilio, CBU, número de
-          cuenta, CUIT, fecha de nacimiento, obra social— por cada uno de los ~1400 usuarios del tenant.
-          Medido contra la base: 1.4 MB de respuesta, de los cuales 1.1 MB eran esos campos que ninguna
-          de las dos pantallas que consumen este endpoint llega a leer. El tiempo de este endpoint es
-          proporcional a los bytes, así que era más de la mitad de la espera.
-    
-          Los consumidores (`RequestsPage.tsx` y la vista Novedades del móvil) leen exactamente dos cosas
-          de `metadata`: `activo` y `projects`. Se agregan `id` y `fullName`, que pesan nada y son como se
-          matchea a la gente que viene de FRAME y a las solicitudes sin nombre cargado.
-    
-          Si una pantalla necesita otro campo de la ficha, lo pide a `/users/:id`: este endpoint es un
-          roster, no la ficha de nadie.
+          Es el caso que hacía esperar 30 segundos a quien abría el modal de un reporte. Un roster de
+          hace unos minutos es una respuesta correcta —las personas de un proyecto no cambian mientras
+          alguien carga un parte— y esperar por una versión más fresca que nadie pidió es el peor
+          intercambio posible. Si la que hay ya es demasiado vieja, se espera: contestar con datos de
+          hace media hora sí puede significar que falte gente que se acaba de dar de alta.
         */
-        const users = await User.find(filter)
-            .select("firstName lastName email projectIds roles metadata.activo metadata.id metadata.fullName metadata.projects")
-            // `roles` con nombre y permisos: mobile los necesita para distinguir a los coordinadores al
-            // armar el roster de novedades —hoy por permiso, antes por el nombre del rol—. Es un array chico
-            // de refs con unos pocos strings, cuesta bastante menos que lo de arriba.
-            .populate({ path: "roles", select: "name permissions", model: Role })
-            .populate("projectIds", "name")
-            .populate({
-            path: "metadata.projects",
-            model: UserProject,
-            /*
-              EL TIPO DE CONTRATO TIENE QUE VIAJAR, aunque cueste.
-    
-              Al recortar los contratos quedaron afuera `nombre_contrato` y `tipo_contrato_id`, y con
-              ellos el filtro "Tipo de contrato" del modal de Reportes: la lista de tipos se arma
-              leyendo esos dos campos de cada contrato, así que quedaba SIEMPRE vacía y la pantalla
-              decía "Ningún contrato del período tiene tipo cargado" con 7.462 contratos que sí lo
-              tienen. No fallaba nada: simplemente el filtro no existía.
-    
-              Medido contra la base: los dos campos suman 454 KB y 4,4 s sobre los 2,2 MB y 22,7 s que
-              este endpoint ya costaba. Es caro y se paga igual, porque un filtro que miente es peor que
-              uno lento. Lo que hay que atacar es el tamaño del directorio entero, no seguir sacándole
-              campos que la pantalla necesita.
-            */
-            select: "projectId areaId nombre_proyecto nombre_rol_frame " +
-                "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
-                "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments " +
-                "contracts.nombre_contrato contracts.tipo_contrato_id",
-        })
-            .sort({ firstName: 1, lastName: 1 })
-            .lean();
-        directoryCache.set(cacheKey, { at: Date.now(), data: users });
-        res.json(users);
+        if (cached && edad < DIRECTORY_STALE_MS) {
+            void traerDirectorio(cacheKey, req.tenantObjectId, status).catch((e) => console.error("Refresco en segundo plano del directorio falló:", e));
+            res.json(cached.data);
+            return;
+        }
+        res.json(await traerDirectorio(cacheKey, req.tenantObjectId, status));
     }
     catch (error) {
         console.error("Get user directory error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
-/*
-  GET /users/eligible-responsables — quiénes pueden quedar a cargo de un proyecto.
-
-  Son los que tienen un rol con la capacidad `project_supervisor:eligible`, que en la práctica es el
-  rol Supervisor: ser responsable de un proyecto ES lo que significa serlo.
-
-  Pasó por dos formas peores. Primero se buscaban los roles cuyo nombre dijera "responsable", así que
-  renombrar un rol cambiaba en silencio quién era elegible. Después fue un tilde suelto en la ficha de
-  cada persona, que separaba el dato del rol que lo explica: alguien podía ser Supervisor y no ser
-  elegible, o al revés, sin que nada lo dijera.
-*/
 router.get("/eligible-responsables", requireTenant, authenticateToken, async (req, res) => {
     try {
         const rolesSupervisores = await Role.find({ tenantId: req.tenantObjectId, permissions: PROJECT_SUPERVISOR }).distinct("_id");

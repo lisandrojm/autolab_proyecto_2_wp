@@ -704,6 +704,16 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const [activeProjectTab, setActiveProjectTab] = useState<"info" | "schedule" | "team">("info");
   const [isLoadingData, setIsLoadingData] = useState(true);
+  /**
+   * EL ROSTER SE CARGA APARTE, Y EL FORMULARIO NO LO ESPERA.
+   *
+   * `/users/directory` mide 30+ segundos cuando su caché está fría —el populate de los contratos de
+   * ~1500 personas— y el modal lo estaba esperando junto con todo lo demás para dibujar el primer
+   * campo. Pero para elegir proyecto, área, turno y fecha no hace falta ninguna persona: lo único que
+   * necesita el roster es «Comenzar Reporte». Así el modal abre en lo que tardan las tres llamadas
+   * livianas y la lista de gente llega mientras tanto.
+   */
+  const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [isLoadingReports, setIsLoadingReports] = useState(true);
   /** Evita disparar loadData() dos veces en simultáneo (ej. doble-montaje en desarrollo): duplicar
    *  las 5 llamadas —una de ellas pesada— aumenta el riesgo de timeouts sin necesidad. */
@@ -965,14 +975,23 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
     if (loadDataInFlightRef.current) return;
     loadDataInFlightRef.current = true;
     setIsLoadingData(true);
+    setIsLoadingRoster(true);
     try {
-      // Las 5 llamadas son independientes entre sí (nada acá depende de otra), así que se disparan
-      // todas juntas en vez de una atrás de la otra — antes tardaba la SUMA de las 5, ahora tarda lo
-      // que tarde la más lenta (típicamente "Employees", que trae usuarios con todos sus contratos).
+      // Las 5 llamadas son independientes entre sí (nada acá depende de otra) y salen todas juntas.
+      // Lo que cambió es QUÉ se espera para dibujar: las tres livianas —tipos, proyectos, áreas y
+      // turnos— habilitan el formulario, y las dos pesadas —el directorio de personas y las
+      // vacaciones— siguen en vuelo con su propio indicador. Antes se esperaba la suma de todo, o
+      // sea la más lenta de las cinco, para mostrar un campo que no dependía de ella.
       // Cada una mantiene su propio try/catch para que si una falla no tire abajo a las demás.
-      await Promise.all([loadTypes(), loadEmployees(), loadProjects(), loadAreasAndShifts(), loadVacations()]);
+      const roster = Promise.all([loadEmployees(), loadVacations()]).finally(() => setIsLoadingRoster(false));
+      await Promise.all([loadTypes(), loadProjects(), loadAreasAndShifts()]);
+      setIsLoadingData(false);
+      // Se sigue esperando acá para no soltar el candado de «ya estoy cargando» antes de tiempo: sin
+      // esto, una segunda llamada a loadData() dispararía el directorio de nuevo estando en curso.
+      await roster;
     } finally {
       setIsLoadingData(false);
+      setIsLoadingRoster(false);
       loadDataInFlightRef.current = false;
     }
   };
@@ -1980,6 +1999,12 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
 
   // ===================== WIZARD LOGIC =====================
   const startWizard = () => {
+    // «Todavía no llegó» no es «no tiene»: decir «Sin Personal» mientras el directorio está en vuelo
+    // manda a buscar un problema de datos que no existe.
+    if (isLoadingRoster && !projectEmployees.length) {
+      sweetAlert.info("Cargando el personal", "Todavía se está trayendo la lista de personas del proyecto. Probá de nuevo en unos segundos.");
+      return;
+    }
     if (!projectEmployees.length) {
       sweetAlert.info("Sin Personal", "Este proyecto no tiene personal asignado.");
       return;
@@ -3774,8 +3799,15 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                 {!isFastEntryEnabled && wizardIndex >= -1 ? (
                   <div className="flex gap-3 items-center w-full">
                     {wizardIndex === -1 ? (
-                      <button onClick={startWizard} disabled={!hasCoordinatorAssignments} className={`w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-md transition-all active:scale-95 text-sm md:text-base ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed !bg-gray-500 hover:!bg-gray-500 shadow-none" : ""}`}>
-                        Comenzar Reporte
+                      // El botón espera al roster, no el formulario entero: mientras llega la lista de
+                      // personas se puede elegir proyecto, área, turno y fecha.
+                      <button
+                        onClick={startWizard}
+                        disabled={!hasCoordinatorAssignments || isLoadingRoster}
+                        title={isLoadingRoster ? "Se está trayendo la lista de personas del proyecto." : undefined}
+                        className={`w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-md transition-all active:scale-95 text-sm md:text-base ${!hasCoordinatorAssignments || isLoadingRoster ? "opacity-50 cursor-not-allowed !bg-gray-500 hover:!bg-gray-500 shadow-none" : ""}`}
+                      >
+                        {isLoadingRoster ? "Cargando personal…" : "Comenzar Reporte"}
                       </button>
                     ) : (
                       <>
