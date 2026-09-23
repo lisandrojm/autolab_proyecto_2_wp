@@ -29,12 +29,15 @@ const pesos = (n: unknown) => {
  * `onQuitar` lo convierte en removible, para el formulario. El mismo badge que usan las tarjetas del
  * listado: es la misma cosa mostrada en dos lados, y dos versiones terminan divergiendo.
  */
-const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; valoracion?: { name: string; color?: string }; onQuitar?: () => void }> = ({ label, convenio, valoracion, onQuitar }) => {
+const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; convenioNombre?: string; valoracion?: { name: string; color?: string }; onQuitar?: () => void }> = ({ label, convenio, convenioNombre, valoracion, onQuitar }) => {
   const oscuro = useThemeStore((st) => st.theme) === 'dark';
   return (
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
     <FontAwesomeIcon icon={faLayerGroup} className="h-2.5 w-2.5" />
     {convenio && <span className="font-mono opacity-70">{convenio}</span>}
+    {/* El nombre del convenio: «0634/11» es el código con el que la categoría viaja a ARCA, y
+        «TELEVISIÓN» es lo que permite reconocerlo sin ir a buscarlo a otra pantalla. */}
+    {convenioNombre && <span className="opacity-70">{convenioNombre}</span>}
     {label}
     {/* El nivel, pegado a la categoría: es lo que decide si esta categoría se ofrece o no en un
         proyecto, así que leerlo aparte obligaría a cruzar dos listas de memoria. */}
@@ -104,6 +107,25 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<RoleFrameItem | null>(null);
+  /*
+    LA VALORACIÓN SE CAMBIA EN EL PROPIO DETALLE, sin pasar por el formulario.
+
+    Es el cambio que más se hace —mirar la función y corregir un nivel— y abrir el formulario entero
+    para eso obliga a volver a elegir categorías que ya están bien. Acá se edita sólo la valoración;
+    lo demás (nombre y qué categorías tiene) sigue siendo el «Editar» de al lado.
+
+    Se guarda por `id` legacy, que es como la función las tiene adentro.
+  */
+  const [valoracionesDetalle, setValoracionesDetalle] = useState<Record<string, string | null>>({});
+  const [guardandoDetalle, setGuardandoDetalle] = useState(false);
+  const abrirDetalle = (role: RoleFrameItem) => {
+    setValoracionesDetalle(Object.fromEntries(((role.data?.categoriasSat as any[]) || []).map((c) => [String(c?.id), c?.valoracionId ? String(c.valoracionId) : null])));
+    setSelectedRole(role);
+  };
+  const hayCambiosEnDetalle = useMemo(() => {
+    if (!selectedRole) return false;
+    return ((selectedRole.data?.categoriasSat as any[]) || []).some((c) => (valoracionesDetalle[String(c?.id)] ?? null) !== (c?.valoracionId ? String(c.valoracionId) : null));
+  }, [selectedRole, valoracionesDetalle]);
   const [allCategories, setAllCategories] = useState<CategoriaSatItem[]>([]);
 
   // CRUD Modal states
@@ -312,18 +334,20 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
    * (`numeroCategoria`) es el del GRUPO salarial — lo compartían decenas de categorías distintas, así
    * que como etiqueta no identificaba nada. Lo que identifica es el código de ARCA de 6 dígitos.
    */
-  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; nombre: string; convenio: string; valoracion?: { name: string; color?: string } }> =>
+  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; nombre: string; convenio: string; convenioNombre: string; valoracion?: { name: string; color?: string } }> =>
     (role.data?.categoriasSat || []).map((c: any, i: number) => {
       const vigente = catalogoPorId.get(String(c.id));
       const codigo = String(vigente?.data?.codigoArca || '').trim();
       const nombre = vigente?.data?.nombre || vigente?.name || c.nombre || c.name || 'Sin nombre';
       // El nivel de CADA categoría, no el de la función: es lo que decide a qué proyecto se le ofrece.
       const v = c.valoracionId ? valoracionPorId.get(String(c.valoracionId)) : undefined;
+      const cct = String(vigente?.data?.convenio || '').trim();
       return {
         key: `${c.id ?? i}`,
         label: codigo ? `${codigo} · ${nombre}` : nombre,
         nombre,
-        convenio: String(vigente?.data?.convenio || '').trim(),
+        convenio: cct,
+        convenioNombre: nombreDelConvenio(cct),
         valoracion: v ? { name: String(v.name), color: String(v.color || '') } : undefined,
       };
     });
@@ -405,6 +429,42 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     } catch (error: any) {
       const message = error.response?.data?.error || 'Error al guardar la función';
       sweetAlert.error('Error', message);
+    }
+  };
+
+  /**
+   * Guarda SÓLO las valoraciones que se tocaron en el detalle.
+   *
+   * Manda las categorías tal como están —el server reconstruye `categoriasSat` entero en cada
+   * guardado, así que omitirlas las borraría— con la valoración nueva encima. El nombre no viaja:
+   * acá no se edita, y mandarlo sería arriesgarse a pisarlo con una copia vieja de la pantalla.
+   */
+  const guardarValoracionesDelDetalle = async () => {
+    if (!selectedRole) return;
+    const categorias: CategoriaAsociada[] = ((selectedRole.data?.categoriasSat as any[]) || [])
+      .map((c) => {
+        const delCatalogo = catalogoPorId.get(String(c?.id));
+        return delCatalogo ? { categoryId: delCatalogo._id, valoracionId: valoracionesDetalle[String(c?.id)] ?? null } : null;
+      })
+      .filter(Boolean) as CategoriaAsociada[];
+
+    // Si alguna categoría ya no existe en el catálogo, guardar la borraría de la función sin decirlo.
+    if (categorias.length !== ((selectedRole.data?.categoriasSat as any[]) || []).length) {
+      sweetAlert.error('No se puede guardar desde acá', 'Alguna categoría de esta función ya no está en el catálogo. Abrí «Editar» para resolverlo.');
+      return;
+    }
+
+    setGuardandoDetalle(true);
+    try {
+      await roleFrameAPI.update(selectedRole._id, { categorias });
+      sweetAlert.success('Valoraciones actualizadas', 'Los cambios se guardaron correctamente');
+      setSelectedRole(null);
+      fetchRoles();
+      fetchCobertura();
+    } catch (error: any) {
+      sweetAlert.error('Error', error.response?.data?.error || 'No se pudieron guardar las valoraciones');
+    } finally {
+      setGuardandoDetalle(false);
     }
   };
 
@@ -540,7 +600,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
           {filteredRoles.map((role) => (
             <Card
               key={role._id}
-              onClick={() => setSelectedRole(role)}
+              onClick={() => abrirDetalle(role)}
               className="hover:scale-[1.03] hover:shadow-lg transition-all duration-200 cursor-pointer"
               header={{
                 title: role.name,
@@ -586,7 +646,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                     {categoriasDe(role).map((c) => (
-                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} valoracion={c.valoracion} />
+                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} />
                     ))}
                   </>
                 )}
@@ -608,7 +668,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                 {filteredRoles.map((role) => (
-                  <tr key={role._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => setSelectedRole(role)}>
+                  <tr key={role._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => abrirDetalle(role)}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center shrink-0">
@@ -632,7 +692,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                             {categoriasDe(role).map((c) => (
-                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} valoracion={c.valoracion} />
+                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} />
                             ))}
                           </>
                         )}
@@ -657,7 +717,38 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
       )}
 
       {selectedRole && (
-        <Modal isOpen={!!selectedRole} onClose={() => setSelectedRole(null)} title={selectedRole.name} subtitle="Información detallada de la función" size="lg">
+        <Modal
+          isOpen={!!selectedRole}
+          onClose={() => setSelectedRole(null)}
+          title={selectedRole.name}
+          subtitle="Información detallada de la función"
+          size="lg"
+          footer={
+            /*
+              A la izquierda «Editar» —el formulario completo: nombre y qué categorías tiene— y a la
+              derecha «Actualizar», que guarda las valoraciones cambiadas acá mismo. Sin botón de
+              cerrar: para eso está la X del encabezado, y un tercer botón competía con los dos que
+              sí hacen algo.
+            */
+            <div className="flex items-center justify-between gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  const role = selectedRole;
+                  setSelectedRole(null);
+                  if (role) openEdit(role);
+                }}
+                className="btn-secondary inline-flex items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+                Editar
+              </button>
+              <button type="button" onClick={() => void guardarValoracionesDelDetalle()} disabled={!hayCambiosEnDetalle || guardandoDetalle} className="btn-primary disabled:opacity-50" title={hayCambiosEnDetalle ? 'Guardar las valoraciones cambiadas' : 'No hay cambios para guardar'}>
+                {guardandoDetalle ? 'Guardando…' : 'Actualizar'}
+              </button>
+            </div>
+          }
+        >
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
@@ -702,16 +793,16 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                             {/* Entre el nombre y la plata a propósito: es lo que explica POR QUÉ esa
                                 categoría cuesta lo que cuesta, y leerlo después del importe llega tarde. */}
                             <td className="px-4 py-2 text-xs">
-                              {(() => {
-                                const v = cat.valoracionId ? valoracionPorId.get(String(cat.valoracionId)) : undefined;
-                                if (!v) return <span className="text-gray-400 dark:text-gray-600">sin valorar</span>;
-                                const color = String(v.color || '');
-                                return (
-                                  <span className="px-1.5 py-0.5 rounded font-semibold border text-[11px]" style={color ? { color, borderColor: color, backgroundColor: `${color}1a` } : undefined}>
-                                    {String(v.name)}
-                                  </span>
-                                );
-                              })()}
+                              {valoraciones.length > 0 ? (
+                                <SelectorValoracion
+                                  valoraciones={valoraciones}
+                                  valor={valoracionesDetalle[String(cat.id)] ?? ''}
+                                  onChange={(id) => setValoracionesDetalle((prev) => ({ ...prev, [String(cat.id)]: id || null }))}
+                                  etiqueta={`Valoración de ${vigente?.data?.nombre || cat.nombre} en esta función`}
+                                />
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-600">sin valorar</span>
+                              )}
                             </td>
                             <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.sueldoBruto ?? cat.sueldoBruto)?.toLocaleString()}</td>
                             <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.neto ?? cat.neto)?.toLocaleString()}</td>
@@ -890,7 +981,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
               // Con tope de alto, para que veinte categorías no se coman la ventana.
               <div className="flex flex-wrap gap-1.5 mb-3 shrink-0 max-h-24 overflow-y-auto">
                 {categoriasElegidas.map((c) => (
-                  <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} valoracion={c.valoracion} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
+                  <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} convenioNombre={nombreDelConvenio(c.convenio)} valoracion={c.valoracion} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
                 ))}
               </div>
             )}
