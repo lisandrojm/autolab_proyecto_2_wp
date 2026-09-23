@@ -2450,7 +2450,24 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
           };
         })
         .filter((entry) => entry.typeName !== "Presente" || (entry.overtimeHours || 0) > 0);
-      setEntries(mappedEntries);
+
+      /*
+        LAS FILAS DE ALGUIEN QUE YA NO EXISTE NO SE PUEDEN EDITAR, Y HAY QUE DECIRLO.
+
+        Cuando el usuario referenciado fue borrado, el server popula ese campo en `null` y con él se va
+        el id: el parte guardado sabe que hubo una persona, pero la respuesta ya no dice cuál. Mandarla
+        de vuelta con el id vacío hace que el guardado falle entero (`employeeId` es obligatorio), así
+        que la fila sale del formulario — y se avisa, porque guardar el parte va a dejarla afuera.
+      */
+      const sinPersona = mappedEntries.filter((e) => !e.employeeId).length;
+      const editables = mappedEntries.filter((e) => e.employeeId);
+      if (sinPersona > 0) {
+        void sweetAlert.warning(
+          `${sinPersona} fila(s) sin persona`,
+          "Corresponden a alguien que fue eliminado del sistema, así que no se pueden editar y no van a formar parte del parte si lo guardás. El resto se edita normalmente.",
+        );
+      }
+      setEntries(editables);
     } else {
       setHasActivity(false);
       setEntries([]);
