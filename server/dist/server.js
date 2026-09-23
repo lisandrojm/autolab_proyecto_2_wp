@@ -49,6 +49,7 @@ import { infoRoutes } from "./routes/info.js";
 import { roleFrameRoutes } from "./routes/roleFrames.js";
 import { categoriasSatRoutes } from "./routes/categoriasSat.js";
 import { arcaCategoriasRoutes } from "./routes/arcaCategorias.js";
+import { escalasConvenioRoutes } from "./routes/escalasConvenio.js";
 import { paritariasRoutes } from "./routes/paritarias.js";
 import { bancoRoutes } from "./routes/bancos.js";
 import { tiposEntidadFinancieraRoutes } from "./routes/tiposEntidadFinanciera.js";
@@ -258,6 +259,7 @@ app.use("/api/v1/terminos-condiciones", terminosCondicionesRoutes);
 app.use("/api/v1/contratos-por-vencer", contratosPorVencerRoutes);
 // ABM de categorías en la forma de ARCA: convenio → grupo (escala) → categoría. Toda la escritura.
 app.use("/api/v1/arca/categorias", arcaCategoriasRoutes);
+app.use("/api/v1/arca/escalas", escalasConvenioRoutes);
 app.use("/api/v1/paritarias", paritariasRoutes);
 app.use("/api/v1/arca/sucursales", arcaSucursalRoutes);
 app.use("/api/v1/arca/modalidades-contratacion", arcaModalidadContratacionRoutes);
