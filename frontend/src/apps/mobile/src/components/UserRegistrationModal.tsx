@@ -10,7 +10,7 @@ import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
 import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
-import { ChipValoracion, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
+import { ChipSinValorar, ChipValoracion, ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
 // El mismo calendario de Vacaciones: se pintan los días de a uno.
@@ -1930,6 +1930,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <div className="flex flex-1 items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-left dark:border-blue-700 dark:bg-blue-900/20">
                 <FontAwesomeIcon icon={faBriefcase} className="text-[10px] text-blue-500" />
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{proyectoElegido ? etiquetaProyecto(proyectoElegido) : "Elegí un proyecto"}</span>
+                {/* LA VALORACIÓN DEL PROYECTO, ACÁ ARRIBA.
+                    Es la que decide qué categorías corresponden —el selector de abajo filtra por ella y avisa
+                    cuando la elegida difiere—, así que tenerla a la vista desde el principio evita elegir una
+                    categoría y recién ahí enterarse de contra qué se la está comparando. */}
+                {proyectoElegido && <ChipValoracionDelProyecto project={proyectoElegido} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />}
               </div>
               {projects.length > 1 && (
                 <button type="button" onClick={() => setProyectoModalOpen(true)} className="shrink-0 rounded-lg border border-slate-300 px-3 py-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -2398,8 +2403,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   {/* Sin el código de ARCA, igual que en la lista de abajo: acá tapaba el nombre. */}
                   <span className="truncate text-sm text-slate-900 dark:text-white">{categoriaElegida.name}</span>
                   {(() => {
+                    // Siempre se dice el nivel, también cuando la categoría no lo tiene: es lo que se compara
+                    // contra el del proyecto, y un hueco no se puede comparar con nada.
                     const n = nivelDeCategoria(categoriaElegida);
-                    return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : null;
+                    return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : <ChipSinValorar className="shrink-0" title="Esta categoría no tiene valoración cargada en la función." />;
                   })()}
                 </>
               ) : (
@@ -3132,7 +3139,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                         {/* El nivel, pegado al nombre: es lo que decide si corresponde al proyecto. */}
                         {(() => {
                           const n = nivelDeCategoria(cat);
-                          return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : null;
+                          return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : <ChipSinValorar className="shrink-0" title="Sin valoración cargada en esta función: se ofrece en cualquier proyecto." />;
                         })()}
                       </button>
                       {/* El grupo. Tocarlo abre la escala; NO elige la categoría, para eso es la fila. */}
@@ -3313,6 +3320,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   {/* Redondo: es una opción entre varias, no una casilla que se suma. */}
                   <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{isSelected && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
                   <span className="text-sm font-medium">{etiquetaProyecto(p)}</span>
+                  {/* El nivel de cada proyecto al elegir, no después: es lo que va a definir qué categorías se
+                      ofrecen para esta contratación. */}
+                  <ChipValoracionDelProyecto project={p} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />
                 </button>
               );
             })}

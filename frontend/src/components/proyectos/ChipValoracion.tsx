@@ -105,8 +105,29 @@ export const badgesDeValoracion = (project: Pick<Project, "valoracionId" | "valo
   ];
 };
 
-/** El tag de un proyecto, resuelto. No dibuja nada si el proyecto no está valorado. */
-export const ChipValoracionDelProyecto: React.FC<{ project: Pick<Project, "valoracionId" | "valoracionManual">; valoraciones: SimpleCatalogItem[]; className?: string }> = ({ project, valoraciones, className }) => {
+/**
+ * «SIN VALORAR»: el tag de lo que NO tiene nivel.
+ *
+ * No es lo mismo que no mostrar nada. Donde la valoración decide algo —qué categorías se ofrecen al
+ * contratar— el vacío se lee como «todavía no cargó la pantalla», y lo que hay que poder afirmar es
+ * que ese proyecto o esa categoría no tienen nivel asignado. En gris y sin color propio, porque no es
+ * un nivel más: es la ausencia de uno.
+ */
+export const ChipSinValorar: React.FC<{ className?: string; title?: string }> = ({ className = "", title = "Sin valoración asignada" }) => (
+  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border whitespace-nowrap border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400 ${className}`} title={title}>
+    Sin valorar
+  </span>
+);
+
+/**
+ * El tag de un proyecto, resuelto.
+ *
+ * Por defecto no dibuja nada si el proyecto no está valorado —así se comporta donde el tag es un
+ * adorno—. Con `mostrarSinValorar` dice «Sin valorar», que es lo que corresponde donde el nivel
+ * DECIDE algo y no saberlo es un dato en sí mismo.
+ */
+export const ChipValoracionDelProyecto: React.FC<{ project: Pick<Project, "valoracionId" | "valoracionManual">; valoraciones: SimpleCatalogItem[]; className?: string; mostrarSinValorar?: boolean }> = ({ project, valoraciones, className, mostrarSinValorar }) => {
   const v = useValoracionDelProyecto(project, valoraciones);
-  return v ? <ChipValoracion nombre={v.nombre} color={v.color} manual={project.valoracionManual} className={className} /> : null;
+  if (v) return <ChipValoracion nombre={v.nombre} color={v.color} manual={project.valoracionManual} className={className} />;
+  return mostrarSinValorar ? <ChipSinValorar className={className} title="Este proyecto no tiene valoración asignada: no filtra las categorías que se ofrecen." /> : null;
 };

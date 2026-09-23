@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBriefcase, faBuilding, faIdCard, faClock, faLayerGroup, faChevronRight, faSearch, faUserShield, faUserTie, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../../../stores/authStore';
@@ -44,6 +45,7 @@ export default function Proyectos({ onNavigate }: { onNavigate?: (view: ViewType
   const { profile, loading } = useProfile();
   const { user } = useAuthStore();
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const valoraciones = useValoraciones();
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
@@ -575,7 +577,15 @@ export default function Proyectos({ onNavigate }: { onNavigate?: (view: ViewType
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[8px] font-black uppercase tracking-widest text-primary">{info.client}</p>
-                  <p className="mt-0.5 text-base font-black leading-tight text-slate-900 dark:text-slate-100">{info.name}</p>
+                  <div className="mt-0.5 flex items-start gap-2">
+                    <p className="min-w-0 flex-1 text-base font-black leading-tight text-slate-900 dark:text-slate-100">{info.name}</p>
+                    {/* EL NIVEL DEL PROYECTO, SIEMPRE. Es lo que decide qué categorías se pueden contratar acá;
+                        saberlo recién al abrir el alta obliga a entrar para averiguar algo del proyecto. */}
+                    {(() => {
+                      const completo = completos[t.pid] || proyectoPorId.get(String(t.pid));
+                      return completo ? <ChipValoracionDelProyecto project={completo} valoraciones={valoraciones} mostrarSinValorar className="shrink-0" /> : null;
+                    })()}
+                  </div>
                   {/*
                     Qué es la persona EN ESTE proyecto. Los roles generales de la cuenta («Supervisor»,
                     «Coordinador») se mostraban acá cuando había un solo proyecto a la vista; en una lista
