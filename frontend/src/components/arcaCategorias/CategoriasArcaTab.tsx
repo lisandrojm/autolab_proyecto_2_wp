@@ -15,6 +15,9 @@ import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFil
 import { DefaultArcaStar, LimpiarDefaultArca } from '../arca/DefaultArcaStar';
 import { TablaCategorias, FilaCategoria } from './TablaCategorias';
 import { useAuthStore } from '../../stores/authStore';
+import { SubPestanasEscala, SubPestanaEscala } from './escalas/SubPestanasEscala';
+import { EscalaConvenioTabs } from './escalas/EscalaConvenioTabs';
+import { AccionesEscalaConvenio } from './escalas/AccionesEscalaConvenio';
 
 /**
  * ABM de Categorías, navegado como ARCA lo modela:
@@ -37,6 +40,20 @@ import { useAuthStore } from '../../stores/authStore';
 const conveniosApi = createSimpleCatalogApi('/convenios');
 
 const CONVENIO_ELEGIDO_KEY = 'arcaCategoriasConvenio';
+const SUB_PESTANA_KEY = 'arcaCategoriasSubPestana';
+
+/**
+ * El % adicional que se deduce del básico y del adicional cargados.
+ *
+ * El dato NO está guardado en el grupo —sólo están los importes— y es el que define la escala: en 0634/11 es fijo
+ * por grupo (62,5 / 49 / 38 / … / 16). Mostrarlo deducido hace visible un importe mal tipeado sin tener que abrir
+ * nada: el grupo 8 de ese convenio da 23,5025 % donde el acta dice 23,5 %, unos $21 de diferencia por mes.
+ */
+const adicionalPctDeducido = (basico?: number | null, adicional?: number | null): number | null => {
+  const a = Number(basico || 0);
+  if (a <= 0) return null;
+  return Math.round(((Number(adicional || 0) / a) * 100 + Number.EPSILON) * 10000) / 10000;
+};
 
 const formatCurrency = (value: number | undefined | null): string => {
   if (value === undefined || value === null) return '—';
@@ -130,6 +147,15 @@ export const CategoriasArcaTab: React.FC = () => {
     requestAnimationFrame(() => window.scrollTo({ top: destino, behavior: 'auto' }));
   };
   const [convenioSel, setConvenioSel] = useState<string>(() => localStorage.getItem(CONVENIO_ELEGIDO_KEY) || '');
+  /**
+   * Qué sub-pestaña del convenio se está viendo. Se persiste como el convenio elegido: quien está cargando una
+   * paritaria entra y sale de la pantalla varias veces, y volver siempre a «Escala» lo obliga a navegar de nuevo.
+   */
+  const [subTab, setSubTab] = useState<SubPestanaEscala>(() => (localStorage.getItem(SUB_PESTANA_KEY) as SubPestanaEscala) || 'escala');
+  const cambiarSubTab = (p: SubPestanaEscala) => {
+    setSubTab(p);
+    localStorage.setItem(SUB_PESTANA_KEY, p);
+  };
   /*
     VISTA DE TABLA PARA «TODOS»: todas las categorías juntas, de todos los convenios.
 
@@ -880,6 +906,25 @@ export const CategoriasArcaTab: React.FC = () => {
     );
   }
 
+  /**
+   * Las sub-pestañas que no son la escala se dibujan en su propio contenedor.
+   *
+   * Sale antes en lugar de envolver todo el bloque de abajo en un condicional: la tabla de grupos con sus
+   * categorías es 300 líneas de JSX que funcionan, y meterlas dentro de un `&&` es la clase de edición que las
+   * rompe sin que se note.
+   */
+  if (subTab !== 'escala') {
+    return (
+      <div className="space-y-4">
+        {banner}
+        {modalHuerfanas}
+        {tabsConvenios}
+        <SubPestanasEscala activa={subTab} onCambiar={cambiarSubTab} />
+        <EscalaConvenioTabs convenio={convenioSel} tab={subTab} canManage={canManage} />
+      </div>
+    );
+  }
+
   // ── Niveles 2 y 3: grupos del convenio, con sus categorías colapsables.
   return (
     <div className="space-y-4">
@@ -890,6 +935,7 @@ export const CategoriasArcaTab: React.FC = () => {
       {modalHuerfanas}
 
       {tabsConvenios}
+      <SubPestanasEscala activa={subTab} onCambiar={cambiarSubTab} />
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="min-w-0">
@@ -945,6 +991,7 @@ export const CategoriasArcaTab: React.FC = () => {
               <span className="hidden md:block">Paritaria</span>
             </button>
           )}
+          <AccionesEscalaConvenio convenio={convenioSel} canManage={canManage} onAplicado={() => void cargarDetalle(convenioSel)} />
         </div>
       </div>
 
@@ -977,6 +1024,9 @@ export const CategoriasArcaTab: React.FC = () => {
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Básico</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Adicional</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell" title="El porcentaje que se deduce del básico y el adicional cargados. En 0634/11 es fijo por grupo.">
+                        % Adic.
+                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Presentismo</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Neto</th>
@@ -1005,6 +1055,23 @@ export const CategoriasArcaTab: React.FC = () => {
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoBasico)}</td>
                             <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoAdicional)}</td>
+                            <td className="px-4 py-3 hidden lg:table-cell">
+                              {(() => {
+                                const pct = adicionalPctDeducido(g.sueldoBasico, g.sueldoAdicional);
+                                if (pct === null) return <span className="text-sm text-gray-400">—</span>;
+                                // Más de dos decimales significa que el importe no sale de un porcentaje redondo:
+                                // casi siempre es un número tipeado a mano.
+                                const sospechoso = Math.round(pct * 100) !== Math.round(pct * 10000) / 100;
+                                return (
+                                  <span
+                                    className={`text-sm font-mono ${sospechoso ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}
+                                    title={sospechoso ? 'No es un porcentaje redondo: revisá el adicional cargado contra el acta.' : undefined}
+                                  >
+                                    {pct.toLocaleString('es-AR', { maximumFractionDigits: 4 })} %
+                                  </span>
+                                );
+                              })()}
+                            </td>
                             <td className="px-4 py-3">
                               <span className={`text-sm font-semibold ${sinEscala ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(g.sueldoBruto)}</span>
                               {sinEscala && (
@@ -1037,7 +1104,7 @@ export const CategoriasArcaTab: React.FC = () => {
 
                           {abierto && (
                             <tr>
-                              <td colSpan={canManage ? 9 : 8} className="p-0 bg-gray-50/70 dark:bg-gray-900/30">
+                              <td colSpan={canManage ? 10 : 9} className="p-0 bg-gray-50/70 dark:bg-gray-900/30">
                                 {g.categorias.length === 0 ? (
                                   <div className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">Este grupo no tiene categorías.</div>
                                 ) : (

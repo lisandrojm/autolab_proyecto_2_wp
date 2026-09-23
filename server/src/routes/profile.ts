@@ -1,13 +1,13 @@
-import { Router } from "express";
-import mongoose from "mongoose";
-import { z } from "zod";
-import { UserProfile } from "../models/UserProfile.js";
-import { Vacation } from "../models/Vacation.js";
-import { User } from "../models/User.js";
-import { Area } from "../models/Area.js";
-import { RoleFrame } from "../models/RoleFrame.js";
-import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
-import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+import { Router } from 'express';
+import mongoose from 'mongoose';
+import { z } from 'zod';
+import { UserProfile } from '../models/UserProfile.js';
+import { Vacation } from '../models/Vacation.js';
+import { User } from '../models/User.js';
+import { Area } from '../models/Area.js';
+import { RoleFrame } from '../models/RoleFrame.js';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
+import { requireTenant, TenantRequest } from '../middleware/tenant.js';
 
 const router = Router();
 
@@ -30,40 +30,41 @@ const updatePhotoSchema = z.object({
   profilePhotoUrl: z.string().url(),
 });
 
-router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get('/', async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
 
     // Fetch user first to get details for profile creation if needed
     let user;
     try {
-      user = await User.findById(userId).populate({
-        path: "metadata.projects",
-        populate: [
-          {
-            path: "projectId",
-            select: "name status clientId",
-            populate: { path: "clientId", select: "name" },
-          },
-          {
-            path: "contracts.areaId",
-            select: "name",
-          },
-          {
-            path: "contracts.areaShiftAssignments.areaId",
-            select: "name",
-          },
-          {
-            path: "contracts.areaShiftAssignments.shiftIds",
-            select: "name startTime endTime",
-          },
-          {
-            path: "areaId",
-            select: "name",
-          },
-        ],
-      })
-        .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
+      user = await User.findById(userId)
+        .populate({
+          path: 'metadata.projects',
+          populate: [
+            {
+              path: 'projectId',
+              select: 'name status clientId',
+              populate: { path: 'clientId', select: 'name' },
+            },
+            {
+              path: 'contracts.areaId',
+              select: 'name',
+            },
+            {
+              path: 'contracts.areaShiftAssignments.areaId',
+              select: 'name',
+            },
+            {
+              path: 'contracts.areaShiftAssignments.shiftIds',
+              select: 'name startTime endTime',
+            },
+            {
+              path: 'areaId',
+              select: 'name',
+            },
+          ],
+        })
+        .populate({ path: 'metadata.roles_frame', select: 'name', model: RoleFrame });
 
       // FILTER: Only show projects that exist and have active contracts
       if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
@@ -97,9 +98,9 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     if (!profile) {
       // Use user data if available, otherwise fallback to email parsing
-      const firstName = user?.firstName || req.user!.email.split("@")[0];
+      const firstName = user?.firstName || req.user!.email.split('@')[0];
       // lastName is required, so we need a fallback if user doesn't have one
-      const lastName = user?.lastName || "-";
+      const lastName = user?.lastName || '-';
 
       const newProfile = new UserProfile({
         tenantId: req.tenantObjectId,
@@ -116,12 +117,12 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       profile = (await newProfile.save()).toObject();
     }
 
-    let areaName = profile.department || "";
+    let areaName = profile.department || '';
     let areaMembers = 0;
 
-    let positionName = profile.position || "";
+    let positionName = profile.position || '';
 
-    let levelName = "";
+    let levelName = '';
 
     // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
     // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
@@ -133,11 +134,11 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     let roleNames: string[] = [];
     if (user && user.roles && user.roles.length > 0) {
       try {
-        const Role = (await import("../models/Role.js")).Role;
-        const roles = await Role.find({ _id: { $in: user.roles } }).select("name");
+        const Role = (await import('../models/Role.js')).Role;
+        const roles = await Role.find({ _id: { $in: user.roles } }).select('name');
         roleNames = roles.map((r) => r.name);
       } catch (roleError) {
-        console.error("Error fetching roles:", roleError);
+        console.error('Error fetching roles:', roleError);
       }
     }
 
@@ -147,7 +148,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Explicitly send projectIds for frontend selectors
     const projectIds = user?.projectIds?.map((id) => id.toString()) || [];
 
-    // ENRICHMENT LOGIC: Extract Sede and Rol/es Frame names from populated metadata.projects
+    // ENRICHMENT LOGIC: Extract Sede and Rol/es Empresa names from populated metadata.projects
     const userSedeNames = new Set<string>();
     const userRolFrameNames = new Set<string>();
     const userContractNames = new Set<string>();
@@ -156,7 +157,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
       for (const up of user.metadata.projects) {
-        if (!up || typeof up !== "object") continue;
+        if (!up || typeof up !== 'object') continue;
 
         // Priority 1: Top level names
         if (up.nombre_rol_frame) userRolFrameNames.add(up.nombre_rol_frame);
@@ -173,7 +174,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
             }
             if (c.fecha_alta_contrato) {
               const start = c.fecha_alta_contrato; // Assuming "YYYY-MM-DD" or similar
-              const end = c.fecha_baja_contrato || "Actualidad";
+              const end = c.fecha_baja_contrato || 'Actualidad';
               userProjectDates.add(`${start} - ${end}`);
             }
           }
@@ -239,7 +240,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
         const userContractTypeIds = new Set<number>();
 
         for (const up of user.metadata.projects) {
-          if (!up || typeof up !== "object") continue;
+          if (!up || typeof up !== 'object') continue;
           if (Array.isArray(up.contracts)) {
             for (const c of up.contracts) {
               // Check if contract is active?
@@ -255,7 +256,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
         }
 
         if (userContractTypeIds.size > 0) {
-          const VacationConfig = (await import("../models/VacationConfig.js")).VacationConfig;
+          const VacationConfig = (await import('../models/VacationConfig.js')).VacationConfig;
           const config = await VacationConfig.findOne({ tenantId: req.tenantObjectId });
 
           if (config && config.contractRules && config.contractRules.length > 0) {
@@ -282,20 +283,20 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
         }
       }
     } catch (e) {
-      console.error("Error evaluating contract rules for user:", e);
+      console.error('Error evaluating contract rules for user:', e);
     }
 
     res.json({ ...profile, areaName, areaMembers, positionName, levelName, roleNames, extraVacationDays, carryOverVacationDays, projectIds, externalInfo, metadata, vacationsEnabled });
   } catch (error) {
-    console.error("Get profile error:", error);
+    console.error('Get profile error:', error);
     if (error instanceof Error) {
-      console.error("Stack:", error.stack);
+      console.error('Stack:', error.stack);
     }
-    res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
+    res.status(500).json({ error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
-router.put("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.put('/', async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
     const data = updateProfileSchema.parse(req.body);
@@ -303,22 +304,22 @@ router.put("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const profile = await UserProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: data }, { new: true, upsert: false });
 
     if (!profile) {
-      res.status(404).json({ error: "Profile not found" });
+      res.status(404).json({ error: 'Profile not found' });
       return;
     }
 
     res.json(profile);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Invalid data", details: error.errors });
+      res.status(400).json({ error: 'Invalid data', details: error.errors });
       return;
     }
-    console.error("Update profile error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-router.put("/photo", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.put('/photo', async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
     const { profilePhotoUrl } = updatePhotoSchema.parse(req.body);
@@ -326,53 +327,53 @@ router.put("/photo", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const profile = await UserProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: { profilePhotoUrl } }, { new: true });
 
     if (!profile) {
-      res.status(404).json({ error: "Profile not found" });
+      res.status(404).json({ error: 'Profile not found' });
       return;
     }
 
     res.json({ profilePhotoUrl: profile.profilePhotoUrl });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Invalid data", details: error.errors });
+      res.status(400).json({ error: 'Invalid data', details: error.errors });
       return;
     }
-    console.error("Update photo error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Update photo error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get('/stats', async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
     const tenantId = req.tenantObjectId;
-    let positionName = "";
-    let areaName = "";
+    let positionName = '';
+    let areaName = '';
 
     // 1. Get User for Vacation Days (calculated virtual) & Hire Date
-    const User = (await import("../models/User.js")).User;
+    const User = (await import('../models/User.js')).User;
     const user = await User.findById(userId).populate({
-      path: "metadata.projects",
+      path: 'metadata.projects',
       populate: [
         {
-          path: "projectId",
-          select: "name status clientId",
-          populate: { path: "clientId", select: "name" },
+          path: 'projectId',
+          select: 'name status clientId',
+          populate: { path: 'clientId', select: 'name' },
         },
         {
-          path: "contracts.areaId",
-          select: "name",
+          path: 'contracts.areaId',
+          select: 'name',
         },
         {
-          path: "contracts.areaShiftAssignments.areaId",
-          select: "name",
+          path: 'contracts.areaShiftAssignments.areaId',
+          select: 'name',
         },
         {
-          path: "contracts.areaShiftAssignments.shiftIds",
-          select: "name startTime endTime",
+          path: 'contracts.areaShiftAssignments.shiftIds',
+          select: 'name startTime endTime',
         },
         {
-          path: "areaId",
-          select: "name",
+          path: 'areaId',
+          select: 'name',
         },
       ],
     });
@@ -450,7 +451,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     console.log(`Stats for user ${user.email}: Seniority Days (Calc): ${calculatedTotalDays}, Projected: ${projectedTotalDays}, LawDays: ${baseLawDays}, Annual: ${annualDays}`);
 
     // 3. Calculate Used and Pending from Vacation model
-    const Vacation = (await import("../models/Vacation.js")).Vacation;
+    const Vacation = (await import('../models/Vacation.js')).Vacation;
     const currentYear = new Date().getFullYear();
 
     // We consider all vacations that subtract from balance.
@@ -467,7 +468,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const activeVacations = await Vacation.find({
       tenantId,
       userId,
-      status: { $nin: ["rejected", "cancelled"] },
+      status: { $nin: ['rejected', 'cancelled'] },
     }).lean();
 
     let daysUsed = 0; // Gozados (Delivered / Signed)
@@ -478,12 +479,12 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       // Gozados: delivered OR (approved AND (signed OR not_required))
       // Actually prompt says: "Firma Enviada: ... Pendientes". "Firma Firmado: ... Gozados".
 
-      const isSigned = v.signatureStatus === "signed";
-      const isDelivered = v.status === "delivered";
+      const isSigned = v.signatureStatus === 'signed';
+      const isDelivered = v.status === 'delivered';
       // If requiresSignature is true, it shouldn't be "Used" until Signed or Delivered.
       // If requiresSignature is false, Approved is enough to be "Used" (Gozado/Ready to take).
 
-      if (isDelivered || isSigned || (v.status === "approved" && !v.requiresSignature)) {
+      if (isDelivered || isSigned || (v.status === 'approved' && !v.requiresSignature)) {
         daysUsed += v.daysRequested;
       } else {
         daysPending += v.daysRequested;
@@ -496,9 +497,9 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     // 4. Resolve Vacation Config (Position > Area > Project > Global)
     // 4. Resolve Vacation Config (Position > Area > Project > Global)
-    let projectName = "Sin Proyecto";
+    let projectName = 'Sin Proyecto';
     let effectiveVacationConfig: any = undefined;
-    let vacationConfigSource = "Global";
+    let vacationConfigSource = 'Global';
 
     // A. Check Position (Legacy field removed, using profile.position as name only)
     if (profile.position) {
@@ -508,17 +509,17 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // B. Check Area (Legacy field removed, using profile.department to resolve)
     if (!effectiveVacationConfig && profile.department) {
       try {
-        const Area = (await import("../models/Area.js")).Area;
-        const area = await Area.findOne({ tenantId, name: profile.department }).select("name vacationConfig").lean();
+        const Area = (await import('../models/Area.js')).Area;
+        const area = await Area.findOne({ tenantId, name: profile.department }).select('name vacationConfig').lean();
         if (area) {
           areaName = area.name;
           if (area.vacationConfig && !area.vacationConfig.useGlobalConfig) {
             effectiveVacationConfig = area.vacationConfig;
-            vacationConfigSource = "Área";
+            vacationConfigSource = 'Área';
           }
         }
       } catch (err) {
-        console.error("Error fetching area for stats:", err);
+        console.error('Error fetching area for stats:', err);
       }
     }
 
@@ -529,8 +530,8 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     if (!effectiveVacationConfig && user && user.projectIds && user.projectIds.length > 0) {
       try {
-        const Project = (await import("../models/Project.js")).Project;
-        const VacationConfig = (await import("../models/VacationConfig.js")).VacationConfig;
+        const Project = (await import('../models/Project.js')).Project;
+        const VacationConfig = (await import('../models/VacationConfig.js')).VacationConfig;
 
         const globalConfig = await VacationConfig.findOne({ tenantId });
         const defaultGlobal = {
@@ -543,8 +544,8 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
           _id: { $in: user.projectIds },
           tenantId,
         })
-          .select("name vacationConfig clientId")
-          .populate("clientId", "name")
+          .select('name vacationConfig clientId')
+          .populate('clientId', 'name')
           .lean();
 
         if (projects.length > 0) {
@@ -553,7 +554,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
               const c = p.clientId;
               return c?.name ? `${c.name} | ${p.name}` : p.name;
             })
-            .join(", "); // List all projects
+            .join(', '); // List all projects
 
           // Resolution Logic
           // Map projects to their effective config (or global if they use global)
@@ -574,9 +575,9 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
           if (anyAllowsFractionation) {
             const allowing = projectConfigs.filter((c) => c.permiteFraccionadas);
-            fractionationSource = allowing.length === 1 ? allowing[0].name : "Múltiples Proyectos";
+            fractionationSource = allowing.length === 1 ? allowing[0].name : 'Múltiples Proyectos';
           } else {
-            fractionationSource = projects.length === 1 ? projects[0].name : "Todos los Proyectos";
+            fractionationSource = projects.length === 1 ? projects[0].name : 'Todos los Proyectos';
           }
 
           // 2. Min Dias: Minimum of those that allow it
@@ -601,10 +602,10 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
           if (anyHabiles) {
             const habilesProjects = projectConfigs.filter((c) => c.diasCorridos === false);
-            diasCorridosSource = habilesProjects.length === 1 ? habilesProjects[0].name : "Múltiples Proyectos (Hábiles)";
+            diasCorridosSource = habilesProjects.length === 1 ? habilesProjects[0].name : 'Múltiples Proyectos (Hábiles)';
           } else {
             // All are Corridos
-            diasCorridosSource = projects.length === 1 ? projects[0].name : "Todos los Proyectos";
+            diasCorridosSource = projects.length === 1 ? projects[0].name : 'Todos los Proyectos';
           }
 
           effectiveVacationConfig = {
@@ -613,29 +614,29 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
             minDiasFraccion: resolvedMinDias,
             diasCorridos: resolvedDiasCorridos,
           };
-          vacationConfigSource = "Proyectos"; // Generic override, detailed sources in meta
+          vacationConfigSource = 'Proyectos'; // Generic override, detailed sources in meta
         }
       } catch (err) {
-        console.error("Error fetching projects for stats:", err);
+        console.error('Error fetching projects for stats:', err);
       }
     } else {
       // If not projects, sources remain as "Global" or "Cargo" or "Area"
-      if (vacationConfigSource === "Global") {
-        minDiasSource = "Global";
-        diasCorridosSource = "Global";
-        fractionationSource = "Global";
-      } else if (vacationConfigSource === "Cargo") {
-        minDiasSource = positionName || "Cargo";
-        diasCorridosSource = positionName || "Cargo";
-        fractionationSource = positionName || "Cargo";
-      } else if (vacationConfigSource === "Área") {
-        minDiasSource = areaName || "Área";
-        diasCorridosSource = areaName || "Área";
-        fractionationSource = areaName || "Área";
+      if (vacationConfigSource === 'Global') {
+        minDiasSource = 'Global';
+        diasCorridosSource = 'Global';
+        fractionationSource = 'Global';
+      } else if (vacationConfigSource === 'Cargo') {
+        minDiasSource = positionName || 'Cargo';
+        diasCorridosSource = positionName || 'Cargo';
+        fractionationSource = positionName || 'Cargo';
+      } else if (vacationConfigSource === 'Área') {
+        minDiasSource = areaName || 'Área';
+        diasCorridosSource = areaName || 'Área';
+        fractionationSource = areaName || 'Área';
       }
     }
 
-    const { UserVacationBalance } = await import("../models/UserVacationBalance.js");
+    const { UserVacationBalance } = await import('../models/UserVacationBalance.js');
     const override = await UserVacationBalance.findOne({ tenantId, userId, year: currentYear }).lean();
 
     let displayTotal = annualDays;
@@ -669,8 +670,8 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       },
     });
   } catch (error) {
-    console.error("Get stats error:", error);
-    res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
+    console.error('Get stats error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

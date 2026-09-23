@@ -1,23 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useAuthStore } from "../stores/authStore";
-import { usersAPI, User } from "../api/users";
-import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
-import { infoAPI, InfoItem } from "../api/info";
-import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
-import { PageLayout } from "../components/ui/PageLayout";
-import { getHelp, hasHelp } from "../data/help/helpContent";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faIdCard, faUser, faMapMarkerAlt, faUniversity, faCheck, faXmark, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuthStore } from '../stores/authStore';
+import { usersAPI, User } from '../api/users';
+import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
+import { infoAPI, InfoItem } from '../api/info';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
+import { PageLayout } from '../components/ui/PageLayout';
+import { getHelp, hasHelp } from '../data/help/helpContent';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faIdCard, faUser, faMapMarkerAlt, faUniversity, faCheck, faXmark, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
-type ProfileTab = "general" | "domicilio" | "bancarios" | "sistema";
+type ProfileTab = 'general' | 'domicilio' | 'bancarios' | 'sistema';
 
 /** Campo de solo lectura: etiqueta arriba, texto plano debajo (sin recuadro de input). */
 const Field: React.FC<{ label: string; value?: React.ReactNode; full?: boolean }> = ({ label, value, full }) => (
-  <div className={`py-2 border-b border-gray-100 dark:border-gray-700/50 ${full ? "md:col-span-2" : ""}`}>
+  <div className={`py-2 border-b border-gray-100 dark:border-gray-700/50 ${full ? 'md:col-span-2' : ''}`}>
     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
-    <div className="text-sm text-gray-800 dark:text-gray-100 select-text">{value !== undefined && value !== null && value !== "" ? value : <span className="text-gray-400 italic">—</span>}</div>
+    <div className="text-sm text-gray-800 dark:text-gray-100 select-text">{value !== undefined && value !== null && value !== '' ? value : <span className="text-gray-400 italic">—</span>}</div>
   </div>
 );
 
@@ -25,29 +25,29 @@ const Field: React.FC<{ label: string; value?: React.ReactNode; full?: boolean }
 const BoolPill: React.FC<{ label: string; value?: boolean }> = ({ label, value }) => (
   <div>
     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{label}</label>
-    <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider ${value ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"}`}>
+    <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider ${value ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
       <FontAwesomeIcon icon={value ? faCheck : faXmark} />
-      {value ? "Sí" : "No"}
+      {value ? 'Sí' : 'No'}
     </div>
   </div>
 );
 
 const formatDate = (value?: string) => {
-  if (!value) return "";
+  if (!value) return '';
   const d = new Date(value);
   if (isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 export const MiPerfilPage: React.FC = () => {
   const authUser = useAuthStore((s) => s.user);
 
-  const HELP_KEY = "miPerfil" as const;
+  const HELP_KEY = 'miPerfil' as const;
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<ProfileTab>("general");
+  const [activeTab, setActiveTab] = useState<ProfileTab>('general');
 
   // Catálogos para resolver IDs → nombres
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
@@ -62,7 +62,7 @@ export const MiPerfilPage: React.FC = () => {
 
   useEffect(() => {
     if (!authUser?.id) {
-      sweetAlert.error("Error", "No se pudo identificar al usuario actual.");
+      sweetAlert.error('Error', 'No se pudo identificar al usuario actual.');
       setLoading(false);
       return;
     }
@@ -70,16 +70,7 @@ export const MiPerfilPage: React.FC = () => {
     (async () => {
       try {
         setLoading(true);
-        const [u, rf, g, dt, c, n, el, b] = await Promise.all([
-          usersAPI.get(authUser.id),
-          roleFrameAPI.list(),
-          infoAPI.listByType("genero"),
-          infoAPI.listByType("tipo-documento"),
-          infoAPI.listByType("pais"),
-          infoAPI.listByType("nacionalidad"),
-          infoAPI.listByType("nivel-estudio"),
-          infoAPI.listByType("banco"),
-        ]);
+        const [u, rf, g, dt, c, n, el, b] = await Promise.all([usersAPI.get(authUser.id), roleFrameAPI.list(), infoAPI.listByType('genero'), infoAPI.listByType('tipo-documento'), infoAPI.listByType('pais'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('banco')]);
         if (cancelled) return;
         setUser(u);
         const rfArray = Array.isArray(rf) ? rf : rf && Array.isArray((rf as any).data) ? (rf as any).data : [];
@@ -91,14 +82,14 @@ export const MiPerfilPage: React.FC = () => {
         setEducationLevels(el);
         setBanks(b);
         // Aparte y con su catch: es nuevo, y si no responde el país se resuelve con los de FRAME (mismos ids).
-        void createSimpleCatalogApi("/paises-residencia")
+        void createSimpleCatalogApi('/paises-residencia')
           .list()
           .then((pr) => !cancelled && setPaisesResidencia(Array.isArray(pr) ? pr : []))
           .catch(() => undefined);
       } catch (error: any) {
         if (!cancelled) {
-          const message = error.response?.data?.error || "No se pudo cargar tu perfil.";
-          sweetAlert.error("Error", message);
+          const message = error.response?.data?.error || 'No se pudo cargar tu perfil.';
+          sweetAlert.error('Error', message);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -111,10 +102,9 @@ export const MiPerfilPage: React.FC = () => {
 
   // Helper: resolver un id numérico contra un catálogo InfoItem (data.id)
   const nameFromInfo = (list: InfoItem[], id?: number) => {
-    if (id === undefined || id === null) return "";
-    return list.find((it) => it.data?.id === id)?.name || "";
+    if (id === undefined || id === null) return '';
+    return list.find((it) => it.data?.id === id)?.name || '';
   };
-
 
   const md = user?.metadata;
 
@@ -126,11 +116,11 @@ export const MiPerfilPage: React.FC = () => {
     const names: string[] = [];
     arr.forEach((rf: any) => {
       if (!rf) return;
-      if (typeof rf === "object" && rf.name) {
+      if (typeof rf === 'object' && rf.name) {
         names.push(rf.name);
         return;
       }
-      const id = typeof rf === "string" ? rf : rf?._id;
+      const id = typeof rf === 'string' ? rf : rf?._id;
       const match = allRoleFrames.find((item) => item._id === id || item.externalId === String(id) || String(item.data?.rol?.id) === String(id));
       if (match) names.push(match.name);
     });
@@ -153,13 +143,13 @@ export const MiPerfilPage: React.FC = () => {
     );
   }
 
-  const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
+  const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
   const tabs: { key: ProfileTab; label: string; icon: any }[] = [
-    { key: "general", label: "Personales", icon: faUser },
-    { key: "domicilio", label: "Domicilio", icon: faMapMarkerAlt },
-    { key: "bancarios", label: "Bancarios", icon: faUniversity },
-    { key: "sistema", label: "Sistema", icon: faUserShield },
+    { key: 'general', label: 'Personales', icon: faUser },
+    { key: 'domicilio', label: 'Domicilio', icon: faMapMarkerAlt },
+    { key: 'bancarios', label: 'Bancarios', icon: faUniversity },
+    { key: 'sistema', label: 'Sistema', icon: faUserShield },
   ];
 
   return (
@@ -184,7 +174,7 @@ export const MiPerfilPage: React.FC = () => {
         <div className="border-b border-gray-200 dark:border-gray-700">
           <div className="flex">
             {tabs.map((t) => (
-              <button key={t.key} type="button" onClick={() => setActiveTab(t.key)} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${activeTab === t.key ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+              <button key={t.key} type="button" onClick={() => setActiveTab(t.key)} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${activeTab === t.key ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                 <FontAwesomeIcon icon={t.icon} className="text-xs" />
                 {t.label}
               </button>
@@ -208,19 +198,15 @@ export const MiPerfilPage: React.FC = () => {
         <div className="px-6 pt-4">
           <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
             <p className="text-sm text-blue-900 dark:text-blue-200">
-              <strong>Estos datos se ven desde acá, pero se cambian desde la app.</strong> Entrá a <strong>Pedidos → Datos personales</strong> en WeProdu Mobile y pedí la
-              modificación: queda registrada y la aprueba quien administra.
+              <strong>Estos datos se ven desde acá, pero se cambian desde la app.</strong> Entrá a <strong>Pedidos → Datos personales</strong> en WeProdu Mobile y pedí la modificación: queda registrada y la aprueba quien administra.
             </p>
-            <p className="text-xs text-blue-800 dark:text-blue-300 mt-2">
-              Nombre, apellido, tipo y número de documento y CUIT/CUIL no se modifican por ningún camino: salen del padrón de ARCA y se
-              confirman contra él.
-            </p>
+            <p className="text-xs text-blue-800 dark:text-blue-300 mt-2">Nombre, apellido, tipo y número de documento y CUIT/CUIL no se modifican por ningún camino: salen del padrón de ARCA y se confirman contra él.</p>
           </div>
         </div>
 
         {/* Contenido */}
         <div className="p-6">
-          {activeTab === "general" && (
+          {activeTab === 'general' && (
             <div className="space-y-6 animate-fadeIn">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Nombre" value={user.firstName} />
@@ -242,11 +228,10 @@ export const MiPerfilPage: React.FC = () => {
               {/* «OS Prepaga» ya no se muestra: quedó deprecado junto con el resto de la obra social
                   como dato de la persona —se declara por contrato y se constata contra el padrón de
                   la SSS—. Ver el comentario de más arriba. */}
-
             </div>
           )}
 
-          {activeTab === "domicilio" && (
+          {activeTab === 'domicilio' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
               <Field label="País" value={paisesResidencia.find((p) => p.data?.id === md?.paisId)?.name || nameFromInfo(countries, md?.paisId)} />
               <Field label="Localidad" value={md?.localidad} />
@@ -258,7 +243,7 @@ export const MiPerfilPage: React.FC = () => {
             </div>
           )}
 
-          {activeTab === "bancarios" && (
+          {activeTab === 'bancarios' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
               <Field label="Banco" value={nameFromInfo(banks, md?.bancoId)} />
               <Field label="CBU / CVU" value={md?.cbu} />
@@ -270,7 +255,7 @@ export const MiPerfilPage: React.FC = () => {
 
           {/* Las mismas secciones que la pestaña Sistema del formulario y del detalle de usuario:
               lo del VÍNCULO con la empresa, separado de quién es la persona. */}
-          {activeTab === "sistema" && (
+          {activeTab === 'sistema' && (
             <div className="space-y-6 animate-fadeIn">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Fecha de Ingreso" value={formatDate(user.hireDate)} />
@@ -285,7 +270,7 @@ export const MiPerfilPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Rol/es Frame</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Rol/es Empresa</label>
                 {roleFrameNames.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {roleFrameNames.map((n) => (

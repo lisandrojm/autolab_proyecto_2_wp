@@ -1,6 +1,9 @@
 # CCT 634/11 (SATTSAID – CAPIT) — Propuesta de esquema y migraciones
 
-**Estado: propuesta para revisar. No está programado nada todavía.**
+**Estado: implementado (23/09/2026). Los scripts de carga están escritos pero NO se corrieron: ninguno escribió nada todavía.**
+
+El diseño de abajo es el que se construyó; al final, en «Estado de implementación», está el detalle de qué archivo hace qué y qué queda pendiente.
+
 Fecha: 23/09/2026 · Acta de referencia: ATA – CAPIT – SATTSAID, 2.º tramo (feb–jun 2026), expediente RE-2026-43103223-APN-DTD#JGM, firmada el 28/04/2026, Anexo A.
 
 ---
@@ -82,7 +85,7 @@ Un documento por `(convenio, grupo, desde)`.
 | `origen` | enum | `acta` \| `excel` \| `manual` \| `estado-actual` \| `derivado` |
 | `migracion` / `nota` | string? | marca del script, para poder revertir |
 
-Índices: único `{convenio, grupo, desde}`; `{convenio, desde: -1}`.
+Índices: único `{convenio, grupo, categoriaId, desde}`; `{convenio, desde: -1}`. La `categoriaId` entra en la clave porque en los convenios sin grupos (los de actores) `grupo` es `null` para todas, y sin ella la segunda categoría del convenio chocaría con la primera.
 
 **Por qué colección aparte y no un array dentro de `ConvenioGrupo`:** ese documento lo lee todo el sistema (contratos, PDFs, roles); meterle historial lo engorda y sus campos hoy son `Mixed`. Con colección aparte, ninguna pantalla existente cambia de comportamiento el día 1.
 
@@ -195,3 +198,57 @@ Selector de período: dos `<input type="date">` al estilo `SearchAndFilters.date
 1. **Anexo A completo** (12 grupos × abril y junio) o el PDF del acta → para no sembrar valores derivados. Junio ya lo puedo reconstruir de la base; abril quedaría derivado.
 2. **Pequeñas empresas**: los 4 valores × 12 grupos. No están en ningún lado del sistema.
 3. **PDF del acta**: no está en paritarias (37 publicaciones, ninguna menciona 634/11).
+
+
+---
+
+## 10. Estado de implementación
+
+Todo lo de arriba está programado. Lo que **no** pasó: ningún script de carga se corrió, así que la base no cambió en nada — sólo el dry-run de la migración, que por construcción no escribe.
+
+### Server
+
+| Qué | Archivo |
+|---|---|
+| Cuenta de la escala (A, B → C, D, total, neto) y cotejo con el acta | `server/src/utils/escalaCalculo.ts` |
+| Vigencias: qué rige a una fecha, superposiciones, `hasta` inclusivo | `server/src/utils/escalaAFecha.ts` |
+| Proponer una paritaria por porcentaje | `server/src/utils/aplicarParitaria.ts` |
+| Liquidación de referencia | `server/src/utils/liquidacionReferencia.ts` |
+| Lo que comparten rutas y scripts: armar período, validar, **espejar el vigente** | `server/src/services/escalasConvenio.ts` |
+| Modelos | `EscalaPeriodo`, `AdicionalConvenio`, `AdicionalValorPeriodo`, `EscalaPequenasEmpresas`, `AcuerdoParitario` |
+| API (`/api/v1/arca/escalas`) | `server/src/routes/escalasConvenio.ts` |
+| Tests (57, todos con valores del acta) | `npm run test:escalas-634` |
+
+### Scripts (ninguno corrido)
+
+```
+npm run escalas-periodo:dry      # ✅ corrido: no escribe. Insertaría 24 períodos
+npm run escalas-periodo          # inserta la foto del estado actual, sin tocar convenio-grupos
+npm run 634-acuerdo[:dry]        # el acta, sus tramos y el régimen alternativo
+npm run 634-tramos[:dry]         # abril y junio 2026 (junio desde categorias-sat; ARCHIVO=<anexo.json> para el Anexo A real)
+npm run 634-adicionales[:dry]    # los 7 adicionales con sus dos importes
+npm run 634-pequenas             # bloqueado: exige ARCHIVO=<ruta.json>, los importes no están en ningún lado
+```
+
+Los tres primeros tienen `:revertir`. El dry-run de la migración ya mostró lo que hay:
+
+- **24 períodos** a insertar (12 de 0634/11 y 12 de 0131/75), 3 grupos salteados (2 sin convenio, 1 sin importe).
+- **G8 de 0634/11 no cierra por $99,16** en el total: su adicional implica 23,5025 % en lugar del 23,5 % del acta. Queda registrado en `diferencias`, sin corregir nada.
+- Los 12 grupos de 0634/11 tienen la **vigencia imposible** (hallazgo 5): se guardan con `hasta: null` y una nota, y el `ConvenioGrupo` no se toca.
+
+### Frontend
+
+`frontend/src/api/escalasConvenio.ts` y `frontend/src/components/arcaCategorias/escalas/`: las cinco sub-pestañas (`SubPestanasEscala`, `EscalaConvenioTabs`, `AdicionalesConvenioTab`, `PequenasEmpresasTab`, `AcuerdosParitariosTab`, `FichaConvenioTab`), el modal de **aplicar paritaria con preview editable**, el de **liquidación de referencia** y las piezas compartidas (`piezas.tsx`).
+
+En `CategoriasArcaTab.tsx` la intervención fue mínima: la barra de sub-pestañas, una salida temprana para las cuatro nuevas, los dos botones («Paritaria %» y «Liquidación») al lado del de Excel —que **no cambió**— y la columna **% Adic.** en la tabla de grupos, que marca en ámbar los porcentajes que no son redondos.
+
+### Verificado de punta a punta
+
+Con el server local y la base de desarrollo (que no tiene convenios cargados) se probó el circuito completo y después se borró todo lo creado: el período de abril reproduce el acta al centavo, la superposición se rechaza con 409, el espejo se escribe **sólo** cuando el período rige hoy, la lectura al 15/06/2026 devuelve «sin período cargado» (el hueco real entre julio y septiembre), el preview del +4,8 % da 1.187.208,59 de básico y el centavo de diferencia en Antigüedad, y la liquidación sale con sus cuatro advertencias.
+
+### Pendiente
+
+1. **Correr los scripts** (con tu OK, y en este orden): `escalas-periodo` → `634-acuerdo` → `634-tramos` → `634-adicionales`.
+2. **Datos que faltan**: el Anexo A completo, los valores de pequeñas empresas y el PDF del acta.
+3. **Deploy**: el VPS corre el `dist` commiteado, así que hasta que no se haga `npm run build` en server y frontend y se commitee el `dist`, nada de esto existe en producción.
+4. Las tres decisiones de la sección 8 sobre datos existentes (vigenciaHasta, G8, `categorias-sat`).

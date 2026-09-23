@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
-import Swal from "sweetalert2";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useState, useEffect, useMemo } from 'react';
+import Swal from 'sweetalert2';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendar,
   faUmbrellaBeach,
@@ -18,26 +18,26 @@ import {
   faRulerCombined,
   faIdCard,
   faClock,
-} from "@fortawesome/free-solid-svg-icons";
-import { ViewType } from "../types";
-import SectionHeader from "../components/SectionHeader";
-import { useVacations } from "../hooks/useVacations";
-import { useProfile } from "../hooks/useProfile";
-import { sweetAlert } from "../utils/sweetAlert";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, isFriday, isSaturday, differenceInYears, differenceInDays } from "date-fns";
-import { es } from "date-fns/locale";
-import { StatusBadge } from "../../../../components/ui/StatusBadge";
-import { mapVacationStatusToStatusTypeForMobile, mapVacationSignatureStateToStatusType, isVacationInFinalState } from "../../../../utils/statusHelpers";
-import VacationDetailModal from "../components/VacationDetailModal";
-import { VacationRequest } from "../../../../api/vacations";
-import { InfoModal } from "../../../../components/ui/InfoModal";
-import { calculateLCTVacationDays, calculateLCTDaysFromSeniority } from "../../../../utils/vacationLCT";
-import { vacationConfigAPI, VacationConfig } from "../../../../api/vacationConfig";
+} from '@fortawesome/free-solid-svg-icons';
+import { ViewType } from '../types';
+import SectionHeader from '../components/SectionHeader';
+import { useVacations } from '../hooks/useVacations';
+import { useProfile } from '../hooks/useProfile';
+import { sweetAlert } from '../utils/sweetAlert';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, isFriday, isSaturday, differenceInYears, differenceInDays } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { StatusBadge } from '../../../../components/ui/StatusBadge';
+import { mapVacationStatusToStatusTypeForMobile, mapVacationSignatureStateToStatusType, isVacationInFinalState } from '../../../../utils/statusHelpers';
+import VacationDetailModal from '../components/VacationDetailModal';
+import { VacationRequest } from '../../../../api/vacations';
+import { InfoModal } from '../../../../components/ui/InfoModal';
+import { calculateLCTVacationDays, calculateLCTDaysFromSeniority } from '../../../../utils/vacationLCT';
+import { vacationConfigAPI, VacationConfig } from '../../../../api/vacationConfig';
 
 // Helper to parse date string as local date (ignoring time/timezone)
 const getLocalDate = (dateString: string) => {
   if (!dateString) return new Date();
-  const datePart = dateString.toString().split("T")[0];
+  const datePart = dateString.toString().split('T')[0];
   return parseISO(datePart);
 };
 
@@ -53,9 +53,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const { profile, stats, loading: profileLoading } = useProfile();
 
   const [showForm, setShowForm] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [reason, setReason] = useState("");
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Modal State
@@ -74,7 +74,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         const config = await vacationConfigAPI.getConfig();
         setGlobalConfig(config);
       } catch (error) {
-        console.error("Error fetching global config:", error);
+        console.error('Error fetching global config:', error);
       }
     };
     fetchConfig();
@@ -102,7 +102,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const loading = vacationsLoading || profileLoading;
 
   // Calendar State for Form
-  const [calendarOpen, setCalendarOpen] = useState<"start" | "end" | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState<'start' | 'end' | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
 
   // Calculate Return Date (Next working day after end date)
@@ -179,14 +179,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       if (!permiteFraccionadas) {
         if (daysRequested < limit) {
           await Swal.fire({
-            icon: "warning",
-            title: "Período Inválido",
+            icon: 'warning',
+            title: 'Período Inválido',
             text: `La configuración actual no permite fraccionar las vacaciones. Debes solicitar el total de tus días disponibles (${limit} días), no puedes solicitar un período menor.`,
-            confirmButtonText: "Entendido",
-            confirmButtonColor: "#3b82f6",
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3b82f6',
             customClass: {
-              popup: "mobile-swal-popup",
-              title: "mobile-swal-title",
+              popup: 'mobile-swal-popup',
+              title: 'mobile-swal-title',
             },
           });
           return;
@@ -195,14 +195,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
       if (daysRequested < minDays) {
         await Swal.fire({
-          icon: "warning",
-          title: "Fraccionamiento Mínimo",
+          icon: 'warning',
+          title: 'Fraccionamiento Mínimo',
           text: `El período de vacaciones no puede ser menor a ${minDays} días corridos.`,
-          confirmButtonText: "Entendido",
-          confirmButtonColor: "#3b82f6",
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#3b82f6',
           customClass: {
-            popup: "mobile-swal-popup",
-            title: "mobile-swal-title",
+            popup: 'mobile-swal-popup',
+            title: 'mobile-swal-title',
           },
         });
         return;
@@ -210,14 +210,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
       if (daysRequested > limit) {
         await Swal.fire({
-          icon: "warning",
-          title: "Límite excedido",
+          icon: 'warning',
+          title: 'Límite excedido',
           text: `Estás solicitando ${daysRequested} días, pero solo tienes ${limit} días disponibles.`,
-          confirmButtonText: "Entendido",
-          confirmButtonColor: "#3b82f6",
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#3b82f6',
           customClass: {
-            popup: "mobile-swal-popup",
-            title: "mobile-swal-title",
+            popup: 'mobile-swal-popup',
+            title: 'mobile-swal-title',
           },
         });
         return;
@@ -229,8 +229,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         const showOptionB = daysToLeaveMin > 0;
 
         const result = await Swal.fire({
-          icon: "warning",
-          title: "Conflicto con saldo restante",
+          icon: 'warning',
+          title: 'Conflicto con saldo restante',
           html: `Esta solicitud de <b>${daysRequested} días</b> dejaría un saldo de <b>${remainingBalance} días</b>.<br/><br/>
                  El mínimo permitido para dejar en el saldo es de <b>${minDays} días</b> (o consumo total).<br/><br/>
                  ¿Qué te gustaría hacer?`,
@@ -238,31 +238,31 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           showCancelButton: true,
           confirmButtonText: `Tomar todo (${limit} días)`,
           denyButtonText: showOptionB ? `Tomar max. permitido (${daysToLeaveMin} días)` : undefined,
-          cancelButtonText: "Corregir manualmente",
-          confirmButtonColor: "#3b82f6",
-          denyButtonColor: "#3b82f6",
-          cancelButtonColor: "#334155",
+          cancelButtonText: 'Corregir manualmente',
+          confirmButtonColor: '#3b82f6',
+          denyButtonColor: '#3b82f6',
+          cancelButtonColor: '#334155',
           customClass: {
-            popup: "mobile-swal-popup",
-            title: "mobile-swal-title",
-            htmlContainer: "text-sm text-gray-600 dark:text-gray-300",
-            actions: "flex flex-col gap-2 p-1",
-            confirmButton: "w-full rounded text-sm font-semibold",
-            denyButton: "w-full rounded text-sm font-semibold order-2",
-            cancelButton: "w-full rounded text-sm font-semibold !bg-slate-700 !text-white order-3",
+            popup: 'mobile-swal-popup',
+            title: 'mobile-swal-title',
+            htmlContainer: 'text-sm text-gray-600 dark:text-gray-300',
+            actions: 'flex flex-col gap-2 p-1',
+            confirmButton: 'w-full rounded text-sm font-semibold',
+            denyButton: 'w-full rounded text-sm font-semibold order-2',
+            cancelButton: 'w-full rounded text-sm font-semibold !bg-slate-700 !text-white order-3',
           },
         });
 
         if (result.isConfirmed) {
           // Tomar todo (Consumption total)
           const newEndDate = addDays(parseISO(startDate), limit - 1);
-          setEndDate(format(newEndDate, "yyyy-MM-dd"));
+          setEndDate(format(newEndDate, 'yyyy-MM-dd'));
           setCalendarOpen(null);
           return;
         } else if (result.isDenied && showOptionB) {
           // Ajustar para dejar el mínimo (Leave minDays)
           const newEndDate = addDays(parseISO(startDate), daysToLeaveMin - 1);
-          setEndDate(format(newEndDate, "yyyy-MM-dd"));
+          setEndDate(format(newEndDate, 'yyyy-MM-dd'));
           setCalendarOpen(null);
           return;
         } else {
@@ -277,7 +277,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate) {
-      sweetAlert.error("Error", "Por favor selecciona fecha de inicio y fin");
+      sweetAlert.error('Error', 'Por favor selecciona fecha de inicio y fin');
       return;
     }
 
@@ -289,24 +289,24 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         reason,
       });
       await Swal.fire({
-        icon: "success",
-        title: "Solicitud enviada",
-        text: "Tu solicitud de vacaciones ha sido creada correctamente",
-        confirmButtonText: "Aceptar",
-        confirmButtonColor: "#3b82f6",
+        icon: 'success',
+        title: 'Solicitud enviada',
+        text: 'Tu solicitud de vacaciones ha sido creada correctamente',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#3b82f6',
         customClass: {
-          popup: "mobile-swal-popup",
-          title: "mobile-swal-title",
+          popup: 'mobile-swal-popup',
+          title: 'mobile-swal-title',
         },
       });
       setShowForm(false);
-      setStartDate("");
-      setEndDate("");
-      setReason("");
+      setStartDate('');
+      setEndDate('');
+      setReason('');
     } catch (error: any) {
-      console.error("Error creating vacation:", error);
-      const errorMessage = error.response?.data?.error || "No se pudo crear la solicitud. Intenta nuevamente.";
-      await sweetAlert.error("Error", errorMessage);
+      console.error('Error creating vacation:', error);
+      const errorMessage = error.response?.data?.error || 'No se pudo crear la solicitud. Intenta nuevamente.';
+      await sweetAlert.error('Error', errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -319,16 +319,16 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
   const calculateAntiguedad = () => {
     if (totalSeniorityDays === 0) {
-      if (!profile?.hireDate) return "0 días";
+      if (!profile?.hireDate) return '0 días';
       const hireDate = parseISO(profile.hireDate);
       const years = differenceInYears(new Date(), hireDate);
       const months = Math.floor((differenceInDays(new Date(), hireDate) % 365) / 30);
 
       const parts = [];
-      if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
-      if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+      if (years > 0) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
 
-      return parts.length > 0 ? parts.join(", ") : "0 días";
+      return parts.length > 0 ? parts.join(', ') : '0 días';
     }
 
     const years = Math.floor(totalSeniorityDays / 365);
@@ -337,11 +337,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
     const days = remainingAfterYears % 30;
 
     const parts = [];
-    if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
-    if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
-    if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+    if (years > 0) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
+    if (days > 0) parts.push(`${days} ${days === 1 ? 'día' : 'días'}`);
 
-    return parts.length > 0 ? parts.join(", ") : "0 días";
+    return parts.length > 0 ? parts.join(', ') : '0 días';
   };
 
   // Calendar Helpers (omitted for brevity)
@@ -358,14 +358,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   };
 
   const isOccupied = (day: Date) => {
-    const formatted = format(day, "yyyy-MM-dd");
+    const formatted = format(day, 'yyyy-MM-dd');
     return occupiedDates.includes(formatted);
   };
 
   const handleClearSelection = () => {
-    setStartDate("");
-    setEndDate("");
-    setCalendarOpen("start");
+    setStartDate('');
+    setEndDate('');
+    setCalendarOpen('start');
   };
 
   const checkOverlap = (start: string, end: string) => {
@@ -379,7 +379,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   };
 
   const handleDateSelect = async (day: Date) => {
-    const formattedDate = format(day, "yyyy-MM-dd");
+    const formattedDate = format(day, 'yyyy-MM-dd');
 
     // Fallback check - button should be disabled, but guard anyway
     if (isOccupied(day)) {
@@ -389,16 +389,16 @@ export default function Vacations({ onNavigate }: VacationsProps) {
     let newStart = startDate;
     let newEnd = endDate;
 
-    if (calendarOpen === "start") {
+    if (calendarOpen === 'start') {
       newStart = formattedDate;
       if (endDate && isAfter(day, parseISO(endDate))) {
-        newEnd = "";
+        newEnd = '';
       }
-    } else if (calendarOpen === "end") {
+    } else if (calendarOpen === 'end') {
       // Logic: If user clicks a date BEFORE the current Start Date, they are correcting the Start Date.
       if (startDate && isBefore(day, parseISO(startDate))) {
         newStart = formattedDate;
-        newEnd = "";
+        newEnd = '';
       } else {
         // Logic for End Date (Normal case)
         if (applyConsecutiveDaysRule && isFriday(day)) {
@@ -407,43 +407,43 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
           // Verificar si los días agregados están ocupados
           if (isOccupied(saturday) || isOccupied(sunday)) {
-            await sweetAlert.error("Error", "No se pueden agregar automáticamente el sábado y domingo porque uno de esos días está ocupado por otro miembro del equipo.");
+            await sweetAlert.error('Error', 'No se pueden agregar automáticamente el sábado y domingo porque uno de esos días está ocupado por otro miembro del equipo.');
             return;
           }
 
           await Swal.fire({
-            icon: "info",
-            title: "Días Corridos",
-            text: "Al finalizar las vacaciones un viernes, se computan automáticamente el sábado y domingo como días corridos.",
-            confirmButtonText: "Entendido",
-            confirmButtonColor: "#3b82f6",
+            icon: 'info',
+            title: 'Días Corridos',
+            text: 'Al finalizar las vacaciones un viernes, se computan automáticamente el sábado y domingo como días corridos.',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3b82f6',
             customClass: {
-              popup: "mobile-swal-popup",
-              title: "mobile-swal-title",
+              popup: 'mobile-swal-popup',
+              title: 'mobile-swal-title',
             },
           });
-          newEnd = format(sunday, "yyyy-MM-dd");
+          newEnd = format(sunday, 'yyyy-MM-dd');
         } else if (applyConsecutiveDaysRule && isSaturday(day)) {
           const sunday = addDays(day, 1);
 
           // Verificar si el día agregado está ocupado
           if (isOccupied(sunday)) {
-            await sweetAlert.error("Error", "No se puede agregar automáticamente el domingo porque está ocupado por otro miembro del equipo.");
+            await sweetAlert.error('Error', 'No se puede agregar automáticamente el domingo porque está ocupado por otro miembro del equipo.');
             return;
           }
 
           await Swal.fire({
-            icon: "info",
-            title: "Días Corridos",
-            text: "Al finalizar las vacaciones un sábado, se computa automáticamente el domingo como día corrido.",
-            confirmButtonText: "Entendido",
-            confirmButtonColor: "#3b82f6",
+            icon: 'info',
+            title: 'Días Corridos',
+            text: 'Al finalizar las vacaciones un sábado, se computa automáticamente el domingo como día corrido.',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3b82f6',
             customClass: {
-              popup: "mobile-swal-popup",
-              title: "mobile-swal-title",
+              popup: 'mobile-swal-popup',
+              title: 'mobile-swal-title',
             },
           });
-          newEnd = format(sunday, "yyyy-MM-dd");
+          newEnd = format(sunday, 'yyyy-MM-dd');
         } else {
           newEnd = formattedDate;
         }
@@ -451,7 +451,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
     }
 
     if (newStart && newEnd) {
-      if (calendarOpen === "end" && (isFriday(day) || isSaturday(day))) {
+      if (calendarOpen === 'end' && (isFriday(day) || isSaturday(day))) {
         const s = parseISO(newStart);
         const e = parseISO(newEnd);
         const days = differenceInDays(e, s) + 1;
@@ -462,17 +462,17 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           const diff = days - limit;
           // Shift start date to fit limit
           const adjustedStart = addDays(s, diff);
-          newStart = format(adjustedStart, "yyyy-MM-dd");
+          newStart = format(adjustedStart, 'yyyy-MM-dd');
 
           await Swal.fire({
-            icon: "info",
-            title: "Ajuste Automático",
+            icon: 'info',
+            title: 'Ajuste Automático',
             text: `Se ha ajustado la fecha de inicio para incluir el fin de semana sin exceder tus días disponibles.`,
-            confirmButtonText: "Entendido",
-            confirmButtonColor: "#3b82f6",
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3b82f6',
             customClass: {
-              popup: "mobile-swal-popup",
-              title: "mobile-swal-title",
+              popup: 'mobile-swal-popup',
+              title: 'mobile-swal-title',
             },
           });
         }
@@ -480,39 +480,33 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
       const hasOverlap = checkOverlap(newStart, newEnd);
       if (hasOverlap) {
-        await sweetAlert.error("Conflicto de fechas", "El rango seleccionado se solapa con vacaciones de otros miembros del equipo. Por favor selecciona otras fechas.");
+        await sweetAlert.error('Conflicto de fechas', 'El rango seleccionado se solapa con vacaciones de otros miembros del equipo. Por favor selecciona otras fechas.');
         return;
       }
     }
 
-    if (calendarOpen === "start") {
+    if (calendarOpen === 'start') {
       setStartDate(newStart);
       if (newEnd !== endDate) setEndDate(newEnd);
-      setCalendarOpen("end");
+      setCalendarOpen('end');
     } else {
       setEndDate(newEnd);
       if (newStart !== startDate) setStartDate(newStart);
     }
   };
 
-  const hasActiveRequest = vacations.some((v) => ["pending", "pre_approved", "approved"].includes(v.status));
+  const hasActiveRequest = vacations.some((v) => ['pending', 'pre_approved', 'approved'].includes(v.status));
 
   return (
     <div className="flex-1 pb-24">
       {/* HEADER: Fijo y con el botón principal (SIN CAMBIOS) */}
       {/* La «i» que ya había abría los datos de vacaciones del perfil: queda como botón dentro del info. */}
-      <SectionHeader
-        icon={faUmbrellaBeach}
-        titulo="Mis Vacaciones"
-        onBack={() => onNavigate("home")}
-        info={"Pedí tus vacaciones y seguí en qué estado está cada pedido: pendiente, aprobado o entregado."}
-        extra={{ label: "Ver mis datos de vacaciones", onClick: () => setShowProfileInfoModal(true) }}
-      />
+      <SectionHeader icon={faUmbrellaBeach} titulo="Mis Vacaciones" onBack={() => onNavigate('home')} info={'Pedí tus vacaciones y seguí en qué estado está cada pedido: pendiente, aprobado o entregado.'} extra={{ label: 'Ver mis datos de vacaciones', onClick: () => setShowProfileInfoModal(true) }} />
 
       <div className="px-4 pt-4 flex flex-col gap-4">
         {/* ALERTA VACACIONES ENTREGADAS (Activas) */}
         {vacations
-          .filter((v) => v.status === "delivered")
+          .filter((v) => v.status === 'delivered')
           .filter((v) => {
             const end = getLocalDate(v.endDate);
             const today = new Date();
@@ -532,7 +526,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                    Vacaciones Entregadas: {format(getLocalDate(v.startDate), "d MMM", { locale: es })} - {format(getLocalDate(v.endDate), "d MMM", { locale: es })}
+                    Vacaciones Entregadas: {format(getLocalDate(v.startDate), 'd MMM', { locale: es })} - {format(getLocalDate(v.endDate), 'd MMM', { locale: es })}
                   </p>
                   <p className="text-xs text-green-700 dark:text-green-400 mt-1">
                     Regreso: <span className="font-bold capitalize">{format(returnDate, "EEEE d 'de' MMMM", { locale: es })}</span>
@@ -581,13 +575,13 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 {/* Pendientes */}
                 <div className="text-center">
                   <p className="text-xs text-slate-400 mb-1">Pendientes</p>
-                  <p className="text-2xl font-bold text-yellow-500">{availableDays?.pending ?? "-"}</p>
+                  <p className="text-2xl font-bold text-yellow-500">{availableDays?.pending ?? '-'}</p>
                 </div>
               </div>
             </div>
 
             {/* BALANCE DE DÍAS (Fila única 4 columnas o 2x2 para mobile) - BALANCE Contable y Uso */}
-            <div className={`grid grid-cols-2 ${isArrastreEnabled ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-y-4 gap-x-2 text-center`}>
+            <div className={`grid grid-cols-2 ${isArrastreEnabled ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-y-4 gap-x-2 text-center`}>
               {/* LCT */}
               <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                 <p className="text-xs text-slate-400 mb-1">Por Ley (LCT)</p>
@@ -631,8 +625,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <form onSubmit={handleSubmit} className="p-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fechas</label>
-                  <div onClick={() => !hasNoDays && setCalendarOpen("start")} className={`relative ${hasNoDays ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-                    <input type="text" value={startDate && endDate ? `Desde ${format(getLocalDate(startDate), "dd/MM/yyyy")} Hasta ${format(getLocalDate(endDate), "dd/MM/yyyy")}` : startDate ? `Desde ${format(getLocalDate(startDate), "dd/MM/yyyy")} ...` : ""} readOnly disabled={hasNoDays} placeholder="Seleccionar rango de fechas" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
+                  <div onClick={() => !hasNoDays && setCalendarOpen('start')} className={`relative ${hasNoDays ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                    <input type="text" value={startDate && endDate ? `Desde ${format(getLocalDate(startDate), 'dd/MM/yyyy')} Hasta ${format(getLocalDate(endDate), 'dd/MM/yyyy')}` : startDate ? `Desde ${format(getLocalDate(startDate), 'dd/MM/yyyy')} ...` : ''} readOnly disabled={hasNoDays} placeholder="Seleccionar rango de fechas" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
                     <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
@@ -652,7 +646,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     Cancelar
                   </button>
                   <button type="submit" disabled={submitting || hasNoDays} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    {submitting ? "Enviando..." : "Enviar"}
+                    {submitting ? 'Enviando...' : 'Enviar'}
                   </button>
                 </div>
               </form>
@@ -689,14 +683,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                         <div className="flex items-center w-full">
                           <div className="flex flex-wrap gap-1.5">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-gray-50 dark:bg-gray-600/50">
-                              {format(getLocalDate(vacation.startDate), "d MMM", { locale: es })} - {format(getLocalDate(vacation.endDate), "d MMM", { locale: es })}
+                              {format(getLocalDate(vacation.startDate), 'd MMM', { locale: es })} - {format(getLocalDate(vacation.endDate), 'd MMM', { locale: es })}
                             </span>
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-sm bg-gray-50 dark:bg-gray-600/20 text-slate-700 dark:text-slate-300">{vacation.daysRequested} días</span>
                           </div>
                         </div>
                       </div>
 
-                      <p className="text-xs text-slate-400">{format(parseISO(vacation.createdAt), "dd/MM/yyyy")}</p>
+                      <p className="text-xs text-slate-400">{format(parseISO(vacation.createdAt), 'dd/MM/yyyy')}</p>
                     </div>
                   </div>
                 </div>
@@ -714,7 +708,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
               <div className="flex flex-col">
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, 'MMMM yyyy', { locale: es })}</h3>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
@@ -736,7 +730,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
             <div className="p-4">
               <div className="grid grid-cols-7 mb-2 text-center">
-                {["L", "M", "M", "J", "V", "S", "D"].map((day, index) => (
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
                   <div key={index} className="text-xs font-bold text-slate-400">
                     {day}
                   </div>
@@ -745,7 +739,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <div className="grid grid-cols-7 gap-y-1">
                 {generateCalendarDays().map((day, idx) => {
                   const isCurrentMonth = isSameMonth(day, viewDate);
-                  const formattedDay = format(day, "yyyy-MM-dd");
+                  const formattedDay = format(day, 'yyyy-MM-dd');
 
                   // Occupied Logic
                   const isOccupiedDay = isOccupied(day);
@@ -777,7 +771,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   const isPast = isBefore(day, today);
 
                   let isExceedingLimit = false;
-                  if (calendarOpen === "end" && startDate) {
+                  if (calendarOpen === 'end' && startDate) {
                     const s = parseISO(startDate);
                     // Only calculate limit for days after start date
                     if (isAfter(day, s) || isSameDay(day, s)) {
@@ -793,66 +787,66 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   const isDisabled = isPast || isExceedingLimit || isOccupiedDay;
 
                   const isSelected = isStart || isEnd || isInRange;
-                  const isSuggested = !isSelected && !isDisabled && !isOccupiedDay && suggestedEndDate && calendarOpen === "end" && startDate && isAfter(day, parseISO(startDate)) && (isBefore(day, suggestedEndDate) || isSameDay(day, suggestedEndDate));
+                  const isSuggested = !isSelected && !isDisabled && !isOccupiedDay && suggestedEndDate && calendarOpen === 'end' && startDate && isAfter(day, parseISO(startDate)) && (isBefore(day, suggestedEndDate) || isSameDay(day, suggestedEndDate));
 
                   // Base classes
-                  let classes = "h-10 w-full flex items-center justify-center text-sm font-medium transition-all relative";
+                  let classes = 'h-10 w-full flex items-center justify-center text-sm font-medium transition-all relative';
 
                   const isReturnDay = returnDate && isSameDay(day, returnDate);
 
                   if (isReturnDay) {
-                    classes += " bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded font-bold border-2 border-green-500/20";
+                    classes += ' bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded font-bold border-2 border-green-500/20';
                     if (isDisabled) {
-                      classes += " cursor-not-allowed opacity-75";
+                      classes += ' cursor-not-allowed opacity-75';
                     }
                   } else if (isDisabled) {
-                    classes += " cursor-not-allowed";
+                    classes += ' cursor-not-allowed';
                     if (isOccupiedDay) {
                       if (isPendingOcc) {
                         // Pending Occupied Style (Yellow - another user has pending vacation)
-                        classes += " bg-amber-200 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300";
+                        classes += ' bg-amber-200 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300';
                       } else {
                         // Approved Occupied Style (Red - another user has approved vacation)
-                        classes += " bg-red-200 text-red-700 dark:bg-red-800/40 dark:text-red-300";
+                        classes += ' bg-red-200 text-red-700 dark:bg-red-800/40 dark:text-red-300';
                       }
                       const visualStart = !prevOcc || isMon;
                       const visualEnd = !nextOcc || isSun;
-                      if (visualStart) classes += " rounded-l-lg";
-                      else classes += " rounded-l-none";
-                      if (visualEnd) classes += " rounded-r-lg";
-                      else classes += " rounded-r-none";
+                      if (visualStart) classes += ' rounded-l-lg';
+                      else classes += ' rounded-l-none';
+                      if (visualEnd) classes += ' rounded-r-lg';
+                      else classes += ' rounded-r-none';
                     } else {
-                      classes += " text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/20";
+                      classes += ' text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/20';
                     }
                   } else if (isSelected) {
-                    classes += " bg-blue-900 text-white z-10";
+                    classes += ' bg-blue-900 text-white z-10';
 
-                    classes += " border border-y-blue-800 dark:border-y-blue-400";
-                    if (isStart || isMon) classes += " border-l-blue-800 dark:border-l-blue-400 rounded-l-lg";
-                    else classes += " border-l-transparent rounded-l-none";
-                    if (isEnd || isSun) classes += " border-r-blue-800 dark:border-r-blue-400 rounded-r-lg";
-                    else classes += " border-r-transparent rounded-r-none";
+                    classes += ' border border-y-blue-800 dark:border-y-blue-400';
+                    if (isStart || isMon) classes += ' border-l-blue-800 dark:border-l-blue-400 rounded-l-lg';
+                    else classes += ' border-l-transparent rounded-l-none';
+                    if (isEnd || isSun) classes += ' border-r-blue-800 dark:border-r-blue-400 rounded-r-lg';
+                    else classes += ' border-r-transparent rounded-r-none';
                   } else if (isSuggested) {
-                    classes += " bg-transparent text-sky-600 dark:text-white rounded";
-                    classes += " border border-blue-500 border-dashed";
+                    classes += ' bg-transparent text-sky-600 dark:text-white rounded';
+                    classes += ' border border-blue-500 border-dashed';
                   } else {
-                    classes += " border-transparent border-2";
-                    classes += !isCurrentMonth ? " text-slate-300 dark:text-slate-700" : " text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded";
+                    classes += ' border-transparent border-2';
+                    classes += !isCurrentMonth ? ' text-slate-300 dark:text-slate-700' : ' text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded';
                   }
 
                   // Generate title for disabled days
-                  let dayTitle = "";
+                  let dayTitle = '';
                   if (isOccupiedDay) {
-                    dayTitle = isPendingOcc ? "Vacación pendiente de otro usuario" : "Vacación aprobada de otro usuario";
+                    dayTitle = isPendingOcc ? 'Vacación pendiente de otro usuario' : 'Vacación aprobada de otro usuario';
                   } else if (isPast) {
-                    dayTitle = "Fecha pasada";
+                    dayTitle = 'Fecha pasada';
                   } else if (isExceedingLimit) {
-                    dayTitle = "Excede límite de días";
+                    dayTitle = 'Excede límite de días';
                   }
 
                   return (
                     <button key={idx} onClick={() => !isDisabled && handleDateSelect(day)} disabled={isDisabled} className={classes} title={dayTitle}>
-                      {format(day, "d")}
+                      {format(day, 'd')}
                     </button>
                   );
                 })}
@@ -864,7 +858,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               {returnDate && (
                 <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded-lg text-xs text-green-700 dark:text-green-300 flex items-center justify-center gap-2">
                   <p>
-                    Volvés a trabajar el{" "}
+                    Volvés a trabajar el{' '}
                     <strong className="capitalize">
                       {format(returnDate, "EEEE d 'de' MMMM", { locale: es })}.<br />
                     </strong>
@@ -880,15 +874,15 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 </div>
                 <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
                 <div className="flex flex-col items-center w-full">
-                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Seleccionados {applyConsecutiveDaysRule ? "(Corr.)" : "(Háb.)"}</span>
+                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Seleccionados {applyConsecutiveDaysRule ? '(Corr.)' : '(Háb.)'}</span>
                   <span
                     className={`text-lg font-bold ${(() => {
                       // Calcular días seleccionados
-                      if (!startDate || !endDate) return "text-slate-400";
+                      if (!startDate || !endDate) return 'text-slate-400';
                       // Reutilizamos lógica simple aquí o la extraemos
                       const s = parseISO(startDate);
                       const e = parseISO(endDate);
-                      if (isBefore(e, s)) return "text-slate-400";
+                      if (isBefore(e, s)) return 'text-slate-400';
 
                       let count = 0;
                       if (applyConsecutiveDaysRule) {
@@ -899,7 +893,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                         count = days.filter((d) => !isSaturday(d) && !isSunday(d)).length;
                       }
 
-                      return count > calculatedAvailable ? "text-red-500" : "text-slate-900 dark:text-white";
+                      return count > calculatedAvailable ? 'text-red-500' : 'text-slate-900 dark:text-white';
                     })()}`}
                   >
                     {(() => {
@@ -958,9 +952,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         size="md"
         actions={[
           {
-            label: "Cerrar",
+            label: 'Cerrar',
             onClick: () => setShowProfileInfoModal(false),
-            variant: "primary",
+            variant: 'primary',
           },
         ]}
       >
@@ -970,7 +964,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             <h4 className="font-semibold text-slate-900 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-2">Datos Generales</h4>
             <div className="flex items-center gap-1">
               <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
-              <span className="font-semibold">Ingreso:</span> {profile?.hireDate ? format(parseISO(profile.hireDate), "dd/MM/yyyy") : "—"}
+              <span className="font-semibold">Ingreso:</span> {profile?.hireDate ? format(parseISO(profile.hireDate), 'dd/MM/yyyy') : '—'}
             </div>
             <div className="flex items-center gap-1">
               <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
@@ -978,38 +972,38 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             </div>
           </div>
 
-          {/* Sede, Rol/es Frame, Contrato, Horario y Fechas */}
+          {/* Sede, Rol/es Empresa, Contrato, Horario y Fechas */}
           {((profile?.externalInfo?.sedes?.length ?? 0) > 0 || (profile?.externalInfo?.rolFrames?.length ?? 0) > 0 || (profile?.externalInfo?.contracts?.length ?? 0) > 0 || (profile?.externalInfo?.schedules?.length ?? 0) > 0 || (profile?.externalInfo?.projectDates?.length ?? 0) > 0) && (
             <div className="space-y-1">
               <h4 className="font-semibold text-slate-900 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-2 mt-2">Detalles Laborales</h4>
               {profile?.externalInfo?.sedes && profile.externalInfo.sedes.length > 0 && (
                 <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold text-amber-600 dark:text-amber-400">Sede:</span> {profile.externalInfo.sedes.join(", ")}
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">Sede:</span> {profile.externalInfo.sedes.join(', ')}
                 </div>
               )}
               {profile?.externalInfo?.rolFrames && profile.externalInfo.rolFrames.length > 0 && (
                 <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faIdCard} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">Rol/es Frame:</span> {profile.externalInfo.rolFrames.join(", ")}
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">Rol/es Empresa:</span> {profile.externalInfo.rolFrames.join(', ')}
                 </div>
               )}
               {profile?.externalInfo?.contracts && profile.externalInfo.contracts.length > 0 && (
                 <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Contrato:</span> {profile.externalInfo.contracts.join(", ")}
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Contrato:</span> {profile.externalInfo.contracts.join(', ')}
                 </div>
               )}
               {profile?.externalInfo?.schedules && profile.externalInfo.schedules.length > 0 && (
                 <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold text-sky-600 dark:text-sky-400">Horario:</span> {profile.externalInfo.schedules.join(", ")}
+                  <span className="font-semibold text-sky-600 dark:text-sky-400">Horario:</span> {profile.externalInfo.schedules.join(', ')}
                 </div>
               )}
               {profile?.externalInfo?.projectDates && profile.externalInfo.projectDates.length > 0 && (
                 <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">Fechas:</span> {profile.externalInfo.projectDates.join(", ")}
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">Fechas:</span> {profile.externalInfo.projectDates.join(', ')}
                 </div>
               )}
             </div>
@@ -1021,22 +1015,22 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             <div className="flex items-start gap-1">
               <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400 mt-0.5" />
               <span className="font-semibold uppercase truncate">Proyecto/s Actual/es:</span>
-              <span className="truncate">{stats?.project || "Sin proyectos"}</span>
+              <span className="truncate">{stats?.project || 'Sin proyectos'}</span>
             </div>
 
             {/* Cargo y Área */}
             <div className="flex items-center gap-1">
               <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
               <span className="font-semibold uppercase text-[10px]">Área:</span>
-              {profile?.areaName || profile?.department || "Sin Área"}
+              {profile?.areaName || profile?.department || 'Sin Área'}
             </div>
             <div className="flex items-center gap-1">
               <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
-              <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
+              <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || 'Sin Cargo'}
             </div>
             <div className="flex items-center gap-1">
               <FontAwesomeIcon icon={faUserGraduate} className="w-3 h-3 text-slate-400" />
-              <span className="font-semibold">Nivel:</span> {profile?.levelName || "Sin Nivel"}
+              <span className="font-semibold">Nivel:</span> {profile?.levelName || 'Sin Nivel'}
             </div>
           </div>
 
@@ -1053,9 +1047,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 const fractionalAllowed = effConfig?.permiteFraccionadas;
                 const minDays = effConfig?.minDiasFraccion ?? 1;
 
-                const minDaysSource = meta?.minDiasSource || stats?.vacationConfigSource || "Global";
-                const fracSource = meta?.fractionationSource || stats?.vacationConfigSource || "Global";
-                const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || "Global";
+                const minDaysSource = meta?.minDiasSource || stats?.vacationConfigSource || 'Global';
+                const fracSource = meta?.fractionationSource || stats?.vacationConfigSource || 'Global';
+                const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || 'Global';
 
                 return (
                   <div className="flex flex-col items-start gap-1">
@@ -1070,7 +1064,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     )}
 
                     <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                      {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({typeSource})</span>
+                      {applyConsecutiveDaysRule ? 'Días Corridos' : 'Días Hábiles'} <span className="opacity-70">({typeSource})</span>
                     </span>
                   </div>
                 );
@@ -1088,9 +1082,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         size="md"
         actions={[
           {
-            label: "Entendido",
+            label: 'Entendido',
             onClick: () => setShowInfoModal(false),
-            variant: "primary",
+            variant: 'primary',
           },
         ]}
       >
@@ -1130,9 +1124,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         size="sm"
         actions={[
           {
-            label: "Entendido",
+            label: 'Entendido',
             onClick: () => setShowSignatureInfoModal(false),
-            variant: "primary",
+            variant: 'primary',
           },
         ]}
       >
@@ -1149,9 +1143,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         size="sm"
         actions={[
           {
-            label: "Entendido",
+            label: 'Entendido',
             onClick: () => setShowPendingInfoModal(false),
-            variant: "primary",
+            variant: 'primary',
           },
         ]}
       >
@@ -1175,7 +1169,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       {/* Floating Action Button for New Request */}
       {/* Floating Action Button for New Request */}
       <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
-        <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest || hasNoDays} className="pointer-events-auto flex items-center justify-center w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100" title={hasActiveRequest ? "Ya tienes una solicitud en curso" : hasNoDays ? "Sin días disponibles" : "Nueva Solicitud"}>
+        <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest || hasNoDays} className="pointer-events-auto flex items-center justify-center w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100" title={hasActiveRequest ? 'Ya tienes una solicitud en curso' : hasNoDays ? 'Sin días disponibles' : 'Nueva Solicitud'}>
           <FontAwesomeIcon icon={faPlus} className="w-6 h-6" />
         </button>
       </div>

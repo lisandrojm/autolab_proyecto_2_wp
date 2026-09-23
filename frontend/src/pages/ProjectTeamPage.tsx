@@ -1,63 +1,63 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
-import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
-import axios from "../api/axiosConfig";
-import { projectsAPI, Project, AreaShiftMembersResponse } from "../api/projects";
-import { usersAPI, User, Contract } from "../api/users";
-import { useAuthStore } from "../stores/authStore";
-import { sweetAlert } from "../utils/sweetAlert";
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import axios from '../api/axiosConfig';
+import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
+import { usersAPI, User, Contract } from '../api/users';
+import { useAuthStore } from '../stores/authStore';
+import { sweetAlert } from '../utils/sweetAlert';
 
-import { PageLayout } from "../components/ui/PageLayout";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { EmptyState } from "../components/ui/EmptyState";
-import { UserCard } from "../components/users/UserCard";
-import { Modal } from "../components/ui/Modal";
-import { InfoModal } from "../components/ui/InfoModal";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
+import { PageLayout } from '../components/ui/PageLayout';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { UserCard } from '../components/users/UserCard';
+import { Modal } from '../components/ui/Modal';
+import { InfoModal } from '../components/ui/InfoModal';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 
-import { getHelp } from "../data/help/helpContent";
+import { getHelp } from '../data/help/helpContent';
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap , faCommentDots } from "@fortawesome/free-solid-svg-icons";
-import { vacationsAPI, VacationRequest } from "../api/vacations";
-import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
-import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
-import { TeamJerarquiaTab } from "../components/team/TeamJerarquiaTab";
-import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
-import { MiembroElegible, SelectorMiembroModal } from "../components/team/SelectorMiembroModal";
-import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from "../components/contratos/DiasDeTrabajo";
-import { JornadasSolicitud } from "../components/contratacion/JornadasSolicitud";
-import { ImportesDelContrato } from "../components/contratacion/ImportesDelContrato";
-import { SelectorHora } from "../components/contratacion/SelectorHora";
-import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from "../utils/horario";
-import { avisoIndeterminado, erroresDeJornadas, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../utils/jornadas";
-import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
-import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
-import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
-import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
-import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
-import { TipoContratoSelect } from "../components/contratos/TipoContratoSelect";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots } from '@fortawesome/free-solid-svg-icons';
+import { vacationsAPI, VacationRequest } from '../api/vacations';
+import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
+import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
+import { TeamJerarquiaTab } from '../components/team/TeamJerarquiaTab';
+import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
+import { MiembroElegible, SelectorMiembroModal } from '../components/team/SelectorMiembroModal';
+import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from '../components/contratos/DiasDeTrabajo';
+import { JornadasSolicitud } from '../components/contratacion/JornadasSolicitud';
+import { ImportesDelContrato } from '../components/contratacion/ImportesDelContrato';
+import { SelectorHora } from '../components/contratacion/SelectorHora';
+import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
+import { avisoIndeterminado, erroresDeJornadas, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
+import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
+import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
+import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
+import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
+import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
-import { coordinaAreas, PROJECT_COORDINATOR } from "../utils/permisosMobile";
-import { contratosAPI, ContratoItem } from "../api/contratos";
-import { releasesAPI, Release } from "../api/release";
-import { companiesAPI, Company } from "../api/companies";
-import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
-import { Area, areasAPI } from "../api/areas";
-import { userProjectsAPI } from "../api/userProjects";
-import { shiftsAPI, Shift } from "../api/shifts";
+import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
+import { contratosAPI, ContratoItem } from '../api/contratos';
+import { releasesAPI, Release } from '../api/release';
+import { companiesAPI, Company } from '../api/companies';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
+import { Area, areasAPI } from '../api/areas';
+import { userProjectsAPI } from '../api/userProjects';
+import { shiftsAPI, Shift } from '../api/shifts';
 // Los días de un turno en texto («Lun a Vie»), dichos igual que en la app y en Jerarquía.
-import { textoDeDias } from "../utils/jerarquiaTurnos";
-import { clientsAPI } from "../api/clients";
-import { infoAPI, InfoItem } from "../api/info";
-import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
-import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
-import { fuzzyMatch } from "../utils/searchHelpers";
+import { textoDeDias } from '../utils/jerarquiaTurnos';
+import { clientsAPI } from '../api/clients';
+import { infoAPI, InfoItem } from '../api/info';
+import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
+import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
+import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
-import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from "../utils/seleccionConvenioCategoria";
-import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from "../components/proyectos/ChipValoracion";
-import { cachedFetch } from "../utils/refCache";
+import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
+import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
+import { cachedFetch } from '../utils/refCache';
 
-const HELP_KEY = "projectTeam" as const;
+const HELP_KEY = 'projectTeam' as const;
 
 /*
   EL VÍNCULO DE LA PERSONA CON EL PROYECTO ABIERTO.
@@ -65,7 +65,7 @@ const HELP_KEY = "projectTeam" as const;
 function vinculoConElProyecto(user: any, projectId?: string): any {
   return (user?.metadata?.projects || []).find((p: any) => {
     const pId = p?.projectId;
-    return String(typeof pId === "object" ? pId?._id : pId) === String(projectId);
+    return String(typeof pId === 'object' ? pId?._id : pId) === String(projectId);
   });
 }
 
@@ -87,20 +87,20 @@ function contratoQueRige(user: any, projectId?: string): any {
 
 /** Cuántos contratos tiene la persona en el proyecto: lo cuenta el server, o el array si vino. */
 function cantidadDeContratos(user: any, projectId?: string): number {
-  if (typeof user?.contractCount === "number") return user.contractCount;
+  if (typeof user?.contractCount === 'number') return user.contractCount;
   return vinculoConElProyecto(user, projectId)?.contracts?.length || 0;
 }
 
 // Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
 function formatContractDate(d?: string): string {
-  if (!d) return "—";
+  if (!d) return '—';
   const iso = String(d).substring(0, 10);
-  const parts = iso.split("-");
+  const parts = iso.split('-');
   if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
     return `${Number(parts[2])}/${Number(parts[1])}/${parts[0]}`;
   }
   const dt = new Date(d);
-  return isNaN(dt.getTime()) ? "—" : dt.toLocaleDateString();
+  return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString();
 }
 
 /*
@@ -113,33 +113,33 @@ function formatContractDate(d?: string): string {
   equipo, y eso es un permiso.
 */
 const MOBILE_ROLE_OPTIONS = [
-  { value: "con", label: "Supervisa áreas" },
-  { value: "sin", label: "No supervisa" },
+  { value: 'con', label: 'Supervisa áreas' },
+  { value: 'sin', label: 'No supervisa' },
 ];
 
 function numeroALetras(num: number): string {
   const Unidades = (num: number): string => {
     switch (num) {
       case 1:
-        return "UN";
+        return 'UN';
       case 2:
-        return "DOS";
+        return 'DOS';
       case 3:
-        return "TRES";
+        return 'TRES';
       case 4:
-        return "CUATRO";
+        return 'CUATRO';
       case 5:
-        return "CINCO";
+        return 'CINCO';
       case 6:
-        return "SEIS";
+        return 'SEIS';
       case 7:
-        return "SIETE";
+        return 'SIETE';
       case 8:
-        return "OCHO";
+        return 'OCHO';
       case 9:
-        return "NUEVE";
+        return 'NUEVE';
       default:
-        return "";
+        return '';
     }
   };
 
@@ -150,37 +150,37 @@ function numeroALetras(num: number): string {
       case 1:
         switch (unidad) {
           case 0:
-            return "DIEZ";
+            return 'DIEZ';
           case 1:
-            return "ONCE";
+            return 'ONCE';
           case 2:
-            return "DOCE";
+            return 'DOCE';
           case 3:
-            return "TRECE";
+            return 'TRECE';
           case 4:
-            return "CATORCE";
+            return 'CATORCE';
           case 5:
-            return "QUINCE";
+            return 'QUINCE';
           default:
-            return "DIECI" + Unidades(unidad);
+            return 'DIECI' + Unidades(unidad);
         }
       case 2:
-        if (unidad === 0) return "VEINTE";
-        return "VEINTI" + Unidades(unidad);
+        if (unidad === 0) return 'VEINTE';
+        return 'VEINTI' + Unidades(unidad);
       case 3:
-        return "TREINTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+        return 'TREINTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
       case 4:
-        return "CUARENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+        return 'CUARENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
       case 5:
-        return "CINCUENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+        return 'CINCUENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
       case 6:
-        return "SESENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+        return 'SESENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
       case 7:
-        return "SETENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+        return 'SETENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
       case 8:
-        return "OCHENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+        return 'OCHENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
       case 9:
-        return "NOVENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+        return 'NOVENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
       default:
         return Unidades(num);
     }
@@ -191,24 +191,24 @@ function numeroALetras(num: number): string {
     const centenaDigito = Math.floor(num / 100);
     switch (centenaDigito) {
       case 1:
-        if (decenas === 0) return "CIEN";
-        return "CIENTO " + Decenas(decenas);
+        if (decenas === 0) return 'CIEN';
+        return 'CIENTO ' + Decenas(decenas);
       case 2:
-        return "DOSCIENTOS " + Decenas(decenas);
+        return 'DOSCIENTOS ' + Decenas(decenas);
       case 3:
-        return "TRESCIENTOS " + Decenas(decenas);
+        return 'TRESCIENTOS ' + Decenas(decenas);
       case 4:
-        return "CUATROCIENTOS " + Decenas(decenas);
+        return 'CUATROCIENTOS ' + Decenas(decenas);
       case 5:
-        return "QUINIENTOS " + Decenas(decenas);
+        return 'QUINIENTOS ' + Decenas(decenas);
       case 6:
-        return "SEISCIENTOS " + Decenas(decenas);
+        return 'SEISCIENTOS ' + Decenas(decenas);
       case 7:
-        return "SETECIENTOS " + Decenas(decenas);
+        return 'SETECIENTOS ' + Decenas(decenas);
       case 8:
-        return "OCHOCIENTOS " + Decenas(decenas);
+        return 'OCHOCIENTOS ' + Decenas(decenas);
       case 9:
-        return "NOVECIENTOS " + Decenas(decenas);
+        return 'NOVECIENTOS ' + Decenas(decenas);
       default:
         return Decenas(num);
     }
@@ -216,11 +216,11 @@ function numeroALetras(num: number): string {
 
   const Seccion = (num: number, divisor: number, strSingular: string, strPlural: string): string => {
     const cientos = Math.floor(num / divisor);
-    let letras = "";
+    let letras = '';
 
     if (cientos > 0) {
       if (cientos > 1) {
-        letras = Centenas(cientos) + " " + strPlural;
+        letras = Centenas(cientos) + ' ' + strPlural;
       } else {
         letras = strSingular;
       }
@@ -232,35 +232,35 @@ function numeroALetras(num: number): string {
   const Miles = (num: number): string => {
     const divisor = 1000;
     const resto = num % divisor;
-    let strMiles = Seccion(num, divisor, "MIL", "MIL");
+    let strMiles = Seccion(num, divisor, 'MIL', 'MIL');
     let strCentenas = Centenas(resto);
 
-    if (strMiles === "") return strCentenas;
-    if (strMiles === "UN MIL") strMiles = "MIL";
-    if (strCentenas === "") return strMiles;
-    return strMiles + " " + strCentenas;
+    if (strMiles === '') return strCentenas;
+    if (strMiles === 'UN MIL') strMiles = 'MIL';
+    if (strCentenas === '') return strMiles;
+    return strMiles + ' ' + strCentenas;
   };
 
   const Millones = (num: number): string => {
     const divisor = 1000000;
     const resto = num % divisor;
-    let strMillones = Seccion(num, divisor, "UN MILLÓN", "MILLONES");
+    let strMillones = Seccion(num, divisor, 'UN MILLÓN', 'MILLONES');
     let strMiles = Miles(resto);
 
-    if (strMillones === "") return strMiles;
-    if (strMiles === "") return strMillones;
-    return strMillones + " " + strMiles;
+    if (strMillones === '') return strMiles;
+    if (strMiles === '') return strMillones;
+    return strMillones + ' ' + strMiles;
   };
 
   const entero = Math.floor(num);
   const centavosVal = Math.round((num - entero) * 100);
-  const centavosStr = centavosVal.toString().padStart(2, "0") + "/100";
+  const centavosStr = centavosVal.toString().padStart(2, '0') + '/100';
 
   if (entero === 0) {
-    return "CERO " + centavosStr;
+    return 'CERO ' + centavosStr;
   }
 
-  return (Millones(entero) + " " + centavosStr).replace(/\s+/g, " ").trim();
+  return (Millones(entero) + ' ' + centavosStr).replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -365,19 +365,19 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
-  const [filterRole, setFilterRole] = useState(""); // Filter by Role
-  const [filterRoleFrame, setFilterRoleFrame] = useState(""); // Filter by Role Frame
-  const [filterProject, setFilterProject] = useState(""); // Filter by Project
+  const [searchTerm, setSearchTerm] = useState(''); // For Disponibles (Modal)
+  const [filterRole, setFilterRole] = useState(''); // Filter by Role
+  const [filterRoleFrame, setFilterRoleFrame] = useState(''); // Filter by Role Frame
+  const [filterProject, setFilterProject] = useState(''); // Filter by Project
   const [showFilters, setShowFilters] = useState(false); // Toggle filters UI
-  const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
-  const [filterUserStatus, setFilterUserStatus] = useState<string>("");
-  const [filterVigencia, setFilterVigencia] = useState<string>(""); // "" | "vigente" | "novigente" (client-side sobre la página)
-  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(""); // nombre_contrato (client-side sobre la página)
-  const [filterAreaTurno, setFilterAreaTurno] = useState<string>(""); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
-  const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(""); // nombre_estado_empleado (client-side sobre la página)
-  const [filterRolMobile, setFilterRolMobile] = useState<string>(""); // "" | "colaborador" | "coordinador" (server-side, paginado)
-  const [filterReemplazo, setFilterReemplazo] = useState<string>(""); // "" | "con" | "sin" (server-side, paginado)
+  const [searchTermTeam, setSearchTermTeam] = useState(''); // For Equipo Actual
+  const [filterUserStatus, setFilterUserStatus] = useState<string>('');
+  const [filterVigencia, setFilterVigencia] = useState<string>(''); // "" | "vigente" | "novigente" (client-side sobre la página)
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(''); // nombre_contrato (client-side sobre la página)
+  const [filterAreaTurno, setFilterAreaTurno] = useState<string>(''); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
+  const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(''); // nombre_estado_empleado (client-side sobre la página)
+  const [filterRolMobile, setFilterRolMobile] = useState<string>(''); // "" | "colaborador" | "coordinador" (server-side, paginado)
+  const [filterReemplazo, setFilterReemplazo] = useState<string>(''); // "" | "con" | "sin" (server-side, paginado)
   // Dos pasos: Contrato y Sueldo. «Extras» (sede y observaciones) se sacó: la sede sale del proyecto.
   // Un solo formulario, como la solicitud de la app: el paso quedó sólo para resetear al abrir.
   const [, setWizardStep] = useState<1 | 2>(1);
@@ -400,7 +400,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     cambios los detecta el server solo (compara la solicitud contra el contrato guardado); esto es
     para lo que ningún diff puede decir —por qué estaba mal y cómo cargarlo la próxima—.
   */
-  const [comentarioRevision, setComentarioRevision] = useState("");
+  const [comentarioRevision, setComentarioRevision] = useState('');
   // Se incrementa tras aprobar para que la pestaña Solicitudes recargue su lista.
   const [solicitudesRefresh, setSolicitudesRefresh] = useState(0);
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
@@ -417,7 +417,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    *
    * `""` = todos los convenios de la empleadora.
    */
-  const [convenioFiltro, setConvenioFiltro] = useState<string>("");
+  const [convenioFiltro, setConvenioFiltro] = useState<string>('');
   /** Ignora el filtro por función Frame y ofrece TODAS las categorías del convenio elegido. */
   const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   /*
@@ -429,9 +429,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     contesta 422).
   */
   const [verTodasLasValoraciones, setVerTodasLasValoraciones] = useState(false);
-  const [motivoValoracion, setMotivoValoracion] = useState("");
+  const [motivoValoracion, setMotivoValoracion] = useState('');
   /** Aviso inline cuando el cambio de convenio dejó sin efecto la categoría que estaba elegida. */
-  const [avisoConvenio, setAvisoConvenio] = useState("");
+  const [avisoConvenio, setAvisoConvenio] = useState('');
 
   /*
     POR QUÉ VÍA SE CONTRATA: filtra los tipos de contrato por su trámite impositivo.
@@ -444,24 +444,24 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     Vacío = sin filtrar. No es lo mismo que «ninguno de los dos»: es no haber filtrado.
   */
-  const [filtroTramite, setFiltroTramite] = useState<TipoImpositivo | "">("");
+  const [filtroTramite, setFiltroTramite] = useState<TipoImpositivo | ''>('');
   const [filtroTramiteOpen, setFiltroTramiteOpen] = useState(false);
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
-    rol_frame_id: "",
-    categoria_sat_id: "",
-    contrato_id: "", // _id del Contrato elegido (Tipo de Contrato, valor del select principal)
-    contrato_frame_id: "", // _id de la Plantilla resuelta para ese Contrato (para el PDF/Estados/filtros)
-    nombre_contrato: "", // nombre de la Plantilla resuelta (identificador estable / match PDF)
-    tipo_contrato_id: "", // ID Externo numérico, solo si la contratos-frame lo tiene
-    estado_id: "",
+    rol_frame_id: '',
+    categoria_sat_id: '',
+    contrato_id: '', // _id del Contrato elegido (Tipo de Contrato, valor del select principal)
+    contrato_frame_id: '', // _id de la Plantilla resuelta para ese Contrato (para el PDF/Estados/filtros)
+    nombre_contrato: '', // nombre de la Plantilla resuelta (identificador estable / match PDF)
+    tipo_contrato_id: '', // ID Externo numérico, solo si la contratos-frame lo tiene
+    estado_id: '',
     // Empresas del proyecto elegidas para el contrato / release de este miembro (ObjectId o "")
-    empresaContratoId: "",
-    empresaReleaseId: "",
-    hora_inicio: "09:00",
-    hora_fin: "18:00",
-    fecha_alta_contrato: new Date().toISOString().split("T")[0],
-    fecha_baja_contrato: "",
+    empresaContratoId: '',
+    empresaReleaseId: '',
+    hora_inicio: '09:00',
+    hora_fin: '18:00',
+    fecha_alta_contrato: new Date().toISOString().split('T')[0],
+    fecha_baja_contrato: '',
     /*
       Los días del contrato. CAMPO PROPIO, separado de `cantidad_jornadas_laborales`.
 
@@ -476,21 +476,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     cantidad_jornadas_laborales: 5,
     sueldo_jornada: 0,
     sueldo_mano: 0,
-    sueldo_mano_texto: "",
+    sueldo_mano_texto: '',
     sueldo_diario_neto: 0,
     diferencia_diaria_neto: 0,
     sueldo_neto: 0,
     sueldo_bruto: 0,
     // Step 3: Extras
-    sede_id: "",
+    sede_id: '',
     reemplazo: false,
-    empleado_id_reemplezado: "",
-    observaciones: "",
+    empleado_id_reemplezado: '',
+    observaciones: '',
     areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
   });
 
   // UI States
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
   /**
@@ -500,8 +500,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    * Configurar Miembro, que vive acá, así que la vista global manda para acá. Sin el parámetro caía
    * en Equipo y había que buscar la pestaña a mano, que es justo lo que el botón venía a evitar.
    */
-  const tabInicial = new URLSearchParams(location.search).get("tab");
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores" | "jerarquia">(tabInicial === "solicitudes" || tabInicial === "coordinadores" || tabInicial === "jerarquia" ? tabInicial : "equipo");
+  const tabInicial = new URLSearchParams(location.search).get('tab');
+  const [activeTab, setActiveTab] = useState<'equipo' | 'solicitudes' | 'coordinadores' | 'jerarquia'>(tabInicial === 'solicitudes' || tabInicial === 'coordinadores' || tabInicial === 'jerarquia' ? tabInicial : 'equipo');
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
   const [showSinAreasInfo, setShowSinAreasInfo] = useState(false);
@@ -528,8 +528,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setSelectedMemberForDetail(user);
     if (detailRefsLoaded) return;
     // Carga perezosa de plantillas de contrato, releases y empresas (puede fallar por permisos → listas vacías)
-    const [cf, rel, emp] = await Promise.all([contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]), releasesAPI.getAll().catch(() => [] as Release[]), // `slim`: acá la empresa es un nombre en un desplegable de descarga, no su ficha de ARCA.
-      companiesAPI.list({ slim: true }).catch(() => [] as Company[])]);
+    const [cf, rel, emp] = await Promise.all([
+      contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]),
+      releasesAPI.getAll().catch(() => [] as Release[]), // `slim`: acá la empresa es un nombre en un desplegable de descarga, no su ficha de ARCA.
+      companiesAPI.list({ slim: true }).catch(() => [] as Company[]),
+    ]);
     setContratoFrames(cf);
     setReleases(rel);
     setCompanies(emp);
@@ -541,7 +544,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // se ofrecen TODAS las empresas del ABM (si no, no habría con qué generar el documento).
   const allEmpresas = companies.map((c) => ({ id: c._id, label: c.razonSocial })).filter((e) => e.label);
   const resolveEmpresas = (ids?: string[]) => {
-    const fromProject = (ids || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || "" })).filter((e) => e.label);
+    const fromProject = (ids || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || '' })).filter((e) => e.label);
     return fromProject.length > 0 ? fromProject : allEmpresas;
   };
   const contratoEmpresas = resolveEmpresas(project?.contratoEmpresas);
@@ -557,8 +560,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     ser de antes de que el proyecto acotara la lista, y cambiárselo por debajo sería reescribirle la
     empleadora a alguien que entró a tocar otra cosa—.
   */
-  const unicaEmpresaContrato = contratoEmpresas.length === 1 ? contratoEmpresas[0].id : "";
-  const unicaEmpresaRelease = releaseEmpresas.length === 1 ? releaseEmpresas[0].id : "";
+  const unicaEmpresaContrato = contratoEmpresas.length === 1 ? contratoEmpresas[0].id : '';
+  const unicaEmpresaRelease = releaseEmpresas.length === 1 ? releaseEmpresas[0].id : '';
   useEffect(() => {
     if (!selectedUserForWizard) return;
     setWizardData((prev) => {
@@ -571,23 +574,23 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // Persistence for view mode
   useEffect(() => {
-    const saved = localStorage.getItem("projectTeamViewMode");
-    if (saved === "table" || saved === "cards") {
-      setViewMode(saved as "table" | "cards");
+    const saved = localStorage.getItem('projectTeamViewMode');
+    if (saved === 'table' || saved === 'cards') {
+      setViewMode(saved as 'table' | 'cards');
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("projectTeamViewMode", viewMode);
+    localStorage.setItem('projectTeamViewMode', viewMode);
   }, [viewMode]);
 
   useEffect(() => {
     const handleResize = () => setIsLg(window.innerWidth >= 1024);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const effectiveViewMode = isLg ? viewMode : "cards";
+  const effectiveViewMode = isLg ? viewMode : 'cards';
 
   /*
     LOS PROYECTOS, SÓLO SI HAY TARJETAS EN PANTALLA.
@@ -597,11 +600,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     que se abre por defecto. Se piden una sola vez: `cachedFetch` los comparte con el resto de la app.
   */
   useEffect(() => {
-    if (effectiveViewMode !== "cards" || allProjects.length > 0) return;
+    if (effectiveViewMode !== 'cards' || allProjects.length > 0) return;
     let cancelado = false;
-    cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 }))
+    cachedFetch('projects:all', () => projectsAPI.listAll({ limit: 500 }))
       .then((ps) => !cancelado && setAllProjects(ps))
-      .catch((e) => console.error("Error cargando proyectos para las tarjetas:", e));
+      .catch((e) => console.error('Error cargando proyectos para las tarjetas:', e));
     return () => {
       cancelado = true;
     };
@@ -658,12 +661,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         que estas filas leen. Antes viajaban todos los proyectos de cada persona con el historial
         completo de contratos: 400 KB por página para dibujar una tabla de un solo proyecto.
       */
-      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: "name", teamTable: true };
+      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: 'name', teamTable: true };
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
-      if (status === "active") params.metadataActivo = "true";
-      if (status === "inactive") params.metadataActivo = "false";
-      if (rolMobile === "con") params.permission = PROJECT_COORDINATOR;
-      if (rolMobile === "sin") params.notPermission = PROJECT_COORDINATOR;
+      if (status === 'active') params.metadataActivo = 'true';
+      if (status === 'inactive') params.metadataActivo = 'false';
+      if (rolMobile === 'con') params.permission = PROJECT_COORDINATOR;
+      if (rolMobile === 'sin') params.notPermission = PROJECT_COORDINATOR;
       if (vigencia) params.vigencia = vigencia;
       if (tipoContrato) params.tipoContrato = tipoContrato;
       if (areaTurno) params.areaTurno = areaTurno;
@@ -675,7 +678,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       setTeamTotal(resp.pagination.total);
       setTeamTotalPages(resp.pagination.pages);
     } catch (e) {
-      if (reqId === teamReqIdRef.current) console.error("Error fetching team page:", e);
+      if (reqId === teamReqIdRef.current) console.error('Error fetching team page:', e);
     } finally {
       if (reqId === teamReqIdRef.current) setTeamFetching(false);
     }
@@ -689,7 +692,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       setAllUsers(resp.users);
       return resp.users;
     } catch (e) {
-      console.error("Error fetching full team (lite):", e);
+      console.error('Error fetching full team (lite):', e);
       return [];
     }
   };
@@ -720,16 +723,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           defecto es la tabla, así que se bajaba siempre para no mostrarse nunca. Ahora se pide cuando
           las tarjetas están en pantalla (ver el efecto más abajo).
         */
-        const [clientes, sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([
-          cachedFetch("clients:all", () => clientsAPI.listAll()),
-          cachedFetch("info:sede", () => infoAPI.listByType("sede")),
-          cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()),
-          cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")),
-          cachedFetch("info:contrato", () => infoAPI.listByType("contrato")),
-          cachedFetch("roleFrames:all", () => roleFrameAPI.list()),
-          cachedFetch("contratoFrames:all", () => contratoFrameAPI.list()),
-          cachedFetch("contratos:all", () => contratosAPI.list()),
-        ]);
+        const [clientes, sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([cachedFetch('clients:all', () => clientsAPI.listAll()), cachedFetch('info:sede', () => infoAPI.listByType('sede')), cachedFetch('categoriaSat:all', () => categoriaSatAPI.list()), cachedFetch('info:estado-empleado', () => infoAPI.listByType('estado-empleado')), cachedFetch('info:contrato', () => infoAPI.listByType('contrato')), cachedFetch('roleFrames:all', () => roleFrameAPI.list()), cachedFetch('contratoFrames:all', () => contratoFrameAPI.list()), cachedFetch('contratos:all', () => contratosAPI.list())]);
         setAllClients(clientes);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
@@ -756,17 +750,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
         // Con error también se da por terminada: el wizard abre igual, con lo que haya, en vez de colgarse.
         enSegundoPlano()
-          .catch((e) => console.error("Error cargando catálogos:", e))
+          .catch((e) => console.error('Error cargando catálogos:', e))
           .finally(() => setCatalogosWizardListos(true));
 
         const [projectData, teamUsers, vacationsData, areasData, shiftsData] = await Promise.all([
-          projectsAPI.getProject(projectId, { team: "ids" }), // específico del proyecto: no se cachea
+          projectsAPI.getProject(projectId, { team: 'ids' }), // específico del proyecto: no se cachea
           // Equipo: lista liviana completa (Coordinadores/contadores) + primera página con datos
           // completos. La página no se espera: se pinta sola cuando llega (`teamFetching`).
           fetchFullTeamLite(),
-          cachedFetch("vacations:all", () => vacationsAPI.getAll()),
-          cachedFetch("areas:all", () => areasAPI.listAll()),
-          cachedFetch("shifts:all", () => shiftsAPI.getAll()),
+          cachedFetch('vacations:all', () => vacationsAPI.getAll()),
+          cachedFetch('areas:all', () => areasAPI.listAll()),
+          cachedFetch('shifts:all', () => shiftsAPI.getAll()),
         ]);
         fetchTeamPage(1);
 
@@ -787,14 +781,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         teamUsers.forEach((u: User) => {
           const metaId = (u.metadata as any)?.id;
           if (metaId) {
-            const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email.split("@")[0];
+            const name = u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : u.email.split('@')[0];
             lookupMap.set(metaId, name);
           }
         });
         setUserLookup(lookupMap);
       } catch (error) {
-        console.error("Error loading data:", error);
-        sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
+        console.error('Error loading data:', error);
+        sweetAlert.error('Error', 'No se pudieron cargar los datos del equipo.');
       } finally {
         setLoading(false);
       }
@@ -850,7 +844,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         setAreaShiftCounts(counts);
         setAreaShiftUserIds(userIds);
       })
-      .catch((e) => console.error("Error fetching area/shift counts:", e));
+      .catch((e) => console.error('Error fetching area/shift counts:', e));
     return () => {
       cancelled = true;
     };
@@ -877,10 +871,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       try {
         const solis = await usersAPI.listSolicitudes();
         // El badge cuenta solo las PENDIENTES: las rechazadas siguen listadas, pero ya no son tarea pendiente.
-        const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId) && (u.metadata?.solicitudStatus || "pendiente") === "pendiente").length;
+        const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId) && (u.metadata?.solicitudStatus || 'pendiente') === 'pendiente').length;
         setSolicitudesCount(count);
       } catch (e) {
-        console.error("Error fetching solicitudes count:", e);
+        console.error('Error fetching solicitudes count:', e);
       }
     };
     fetchCount();
@@ -896,7 +890,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   useEffect(() => {
     if (!showAddModal) {
       setCandidateUsers([]);
-      setSearchTerm("");
+      setSearchTerm('');
       setCandTotal(0);
       setCandTotalPages(1);
       setCandPage(1);
@@ -908,13 +902,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       try {
         setSearchingCandidates(true);
         // slimProjects (sin contratos) → carga liviana; el contrato se trae on-demand en handleOpenWizard.
-        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: "true", email: searchTerm || undefined, slimProjects: true });
+        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: 'true', email: searchTerm || undefined, slimProjects: true });
         if (reqId !== candReqIdRef.current) return;
         setCandidateUsers(response.users);
         setCandTotal(response.pagination.total);
         setCandTotalPages(response.pagination.pages);
       } catch (error) {
-        if (reqId === candReqIdRef.current) console.error("Error fetching candidates:", error);
+        if (reqId === candReqIdRef.current) console.error('Error fetching candidates:', error);
       } finally {
         if (reqId === candReqIdRef.current) setSearchingCandidates(false);
       }
@@ -928,11 +922,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // Derived state
   const clientName = useMemo(() => {
-    if (!project) return "";
-    if (typeof project.clientId === "object" && project.clientId?.name) {
+    if (!project) return '';
+    if (typeof project.clientId === 'object' && project.clientId?.name) {
       return project.clientId.name;
     }
-    return "";
+    return '';
   }, [project]);
 
   const projectMap = useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
@@ -943,12 +937,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const opts: { value: string; label: string }[] = [];
     const seen = new Set<string>();
     (project?.areasConfig || []).forEach((ac: any) => {
-      const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-      const aName = typeof ac.areaId === "object" ? ac.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+      const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
+      const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
       if (!aId || !aName) return;
       (ac.shiftIds || []).forEach((sid: any) => {
-        const sId = typeof sid === "object" ? sid?._id : sid;
-        const sName = typeof sid === "object" ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
+        const sId = typeof sid === 'object' ? sid?._id : sid;
+        const sName = typeof sid === 'object' ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
         if (!sId || !sName) return;
         const key = `${aId}::${sId}`;
         if (seen.has(key)) return;
@@ -1014,22 +1008,22 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Contrato durante la edición (ahí sí hay que re-sincronizar el estado impositivo). Se resetea al
   // abrir el wizard (ver `handleOpenWizard`) para que la primera corrida de este efecto no cuente
   // como "cambio".
-  const prevContratoFrameIdRef = useRef<string>("");
+  const prevContratoFrameIdRef = useRef<string>('');
 
   useEffect(() => {
     if (esAltaNueva) {
       // "Agregar Miembro": el estado siempre es el impositivo automático (no lo elige el usuario).
-      const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : "";
+      const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
       setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
-      prevContratoFrameIdRef.current = wizardData.contrato_frame_id || "";
+      prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
       return;
     }
 
     // "Configurar Miembro": el estado lo elige el usuario, pero si cambia el Tipo de Contrato/
     // Plantilla durante la edición, se re-sincroniza con el impositivo del tipo nuevo (si no tiene
     // ninguno vinculado, se deja el estado como está, para no pisarlo con algo sin sentido).
-    const cambioDeTipo = prevContratoFrameIdRef.current !== (wizardData.contrato_frame_id || "");
-    prevContratoFrameIdRef.current = wizardData.contrato_frame_id || "";
+    const cambioDeTipo = prevContratoFrameIdRef.current !== (wizardData.contrato_frame_id || '');
+    prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
     if (!cambioDeTipo || !estadoImpositivoAuto) return;
     const nuevoId = String(estadoImpositivoAuto.data.id);
     setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
@@ -1072,7 +1066,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     y el sueldo en mano sigue saliendo de jornada × jornadas; lo que cuelga de la categoría (neto,
     bruto, diario) queda en 0, como ya pasaba sin categoría. Es la misma regla que la solicitud del móvil.
   */
-  const esServicios = !!wizardData.contrato_id && tramitePorContrato.get(wizardData.contrato_id) === "constancia_cuit";
+  const esServicios = !!wizardData.contrato_id && tramitePorContrato.get(wizardData.contrato_id) === 'constancia_cuit';
 
   /*
     LAS MISMAS CUENTAS QUE LA SOLICITUD DE LA APP (ver `utils/jornadas.ts` e `ImportesDelContrato`).
@@ -1088,14 +1082,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const jornadasCalculadasWizard = jornadasDelCalendario(periodoWizard.desde, periodoWizard.hasta, wizardData.dias_semana);
   const mesesEqWizard = mesesEquivalentes(periodoWizard.desde, periodoWizard.hasta, wizardData.dias_semana);
   /** El ajuste manual de las jornadas es de la pantalla: al contrato va el número final. */
-  const [ajusteJornadas, setAjusteJornadas] = useState<{ ajustado: boolean; motivo: string; nota: string }>({ ajustado: false, motivo: "", nota: "" });
+  const [ajusteJornadas, setAjusteJornadas] = useState<{ ajustado: boolean; motivo: string; nota: string }>({ ajustado: false, motivo: '', nota: '' });
   const datosJornadasWizard = {
     desde: periodoWizard.desde,
     hasta: periodoWizard.hasta,
-    diasPorSemana: String(wizardData.dias_por_semana || ""),
+    diasPorSemana: String(wizardData.dias_por_semana || ''),
     dias: wizardData.dias_semana,
     rotativos: wizardData.dias_rotativos,
-    jornadas: String(wizardData.cantidad_jornadas_laborales || ""),
+    jornadas: String(wizardData.cantidad_jornadas_laborales || ''),
     calculadas: jornadasCalculadasWizard,
     ajustado: ajusteJornadas.ajustado,
     motivo: ajusteJornadas.motivo,
@@ -1173,13 +1167,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         </label>
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Entrada</label>
-          <SelectorHora
-            valor={wizardData.hora_inicio}
-            onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))}
-            etiqueta="Entrada"
-            placeholder="Entrada"
-            className="input-field w-full"
-          />
+          <SelectorHora valor={wizardData.hora_inicio} onCambio={(h) => setWizardData((prev) => ({ ...prev, hora_inicio: h, hora_fin: !prev.hora_fin && h && limiteHorasWizard != null ? sumarMinutos(h, limiteHorasWizard * 60) : prev.hora_fin }))} etiqueta="Entrada" placeholder="Entrada" className="input-field w-full" />
         </div>
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Salida</label>
@@ -1188,17 +1176,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         </div>
         {horarioExcedidoWizard ? (
           <p className="md:col-span-2 text-[11px] font-medium text-red-600 dark:text-red-400 ml-1 -mt-2">
-            El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
+            El tipo de contrato admite hasta {limiteHorasWizard} h por jornada y el horario suma {duracionHorarioWizard?.toLocaleString('es-AR', { maximumFractionDigits: 2 })} h. Ajustá la entrada o la salida.
           </p>
         ) : (
-          <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">
-            Se completa con el horario del turno elegido; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ""}
-          </p>
+          <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">Se completa con el horario del turno elegido; cambialo si esta persona entra o sale a otra hora.{limiteHorasWizard != null ? ` Hasta ${limiteHorasWizard} h por jornada, según el tipo de contrato.` : ''}</p>
         )}
         {/* Se sale del turno: se avisa y se guarda igual (ver `turnosFueraDeHorario`). */}
         {turnosFueraDeHorario.length > 0 && (
           <p className="md:col-span-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 ml-1 -mt-1">
-            Ojo: {wizardData.hora_inicio} a {wizardData.hora_fin} se sale {turnosFueraDeHorario.length === 1 ? "del turno" : "de los turnos"} {turnosFueraDeHorario.map((sh) => `${sh.name} (${sh.startTime} a ${sh.endTime})`).join(", ")}. Se puede guardar igual.
+            Ojo: {wizardData.hora_inicio} a {wizardData.hora_fin} se sale {turnosFueraDeHorario.length === 1 ? 'del turno' : 'de los turnos'} {turnosFueraDeHorario.map((sh) => `${sh.name} (${sh.startTime} a ${sh.endTime})`).join(', ')}. Se puede guardar igual.
           </p>
         )}
       </div>
@@ -1211,14 +1197,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           rotativos={wizardData.dias_rotativos}
           calculadas={jornadasCalculadasWizard}
           dias={wizardData.dias_semana}
-          valor={String(wizardData.cantidad_jornadas_laborales || "")}
+          valor={String(wizardData.cantidad_jornadas_laborales || '')}
           onValor={(v) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(v) || 0 }))}
           ajustado={ajusteJornadas.ajustado}
           motivo={ajusteJornadas.motivo}
           nota={ajusteJornadas.nota}
           onEditarManual={() => setAjusteJornadas((a) => ({ ...a, ajustado: true }))}
           onCancelarAjuste={() => {
-            setAjusteJornadas({ ajustado: false, motivo: "", nota: "" });
+            setAjusteJornadas({ ajustado: false, motivo: '', nota: '' });
             if (jornadasCalculadasWizard !== null) setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
           }}
           onMotivo={(m) => setAjusteJornadas((a) => ({ ...a, motivo: m }))}
@@ -1235,13 +1221,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setWizardData((prev) => {
       if ((Number(prev.dias_por_semana) || 0) <= limiteDiasWizard) return prev;
       const lunesPrimero = [1, 2, 3, 4, 5, 6, 0];
-      const dias = prev.dias_rotativos ? prev.dias_semana : lunesPrimero.filter((d) => prev.dias_semana.includes(d)).slice(0, limiteDiasWizard).sort((a, b) => a - b);
+      const dias = prev.dias_rotativos
+        ? prev.dias_semana
+        : lunesPrimero
+            .filter((d) => prev.dias_semana.includes(d))
+            .slice(0, limiteDiasWizard)
+            .sort((a, b) => a - b);
       return { ...prev, dias_por_semana: limiteDiasWizard, dias_semana: dias };
     });
   }, [limiteDiasWizard]);
   useEffect(() => {
     if (!esServicios || !wizardData.categoria_sat_id) return;
-    setWizardData((prev) => ({ ...prev, categoria_sat_id: "" }));
+    setWizardData((prev) => ({ ...prev, categoria_sat_id: '' }));
   }, [esServicios, wizardData.categoria_sat_id]);
 
   const sedeName = useMemo(() => {
@@ -1252,20 +1243,20 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [client, setClient] = useState<any>(null);
 
   useEffect(() => {
-    if (project && typeof project.clientId === "string" && !clientName) {
+    if (project && typeof project.clientId === 'string' && !clientName) {
       // fetch client
       projectsAPI.getClient(project.clientId).then(setClient).catch(console.error);
     }
   }, [project, clientName]);
 
-  const displayedClientName = client?.name || clientName || "Cliente";
+  const displayedClientName = client?.name || clientName || 'Cliente';
 
   // Unificamos los IDs de usuarios asignados (cruce entre la lista del proyecto y los metadatos de los usuarios)
   const assignedUserIds = useMemo(() => {
     if (!project || !projectId) return [];
 
     // 1. Usuarios explícitamente asignados en el objeto Proyecto
-    const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === "string" ? u : u._id));
+    const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === 'string' ? u : u._id));
 
     return Array.from(new Set(fromProject));
   }, [project, projectId]);
@@ -1290,7 +1281,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
       // 4. Filter by Role Frame (contratos/proyectos + propios del usuario en metadata.roles_frame)
       if (filterRoleFrame) {
-        const ownRFNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
+        const ownRFNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
         const userRFs = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRFNames]));
         if (!userRFs.includes(filterRoleFrame)) return false;
       }
@@ -1319,18 +1310,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   /** Personas distintas asignadas como coordinadoras (una puede coordinar varias combinaciones área/turno). */
   const coordinadoresCount = useMemo(() => {
-    const coordIds = new Set((project?.coordinatorAssignments || []).map((asm) => (typeof asm.userId === "object" ? asm.userId?._id : asm.userId)).filter(Boolean));
+    const coordIds = new Set((project?.coordinatorAssignments || []).map((asm) => (typeof asm.userId === 'object' ? asm.userId?._id : asm.userId)).filter(Boolean));
     return coordIds.size;
   }, [project?.coordinatorAssignments]);
 
   const displayedCount = useMemo(() => {
-    if (activeTab === "equipo") {
+    if (activeTab === 'equipo') {
       return teamTotal;
     }
-    if (activeTab === "coordinadores") {
+    if (activeTab === 'coordinadores') {
       return coordinadoresCount;
     }
-    if (activeTab === "solicitudes") {
+    if (activeTab === 'solicitudes') {
       return solicitudesCount;
     }
     return teamMembers.length;
@@ -1353,7 +1344,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    * de Datos ARCA ya marca esos casos por su cuenta.
    */
   const conveniosDeLaEmpleadora = useMemo(
-    () => codigosDeConveniosDeLaEmpleadora(companies.find((c) => c._id === wizardData.empresaContratoId), allConvenios),
+    () =>
+      codigosDeConveniosDeLaEmpleadora(
+        companies.find((c) => c._id === wizardData.empresaContratoId),
+        allConvenios,
+      ),
     [companies, allConvenios, wizardData.empresaContratoId],
   );
 
@@ -1382,20 +1377,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // El escape hatch es por convenio: al cambiar de convenio vuelve a su default.
     setVerTodasDelConvenio(false);
     setVerTodasLasValoraciones(false);
-    setMotivoValoracion("");
-    setAvisoConvenio("");
+    setMotivoValoracion('');
+    setAvisoConvenio('');
     if (!nuevo || !wizardData.categoria_sat_id) return;
     const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
-    if (String(cat?.data?.convenio || "").trim() !== nuevo) {
-      setWizardData((prev) => ({ ...prev, categoria_sat_id: "" }));
-      setAvisoConvenio("Se limpió la categoría: no pertenece al convenio elegido.");
+    if (String(cat?.data?.convenio || '').trim() !== nuevo) {
+      setWizardData((prev) => ({ ...prev, categoria_sat_id: '' }));
+      setAvisoConvenio('Se limpió la categoría: no pertenece al convenio elegido.');
     }
   };
 
-  const conveniosDisponibles = useMemo(
-    () => conveniosOfrecidos({ codigosEmpleadora: conveniosDeLaEmpleadora, convenioElegido: convenioFiltro, categorias: allCategoriasSat, convenios: allConvenios }),
-    [conveniosDeLaEmpleadora, convenioFiltro, allCategoriasSat, allConvenios],
-  );
+  const conveniosDisponibles = useMemo(() => conveniosOfrecidos({ codigosEmpleadora: conveniosDeLaEmpleadora, convenioElegido: convenioFiltro, categorias: allCategoriasSat, convenios: allConvenios }), [conveniosDeLaEmpleadora, convenioFiltro, allCategoriasSat, allConvenios]);
   const {
     categorias: availableCategoriasSat,
     ocultasPorConvenio: categoriasOcultasPorConvenio,
@@ -1415,7 +1407,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         verTodasDelConvenio,
         categoriaElegidaId: wizardData.categoria_sat_id,
         // La del PROYECTO: es la que define qué categorías corresponden a este trabajo.
-        valoracionProyecto: project?.valoracionId ? (typeof project.valoracionId === "object" ? String((project.valoracionId as any)._id) : String(project.valoracionId)) : "",
+        valoracionProyecto: project?.valoracionId ? (typeof project.valoracionId === 'object' ? String((project.valoracionId as any)._id) : String(project.valoracionId)) : '',
         verTodasLasValoraciones,
       }),
     [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio, project?.valoracionId, verTodasLasValoraciones],
@@ -1450,7 +1442,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!valoracionProyectoId || !wizardData.categoria_sat_id) return false;
     const rol = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
     const asociada = ((rol?.data?.categoriasSat as any[]) || []).find((c) => String(c?.id) === String(wizardData.categoria_sat_id));
-    const deLaCategoria = asociada?.valoracionId ? String(asociada.valoracionId) : "";
+    const deLaCategoria = asociada?.valoracionId ? String(asociada.valoracionId) : '';
     return !!deLaCategoria && deLaCategoria !== valoracionProyectoId;
   }, [valoracionProyectoId, allRoleFrames, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
 
@@ -1462,7 +1454,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const [rolFrameAgregado, setRolFrameAgregado] = useState<RoleFrameItem | null>(null);
   const [rolFrameBuscadorOpen, setRolFrameBuscadorOpen] = useState(false);
-  const [rolFrameBusqueda, setRolFrameBusqueda] = useState("");
+  const [rolFrameBusqueda, setRolFrameBusqueda] = useState('');
 
   const userAssignedRoleFrames = useMemo(() => {
     if (!selectedUserForWizard) return [];
@@ -1484,7 +1476,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     // Role frames propios del usuario (colección users.metadata.roles_frame / rolesFrameIds)
     const ownRoleFrameIds = (((selectedUserForWizard.metadata as any)?.rolesFrameIds || (selectedUserForWizard.metadata as any)?.roles_frame || []) as any[])
-      .map((rf: any) => (typeof rf === "object" ? rf?._id : rf))
+      .map((rf: any) => (typeof rf === 'object' ? rf?._id : rf))
       .filter(Boolean)
       .map(String);
     if (ownRoleFrameIds.length > 0) {
@@ -1532,7 +1524,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // Coordinador = tiene áreas a cargo. Se conserva el fallback por el nombre de la persona, que cubre
   // a quien tiene el puesto escrito en el nombre y ningún rol detrás.
-  const checkIsCoordinator = (user: User) => coordinaAreas(user.roles) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+  const checkIsCoordinator = (user: User) => coordinaAreas(user.roles) || user.firstName?.toLowerCase().includes('coordinador') || user.lastName?.toLowerCase().includes('coordinador');
 
   // Get standard shifts for a user assigned to an area
   const getStandardShifts = (user: User, userConfig: any, activeContract: any, areaId: string, areaName: string) => {
@@ -1544,11 +1536,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       if (!project?.coordinatorAssignments) return [];
       return project.coordinatorAssignments
         .filter((asm) => {
-          const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-          const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+          const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+          const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
           return String(uid) === String(user._id) && String(aid) === String(areaId);
         })
-        .map((asm) => (typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId));
+        .map((asm) => (typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId));
     };
 
     const coordShiftIds = getCoordinatedShiftIds();
@@ -1556,7 +1548,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // 1. Check team configuration assignments (Wizard) and EXCLUDE coordinated ones
     const assignments = userConfig?.areaShiftAssignments || [];
     const areaAssign = assignments.find((a: any) => {
-      const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+      const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
       if (String(aid) === String(areaId)) return true;
       const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
       return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
@@ -1565,7 +1557,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (areaAssign) {
       const sids = areaAssign.shiftIds || [];
       sids.forEach((sid: any) => {
-        const actualSid = typeof sid === "object" ? sid?._id : sid;
+        const actualSid = typeof sid === 'object' ? sid?._id : sid;
         if (coordShiftIds.includes(actualSid)) return;
         const shift = allShifts.find((s) => String(s._id) === String(actualSid));
         if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
@@ -1578,7 +1570,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (shifts.length === 0) {
       if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
         const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-          const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+          const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
           if (String(aid) === String(areaId)) return true;
           const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
           return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
@@ -1587,7 +1579,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         if (fallbackAssign) {
           const sids = fallbackAssign.shiftIds || [];
           sids.forEach((sid: any) => {
-            const actualSid = typeof sid === "object" ? sid?._id : sid;
+            const actualSid = typeof sid === 'object' ? sid?._id : sid;
             if (coordShiftIds.includes(actualSid)) return;
             const shift = allShifts.find((s) => String(s._id) === String(actualSid));
             if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
@@ -1600,7 +1592,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     // 3. Legacy members fallback
     if (shifts.length === 0) {
-      const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+      const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === 'object' ? user.turnos[0]._id : user.turnos[0]) : undefined;
       const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
       const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
       if (shift) shifts = [shift];
@@ -1636,8 +1628,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     try {
       setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, shift ? String(shift._id) : undefined, shift ? undefined : (shiftsDelArea || []).map((s) => String(s._id))));
     } catch (e) {
-      console.error("Error fetching area/shift members:", e);
-      sweetAlert.error("Error", "No se pudo cargar el detalle del área/turno.");
+      console.error('Error fetching area/shift members:', e);
+      sweetAlert.error('Error', 'No se pudo cargar el detalle del área/turno.');
       setViewingAreaShift(null);
     } finally {
       setLoadingAreaShiftMembers(false);
@@ -1650,12 +1642,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!user) return shifts;
     if (project?.coordinatorAssignments) {
       const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-        const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-        const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+        const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+        const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
         return String(uid) === String(user._id) && String(aid) === String(areaId);
       });
       myCoordAsgn.forEach((asm) => {
-        const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
+        const sid = typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId;
         const shift = allShifts.find((s) => String(s._id) === String(sid));
         if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
           shifts.push(shift);
@@ -1671,7 +1663,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     return vacations.find((v) => {
       if (v.userId !== userId) return false;
-      const isFinal = v.status === "delivered" || v.signatureStatus === "signed" || (v.status === "approved" && v.signatureStatus === "not_required");
+      const isFinal = v.status === 'delivered' || v.signatureStatus === 'signed' || (v.status === 'approved' && v.signatureStatus === 'not_required');
       if (!isFinal) return false;
 
       const start = new Date(v.startDate);
@@ -1684,11 +1676,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   };
 
   const calculateDuration = (start: string, end: string) => {
-    if (!start || !end) return "";
+    if (!start || !end) return '';
     try {
-      const [startH, startM] = start.split(":").map(Number);
-      const [endH, endM] = end.split(":").map(Number);
-      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return "";
+      const [startH, startM] = start.split(':').map(Number);
+      const [endH, endM] = end.split(':').map(Number);
+      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return '';
 
       let startTotal = startH * 60 + startM;
       let endTotal = endH * 60 + endM;
@@ -1704,7 +1696,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       if (mins === 0) return `${hours}hs`;
       return `${hours}h ${mins}m`;
     } catch (e) {
-      return "";
+      return '';
     }
   };
 
@@ -1716,8 +1708,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       const updatedProject = await projectsAPI.updateTeamConfig(project._id, newConfig);
       setTeamConfig(updatedProject.teamConfig || []);
     } catch (err) {
-      console.error("Error updating team config", err);
-      sweetAlert.error("Error", "No se pudo guardar la configuración del equipo.");
+      console.error('Error updating team config', err);
+      sweetAlert.error('Error', 'No se pudo guardar la configuración del equipo.');
     }
   };
   const handleOpenScheduleModal = (user: User, contractOverride?: Contract, contractIndex?: number) => {
@@ -1749,10 +1741,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const abrirWizardAhora = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
     // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
     // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
-    setEditingContractIndex(typeof contractIndex === "number" ? contractIndex : null);
+    setEditingContractIndex(typeof contractIndex === 'number' ? contractIndex : null);
     // Si viene de aprobar una solicitud, recordamos el id para marcarla aprobada al guardar.
     setApprovingSolicitudId(approveSolicitudId ?? null);
-    setComentarioRevision("");
+    setComentarioRevision('');
     // La lista de candidatos viene "slim" (sin contratos) para no cargar 100 historiales
     // de una. Traemos el usuario completo (con contratos) on-demand para el pre-fill.
     const cached = allUsers.find((u) => u._id === userId) || candidateUsers.find((u) => u._id === userId);
@@ -1761,7 +1753,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       const full = await usersAPI.get(userId);
       if (full) user = full;
     } catch (e) {
-      console.error("No se pudo traer el usuario completo, uso el de la lista:", e);
+      console.error('No se pudo traer el usuario completo, uso el de la lista:', e);
     }
     if (!user) return;
 
@@ -1779,13 +1771,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     let solicitud: User | null = null;
     if (approveSolicitudId) {
       solicitud = user;
-      const idPersonaReal = String((user.metadata as any)?.solicitudUserId || "");
+      const idPersonaReal = String((user.metadata as any)?.solicitudUserId || '');
       if (idPersonaReal && idPersonaReal !== String(user._id)) {
         try {
           const real = await usersAPI.get(idPersonaReal);
           if (real) user = real;
         } catch (e) {
-          console.error("No se pudo traer a la persona de la solicitud; sigo con la solicitud:", e);
+          console.error('No se pudo traer a la persona de la solicitud; sigo con la solicitud:', e);
         }
       }
     }
@@ -1794,7 +1786,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const metadataProjects = user.metadata?.projects || [];
 
     // Prioritize current project if existing
-    const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === "string" ? p.projectId : p.projectId?._id) === String(project?._id));
+    const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id));
 
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
     // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el que
@@ -1809,7 +1801,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       índice alcanza para tomar ESE MISMO contrato del usuario completo que se acaba de traer
       (`usersAPI.get`, arriba). El override queda de respaldo por si esa consulta falló.
     */
-    const contratoPorIndice = typeof contractIndex === "number" ? ((lastProject?.contracts as any[])?.[contractIndex] ?? null) : null;
+    const contratoPorIndice = typeof contractIndex === 'number' ? ((lastProject?.contracts as any[])?.[contractIndex] ?? null) : null;
     const lastContract = contratoPorIndice || contractOverride || elQueRige;
 
     /*
@@ -1820,36 +1812,36 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       es una contratación nueva —típicamente una renovación de quien ya está—. Fijar el índice haría
       que aprobar pisara el contrato vigente en vez de agregarle el nuevo, y se perdería el anterior.
     */
-    if (!approveSolicitudId && typeof contractIndex !== "number" && !contractOverride && elQueRige && Array.isArray(lastProject?.contracts)) {
+    if (!approveSolicitudId && typeof contractIndex !== 'number' && !contractOverride && elQueRige && Array.isArray(lastProject?.contracts)) {
       const idxQueRige = (lastProject!.contracts as any[]).indexOf(elQueRige);
       if (idxQueRige >= 0) setEditingContractIndex(idxQueRige);
     }
 
-    console.log("[Wizard] user:", user._id, "lastProject:", lastProject?._id, "lastContract keys:", lastContract ? Object.keys(lastContract) : "null");
-    console.log("[Wizard] lastContract:", lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : "null");
+    console.log('[Wizard] user:', user._id, 'lastProject:', lastProject?._id, 'lastContract keys:', lastContract ? Object.keys(lastContract) : 'null');
+    console.log('[Wizard] lastContract:', lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : 'null');
 
     // Default statuses and IDs
-    const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes("activo"));
+    const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes('activo'));
 
     // Prioritize IDs from last contract if they exist (numeric IDs stored in UserProject)
-    let initialCatId = "";
+    let initialCatId = '';
     if (lastContract) {
       const catIdFromDb = (lastContract as any).categoria_sat_id;
       const catNameFromDb = (lastContract as any).nombre_categoria_sat;
 
-      console.log("[Wizard] lastContract categoria_sat_id:", catIdFromDb, "nombre_categoria_sat:", catNameFromDb);
+      console.log('[Wizard] lastContract categoria_sat_id:', catIdFromDb, 'nombre_categoria_sat:', catNameFromDb);
       console.log(
-        "[Wizard] allCategoriasSat count:",
+        '[Wizard] allCategoriasSat count:',
         allCategoriasSat.length,
-        "sample:",
+        'sample:',
         allCategoriasSat.slice(0, 3).map((c) => ({ _id: c._id, dataId: c.data?.id, name: c.name })),
       );
 
       // Try to find the category in the global list first by numeric ID, MongoDB ID, or Name
       let matchedCat = allCategoriasSat.find((c) => {
-        const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.data?.id) === String(catIdFromDb);
-        const mongoIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c._id) === String(catIdFromDb);
-        const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && (c.name?.toLowerCase() === catNameFromDb.toLowerCase() || c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase());
+        const numericIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c.data?.id) === String(catIdFromDb);
+        const mongoIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c._id) === String(catIdFromDb);
+        const nameMatch = catNameFromDb && catNameFromDb !== 'Sin categoria' && (c.name?.toLowerCase() === catNameFromDb.toLowerCase() || c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase());
         return numericIdMatch || mongoIdMatch || nameMatch;
       });
 
@@ -1858,8 +1850,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         const foundRF = allRoleFrames.find((rf) => rf.name === lastProject?.nombre_rol_frame);
         const rfCats = foundRF?.data?.categoriasSat || [];
         const matchedInRF = rfCats.find((c: any) => {
-          const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.id) === String(catIdFromDb);
-          const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
+          const numericIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c.id) === String(catIdFromDb);
+          const nameMatch = catNameFromDb && catNameFromDb !== 'Sin categoria' && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
           return numericIdMatch || nameMatch;
         });
 
@@ -1871,13 +1863,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
       if (matchedCat) {
         initialCatId = String(matchedCat.data?.id ?? matchedCat._id);
-        console.log("[Wizard] Matched cat:", matchedCat.name, "-> initialCatId:", initialCatId);
+        console.log('[Wizard] Matched cat:', matchedCat.name, '-> initialCatId:', initialCatId);
       } else {
-        console.log("[Wizard] No matched cat found. catIdFromDb:", catIdFromDb, "catNameFromDb:", catNameFromDb);
+        console.log('[Wizard] No matched cat found. catIdFromDb:', catIdFromDb, 'catNameFromDb:', catNameFromDb);
         // Last resort: if we have a numeric catIdFromDb, just use it directly
-        if (catIdFromDb != null && catIdFromDb !== "" && catIdFromDb !== 0) {
+        if (catIdFromDb != null && catIdFromDb !== '' && catIdFromDb !== 0) {
           initialCatId = String(catIdFromDb);
-          console.log("[Wizard] Using catIdFromDb directly as initialCatId:", initialCatId);
+          console.log('[Wizard] Using catIdFromDb directly as initialCatId:', initialCatId);
         }
       }
     }
@@ -1889,11 +1881,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       initialCatId = String((user.metadata as any).categoria_sat_id);
     }
 
-    console.log("[Wizard] FINAL initialCatId:", initialCatId);
+    console.log('[Wizard] FINAL initialCatId:', initialCatId);
 
-    let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : "";
+    let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : '';
     if (!initialTipoContratoId && lastContract?.nombre_contrato) {
-      initialTipoContratoId = String(allTiposContrato.find((t) => t.name === lastContract.nombre_contrato)?.data.id || "");
+      initialTipoContratoId = String(allTiposContrato.find((t) => t.name === lastContract.nombre_contrato)?.data.id || '');
     }
     if (!initialTipoContratoId && (user.metadata as any)?.tipoContratoId) {
       initialTipoContratoId = String((user.metadata as any).tipoContratoId);
@@ -1905,8 +1897,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Preseleccionar la contratos-frame del último contrato: primero por nombre (identificador estable),
     // fallback por ID Externo numérico.
     const initialCf = contratoFrames.find((cf) => cf.name === lastContract?.nombre_contrato) || (initialTipoContratoId ? contratoFrames.find((cf) => cf.data?.id != null && String(cf.data.id) === initialTipoContratoId) : undefined);
-    const initialContratoFrameId = initialCf?._id || "";
-    const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || "";
+    const initialContratoFrameId = initialCf?._id || '';
+    const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || '';
     if (initialCf?.data?.id != null) initialTipoContratoId = String(initialCf.data.id);
     /*
       El Contrato (tipo) se resuelve a partir de la Plantilla del último contrato del miembro, y si no
@@ -1916,38 +1908,38 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       elegido por quien conoce a la persona. Volver a preguntarlo acá era pedir dos veces lo mismo y
       arriesgarse a que la respuesta no coincida con la de la solicitud que se está aprobando.
     */
-    const initialContratoId = (typeof initialCf?.contratoId === "object" ? initialCf?.contratoId?._id : initialCf?.contratoId) || (user.metadata as any)?.contratoId || "";
+    const initialContratoId = (typeof initialCf?.contratoId === 'object' ? initialCf?.contratoId?._id : initialCf?.contratoId) || (user.metadata as any)?.contratoId || '';
 
-    let initialEstadoId = "";
+    let initialEstadoId = '';
     if (lastContract) {
       const estadoIdFromDb = (lastContract as any).estado_id;
       const estadoNameFromDb = (lastContract as any).nombre_estado_empleado;
-      console.log("[Wizard] lastContract estado_id:", estadoIdFromDb, "nombre_estado_empleado:", estadoNameFromDb);
+      console.log('[Wizard] lastContract estado_id:', estadoIdFromDb, 'nombre_estado_empleado:', estadoNameFromDb);
       console.log(
-        "[Wizard] allEstados count:",
+        '[Wizard] allEstados count:',
         allEstados.length,
-        "sample:",
+        'sample:',
         allEstados.slice(0, 3).map((e) => ({ _id: e._id, dataId: e.data?.id, name: e.name })),
       );
 
       // Match by numeric ID first
-      if (estadoIdFromDb != null && estadoIdFromDb !== "" && estadoIdFromDb !== 0) {
+      if (estadoIdFromDb != null && estadoIdFromDb !== '' && estadoIdFromDb !== 0) {
         const matchedEstado = allEstados.find((e) => String(e.data?.id) === String(estadoIdFromDb) || String(e._id) === String(estadoIdFromDb));
         if (matchedEstado) {
           initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
-          console.log("[Wizard] Matched estado by ID:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
+          console.log('[Wizard] Matched estado by ID:', matchedEstado.name, '-> initialEstadoId:', initialEstadoId);
         } else {
           // Use the numeric ID directly as fallback
           initialEstadoId = String(estadoIdFromDb);
-          console.log("[Wizard] Using estadoIdFromDb directly:", initialEstadoId);
+          console.log('[Wizard] Using estadoIdFromDb directly:', initialEstadoId);
         }
       }
       // Match by name as fallback
-      if (!initialEstadoId && estadoNameFromDb && estadoNameFromDb !== "Activo") {
+      if (!initialEstadoId && estadoNameFromDb && estadoNameFromDb !== 'Activo') {
         const matchedEstado = allEstados.find((e) => e.name?.toLowerCase() === estadoNameFromDb.toLowerCase());
         if (matchedEstado) {
           initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
-          console.log("[Wizard] Matched estado by name:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
+          console.log('[Wizard] Matched estado by name:', matchedEstado.name, '-> initialEstadoId:', initialEstadoId);
         }
       }
     }
@@ -1958,15 +1950,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       initialEstadoId = String((user.metadata as any).estado_id);
     }
     if (!initialEstadoId) {
-      initialEstadoId = String(activoEstado?.data?.id || "");
+      initialEstadoId = String(activoEstado?.data?.id || '');
     }
-    console.log("[Wizard] FINAL initialEstadoId:", initialEstadoId);
+    console.log('[Wizard] FINAL initialEstadoId:', initialEstadoId);
 
     /*
       LA SEDE ES LA DEL PROYECTO. Se configura ahí y el alta ya no la pregunta (el paso «Extras» se
       sacó). Sólo si el proyecto no tiene sede se cae a la del último contrato, para no borrarla.
     */
-    let initialSedeId = project?.metadata?.sedeId ? String(project.metadata.sedeId) : lastContract?.sede_id ? String(lastContract.sede_id) : "";
+    let initialSedeId = project?.metadata?.sedeId ? String(project.metadata.sedeId) : lastContract?.sede_id ? String(lastContract.sede_id) : '';
     if (!initialSedeId && lastContract?.nombre_sede) {
       const foundSede = allSedes.find((s) => s.name === lastContract.nombre_sede);
       if (foundSede) initialSedeId = String(foundSede.data.id);
@@ -1975,7 +1967,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       initialSedeId = String((user.metadata as any).sedeId);
     }
 
-    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : "";
+    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : '';
     if (!initialRolFrameId && lastProject?.nombre_rol_frame) {
       // Find role frame by name
       const foundRF = allRoleFrames.find((rf) => rf.name === lastProject.nombre_rol_frame);
@@ -2010,7 +2002,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     // Map existing assignments to the wizard format, ensuring we use string IDs
     const areaShiftAssignments = (existingAssignments || []).map((a: any) => ({
-      areaId: String(a.areaId?._id || a.areaId || ""),
+      areaId: String(a.areaId?._id || a.areaId || ''),
       shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
     }));
 
@@ -2030,7 +2022,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // permite ofrecer solo las categorías que ARCA le va a aceptar a esa empleadora. Si falla, la
     // lista queda vacía y no se filtra nada — mejor ofrecer de más que dejar al operador sin opciones.
     if (allConvenios.length === 0) {
-      createSimpleCatalogApi("/convenios")
+      createSimpleCatalogApi('/convenios')
         .list()
         .then(setAllConvenios)
         .catch(() => {});
@@ -2038,21 +2030,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     // Helper for date formatting
     const formatDate = (dateStr: any) => {
-      if (!dateStr) return "";
+      if (!dateStr) return '';
       try {
         const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return "";
-        return d.toISOString().split("T")[0];
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().split('T')[0];
       } catch {
-        return "";
+        return '';
       }
     };
 
     // Horario de la solicitud (metadata.schedule = "HH:MM - HH:MM") como fallback cuando no hay contrato
     // previo (p.ej. al aprobar una solicitud desde el wizard).
     // De la SOLICITUD cuando se aprueba: `user` ya es la persona real, que no tiene el horario pedido.
-    const metaSchedule = String(((solicitud ?? user).metadata as any)?.schedule || "");
-    const [metaHoraInicio, metaHoraFin] = metaSchedule.includes("-") ? metaSchedule.split("-").map((s) => s.trim()) : ["", ""];
+    const metaSchedule = String(((solicitud ?? user).metadata as any)?.schedule || '');
+    const [metaHoraInicio, metaHoraFin] = metaSchedule.includes('-') ? metaSchedule.split('-').map((s) => s.trim()) : ['', ''];
 
     // Se resetea ACÁ (no en el efecto) para que la primera corrida del auto-set de estado, tras este
     // reset, no confunda "recién abrí el wizard" con "el usuario cambió el Tipo de Contrato".
@@ -2084,7 +2076,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const tramiteDelContrato = tipoImpositivoDeContrato(initialContratoId, contratoFrames, allEstados);
     const tramitePedido = solicitud && metaParaTramite.contratoId ? tipoImpositivoDeContrato(String(metaParaTramite.contratoId), contratoFrames, allEstados) : null;
     const tramiteDeclarado = esTipoImpositivo(metaParaTramite.tipoImpositivo) ? (metaParaTramite.tipoImpositivo as TipoImpositivo) : null;
-    setFiltroTramite(tramitePedido || (solicitud ? tramiteDeclarado || tramiteDelContrato : tramiteDelContrato || tramiteDeclarado) || "");
+    setFiltroTramite(tramitePedido || (solicitud ? tramiteDeclarado || tramiteDelContrato : tramiteDelContrato || tramiteDeclarado) || '');
 
     /*
       LO QUE PIDIÓ QUIEN CARGÓ LA SOLICITUD MANDA.
@@ -2101,10 +2093,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const catDeSolicitud = metaSolicitud?.categoriaSatId ? allCategoriasSat.find((c) => String(c._id) === String(metaSolicitud.categoriaSatId) || String(c.data?.id) === String(metaSolicitud.categoriaSatId)) : undefined;
     const rolDeSolicitud = (() => {
       const rf = metaSolicitud?.roles_frame?.[0] ?? metaSolicitud?.rolesFrameIds?.[0];
-      const id = rf && typeof rf === "object" ? rf._id : rf;
+      const id = rf && typeof rf === 'object' ? rf._id : rf;
       return id ? allRoleFrames.find((r) => String(r._id) === String(id)) : undefined;
     })();
-    const plantillasDeSolicitud = metaSolicitud?.contratoId ? contratoFrames.filter((cf) => String(typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === String(metaSolicitud.contratoId)) : [];
+    const plantillasDeSolicitud = metaSolicitud?.contratoId ? contratoFrames.filter((cf) => String(typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === String(metaSolicitud.contratoId)) : [];
     /*
       La plantilla del tipo pedido: la única que tenga, o la del contrato anterior si es de ESTE tipo.
       Con varias y ninguna conocida queda vacía y se elige en el select de «Plantilla» —que es lo que
@@ -2118,11 +2110,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           ...(rolDeSolicitud?.data?.rol?.id != null ? { rol_frame_id: String(rolDeSolicitud.data.rol.id) } : {}),
           ...(catDeSolicitud?.data?.id != null ? { categoria_sat_id: String(catDeSolicitud.data.id) } : {}),
           ...(metaSolicitud.contratoId ? { contrato_id: String(metaSolicitud.contratoId) } : {}),
-          ...(metaSolicitud.contratoId
-            ? unicaPlantillaSolicitud
-              ? { contrato_frame_id: unicaPlantillaSolicitud._id, nombre_contrato: unicaPlantillaSolicitud.name, tipo_contrato_id: unicaPlantillaSolicitud.data?.id != null ? String(unicaPlantillaSolicitud.data.id) : "" }
-              : { contrato_frame_id: "", nombre_contrato: "", tipo_contrato_id: "" }
-            : {}),
+          ...(metaSolicitud.contratoId ? (unicaPlantillaSolicitud ? { contrato_frame_id: unicaPlantillaSolicitud._id, nombre_contrato: unicaPlantillaSolicitud.name, tipo_contrato_id: unicaPlantillaSolicitud.data?.id != null ? String(unicaPlantillaSolicitud.data.id) : '' } : { contrato_frame_id: '', nombre_contrato: '', tipo_contrato_id: '' }) : {}),
           // El horario pedido, por encima del de un contrato anterior.
           ...(metaHoraInicio && metaHoraFin ? { hora_inicio: metaHoraInicio, hora_fin: metaHoraFin } : {}),
           ...(metaSolicitud.empresaContratoId ? { empresaContratoId: String(metaSolicitud.empresaContratoId) } : {}),
@@ -2146,18 +2134,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       anterior, o «Activo») y el contrato no caía en la bandeja de ARCA. Es la misma regla que
       `esAltaNueva`, evaluada con la persona que se acaba de resolver.
     */
-    const esContratoNuevo = !!approveSolicitudId || (typeof contractIndex !== "number" && !contractOverride && !allUsers.some((m) => m._id === user._id));
+    const esContratoNuevo = !!approveSolicitudId || (typeof contractIndex !== 'number' && !contractOverride && !allUsers.some((m) => m._id === user._id));
     const estadoDelContratoNuevo = esContratoNuevo ? estadoImpositivoDePlantilla(allEstados, deLaSolicitud.contrato_frame_id ?? initialContratoFrameId) : undefined;
 
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
-    setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || "").trim());
+    setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || '').trim());
     setVerTodasDelConvenio(false);
     setVerTodasLasValoraciones(false);
     // Al editar un contrato que ya se eligió de otra valoración, su motivo viene cargado: el server lo
     // vuelve a pedir en cada guardado, y hacerlo tipear de nuevo para cambiar un horario no aporta nada.
     // Sólo con un contrato puntual de ESTE proyecto: el de otro proyecto no justifica nada acá.
-    setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ""));
-    setAvisoConvenio("");
+    setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ''));
+    setAvisoConvenio('');
 
     // Reset wizard data with pulled data or defaults
     setWizardData({
@@ -2168,10 +2156,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       nombre_contrato: initialNombreContrato,
       tipo_contrato_id: initialTipoContratoId,
       estado_id: initialEstadoId,
-      empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : "",
-      empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : "",
-      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || "09:00",
-      hora_fin: lastContract?.hora_fin || metaHoraFin || "18:00",
+      empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : '',
+      empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : '',
+      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || '09:00',
+      hora_fin: lastContract?.hora_fin || metaHoraFin || '18:00',
       fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
       fecha_baja_contrato: formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
@@ -2182,19 +2170,19 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       dias_rotativos: !!(lastContract as any)?.dias_rotativos,
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
-      sueldo_mano_texto: lastContract?.sueldo_mano_texto || "",
+      sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
       sueldo_diario_neto: lastContract?.sueldo_diario_neto || 0,
       diferencia_diaria_neto: lastContract?.diferencia_diaria_neto || 0,
       sueldo_neto: lastContract?.sueldo_neto || 0,
       sueldo_bruto: lastContract?.sueldo_bruto || 0,
       sede_id: initialSedeId,
       reemplazo: lastContract?.reemplazo || false,
-      empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || "",
-      observaciones: lastContract?.observaciones || "",
+      empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
+      observaciones: lastContract?.observaciones || '',
       areaShiftAssignments: areaShiftAssignments,
       // Lo de la solicitud, último: es lo que pidió quien la cargó.
       ...deLaSolicitud,
-      ...(esContratoNuevo ? { estado_id: estadoDelContratoNuevo ? String(estadoDelContratoNuevo.data.id) : "" } : {}),
+      ...(esContratoNuevo ? { estado_id: estadoDelContratoNuevo ? String(estadoDelContratoNuevo.data.id) : '' } : {}),
     });
 
     /*
@@ -2204,11 +2192,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       con su motivo. Fuera de una aprobación arranca sin ajuste: el estado es de la pantalla y, si no
       se limpia, queda el de la vez anterior.
     */
-    setAjusteJornadas(
-      metaSolicitud?.workdaysOverridden
-        ? { ajustado: true, motivo: String(metaSolicitud.workdaysOverrideReason || ""), nota: String(metaSolicitud.workdaysOverrideNote || "") }
-        : { ajustado: false, motivo: "", nota: "" },
-    );
+    setAjusteJornadas(metaSolicitud?.workdaysOverridden ? { ajustado: true, motivo: String(metaSolicitud.workdaysOverrideReason || ''), nota: String(metaSolicitud.workdaysOverrideNote || '') } : { ajustado: false, motivo: '', nota: '' });
     // El rol pedido tiene que estar en el desplegable aunque no esté en la ficha: si falta, se suma al guardar.
     setRolFrameAgregado(rolDeSolicitud || null);
   };
@@ -2248,7 +2232,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const { userId, contractIndex } = st.openWizardFor;
     if (!userId) return;
     wizardAutoOpenedRef.current = true;
-    handleOpenWizard(userId, undefined, typeof contractIndex === "number" ? contractIndex : undefined);
+    handleOpenWizard(userId, undefined, typeof contractIndex === 'number' ? contractIndex : undefined);
     navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, project]);
@@ -2260,25 +2244,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    */
   const faltantesPaso1 = (): string[] => {
     const faltan: string[] = [];
-    if (!wizardData.rol_frame_id) faltan.push("Role Frame a Desempeñar");
-    if (!esServicios && !wizardData.categoria_sat_id) faltan.push("Categoría");
-    if (!wizardData.contrato_id) faltan.push("Tipo de contrato");
+    if (!wizardData.rol_frame_id) faltan.push('Role Frame a Desempeñar');
+    if (!esServicios && !wizardData.categoria_sat_id) faltan.push('Categoría');
+    if (!wizardData.contrato_id) faltan.push('Tipo de contrato');
     // La Plantilla solo se elige a mano cuando el contrato tiene más de una (si hay una sola se
     // asigna sola, y si no hay ninguna se puede guardar igual: solo no se podrá generar el PDF).
-    const plantillas = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
-    if (plantillas.length > 1 && !wizardData.contrato_frame_id) faltan.push("Plantilla");
-    if (!wizardData.estado_id) faltan.push("Estado");
+    const plantillas = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+    if (plantillas.length > 1 && !wizardData.contrato_frame_id) faltan.push('Plantilla');
+    if (!wizardData.estado_id) faltan.push('Estado');
     // Un contrato a plazo tiene que decir cuándo termina; los de tiempo indeterminado no llevan baja
     // (de hecho el campo ni se muestra).
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
-    if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push("Fecha baja contrato");
-    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push("Área y turno");
-    if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push("Horario (entrada y salida)");
+    if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
+    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push('Área y turno');
+    if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push('Horario (entrada y salida)');
     if (horarioExcedidoWizard) faltan.push(`Horario dentro de las ${limiteHorasWizard} h por jornada del contrato`);
-    if (erroresJornadasWizard.jornadas) faltan.push("Cantidad de jornadas");
-    if (erroresJornadasWizard.motivo || erroresJornadasWizard.nota) faltan.push("Motivo del ajuste de jornadas");
+    if (erroresJornadasWizard.jornadas) faltan.push('Cantidad de jornadas');
+    if (erroresJornadasWizard.motivo || erroresJornadasWizard.nota) faltan.push('Motivo del ajuste de jornadas');
     // Lo exige el server; frenarlo acá dice QUÉ falta en vez de mostrar el 422 después de guardar.
-    if (categoriaElegidaDeOtraValoracion && !motivoValoracion.trim()) faltan.push("Motivo de la categoría de otra valoración");
+    if (categoriaElegidaDeOtraValoracion && !motivoValoracion.trim()) faltan.push('Motivo de la categoría de otra valoración');
     /*
       LOS DÍAS QUE TRABAJA SON OBLIGATORIOS, no una sugerencia.
 
@@ -2300,7 +2284,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     const faltan = faltantesPaso1();
     if (faltan.length > 0) {
-      sweetAlert.error("Faltan campos obligatorios", `Completá: ${faltan.join(", ")}.`);
+      sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
       setWizardStep(1);
       return;
     }
@@ -2314,8 +2298,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       // backend will handle UserProject and internal assignedUsers
       // Extract first assignment for backward-compatible contract fields
       const firstAssignment = wizardData.areaShiftAssignments[0];
-      const primaryShiftId = firstAssignment?.shiftIds?.[0] || "";
-      const primaryAreaId = firstAssignment?.areaId || "";
+      const primaryShiftId = firstAssignment?.shiftIds?.[0] || '';
+      const primaryAreaId = firstAssignment?.areaId || '';
 
       // Los contratos de tiempo indeterminado no llevan fecha de baja
       // El Contrato (tipo) es la fuente de verdad de "tiempo indeterminado"; se resuelve por ahí y no
@@ -2333,7 +2317,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         // es un contrato nuevo y el anterior tiene que seguir estando (es el historial de la persona).
         isUpdate: approvingSolicitudId ? false : isExistingMember,
         // Si se está editando un contrato puntual, el backend actualiza ESE índice (no el último).
-        contractIndex: approvingSolicitudId ? undefined : editingContractIndex ?? undefined,
+        contractIndex: approvingSolicitudId ? undefined : (editingContractIndex ?? undefined),
         // Si el wizard se abrió para aprobar una solicitud, el backend la marca aprobada.
         // Qué solicitud se está aprobando: el contrato va en la persona real, así que hay que decir cuál.
         approveSolicitud: approvingSolicitudId || undefined,
@@ -2341,7 +2325,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         comentarioRevision: approvingSolicitudId ? comentarioRevision.trim() || undefined : undefined,
         contract: {
           ...wizardData,
-          fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
+          fecha_baja_contrato: esTiempoIndeterminado ? '' : wizardData.fecha_baja_contrato,
           areaId: primaryAreaId,
           shiftId: primaryShiftId,
           areaShiftAssignments: wizardData.areaShiftAssignments,
@@ -2352,7 +2336,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           categoria_sat_id: Number(wizardData.categoria_sat_id),
           nombre_contrato: wizardData.nombre_contrato,
           tipo_contrato_id: wizardData.tipo_contrato_id ? Number(wizardData.tipo_contrato_id) : null,
-          nombre_rol_frame: rfSel?.name || "",
+          nombre_rol_frame: rfSel?.name || '',
           rol_frame_id: Number(wizardData.rol_frame_id),
           /*
             El salteo de valoración, con su motivo. Sólo viaja si se abrió el escape manual: el
@@ -2382,16 +2366,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         try {
           await usersAPI.agregarRolesFrame(selectedUserForWizard._id, [rolFrameAgregado._id]);
         } catch (e) {
-          console.error("No se pudo agregar el rol empresa a la ficha:", e);
+          console.error('No se pudo agregar el rol empresa a la ficha:', e);
         }
       }
 
       const wasApproving = !!approvingSolicitudId;
-      const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || "El usuario";
-      sweetAlert.success(wasApproving ? "Solicitud Aprobada" : isExistingMember ? "Miembro Actualizado" : "Miembro Agregado", `${nombre} ha sido ${wasApproving ? "aprobado e incorporado al equipo" : isExistingMember ? "actualizado" : "incorporado al equipo"}.`);
+      const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || 'El usuario';
+      sweetAlert.success(wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
 
       // Refresh Data
-      const updatedProject = await projectsAPI.getProject(project._id, { team: "ids" });
+      const updatedProject = await projectsAPI.getProject(project._id, { team: 'ids' });
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
 
@@ -2403,7 +2387,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         setSolicitudesRefresh((x) => x + 1);
         try {
           const solis = await usersAPI.listSolicitudes();
-          setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!) && (u.metadata?.solicitudStatus || "pendiente") === "pendiente").length);
+          setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!) && (u.metadata?.solicitudStatus || 'pendiente') === 'pendiente').length);
         } catch {
           /* noop */
         }
@@ -2412,20 +2396,20 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
       setSelectedUserForWizard(null);
       setRolFrameAgregado(null);
-      setRolFrameBusqueda("");
+      setRolFrameBusqueda('');
       setShowAddModal(false);
       // Modo «sólo aprobación»: la solicitud quedó aprobada (o su contrato corregido) y quien abrió el modal recarga su lista.
       soloAprobacion?.onAprobada();
     } catch (error: any) {
-      console.error("Assign member error:", error);
-      let errorMsg = "Internal server error during assignment";
+      console.error('Assign member error:', error);
+      let errorMsg = 'Internal server error during assignment';
       if (error.response?.data?.error) {
         errorMsg = error.response.data.error;
         if (error.response?.data?.details) {
           errorMsg += `\nDetalles: ${error.response.data.details}`;
         }
       }
-      sweetAlert.error("Error", errorMsg);
+      sweetAlert.error('Error', errorMsg);
     } finally {
       setLoading(false);
     }
@@ -2433,7 +2417,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   const handleRemoveUser = async (userId: string) => {
     if (!project) return;
-    const result = await sweetAlert.confirm("¿Retirar del equipo?", "El usuario será retirado del proyecto y se eliminarán sus asignaciones de áreas y turnos.");
+    const result = await sweetAlert.confirm('¿Retirar del equipo?', 'El usuario será retirado del proyecto y se eliminarán sus asignaciones de áreas y turnos.');
     if (!result.isConfirmed) return;
 
     try {
@@ -2443,16 +2427,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       await projectsAPI.removeMember(project._id, userId);
 
       // Refresh local state (equipo liviano + página actual, no todo el tenant → evita OOM)
-      const updatedProject = await projectsAPI.getProject(project._id, { team: "ids" });
+      const updatedProject = await projectsAPI.getProject(project._id, { team: 'ids' });
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
       await fetchFullTeamLite();
       fetchTeamPage(teamPage);
 
-      sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.");
+      sweetAlert.success('Usuario Retirado', 'El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.');
     } catch (error: any) {
-      console.error("Error removing user:", error);
-      sweetAlert.error("Error", error.response?.data?.error || "No se pudo retirar al usuario.");
+      console.error('Error removing user:', error);
+      sweetAlert.error('Error', error.response?.data?.error || 'No se pudo retirar al usuario.');
     } finally {
       setLoading(false);
     }
@@ -2474,7 +2458,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           metadata: {
             ...prev.metadata,
             projects: prev.metadata.projects.map((p) => {
-              const pId = typeof p.projectId === "object" ? (p.projectId as any)?._id : p.projectId;
+              const pId = typeof p.projectId === 'object' ? (p.projectId as any)?._id : p.projectId;
               if (String(pId) !== String(projectId)) return p;
               const contracts = [...(p.contracts || [])];
               if (!contracts[contractIndex]) return p;
@@ -2484,16 +2468,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           },
         };
       });
-      sweetAlert.success("Documento subido", "El documento se guardó correctamente.");
+      sweetAlert.success('Documento subido', 'El documento se guardó correctamente.');
     } catch (error: any) {
-      sweetAlert.error("Error", error.response?.data?.error || "No se pudo subir el documento.");
+      sweetAlert.error('Error', error.response?.data?.error || 'No se pudo subir el documento.');
     }
   };
 
   /* --------------------------------View ---------------------------------- */
 
   if (!project && !loading) {
-    return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: "volver", onClick: () => navigate(-1) }} />;
+    return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: 'volver', onClick: () => navigate(-1) }} />;
   }
 
   // Último contrato del empleado en ESTE proyecto (mismo criterio que la columna Contrato).
@@ -2510,7 +2494,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       assignments = lastContract?.areaShiftAssignments || [];
     }
     return (assignments || []).map((a: any) => ({
-      areaId: String(a.areaId?._id || a.areaId || ""),
+      areaId: String(a.areaId?._id || a.areaId || ''),
       shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
     }));
   };
@@ -2526,16 +2510,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       setHerenciaReemplazo(null);
       return;
     }
-    const replacedName = `${replaced.firstName || ""} ${replaced.lastName || ""}`.trim() || replaced.email;
+    const replacedName = `${replaced.firstName || ''} ${replaced.lastName || ''}`.trim() || replaced.email;
     const isCoordinadorRole = coordinaAreas(selectedUserForWizard?.roles);
 
     const assignments = getMemberAssignments(replaced._id)
       .map((a) => {
-        const areaConfig = (project?.areasConfig || []).find((c: any) => String(typeof c.areaId === "object" ? c.areaId?._id : c.areaId) === a.areaId);
+        const areaConfig = (project?.areasConfig || []).find((c: any) => String(typeof c.areaId === 'object' ? c.areaId?._id : c.areaId) === a.areaId);
         if (!areaConfig) return null;
         const areaObj = allAreas.find((ar) => String(ar._id) === a.areaId);
         if (areaObj?.isSystem && !isCoordinadorRole) return null;
-        const allowedShiftIds = ((areaConfig as any).shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
+        const allowedShiftIds = ((areaConfig as any).shiftIds || []).map((s: any) => String(typeof s === 'object' ? s._id : s));
         const shiftIds = a.shiftIds.filter((s) => allowedShiftIds.includes(s));
         return shiftIds.length > 0 ? { areaId: a.areaId, shiftIds } : null;
       })
@@ -2547,7 +2531,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       setHerenciaReemplazo({
         ok: false,
         replacedName,
-        detalle: origen.length === 0 ? "Esa persona no tiene área ni turno cargados en el proyecto. Elegí el área y el turno abajo." : "Su área o sus turnos ya no están disponibles en la configuración del proyecto. Elegí el área y el turno abajo.",
+        detalle: origen.length === 0 ? 'Esa persona no tiene área ni turno cargados en el proyecto. Elegí el área y el turno abajo.' : 'Su área o sus turnos ya no están disponibles en la configuración del proyecto. Elegí el área y el turno abajo.',
       });
       return;
     }
@@ -2564,10 +2548,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const detalle = heredadas
       .map((a) => {
         const areaName = allAreas.find((ar) => String(ar._id) === a.areaId)?.name || a.areaId;
-        const turnos = a.shiftIds.map((s) => allShifts.find((sh) => String(sh._id) === s)?.name || s).join(", ");
+        const turnos = a.shiftIds.map((s) => allShifts.find((sh) => String(sh._id) === s)?.name || s).join(', ');
         return `${areaName} (${turnos})`;
       })
-      .join(" + ");
+      .join(' + ');
 
     setWizardData((prev) => ({ ...prev, areaShiftAssignments: heredadas }));
     setAreaExpandida(undefined); // que se abra el área heredada, y no la que estuviera abierta
@@ -2586,7 +2570,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    */
   const horasPorDia = (inicio?: string, fin?: string): number | null => {
     const minutos = (h?: string) => {
-      const m = /^(\d{1,2}):(\d{2})$/.exec(String(h || "").trim());
+      const m = /^(\d{1,2}):(\d{2})$/.exec(String(h || '').trim());
       return m ? Number(m[1]) * 60 + Number(m[2]) : null;
     };
     const desde = minutos(inicio);
@@ -2609,13 +2593,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       teamMembers
         .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
         .map((m) => {
-          const proyectoMeta = (m.metadata?.projects || []).find((p: any) => String(typeof p.projectId === "object" ? (p.projectId as any)?._id : p.projectId) === String(projectId));
+          const proyectoMeta = (m.metadata?.projects || []).find((p: any) => String(typeof p.projectId === 'object' ? (p.projectId as any)?._id : p.projectId) === String(projectId));
           return {
             user: m,
-            idFrame: String((m.metadata as any)?.id || ""),
-            nombre: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.email || "Sin nombre",
-            email: m.email || "",
-            rolFrame: (proyectoMeta as any)?.nombre_rol_frame || m.externalInfo?.rolFrames?.[0] || "-",
+            idFrame: String((m.metadata as any)?.id || ''),
+            nombre: `${m.firstName || ''} ${m.lastName || ''}`.trim() || m.email || 'Sin nombre',
+            email: m.email || '',
+            rolFrame: (proyectoMeta as any)?.nombre_rol_frame || m.externalInfo?.rolFrames?.[0] || '-',
           };
         })
         .sort((a, b) => a.nombre.localeCompare(b.nombre)),
@@ -2627,7 +2611,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const renderUserRow = (user: User) => {
     const userConfig = teamConfig.find((c) => c.userId === user._id);
     const projectMeta = vinculoConElProyecto(user, projectId);
-    const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
+    const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : '-');
     const activeContract = contratoQueRige(user, projectId);
 
     // `group` para que la celda fija pueda repintar su propio fondo en el hover: al ser opaca no la
@@ -2641,7 +2625,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               y solo corría el nombre —lo único que sí identifica— hacia la derecha. */}
           <div className="flex items-center gap-3">
             <div className="min-w-0">
-              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
+              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</p>
               <div className="flex flex-col gap-1.5 mt-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -2673,19 +2657,19 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             <div className="flex flex-col gap-1">
               {(() => {
                 const vigente = esContratoVigente(activeContract);
-                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>;
+                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>;
               })()}
               <div className="flex flex-col gap-0.5">
                 <span>
                   <span className="text-gray-400">Alta:</span> {formatContractDate(activeContract.fecha_alta_contrato)}
                 </span>
                 <span>
-                  <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : "—"}
+                  <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : '—'}
                 </span>
               </div>
             </div>
           ) : (
-            "—"
+            '—'
           )}
         </td>
         {/* Cantidad de contratos de la persona EN ESTE PROYECTO (la columna Contrato muestra el último). */}
@@ -2697,17 +2681,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
             {(() => {
-              const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes("responsable"));
+              const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes('responsable'));
 
               return (
                 <>
                   {filteredRoles.slice(0, 3).map((r) => {
                     const lower = r.name.toLowerCase();
-                    const isCoordinador = lower.includes("coordinador");
+                    const isCoordinador = lower.includes('coordinador');
 
-                    let badgeClasses = "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
+                    let badgeClasses = 'border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
                     if (isCoordinador) {
-                      badgeClasses = "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400";
+                      badgeClasses = 'border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400';
                     }
 
                     return (
@@ -2724,7 +2708,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
         <td className="px-4 py-3">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.metadata?.activo ? "ACTIVO" : "INACTIVO"}</span>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{user.metadata?.activo ? 'ACTIVO' : 'INACTIVO'}</span>
         </td>
         <td
           className="px-4 py-3 cursor-pointer"
@@ -2745,8 +2729,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             if (config?.areaShiftAssignments && config.areaShiftAssignments.length > 0) {
               areaData = config.areaShiftAssignments
                 .map((asa: any) => {
-                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
-                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
+                  const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
+                  const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
                   return aName ? { id: String(aId), name: aName } : null;
                 })
                 .filter(Boolean) as { id: string; name: string }[];
@@ -2756,8 +2740,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             if (areaData.length === 0 && activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
               areaData = activeContract.areaShiftAssignments
                 .map((asa: any) => {
-                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
-                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+                  const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
+                  const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
                   return aName ? { id: String(aId), name: aName } : null;
                 })
                 .filter(Boolean) as { id: string; name: string }[];
@@ -2765,10 +2749,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             // 2. Secondary: If coordinator and no detailed config, check coordinatorAssignments
             if (areaData.length === 0 && isCoord && project?.coordinatorAssignments) {
               const myAssignments = project.coordinatorAssignments.filter((asm) => {
-                const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
                 return String(uid) === String(user._id);
               });
-              const areaIds = Array.from(new Set(myAssignments.map((asm) => (typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId))));
+              const areaIds = Array.from(new Set(myAssignments.map((asm) => (typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId))));
               areaData = areaIds
                 .map((id) => {
                   const a = allAreas.find((area) => String(area._id) === String(id));
@@ -2779,8 +2763,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
             // 3. Fallback: Global user area (legacy/basic)
             if (areaData.length === 0) {
-              const userAreaId = typeof user.areaId === "object" ? user.areaId?._id : user.areaId;
-              const userAreaName = typeof user.areaId === "object" ? user.areaId?.name : allAreas.find((a) => String(a._id) === String(userAreaId))?.name;
+              const userAreaId = typeof user.areaId === 'object' ? user.areaId?._id : user.areaId;
+              const userAreaName = typeof user.areaId === 'object' ? user.areaId?.name : allAreas.find((a) => String(a._id) === String(userAreaId))?.name;
               if (userAreaId && userAreaName) {
                 areaData = [{ id: String(userAreaId), name: userAreaName }];
               }
@@ -2800,7 +2784,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: "standard" });
+                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' });
                           }}
                           className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black"
                           title="Ver turnos"
@@ -2828,7 +2812,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           {(() => {
             const myCoordinatedAssignments =
               project?.coordinatorAssignments?.filter((asm) => {
-                const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+                const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
                 return String(uid) === String(user._id);
               }) || [];
 
@@ -2836,8 +2820,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
             const coordAreaDataMap = new Map<string, { id: string; name: string }>();
             myCoordinatedAssignments.forEach((asm) => {
-              const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
-              const aName = typeof asm.areaId === "object" ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
+              const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
+              const aName = typeof asm.areaId === 'object' ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
               if (aid && aName) {
                 coordAreaDataMap.set(String(aid), { id: String(aid), name: aName });
               }
@@ -2865,7 +2849,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             handleOpenAreaShiftDetail(ad.id, ad.name, null, shifts);
                           }}
                           className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer"
-                          title={`Ver las personas de ${ad.name} en los horarios que supervisa: ${totalArea} activa${totalArea === 1 ? "" : "s"} con contrato vigente (cada persona una sola vez)`}
+                          title={`Ver las personas de ${ad.name} en los horarios que supervisa: ${totalArea} activa${totalArea === 1 ? '' : 's'} con contrato vigente (cada persona una sola vez)`}
                         >
                           {ad.name} ({totalArea})
                         </button>
@@ -2873,7 +2857,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: "coordinated" });
+                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' });
                           }}
                           className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black"
                           title="Ver turnos supervisados"
@@ -2894,7 +2878,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                   handleOpenAreaShiftDetail(ad.id, ad.name, s);
                                 }}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors whitespace-nowrap w-fit cursor-pointer"
-                                title={`Ver las ${coordinados} persona${coordinados === 1 ? "" : "s"} activa${coordinados === 1 ? "" : "s"} con contrato vigente en ${ad.name} / ${s.name}`}
+                                title={`Ver las ${coordinados} persona${coordinados === 1 ? '' : 's'} activa${coordinados === 1 ? '' : 's'} con contrato vigente en ${ad.name} / ${s.name}`}
                               >
                                 {s.name} ({s.startTime} - {s.endTime})<span className="font-black text-amber-800 dark:text-amber-300">({coordinados})</span>
                               </button>
@@ -2924,10 +2908,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
             const areasPorCoordinador = new Map<string, Map<string, string>>();
             for (const asm of project?.coordinatorAssignments || []) {
-              const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-              const aid = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+              const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
+              const aid = typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId;
               if (!uid || !aid) continue;
-              const nombreArea = (typeof asm.areaId === "object" ? asm.areaId?.name : "") || allAreas.find((a) => String(a._id) === String(aid))?.name || "Área";
+              const nombreArea = (typeof asm.areaId === 'object' ? asm.areaId?.name : '') || allAreas.find((a) => String(a._id) === String(aid))?.name || 'Área';
               if (!areasPorCoordinador.has(String(uid))) areasPorCoordinador.set(String(uid), new Map());
               areasPorCoordinador.get(String(uid))!.set(String(aid), nombreArea);
             }
@@ -2939,7 +2923,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   const coord = allUsers.find((x) => String(x._id) === uid);
                   return (
                     <div key={uid} className="flex flex-col gap-1">
-                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{coord ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() || coord.email : "Supervisor"}</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{coord ? `${coord.firstName || ''} ${coord.lastName || ''}`.trim() || coord.email : 'Supervisor'}</span>
                       <div className="flex flex-wrap gap-1">
                         {[...areas].map(([aid, nombre]) => (
                           <span key={aid} className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
@@ -2957,7 +2941,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         <td className="px-4 py-3">
           <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
             <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-            {activeContract?.nombre_contrato || "-"}
+            {activeContract?.nombre_contrato || '-'}
           </span>
         </td>
         {/* Estado del contrato (Pedido servicios, Disponible, ...) — distinto del estado del usuario. */}
@@ -2990,7 +2974,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         <td className="px-4 py-3 text-right whitespace-nowrap">
           {activeContract?.sueldo_mano != null ? (
             <>
-              <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${Number(activeContract.sueldo_mano).toLocaleString("es-AR")}</div>
+              <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${Number(activeContract.sueldo_mano).toLocaleString('es-AR')}</div>
               {activeContract?.cantidad_jornadas_laborales ? <div className="text-xs text-gray-400">{activeContract.cantidad_jornadas_laborales} jor.</div> : null}
             </>
           ) : (
@@ -3007,13 +2991,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           Sigue apareciendo también bajo el monto: ahí es el denominador que explica esa cifra, y
           sacarlo dejaría el importe sin decir de cuántas jornadas sale.
         */}
-        <td className="px-4 py-3 text-right whitespace-nowrap">
-          {activeContract?.cantidad_jornadas_laborales ? (
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{activeContract.cantidad_jornadas_laborales}</span>
-          ) : (
-            <span className="text-xs text-gray-400">—</span>
-          )}
-        </td>
+        <td className="px-4 py-3 text-right whitespace-nowrap">{activeContract?.cantidad_jornadas_laborales ? <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{activeContract.cantidad_jornadas_laborales}</span> : <span className="text-xs text-gray-400">—</span>}</td>
         {/*
           CUÁNTOS DÍAS Y CUÁLES.
 
@@ -3055,7 +3033,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             <span className="text-xs text-gray-400">—</span>
           )}
         </td>
-        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}</td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : '-'}</td>
         {/* Las horas que sale de ese horario. Se calcula y no se guarda: ver `horasPorDia`. */}
         <td className="px-4 py-3 text-right whitespace-nowrap">
           {(() => {
@@ -3064,7 +3042,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               <span className="text-xs text-gray-400">—</span>
             ) : (
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                {horas.toLocaleString("es-AR")}
+                {horas.toLocaleString('es-AR')}
                 <span className="ml-0.5 text-xs font-normal text-gray-400">h</span>
               </span>
             );
@@ -3114,14 +3092,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         actions={[
           {
             icon: faEdit,
-            title: "Editar Horario",
+            title: 'Editar Horario',
             onClick: () => handleOpenScheduleModal(user),
           },
           {
             icon: faTrash,
-            title: "Retirar del equipo",
+            title: 'Retirar del equipo',
             onClick: () => handleRemoveUser(user._id),
-            className: "text-red-500 hover:text-red-700",
+            className: 'text-red-500 hover:text-red-700',
           },
         ]}
       />
@@ -3164,7 +3142,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 </div>
                 <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
               </div>
-              <button onClick={() => setShowFilters(true)} className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}>
+              <button onClick={() => setShowFilters(true)} className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>
                 <FontAwesomeIcon icon={faFilter} className="text-xs" />
                 Filtros
                 {activeAddFiltersCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800 shadow-sm">{activeAddFiltersCount}</span>}
@@ -3177,7 +3155,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 {filterRole && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                     <span className="opacity-60">Rol:</span> {filterRole}
-                    <button onClick={() => setFilterRole("")} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                    <button onClick={() => setFilterRole('')} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
                       <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                     </button>
                   </span>
@@ -3185,7 +3163,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 {filterRoleFrame && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                     <span className="opacity-60">Role Frame:</span> {filterRoleFrame}
-                    <button onClick={() => setFilterRoleFrame("")} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
+                    <button onClick={() => setFilterRoleFrame('')} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
                       <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                     </button>
                   </span>
@@ -3193,16 +3171,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 {filterProject && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
                     <span className="opacity-60">Proyecto:</span> {filterProject}
-                    <button onClick={() => setFilterProject("")} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
+                    <button onClick={() => setFilterProject('')} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
                       <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                     </button>
                   </span>
                 )}
                 <button
                   onClick={() => {
-                    setFilterRole("");
-                    setFilterRoleFrame("");
-                    setFilterProject("");
+                    setFilterRole('');
+                    setFilterRoleFrame('');
+                    setFilterProject('');
                   }}
                   className="text-[10px] text-gray-500 hover:text-red-500 font-bold ml-1 transition-colors uppercase tracking-wider"
                 >
@@ -3219,7 +3197,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                     <th className="px-4 py-3">Nombre</th>
                     <th className="px-4 py-3">Rol</th>
-                    <th className="px-4 py-3">Rol/es Frame</th>
+                    <th className="px-4 py-3">Rol/es Empresa</th>
                     <th className="px-4 py-3">Proyecto/s</th>
                     <th className="px-4 py-3">Turnos asociados</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
@@ -3236,7 +3214,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   ) : filteredCandidates.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                        {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : "No hay usuarios disponibles para asignar"}
+                        {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : 'No hay usuarios disponibles para asignar'}
                       </td>
                     </tr>
                   ) : (
@@ -3244,7 +3222,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       const isCoordinator = checkIsCoordinator(user);
                       const metadataProjects = user.metadata?.projects || [];
                       // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
-                      const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
+                      const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
                       const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
                       const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
 
@@ -3252,7 +3230,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                           <td className="px-4 py-3">
                             <div className="flex flex-col">
-                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</span>
+                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</span>
                               <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
                             </div>
                           </td>
@@ -3260,14 +3238,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             <div className="flex flex-wrap gap-1 max-w-[150px]">
                               {(user.roles || []).map((r) => {
                                 const lower = r.name.toLowerCase();
-                                const isCoord = lower.includes("coordinador");
-                                const isResp = lower.includes("responsable");
+                                const isCoord = lower.includes('coordinador');
+                                const isResp = lower.includes('responsable');
 
-                                let classes = "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800";
+                                let classes = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800';
                                 if (isCoord) {
-                                  classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800";
+                                  classes = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
                                 } else if (isResp) {
-                                  classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
+                                  classes = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
                                 }
 
                                 return (
@@ -3308,9 +3286,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             <div className="flex flex-col gap-1.5">
                               {user.turnos && user.turnos.length > 0 ? (
                                 user.turnos.map((t) => (
-                                  <div key={typeof t === "string" ? t : t._id} className="flex flex-col gap-0.5">
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === "object" ? t.name : "Turno"}</span>
-                                    {typeof t === "object" && t.startTime && t.endTime && (
+                                  <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === 'object' ? t.name : 'Turno'}</span>
+                                    {typeof t === 'object' && t.startTime && t.endTime && (
                                       <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
                                         {t.startTime} - {t.endTime}
                                       </span>
@@ -3370,9 +3348,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           <div className="flex items-center justify-between w-full">
             <button
               onClick={() => {
-                setFilterRole("");
-                setFilterRoleFrame("");
-                setFilterProject("");
+                setFilterRole('');
+                setFilterRoleFrame('');
+                setFilterProject('');
                 setShowFilters(false);
               }}
               className="btn-secondary"
@@ -3404,7 +3382,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol/es Frame</label>
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol/es Empresa</label>
             <div className="relative">
               <select className="input-field py-2 w-full text-xs pr-8" value={filterRoleFrame} onChange={(e) => setFilterRoleFrame(e.target.value)}>
                 <option value="">Todos los Rol Frames</option>
@@ -3439,7 +3417,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           {activeAddFiltersCount > 0 && (
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
               <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
-                Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? "s" : ""} aplicado{activeAddFiltersCount > 1 ? "s" : ""}.
+                Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? 's' : ''} aplicado{activeAddFiltersCount > 1 ? 's' : ''}.
               </p>
             </div>
           )}
@@ -3470,14 +3448,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       <Modal
         isOpen={!!viewingShiftsData}
         onClose={() => setViewingShiftsData(null)}
-        title={`Turnos ${viewingShiftsData?.assignmentType === "coordinated" ? "Supervisados" : "Asignados"} - ${viewingShiftsData?.areaName}`}
+        title={`Turnos ${viewingShiftsData?.assignmentType === 'coordinated' ? 'Supervisados' : 'Asignados'} - ${viewingShiftsData?.areaName}`}
         subtitle={
           viewingShiftsData ? (
             <p className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight">
               {viewingShiftsData.user.firstName} {viewingShiftsData.user.lastName}
             </p>
           ) : (
-            ""
+            ''
           )
         }
         size="md"
@@ -3494,25 +3472,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               if (!project?.coordinatorAssignments) return [];
               return project.coordinatorAssignments
                 .filter((asm) => {
-                  const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-                  const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                  const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+                  const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
                   return String(uid) === String(user._id) && String(aid) === String(areaId);
                 })
-                .map((asm) => (typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId));
+                .map((asm) => (typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId));
             };
 
             const coordShiftIds = getCoordinatedShiftIds();
 
             // 1. If viewing coordinated, check ONLY coordinatorAssignments
-            if (assignmentType === "coordinated") {
+            if (assignmentType === 'coordinated') {
               if (project?.coordinatorAssignments) {
                 const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-                  const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-                  const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                  const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+                  const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
                   return String(uid) === String(user._id) && String(aid) === String(areaId);
                 });
                 myCoordAsgn.forEach((asm) => {
-                  const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
+                  const sid = typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId;
                   const shift = allShifts.find((s) => String(s._id) === String(sid));
                   if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) shifts.push(shift);
                 });
@@ -3521,7 +3499,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               // 2. If viewing standard, check team configuration assignments (Wizard) and EXCLUDE coordinated ones
               const assignments = userConfig?.areaShiftAssignments || [];
               const areaAssign = assignments.find((a: any) => {
-                const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
                 if (String(aid) === String(areaId)) return true;
                 const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
                 const targetName = viewingShiftsData.areaName;
@@ -3531,7 +3509,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               if (areaAssign) {
                 const sids = areaAssign.shiftIds || [];
                 sids.forEach((sid: any) => {
-                  const actualSid = typeof sid === "object" ? sid?._id : sid;
+                  const actualSid = typeof sid === 'object' ? sid?._id : sid;
 
                   // EXCLUDE if it's in coordinated
                   if (coordShiftIds.includes(actualSid)) return;
@@ -3549,7 +3527,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                 if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
                   const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-                    const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                    const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
                     if (String(aid) === String(areaId)) return true;
                     const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
                     const targetName = viewingShiftsData.areaName;
@@ -3559,7 +3537,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   if (fallbackAssign) {
                     const sids = fallbackAssign.shiftIds || [];
                     sids.forEach((sid: any) => {
-                      const actualSid = typeof sid === "object" ? sid?._id : sid;
+                      const actualSid = typeof sid === 'object' ? sid?._id : sid;
 
                       // EXCLUDE if it's in coordinated
                       if (coordShiftIds.includes(actualSid)) return;
@@ -3577,7 +3555,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             // 4. Legacy members fallback
             if (shifts.length === 0) {
               // Fallback for legacy members (only if nothing found yet)
-              const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+              const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === 'object' ? user.turnos[0]._id : user.turnos[0]) : undefined;
               const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
               const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
               if (shift) shifts = [shift];
@@ -3592,16 +3570,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               handleOpenAreaShiftDetail(areaId, viewingShiftsData.areaName, s);
             };
             return shifts.map((s, idx) => (
-              <div
-                key={idx}
-                onClick={assignmentType === "coordinated" ? () => abrirDetalle(s) : undefined}
-                title={assignmentType === "coordinated" ? "Ver las personas de este turno" : undefined}
-                className={`p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3 ${assignmentType === "coordinated" ? "cursor-pointer hover:border-amber-300 dark:hover:border-amber-600 transition-colors" : ""}`}
-              >
+              <div key={idx} onClick={assignmentType === 'coordinated' ? () => abrirDetalle(s) : undefined} title={assignmentType === 'coordinated' ? 'Ver las personas de este turno' : undefined} className={`p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3 ${assignmentType === 'coordinated' ? 'cursor-pointer hover:border-amber-300 dark:hover:border-amber-600 transition-colors' : ''}`}>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                     {s.name}
-                    {assignmentType === "coordinated" && <span className="ml-1.5 text-amber-600 dark:text-amber-400">({getAreaShiftPeopleCount(areaId, String(s._id))})</span>}
+                    {assignmentType === 'coordinated' && <span className="ml-1.5 text-amber-600 dark:text-amber-400">({getAreaShiftPeopleCount(areaId, String(s._id))})</span>}
                   </span>
                   <span className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[10px] font-black shadow-sm">
                     {s.startTime} — {s.endTime} HS
@@ -3609,8 +3582,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 </div>
                 {s.days && s.days.length > 0 && (
                   <div className="flex gap-1.5 mt-1">
-                    {["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"].map((label, dIdx) => (
-                      <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? "bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700" : "text-gray-300 dark:text-gray-600"}`}>
+                    {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'].map((label, dIdx) => (
+                      <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? 'bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700' : 'text-gray-300 dark:text-gray-600'}`}>
                         {label}
                       </span>
                     ))}
@@ -3629,8 +3602,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           setViewingAreaShift(null);
           setAreaShiftMembers(null);
         }}
-        title={viewingAreaShift ? `Personas en ${viewingAreaShift.areaName}` : "Personas"}
-        subtitle={viewingAreaShift ? <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">{viewingAreaShift.shift ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})` : (viewingAreaShift.shifts || []).map((s: any) => s.name).join(" · ") || "Todos los horarios del área"}</p> : ""}
+        title={viewingAreaShift ? `Personas en ${viewingAreaShift.areaName}` : 'Personas'}
+        subtitle={viewingAreaShift ? <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">{viewingAreaShift.shift ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})` : (viewingAreaShift.shifts || []).map((s: any) => s.name).join(' · ') || 'Todos los horarios del área'}</p> : ''}
         size="lg"
       >
         {loadingAreaShiftMembers ? (
@@ -3647,7 +3620,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             const mostrarTurnos = !viewingAreaShift?.shift;
 
             const renderMember = (m: (typeof areaShiftMembers.members)[number]) => (
-              <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" : "bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80"}`}>
+              <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : 'bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80'}`}>
                 <div className="flex flex-col min-w-0 gap-1">
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{m.firstName || m.lastName ? `${m.firstName} ${m.lastName}`.trim() : m.email}</span>
                   <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{m.email}</span>
@@ -3657,7 +3630,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         const s: any = allShifts.find((x) => String(x._id) === String(sid));
                         return (
                           <span key={sid} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap">
-                            {s ? `${s.name} (${s.startTime} - ${s.endTime})` : "Turno"}
+                            {s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Turno'}
                           </span>
                         );
                       })}
@@ -3665,12 +3638,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.activo ? "ACTIVO" : "INACTIVO"}</span>
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.activo ? 'ACTIVO' : 'INACTIVO'}</span>
                   {m.estadoContrato ? <EstadoBadge name={m.estadoContrato} className="text-[10px] whitespace-nowrap" /> : <span className="text-[10px] text-gray-400">Sin contrato</span>}
                   <div className="flex flex-col items-end gap-0.5 text-[10px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded uppercase font-bold ${m.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{m.vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded uppercase font-bold ${m.vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
                     <span>Alta: {formatContractDate(m.fechaAlta)}</span>
-                    <span>Baja: {m.fechaBaja ? formatContractDate(m.fechaBaja) : "—"}</span>
+                    <span>Baja: {m.fechaBaja ? formatContractDate(m.fechaBaja) : '—'}</span>
                   </div>
                 </div>
               </div>
@@ -3680,14 +3653,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               <div className="space-y-4">
                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                   <p className="text-xs text-amber-800 dark:text-amber-300">
-                    <strong>{areaShiftMembers.cuentan}</strong> persona{areaShiftMembers.cuentan === 1 ? "" : "s"} activa{areaShiftMembers.cuentan === 1 ? "" : "s"} con contrato vigente
+                    <strong>{areaShiftMembers.cuentan}</strong> persona{areaShiftMembers.cuentan === 1 ? '' : 's'} activa{areaShiftMembers.cuentan === 1 ? '' : 's'} con contrato vigente
                     {areaShiftMembers.total !== areaShiftMembers.cuentan ? (
                       <>
-                        {" "}
-                        · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? "" : "s"} en total
+                        {' '}
+                        · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? '' : 's'} en total
                       </>
                     ) : null}
-                    {mostrarTurnos ? " en los horarios que supervisa de esta área." : ". El número de la columna Área/Turno Supervisada es el primero."}
+                    {mostrarTurnos ? ' en los horarios que supervisa de esta área.' : '. El número de la columna Área/Turno Supervisada es el primero.'}
                   </p>
                 </div>
 
@@ -3729,7 +3702,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           <input type="text" autoFocus value={rolFrameBusqueda} onChange={(e) => setRolFrameBusqueda(e.target.value)} placeholder="Buscar especialidad…" className="input-field w-full" />
           <div className="grid max-h-[45vh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
             {rolesFrameParaBuscar.length === 0 ? (
-              <p className="col-span-full py-8 text-center text-xs italic text-gray-400">{rolFrameBusqueda ? `No hay especialidades que coincidan con "${rolFrameBusqueda}"` : "La persona ya tiene todos los oficios del catálogo."}</p>
+              <p className="col-span-full py-8 text-center text-xs italic text-gray-400">{rolFrameBusqueda ? `No hay especialidades que coincidan con "${rolFrameBusqueda}"` : 'La persona ya tiene todos los oficios del catálogo.'}</p>
             ) : (
               rolesFrameParaBuscar.map((rf) => (
                 <button
@@ -3738,9 +3711,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   onClick={() => {
                     setRolFrameAgregado(rf);
                     // Se deja elegido en el desplegable, que es lo que el wizard guarda.
-                    setWizardData((prev) => ({ ...prev, rol_frame_id: String(rf.data?.rol?.id || ""), categoria_sat_id: "" }));
+                    setWizardData((prev) => ({ ...prev, rol_frame_id: String(rf.data?.rol?.id || ''), categoria_sat_id: '' }));
                     setRolFrameBuscadorOpen(false);
-                    setRolFrameBusqueda("");
+                    setRolFrameBusqueda('');
                   }}
                   className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-left text-sm text-gray-700 transition-all hover:border-blue-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200"
                 >
@@ -3757,14 +3730,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         isOpen={reemplazadoModalOpen}
         onClose={() => setReemplazadoModalOpen(false)}
         miembros={candidatosAReemplazar}
-        valor={String(wizardData.empleado_id_reemplezado || "")}
+        valor={String(wizardData.empleado_id_reemplezado || '')}
         onElegir={(idFrame) => {
           setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: idFrame }));
           // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
           applyReplacedMemberAssignments(idFrame);
         }}
         onQuitar={() => {
-          setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: "" }));
+          setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: '' }));
           setHerenciaReemplazo(null);
         }}
       />
@@ -3776,11 +3749,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           setSelectedUserForWizard(null);
           // El oficio agregado a mano es de ESTA carga: si se cierra sin guardar, no queda nada.
           setRolFrameAgregado(null);
-          setRolFrameBusqueda("");
+          setRolFrameBusqueda('');
           // Abierto desde Solicitudes no hay pantalla atrás: cerrarlo es cerrar el modo entero.
           soloAprobacion?.onCerrar();
         }}
-        title={esEdicionMiembro ? "Configurar Miembro" : "Agregar Miembro"}
+        title={esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
         subtitle={
           selectedUserForWizard ? (
             <div className="flex flex-col gap-0.5">
@@ -3813,7 +3786,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         <div className="flex flex-col h-[520px]">
           {/* Un solo formulario, en una sola columna con scroll: el orden va de arriba hacia abajo. */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
-            {(
+            {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/*
                   EMPLEADO OCUPA MEDIA FILA, no la entera.
@@ -3853,12 +3826,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     Role Frame a Desempeñar <span className="text-red-500">*</span>
                   </label>
                   <div className="flex items-center gap-2">
-                    <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))} required>
+                    <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: '' }))} required>
                       <option value="">Selecciona role frame...</option>
                       {rolesFrameOfrecidos.map((rf) => (
                         <option key={rf._id} value={rf.data.rol.id}>
                           {rf.name}
-                          {!userAssignedRoleFrames.some((p) => p._id === rf._id) ? " (nuevo)" : ""}
+                          {!userAssignedRoleFrames.some((p) => p._id === rf._id) ? ' (nuevo)' : ''}
                         </option>
                       ))}
                     </select>
@@ -3894,7 +3867,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </button>
                   </div>
                   <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
-                    {(contratoEmpresas.length !== 1 || !contratoEmpresas.some((e) => e.id === wizardData.empresaContratoId)) && <option value="">{contratoEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>}
+                    {(contratoEmpresas.length !== 1 || !contratoEmpresas.some((e) => e.id === wizardData.empresaContratoId)) && <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>}
                     {contratoEmpresas.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.label}
@@ -3913,7 +3886,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </button>
                   </div>
                   <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
-                    {(releaseEmpresas.length !== 1 || !releaseEmpresas.some((e) => e.id === wizardData.empresaReleaseId)) && <option value="">{releaseEmpresas.length ? "Selecciona empresa..." : "No hay empresas cargadas"}</option>}
+                    {(releaseEmpresas.length !== 1 || !releaseEmpresas.some((e) => e.id === wizardData.empresaReleaseId)) && <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>}
                     {releaseEmpresas.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.label}
@@ -3965,7 +3938,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         filtro.
                       */
                       <EstadoBadge name={estadoImpositivoPorTipo(allEstados, filtroTramite)!.name} className="text-[9px] px-1.5 py-0 whitespace-nowrap">
-                        <button type="button" onClick={() => setFiltroTramite("")} title="Quitar el filtro" className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" aria-label="Quitar el filtro de trámite">
+                        <button type="button" onClick={() => setFiltroTramite('')} title="Quitar el filtro" className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" aria-label="Quitar el filtro de trámite">
                           <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
                         </button>
                       </EstadoBadge>
@@ -3987,23 +3960,20 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       const contrato = contratos.find((c) => c._id === contratoId);
                       // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
                       // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
-                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === contratoId);
+                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === contratoId);
                       const unicaPlantilla = plantillasDelContrato.length === 1 ? plantillasDelContrato[0] : undefined;
                       setWizardData((prev) => ({
                         ...prev,
                         contrato_id: contratoId,
-                        contrato_frame_id: unicaPlantilla?._id || "",
-                        nombre_contrato: unicaPlantilla?.name || "",
-                        tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : "",
-                        fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? "" : prev.fecha_baja_contrato,
+                        contrato_frame_id: unicaPlantilla?._id || '',
+                        nombre_contrato: unicaPlantilla?.name || '',
+                        tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : '',
+                        fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? '' : prev.fecha_baja_contrato,
                       }));
                     }}
                   />
 
-
-                  {filtroTramite && contratosFiltradosPorTramite.length === 0 && (
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún tipo de contrato está configurado para este trámite. Vinculalo desde el ABM de Estados, o mirá todos.</p>
-                  )}
+                  {filtroTramite && contratosFiltradosPorTramite.length === 0 && <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún tipo de contrato está configurado para este trámite. Vinculalo desde el ABM de Estados, o mirá todos.</p>}
                   {contratoDelWizard && (limiteHorasWizard != null || limiteDiasWizard != null) && (
                     <p className="ml-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 dark:text-gray-400">
                       {limiteHorasWizard != null && (
@@ -4023,7 +3993,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                 {(() => {
                   if (!wizardData.contrato_id) return null;
-                  const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+                  const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
 
                   // Varias Plantillas para el mismo Contrato: hay que elegir cuál usar para el PDF.
                   if (plantillasDelContrato.length > 1) {
@@ -4039,9 +4009,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             const cf = plantillasDelContrato.find((p) => p._id === e.target.value);
                             setWizardData((prev) => ({
                               ...prev,
-                              contrato_frame_id: cf?._id || "",
-                              nombre_contrato: cf?.name || "",
-                              tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : "",
+                              contrato_frame_id: cf?._id || '',
+                              nombre_contrato: cf?.name || '',
+                              tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : '',
                             }));
                           }}
                           required
@@ -4088,7 +4058,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <div className="input-field w-full flex items-center">{estadoImpositivoAuto ? <EstadoBadge name={estadoImpositivoAuto.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_frame_id ? "Este tipo de contrato no tiene un estado impositivo configurado" : "Elegí primero el Tipo de contrato"}</span>}</div>
+                      <div className="input-field w-full flex items-center">{estadoImpositivoAuto ? <EstadoBadge name={estadoImpositivoAuto.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}</span>}</div>
                     </>
                   ) : (
                     <>
@@ -4105,9 +4075,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         siguiente cambio de tipo pisaba sin avisar, y no había forma de saber si el
                         que se veía era el elegido o el derivado.
                       */}
-                      <div className="input-field w-full flex items-center">
-                        {estadoElegido ? <EstadoBadge name={estadoElegido.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_id ? "Este tipo de contrato no tiene un estado configurado" : "Elegí primero el Tipo de contrato"}</span>}
-                      </div>
+                      <div className="input-field w-full flex items-center">{estadoElegido ? <EstadoBadge name={estadoElegido.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_id ? 'Este tipo de contrato no tiene un estado configurado' : 'Elegí primero el Tipo de contrato'}</span>}</div>
                     </>
                   )}
                 </div>
@@ -4141,9 +4109,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
                     Asignación por Área y Turno <span className="text-red-500">*</span>
                   </label>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">
-                    Elegí el área y el turno donde va a trabajar este miembro: uno solo de cada uno. Tocá un área para ver sus turnos. Con el turno elegido, acá abajo se cargan los días que trabaja y el horario de entrada y salida.
-                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">Elegí el área y el turno donde va a trabajar este miembro: uno solo de cada uno. Tocá un área para ver sus turnos. Con el turno elegido, acá abajo se cargan los días que trabaja y el horario de entrada y salida.</p>
 
                   {(project?.areasConfig || []).length === 0 && (
                     // Sin áreas en el proyecto no se puede completar este paso (es obligatorio) → link a Editar Proyecto.
@@ -4182,16 +4148,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       */
                       const seleccionActual = wizardData.areaShiftAssignments[0];
                       // Sin tocar nada se abre la que tiene la elección; `null` es «la cerré yo».
-                      const areaAbierta = areaExpandida === undefined ? seleccionActual?.areaId ?? null : areaExpandida;
+                      const areaAbierta = areaExpandida === undefined ? (seleccionActual?.areaId ?? null) : areaExpandida;
 
                       return (project?.areasConfig || []).map((ac: any) => {
-                        const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+                        const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
                         const areaObj = allAreas.find((a) => a._id === aId);
-                        const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
+                        const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : areaObj?.name;
                         const isCoordinadorArea = areaObj?.isSystem;
                         const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
 
-                        const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
+                        const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === 'object' ? s._id : s));
                         const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
                         // Current assignment for this area
@@ -4203,14 +4169,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         const turnosElegidos = selectedShiftIds
                           .map((id) => allShifts.find((s) => String(s._id) === id)?.name)
                           .filter(Boolean)
-                          .join(", ");
+                          .join(', ');
 
                         return (
-                          <div key={aId} className={`rounded-xl border overflow-hidden transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
-                            <button type="button" onClick={() => setAreaExpandida(estaAbierta ? null : aId)} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors" aria-expanded={estaAbierta} title={estaAbierta ? "Cerrar el área" : "Ver los turnos del área"}>
+                          <div key={aId} className={`rounded-xl border overflow-hidden transition-all ${isAreaActive ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10' : isAreaRestricted ? 'border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75' : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20'}`}>
+                            <button type="button" onClick={() => setAreaExpandida(estaAbierta ? null : aId)} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors" aria-expanded={estaAbierta} title={estaAbierta ? 'Cerrar el área' : 'Ver los turnos del área'}>
                               <div className="flex items-center gap-2 min-w-0">
                                 <FontAwesomeIcon icon={estaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400 shrink-0" />
-                                <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 shrink-0 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
+                                <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 shrink-0 ${isAreaActive ? 'text-blue-500' : isAreaRestricted ? 'text-amber-500' : 'text-gray-400'}`} />
                                 <span className="font-bold text-sm uppercase tracking-wide truncate">{aName || aId}</span>
                                 {isAreaRestricted && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter shrink-0">Requiere Supervisor</span>}
                               </div>
@@ -4235,10 +4201,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                   mismo gesto, que es de lo que se trata: quien carga la solicitud en el teléfono
                                   y quien la aprueba en el escritorio están mirando la misma lista.
                                 */}
-                                <div className={`grid grid-cols-1 gap-2 px-4 pb-3 sm:grid-cols-2 lg:grid-cols-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
+                                <div className={`grid grid-cols-1 gap-2 px-4 pb-3 sm:grid-cols-2 lg:grid-cols-3 ${isAreaRestricted ? 'pointer-events-none grayscale-[0.5]' : ''}`}>
                                   {shiftsForArea.map((shift) => {
                                     const isSelected = selectedShiftIds.includes(String(shift._id));
-                                    const horario = shift.startTime && shift.endTime ? `${shift.startTime} a ${shift.endTime}` : "";
+                                    const horario = shift.startTime && shift.endTime ? `${shift.startTime} a ${shift.endTime}` : '';
                                     const dias = textoDeDias(shift.days);
 
                                     return (
@@ -4265,21 +4231,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                             ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
                                           }));
                                         }}
-                                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${isSelected ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:border-blue-600"}`}
+                                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${isSelected ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:border-blue-600'}`}
                                         title={isSelected ? `${shift.name} (tocá para quitarlo)` : shift.name}
                                       >
-                                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
+                                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-blue-600' : 'border-gray-300 dark:border-gray-600'}`}>{isSelected && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
                                         <span className="min-w-0">
                                           <span className="block truncate text-sm font-medium">{shift.name}</span>
                                           {/* Horario y días en que corre: con eso se elige el turno, no sólo con el nombre. */}
-                                          {(horario || dias) && <span className="block text-[10px] text-gray-400">{[horario, dias].filter(Boolean).join(" · ")}</span>}
+                                          {(horario || dias) && <span className="block text-[10px] text-gray-400">{[horario, dias].filter(Boolean).join(' · ')}</span>}
                                         </span>
                                       </button>
                                     );
                                   })}
                                 </div>
                                 {/* Elegido el turno, acá mismo se dice cómo trabaja en él. */}
-                                {isAreaActive && <div className="px-4 pb-3">{panelComoTrabaja("Cómo trabaja en este turno")}</div>}
+                                {isAreaActive && <div className="px-4 pb-3">{panelComoTrabaja('Cómo trabaja en este turno')}</div>}
                               </>
                             )}
                           </div>
@@ -4333,13 +4299,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Elegí el área y el turno donde va a trabajar.</p>}
 
                   {/* Sin áreas configuradas no hay turno al que pertenecer: va sola, para poder cargarla igual. */}
-                  {(project?.areasConfig || []).length === 0 && panelComoTrabaja("Cómo trabaja")}
+                  {(project?.areasConfig || []).length === 0 && panelComoTrabaja('Cómo trabaja')}
                 </div>
 
                 {/* Con un tipo de Servicios no hay convenio ni categoría: ver `esServicios`. */}
                 {!esServicios && (
-                <>
-                {/*
+                  <>
+                    {/*
                   CONVENIO — es un FILTRO, no un dato del contrato.
 
                   Replica el flujo de ARCA (convenio → categoría) sin cambiar el modelo: no se
@@ -4347,53 +4313,53 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   terminaba decidiendo quien cargó las categorías de la función Frame, y así había
                   convenios habilitados por ARCA que no se podían usar.
                 */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
-                  <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
-                    <option value="">Todos los convenios de la empleadora</option>
-                    {conveniosDisponibles.map((c) => (
-                      <option key={c.externalId} value={c.externalId}>
-                        {c.externalId}
-                        {c.name ? ` — ${c.name}` : ""} ({c.cantidadCategorias}){c.registrado ? "" : " · no registrado en ARCA"}
-                      </option>
-                    ))}
-                  </select>
-                  {!wizardData.empresaContratoId ? <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p> : conveniosDisponibles.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p> : <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>}
-                </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
+                      <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
+                        <option value="">Todos los convenios de la empleadora</option>
+                        {conveniosDisponibles.map((c) => (
+                          <option key={c.externalId} value={c.externalId}>
+                            {c.externalId}
+                            {c.name ? ` — ${c.name}` : ''} ({c.cantidadCategorias}){c.registrado ? '' : ' · no registrado en ARCA'}
+                          </option>
+                        ))}
+                      </select>
+                      {!wizardData.empresaContratoId ? <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p> : conveniosDisponibles.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p> : <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>}
+                    </div>
 
-                <div className="space-y-1.5">
-                  {/* Alto fijo, igual que el rótulo de «Tipo de contrato»: es lo que mantiene
+                    <div className="space-y-1.5">
+                      {/* Alto fijo, igual que el rótulo de «Tipo de contrato»: es lo que mantiene
                       los dos desplegables alineados aunque el de al lado muestre un badge. */}
-                  <div className="h-6 flex items-center ml-1">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                      Categoría <span className="text-red-500">*</span>
-                    </label>
-                  </div>
-                  <select
-                    className="input-field w-full"
-                    value={wizardData.categoria_sat_id}
-                    onChange={(e) => {
-                      setAvisoConvenio("");
-                      setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
-                    }}
-                    required
-                  >
-                    <option value="">Selecciona categoria...</option>
-                    {availableCategoriasSat.map((c: any) => (
-                      <option key={c.id} value={c.id}>
-                        {c.codigoArca ? `${c.codigoArca} — ` : ""}
-                        {c.nombre}
-                        {/* El nivel, en el texto de la opción: un `<option>` no admite colores, y sin
+                      <div className="h-6 flex items-center ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Categoría <span className="text-red-500">*</span>
+                        </label>
+                      </div>
+                      <select
+                        className="input-field w-full"
+                        value={wizardData.categoria_sat_id}
+                        onChange={(e) => {
+                          setAvisoConvenio('');
+                          setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
+                        }}
+                        required
+                      >
+                        <option value="">Selecciona categoria...</option>
+                        {availableCategoriasSat.map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            {c.codigoArca ? `${c.codigoArca} — ` : ''}
+                            {c.nombre}
+                            {/* El nivel, en el texto de la opción: un `<option>` no admite colores, y sin
                             esto hay que elegir la categoría para recién ahí saber si corresponde al
                             proyecto. El tag con su color va abajo, ya con la categoría elegida. */}
-                        {(() => {
-                          const v = valoraciones.find((x) => String(x._id) === String(c.valoracionId || ""));
-                          return v ? ` · ${String(v.name)}` : "";
-                        })()}
-                      </option>
-                    ))}
-                  </select>
-                  {/*
+                            {(() => {
+                              const v = valoraciones.find((x) => String(x._id) === String(c.valoracionId || ''));
+                              return v ? ` · ${String(v.name)}` : '';
+                            })()}
+                          </option>
+                        ))}
+                      </select>
+                      {/*
                     EL NIVEL DE LA CATEGORÍA ELEGIDA, CON SU COLOR, Y SI COINCIDE CON EL DEL PROYECTO.
 
                     Es la comparación que decide si el encuadre corresponde, y estaba a medias: el
@@ -4401,31 +4367,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     ninguno, así que había que acordarse de memoria de cuál era cuál. Se dice también
                     con palabras: Oro y Plata, en chico, se parecen demasiado.
                   */}
-                  {(() => {
-                    if (!wizardData.categoria_sat_id) return null;
-                    const elegida = availableCategoriasSat.find((c: any) => String(c.id) === String(wizardData.categoria_sat_id));
-                    if (!elegida) return null;
-                    const idCat = String(elegida.valoracionId || "");
-                    const v = valoraciones.find((x) => String(x._id) === idCat);
-                    if (!v) return <p className="ml-1 mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">Esta categoría no tiene valoración cargada en la función.</p>;
-                    const coincide = !!valoracionProyectoId && idCat === valoracionProyectoId;
-                    return (
-                      <p className="ml-1 mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                        <ChipValoracion nombre={String(v.name)} color={String(v.color || "")} />
-                        {valoracionProyectoId ? (
-                          <span className={coincide ? "text-emerald-600 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}>
-                            {coincide ? "coincide con la valoración del proyecto" : `el proyecto es ${valoracionDelProyecto?.nombre || "de otra valoración"}`}
-                          </span>
-                        ) : (
-                          <span className="text-gray-500 dark:text-gray-400">el proyecto no está valorado</span>
-                        )}
-                      </p>
-                    );
-                  })()}
-                  {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
-                  {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
+                      {(() => {
+                        if (!wizardData.categoria_sat_id) return null;
+                        const elegida = availableCategoriasSat.find((c: any) => String(c.id) === String(wizardData.categoria_sat_id));
+                        if (!elegida) return null;
+                        const idCat = String(elegida.valoracionId || '');
+                        const v = valoraciones.find((x) => String(x._id) === idCat);
+                        if (!v) return <p className="ml-1 mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">Esta categoría no tiene valoración cargada en la función.</p>;
+                        const coincide = !!valoracionProyectoId && idCat === valoracionProyectoId;
+                        return (
+                          <p className="ml-1 mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <ChipValoracion nombre={String(v.name)} color={String(v.color || '')} />
+                            {valoracionProyectoId ? <span className={coincide ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>{coincide ? 'coincide con la valoración del proyecto' : `el proyecto es ${valoracionDelProyecto?.nombre || 'de otra valoración'}`}</span> : <span className="text-gray-500 dark:text-gray-400">el proyecto no está valorado</span>}
+                          </p>
+                        );
+                      })()}
+                      {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
+                      {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
 
-                  {/*
+                      {/*
                     El escape hatch del filtro por función Frame.
 
                     Solo aparece con un convenio elegido, porque sin convenio «todas las del
@@ -4433,15 +4393,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     ese convenio se prende solo y queda fijo: apagarlo dejaría el select vacío, que
                     es el estado sin explicación que esto viene a sacar.
                   */}
-                  {convenioFiltro && wizardData.rol_frame_id && (
-                    <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                      <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
-                      <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
-                    </label>
-                  )}
-                  {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
+                      {convenioFiltro && wizardData.rol_frame_id && (
+                        <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+                          <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
+                          <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
+                        </label>
+                      )}
+                      {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
 
-                  {/*
+                      {/*
                     El filtro se dice, no se aplica en silencio: si una categoría que el operador
                     esperaba ver no está, tiene que saber por qué y qué la destraba.
 
@@ -4449,15 +4409,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     ARCA no se puede destrabar desde acá (hay que registrar el convenio en la
                     empleadora); lo que oculta el filtro se destraba cambiando el select de arriba.
                   */}
-                  {conveniosDeLaEmpleadora && (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                      {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(", ")}).`}
-                      {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ""}
-                      {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ""}
-                    </p>
-                  )}
+                      {conveniosDeLaEmpleadora && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(', ')}).`}
+                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ''}
+                          {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ''}
+                        </p>
+                      )}
 
-                  {/*
+                      {/*
                     LA VALORACIÓN: lo que quedó afuera, y el escape.
 
                     Va abajo de los avisos de convenio porque es el último filtro de la cadena, y se
@@ -4465,57 +4425,39 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     este proyecto. Nunca deja una lista vacía sin explicar — si la función no tiene
                     ninguna de esta valoración, el filtro se salta solo y lo dice.
                   */}
-                  {rolNoTieneCategoriasDeLaValoracion && (
-                    <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">
-                      La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene ninguna categoría de la
-                      valoración de este proyecto; se muestran todas.
-                    </p>
-                  )}
+                      {rolNoTieneCategoriasDeLaValoracion && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene ninguna categoría de la valoración de este proyecto; se muestran todas.</p>}
 
-                  {/* El modo permisivo, dicho: sin esto parece que el filtro no anduvo. Nueva
+                      {/* El modo permisivo, dicho: sin esto parece que el filtro no anduvo. Nueva
                       pestaña para no perder lo cargado en el formulario. */}
-                  {rolSinValorar && valoracionDelProyecto && (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                      La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» todavía no tiene categorías valoradas: se ofrecen
-                      todas, sin filtrar por la valoración del proyecto ({valoracionDelProyecto.nombre}). Para que se ofrezca y se elija sola la de {valoracionDelProyecto.nombre},{" "}
-                      <a href="/roles-empresa" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
-                        valorala en Roles Empresa
-                      </a>
-                      .
-                    </p>
-                  )}
+                      {rolSinValorar && valoracionDelProyecto && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                          La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» todavía no tiene categorías valoradas: se ofrecen todas, sin filtrar por la valoración del proyecto ({valoracionDelProyecto.nombre}). Para que se ofrezca y se elija sola la de {valoracionDelProyecto.nombre},{' '}
+                          <a href="/roles-empresa" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
+                            valorala en Roles Empresa
+                          </a>
+                          .
+                        </p>
+                      )}
 
-                  {ocultasPorValoracion > 0 && !verTodasLasValoraciones && (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                      Se ocultaron {ocultasPorValoracion} de otra valoración.{" "}
-                      <button type="button" onClick={() => setVerTodasLasValoraciones(true)} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
-                        Elegir de todas formas
-                      </button>
-                    </p>
-                  )}
+                      {ocultasPorValoracion > 0 && !verTodasLasValoraciones && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                          Se ocultaron {ocultasPorValoracion} de otra valoración.{' '}
+                          <button type="button" onClick={() => setVerTodasLasValoraciones(true)} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
+                            Elegir de todas formas
+                          </button>
+                        </p>
+                      )}
 
-                  {(verTodasLasValoraciones || categoriaElegidaDeOtraValoracion) && (
-                    <div className="ml-1 mt-1 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/30">
-                      <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                        {categoriaElegidaDeOtraValoracion
-                          ? `La categoría elegida no es de la valoración del proyecto${valoracionDelProyecto ? ` (${valoracionDelProyecto.nombre})` : ""}: contá por qué.`
-                          : "Estás viendo categorías de otras valoraciones."}
-                      </p>
-                      {/* El motivo es OBLIGATORIO y lo exige el server (422 sin él): un salteo sin
+                      {(verTodasLasValoraciones || categoriaElegidaDeOtraValoracion) && (
+                        <div className="ml-1 mt-1 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/30">
+                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">{categoriaElegidaDeOtraValoracion ? `La categoría elegida no es de la valoración del proyecto${valoracionDelProyecto ? ` (${valoracionDelProyecto.nombre})` : ''}: contá por qué.` : 'Estás viendo categorías de otras valoraciones.'}</p>
+                          {/* El motivo es OBLIGATORIO y lo exige el server (422 sin él): un salteo sin
                           explicación es justo lo que después nadie puede reconstruir. */}
-                      <input
-                        type="text"
-                        value={motivoValoracion}
-                        onChange={(e) => setMotivoValoracion(e.target.value)}
-                        maxLength={200}
-                        placeholder="Motivo (obligatorio si elegís una de otra valoración)"
-                        className="mt-1.5 w-full rounded border border-amber-300 bg-white px-2 py-1 text-[11px] text-gray-800 dark:border-amber-800 dark:bg-gray-900 dark:text-gray-100"
-                      />
+                          <input type="text" value={motivoValoracion} onChange={(e) => setMotivoValoracion(e.target.value)} maxLength={200} placeholder="Motivo (obligatorio si elegís una de otra valoración)" className="mt-1.5 w-full rounded border border-amber-300 bg-white px-2 py-1 text-[11px] text-gray-800 dark:border-amber-800 dark:bg-gray-900 dark:text-gray-100" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                </>
+                  </>
                 )}
 
                 {/*
@@ -4525,36 +4467,22 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   Lo que se guarda sigue siendo el sueldo por jornada.
                 */}
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                  <ImportesDelContrato
-                    className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ""}
-                    onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))}
-                    mesesEq={mesesEqWizard}
-                    indeterminado={indeterminadoWizard}
-                    jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0}
-                    diasSemana={diasSemanaWizard}
-                    bloqueado={!esServicios && !wizardData.categoria_sat_id}
-                    textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala."
-                    claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1"
-                    claseCampo="input-field w-full"
-                    claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300"
-                    claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1"
-                  />
+                  <ImportesDelContrato className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} diasSemana={diasSemanaWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
 
                   {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
-                <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
-                  <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
-                </div>
+                  <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
+                    <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                    Sueldo en mano texto <span className="text-red-500">*</span>
-                  </label>
-                  <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
-                </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Sueldo en mano texto <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
+                  </div>
 
-                {/*
+                  {/*
                   LA ESCALA DEL CONVENIO NO APLICA A UN SERVICIO.
 
                   Sueldo diario neto, diferencia diaria, neto y bruto salen de la CATEGORÍA del
@@ -4566,31 +4494,31 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   Se mira el TRÁMITE (`esServicios` → `constancia_cuit`) y no el nombre del estado:
                   «Pedido de Servicios» se puede renombrar desde el ABM en cualquier momento.
                 */}
-                {!esServicios && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo diario neto</label>
-                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_diario_neto} readOnly />
+                  {!esServicios && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo diario neto</label>
+                          <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_diario_neto} readOnly />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
+                          <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold" style={{ color: wizardData.diferencia_diaria_neto < 0 ? '#ef4444' : '#22c55e' }} value={wizardData.diferencia_diaria_neto} readOnly />
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
-                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold" style={{ color: wizardData.diferencia_diaria_neto < 0 ? "#ef4444" : "#22c55e" }} value={wizardData.diferencia_diaria_neto} readOnly />
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
-                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
+                          <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
+                          <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
-                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
-                      </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
                 </div>
 
                 {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
@@ -4603,7 +4531,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       checked={wizardData.reemplazo}
                       onChange={(e) => {
                         const checked = e.target.checked;
-                        setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : "" }));
+                        setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : '' }));
                         if (!checked) setHerenciaReemplazo(null);
                       }}
                     />
@@ -4616,8 +4544,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       lista, no como algo que enciende otra cosa.
                     */}
                     <label htmlFor="esReemplazo" className="flex cursor-pointer select-none items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <span className={`flex h-6 w-10 shrink-0 items-center rounded-full p-1 duration-300 ease-in-out ${wizardData.reemplazo ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
-                        <span className={`h-4 w-4 transform rounded-full bg-white shadow-md duration-300 ease-in-out ${wizardData.reemplazo ? "translate-x-4" : ""}`} />
+                      <span className={`flex h-6 w-10 shrink-0 items-center rounded-full p-1 duration-300 ease-in-out ${wizardData.reemplazo ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                        <span className={`h-4 w-4 transform rounded-full bg-white shadow-md duration-300 ease-in-out ${wizardData.reemplazo ? 'translate-x-4' : ''}`} />
                       </span>
                       Es reemplazo
                     </label>
@@ -4637,7 +4565,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         {reemplazadoElegido ? (
                           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
                             <span className="font-medium">{reemplazadoElegido.nombre}</span>
-                            {reemplazadoElegido.rolFrame && reemplazadoElegido.rolFrame !== "-" && <span className="text-gray-500 dark:text-gray-400">{reemplazadoElegido.rolFrame}</span>}
+                            {reemplazadoElegido.rolFrame && reemplazadoElegido.rolFrame !== '-' && <span className="text-gray-500 dark:text-gray-400">{reemplazadoElegido.rolFrame}</span>}
                           </span>
                         ) : (
                           <span className="flex-1 text-gray-400 dark:text-gray-500">Elegí a quién reemplaza...</span>
@@ -4649,7 +4577,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                   {/* Aviso de la herencia: qué se copió (o por qué no se pudo) antes de mostrar las áreas. */}
                   {herenciaReemplazo && (
-                    <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"}`}>
+                    <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'}`}>
                       <p className="font-bold flex items-center gap-2">
                         <FontAwesomeIcon icon={herenciaReemplazo.ok ? faInfoCircle : faTriangleExclamation} />
                         {herenciaReemplazo.ok ? `Área y turno heredados de ${herenciaReemplazo.replacedName}` : `No se pudo heredar el área de ${herenciaReemplazo.replacedName}`}
@@ -4666,9 +4594,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </div>
                   )}
                 </div>
-
               </div>
-            )}
+            }
 
             {/* Step 2: Sueldo */}
 
@@ -4691,18 +4618,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   <FontAwesomeIcon icon={faCommentDots} className="h-3.5 w-3.5" />
                   Comentario para quien pidió el alta
                 </label>
-                <p className="mt-1 text-[11px] text-blue-700/80 dark:text-blue-300/80">
-                  Lo va a leer en la app, junto con los campos que le hayas cambiado. Contale qué corregiste y cómo cargarlo la próxima. Opcional.
-                </p>
-                <textarea
-                  id="comentario-revision"
-                  value={comentarioRevision}
-                  onChange={(e) => setComentarioRevision(e.target.value)}
-                  rows={3}
-                  maxLength={2000}
-                  placeholder="Ej: la fecha de baja tenía que ser el último día del rodaje, no el primero."
-                  className="mt-2 w-full resize-y rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-blue-900 dark:bg-gray-900 dark:text-white"
-                />
+                <p className="mt-1 text-[11px] text-blue-700/80 dark:text-blue-300/80">Lo va a leer en la app, junto con los campos que le hayas cambiado. Contale qué corregiste y cómo cargarlo la próxima. Opcional.</p>
+                <textarea id="comentario-revision" value={comentarioRevision} onChange={(e) => setComentarioRevision(e.target.value)} rows={3} maxLength={2000} placeholder="Ej: la fecha de baja tenía que ser el último día del rodaje, no el primero." className="mt-2 w-full resize-y rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-blue-900 dark:bg-gray-900 dark:text-white" />
               </div>
             )}
           </div>
@@ -4713,7 +4630,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   const modalesSueltos = (
     <>
-  {/*
+      {/*
     FILTRO DE TRÁMITE — ventana aparte, como «Filtros avanzados».
 
     Elegir entre ARCA y Servicios es una decisión de filtrado, no un campo del contrato: metida
@@ -4721,208 +4638,199 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     Acá tiene lugar para mostrarse con los badges de color de verdad —que en una ventana de
     filtros ayudan a reconocerlos, mientras que en el medio del formulario distraían—.
   */}
-  <Modal
-    isOpen={filtroTramiteOpen}
-    onClose={() => setFiltroTramiteOpen(false)}
-    title="Filtrar tipos de contrato"
-    subtitle="Por el trámite que declaran ante ARCA"
-    size="sm"
-    zIndex={120}
-    footer={
-      <div className="flex items-center justify-between w-full gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            setFiltroTramite("");
-            setFiltroTramiteOpen(false);
-          }}
-          className="btn-secondary"
-        >
-          Ver todos
-        </button>
-        <button type="button" onClick={() => setFiltroTramiteOpen(false)} className="btn-primary">
-          Cerrar
-        </button>
-      </div>
-    }
-  >
-    <div className="space-y-2">
-      {impositivosDelAbm.map((e) => {
-        const tipo = e.data?.tipoImpositivo;
-        if (!esTipoImpositivo(tipo)) return null;
-        const activo = filtroTramite === tipo;
-        const cuantos = contratos.filter((c) => tramitePorContrato.get(c._id) === tipo).length;
-        return (
-          <button
-            key={e._id}
-            type="button"
-            onClick={() => {
-              setFiltroTramite(activo ? "" : tipo);
-              setFiltroTramiteOpen(false);
-            }}
-            className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition-colors ${activo ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20" : "border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600"}`}
-          >
-            <EstadoBadge name={e.name} />
-            {/* Cuántos tipos de contrato quedan de cada lado: evita elegir un filtro que deja
+      <Modal
+        isOpen={filtroTramiteOpen}
+        onClose={() => setFiltroTramiteOpen(false)}
+        title="Filtrar tipos de contrato"
+        subtitle="Por el trámite que declaran ante ARCA"
+        size="sm"
+        zIndex={120}
+        footer={
+          <div className="flex items-center justify-between w-full gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroTramite('');
+                setFiltroTramiteOpen(false);
+              }}
+              className="btn-secondary"
+            >
+              Ver todos
+            </button>
+            <button type="button" onClick={() => setFiltroTramiteOpen(false)} className="btn-primary">
+              Cerrar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-2">
+          {impositivosDelAbm.map((e) => {
+            const tipo = e.data?.tipoImpositivo;
+            if (!esTipoImpositivo(tipo)) return null;
+            const activo = filtroTramite === tipo;
+            const cuantos = contratos.filter((c) => tramitePorContrato.get(c._id) === tipo).length;
+            return (
+              <button
+                key={e._id}
+                type="button"
+                onClick={() => {
+                  setFiltroTramite(activo ? '' : tipo);
+                  setFiltroTramiteOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition-colors ${activo ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'}`}
+              >
+                <EstadoBadge name={e.name} />
+                {/* Cuántos tipos de contrato quedan de cada lado: evita elegir un filtro que deja
                 la lista vacía y después no entender por qué no hay nada para seleccionar. */}
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{cuantos === 1 ? "1 tipo" : `${cuantos} tipos`}</span>
-          </button>
-        );
-      })}
-      <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-1">El filtro solo acota la lista de tipos de contrato. No cambia nada de lo que se guarda.</p>
-    </div>
-  </Modal>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{cuantos === 1 ? '1 tipo' : `${cuantos} tipos`}</span>
+              </button>
+            );
+          })}
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-1">El filtro solo acota la lista de tipos de contrato. No cambia nada de lo que se guarda.</p>
+        </div>
+      </Modal>
 
-  {/* Modal de detalle del empleado: contratos del proyecto + descargas */}
-  <EmployeeContractsModal
-    isOpen={!!selectedMemberForDetail}
-    onClose={() => setSelectedMemberForDetail(null)}
-    user={selectedMemberForDetail}
-    projectId={projectId || ""}
-    contratoFrames={contratoFrames}
-    releases={releases}
-    contratoEmpresas={contratoEmpresas}
-    releaseEmpresas={releaseEmpresas}
-    onEdit={(u, contract, contractIndex) => {
-      setSelectedMemberForDetail(null);
-      handleOpenScheduleModal(u, contract, contractIndex);
-    }}
-    onDelete={(id) => {
-      setSelectedMemberForDetail(null);
-      handleRemoveUser(id);
-    }}
-    onUploadAltaDocumento={handleUploadAltaDocumento}
-  />
+      {/* Modal de detalle del empleado: contratos del proyecto + descargas */}
+      <EmployeeContractsModal
+        isOpen={!!selectedMemberForDetail}
+        onClose={() => setSelectedMemberForDetail(null)}
+        user={selectedMemberForDetail}
+        projectId={projectId || ''}
+        contratoFrames={contratoFrames}
+        releases={releases}
+        contratoEmpresas={contratoEmpresas}
+        releaseEmpresas={releaseEmpresas}
+        onEdit={(u, contract, contractIndex) => {
+          setSelectedMemberForDetail(null);
+          handleOpenScheduleModal(u, contract, contractIndex);
+        }}
+        onDelete={(id) => {
+          setSelectedMemberForDetail(null);
+          handleRemoveUser(id);
+        }}
+        onUploadAltaDocumento={handleUploadAltaDocumento}
+      />
 
-  {/* Info: por qué no se puede guardar el miembro si el proyecto no tiene áreas */}
-  <InfoModal
-    isOpen={showSinAreasInfo}
-    onClose={() => setShowSinAreasInfo(false)}
-    title="El proyecto no tiene áreas configuradas"
-    subtitle="Por qué no podés guardar los cambios del miembro"
-    size="sm"
-    zIndex={100}
-    actions={[
-      {
-        label: "Ir a Editar Proyecto",
-        onClick: () => {
-          setShowSinAreasInfo(false);
-          navigate(`/projects/${projectId}`, { state: { openEdit: true } });
-        },
-        variant: "primary",
-      },
-      { label: "Entendido", onClick: () => setShowSinAreasInfo(false), variant: "secondary" },
-    ]}
-  >
-    <div className="space-y-4">
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-        La <strong>asignación por área y turno es obligatoria</strong> para guardar un miembro. Si el proyecto no tiene áreas, no hay nada para seleccionar y cualquier cambio del miembro (sueldo, contrato, extras) queda bloqueado.
-      </p>
-      <ul className="space-y-3">
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Entrá a <strong>Editar Proyecto → Configuración por Área</strong> y agregá al menos un área con sus turnos.
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">Volvé al equipo y configurá el miembro: ya vas a poder elegir área y turno, y guardar.</span>
-        </li>
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">Sin áreas, además, los usuarios no pueden cargar su área y los supervisores no pueden informar novedades sobre ellos.</span>
-        </li>
-      </ul>
-    </div>
-  </InfoModal>
+      {/* Info: por qué no se puede guardar el miembro si el proyecto no tiene áreas */}
+      <InfoModal
+        isOpen={showSinAreasInfo}
+        onClose={() => setShowSinAreasInfo(false)}
+        title="El proyecto no tiene áreas configuradas"
+        subtitle="Por qué no podés guardar los cambios del miembro"
+        size="sm"
+        zIndex={100}
+        actions={[
+          {
+            label: 'Ir a Editar Proyecto',
+            onClick: () => {
+              setShowSinAreasInfo(false);
+              navigate(`/projects/${projectId}`, { state: { openEdit: true } });
+            },
+            variant: 'primary',
+          },
+          { label: 'Entendido', onClick: () => setShowSinAreasInfo(false), variant: 'secondary' },
+        ]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            La <strong>asignación por área y turno es obligatoria</strong> para guardar un miembro. Si el proyecto no tiene áreas, no hay nada para seleccionar y cualquier cambio del miembro (sueldo, contrato, extras) queda bloqueado.
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Entrá a <strong>Editar Proyecto → Configuración por Área</strong> y agregá al menos un área con sus turnos.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Volvé al equipo y configurá el miembro: ya vas a poder elegir área y turno, y guardar.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Sin áreas, además, los usuarios no pueden cargar su área y los supervisores no pueden informar novedades sobre ellos.</span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
 
-  {/* Info: de dónde sale el Estado del contrato (Agregar/Configurar miembro) */}
-  <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: "Entendido", onClick: () => setShowEstadoInfo(false), variant: "primary" }]}>
-    <div className="space-y-4">
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-        El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de ARCA" o "Pedido de Servicios"), se muestra acá. Si no tiene ninguno, no hay nada para mostrar.
-      </p>
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-        Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{" "}
-        <Link to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-          Contratos → Estados de Contratos
-        </Link>
-        .
-      </p>
-    </div>
-  </InfoModal>
+      {/* Info: de dónde sale el Estado del contrato (Agregar/Configurar miembro) */}
+      <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: 'Entendido', onClick: () => setShowEstadoInfo(false), variant: 'primary' }]}>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de ARCA" o "Pedido de Servicios"), se muestra acá. Si no tiene ninguno, no hay nada para mostrar.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{' '}
+            <Link to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              Contratos → Estados de Contratos
+            </Link>
+            .
+          </p>
+        </div>
+      </InfoModal>
 
-  {/* Info: de dónde salen las empresas del contrato y del release */}
-  <InfoModal
-    isOpen={showEmpresasInfo}
-    onClose={() => setShowEmpresasInfo(false)}
-    title="Empresa del Contrato y del Release"
-    subtitle="Por qué aparecen esas empresas y dónde se eligen"
-    size="sm"
-    zIndex={120}
-    actions={[{ label: "Entendido", onClick: () => setShowEmpresasInfo(false), variant: "primary" }]}
-  >
-    <div className="space-y-4">
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-        Las dos listas salen de <strong>este proyecto</strong>: son las empresas que tiene configuradas para contratar y para firmar el release. Por eso acá no aparecen todas las del sistema, sino las que el proyecto habilitó.
-      </p>
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-        Si ves <strong>una sola</strong>, es porque el proyecto definió una sola para ese uso: queda elegida y no hay nada que decidir. Con el proyecto sin ninguna configurada se ofrecen todas, que es lo único que permite generar el documento.
-      </p>
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-        Se cambian en{" "}
-        <Link to={`/projects/${projectId}`} target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-          el proyecto → Editar
-        </Link>
-        , en Empresa del contrato y Empresa del release.
-      </p>
-    </div>
-  </InfoModal>
+      {/* Info: de dónde salen las empresas del contrato y del release */}
+      <InfoModal isOpen={showEmpresasInfo} onClose={() => setShowEmpresasInfo(false)} title="Empresa del Contrato y del Release" subtitle="Por qué aparecen esas empresas y dónde se eligen" size="sm" zIndex={120} actions={[{ label: 'Entendido', onClick: () => setShowEmpresasInfo(false), variant: 'primary' }]}>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Las dos listas salen de <strong>este proyecto</strong>: son las empresas que tiene configuradas para contratar y para firmar el release. Por eso acá no aparecen todas las del sistema, sino las que el proyecto habilitó.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Si ves <strong>una sola</strong>, es porque el proyecto definió una sola para ese uso: queda elegida y no hay nada que decidir. Con el proyecto sin ninguna configurada se ofrecen todas, que es lo único que permite generar el documento.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Se cambian en{' '}
+            <Link to={`/projects/${projectId}`} target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              el proyecto → Editar
+            </Link>
+            , en Empresa del contrato y Empresa del release.
+          </p>
+        </div>
+      </InfoModal>
 
-  {/* Info: qué significa el número entre paréntesis en Área/Turno Coordinada */}
-  <InfoModal isOpen={openCoordCountInfo} onClose={() => setOpenCoordCountInfo(false)} title="Personas supervisadas por área y turno" subtitle="Qué significa el número entre paréntesis" size="sm" zIndex={100} actions={[{ label: "Entendido", onClick: () => setOpenCoordCountInfo(false), variant: "primary" }]}>
-    <div className="space-y-4">
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-        El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong> asignados a esa combinación exacta de área y turno, o sea a quiénes supervisa esa persona en ese horario.
-      </p>
-      <ul className="space-y-3">
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            <strong>Estado activo</strong>: el usuario figura como ACTIVO. <strong>Contrato vigente</strong>: su contrato no tiene fecha de baja, o la baja es de hoy en adelante. Quien no cumple las dos cosas no suma.
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Haciendo <strong>click en el turno</strong> se abre el detalle de esas personas con su estado, estado de contrato y alta/baja. Las que no cumplen aparecen al final, en <strong>"No suman al total"</strong>.
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es el total de esos horarios contando a cada <strong>persona una sola vez</strong>: quien está asignado a dos turnos de la misma área suma uno, no dos.
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            El <strong>supervisor se incluye a sí mismo</strong> si además pertenece a esa área y turno.
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Se calcula sobre <strong>todo el equipo del proyecto</strong>, no solo sobre la página que estás viendo, y se actualiza cuando cambian las asignaciones de los miembros.
-          </span>
-        </li>
-      </ul>
-    </div>
-  </InfoModal>
+      {/* Info: qué significa el número entre paréntesis en Área/Turno Coordinada */}
+      <InfoModal isOpen={openCoordCountInfo} onClose={() => setOpenCoordCountInfo(false)} title="Personas supervisadas por área y turno" subtitle="Qué significa el número entre paréntesis" size="sm" zIndex={100} actions={[{ label: 'Entendido', onClick: () => setOpenCoordCountInfo(false), variant: 'primary' }]}>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong> asignados a esa combinación exacta de área y turno, o sea a quiénes supervisa esa persona en ese horario.
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>Estado activo</strong>: el usuario figura como ACTIVO. <strong>Contrato vigente</strong>: su contrato no tiene fecha de baja, o la baja es de hoy en adelante. Quien no cumple las dos cosas no suma.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Haciendo <strong>click en el turno</strong> se abre el detalle de esas personas con su estado, estado de contrato y alta/baja. Las que no cumplen aparecen al final, en <strong>"No suman al total"</strong>.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es el total de esos horarios contando a cada <strong>persona una sola vez</strong>: quien está asignado a dos turnos de la misma área suma uno, no dos.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                El <strong>supervisor se incluye a sí mismo</strong> si además pertenece a esa área y turno.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Se calcula sobre <strong>todo el equipo del proyecto</strong>, no solo sobre la página que estás viendo, y se actualiza cuando cambian las asignaciones de los miembros.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
     </>
   );
-
 
   /*
     EN MODO «SÓLO APROBACIÓN» NO SE DIBUJA LA PANTALLA, sólo sus modales.
@@ -4960,13 +4868,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             }
           : undefined
       }
-      badge={project ? { text: project.name, variant: "default" } : undefined}
-      badgeSecondary={sedeName ? { text: sedeName, variant: "default" } : undefined}
+      badge={project ? { text: project.name, variant: 'default' } : undefined}
+      badgeSecondary={sedeName ? { text: sedeName, variant: 'default' } : undefined}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
         onClose: () => setOpenInfo(false),
-        title: helpEntry?.title || "Información",
+        title: helpEntry?.title || 'Información',
         content: helpEntry?.content,
       }}
       modal={
@@ -4974,7 +4882,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           ? {
               isOpen: true,
               onClose: () => setOpenCoordinadoresInfo(false),
-              title: "Asignación de Supervisores",
+              title: 'Asignación de Supervisores',
               content: <p className="text-gray-600 dark:text-gray-300">Asigna un supervisor designado para cada combinación de Área y Turno del proyecto. Todas las combinaciones deben estar cubiertas.</p>,
             }
           : undefined
@@ -5002,11 +4910,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           {/* TABS */}
           <div className="sticky top-[144px] pb-1 pt-3 z-[40] bg-[#f3f4f6] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 flex items-center justify-between shadow-sm lg:shadow-none hover:shadow-md transition-shadow">
             <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar flex-nowrap">
-              <button onClick={() => setActiveTab("equipo")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "equipo" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              <button onClick={() => setActiveTab('equipo')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'equipo' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faUsers} className="text-xs" />
                 Equipo ({teamTotal})
               </button>
-              <button onClick={() => setActiveTab("coordinadores")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "coordinadores" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              <button onClick={() => setActiveTab('coordinadores')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'coordinadores' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faUserTie} className="text-xs" />
                 Supervisores ({coordinadoresCount})
                 <span
@@ -5015,17 +4923,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     e.stopPropagation();
                     setOpenCoordinadoresInfo(true);
                   }}
-                  className={`ml-1.5 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer ${activeTab === "coordinadores" ? "text-blue-400" : ""}`}
+                  className={`ml-1.5 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer ${activeTab === 'coordinadores' ? 'text-blue-400' : ''}`}
                   title="Información de asignación"
                 >
                   <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                 </span>
               </button>
-              <button onClick={() => setActiveTab("jerarquia")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "jerarquia" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              <button onClick={() => setActiveTab('jerarquia')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'jerarquia' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faSitemap} className="text-xs" />
                 Jerarquía
               </button>
-              <button onClick={() => setActiveTab("solicitudes")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "solicitudes" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              <button onClick={() => setActiveTab('solicitudes')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'solicitudes' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
                 Solicitudes
                 {solicitudesCount > 0 && <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">{solicitudesCount}</span>}
@@ -5037,7 +4945,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
           {/* Tab Content */}
           <div className="mt-0">
-            {activeTab === "equipo" && (
+            {activeTab === 'equipo' && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
                   <div className="flex-1 w-full">
@@ -5047,64 +4955,64 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       searchPlaceholder="Buscar en equipo actual..."
                       radioFilters={[
                         {
-                          label: "Estado de usuarios",
+                          label: 'Estado de usuarios',
                           value: filterUserStatus,
                           onChange: setFilterUserStatus,
                           options: [
-                            { label: "Usuarios Activos", value: "active" },
-                            { label: "Usuarios Inactivos", value: "inactive" },
-                            { label: "Todos los usuarios", value: "" },
+                            { label: 'Usuarios Activos', value: 'active' },
+                            { label: 'Usuarios Inactivos', value: 'inactive' },
+                            { label: 'Todos los usuarios', value: '' },
                           ],
                         },
                         {
-                          label: "Contratos",
+                          label: 'Contratos',
                           value: filterVigencia,
                           onChange: setFilterVigencia,
                           options: [
-                            { label: "Vigentes", value: "vigente" },
-                            { label: "No Vigentes", value: "novigente" },
-                            { label: "Todos los contratos", value: "" },
+                            { label: 'Vigentes', value: 'vigente' },
+                            { label: 'No Vigentes', value: 'novigente' },
+                            { label: 'Todos los contratos', value: '' },
                           ],
                         },
                       ]}
                       selectFilters={[
                         {
-                          label: "Rol/es",
+                          label: 'Rol/es',
                           value: filterRolMobile,
                           onChange: setFilterRolMobile,
-                          placeholder: "Todos los roles",
+                          placeholder: 'Todos los roles',
                           options: MOBILE_ROLE_OPTIONS,
                         },
                         {
-                          label: "Tipo de contrato",
+                          label: 'Tipo de contrato',
                           value: filterTipoContrato,
                           onChange: setFilterTipoContrato,
-                          placeholder: "Todos los tipos",
+                          placeholder: 'Todos los tipos',
                           options: contratoFrames.map((cf) => ({ value: cf.name, label: cf.name })),
                         },
                         {
-                          label: "Área / Turno",
+                          label: 'Área / Turno',
                           value: filterAreaTurno,
                           onChange: setFilterAreaTurno,
-                          placeholder: "Todas las áreas/turnos",
-                          options: [{ value: "__none__", label: "Sin área/turno" }, ...areaTurnoOptions],
+                          placeholder: 'Todas las áreas/turnos',
+                          options: [{ value: '__none__', label: 'Sin área/turno' }, ...areaTurnoOptions],
                         },
                         {
-                          label: "Estado de contrato",
+                          label: 'Estado de contrato',
                           value: filterEstadoContrato,
                           onChange: setFilterEstadoContrato,
-                          placeholder: "Todos los estados",
+                          placeholder: 'Todos los estados',
                           options: estadoContratoOptions,
                           renderOption: (opt) => <EstadoBadge name={opt.label} />,
                         },
                         {
-                          label: "Reemplazo",
+                          label: 'Reemplazo',
                           value: filterReemplazo,
                           onChange: setFilterReemplazo,
-                          placeholder: "Con y sin reemplazo",
+                          placeholder: 'Con y sin reemplazo',
                           options: [
-                            { value: "con", label: "Con reemplazo" },
-                            { value: "sin", label: "Sin reemplazo" },
+                            { value: 'con', label: 'Con reemplazo' },
+                            { value: 'sin', label: 'Sin reemplazo' },
                           ],
                         },
                       ]}
@@ -5112,10 +5020,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => setViewMode("cards")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+                    <button onClick={() => setViewMode('cards')} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
                       <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setViewMode("table")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+                    <button onClick={() => setViewMode('table')} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
                       <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
                     </button>
                   </div>
@@ -5165,14 +5073,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
-                        <p className="text-base font-medium">{hayFiltros ? "No se encontraron miembros" : "Aún no hay miembros en el equipo"}</p>
-                        <p className="text-sm mt-1">{hayFiltros ? "Probá ajustar la búsqueda o los filtros." : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
+                        <p className="text-base font-medium">{hayFiltros ? 'No se encontraron miembros' : 'Aún no hay miembros en el equipo'}</p>
+                        <p className="text-sm mt-1">{hayFiltros ? 'Probá ajustar la búsqueda o los filtros.' : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
                       </div>
                     );
                   }
 
-                  return effectiveViewMode === "table" ? (
-                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
+                  return effectiveViewMode === 'table' ? (
+                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>
                       <div className="overflow-x-auto">
                         {/*
                           `border-separate` Y NO `border-collapse`, PARA PODER FIJAR «Usuario».
@@ -5210,7 +5118,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Último Contrato</th>
                               <th className="px-4 py-3 font-semibold text-center">Contratos</th>
                               <th className="px-4 py-3 font-semibold">Rol/es</th>
-                              <th className="px-4 py-3 font-semibold">Rol/es Frame</th>
+                              <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
                               <th className="px-4 py-3 font-semibold">Estado</th>
                               <th className="px-4 py-3 font-semibold">Área / Turno</th>
                               <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">
@@ -5241,7 +5149,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       </div>
                     </div>
                   ) : (
-                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? "opacity-60" : ""}`}>{rows.map((u) => renderUserCard(u))}</div>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>{rows.map((u) => renderUserCard(u))}</div>
                   );
                 })()}
 
@@ -5271,7 +5179,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           const p = i + 1;
                           if (p === 1 || p === teamTotalPages || (p >= teamPage - 2 && p <= teamPage + 2)) {
                             return (
-                              <button key={p} onClick={() => setTeamPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${teamPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                              <button key={p} onClick={() => setTeamPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${teamPage === p ? 'bg-primary-600 border-primary-600 text-white z-10' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                                 {p}
                               </button>
                             );
@@ -5295,43 +5203,45 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               </div>
             )}
 
-            {activeTab === "coordinadores" && project && (
+            {activeTab === 'coordinadores' && project && (
               <TeamCoordinadoresTab
                 projectId={projectId!}
                 project={project}
                 allUsers={allUsers}
                 teamMembers={teamMembers}
-                onGoToTeam={() => setActiveTab("equipo")}
+                onGoToTeam={() => setActiveTab('equipo')}
                 onUpdated={async () => {
-                  const updatedProject = await projectsAPI.getProject(projectId!, { team: "ids" });
+                  const updatedProject = await projectsAPI.getProject(projectId!, { team: 'ids' });
                   setProject(updatedProject);
                   setTeamConfig(updatedProject.teamConfig || []);
                 }}
               />
             )}
 
-            {activeTab === "jerarquia" && project && (
+            {activeTab === 'jerarquia' && project && (
               <TeamJerarquiaTab
                 project={project}
                 teamMembers={teamMembers}
                 allAreas={allAreas}
                 allShifts={allShifts}
                 onRefresh={async () => {
-                  const updatedProject = await projectsAPI.getProject(projectId!, { team: "ids" });
+                  const updatedProject = await projectsAPI.getProject(projectId!, { team: 'ids' });
                   setProject(updatedProject);
                   setTeamConfig(updatedProject.teamConfig || []);
                 }}
               />
             )}
 
-            {activeTab === "solicitudes" && project && <TeamSolicitudesTab
+            {activeTab === 'solicitudes' && project && (
+              <TeamSolicitudesTab
                 projectId={projectId!}
                 project={project}
                 refreshSignal={solicitudesRefresh}
                 onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)}
                 // El contrato de una aprobada puede estar en otro de los proyectos que pidió: ahí se va a ese equipo.
                 onEditarContrato={(u) => (u.projectId === projectId ? handleOpenWizard(u.userId, undefined, u.contractIndex) : navigate(`/projects/${u.projectId}/team`, { state: { openWizardFor: { userId: u.userId, contractIndex: u.contractIndex } } }))}
-              />}
+              />
+            )}
           </div>
 
           {modalesDelProyecto}
