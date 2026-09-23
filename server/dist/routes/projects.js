@@ -394,7 +394,10 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
         if (req.query.slim === "true") {
             const proyectos = await Project.find(filter)
                 // `metadata.responsableId`: la solicitud del móvil deja elegir TODAS las áreas y turnos al coordinador del proyecto.
-                .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId")
+                // `valoracionId`/`valoracionManual`: la solicitud del móvil FILTRA las categorías por la valoración del
+                // proyecto y muestra su tag. Sin estos dos campos ese filtro no se aplicaba nunca —se ofrecían todas las
+                // categorías, de cualquier nivel— y el tag decía «sin valorar» en un proyecto que sí lo estaba.
+                .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId valoracionId valoracionManual")
                 .populate("clientId", "name")
                 .populate("coordinatorAssignments.areaId", "name")
                 .populate("coordinatorAssignments.shiftId", "name startTime endTime order days")

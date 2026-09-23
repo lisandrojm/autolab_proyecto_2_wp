@@ -354,8 +354,8 @@ class ProjectsAPI {
     if (params.q) sp.append("q", params.q);
     if (params.page) sp.append("page", String(params.page));
     if (params.limit) sp.append("limit", String(params.limit));
-    // `slim`: sólo nombre, cliente, estado y las empresas/convenios del proyecto. Para elegir uno de
-    // una lista; sin áreas, turnos, coordinadores ni las resoluciones de sede y centro de costo.
+    // `slim`: nombre, cliente, estado, las empresas/convenios y la VALORACIÓN del proyecto. Para elegir
+    // uno de una lista; sin áreas, turnos, coordinadores ni las resoluciones de sede y centro de costo.
     if (params.slim) sp.append("slim", "true");
 
     const { data } = await axios.get(`/projects?${sp.toString()}`, {

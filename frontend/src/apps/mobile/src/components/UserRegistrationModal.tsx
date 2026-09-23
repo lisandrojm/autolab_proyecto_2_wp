@@ -487,8 +487,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           "tarda un montón en traer los proyectos" era, en buena parte, traerlos dos veces.
         */
         const proyectos = projectsAPI
-          // `slim`: nombre, cliente, estado y las empresas/convenios del proyecto, que es todo lo que
-          // esta pantalla lee. El listado normal trae además áreas, turnos y coordinadores poblados,
+          // `slim`: nombre, cliente, estado, las empresas/convenios y la valoración del proyecto, que es
+          // todo lo que esta pantalla lee. El listado normal trae además áreas, turnos y coordinadores poblados,
           // y resuelve sede, centro de costo y responsable: 1451 ms y 84 KB contra 142 ms y 5 KB.
           .listAll({ slim: true })
           .then((projs) => setProjects(projs.filter((p) => p.status === "active")))
