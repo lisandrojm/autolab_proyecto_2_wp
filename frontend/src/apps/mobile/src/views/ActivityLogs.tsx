@@ -100,6 +100,27 @@ const lastContractIsVigente = (contracts?: any[]): boolean => {
   return esContratoVigente(getContratoActivo(contracts));
 };
 
+/**
+ * EL ID DE UNA REFERENCIA QUE PUEDE VENIR POBLADA, PELADA O EN NULL.
+ *
+ * `typeof null === "object"` es la trampa: el patrón `typeof x === "object" ? x._id : x` explota justo
+ * cuando el dato falta, que acá es el caso NORMAL. El detalle de un parte lo sirve
+ * `GET /activity-reports/:id`, que popula `attendance.replacementId`, y Mongoose deja en `null` las
+ * filas sin reemplazo —15 de 16 en un parte típico—. Con eso, tocar «Editar» sobre casi cualquier
+ * parte tiraba el render entero y el modal desaparecía sin decir nada.
+ *
+ * Devuelve `undefined` cuando no hay id, que es lo que distingue «no tiene reemplazo» de «tiene uno
+ * que no se pudo resolver».
+ */
+const idDe = (ref: unknown): string | undefined => {
+  if (ref === null || ref === undefined) return undefined;
+  if (typeof ref === "object") {
+    const id = (ref as { _id?: unknown })._id;
+    return id ? String(id) : undefined;
+  }
+  return String(ref);
+};
+
 interface LocalAttendanceRecord {
   tempId: string;
   employeeId: string;
@@ -216,7 +237,8 @@ const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: strin
 
   // 1. Check if user has a specific schedule in teamConfig
   const userConfig = project.teamConfig.find((c) => {
-    const configUserId = typeof c.userId === "object" ? (c.userId as any)._id : c.userId;
+    // Mismo caso: un `teamConfig` que referencia a alguien borrado llega poblado en null.
+    const configUserId = idDe(c.userId);
     return String(configUserId) === String(employeeId);
   });
 
@@ -296,7 +318,8 @@ const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: str
 
   // 1. Check if user has a specific schedule in teamConfig
   const userConfig = project.teamConfig.find((c) => {
-    const configUserId = typeof c.userId === "object" ? (c.userId as any)._id : c.userId;
+    // Mismo caso: un `teamConfig` que referencia a alguien borrado llega poblado en null.
+    const configUserId = idDe(c.userId);
     return String(configUserId) === String(employeeId);
   });
 
@@ -1423,7 +1446,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
       const isExplicitlyAssigned =
         !!teamConfigMember ||
         selectedProject?.assignedUsers?.some((au: any) => {
-          const auId = typeof au === "object" ? au._id : au;
+          const auId = idDe(au);
           return String(auId) === String(e.id);
         });
 
@@ -2400,10 +2423,10 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
             }
           }
 
-          const empId = typeof att.employeeId === "object" ? att.employeeId._id : att.employeeId;
+          const empId = idDe(att.employeeId) ?? "";
           const emp = employees.find((e) => e.id === empId);
-          const repId = typeof att.replacementId === "object" ? att.replacementId._id : att.replacementId;
-          const rep = employees.find((e) => e.id === repId);
+          const repId = idDe(att.replacementId);
+          const rep = repId ? employees.find((e) => e.id === repId) : undefined;
 
           return {
             tempId: idx.toString(),
