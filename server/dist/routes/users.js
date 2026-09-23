@@ -1168,6 +1168,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 nombre_empresa_contrato: c.nombre_empresa_contrato || "",
                 nombre_empresa_release: c.nombre_empresa_release || "",
                 categoria_sat_id: c.categoria_sat_id ?? null,
+                // La función con la que se contrató: con ella, Contratación sabe qué valoración le toca a
+                // cada categoría (la valoración vive en la asociación función ↔ categoría, no en el catálogo).
+                rol_frame_id: c.rol_frame_id ?? null,
                 sede_id: c.sede_id ?? null,
                 tipo_contrato_id: c.tipo_contrato_id ?? null,
                 // Sucursal del padrón de ARCA (independiente de sede_id) y, si tiene varias actividades

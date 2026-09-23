@@ -15,6 +15,13 @@ import { valoracionesPorBrutoAPI, ValoracionSugerida } from '../../api/valoracio
 import { sweetAlert } from '../../utils/sweetAlert';
 
 const valoracionesApi = createSimpleCatalogApi('/valoraciones');
+const conveniosApi = createSimpleCatalogApi('/convenios');
+
+/** Los importes se leen de un vistazo con separador de miles y sin centavos: son sueldos, no precios. */
+const pesos = (n: unknown) => {
+  const v = Number(n);
+  return Number.isFinite(v) && v > 0 ? `$${Math.round(v).toLocaleString('es-AR')}` : '';
+};
 
 /**
  * Badge de categoría: código de ARCA + nombre, con el convenio del que cuelga.
@@ -152,6 +159,24 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     setSelectedCategorias((prev) => prev.map((c) => (c.categoryId in sugerencias ? { ...c, valoracionId: sugerencias[c.categoryId].valoracionId } : c)));
   };
   const difiereDelBruto = (categoryId: string, valoracionId: string) => categoryId in sugerencias && (sugerencias[categoryId].valoracionId || '') !== valoracionId;
+
+  /*
+    LOS NOMBRES DE LOS CONVENIOS: «0102/90» no dice nada; «0102/90 ACTORES», sí.
+
+    El código es lo que la categoría guarda y lo que ARCA exige, así que sigue adelante; el nombre va
+    al lado porque es lo que permite reconocer de qué convenio se está eligiendo sin buscarlo aparte.
+  */
+  const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
+  useEffect(() => {
+    void conveniosApi
+      .list()
+      .then((c) => setConvenios(Array.isArray(c) ? c : []))
+      .catch(() => setConvenios([]));
+  }, []);
+  const nombreDelConvenio = useMemo(() => {
+    const porCct = new Map(convenios.map((c) => [String(c.externalId || '').trim(), String(c.name || '')]));
+    return (cct: string) => porCct.get(String(cct).trim()) || '';
+  }, [convenios]);
 
   /** Las valoraciones del tenant, para los selects. Sólo las activas: son para contratos nuevos. */
   const [valoraciones, setValoraciones] = useState<SimpleCatalogItem[]>([]);
@@ -910,7 +935,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                         {/* El convenio como encabezado: es el nivel del que cuelga la categoría, no una etiqueta más. */}
                         <div className="sticky top-0 z-10 flex items-center gap-2 px-1.5 pt-3 pb-1 mb-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                           <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400">{grupo.convenio}</span>
-                          <span className="text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
+                          {nombreDelConvenio(grupo.convenio) && <span className="truncate text-[11px] font-semibold text-gray-600 dark:text-gray-300">{nombreDelConvenio(grupo.convenio)}</span>}
+                          <span className="shrink-0 text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
                         </div>
                         {grupo.cats.map((cat) => {
                           const isChecked = idsElegidos.has(cat._id);
@@ -932,6 +958,10 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                                   <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{cat.data?.codigoArca || '——————'}</span> · {cat.data?.nombre || cat.name}
                                 </span>
+                                {/* El bruto, al elegir: es lo que decide qué valoración le toca a la
+                                    categoría —la más barata de cada convenio es la del nivel más
+                                    bajo— y sin él había que ir a buscarlo a otra pantalla. */}
+                                {pesos(cat.data?.sueldoBruto) && <span className="ml-auto shrink-0 font-mono text-[11px] text-gray-500 dark:text-gray-400">{pesos(cat.data?.sueldoBruto)}</span>}
                               </label>
                               {/*
                                 El select SÓLO cuando la categoría está tildada: sin tildar no hay

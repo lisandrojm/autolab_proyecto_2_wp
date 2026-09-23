@@ -6,6 +6,7 @@ import UserProject from "../models/UserProject.js";
 import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
+import { sugerirPorBruto } from "../services/valorarFunciones.js";
 /**
  * ABM de valoraciones comerciales (Plata, Oro…).
  *
@@ -193,6 +194,28 @@ router.post("/import", requireTenant, authenticateToken, (_req, res) => {
 });
 router.post("/bulk", requireTenant, authenticateToken, (_req, res) => {
     res.status(405).json({ error: "Las valoraciones se cargan a mano: son pocas y la carga masiva no valida los rangos." });
+});
+/*
+  ── LAS CATEGORÍAS SE VALORAN POR BRUTO ──
+
+  El proyecto toma su valoración del margen; la categoría, de su sueldo (la regla, con sus tests, en
+  `utils/valoracionPorBruto.ts`). `sugerir` la expone para el formulario de Roles Empresa, que la
+  pide con lo que tiene tildado y la pone sola en lo que nadie eligió a mano. Se pide por CONJUNTO
+  porque «la más barata» es relativa a las otras.
+
+  Aplicarla a TODAS las funciones de una vez —cuando se agrega un nivel, por ejemplo— es el script
+  `valorarFuncionesPorBruto` (con modo en seco). Hubo un botón para eso en la pantalla y se sacó: en
+  el día a día no tenía nada que hacer, porque cada función ya se valora sola al editarla.
+*/
+router.post("/por-bruto/sugerir", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const ids = Array.isArray(req.body?.categorias) ? req.body.categorias.map(String) : [];
+        res.json({ sugerencias: await sugerirPorBruto(req.tenantObjectId, ids.slice(0, 500)) });
+    }
+    catch (error) {
+        console.error("Sugerir valoración por bruto error:", error);
+        res.status(500).json({ error: "No se pudo calcular la valoración por bruto." });
+    }
 });
 /*
   Van montadas ANTES del factory y llaman a `next()`: el guardado sigue siendo el del factory, acá
