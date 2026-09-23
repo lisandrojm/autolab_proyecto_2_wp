@@ -132,6 +132,7 @@ async function resolveProjectGlobalConfig(project, tenantId) {
     if (project.activityLogConfig.useGlobalConfig !== false) {
         const generalConfig = await ActivityLogGeneralConfig.getOrCreateDefault(tenantId);
         project.activityLogConfig.allowedPastDays = generalConfig.allowedPastDays;
+        project.activityLogConfig.allowedEditPastDays = generalConfig.allowedEditPastDays;
     }
 }
 /**
@@ -216,6 +217,7 @@ async function resolveProjectsGlobalConfig(projects, tenantId) {
         }
         if (project.activityLogConfig.useGlobalConfig !== false) {
             project.activityLogConfig.allowedPastDays = generalConfig.allowedPastDays;
+            project.activityLogConfig.allowedEditPastDays = generalConfig.allowedEditPastDays;
         }
     }
 }

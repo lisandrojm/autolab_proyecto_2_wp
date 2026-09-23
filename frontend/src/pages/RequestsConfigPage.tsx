@@ -46,6 +46,10 @@ const sanitizeActivityLogConfig = (config: any) => {
     sanitized.allowedPastDays = Number(config.allowedPastDays);
   }
 
+  if (config.allowedEditPastDays !== undefined) {
+    sanitized.allowedEditPastDays = Number(config.allowedEditPastDays);
+  }
+
   if (config.schedule && config.schedule.type) {
     sanitized.schedule = {
       type: config.schedule.type,
@@ -87,6 +91,10 @@ export const RequestsConfigPage: React.FC = () => {
   const [globalAllowedPastDays, setGlobalAllowedPastDays] = useState<number>(3);
   const [savingGlobalAllowedDays, setSavingGlobalAllowedDays] = useState(false);
   const [projectSpecificDays, setProjectSpecificDays] = useState<Record<string, number>>({});
+  /* La ventana de EDICIÓN, en paralelo a la de carga. Default 2: es lo que estaba clavado en el móvil. */
+  const [globalAllowedEditPastDays, setGlobalAllowedEditPastDays] = useState<number>(2);
+  const [savingGlobalEditDays, setSavingGlobalEditDays] = useState(false);
+  const [projectSpecificEditDays, setProjectSpecificEditDays] = useState<Record<string, number>>({});
 
   // ABM State
   const [activityTypes, setActivityTypes] = useState<RequestConfigType[]>([]);
@@ -113,6 +121,8 @@ export const RequestsConfigPage: React.FC = () => {
     try {
       const data = await activityLogTypesAPI.getGeneralSettings();
       setGlobalAllowedPastDays(data.allowedPastDays ?? 3);
+      // 2 es lo que regía antes de que esto fuera configurable: quien no la tocó nunca ve lo mismo.
+      setGlobalAllowedEditPastDays(data.allowedEditPastDays ?? 2);
     } catch (e) {
       console.error('Error fetching general allowed past days settings', e);
     }
@@ -208,6 +218,7 @@ export const RequestsConfigPage: React.FC = () => {
         ...conf,
         useGlobalConfig: newUseGlobal,
         allowedPastDays: newUseGlobal ? globalAllowedPastDays : currentCustomDays,
+        allowedEditPastDays: newUseGlobal ? globalAllowedEditPastDays : conf?.allowedEditPastDays ?? globalAllowedEditPastDays,
       });
 
       // Optimistic UI
@@ -238,6 +249,37 @@ export const RequestsConfigPage: React.FC = () => {
       console.error('Error saving custom allowed days:', error);
       sweetAlert.error('Error', 'No se pudo guardar la configuración');
       loadProjects(); // Revert
+    }
+  };
+
+  const handleSaveGlobalEditDays = async () => {
+    setSavingGlobalEditDays(true);
+    try {
+      await activityLogTypesAPI.updateGeneralSettings({ allowedEditPastDays: globalAllowedEditPastDays });
+      setAllProjects((prev) => prev.map((p) => (p.activityLogConfig?.useGlobalConfig !== false ? { ...p, activityLogConfig: { ...p.activityLogConfig, useGlobalConfig: true, allowedEditPastDays: globalAllowedEditPastDays } } : p)));
+      sweetAlert.success('Guardado', 'Se actualizó la ventana de edición.');
+    } catch (error) {
+      console.error('Error saving global edit days:', error);
+      sweetAlert.error('Error', 'No se pudo guardar la ventana de edición');
+    } finally {
+      setSavingGlobalEditDays(false);
+    }
+  };
+
+  /** Los días de edición propios de un proyecto. Guardarlos lo saca de la configuración global. */
+  const handleSaveProjectEditDays = async (project: Project, days: number) => {
+    try {
+      const newConfig = sanitizeActivityLogConfig({
+        ...project.activityLogConfig,
+        useGlobalConfig: false,
+        allowedEditPastDays: days,
+      });
+      setAllProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p)));
+      await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
+    } catch (error) {
+      console.error('Error saving custom edit days:', error);
+      sweetAlert.error('Error', 'No se pudo guardar la configuración');
+      loadProjects();
     }
   };
 
@@ -824,6 +866,20 @@ export const RequestsConfigPage: React.FC = () => {
                             </button>
                           </div>
                         </div>
+
+                        <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 max-w-xl mt-3">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Días permitidos para EDITAR (hacia atrás)</span>
+                            <span className="text-[10px] text-gray-400">Hasta cuándo se puede modificar una novedad ya enviada. Es otra decisión que la de cargarla.</span>
+                          </div>
+                          <div className="flex items-center gap-3 ml-auto">
+                            <input type="number" min="1" max="30" value={globalAllowedEditPastDays} onChange={(e) => setGlobalAllowedEditPastDays(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 p-2 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white text-sm" />
+                            <button onClick={handleSaveGlobalEditDays} disabled={savingGlobalEditDays} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex items-center gap-2 disabled:opacity-50 transition-colors text-sm">
+                              {savingGlobalEditDays ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faCheck} />}
+                              <span>Guardar</span>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -843,6 +899,7 @@ export const RequestsConfigPage: React.FC = () => {
                         const conf = project.activityLogConfig;
                         const usesGlobal = conf?.useGlobalConfig !== false;
                         const effectiveDays = conf?.allowedPastDays !== undefined ? conf.allowedPastDays : globalAllowedPastDays;
+                        const effectiveEditDays = conf?.allowedEditPastDays !== undefined ? conf.allowedEditPastDays : globalAllowedEditPastDays;
 
                         return (
                           <div key={project._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
@@ -889,6 +946,39 @@ export const RequestsConfigPage: React.FC = () => {
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                           handleSaveProjectDays(project, projectSpecificDays[project._id] ?? effectiveDays);
+                                          (e.target as HTMLInputElement).blur();
+                                        }
+                                      }}
+                                      className="w-16 p-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white text-sm"
+                                    />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">días</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* La ventana de EDICIÓN, con la misma forma que la de carga: heredada o propia. */}
+                              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Días para Editar</span>
+                                  <span className="text-[10px] text-gray-400">{usesGlobal ? `Heredado de la configuración global` : `Se puede modificar una novedad de hoy y de los ${effectiveEditDays - 1} días anteriores`}</span>
+                                </div>
+                                {usesGlobal ? (
+                                  <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 font-semibold text-sm rounded px-3 py-1 border border-gray-200 dark:border-gray-600">{globalAllowedEditPastDays} días</div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="30"
+                                      value={projectSpecificEditDays[project._id] ?? effectiveEditDays}
+                                      onChange={(e) => {
+                                        const val = Math.max(1, parseInt(e.target.value) || 1);
+                                        setProjectSpecificEditDays((prev) => ({ ...prev, [project._id]: val }));
+                                      }}
+                                      onBlur={() => handleSaveProjectEditDays(project, projectSpecificEditDays[project._id] ?? effectiveEditDays)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          handleSaveProjectEditDays(project, projectSpecificEditDays[project._id] ?? effectiveEditDays);
                                           (e.target as HTMLInputElement).blur();
                                         }
                                       }}

@@ -11,6 +11,10 @@ const ActivityLogGeneralConfigSchema = new Schema({
         type: Number,
         default: 3,
     },
+    allowedEditPastDays: {
+        type: Number,
+        default: 2,
+    },
 }, {
     timestamps: true,
     collection: "activity_log_general_configs",
@@ -21,6 +25,7 @@ ActivityLogGeneralConfigSchema.statics.getOrCreateDefault = async function (tena
         config = await this.create({
             tenantId,
             allowedPastDays: 3,
+            allowedEditPastDays: 2,
         });
     }
     return config;

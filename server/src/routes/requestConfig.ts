@@ -22,21 +22,31 @@ router.get("/settings", async (req: AuthenticatedRequest & TenantRequest, res) =
 // PUT /api/v1/request-config/settings
 router.put("/settings", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { allowedPastDays } = req.body;
-    
+    const { allowedPastDays, allowedEditPastDays } = req.body;
+
     if (allowedPastDays !== undefined && (typeof allowedPastDays !== "number" || allowedPastDays < 1)) {
       return res.status(400).json({ error: "allowedPastDays must be a positive number" });
     }
+    if (allowedEditPastDays !== undefined && (typeof allowedEditPastDays !== "number" || allowedEditPastDays < 1)) {
+      return res.status(400).json({ error: "allowedEditPastDays must be a positive number" });
+    }
 
-    const config = await ActivityLogGeneralConfig.findOneAndUpdate(
-      { tenantId: req.tenantObjectId },
-      {
-        $set: {
-          allowedPastDays: allowedPastDays !== undefined ? allowedPastDays : 3,
-        },
-      },
-      { new: true, upsert: true, setDefaultsOnInsert: true },
-    );
+    /*
+      Cada campo se escribe SÓLO si vino.
+
+      La pantalla guarda los dos por separado —son dos botones distintos— y el `$set` con el default
+      pisaba el otro campo con su valor inicial: guardar los días de carga habría reseteado a 2 los de
+      edición sin que nadie lo pidiera.
+    */
+    const cambios: Record<string, number> = {};
+    if (allowedPastDays !== undefined) cambios.allowedPastDays = allowedPastDays;
+    if (allowedEditPastDays !== undefined) cambios.allowedEditPastDays = allowedEditPastDays;
+
+    const config = await ActivityLogGeneralConfig.findOneAndUpdate({ tenantId: req.tenantObjectId }, Object.keys(cambios).length ? { $set: cambios } : {}, {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    });
 
     res.json(config);
   } catch (error) {

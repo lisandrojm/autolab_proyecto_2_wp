@@ -2226,7 +2226,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
   const handleConfirmSubmit = async () => {
     const confirmRes = await sweetAlert.confirm(
       "Importante",
-      "Recordá que tenés hasta 48hs de realizado el reporte para editarlo.",
+      `Recordá que vas a poder editarlo hasta ${Math.max(0, (selectedProject?.activityLogConfig?.allowedEditPastDays ?? 2) - 1)} día(s) después de la fecha del reporte.`,
       "Confirmar",
       "Volver"
     );
@@ -2436,16 +2436,35 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
     setShowForm(true);
   };
 
+  /**
+   * CUÁNTOS DÍAS HACIA ATRÁS SE PUEDE EDITAR UNA NOVEDAD. LA REGLA VIVE ACÁ.
+   *
+   * Estaba escrita tres veces y las tres decían cosas distintas: el botón se pintaba gris con un `<= 2`
+   * clavado, el bloqueo real usaba `allowedPastDays` —la ventana de CARGA, que en algunos tenants son
+   * 30 días— y el cartel informaba 48 horas. O sea que el usuario leía una cosa, veía otra y le pasaba
+   * una tercera.
+   *
+   * Ahora es su propio dato configurable (Novedades → Días Permitidos), por proyecto o heredado de la
+   * global. El default 2 es lo que decía el cartel.
+   */
+  const diasParaEditar = (report: ActivityReport | null): number => {
+    if (!report) return 2;
+    const projId = typeof report.projectId === "object" && report.projectId ? (report.projectId as any)._id : report.projectId;
+    const project = allProjectsCache.find((p) => p._id === projId) || userProjects.find((p) => p._id === projId);
+    return project?.activityLogConfig?.allowedEditPastDays ?? 2;
+  };
+
+  /** Días transcurridos entre la fecha de la novedad y hoy. 0 = es de hoy. */
+  const diasDesdeLaNovedad = (report: ActivityReport): number => Math.round((startOfDay(new Date()).getTime() - startOfDay(parseISO(report.date)).getTime()) / (1000 * 60 * 60 * 24));
+
+  /** `true` si todavía está dentro de la ventana de edición. Es lo que mira el botón Y el bloqueo. */
+  const sePuedeEditar = (report: ActivityReport | null): boolean => (report ? diasDesdeLaNovedad(report) <= diasParaEditar(report) - 1 : false);
+
   const handleEditFromDetail = () => {
     if (viewingReport) {
-      const projId = typeof viewingReport.projectId === "object" && viewingReport.projectId ? (viewingReport.projectId as any)._id : viewingReport.projectId;
-      const project = userProjects.find((p) => p._id === projId);
-      const allowedPastDays = project?.activityLogConfig?.allowedPastDays ?? 3;
-      const reportDate = startOfDay(parseISO(viewingReport.date));
-      const today = startOfDay(new Date());
-      const diffDays = Math.round((today.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays > (allowedPastDays - 1)) {
-        sweetAlert.error("Atención", `El máximo para editar son ${(allowedPastDays - 1) * 24} horas de realizado el reporte.`);
+      if (!sePuedeEditar(viewingReport)) {
+        const dias = diasParaEditar(viewingReport);
+        sweetAlert.error("Fuera de la ventana de edición", `Esta novedad es de hace ${diasDesdeLaNovedad(viewingReport)} día(s) y sólo se puede editar hasta ${dias - 1} día(s) después de su fecha.`);
         return;
       }
       setShowDetailModal(false);
@@ -5052,12 +5071,14 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
               Cerrar
             </button>
             {(() => {
-              const isEditable = viewingReport
-                ? Math.round((startOfDay(new Date()).getTime() - startOfDay(parseISO(viewingReport.date)).getTime()) / (1000 * 60 * 60 * 24)) <= 2
-                : false;
+              const isEditable = sePuedeEditar(viewingReport);
               return (
                 <button
                   onClick={handleEditFromDetail}
+                  // Se pintaba gris pero seguía siendo clickeable: el "no se puede editar" era una
+                  // sugerencia. Si la ventana venció, el botón no hace nada.
+                  disabled={!isEditable}
+                  title={isEditable ? undefined : `Esta novedad quedó fuera de la ventana de edición (${diasParaEditar(viewingReport)} día(s)).`}
                   className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${
                     isEditable
                       ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md"
@@ -5112,13 +5133,17 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
             })()}
 
              {(() => {
-               const submittedDate = new Date(viewingReport.submittedAt);
-               const limitDate = new Date(submittedDate.getTime() + 48 * 60 * 60 * 1000);
+               /* El cartel decía 48hs contadas desde el envío, y el bloqueo miraba otra cosa: días desde
+                  la FECHA de la novedad. Ahora dice exactamente lo que se aplica. */
+               const dias = diasParaEditar(viewingReport);
+               const limite = new Date(startOfDay(parseISO(viewingReport.date)).getTime() + (dias - 1) * 24 * 60 * 60 * 1000);
+               const vigente = sePuedeEditar(viewingReport);
                return (
-                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2.5">
-                   <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 text-blue-500 flex-shrink-0" />
+                 <div className={`${vigente ? "bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/50 text-blue-800 dark:text-blue-200" : "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"} p-3 rounded-lg border text-xs flex items-start gap-2.5`}>
+                   <FontAwesomeIcon icon={faInfoCircle} className={`mt-0.5 flex-shrink-0 ${vigente ? "text-blue-500" : "text-slate-400"}`} />
                    <div>
-                     EDITAR: Solo se puede editar hasta 48hs después de la fecha de la novedad (hasta el {limitDate.toLocaleString()}).
+                     EDITAR: se puede modificar el día de la novedad y hasta {dias - 1} día(s) después (hasta el {limite.toLocaleDateString()} inclusive).
+                     {!vigente && " Esta ya quedó fuera de esa ventana."}
                    </div>
                  </div>
                );

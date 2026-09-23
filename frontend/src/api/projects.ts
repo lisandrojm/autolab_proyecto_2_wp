@@ -103,6 +103,8 @@ export interface Project {
     enableFastEntry?: boolean;
     allowsAdditionalStaff?: boolean;
     allowedPastDays?: number;
+    /** Ventana para EDITAR una novedad ya cargada. La resuelve el server: si el proyecto hereda, llega la global. */
+    allowedEditPastDays?: number;
     schedule?: {
       type: "daily" | "workdays" | "custom";
       days: number[];

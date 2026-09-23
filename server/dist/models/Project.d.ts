@@ -145,6 +145,8 @@ export interface IProject extends Document {
         enableFastEntry?: boolean;
         allowsAdditionalStaff?: boolean;
         allowedPastDays?: number;
+        /** Ventana para EDITAR una novedad ya cargada. Vacío = hereda la global. */
+        allowedEditPastDays?: number;
         schedule?: {
             type: "daily" | "workdays" | "custom";
             days: number[];

@@ -150,6 +150,8 @@ export interface IProject extends Document {
     enableFastEntry?: boolean;
     allowsAdditionalStaff?: boolean;
     allowedPastDays?: number;
+    /** Ventana para EDITAR una novedad ya cargada. Vacío = hereda la global. */
+    allowedEditPastDays?: number;
     schedule?: {
       type: "daily" | "workdays" | "custom";
       days: number[];
@@ -237,6 +239,7 @@ const projectSchema = new Schema<IProject>(
       enableFastEntry: { type: Boolean },
       allowsAdditionalStaff: { type: Boolean },
       allowedPastDays: { type: Number },
+      allowedEditPastDays: { type: Number },
       schedule: {
         type: { type: String, enum: ["daily", "workdays", "custom"] },
         days: [{ type: Number }],

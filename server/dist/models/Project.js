@@ -55,6 +55,7 @@ const projectSchema = new Schema({
         enableFastEntry: { type: Boolean },
         allowsAdditionalStaff: { type: Boolean },
         allowedPastDays: { type: Number },
+        allowedEditPastDays: { type: Number },
         schedule: {
             type: { type: String, enum: ["daily", "workdays", "custom"] },
             days: [{ type: Number }],
