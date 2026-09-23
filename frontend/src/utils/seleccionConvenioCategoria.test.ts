@@ -17,7 +17,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { categoriasOfrecidas } from './seleccionConvenioCategoria.js';
+import { categoriasOfrecidas, categoriaPorDefecto } from './seleccionConvenioCategoria.js';
 import type { CategoriaSatItem } from '../api/categoriasSat.js';
 import type { RoleFrameItem } from '../api/roleFrames.js';
 
@@ -145,5 +145,85 @@ describe('categoriasOfrecidas — el orden de los filtros', () => {
     assert.equal(r.ocultasPorConvenio, 1, 'la 3, por convenio');
     assert.equal(r.ocultasPorValoracion, 1, 'la 2, por valoración');
     assert.deepEqual(ids(r), [1]);
+  });
+});
+
+/*
+  ── LA CATEGORÍA QUE VIENE ELEGIDA ──
+
+  Un proyecto Plata se contrata con las categorías Plata de la función: dejar el selector vacío obliga
+  a elegir a mano algo que el dato ya decide. Y cuando la función NO tiene ninguna del nivel del
+  proyecto, lo que no puede pasar es que no se proponga nada y tampoco se explique por qué la que
+  quedó es de otro nivel — eso se lee como un descuido y es una decisión.
+
+  Los `orden` son los de producción: 1 = Oro (el más alto), 2 = Plata.
+*/
+const NIVELES = [
+  { _id: ORO, orden: 1 },
+  { _id: PLATA, orden: 2 },
+];
+const BRONCE = 'bronce-id';
+const NIVELES_CON_BRONCE = [...NIVELES, { _id: BRONCE, orden: 3 }];
+
+/** Una categoría como la devuelve `categoriasOfrecidas`. */
+const ofrecida = (id: number, valoracionId: string | null) => ({ id, nombre: `Categoría ${id}`, numeroCategoria: id, codigoArca: String(35000 + id).padStart(6, '0'), valoracionId });
+
+describe('categoriaPorDefecto — qué viene elegido al abrir el alta', () => {
+  it('un proyecto Plata elige la Plata, aunque la Oro esté primera en la lista', () => {
+    const r = categoriaPorDefecto({ categorias: [ofrecida(1, ORO), ofrecida(2, PLATA)], valoracionProyecto: PLATA, niveles: NIVELES });
+    assert.equal(r?.id, '2');
+    assert.equal(r?.motivo, 'coincide');
+  });
+
+  it('un proyecto Oro elige la Oro', () => {
+    const r = categoriaPorDefecto({ categorias: [ofrecida(1, ORO), ofrecida(2, PLATA)], valoracionProyecto: ORO, niveles: NIVELES });
+    assert.equal(r?.id, '1');
+    assert.equal(r?.motivo, 'coincide');
+  });
+
+  it('SIN Plata en la función, elige Oro y avisa que difiere', () => {
+    // Es el caso del pedido: no hay categoría del nivel del proyecto, se propone la más cercana y se
+    // dice. El motivo `otra-valoracion` es lo que la pantalla usa para explicarlo.
+    const r = categoriaPorDefecto({ categorias: [ofrecida(1, ORO), ofrecida(3, ORO)], valoracionProyecto: PLATA, niveles: NIVELES });
+    assert.equal(r?.motivo, 'otra-valoracion');
+    assert.equal(r?.id, '1');
+  });
+
+  it('con varias del nivel del proyecto toma la primera y lo informa en `candidatas`', () => {
+    const r = categoriaPorDefecto({ categorias: [ofrecida(1, PLATA), ofrecida(2, PLATA)], valoracionProyecto: PLATA, niveles: NIVELES });
+    assert.equal(r?.id, '1');
+    assert.equal(r?.candidatas, 2);
+  });
+
+  it('sin el nivel exacto, gana el MÁS CERCANO por orden', () => {
+    // Proyecto Plata (2) entre Oro (1) y Bronce (3): las dos están a distancia 1, y el empate lo gana
+    // el nivel más alto. Con Bronce a distancia 1 y Oro a 2, gana Bronce.
+    const empate = categoriaPorDefecto({ categorias: [ofrecida(3, BRONCE), ofrecida(1, ORO)], valoracionProyecto: PLATA, niveles: NIVELES_CON_BRONCE });
+    assert.equal(empate?.id, '1');
+
+    const conBronce = categoriaPorDefecto({ categorias: [ofrecida(3, BRONCE), ofrecida(1, ORO)], valoracionProyecto: ORO, niveles: NIVELES_CON_BRONCE });
+    assert.equal(conBronce?.id, '1'); // la propia Oro gana por coincidencia
+  });
+
+  it('una sola candidata se elige sola, esté valorada o no', () => {
+    assert.deepEqual(categoriaPorDefecto({ categorias: [ofrecida(1, null)], valoracionProyecto: PLATA, niveles: NIVELES }), { id: '1', motivo: 'unica', candidatas: 1 });
+  });
+
+  it('con varias sin valorar NO decide: el dato que haría falta todavía no se cargó', () => {
+    assert.equal(categoriaPorDefecto({ categorias: [ofrecida(1, null), ofrecida(2, null)], valoracionProyecto: PLATA, niveles: NIVELES }), null);
+  });
+
+  it('sin valoración del proyecto y con varias, no decide', () => {
+    assert.equal(categoriaPorDefecto({ categorias: [ofrecida(1, ORO), ofrecida(2, PLATA)], valoracionProyecto: '', niveles: NIVELES }), null);
+  });
+
+  it('sin categorías, nada', () => {
+    assert.equal(categoriaPorDefecto({ categorias: [], valoracionProyecto: PLATA, niveles: NIVELES }), null);
+  });
+
+  it('sin el orden de los niveles cargado no inventa cercanía', () => {
+    // Sin `orden` no hay forma de saber cuál es "el más cercano": mejor no elegir que elegir por
+    // orden de lista.
+    assert.equal(categoriaPorDefecto({ categorias: [ofrecida(1, ORO), ofrecida(3, ORO)], valoracionProyecto: PLATA, niveles: [] }), null);
   });
 });

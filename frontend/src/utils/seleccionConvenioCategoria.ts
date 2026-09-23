@@ -291,3 +291,84 @@ export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undef
   const multiplicador = Number(multiplicadorDiario) > 0 ? Number(multiplicadorDiario) : 1;
   return Number(((Number(categoria.data?.neto ?? 0) / 30) * multiplicador).toFixed(2));
 };
+
+/** Un nivel del catálogo de Valoraciones. Para compararlos alcanza con el orden. */
+export interface NivelDeValoracion {
+  _id: string;
+  /** **1 es el nivel MÁS ALTO** (Oro). Sin orden, un nivel no se puede comparar con otro. */
+  orden?: number | null;
+}
+
+/** Por qué quedó elegida esa categoría. Lo usa la pantalla para explicarlo sin volver a deducirlo. */
+export type MotivoDeDefecto = "coincide" | "otra-valoracion" | "unica";
+
+export interface CategoriaElegidaPorDefecto {
+  id: string;
+  motivo: MotivoDeDefecto;
+  /** Cuántas candidatas había. Más de una significa que se eligió la primera y conviene decirlo. */
+  candidatas: number;
+}
+
+const ordenDelNivel = (valoracionId: string | null | undefined, niveles: NivelDeValoracion[]): number | null => {
+  const nivel = niveles.find((n) => String(n._id) === String(valoracionId || ""));
+  const orden = Number(nivel?.orden);
+  return Number.isFinite(orden) ? orden : null;
+};
+
+/**
+ * QUÉ CATEGORÍA VIENE ELEGIDA AL ABRIR EL ALTA.
+ *
+ * La valoración del proyecto es lo que define el encuadre: un proyecto Plata se contrata con las
+ * categorías Plata de la función. Dejar el selector vacío obliga a elegir a mano algo que el dato ya
+ * decide, y —peor— hace que la pantalla dependa de que cada persona se acuerde de la regla.
+ *
+ * EL ORDEN DE PREFERENCIA
+ *
+ *   1. Una del NIVEL DEL PROYECTO, si existe. Gana siempre, aunque haya de otros niveles en la lista.
+ *   2. Si no hay ninguna de ese nivel, la del nivel MÁS CERCANO por `orden`, y en un empate la MÁS
+ *      ALTA. Que no exista la categoría del nivel del proyecto no es motivo para no proponer nada: se
+ *      propone la más parecida y se dice que difiere, para que se lea como lo que es —una decisión
+ *      particular de este contrato— y no como un descuido. Quien la confirme va a tener que escribir
+ *      el motivo igual, que es lo que el server exige.
+ *   3. Si hay una sola candidata, ésa: pedir un click para confirmar lo único posible no es elegir.
+ *
+ * CUÁNDO NO DECIDE NADA (devuelve `null`): sin categorías, o con varias y ninguna valorada. En el
+ * segundo caso el dato que haría falta —la valoración de cada categoría en esa función— todavía no se
+ * cargó, y elegir por orden de lista sería inventar un criterio.
+ *
+ * `candidatas > 1` con motivo `coincide` significa que la función tiene varias del nivel del proyecto
+ * y se tomó la primera. Es una elección legítima pero no la única, y por eso se informa.
+ */
+export const categoriaPorDefecto = ({
+  categorias,
+  valoracionProyecto,
+  niveles = [],
+}: {
+  categorias: CategoriaOfrecida[];
+  valoracionProyecto?: string;
+  niveles?: NivelDeValoracion[];
+}): CategoriaElegidaPorDefecto | null => {
+  if (categorias.length === 0) return null;
+  if (categorias.length === 1) return { id: String(categorias[0].id), motivo: "unica", candidatas: 1 };
+  if (!valoracionProyecto) return null;
+
+  const delNivelDelProyecto = categorias.filter((c) => String(c.valoracionId || "") === valoracionProyecto);
+  if (delNivelDelProyecto.length > 0) return { id: String(delNivelDelProyecto[0].id), motivo: "coincide", candidatas: delNivelDelProyecto.length };
+
+  const ordenProyecto = ordenDelNivel(valoracionProyecto, niveles);
+  const valoradas = categorias.filter((c) => ordenDelNivel(c.valoracionId, niveles) !== null);
+  // Sin orden del proyecto o sin categorías valoradas no hay con qué medir "cercanía": no se decide.
+  if (ordenProyecto === null || valoradas.length === 0) return null;
+
+  const masCercana = [...valoradas].sort((a, b) => {
+    const ordenA = ordenDelNivel(a.valoracionId, niveles) as number;
+    const ordenB = ordenDelNivel(b.valoracionId, niveles) as number;
+    const distanciaA = Math.abs(ordenA - ordenProyecto);
+    const distanciaB = Math.abs(ordenB - ordenProyecto);
+    if (distanciaA !== distanciaB) return distanciaA - distanciaB;
+    // Empate: gana el nivel más alto, que es el de `orden` más chico.
+    return ordenA - ordenB;
+  })[0];
+
+  return { id: String(masCercana.id), motivo: "otra-valoracion", candidatas: valoradas.length };
+};

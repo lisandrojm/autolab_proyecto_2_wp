@@ -53,7 +53,7 @@ import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
-import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
 import { cachedFetch } from '../utils/refCache';
 
@@ -1414,19 +1414,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   );
 
   /*
-    UNA SOLA CANDIDATA SE ELIGE SOLA.
-
-    Con el filtro de valoración puesto, lo habitual es que quede una: pedir que la elijan de una
-    lista de uno es pedir un click para confirmar lo único posible. No pisa una elección previa ni
-    corre mientras se está viendo la lista completa por el escape manual.
-  */
-  useEffect(() => {
-    if (verTodasLasValoraciones || wizardData.categoria_sat_id) return;
-    if (availableCategoriasSat.length !== 1) return;
-    setWizardData((prev) => ({ ...prev, categoria_sat_id: String(availableCategoriasSat[0].id) }));
-  }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id]);
-
-  /*
     LA CATEGORÍA ELEGIDA ES DE OTRA VALORACIÓN que la del proyecto: pide motivo, se llegue como se llegue.
 
     No sólo por «Elegir de todas formas». Cuando la función no tiene NINGUNA categoría del nivel del
@@ -1445,6 +1432,28 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const deLaCategoria = asociada?.valoracionId ? String(asociada.valoracionId) : '';
     return !!deLaCategoria && deLaCategoria !== valoracionProyectoId;
   }, [valoracionProyectoId, allRoleFrames, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
+
+  /*
+    LA CATEGORÍA VIENE ELEGIDA SEGÚN LA VALORACIÓN DEL PROYECTO.
+
+    Un proyecto Plata se contrata con las categorías Plata de la función: si existe una, es ÉSA, aunque
+    la lista traiga también de otros niveles. Y si la función no tiene ninguna de ese nivel, se propone
+    igual la más cercana y la leyenda de abajo dice que difiere: es una decisión particular de este
+    contrato —el server va a pedir el motivo— y no un descuido. Dejar el campo vacío escondía las dos
+    cosas y obligaba a elegir a mano algo que el dato ya decide.
+
+    La regla vive en `categoriaPorDefecto`, con tests. Acá sólo se decide CUÁNDO aplicarla: nunca pisa
+    una elección previa, ni corre con el escape manual abierto —ahí ya eligió una persona—.
+  */
+  useEffect(() => {
+    if (verTodasLasValoraciones || wizardData.categoria_sat_id) return;
+    // `orden` viaja como `unknown` en el catálogo genérico; sin número, `categoriaPorDefecto` no
+    // inventa cercanía y devuelve null.
+    const niveles = valoraciones.map((v) => ({ _id: String(v._id), orden: Number((v as any).orden) }));
+    const porDefecto = categoriaPorDefecto({ categorias: availableCategoriasSat, valoracionProyecto: valoracionProyectoId, niveles });
+    if (!porDefecto) return;
+    setWizardData((prev) => ({ ...prev, categoria_sat_id: porDefecto.id }));
+  }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id, valoracionProyectoId, valoraciones]);
 
   /*
     EL OFICIO QUE SE AGREGA DESDE EL BUSCADOR, y que la persona todavía no tiene en su ficha.
@@ -4375,10 +4384,26 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         const v = valoraciones.find((x) => String(x._id) === idCat);
                         if (!v) return <p className="ml-1 mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">Esta categoría no tiene valoración cargada en la función.</p>;
                         const coincide = !!valoracionProyectoId && idCat === valoracionProyectoId;
+                        // Varias del mismo nivel: la elegida vino por ser la primera de la lista, no por ser
+                        // LA correcta. Decirlo es la diferencia entre proponer y decidir por el otro.
+                        const delMismoNivel = coincide ? availableCategoriasSat.filter((c: any) => String(c.valoracionId || '') === valoracionProyectoId).length : 0;
                         return (
                           <p className="ml-1 mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                             <ChipValoracion nombre={String(v.name)} color={String(v.color || '')} />
-                            {valoracionProyectoId ? <span className={coincide ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>{coincide ? 'coincide con la valoración del proyecto' : `el proyecto es ${valoracionDelProyecto?.nombre || 'de otra valoración'}`}</span> : <span className="text-gray-500 dark:text-gray-400">el proyecto no está valorado</span>}
+                            {valoracionProyectoId ? (
+                              <span className={coincide ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>
+                                {/* Cuando la función NO tiene ninguna del nivel del proyecto, la que quedó no es un
+                                descuido: es lo más cercano que hay. Decirlo así evita que se lea como un error y
+                                deja claro que hay que justificarlo. */}
+                                {coincide
+                                  ? `coincide con la valoración del proyecto${delMismoNivel > 1 ? ` · la función tiene ${delMismoNivel} de este nivel, revisá que sea la correcta` : ''}`
+                                  : rolNoTieneCategoriasDeLaValoracion
+                                    ? `la función no tiene categorías ${valoracionDelProyecto?.nombre || 'de la valoración del proyecto'}: ésta difiere y hay que explicar por qué`
+                                    : `difiere de la valoración del proyecto (${valoracionDelProyecto?.nombre || 'otra'})`}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 dark:text-gray-400">el proyecto no está valorado</span>
+                            )}
                           </p>
                         );
                       })()}
