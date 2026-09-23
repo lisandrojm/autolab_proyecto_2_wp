@@ -255,7 +255,15 @@ export const RequestsConfigPage: React.FC = () => {
   const handleSaveGlobalEditDays = async () => {
     setSavingGlobalEditDays(true);
     try {
-      await activityLogTypesAPI.updateGeneralSettings({ allowedEditPastDays: globalAllowedEditPastDays });
+      /*
+        SE MANDAN LOS DOS CAMPOS, aunque este botón sólo cambie uno.
+
+        El server viejo —el que todavía puede estar desplegado— no conoce `allowedEditPastDays` y su
+        `$set` escribe `allowedPastDays: allowedPastDays ?? 3`: mandarle sólo el campo nuevo le hace
+        pisar los días de CARGA con un 3 que nadie pidió. Ya pasó una vez, con un tenant que tenía 30.
+        Mandando el valor actual del otro campo, el peor caso es que se reescriba con lo que ya tenía.
+      */
+      await activityLogTypesAPI.updateGeneralSettings({ allowedEditPastDays: globalAllowedEditPastDays, allowedPastDays: globalAllowedPastDays });
       setAllProjects((prev) => prev.map((p) => (p.activityLogConfig?.useGlobalConfig !== false ? { ...p, activityLogConfig: { ...p.activityLogConfig, useGlobalConfig: true, allowedEditPastDays: globalAllowedEditPastDays } } : p)));
       sweetAlert.success('Guardado', 'Se actualizó la ventana de edición.');
     } catch (error) {
