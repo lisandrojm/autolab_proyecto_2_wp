@@ -37,12 +37,12 @@ import { formatCuit } from '../utils/cuit';
 import { cargaNovedades, MOBILE_ACTIVITY_LOGS } from '../utils/permisosMobile';
 import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
 import { calificacionesAPI, ResumenCalificacion } from '../api/calificaciones';
-import { CalificacionesModal } from '../components/calificaciones/CalificacionesModal';
+import { CalificacionesModal, CalificacionesPanel } from '../components/calificaciones/CalificacionesModal';
 import { CalificacionPromedio } from '../components/calificaciones/Estrellas';
 
 const HELP_KEY = 'users' as const;
 
-type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'sistema' | 'proyectos';
+type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'sistema' | 'proyectos' | 'calificaciones';
 
 type ModalMode = 'edit' | 'password';
 
@@ -1054,6 +1054,13 @@ export const UsersPage: React.FC = () => {
                   <FontAwesomeIcon icon={faBriefcase} className="text-xs" />
                   Proyectos
                 </button>
+                {/* Última: las calificaciones de la persona. Una solicitud todavía no es alguien a quien calificar. */}
+                {canManage && !viewUser.metadata?.isSolicitud && (
+                  <button type="button" onClick={() => setViewActiveTab('calificaciones')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'calificaciones' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                    <FontAwesomeIcon icon={faStar} className="text-xs" />
+                    Calificaciones
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1856,6 +1863,18 @@ export const UsersPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {viewActiveTab === 'calificaciones' && canManage && !viewUser.metadata?.isSolicitud && (
+                <div className="animate-fadeIn">
+                  <CalificacionesPanel
+                    userKey={viewUser._id}
+                    ayuda="Calificá su actuación por algún motivo en especial."
+                    cargar={() => calificacionesAPI.historial(viewUser._id)}
+                    calificar={(c) => calificacionesAPI.calificar(viewUser._id, c, 'usuarios')}
+                    onCalificada={() => cargarCalificaciones(users)}
+                  />
                 </div>
               )}
             </div>
