@@ -21,6 +21,8 @@ import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
+import { SeleccionMultiple } from '../components/ui/SeleccionMultiple';
+import { sedesDelForm, nombresDeSedes } from '../utils/sedesProyecto';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -81,6 +83,7 @@ export const ProjectsPage: React.FC = () => {
       // La empresa de Tango del centro: el id solo es ambiguo entre empresas (ver `SelectorCentroCosto`).
       centroCostoEmpresaTangoId: undefined as number | undefined,
       sedeId: undefined as number | undefined,
+      sedeIds: [] as number[],
       responsableId: undefined as number | undefined,
     },
   });
@@ -228,6 +231,7 @@ export const ProjectsPage: React.FC = () => {
         centroCostoId: undefined,
         centroCostoEmpresaTangoId: undefined,
         sedeId: undefined,
+        sedeIds: [],
         responsableId: undefined,
       },
     });
@@ -259,6 +263,7 @@ export const ProjectsPage: React.FC = () => {
         centroCostoId: project.metadata?.centroCostoId,
         centroCostoEmpresaTangoId: (project.metadata as any)?.centroCostoEmpresaTangoId,
         sedeId: project.metadata?.sedeId,
+        sedeIds: sedesDelForm(project.metadata),
         responsableId: project.metadata?.responsableId,
       },
     });
@@ -294,6 +299,10 @@ export const ProjectsPage: React.FC = () => {
     }
     if (!formData.metadata?.responsableId) {
       sweetAlert.error('Datos incompletos', 'El coordinador del proyecto es obligatorio');
+      return;
+    }
+    if (sedesDelForm(formData.metadata).length === 0) {
+      sweetAlert.error('Datos incompletos', 'Elegí al menos una sede');
       return;
     }
     try {
@@ -523,7 +532,13 @@ export const ProjectsPage: React.FC = () => {
                           <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
                           Sede
                         </label>
-                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || 'Sede'}</span>
+                        <div className="flex flex-wrap gap-1.5">
+                      {nombresDeSedes(project).map((nombre) => (
+                        <span key={nombre} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
+                          {nombre}
+                        </span>
+                      ))}
+                    </div>
                       </div>
                     )}
                     {centroCostoTarjeta && (
@@ -621,7 +636,7 @@ export const ProjectsPage: React.FC = () => {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                 {filteredProjects.map((project) => {
                   const clientName = (typeof project.clientId === 'object' ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || 'Cliente Desconocido';
-                  const sedeName = project.metadataResolutions?.sede?.name || project.metadataResolutions?.sede?.data?.nombre || '-';
+                  const sedeName = nombresDeSedes(project).join(', ') || '-';
                   /* `ID: n` y no un guion cuando el id no resuelve: distingue «no tiene centro de
                      costo» de «apunta a uno que no está en el catálogo», que son cosas distintas. */
                   const centroCosto = nombreCentroCosto(project);
@@ -749,15 +764,19 @@ export const ProjectsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Sede *</label>
-                <select className="input-field py-2.5" required value={formData.metadata?.sedeId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, sedeId: idOpcional(e.target.value) } }))}>
-                  <option value="">Seleccionar del sistema...</option>
-                  {availableSedes.map((s) => (
-                    <option key={s._id} value={s.data?.id}>
-                      {s.name || s.data?.nombre}
-                    </option>
-                  ))}
-                </select>
+                {/* Varias sedes, como los roles empresa: la primera es la principal (precarga el alta de contratos). */}
+                <SeleccionMultiple
+                  label={<span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede *</span>}
+                  titulo="Sedes"
+                  descripcion="la primera es la principal"
+                  principal="Principal"
+                  placeholder="Elegí una o más sedes…"
+                  placeholderBusqueda="Buscar sede..."
+                  vacio="No hay sedes cargadas."
+                  opciones={availableSedes.filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
+                  valor={sedesDelForm(formData.metadata).map(String)}
+                  onChange={(ids) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, sedeIds: ids.map(Number), sedeId: ids.length ? Number(ids[0]) : undefined } }))}
+                />
               </div>
             </div>
 
@@ -782,13 +801,18 @@ export const ProjectsPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
               <div>
-                <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                  Empresa del Contrato
-                  <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
+                <CompanyMultiSelect
+                  label={
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      Empresa del Contrato
+                      <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
                     <FontAwesomeIcon icon={faInfoCircle} />
                   </button>
-                </label>
-                <CompanyMultiSelect companies={companies} value={formData.contratoEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids }))} />
+                    </span>
+                  }
+                  titulo="Empresa del Contrato"
+                  companies={companies} value={formData.contratoEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids }))}
+                />
               </div>
 
               {/*
@@ -804,13 +828,18 @@ export const ProjectsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                  Empresa del Release
-                  <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
+                <CompanyMultiSelect
+                  label={
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      Empresa del Release
+                      <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
                     <FontAwesomeIcon icon={faInfoCircle} />
                   </button>
-                </label>
-                <CompanyMultiSelect companies={companies} value={formData.releaseEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, releaseEmpresas: ids }))} />
+                    </span>
+                  }
+                  titulo="Empresa del Release"
+                  companies={companies} value={formData.releaseEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, releaseEmpresas: ids }))}
+                />
               </div>
             </div>
 

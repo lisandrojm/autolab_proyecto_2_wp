@@ -10,6 +10,12 @@ export interface IProjectMetadata {
   fechaFin: string;
   fechaAlta: string;
   sedeId: number;
+  /**
+   * TODAS LAS SEDES del proyecto (un proyecto puede trabajar en varias). `sedeId` queda siempre igual a
+   * la PRIMERA: es la principal, la que precarga el alta de contratos y la que se manda a FRAME. Los
+   * proyectos de antes sólo tienen `sedeId`: ver `sedesDelProyecto` en `routes/projects.ts`.
+   */
+  sedeIds?: number[];
   activo: boolean;
   centroCostoId: number;
   /**
@@ -280,6 +286,7 @@ const projectSchema = new Schema<IProject>(
       fechaFin: { type: String },
       fechaAlta: { type: String },
       sedeId: { type: Number },
+      sedeIds: { type: [Number], default: undefined },
       activo: { type: Boolean },
       centroCostoId: { type: Number },
       centroCostoEmpresaTangoId: { type: Number },

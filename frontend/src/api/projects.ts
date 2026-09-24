@@ -138,7 +138,10 @@ export interface Project {
   metadataResolutions?: {
     responsable?: any;
     cliente?: any;
+    /** La sede principal (la primera). */
     sede?: any;
+    /** Todas las sedes del proyecto, en orden. */
+    sedes?: any[];
     /*
       El centro de costo resuelto por el server: el documento de `centros-costo`, con el CÓDIGO de
       FRAME (`codAuxiliar`), que es lo que se muestra. `name` y `data` siguen llegando derivados.

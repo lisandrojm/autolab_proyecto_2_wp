@@ -94,6 +94,7 @@ const projectSchema = new Schema({
         fechaFin: { type: String },
         fechaAlta: { type: String },
         sedeId: { type: Number },
+        sedeIds: { type: [Number], default: undefined },
         activo: { type: Boolean },
         centroCostoId: { type: Number },
         centroCostoEmpresaTangoId: { type: Number },

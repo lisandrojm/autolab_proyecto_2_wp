@@ -222,6 +222,43 @@ async function resolveProjectsGlobalConfig(projects, tenantId) {
     }
 }
 const router = Router();
+/**
+ * Las sedes de un proyecto: `sedeIds` si las tiene; si no, la única de antes (`sedeId`).
+ * Ver `metadata.sedeIds` en `models/Project.ts`.
+ */
+const sedesDelProyecto = (meta) => {
+    const varias = Array.isArray(meta?.sedeIds) ? meta.sedeIds.map(Number).filter((n) => Number.isFinite(n) && n > 0) : [];
+    if (varias.length > 0)
+        return [...new Set(varias)];
+    return Number(meta?.sedeId) > 0 ? [Number(meta.sedeId)] : [];
+};
+/** Lo que pide el formulario: la lista (sin repetidos) y la principal. `undefined` = no tocar. */
+const sedesPedidas = (meta) => {
+    if (Array.isArray(meta?.sedeIds)) {
+        const ids = sedesDelProyecto({ sedeIds: meta.sedeIds });
+        return { sedeIds: ids, sedeId: ids[0] };
+    }
+    if (meta?.sedeId !== undefined)
+        return { sedeIds: meta.sedeId ? [Number(meta.sedeId)] : [], sedeId: meta.sedeId || undefined };
+    return undefined;
+};
+/** Resuelve a nombre las sedes de varios proyectos de una: `metadataResolutions.sedes` (y `.sede`, la principal). */
+async function resolverSedes(projects) {
+    const todas = [...new Set(projects.flatMap((p) => sedesDelProyecto(p.metadata)))];
+    if (todas.length === 0)
+        return;
+    const sedes = await Info.find({ type: "sede", "data.id": { $in: todas } }).lean();
+    const sedeMap = new Map(sedes.map((s) => [Number(s.data.id), s]));
+    for (const p of projects) {
+        const resueltas = sedesDelProyecto(p.metadata).map((id) => sedeMap.get(id)).filter(Boolean);
+        if (resueltas.length === 0)
+            continue;
+        if (!p.metadataResolutions)
+            p.metadataResolutions = {};
+        p.metadataResolutions.sede = resueltas[0];
+        p.metadataResolutions.sedes = resueltas;
+    }
+}
 const createProjectSchema = z.object({
     name: z.string().min(1),
     description: z.string().optional().nullable(),
@@ -272,6 +309,8 @@ const createProjectSchema = z.object({
     metadata: z.object({
         responsableId: z.number({ required_error: "El responsable del proyecto es obligatorio" }),
         sedeId: z.number().optional().nullable(),
+        // Varias sedes; la primera es la principal y se copia a `sedeId`.
+        sedeIds: z.array(z.number()).optional().nullable(),
         centroCostoId: z.number().optional().nullable(),
         centroCostoEmpresaTangoId: z.number().optional().nullable(),
         clienteId: z.number().optional().nullable(),
@@ -465,33 +504,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
             });
         }
         // 3. BULK METADATA RESOLUTION (Sedes)
-        // Recolectar IDs de sedes
-        const sedeIds = new Set();
-        projects.forEach((p) => {
-            if (p.metadata?.sedeId) {
-                sedeIds.add(String(p.metadata.sedeId));
-            }
-        });
-        if (sedeIds.size > 0) {
-            // Convertir a números ya que data.id es Number en el modelo Info
-            const sedeIdsArray = Array.from(sedeIds).map((id) => Number(id));
-            const sedes = await Info.find({
-                type: "sede",
-                "data.id": { $in: sedeIdsArray },
-            }).lean();
-            const sedeMap = new Map();
-            sedes.forEach((s) => sedeMap.set(String(s.data.id), s));
-            projects.forEach((p) => {
-                if (p.metadata?.sedeId) {
-                    const sede = sedeMap.get(String(p.metadata.sedeId));
-                    if (sede) {
-                        if (!p.metadataResolutions)
-                            p.metadataResolutions = {};
-                        p.metadataResolutions.sede = sede;
-                    }
-                }
-            });
-        }
+        await resolverSedes(projects);
         await resolverCentroCostoDeProyectos(projects);
         // 4. BULK METADATA RESOLUTION (Responsables)
         const responsableIds = new Set();
@@ -715,33 +728,8 @@ async (req, res) => {
                 .lean(),
             Project.countDocuments(filter),
         ]);
-        // Bulk Sede Resolution
-        const sedeIds = new Set();
-        projects.forEach((p) => {
-            if (p.metadata?.sedeId) {
-                sedeIds.add(String(p.metadata.sedeId));
-            }
-        });
-        if (sedeIds.size > 0) {
-            // Convertir a números ya que data.id es Number en el modelo Info
-            const sedeIdsArray = Array.from(sedeIds).map((id) => Number(id));
-            const sedes = await Info.find({
-                type: "sede",
-                "data.id": { $in: sedeIdsArray },
-            }).lean();
-            const sedeMap = new Map();
-            sedes.forEach((s) => sedeMap.set(String(s.data.id), s));
-            projects.forEach((p) => {
-                if (p.metadata?.sedeId) {
-                    const sede = sedeMap.get(String(p.metadata.sedeId));
-                    if (sede) {
-                        if (!p.metadataResolutions)
-                            p.metadataResolutions = {};
-                        p.metadataResolutions.sede = sede;
-                    }
-                }
-            });
-        }
+        // Sedes a nombre (todas, y la principal)
+        await resolverSedes(projects);
         // El centro de costo, con el mismo criterio que el listado general (ver el helper).
         await resolverCentroCostoDeProyectos(projects);
         // Bulk People Count (cantidad de personas asignadas al proyecto)
@@ -829,7 +817,9 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
             fechaFin: project.endDate ? project.endDate.toISOString() : "",
             activo: project.status === "active",
             responsableId: data.metadata?.responsableId,
-            sedeId: data.metadata?.sedeId,
+            // Varias sedes; la principal (la primera) también en `sedeId`.
+            sedeId: sedesPedidas(data.metadata)?.sedeId,
+            sedeIds: sedesPedidas(data.metadata)?.sedeIds,
             centroCostoId: data.metadata?.centroCostoId,
         };
         await project.save();
@@ -1003,9 +993,9 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
         // --- Resolución de Metadata ---
         // Son búsquedas independientes entre sí: van en paralelo, no encadenadas.
         if (project.metadata) {
-            const { responsableId, clienteId, sedeId, centroCostoId } = project.metadata;
+            const { responsableId, clienteId, centroCostoId } = project.metadata;
             const externalProjId = project.metadata.id || project.externalId;
-            const [responsable, cliente, sede, centroCosto, userCount] = await Promise.all([
+            const [responsable, cliente, sedes, centroCosto, userCount] = await Promise.all([
                 responsableId
                     ? User.findOne({ tenantId: req.tenantObjectId, "metadata.id": responsableId })
                         .select("firstName lastName email")
@@ -1019,7 +1009,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
                         .select("name email externalId")
                         .lean()
                     : null,
-                sedeId ? Info.findOne({ type: "sede", "data.id": sedeId }).lean() : null,
+                sedesDelProyecto(project.metadata).length > 0 ? Info.find({ type: "sede", "data.id": { $in: sedesDelProyecto(project.metadata) } }).lean() : [],
                 // Sólo el catálogo del ABM, por la misma razón que el listado: ver el comentario de arriba.
                 /*
                   Primero la fila de la empresa que guardó el proyecto: el mismo id es otro código en cada
@@ -1041,8 +1031,14 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
                 resolutions.responsable = responsable;
             if (cliente)
                 resolutions.cliente = cliente;
-            if (sede)
-                resolutions.sede = sede;
+            // En el orden del proyecto: la primera es la principal.
+            const sedesResueltas = sedesDelProyecto(project.metadata)
+                .map((id) => sedes.find((s) => Number(s.data?.id) === id))
+                .filter(Boolean);
+            if (sedesResueltas.length > 0) {
+                resolutions.sede = sedesResueltas[0];
+                resolutions.sedes = sedesResueltas;
+            }
             if (centroCosto)
                 resolutions.centroCosto = centroCosto;
             project.metadataResolutions = resolutions;
@@ -1258,8 +1254,11 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
         if (updateData.metadata) {
             if (updateData.metadata.responsableId !== undefined)
                 currentProject.metadata.responsableId = updateData.metadata.responsableId;
-            if (updateData.metadata.sedeId !== undefined)
-                currentProject.metadata.sedeId = updateData.metadata.sedeId;
+            const pedidas = sedesPedidas(updateData.metadata);
+            if (pedidas) {
+                currentProject.metadata.sedeId = pedidas.sedeId;
+                currentProject.metadata.sedeIds = pedidas.sedeIds;
+            }
             if (updateData.metadata.centroCostoId !== undefined)
                 currentProject.metadata.centroCostoId = updateData.metadata.centroCostoId;
         }

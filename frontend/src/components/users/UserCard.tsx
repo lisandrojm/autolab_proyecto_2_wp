@@ -1,6 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation, faFileInvoice, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation, faFileInvoice, faCircleCheck, faStar } from "@fortawesome/free-solid-svg-icons";
 import { formatCuit } from "../../utils/cuit";
 import { noPoseeCuit } from "../contratos/ConstanciaBulk";
 import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
@@ -13,6 +13,8 @@ import { RoleFrameItem } from "../../api/roleFrames";
 import { Card } from "../ui/Card";
 import { InfoModal } from "../ui/InfoModal";
 import { MOBILE_ACTIVITY_LOGS } from "../../utils/permisosMobile";
+import { ResumenCalificacion } from "../../api/calificaciones";
+import { CalificacionPromedio } from "../calificaciones/Estrellas";
 
 interface UserCardProps {
   user: User;
@@ -41,9 +43,15 @@ interface UserCardProps {
     onClick: () => void;
     className?: string;
   }[];
+  /**
+   * La calificación de la persona (promedio de sus estrellas), debajo de la antigüedad. Sin `onCalificar`
+   * no se dibuja: sólo la lista de Usuarios la muestra. `calificacion` vacía = «Sin calificar».
+   */
+  calificacion?: ResumenCalificacion;
+  onCalificar?: () => void;
 }
 
-export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClients, vacations = [], projectContext, userConfig, userLookup, allRoleFrames = [], onClick, actions, seleccionado, seleccionable = true, motivoNoSeleccionable, onToggleSeleccion }) => {
+export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClients, vacations = [], projectContext, userConfig, userLookup, allRoleFrames = [], onClick, actions, seleccionado, seleccionable = true, motivoNoSeleccionable, onToggleSeleccion, calificacion, onCalificar }) => {
   const [vacationModalOpen, setVacationModalOpen] = React.useState(false);
   const [selectedVacationUser, setSelectedVacationUser] = React.useState<{ id: string; name: string } | null>(null);
 
@@ -410,19 +418,44 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             }, 0) ||
               0);
 
-          if (totalDaysCount === 0 && !user.metadata?.documento) return null;
+          const conAntiguedad = totalDaysCount > 0 || !!user.metadata?.documento;
+          if (!conAntiguedad && !onCalificar) return null;
 
           return (
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                <FontAwesomeIcon icon={faClock} className="text-gray-300" />
-                Antigüedad Total
-              </label>
-              <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
-                {totalDaysCount} {totalDaysCount === 1 ? "día" : "días"}
-              </div>
+            <div className="space-y-3">
+              {conAntiguedad && (
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                    <FontAwesomeIcon icon={faClock} className="text-gray-300" />
+                    Antigüedad Total
+                  </label>
+                  <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
+                    {totalDaysCount} {totalDaysCount === 1 ? "día" : "días"}
+                  </div>
 
-              {totalDaysCount > 0 && <div className="text-[9px] text-gray-400 mt-0.5 ml-1">({totalDaysCount} días en total)</div>}
+                  {totalDaysCount > 0 && <div className="text-[9px] text-gray-400 mt-0.5 ml-1">({totalDaysCount} días en total)</div>}
+                </div>
+              )}
+              {onCalificar && (
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                    <FontAwesomeIcon icon={faStar} className="text-gray-300" />
+                    Calificación
+                  </label>
+                  {/* Tocarla abre sus calificaciones (y calificar), no la ficha. */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCalificar();
+                    }}
+                    title="Ver calificaciones o calificar"
+                    className="-ml-1 rounded px-1 py-0.5 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                  >
+                    <CalificacionPromedio promedio={calificacion?.promedio} cantidad={calificacion?.cantidad} />
+                  </button>
+                </div>
+              )}
             </div>
           );
         })()}

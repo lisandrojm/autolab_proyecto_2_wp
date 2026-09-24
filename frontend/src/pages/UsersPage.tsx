@@ -1000,7 +1000,7 @@ export const UsersPage: React.FC = () => {
         onClose: closeView,
         title: viewUser ? `Detalle: ${viewUser.firstName || ''} ${viewUser.lastName || ''}`.trim() || viewUser.email : 'Detalle de Usuario',
         subtitle: undefined,
-        size: 'md',
+        size: 'lg',
         actions: [
           ...(canManage
             ? [
@@ -1033,30 +1033,30 @@ export const UsersPage: React.FC = () => {
             {/* Tabs Header */}
             <div className="z-20 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm shrink-0">
               <div className="flex">
-                <button type="button" onClick={() => setViewActiveTab('general')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'general' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                <button type="button" onClick={() => setViewActiveTab('general')} className={`flex-1 px-4 py-3.5 text-sm font-bold whitespace-nowrap transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'general' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faUser} className="text-xs" />
                   Personales
                 </button>
-                <button type="button" onClick={() => setViewActiveTab('domicilio')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'domicilio' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                <button type="button" onClick={() => setViewActiveTab('domicilio')} className={`flex-1 px-4 py-3.5 text-sm font-bold whitespace-nowrap transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'domicilio' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
                   Domicilio
                 </button>
-                <button type="button" onClick={() => setViewActiveTab('bancarios')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'bancarios' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                <button type="button" onClick={() => setViewActiveTab('bancarios')} className={`flex-1 px-4 py-3.5 text-sm font-bold whitespace-nowrap transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'bancarios' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                   Bancarios
                   {((viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada) || (viewUser.metadata?.solicitaCambioCuenta && !viewUser.metadata?.cambioCuentaConfirmada)) && <FontAwesomeIcon icon={faBell} className="text-xs text-amber-500 animate-pulse" title="Acción bancaria pendiente" />}
                 </button>
-                <button type="button" onClick={() => setViewActiveTab('sistema')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'sistema' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                <button type="button" onClick={() => setViewActiveTab('sistema')} className={`flex-1 px-4 py-3.5 text-sm font-bold whitespace-nowrap transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'sistema' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faUserShield} className="text-xs" />
                   Sistema
                 </button>
-                <button type="button" onClick={() => setViewActiveTab('proyectos')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'proyectos' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                <button type="button" onClick={() => setViewActiveTab('proyectos')} className={`flex-1 px-4 py-3.5 text-sm font-bold whitespace-nowrap transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'proyectos' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faBriefcase} className="text-xs" />
                   Proyectos
                 </button>
                 {/* Última: las calificaciones de la persona. Una solicitud todavía no es alguien a quien calificar. */}
                 {canManage && !viewUser.metadata?.isSolicitud && (
-                  <button type="button" onClick={() => setViewActiveTab('calificaciones')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'calificaciones' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                  <button type="button" onClick={() => setViewActiveTab('calificaciones')} className={`flex-1 px-4 py-3.5 text-sm font-bold whitespace-nowrap transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'calificaciones' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                     <FontAwesomeIcon icon={faStar} className="text-xs" />
                     Calificaciones
                   </button>
@@ -1064,7 +1064,7 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto px-8 py-7 space-y-6">
               {viewActiveTab === 'general' && (
                 <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
                   <div className="flex justify-between items-start pb-4 border-b border-gray-100 dark:border-gray-800">
@@ -1963,6 +1963,8 @@ export const UsersPage: React.FC = () => {
                     seleccionable={puedeValidarse(user)}
                     motivoNoSeleccionable={user.metadata?.nombreValidadoArcaAt ? 'El nombre ya está validado en ARCA: no hace falta volver a consultarlo' : 'Sin un CUIT válido no se puede consultar el Padrón'}
                     onToggleSeleccion={() => alternarUno(user._id)}
+                    calificacion={calificaciones[user._id]}
+                    onCalificar={canManage && !user.metadata?.isSolicitud ? () => setCalificandoA(user) : undefined}
                     userLookup={userLookup}
                     allRoleFrames={allRoleFrames}
                     actions={

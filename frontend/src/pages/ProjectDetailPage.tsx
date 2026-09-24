@@ -18,6 +18,8 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { InfoModal } from "../components/ui/InfoModal";
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from "../components/CompanyMultiSelect";
+import { SeleccionMultiple } from "../components/ui/SeleccionMultiple";
+import { sedesDelForm, nombresDeSedes } from "../utils/sedesProyecto";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -100,6 +102,7 @@ export const ProjectDetailPage: React.FC = () => {
       centroCostoId: undefined as number | undefined,
       centroCostoEmpresaTangoId: undefined as number | undefined,
       sedeId: undefined as number | undefined,
+      sedeIds: [] as number[],
       responsableId: undefined as number | undefined,
       clienteId: undefined as number | undefined,
     },
@@ -149,6 +152,7 @@ export const ProjectDetailPage: React.FC = () => {
           centroCostoId: data.metadata?.centroCostoId,
           centroCostoEmpresaTangoId: (data.metadata as any)?.centroCostoEmpresaTangoId,
           sedeId: data.metadata?.sedeId,
+          sedeIds: sedesDelForm(data.metadata),
           responsableId: data.metadata?.responsableId,
           clienteId: data.metadata?.clienteId,
         },
@@ -291,6 +295,10 @@ export const ProjectDetailPage: React.FC = () => {
       sweetAlert.error("Datos incompletos", "El coordinador del proyecto es obligatorio");
       return;
     }
+    if (sedesDelForm(projectForm.metadata).length === 0) {
+      sweetAlert.error("Datos incompletos", "Elegí al menos una sede");
+      return;
+    }
 
     try {
       const payload = {
@@ -419,7 +427,7 @@ export const ProjectDetailPage: React.FC = () => {
     return [{ label: "Listo", onClick: closeModal, variant: "primary" as const }];
   };
 
-  const sedeName = project?.metadataResolutions?.sede?.name || project?.metadataResolutions?.sede?.data?.nombre || null;
+  const sedeName = nombresDeSedes(project).join(", ") || null;
 
   return (
     // Sólo el nombre en el título: se llega desde Proyectos y el ícono ya dice qué es.
@@ -528,18 +536,19 @@ export const ProjectDetailPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Sede *</label>
-                    <select
-                      className="input-field py-2.5"
-                      required
-                      value={projectForm.metadata?.sedeId || ""}
-                      onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, sedeId: idOpcional(e.target.value) } }))}
-                    >
-                      <option value="">Seleccionar del sistema...</option>
-                      {availableSedes.map(s => (
-                        <option key={s._id} value={s.data?.id}>{s.name || s.data?.nombre}</option>
-                      ))}
-                    </select>
+                    {/* Varias sedes, como los roles empresa: la primera es la principal (precarga el alta de contratos). */}
+                <SeleccionMultiple
+                  label={<span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede *</span>}
+                  titulo="Sedes"
+                  descripcion="la primera es la principal"
+                  principal="Principal"
+                  placeholder="Elegí una o más sedes…"
+                  placeholderBusqueda="Buscar sede..."
+                  vacio="No hay sedes cargadas."
+                  opciones={availableSedes.filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
+                  valor={sedesDelForm(projectForm.metadata).map(String)}
+                  onChange={(ids) => setProjectForm((p) => ({ ...p, metadata: { ...p.metadata, sedeIds: ids.map(Number), sedeId: ids.length ? Number(ids[0]) : undefined } }))}
+                />
                   </div>
                 </div>
 
@@ -569,31 +578,37 @@ export const ProjectDetailPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   <div>
-                    <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <CompanyMultiSelect
+                  label={
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
                       Empresa del Contrato
                       <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
                         <FontAwesomeIcon icon={faInfoCircle} />
                       </button>
-                    </label>
-                    <CompanyMultiSelect
-                      companies={companies}
+                    </span>
+                  }
+                  titulo="Empresa del Contrato"
+                  companies={companies}
                       value={projectForm.contratoEmpresas}
                       onChange={(ids) => setProjectForm((p) => ({ ...p, contratoEmpresas: ids }))}
-                    />
+                />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <CompanyMultiSelect
+                  label={
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
                       Empresa del Release
                       <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
                         <FontAwesomeIcon icon={faInfoCircle} />
                       </button>
-                    </label>
-                    <CompanyMultiSelect
-                      companies={companies}
+                    </span>
+                  }
+                  titulo="Empresa del Release"
+                  companies={companies}
                       value={projectForm.releaseEmpresas}
                       onChange={(ids) => setProjectForm((p) => ({ ...p, releaseEmpresas: ids }))}
-                    />
+                />
                   </div>
 
                   {/* Los convenios del proyecto cuelgan de la Empresa del Contrato: ver el componente. */}
@@ -953,7 +968,7 @@ export const ProjectDetailPage: React.FC = () => {
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede / Ubicación</span>
                       {(() => {
-                        const val = project.metadataResolutions?.sede?.name || project.metadataResolutions?.sede?.data?.nombre || (project.metadata?.sedeId ? `ID: ${project.metadata.sedeId}` : "");
+                        const val = nombresDeSedes(project).join(", ") || (project.metadata?.sedeId ? `ID: ${project.metadata.sedeId}` : "");
                         return val ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 w-fit">{val}</span>
                         ) : (
@@ -1177,9 +1192,13 @@ export const ProjectDetailPage: React.FC = () => {
                     <FontAwesomeIcon icon={faBuilding} className="text-amber-500/50" />
                     Sede / Ubicación
                   </label>
-                  <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 w-fit">
-                    {project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre}
-                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {nombresDeSedes(project).map((nombre) => (
+                      <span key={nombre} className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 w-fit">
+                        {nombre}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 

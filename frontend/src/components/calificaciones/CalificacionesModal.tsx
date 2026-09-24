@@ -84,11 +84,11 @@ export const CalificacionesPanel: React.FC<PanelProps> = ({ cargar, calificar, o
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>{historial ? <CalificacionPromedio promedio={historial.promedio} cantidad={historial.cantidad} /> : <span className="text-xs text-slate-400">Cargando…</span>}</div>
       {calificar &&
         (formAbierto ? (
-          <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+          <div className="rounded-xl border border-slate-200 p-5 dark:border-slate-700">
             {ayuda && <p className="mb-2 text-center text-xs text-slate-500 dark:text-slate-400">{ayuda}</p>}
             <EstrellasInput valor={estrellas} onChange={setEstrellas} disabled={guardando} />
             <textarea
@@ -129,9 +129,9 @@ export const CalificacionesPanel: React.FC<PanelProps> = ({ cargar, calificar, o
       ) : historial.calificaciones.length === 0 ? (
         <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">Todavía nadie la calificó.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {historial.calificaciones.map((c) => (
-            <li key={c._id} className="rounded-lg border border-slate-100 p-3 dark:border-slate-800">
+            <li key={c._id} className="rounded-xl border border-slate-100 px-5 py-4 dark:border-slate-800">
               <div className="flex items-center justify-between gap-2">
                 <EstrellasVista valor={c.estrellas} className="text-sm" />
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">{fechaYHora(c.createdAt)}</span>
@@ -143,7 +143,7 @@ export const CalificacionesPanel: React.FC<PanelProps> = ({ cargar, calificar, o
                 {c.origen === "fin_contrato" && c.decision ? ` (${c.decision === "renovar" ? "renovó" : "lo dejó vencer"})` : ""}
                 {c.proyectoNombre ? ` · ${c.proyectoNombre}` : ""}
               </p>
-              {c.comentario && <p className="mt-1.5 whitespace-pre-line rounded bg-slate-50 p-2 text-sm text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">{c.comentario}</p>}
+              {c.comentario && <p className="mt-2 whitespace-pre-line rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">{c.comentario}</p>}
             </li>
           ))}
         </ul>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { nombresDeSedes } from "../../../../utils/sedesProyecto";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuilding, faCalendarAlt, faLayerGroup, faMapMarkerAlt, faUserShield, faWallet } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "./Modal";
@@ -85,7 +86,7 @@ export default function ProyectoInfoModal({ isOpen, onClose, proyecto, superviso
   const cliente = typeof proyecto.clientId === "object" ? proyecto.clientId?.name || "" : "";
   const estado = ESTADOS[proyecto.status] || ESTADOS.active;
   const meta: any = proyecto.metadata || {};
-  const sede = proyecto.metadataResolutions?.sede?.name || proyecto.metadataResolutions?.sede?.data?.nombre || (meta.sedeId ? `ID: ${meta.sedeId}` : "");
+  const sede = nombresDeSedes(proyecto).join(", ") || (meta.sedeId ? `ID: ${meta.sedeId}` : "");
   // Sin el catálogo de centros (no se carga en el móvil): lo que resolvió el server, o su id.
   const centroCosto = nombreCentroCosto(proyecto as any);
   const fechaAlta = meta.fechaAlta ? new Date(meta.fechaAlta).toLocaleDateString("es-AR") : "";
