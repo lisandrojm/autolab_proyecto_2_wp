@@ -1,0 +1,2 @@
+# git-ftp 1.6 no escapa los espacios de los nombres: «CRONOS Manual.pdf» rompía el upload (curl: (3)).
+cronos/*
