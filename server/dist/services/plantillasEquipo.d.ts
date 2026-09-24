@@ -15,6 +15,7 @@ export declare function listarPlantillas(tenantId: Types.ObjectId, projectId: st
     inTime: any;
     outTime: any;
     integrantes: any;
+    sinAsignar: any;
     ultimaContratacionEl: any;
 }[]>;
 /** Una plantilla con sus integrantes resueltos a nombre (para el editor). */
@@ -24,7 +25,11 @@ export declare function actualizarPlantilla(tenantId: Types.ObjectId, id: string
 /** Borrar = dar de baja: los lotes ya contratados siguen apuntando a ella. */
 export declare function borrarPlantilla(tenantId: Types.ObjectId, id: string): Promise<void>;
 export declare function duplicarPlantilla(tenantId: Types.ObjectId, creadorId: string, id: string, nombre?: string): Promise<any>;
-/** Suma personas (una o varias). Sin roles, se toman los de su ficha. Nadie dos veces. */
+/**
+ * Suma puestos y/o personas. Cada entrada es un PUESTO: su rol (obligatorio si no hay persona) y, si ya se
+ * sabe, la persona —sin roles, se toman los de su ficha—. `cantidad` repite un puesto sin asignar
+ * («2 cámaras»). Nadie dos veces; los puestos sin asignar sí se repiten.
+ */
 export declare function agregarIntegrantes(tenantId: Types.ObjectId, id: string, nuevos: any[]): Promise<any>;
 /**
  * Cambia lo propio de un integrante. `null` o "" en un campo = volver al valor del equipo. Fijar el importe

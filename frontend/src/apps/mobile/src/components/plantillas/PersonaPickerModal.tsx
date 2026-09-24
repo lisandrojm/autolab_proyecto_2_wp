@@ -33,6 +33,8 @@ interface Props {
   onElegir: (personas: PersonaElegida[]) => void;
   /** Acota la lista al equipo de un proyecto (para elegir a quién se reemplaza). */
   projectId?: string;
+  /** El rol con que arranca el filtro (el del puesto que se está completando). Se puede sacar. */
+  rolInicial?: string;
 }
 
 const nombreDe = (u: any) => (u?.metadata?.fullName || `${u?.firstName || ""} ${u?.lastName || ""}`).trim() || u?.email || "Sin nombre";
@@ -41,7 +43,7 @@ const ddmmaa = (iso: string) => {
   return y && m && d ? `${d}/${m}/${y}` : "—";
 };
 
-export default function PersonaPickerModal({ isOpen, onClose, titulo, multiple = false, excluir = [], roleFrames, onElegir, projectId }: Props) {
+export default function PersonaPickerModal({ isOpen, onClose, titulo, multiple = false, excluir = [], roleFrames, onElegir, projectId, rolInicial }: Props) {
   const [texto, setTexto] = useState("");
   const [rol, setRol] = useState("");
   const [personas, setPersonas] = useState<User[]>([]);
@@ -55,8 +57,8 @@ export default function PersonaPickerModal({ isOpen, onClose, titulo, multiple =
     if (!isOpen) return;
     setElegidas(new Map());
     setTexto("");
-    setRol("");
-  }, [isOpen]);
+    setRol(rolInicial || "");
+  }, [isOpen, rolInicial]);
 
   const buscar = (nuevaPagina: number) => {
     const id = ++pedido.current;

@@ -11,9 +11,11 @@ export interface AreaTurno {
   shiftIds: string[];
 }
 
+/** Un PUESTO del equipo: su rol empresa y, si ya se sabe, la persona (`userId: null` = sin asignar). */
 export interface Integrante {
   _id: string;
-  userId: string;
+  userId: string | null;
+  /** Vacío si el puesto está sin asignar. */
   nombre: string;
   activo: boolean;
   rolesFrame: string[];
@@ -59,14 +61,18 @@ export interface PlantillaResumen {
   inTime: string;
   outTime: string;
   integrantes: number;
+  /** Puestos sin persona: se completan al contratar o se excluyen. */
+  sinAsignar: number;
   ultimaContratacionEl: string | null;
 }
 
 /** Los valores comunes (sin integrantes) que se pueden mandar al crear o editar. */
 export type ComunesPlantilla = Partial<Omit<Plantilla, "_id" | "integrantes" | "ultimaContratacionEl">>;
 
+/** Un puesto nuevo: con persona, o sólo con su rol (y `cantidad` para repetirlo: «2 cámaras»). */
 export interface NuevoIntegrante {
-  userId: string;
+  userId?: string | null;
+  cantidad?: number;
   rolesFrame?: string[];
   categoriaSatId?: string | null;
   inTime?: string | null;
@@ -78,6 +84,8 @@ export interface NuevoIntegrante {
 /** Lo que se pisa SÓLO en esta contratación, por integrante (`_id` del integrante). */
 export interface Puntual {
   excluido?: boolean;
+  /** Para un puesto sin asignar: quién lo ocupa en esta contratación. */
+  userId?: string;
   categoriaSatId?: string;
   inTime?: string;
   outTime?: string;

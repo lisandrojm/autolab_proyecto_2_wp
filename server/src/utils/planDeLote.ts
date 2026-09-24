@@ -38,6 +38,7 @@ export interface PlantillaParaPlan {
   comentarios?: string;
 }
 
+/** Un puesto de la plantilla: un rol y, si ya se sabe, la persona (`userId` vacío = sin asignar). */
 export interface IntegranteParaPlan {
   _id: string;
   userId: string;
@@ -64,6 +65,8 @@ export interface FechasDeContratacion {
 /** Lo que se pisa SÓLO en esta contratación, sin tocar la plantilla. */
 export interface Puntual {
   excluido?: boolean;
+  /** Para un puesto SIN ASIGNAR: quién lo ocupa en esta contratación (la plantilla no cambia). */
+  userId?: string;
   categoriaSatId?: string;
   inTime?: string;
   outTime?: string;
@@ -149,10 +152,20 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
   const limiteHoras = ctx.contrato?.horasPorJornada ?? null;
   const areaTurnoElegido = plantilla.areaShiftAssignments.some((a) => a.areaId && a.shiftIds.length > 0);
 
-  const filas: FilaDelPlan[] = integrantes.map((integ) => {
-    const p = puntuales[integ._id] || {};
-    const persona = ctx.personas.get(integ.userId);
-    const nombre = persona?.nombre || "Persona no encontrada";
+  // La persona de cada puesto: la de la plantilla o, si está sin asignar, la elegida para esta vez.
+  const personaDelPuesto = (integ: IntegranteParaPlan) => integ.userId || puntuales[integ._id]?.userId || "";
+  const veces = new Map<string, number>();
+  for (const integ of integrantes) {
+    const uid = personaDelPuesto(integ);
+    if (uid && !puntuales[integ._id]?.excluido) veces.set(uid, (veces.get(uid) || 0) + 1);
+  }
+
+  const filas: FilaDelPlan[] = integrantes.map((original) => {
+    const p = puntuales[original._id] || {};
+    const integ = { ...original, userId: personaDelPuesto(original) };
+    const sinPersona = !integ.userId;
+    const persona = sinPersona ? undefined : ctx.personas.get(integ.userId);
+    const nombre = sinPersona ? "Puesto sin asignar" : persona?.nombre || "Persona no encontrada";
     const errores: string[] = [];
     const advertencias: string[] = [];
 
@@ -198,10 +211,12 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 ? dailyRate : null, mesesEq, jornadas, diasSemana: diasPorSemana });
 
     // ── Las reglas del formulario individual ──
-    if (!persona) errores.push("La persona no existe (se borró).");
+    if (sinPersona) errores.push("Falta la persona del puesto: elegila o excluí el puesto.");
+    else if (!persona) errores.push("La persona no existe (se borró).");
     else if (persona.esSolicitud) errores.push("No es una persona registrada: es una solicitud de alta.");
     else if (!persona.activo) errores.push("La persona está inactiva.");
     if (integ.rolesFrame.length === 0) errores.push("Falta el rol empresa.");
+    if (!sinPersona && (veces.get(integ.userId) || 0) > 1) errores.push("La misma persona está en más de un puesto.");
     if (!esServicios && !categoriaSatId) errores.push("Falta la categoría (a completar).");
     if (!areaTurnoElegido) errores.push("La plantilla no tiene área y turno.");
     if (!plantilla.contratoId && ctx.hayContratos) errores.push("La plantilla no tiene tipo de contrato.");

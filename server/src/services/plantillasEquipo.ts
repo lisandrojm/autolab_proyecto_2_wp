@@ -101,6 +101,7 @@ export async function listarPlantillas(tenantId: Types.ObjectId, projectId: stri
     inTime: p.inTime,
     outTime: p.outTime,
     integrantes: (p.integrantes || []).length,
+    sinAsignar: (p.integrantes || []).filter((i: any) => !i.userId).length,
     ultimaContratacionEl: p.ultimaContratacionEl || null,
   }));
 }
@@ -108,7 +109,7 @@ export async function listarPlantillas(tenantId: Types.ObjectId, projectId: stri
 /** Una plantilla con sus integrantes resueltos a nombre (para el editor). */
 export async function obtenerPlantilla(tenantId: Types.ObjectId, id: string) {
   const p: any = (await cargar(tenantId, id)).toObject();
-  const userIds = [...(p.integrantes || []).map((i: any) => i.userId), ...(p.integrantes || []).map((i: any) => i.reemplazadoDePersonaId).filter(Boolean)];
+  const userIds = [...(p.integrantes || []).map((i: any) => i.userId), ...(p.integrantes || []).map((i: any) => i.reemplazadoDePersonaId)].filter(Boolean);
   const personas: any[] = userIds.length ? await User.find({ _id: { $in: userIds }, tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.isSolicitud").lean() : [];
   const persona = new Map(personas.map((u) => [String(u._id), u]));
   return {
@@ -119,9 +120,10 @@ export async function obtenerPlantilla(tenantId: Types.ObjectId, id: string) {
       .map((i: any) => ({
         ...i,
         _id: String(i._id),
-        userId: String(i.userId),
-        nombre: persona.has(String(i.userId)) ? nombreDe(persona.get(String(i.userId))) : "Persona no encontrada",
-        activo: persona.get(String(i.userId))?.metadata?.activo !== false && !!persona.get(String(i.userId)),
+        // `null` = puesto sin asignar: se completa en el editor (para siempre) o al contratar (esa vez).
+        userId: i.userId ? String(i.userId) : null,
+        nombre: !i.userId ? "" : persona.has(String(i.userId)) ? nombreDe(persona.get(String(i.userId))) : "Persona no encontrada",
+        activo: !i.userId || (persona.get(String(i.userId))?.metadata?.activo !== false && !!persona.get(String(i.userId))),
         rolesFrame: (i.rolesFrame || []).map(String),
         reemplazadoDeNombre: i.reemplazadoDePersonaId ? nombreDe(persona.get(String(i.reemplazadoDePersonaId))) : "",
       })),
@@ -200,26 +202,36 @@ async function escalaDe(plantilla: any, categoriaSatId: any): Promise<number | n
   return cat ? importePorJornada(cat.data?.neto, contrato?.data?.multiplicadorDiario) : null;
 }
 
-/** Suma personas (una o varias). Sin roles, se toman los de su ficha. Nadie dos veces. */
+/**
+ * Suma puestos y/o personas. Cada entrada es un PUESTO: su rol (obligatorio si no hay persona) y, si ya se
+ * sabe, la persona —sin roles, se toman los de su ficha—. `cantidad` repite un puesto sin asignar
+ * («2 cámaras»). Nadie dos veces; los puestos sin asignar sí se repiten.
+ */
 export async function agregarIntegrantes(tenantId: Types.ObjectId, id: string, nuevos: any[]) {
   const p = await cargar(tenantId, id);
-  const ya = new Set(p.integrantes.map((i) => String(i.userId)));
-  const pedidos = (Array.isArray(nuevos) ? nuevos : []).filter((n) => idOk(n?.userId));
-  const repetidos = pedidos.filter((n) => ya.has(String(n.userId)));
+  const ya = new Set(p.integrantes.filter((i) => i.userId).map((i) => String(i.userId)));
+  const entradas = (Array.isArray(nuevos) ? nuevos : []).flatMap((n: any) => {
+    if (idOk(n?.userId)) return [n];
+    const veces = Math.min(Math.max(1, Math.floor(Number(n?.cantidad) || 1)), MAX_INTEGRANTES_POR_LOTE);
+    return Array.from({ length: veces }, () => ({ ...n, userId: null }));
+  });
+  const conPersona = entradas.filter((n) => n.userId);
+  const repetidos = conPersona.filter((n) => ya.has(String(n.userId)));
   if (repetidos.length) throw new ErrorPlantilla(409, repetidos.length === 1 ? "Esa persona ya está en la plantilla." : `${repetidos.length} de esas personas ya están en la plantilla.`);
-  if (new Set(pedidos.map((n) => String(n.userId))).size !== pedidos.length) throw new ErrorPlantilla(400, "Hay una persona repetida en lo que se quiere agregar.");
-  if (p.integrantes.length + pedidos.length > MAX_INTEGRANTES_POR_LOTE) throw new ErrorPlantilla(400, `Una plantilla admite hasta ${MAX_INTEGRANTES_POR_LOTE} personas.`);
-  const personas: any[] = await User.find({ _id: { $in: pedidos.map((n) => oid(n.userId)) }, tenantId }).select("metadata.roles_frame metadata.isSolicitud").lean();
+  if (new Set(conPersona.map((n) => String(n.userId))).size !== conPersona.length) throw new ErrorPlantilla(400, "Hay una persona repetida en lo que se quiere agregar.");
+  if (entradas.some((n) => !n.userId && !(Array.isArray(n.rolesFrame) && n.rolesFrame.some(idOk)))) throw new ErrorPlantilla(400, "Un puesto sin persona necesita su rol empresa.");
+  if (p.integrantes.length + entradas.length > MAX_INTEGRANTES_POR_LOTE) throw new ErrorPlantilla(400, `Una plantilla admite hasta ${MAX_INTEGRANTES_POR_LOTE} puestos.`);
+  const personas: any[] = conPersona.length ? await User.find({ _id: { $in: conPersona.map((n) => oid(n.userId)) }, tenantId }).select("metadata.roles_frame metadata.isSolicitud").lean() : [];
   const persona = new Map(personas.map((u) => [String(u._id), u]));
   let orden = p.integrantes.reduce((m, i) => Math.max(m, i.orden ?? 0), -1);
-  for (const n of pedidos) {
-    const u = persona.get(String(n.userId));
-    if (!u || u.metadata?.isSolicitud) throw new ErrorPlantilla(400, "Sólo se pueden agregar personas registradas.");
-    const roles = (Array.isArray(n.rolesFrame) && n.rolesFrame.length ? n.rolesFrame : u.metadata?.roles_frame || []).filter(idOk).map(oid);
+  for (const n of entradas) {
+    const u = n.userId ? persona.get(String(n.userId)) : null;
+    if (n.userId && (!u || u.metadata?.isSolicitud)) throw new ErrorPlantilla(400, "Sólo se pueden agregar personas registradas.");
+    const roles = (Array.isArray(n.rolesFrame) && n.rolesFrame.length ? n.rolesFrame : u?.metadata?.roles_frame || []).filter(idOk).map(oid);
     const categoriaSatId = idOk(n.categoriaSatId) ? oid(n.categoriaSatId) : null;
     const dailyRateManual = Number(n.dailyRateManual) > 0 ? Number(n.dailyRateManual) : null;
     p.integrantes.push({
-      userId: oid(n.userId),
+      userId: n.userId ? oid(n.userId) : null,
       rolesFrame: roles,
       orden: ++orden,
       categoriaSatId,
@@ -260,6 +272,11 @@ export async function actualizarIntegrante(tenantId: Types.ObjectId, id: string,
     i.escalaAlFijar = monto ? await escalaDe(p, i.categoriaSatId) : null;
   }
   if (body.comentarios !== undefined) i.comentarios = body.comentarios ? str(body.comentarios).trim().slice(0, 1000) : null;
+  // Dejar el puesto sin asignar (la persona sale; el puesto, con su rol y lo propio, queda).
+  if (body.userId === null) {
+    if (!i.rolesFrame?.length) throw new ErrorPlantilla(400, "Un puesto sin persona necesita su rol empresa.");
+    i.userId = null;
+  }
   if (body.orden !== undefined && Number.isFinite(Number(body.orden))) i.orden = Number(body.orden);
   p.markModified("integrantes");
   await p.save();
@@ -284,12 +301,15 @@ export async function reemplazarIntegrante(tenantId: Types.ObjectId, id: string,
   const i: any = p.integrantes.find((x) => String(x._id) === String(integranteId));
   if (!i) throw new ErrorPlantilla(404, "Ese integrante ya no está en la plantilla.");
   if (!idOk(nuevoUserId)) throw new ErrorPlantilla(400, "Elegí a la persona que entra.");
-  if (String(i.userId) === String(nuevoUserId)) throw new ErrorPlantilla(400, "Es la misma persona.");
-  if (p.integrantes.some((x) => String(x.userId) === String(nuevoUserId))) throw new ErrorPlantilla(409, "Esa persona ya está en la plantilla.");
+  if (i.userId && String(i.userId) === String(nuevoUserId)) throw new ErrorPlantilla(400, "Es la misma persona.");
+  if (p.integrantes.some((x) => x.userId && String(x.userId) === String(nuevoUserId))) throw new ErrorPlantilla(409, "Esa persona ya está en la plantilla.");
   const u: any = await User.findOne({ _id: oid(nuevoUserId), tenantId }).select("metadata.isSolicitud").lean();
   if (!u || u.metadata?.isSolicitud) throw new ErrorPlantilla(400, "Sólo se pueden agregar personas registradas.");
-  i.reemplazadoDePersonaId = i.userId;
-  i.reemplazadoEl = new Date();
+  // Un puesto sin asignar se ASIGNA (no reemplaza a nadie); uno ocupado cambia de persona y queda anotado.
+  if (i.userId) {
+    i.reemplazadoDePersonaId = i.userId;
+    i.reemplazadoEl = new Date();
+  }
   i.userId = oid(nuevoUserId);
   p.markModified("integrantes");
   await p.save();
@@ -311,6 +331,7 @@ function leerContratacion(body: any): { fechas: FechasDeContratacion; puntuales:
     const x: any = v || {};
     puntuales[k] = {
       excluido: !!x.excluido,
+      userId: idOk(x.userId) ? String(x.userId) : undefined,
       categoriaSatId: idOk(x.categoriaSatId) ? String(x.categoriaSatId) : undefined,
       inTime: esHora(x.inTime) ? x.inTime : undefined,
       outTime: esHora(x.outTime) ? x.outTime : undefined,
@@ -347,7 +368,7 @@ function paraPlan(p: any): { plantilla: PlantillaParaPlan; integrantes: Integran
       .sort((a: any, b: any) => (a.orden ?? 0) - (b.orden ?? 0))
       .map((i: any) => ({
         _id: String(i._id),
-        userId: String(i.userId),
+        userId: i.userId ? String(i.userId) : "",
         rolesFrame: (i.rolesFrame || []).map(String),
         categoriaSatId: s(i.categoriaSatId) || null,
         inTime: i.inTime || null,
@@ -369,7 +390,7 @@ async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: Integra
     p.convenioId ? Convenio.findById(p.convenioId).select("externalId").lean() : null,
     Convenio.exists({}),
     categoriaIds.length ? CategoriaSat.find({ _id: { $in: categoriaIds } }).select("name data.neto data.convenio").lean() : [],
-    integrantes.length ? User.find({ _id: { $in: integrantes.map((i) => oid(i.userId)) }, tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.isSolicitud").lean() : [],
+    User.find({ _id: { $in: [...integrantes.map((i) => i.userId), ...Object.values(puntuales).map((x) => x.userId)].filter(idOk).map(oid) }, tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.isSolicitud").lean(),
     User.find({ tenantId, projectIds: oid(p.projectId) }).select("_id").lean(),
     RequestConfig.find({ tenantId, isActive: true }).select("name").lean(),
   ]);

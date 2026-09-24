@@ -16,14 +16,19 @@ import mongoose, { Schema, Types } from "mongoose";
  *    alguien fijó a mano el importe de un integrante (`dailyRateManual`), la escala que regía en ese
  *    momento (`escalaAlFijar`): si después cambió, la contratación lo avisa («antes X, ahora Y»).
  *
+ * CADA INTEGRANTE ES UN PUESTO: un rol empresa (Director, Cámara, Microfonista…) y, si ya se sabe, la
+ * persona que lo ocupa. El equipo se arma primero por roles —«1 director, 2 cámaras, 1 sonido»— y la
+ * gente se asigna después; un puesto sin persona se completa al contratar (sólo esa vez) o se excluye.
+ *
  * Los integrantes van EMBEBIDOS (decisión D1 del plan): una plantilla se lee y se escribe entera, sus
  * integrantes no existen fuera de ella y el orden es el del array. Una persona no puede estar dos
- * veces: lo controla el servicio (un índice único no alcanza dentro de un array).
+ * veces (los puestos sin asignar sí pueden repetirse): lo controla el servicio.
  */
 
 export interface IIntegrantePlantilla {
   _id: Types.ObjectId;
-  userId: Types.ObjectId;
+  /** La persona del puesto. `null` = puesto sin asignar. */
+  userId: Types.ObjectId | null;
   rolesFrame: Types.ObjectId[];
   orden: number;
   // Lo propio de esta persona. `null`/ausente = usa el valor de la plantilla.
@@ -67,7 +72,7 @@ export interface IPlantillaEquipo {
 }
 
 const integranteSchema = new Schema<IIntegrantePlantilla>({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
   rolesFrame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
   orden: { type: Number, default: 0 },
   categoriaSatId: { type: Schema.Types.ObjectId, ref: "CategoriaSat", default: null },

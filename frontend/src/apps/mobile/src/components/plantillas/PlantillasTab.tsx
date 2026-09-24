@@ -125,7 +125,8 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
               <div className="min-w-0">
                 <h4 className="truncate font-bold text-slate-900 dark:text-slate-100">{p.nombre}</h4>
                 <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {p.integrantes} {p.integrantes === 1 ? "integrante" : "integrantes"} · {p.nombreContrato || "Sin tipo de contrato"}
+                  {p.integrantes} {p.integrantes === 1 ? "puesto" : "puestos"}
+                  {p.sinAsignar > 0 && <span className="font-semibold text-amber-600 dark:text-amber-400"> ({p.sinAsignar} sin asignar)</span>} · {p.nombreContrato || "Sin tipo de contrato"}
                 </p>
                 <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                   {turnoDe(p)} · {p.inTime || "—"} a {p.outTime || "—"}

@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 const integranteSchema = new Schema({
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     rolesFrame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
     orden: { type: Number, default: 0 },
     categoriaSatId: { type: Schema.Types.ObjectId, ref: "CategoriaSat", default: null },

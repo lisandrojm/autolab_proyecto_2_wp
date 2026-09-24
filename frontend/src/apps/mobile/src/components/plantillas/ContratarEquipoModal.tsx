@@ -48,6 +48,9 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
   const [preview, setPreview] = useState<Preview | null>(null);
   const [calculando, setCalculando] = useState(false);
   const [aQuienReemplaza, setAQuienReemplaza] = useState<string | null>(null);
+  /** El puesto sin asignar al que se le está eligiendo persona (sólo esta vez). */
+  const [completandoPuesto, setCompletandoPuesto] = useState<string | null>(null);
+  const [nombresElegidos, setNombresElegidos] = useState<Record<string, string>>({});
   const [nombresReemplazados, setNombresReemplazados] = useState<Record<string, string>>({});
   const clave = useRef(nuevaClave());
   const areas = useAreasDelProyecto(isOpen ? proyecto?._id : null);
@@ -62,6 +65,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
     setAbierto(null);
     setPreview(null);
     setNombresReemplazados({});
+    setNombresElegidos({});
     clave.current = nuevaClave();
   }, [isOpen, plantilla?._id]);
 
@@ -110,6 +114,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
   const pisar = (id: string, x: Partial<Puntual>) => setPuntuales((p) => ({ ...p, [id]: { ...p[id], ...x } }));
   const conErrores = (preview?.filas || []).filter((f) => !f.excluido && f.errores.length > 0);
   const nombreMotivo = (id?: string) => catalogos.motivos.find((m) => m._id === id)?.name || "";
+  const nombreRol = (ids: string[]) => ids.map((r) => catalogos.roleFrames.find((x) => x._id === r)?.name).filter(Boolean).join(", ") || "Sin rol";
 
   if (!plantilla) return null;
 
@@ -237,8 +242,10 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
         <div className="space-y-2">
           <h4 className="text-sm font-bold text-slate-900 dark:text-white">Integrantes</h4>
           {!hayFechas && <p className="text-[11px] text-slate-500">Elegí las fechas para ver cuánto sale cada uno.</p>}
-          {plantilla.integrantes.map((i) => {
+          {plantilla.integrantes.map((i, n) => {
             const p = puntuales[i._id] || {};
+            const vacante = !i.userId;
+            const nombrePersona = vacante ? (p.userId ? nombresElegidos[i._id] || "Elegida" : "") : i.nombre;
             const f = filaDe(i._id);
             const excluido = !!p.excluido;
             const estado = excluido ? "excluido" : !f ? "sin" : f.errores.length ? "error" : f.advertencias.length ? "aviso" : "ok";
@@ -250,11 +257,13 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
             return (
               <div key={i._id} id={`integrante-${i._id}`} className={`rounded-xl border bg-white dark:bg-slate-900/60 ${estado === "error" ? "border-red-400 dark:border-red-800" : estado === "aviso" ? (f?.superposicionHorario ? "border-red-300 dark:border-red-900/60" : "border-amber-300 dark:border-amber-800/60") : "border-slate-200 dark:border-slate-700"} ${excluido ? "opacity-50" : ""}`}>
                 <div className="flex items-center gap-3 p-3">
-                  <input type="checkbox" checked={!excluido} onChange={(e) => pisar(i._id, { excluido: !e.target.checked })} className="h-5 w-5 shrink-0 rounded" aria-label={`Incluir a ${i.nombre}`} />
+                  <input type="checkbox" checked={!excluido} onChange={(e) => pisar(i._id, { excluido: !e.target.checked })} className="h-5 w-5 shrink-0 rounded" aria-label={`Incluir el puesto ${n + 1}`} />
                   <button type="button" onClick={() => setAbierto(abiertoAca ? null : i._id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{i.nombre}</span>
+                        <span className="text-xs font-bold text-slate-400">{n + 1}.</span>
+                        <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{nombreRol(i.rolesFrame)}</span>
+                        {nombrePersona ? <span className="truncate text-xs text-slate-600 dark:text-slate-300">· {nombrePersona}</span> : <Badge tono="ambar">Sin asignar</Badge>}
                         {pisado && !excluido && <Badge tono="azul">Sólo esta vez</Badge>}
                         {p.isReplacement && !excluido && <Badge tono="ambar">Reemplazo</Badge>}
                       </div>
@@ -283,6 +292,15 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {vacante && !excluido && (
+                  <div className="mx-3 mb-2 flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                    <span>{p.userId ? `Esta vez lo ocupa ${nombrePersona}.` : "Puesto sin asignar: elegí quién lo ocupa esta vez, o destildalo."}</span>
+                    <button type="button" onClick={() => setCompletandoPuesto(i._id)} className="shrink-0 rounded-lg bg-amber-500 px-2.5 py-1 font-bold text-white">
+                      {p.userId ? "Cambiar" : "Elegí quién"}
+                    </button>
+                  </div>
                 )}
 
                 {sugerirCubre && !excluido && (
@@ -376,6 +394,26 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
         </div>
       </div>
 
+      <PersonaPickerModal
+        isOpen={!!completandoPuesto}
+        onClose={() => setCompletandoPuesto(null)}
+        titulo={(() => {
+          const i = plantilla.integrantes.find((x) => x._id === completandoPuesto);
+          return i ? `¿Quién ocupa el puesto de ${nombreRol(i.rolesFrame)}?` : "";
+        })()}
+        rolInicial={(() => {
+          const i = plantilla.integrantes.find((x) => x._id === completandoPuesto);
+          return i ? catalogos.roleFrames.find((r) => r._id === i.rolesFrame[0])?.name : undefined;
+        })()}
+        excluir={[...(plantilla.integrantes.map((x) => x.userId).filter(Boolean) as string[]), ...Object.entries(puntuales).filter(([k, v]) => k !== completandoPuesto && v.userId).map(([, v]) => v.userId!)]}
+        roleFrames={catalogos.roleFrames}
+        onElegir={(ps) => {
+          const id = completandoPuesto;
+          if (!id || !ps[0]) return;
+          pisar(id, { userId: ps[0]._id });
+          setNombresElegidos((n) => ({ ...n, [id]: ps[0].nombre }));
+        }}
+      />
       <PersonaPickerModal
         isOpen={!!aQuienReemplaza}
         onClose={() => setAQuienReemplaza(null)}

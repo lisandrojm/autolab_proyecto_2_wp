@@ -87,8 +87,8 @@ export default function IntegranteModal({ isOpen, onClose, plantilla, proyecto, 
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={integrante.nombre}
-      subtitle="Lo que tenga distinto al resto del equipo"
+      title={integrante.nombre || `Puesto: ${integrante.rolesFrame.map((r) => catalogos.roleFrames.find((x) => x._id === r)?.name).filter(Boolean).join(", ") || "sin rol"}`}
+      subtitle={integrante.userId ? "Lo que tenga distinto al resto del equipo" : "Puesto sin asignar: la persona se elige después"}
       size="lg"
       zIndex={80}
       footer={

@@ -39,6 +39,7 @@ export interface PlantillaParaPlan {
     diasRotativos: boolean;
     comentarios?: string;
 }
+/** Un puesto de la plantilla: un rol y, si ya se sabe, la persona (`userId` vacío = sin asignar). */
 export interface IntegranteParaPlan {
     _id: string;
     userId: string;
@@ -63,6 +64,8 @@ export interface FechasDeContratacion {
 /** Lo que se pisa SÓLO en esta contratación, sin tocar la plantilla. */
 export interface Puntual {
     excluido?: boolean;
+    /** Para un puesto SIN ASIGNAR: quién lo ocupa en esta contratación (la plantilla no cambia). */
+    userId?: string;
     categoriaSatId?: string;
     inTime?: string;
     outTime?: string;

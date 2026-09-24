@@ -207,3 +207,23 @@ test("bulk == individual: la fila del lote produce el mismo payload que el formu
     }, { ahora: T });
     assert.deepStrictEqual(delLote, delFormulario);
 });
+test("puesto sin asignar: error hasta que se elige a alguien (sólo esta vez) o se excluye", () => {
+    const puesto = integ("P", { userId: "" });
+    const vacio = planDeLote(plantilla, [integ("1"), puesto], SEPT, {}, ctx());
+    assert.ok(vacio.filas[1].errores.some((e) => /Falta la persona del puesto/.test(e)));
+    assert.equal(vacio.filas[1].nombre, "Puesto sin asignar");
+    assert.equal(vacio.filas[1].datos, null);
+    const completado = planDeLote(plantilla, [integ("1"), puesto], SEPT, { iP: { userId: "u2" } }, ctx());
+    assert.deepEqual(completado.filas[1].errores, []);
+    assert.equal(completado.filas[1].nombre, "Beto Dos");
+    assert.equal(completado.filas[1].datos.solicitudUserId, "u2");
+    assert.equal(completado.totales.personas, 2);
+    const excluido = planDeLote(plantilla, [integ("1"), puesto], SEPT, { iP: { excluido: true } }, ctx());
+    assert.deepEqual(excluido.filas[1].errores, []);
+    assert.equal(excluido.totales.personas, 1);
+});
+test("la misma persona en dos puestos: error en los dos", () => {
+    const { filas } = planDeLote(plantilla, [integ("1"), integ("P", { userId: "" })], SEPT, { iP: { userId: "u1" } }, ctx());
+    assert.ok(filas[0].errores.some((e) => /más de un puesto/.test(e)));
+    assert.ok(filas[1].errores.some((e) => /más de un puesto/.test(e)));
+});

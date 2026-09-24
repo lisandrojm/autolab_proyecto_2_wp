@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faPen, faPlus, faRightLeft, faSpinner, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faPen, faPlus, faRightLeft, faSpinner, faTrash, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../Modal";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { Integrante, Plantilla, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
@@ -9,6 +9,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./useCatalogosContratacion";
 import PersonaPickerModal from "./PersonaPickerModal";
 import IntegranteModal from "./IntegranteModal";
+import PuestosModal from "./PuestosModal";
 import { Badge, CLASE_CAMPO, CLASE_HORA, DIAS, Rotulo, textoDias } from "./comun";
 
 /*
@@ -57,6 +58,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
   const [guardando, setGuardando] = useState(false);
   const [sucio, setSucio] = useState(false);
   const [agregando, setAgregando] = useState(false);
+  const [agregandoPuestos, setAgregandoPuestos] = useState(false);
   const [reemplazando, setReemplazando] = useState<Integrante | null>(null);
   const [editando, setEditando] = useState<Integrante | null>(null);
   const areas = useAreasDelProyecto(isOpen ? proyecto?._id : null);
@@ -182,7 +184,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
   };
 
   const quitar = async (i: Integrante) => {
-    const r: any = await sweetAlert.confirm("¿Sacar de la plantilla?", `${i.nombre} deja de estar en «${plantilla?.nombre}». Las solicitudes ya pedidas no cambian.`, "Sacar", "Cancelar");
+    const r: any = await sweetAlert.confirm("¿Sacar el puesto?", `${i.nombre ? `${i.nombre} y su puesto dejan` : "El puesto deja"} de estar en «${plantilla?.nombre}». Las solicitudes ya pedidas no cambian.`, "Sacar", "Cancelar");
     if (!(r === true || r?.isConfirmed)) return;
     await conPlantilla((p) => plantillasEquipoAPI.quitarIntegrante(p._id, i._id));
   };
@@ -360,78 +362,108 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
             </div>
           </section>
 
-          {/* ── INTEGRANTES ── */}
+          {/* ── PUESTOS ── */}
           <section className="space-y-3 border-t border-slate-200 pt-5 dark:border-slate-700">
             <div className="flex items-center justify-between gap-2">
               <h4 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
                 <FontAwesomeIcon icon={faUsers} className="text-blue-500" />
-                Integrantes {plantilla ? `(${plantilla.integrantes.length})` : ""}
+                Puestos {plantilla ? `(${plantilla.integrantes.length})` : ""}
               </h4>
-              <button type="button" onClick={() => setAgregando(true)} disabled={!plantilla && !c.nombre.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
-                <FontAwesomeIcon icon={faPlus} />
-                Agregar
-              </button>
+              <div className="flex gap-1.5">
+                <button type="button" onClick={() => setAgregandoPuestos(true)} disabled={!plantilla && !c.nombre.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+                  <FontAwesomeIcon icon={faPlus} />
+                  Por rol
+                </button>
+                <button type="button" onClick={() => setAgregando(true)} disabled={!plantilla && !c.nombre.trim()} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 px-3 py-2 text-xs font-bold text-blue-600 disabled:opacity-40 dark:text-blue-400">
+                  <FontAwesomeIcon icon={faUserPlus} />
+                  Personas
+                </button>
+              </div>
             </div>
-            {!plantilla && <p className="text-[11px] text-slate-500">Al agregar la primera persona se crea la plantilla con estos valores.</p>}
-            {plantilla && plantilla.integrantes.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay nadie. Con «Agregar» sumás a varias personas de una vez.</p>}
-            {plantilla?.integrantes.map((i) => {
+            {!plantilla && <p className="text-[11px] text-slate-500">Al agregar el primer puesto se crea la plantilla con estos valores.</p>}
+            {plantilla && plantilla.integrantes.length === 0 && (
+              <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+                Armá el equipo por roles («Por rol»: 1 director, 2 cámaras, 1 microfonista…) y asigná a la gente después, o agregá directamente a las personas.
+              </p>
+            )}
+            {plantilla?.integrantes.map((i, n) => {
               const personalizado = !!(i.inTime || i.outTime || i.dailyRateManual || i.comentarios);
               const catOk = categoriaValida(i);
+              const rol = i.rolesFrame.map((r) => nombreRol.get(r) || "Rol").join(", ") || "Sin rol";
+              const vacante = !i.userId;
               return (
-                <div key={i._id} className={`rounded-xl border p-3 ${!i.activo || !catOk ? "border-red-300 dark:border-red-900/60" : "border-slate-200 dark:border-slate-700"} bg-white dark:bg-slate-900/60`}>
+                <div key={i._id} className={`rounded-xl border p-3 ${!i.activo || (!catOk && i.categoriaSatId) ? "border-red-300 dark:border-red-900/60" : vacante ? "border-dashed border-amber-400 dark:border-amber-700" : "border-slate-200 dark:border-slate-700"} bg-white dark:bg-slate-900/60`}>
                   <div className="flex items-start justify-between gap-2">
                     <button type="button" onClick={() => setEditando(i)} className="min-w-0 flex-1 text-left">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{i.nombre}</span>
+                        <span className="text-xs font-bold text-slate-400">{n + 1}.</span>
+                        <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{rol}</span>
                         {personalizado && <Badge tono="azul">Personalizado</Badge>}
                         {!i.activo && <Badge tono="rojo">Inactiva</Badge>}
-                        {!catOk && <Badge tono="rojo">Categoría a completar</Badge>}
+                        {!catOk && i.categoriaSatId && <Badge tono="rojo">Categoría a completar</Badge>}
                       </div>
-                      <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {i.rolesFrame.map((r) => nombreRol.get(r) || "Rol").join(", ") || "Sin rol"}
-                        {!esServicios && ` · ${i.categoriaSatId ? nombreCategoria.get(i.categoriaSatId) || "Categoría" : "Sin categoría"}`}
-                      </p>
+                      <p className={`mt-0.5 truncate text-xs ${vacante ? "font-semibold text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-200"}`}>{vacante ? "Sin asignar" : i.nombre}</p>
                       <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                        {!esServicios && `${i.categoriaSatId ? nombreCategoria.get(i.categoriaSatId) || "Categoría" : "Sin categoría"} · `}
                         {(i.inTime || c.inTime || "—") + " a " + (i.outTime || c.outTime || "—")}
                         {i.dailyRateManual ? ` · $ ${i.dailyRateManual.toLocaleString("es-AR")} fijado` : ""}
                       </p>
                       {i.reemplazadoDeNombre && <p className="text-[10px] text-slate-400">Entró en lugar de {i.reemplazadoDeNombre}</p>}
                     </button>
                     <div className="flex shrink-0 gap-1">
-                      <button type="button" onClick={() => setEditando(i)} aria-label={`Editar a ${i.nombre}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
+                      <button type="button" onClick={() => setEditando(i)} aria-label={`Editar el puesto ${n + 1}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
                         <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
                       </button>
-                      <button type="button" onClick={() => setReemplazando(i)} aria-label={`Reemplazar a ${i.nombre}`} title="Reemplazar por otra persona" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
-                        <FontAwesomeIcon icon={faRightLeft} className="h-3 w-3" />
+                      <button
+                        type="button"
+                        onClick={() => setReemplazando(i)}
+                        aria-label={vacante ? `Asignar persona al puesto ${n + 1}` : `Cambiar a ${i.nombre}`}
+                        title={vacante ? "Asignar persona" : "Cambiar por otra persona"}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg ${vacante ? "bg-amber-500 text-white" : "border border-slate-200 text-slate-500 dark:border-slate-700"}`}
+                      >
+                        <FontAwesomeIcon icon={vacante ? faUserPlus : faRightLeft} className="h-3 w-3" />
                       </button>
-                      <button type="button" onClick={() => void quitar(i)} aria-label={`Sacar a ${i.nombre}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-red-500 dark:border-slate-700">
+                      <button type="button" onClick={() => void quitar(i)} aria-label={`Sacar el puesto ${n + 1}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-red-500 dark:border-slate-700">
                         <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
+                  {!vacante && (
+                    <button type="button" onClick={() => void conPlantilla((p) => plantillasEquipoAPI.actualizarIntegrante(p._id, i._id, { userId: null }))} className="mt-1 text-[11px] font-semibold text-slate-400 hover:text-slate-600">
+                      Dejar el puesto sin asignar
+                    </button>
+                  )}
                 </div>
               );
             })}
+            {plantilla && plantilla.integrantes.some((i) => !i.userId) && <p className="text-[11px] text-amber-600 dark:text-amber-400">Los puestos sin asignar se completan acá (para siempre) o al contratar (sólo esa vez).</p>}
             {plantilla && plantilla.integrantes.length > 0 && <p className="text-[11px] text-slate-500">Días del equipo: {porDiasSueltos ? "se eligen al contratar" : textoDias(c.diasSemana)}.</p>}
           </section>
         </div>
       )}
 
+      <PuestosModal
+        isOpen={agregandoPuestos}
+        onClose={() => setAgregandoPuestos(false)}
+        roleFrames={catalogos.roleFrames}
+        onAgregar={(puestos) => void conPlantilla((p) => plantillasEquipoAPI.agregarIntegrantes(p._id, puestos.map((x) => ({ userId: null, rolesFrame: [x.rolId], cantidad: x.cantidad }))))}
+      />
       <PersonaPickerModal
         isOpen={agregando}
         onClose={() => setAgregando(false)}
-        titulo="Agregar al equipo"
+        titulo="Agregar personas al equipo"
         multiple
-        excluir={plantilla?.integrantes.map((i) => i.userId) || []}
+        excluir={(plantilla?.integrantes.map((i) => i.userId).filter(Boolean) as string[]) || []}
         roleFrames={catalogos.roleFrames}
         onElegir={(ps) => void conPlantilla((p) => plantillasEquipoAPI.agregarIntegrantes(p._id, ps.map((x) => ({ userId: x._id, rolesFrame: x.rolesFrame }))))}
       />
       <PersonaPickerModal
         isOpen={!!reemplazando}
         onClose={() => setReemplazando(null)}
-        titulo={reemplazando ? `¿Quién entra en lugar de ${reemplazando.nombre}?` : ""}
-        excluir={plantilla?.integrantes.map((i) => i.userId) || []}
+        titulo={reemplazando ? (reemplazando.userId ? `¿Quién entra en lugar de ${reemplazando.nombre}?` : `¿Quién ocupa el puesto de ${reemplazando.rolesFrame.map((r) => nombreRol.get(r)).filter(Boolean).join(", ") || "este rol"}?`) : ""}
+        excluir={(plantilla?.integrantes.map((i) => i.userId).filter(Boolean) as string[]) || []}
         roleFrames={catalogos.roleFrames}
+        rolInicial={reemplazando ? nombreRol.get(reemplazando.rolesFrame[0]) : undefined}
         onElegir={(ps) => {
           const i = reemplazando;
           if (!i || !ps[0]) return;
