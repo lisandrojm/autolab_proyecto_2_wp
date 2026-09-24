@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark } from '@fortawesome/free-solid-svg-icons';
 import { usePermisoInactivo } from '../stores/permisosInactivosStore';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
@@ -153,7 +153,7 @@ const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empr
  * «Clientes»: acá el orden es el dato —dice qué va antes y qué después—, y alfabético quedaría
  * Contratos, Documentos, Solicitudes, que es el ciclo contado al revés.
  */
-const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/documents'];
+const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/admin/contratos-sin-dias', '/documents'];
 /**
  * Subgrupo «Usuarios» de Configuración, con Roles adentro.
  *
@@ -430,6 +430,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_valoraciones:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/valoraciones', icon: faRankingStar, label: 'Valoraciones', scope: 'global' });
       if (hasPermission('admin_sedes:view')) base.push({ permiso: 'admin_sedes:view', path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
       if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global', pendientes: pendientes.contratos });
+      // Los vigentes que no dicen qué días se trabaja (casi todos vienen de FRAME): se completan ahí.
+      if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contratos-sin-dias', icon: faCalendarXmark, label: 'Sin días', scope: 'global' });
       // Solicitudes va pegada a Contratos porque son los dos extremos del mismo ciclo: lo que se
       // pidió y lo que ya se contrató. Comparte permiso con Usuarios —una solicitud es un alta de
       // usuario, no un contrato— igual que el endpoint que la alimenta.
