@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { sumarAlConteo } from "../services/conteoUsuariosTenant.js";
+import { faltaDefinirDias } from "../compartido/diasDeTrabajo.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { z } from "zod";
 import multer from "multer";
@@ -1868,6 +1869,17 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     const veredicto = await revisarValoracion({ valoracionProyecto: project.valoracionId, rolFrameId: contract.rol_frame_id, categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
     if (veredicto.rechazo) return res.status(422).json(veredicto.rechazo);
     Object.assign(contract, veredicto.aGuardar(req.user!.userId));
+
+    /*
+      ── UN CONTRATO DICE QUÉ DÍAS TRABAJA ──
+
+      El wizard ya no deja guardar sin los días (`faltaDefinirDias`); esto es para que tampoco se pueda
+      saltear llamando al API. Sin los días no se puede saber si un contrato se superpone con otro (ver
+      `utils/superposicionContratos.ts`) ni si un feriado le cae en día laborable. Misma regla que el
+      front, desde `compartido/diasDeTrabajo.ts`. Los contratos que llegan de FRAME no pasan por acá.
+    */
+    const faltanDias = faltaDefinirDias(Number(contract.dias_por_semana) || 0, !!contract.dias_rotativos, Array.isArray(contract.dias_semana) ? contract.dias_semana.map(Number) : []);
+    if (faltanDias) return res.status(422).json({ error: `Faltan los días que trabaja: ${faltanDias}.` });
 
     // --- Validation: Check for overlapping shifts in OTHER projects only ---
     // Sanitize optional reference IDs (empty string -> null) to avoid BSON casting errors

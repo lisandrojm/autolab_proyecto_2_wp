@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import UserProject from "../models/UserProject.js";
 import { User } from "../models/User.js";
 import { Project } from "../models/Project.js";
+import { Shift } from "../models/Shift.js";
 // El `populate("clientId")` necesita el modelo registrado; no se depende de que otro archivo lo haya cargado.
 import "../models/Client.js";
 import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
@@ -59,6 +60,21 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
     const proyectoIds = [...asignaciones.map((a) => a.projectId), ...pendientes.flatMap((p) => p.metadata?.projectIds || [])].filter((id) => id && Types.ObjectId.isValid(String(id)));
     const proyectos = proyectoIds.length ? await Project.find({ _id: { $in: proyectoIds } }).select("name clientId").populate("clientId", "name").lean() : [];
     const nombreDe = new Map(proyectos.map((p) => [String(p._id), p.clientId?.name ? `${p.clientId.name} | ${p.name}` : p.name]));
+    /*
+      CONTRATOS SIN DÍAS PERO CON TURNO: se usan los días del turno. Casi todos los contratos que vienen de
+      FRAME no traen días de la semana (FRAME no los manda); los que tienen turno asignado igual dicen qué
+      días trabaja la persona. Sin días ni turno, la regla lo trata como «podría pisarse» y lo dice.
+    */
+    const turnosSinDias = [
+        ...new Set(asignaciones.flatMap((a) => (a.contracts || []).filter((c) => !(Array.isArray(c.dias_semana) && c.dias_semana.length)).flatMap((c) => idsDeTurno(c.areaShiftAssignments, c.shiftId)))),
+    ].filter((id) => Types.ObjectId.isValid(id));
+    const turnos = turnosSinDias.length ? await Shift.find({ _id: { $in: turnosSinDias } }).select("days").lean() : [];
+    const diasDelTurno = new Map(turnos.map((t) => [String(t._id), (t.days || []).map(Number)]));
+    const diasDe = (c) => {
+        if (Array.isArray(c.dias_semana) && c.dias_semana.length)
+            return c.dias_semana.map(Number);
+        return [...new Set(idsDeTurno(c.areaShiftAssignments, c.shiftId).flatMap((id) => diasDelTurno.get(id) || []))].sort();
+    };
     const compromisos = [];
     for (const a of asignaciones) {
         for (const c of a.contracts || []) {
@@ -70,7 +86,7 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
                 proyectoNombre: nombreDe.get(String(a.projectId)) || a.nombre_proyecto || "",
                 desde,
                 hasta: fechaISO(c.fecha_baja_contrato),
-                dias: Array.isArray(c.dias_semana) ? c.dias_semana.map(Number) : [],
+                dias: diasDe(c),
                 rotativos: !!c.dias_rotativos,
                 inTime: c.hora_inicio || "",
                 outTime: c.hora_fin || "",
