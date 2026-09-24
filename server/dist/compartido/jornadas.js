@@ -94,6 +94,21 @@ export const jornadasDelCalendario = (desde, hasta, dias) => {
     }
     return jornadas;
 };
+/**
+ * LAS JORNADAS QUE DA EL CALENDARIO, según cómo se pide el contrato:
+ *  - por DÍAS SUELTOS («Jornada»): los días marcados, uno por jornada. NO los días de la semana que
+ *    caen en el período: «el martes 1 y el martes 15» son 2 jornadas, aunque entre los dos haya otro
+ *    martes (así se contaba antes, y la solicitud salía con 3).
+ *  - con días ROTATIVOS: no hay patrón del cual deducirlas (`null`: se cargan a mano).
+ *  - por PERÍODO: los días de la semana marcados que caen en él (`jornadasDelCalendario`).
+ */
+export const jornadasCalculadasDelPedido = (p) => {
+    if (p.porDiasSueltos)
+        return p.fechas.length > 0 ? new Set(p.fechas).size : null;
+    if (p.rotativos)
+        return null;
+    return jornadasDelCalendario(p.desde, p.hasta, p.dias);
+};
 /** Hay diferencia real entre lo cargado a mano y el calendario. Sin diferencia no hay nada que justificar. */
 export const hayAjuste = (d) => !d.rotativos && d.ajustado && d.calculadas !== null && d.jornadas !== "" && Number(d.jornadas) !== d.calculadas;
 /** Qué impide enviar. Vacío = se puede. */

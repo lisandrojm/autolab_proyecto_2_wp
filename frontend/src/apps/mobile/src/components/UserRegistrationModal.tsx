@@ -5,7 +5,7 @@ import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt,
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
-import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
+import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
 import { armarPayloadDeSolicitud } from "@compartido/solicitudDeContratacion";
 import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSuperposicion";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
@@ -1606,9 +1606,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     // `porDiasSueltos` queda afuera: ahí las fechas las fija el calendario, y limpiarlas sería pelearle.
     if (indeterminado && !porDiasSueltos && formData.dueDate) setFormData((p) => ({ ...p, dueDate: "" }));
   }, [indeterminado, porDiasSueltos, formData.dueDate]);
+  // Con días sueltos son los días marcados (antes se contaban los días de la semana del período, y
+  // «martes 1 y martes 15» salía con 3): regla compartida con el alta masiva, en `jornadas.ts`.
   const jornadasCalculadas = useMemo(
-    () => (formData.diasRotativos ? null : jornadasDelCalendario(periodo.desde, periodo.hasta, formData.diasSemana)),
-    [formData.diasRotativos, periodo, formData.diasSemana],
+    () => jornadasCalculadasDelPedido({ porDiasSueltos, fechas: formData.fechasTrabajadas, rotativos: formData.diasRotativos, desde: periodo.desde, hasta: periodo.hasta, dias: formData.diasSemana }),
+    [porDiasSueltos, formData.fechasTrabajadas, formData.diasRotativos, periodo, formData.diasSemana],
   );
 
   /*

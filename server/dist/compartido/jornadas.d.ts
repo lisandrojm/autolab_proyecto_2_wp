@@ -55,6 +55,22 @@ export declare const diasCorridos: (desde?: string, hasta?: string) => number | 
  * feriados: para eso está el ajuste con motivo. `null` si no hay período válido o no hay días marcados.
  */
 export declare const jornadasDelCalendario: (desde: string | undefined, hasta: string | undefined, dias: number[]) => number | null;
+/**
+ * LAS JORNADAS QUE DA EL CALENDARIO, según cómo se pide el contrato:
+ *  - por DÍAS SUELTOS («Jornada»): los días marcados, uno por jornada. NO los días de la semana que
+ *    caen en el período: «el martes 1 y el martes 15» son 2 jornadas, aunque entre los dos haya otro
+ *    martes (así se contaba antes, y la solicitud salía con 3).
+ *  - con días ROTATIVOS: no hay patrón del cual deducirlas (`null`: se cargan a mano).
+ *  - por PERÍODO: los días de la semana marcados que caen en él (`jornadasDelCalendario`).
+ */
+export declare const jornadasCalculadasDelPedido: (p: {
+    porDiasSueltos: boolean;
+    fechas: string[];
+    rotativos: boolean;
+    desde: string;
+    hasta: string;
+    dias: number[];
+}) => number | null;
 export interface DatosJornadas {
     desde: string;
     hasta: string;

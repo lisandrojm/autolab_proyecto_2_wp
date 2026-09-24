@@ -12,7 +12,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { anclaDesdeJornada, derivarImportes, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
+import { anclaDesdeJornada, derivarImportes, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
 const LU_VI = [1, 2, 3, 4, 5];
 const cerca = (a, b) => assert.ok(a !== null && Math.abs(a - b) < 1e-9, `${a} ≠ ${b}`);
 test("diasCorridos: ambos extremos inclusive; null si falta una fecha o el fin es anterior", () => {
@@ -122,4 +122,11 @@ test("importePorJornada: neto ÷ 30 × multiplicador del tipo de contrato (sin m
     // Redondea a centavos DESPUÉS de multiplicar.
     assert.equal(importePorJornada(1176624.4, 1.5), 58831.22);
     assert.equal(importePorJornada(undefined, 1.5), 0);
+});
+test("jornadasCalculadasDelPedido: por días sueltos son los días marcados, no los de la semana del período", () => {
+    // Martes 1 y martes 15: dos jornadas, aunque el período (1 al 15) tenga tres martes.
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: true, fechas: ["2026-09-01", "2026-09-15"], rotativos: false, desde: "2026-09-01", hasta: "2026-09-15", dias: [2] }), 2);
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: true, fechas: [], rotativos: false, desde: "", hasta: "", dias: [] }), null);
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "2026-09-01", hasta: "2026-09-30", dias: [1, 2, 3, 4, 5] }), null);
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-09-01", hasta: "2026-09-30", dias: [1, 2, 3, 4, 5] }), 22);
 });
