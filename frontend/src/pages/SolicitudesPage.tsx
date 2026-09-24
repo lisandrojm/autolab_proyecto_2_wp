@@ -11,6 +11,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
+import { CalificacionesModal } from "../components/calificaciones/CalificacionesModal";
+import { calificacionesAPI } from "../api/calificaciones";
 // La pantalla del equipo, montada en modo «sólo aprobación»: de ahí sale el wizard de contratación.
 import { ProjectTeamPage } from "./ProjectTeamPage";
 
@@ -41,6 +43,8 @@ export const SolicitudesPage: React.FC = () => {
   const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number } } | null>(null);
   /** La solicitud que se está revisando: el detalle completo, antes de decidir. */
   const [revisando, setRevisando] = useState<SolicitudVista | null>(null);
+  /** La persona de una renovación que se está calificando (desde el detalle). */
+  const [calificando, setCalificando] = useState<{ solicitudId: string; userId: string; nombre: string } | null>(null);
   const ayuda = getHelp(CLAVE_AYUDA);
 
   const [rows, setRows] = useState<SolicitudOverviewRow[]>([]);
@@ -288,7 +292,27 @@ export const SolicitudesPage: React.FC = () => {
           />
 
           {/* Revisar acá; aprobar sigue llevando al equipo del proyecto, que es donde se carga el contrato. */}
-          <SolicitudDetalleModal isOpen={!!revisando} onClose={() => setRevisando(null)} solicitud={revisando} catalogos={catalogos} proyectos={revisando?.proyectos} onAprobar={irAAprobar} onRechazar={pedirMotivoYRechazar} />
+          <SolicitudDetalleModal
+            isOpen={!!revisando}
+            onClose={() => setRevisando(null)}
+            solicitud={revisando}
+            catalogos={catalogos}
+            proyectos={revisando?.proyectos}
+            onAprobar={irAAprobar}
+            onRechazar={pedirMotivoYRechazar}
+            onCalificar={(s, userId) => setCalificando({ solicitudId: s._id, userId, nombre: s.nombre })}
+          />
+
+          {/* Calificar a la persona de una renovación, con su historial a la vista: ayuda a decidir. */}
+          <CalificacionesModal
+            isOpen={!!calificando}
+            onClose={() => setCalificando(null)}
+            nombre={calificando?.nombre || ""}
+            ayuda="Cómo fue su actuación en el contrato que se renueva."
+            empezarCalificando
+            cargar={() => calificacionesAPI.historial(calificando!.userId)}
+            calificar={(c) => calificacionesAPI.calificar(calificando!.userId, c, "solicitud_renovacion", calificando!.solicitudId)}
+          />
 
           {/*
             EL WIZARD DE CONTRATACIÓN, ARRIBA DE ESTA PANTALLA.

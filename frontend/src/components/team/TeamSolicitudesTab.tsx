@@ -6,6 +6,8 @@ import { Project } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { SolicitudVista, SolicitudesTable, solicitudDesdeUser, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../solicitudes/SolicitudDetalleModal";
+import { CalificacionesModal } from "../calificaciones/CalificacionesModal";
+import { calificacionesAPI } from "../../api/calificaciones";
 
 interface TeamSolicitudesTabProps {
   projectId: string;
@@ -32,6 +34,8 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
   const [searchTerm, setSearchTerm] = useState("");
   /** La solicitud que se está revisando: se decide desde su detalle, no desde la fila. */
   const [revisando, setRevisando] = useState<SolicitudVista | null>(null);
+  /** La persona de una renovación que se está calificando (desde el detalle). */
+  const [calificando, setCalificando] = useState<{ solicitudId: string; userId: string; nombre: string } | null>(null);
   const catalogos = useCatalogosDeSolicitudes();
 
   const fetchSolicitudes = async () => {
@@ -178,7 +182,16 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
         />
       )}
 
-      <SolicitudDetalleModal isOpen={!!revisando} onClose={() => setRevisando(null)} solicitud={revisando} catalogos={catalogos} proyectos={project ? [{ _id: String(project._id), name: project.name }] : []} onAprobar={aprobar} onRechazar={pedirMotivoYRechazar} />
+      <SolicitudDetalleModal isOpen={!!revisando} onClose={() => setRevisando(null)} solicitud={revisando} catalogos={catalogos} proyectos={project ? [{ _id: String(project._id), name: project.name }] : []} onAprobar={aprobar} onRechazar={pedirMotivoYRechazar} onCalificar={(sol, userId) => setCalificando({ solicitudId: sol._id, userId, nombre: sol.nombre })} />
+      <CalificacionesModal
+        isOpen={!!calificando}
+        onClose={() => setCalificando(null)}
+        nombre={calificando?.nombre || ""}
+        ayuda="Cómo fue su actuación en el contrato que se renueva."
+        empezarCalificando
+        cargar={() => calificacionesAPI.historial(calificando!.userId)}
+        calificar={(c) => calificacionesAPI.calificar(calificando!.userId, c, "solicitud_renovacion", calificando!.solicitudId)}
+      />
     </div>
   );
 };

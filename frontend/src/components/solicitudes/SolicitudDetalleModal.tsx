@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faCommentDots, faTriangleExclamation , faPenToSquare , faRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faCommentDots, faTriangleExclamation , faPenToSquare , faRotateLeft, faStar } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { usersAPI, User } from "../../api/users";
 import { companiesAPI, Company } from "../../api/companies";
@@ -94,9 +94,14 @@ interface Props {
   onEditar?: (s: SolicitudVista) => void;
   onCancelar?: (s: SolicitudVista) => void;
   cancelando?: boolean;
+  /**
+   * Calificar a la persona de una RENOVACIÓN (el escritorio): quien decide si se renueva es quien mejor
+   * sabe cómo trabajó. Recibe el id de la persona, no el de la solicitud.
+   */
+  onCalificar?: (s: SolicitudVista, userId: string) => void;
 }
 
-export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solicitud, catalogos, proyectos, solicitudCompleta, onAprobar, onRechazar, onEditar, onCancelar, cancelando }) => {
+export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solicitud, catalogos, proyectos, solicitudCompleta, onAprobar, onRechazar, onEditar, onCancelar, cancelando, onCalificar }) => {
   const [detalle, setDetalle] = useState<User | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -294,6 +299,12 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
             <button onClick={onClose} className="px-3 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
               Cerrar
             </button>
+            {onCalificar && solicitud && m.esRenovacion && m.solicitudUserId && (
+              <button onClick={() => onCalificar(solicitud, String(m.solicitudUserId))} className="px-3 py-2 text-sm font-semibold rounded-lg border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-2">
+                <FontAwesomeIcon icon={faStar} className="text-[11px]" />
+                Calificar
+              </button>
+            )}
             {/* Lo de quien la pidió: corregirla o darla de baja, sólo mientras nadie la decidió. */}
             {puedeDecidir && onCancelar && solicitud && (
               <button onClick={() => onCancelar(solicitud)} disabled={cancelando} className="px-3 py-2 text-sm font-medium rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">

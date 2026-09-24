@@ -26,7 +26,7 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faCheck, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup, faFileSignature } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faCheck, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup, faFileSignature, faStar } from '@fortawesome/free-solid-svg-icons';
 import { RichTextViewer } from '../components/ui/RichTextEditor';
 import { terminosCondicionesAPI } from '../api/terminosCondiciones';
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -36,6 +36,9 @@ import { cachedFetch, invalidateRefCache } from '../utils/refCache';
 import { formatCuit } from '../utils/cuit';
 import { cargaNovedades, MOBILE_ACTIVITY_LOGS } from '../utils/permisosMobile';
 import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
+import { calificacionesAPI, ResumenCalificacion } from '../api/calificaciones';
+import { CalificacionesModal } from '../components/calificaciones/CalificacionesModal';
+import { CalificacionPromedio } from '../components/calificaciones/Estrellas';
 
 const HELP_KEY = 'users' as const;
 
@@ -208,6 +211,25 @@ export const UsersPage: React.FC = () => {
   };
 
   const canManage = hasPermission('admin_users:view');
+
+  /*
+    CALIFICACIONES: el promedio de las personas de la página (una llamada por página) y a quién se está
+    calificando. Desde acá se califica en cualquier momento, por el motivo que sea.
+  */
+  const [calificaciones, setCalificaciones] = useState<Record<string, ResumenCalificacion>>({});
+  const [calificandoA, setCalificandoA] = useState<User | null>(null);
+  const cargarCalificaciones = (lista: User[]) => {
+    if (!canManage) return;
+    calificacionesAPI
+      .resumen(lista.map((u) => u._id))
+      .then(setCalificaciones)
+      .catch(() => {});
+  };
+  useEffect(() => {
+    cargarCalificaciones(users);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users]);
+  const nombreDeUsuario = (u: User) => (u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : u.email.split('@')[0]);
 
   // Para descartar respuestas viejas
   const requestIdRef = useRef(0);
@@ -1956,6 +1978,19 @@ export const UsersPage: React.FC = () => {
                               },
                               title: 'Password',
                             },
+                            ...(!user.metadata?.isSolicitud
+                              ? [
+                                  {
+                                    icon: faStar,
+                                    onClick: (e: any) => {
+                                      e.stopPropagation();
+                                      setCalificandoA(user);
+                                    },
+                                    title: calificaciones[user._id] ? `Calificación ${calificaciones[user._id].promedio.toFixed(1)} · Calificar` : 'Calificar',
+                                    className: 'text-amber-500',
+                                  },
+                                ]
+                              : []),
                             ...(!user.isSystem
                               ? [
                                   {
@@ -2006,6 +2041,7 @@ export const UsersPage: React.FC = () => {
                       {/* `hidden lg:table-cell`: la tabla ya venía con siete columnas, y en pantallas
                           chicas esta es la primera que sobra — el dato completo sigue en la ficha. */}
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell" title="Sindicato al que está afiliada la persona">Sindicato</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell" title="Promedio de sus calificaciones (1 a 5 estrellas). Click para verlas o calificar.">Calificación</th>
                       <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
                     </tr>
@@ -2182,6 +2218,16 @@ export const UsersPage: React.FC = () => {
                             );
                           })()}
                         </td>
+                        <td className="py-4 px-6 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
+                          {/* Las solicitudes no son personas todavía: se califica a la persona, no al pedido. */}
+                          {user.metadata?.isSolicitud ? (
+                            <span className="text-gray-400 dark:text-gray-600">—</span>
+                          ) : (
+                            <button type="button" onClick={() => setCalificandoA(user)} title="Ver calificaciones o calificar" className="rounded px-1 py-0.5 hover:bg-amber-50 dark:hover:bg-amber-900/20">
+                              <CalificacionPromedio promedio={calificaciones[user._id]?.promedio} cantidad={calificaciones[user._id]?.cantidad} />
+                            </button>
+                          )}
+                        </td>
                         <td className="py-4 px-6">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{user.metadata?.activo ? 'Activo' : 'Inactivo'}</span>
@@ -2334,6 +2380,15 @@ export const UsersPage: React.FC = () => {
       />
 
       {/* Links de registro y quiénes se registraron con ellos. Ver el componente. */}
+      <CalificacionesModal
+        isOpen={!!calificandoA}
+        onClose={() => setCalificandoA(null)}
+        nombre={calificandoA ? nombreDeUsuario(calificandoA) : ''}
+        ayuda="Calificá su actuación por algún motivo en especial."
+        cargar={() => calificacionesAPI.historial(calificandoA!._id)}
+        calificar={(c) => calificacionesAPI.calificar(calificandoA!._id, c, 'usuarios')}
+        onCalificada={() => cargarCalificaciones(users)}
+      />
       <RegistroModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} clientId={clientId} onAbrirUsuario={openEdit} />
     </PageLayout>
   );

@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import { NuevaCalificacion } from "./calificaciones";
 
 /**
  * Un contrato vigente que termina en los próximos 7 días, para decidir si se renueva o se deja vencer.
@@ -49,8 +50,13 @@ export const contratosPorVencerAPI = {
     return Number(data?.count) || 0;
   },
 
-  /** No se renueva: sale de la lista y el contrato termina en su fecha. */
-  async dejarVencer(userProjectId: string, fechaBajaContrato: string): Promise<void> {
-    await axios.post(`/contratos-por-vencer/dejar-vencer`, { userProjectId, fechaBajaContrato });
+  /** No se renueva: sale de la lista y el contrato termina en su fecha. Se decide calificando a la persona. */
+  async dejarVencer(userProjectId: string, fechaBajaContrato: string, calificacion: NuevaCalificacion): Promise<void> {
+    await axios.post(`/contratos-por-vencer/dejar-vencer`, { userProjectId, fechaBajaContrato, ...calificacion });
+  },
+
+  /** La calificación al renovar: va antes de abrir el formulario de la renovación. */
+  async calificar(userProjectId: string, fechaBajaContrato: string, calificacion: NuevaCalificacion): Promise<void> {
+    await axios.post(`/contratos-por-vencer/calificar`, { userProjectId, fechaBajaContrato, ...calificacion });
   },
 };

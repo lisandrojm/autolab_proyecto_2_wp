@@ -21,6 +21,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import AvisoNovedades from "../components/AvisoNovedades";
 import { useNovedades } from "../hooks/useNovedades";
 import { NOVEDADES_CONTRATACION } from "../../../../api/personnel";
+import { CalificarModal } from "../../../../components/calificaciones/CalificarModal";
+import { NuevaCalificacion } from "../../../../api/calificaciones";
 
 /*
   CÓMO SE MUESTRA EL ESTADO DE UNA SOLICITUD.
@@ -129,22 +131,35 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   };
   const textoVence = (dias: number) => (dias <= 0 ? "Vence hoy" : dias === 1 ? "Vence mañana" : `Vence en ${dias} días`);
 
-  const renovar = (c: ContratoPorVencer) => {
-    setEditingUser(null);
-    setRenovacion({ plantilla: c.plantilla, userProjectId: c.userProjectId, fechaBajaContrato: c.fechaBaja });
-    setShowRegistrationModal(true);
-  };
+  /*
+    DECIDIR ES CALIFICAR: tanto Renovar como Dejar vencer piden primero calificar la actuación de la
+    persona en ese contrato (estrellas obligatorias, comentario opcional). El modal ES la confirmación:
+    con «Dejar vencer» se guardan juntas la decisión y la calificación; con «Renovar» se guarda la
+    calificación y recién ahí se abre el formulario de la renovación.
+  */
+  const [calificando, setCalificando] = useState<{ contrato: ContratoPorVencer; decision: "renovar" | "dejar_vencer" } | null>(null);
 
-  const dejarVencer = async (c: ContratoPorVencer) => {
-    const r: any = await sweetAlert.confirm("¿Dejar vencer el contrato?", `El contrato de ${c.nombre} en ${c.proyectoNombre} termina el ${fechaCorta(c.fechaBaja)} y no se renueva. Sale de esta lista.`, "Dejar vencer", "Cancelar");
-    if (!(r === true || r?.isConfirmed)) return;
+  const renovar = (c: ContratoPorVencer) => setCalificando({ contrato: c, decision: "renovar" });
+  const dejarVencer = (c: ContratoPorVencer) => setCalificando({ contrato: c, decision: "dejar_vencer" });
+
+  /** Tira error para que el modal quede abierto y lo muestre. */
+  const confirmarCalificacion = async (calificacion: NuevaCalificacion) => {
+    if (!calificando) return;
+    const { contrato: c, decision } = calificando;
+    if (decision === "renovar") {
+      await contratosPorVencerAPI.calificar(c.userProjectId, c.fechaBaja, calificacion);
+      setCalificando(null);
+      setEditingUser(null);
+      setRenovacion({ plantilla: c.plantilla, userProjectId: c.userProjectId, fechaBajaContrato: c.fechaBaja });
+      setShowRegistrationModal(true);
+      return;
+    }
     setProcesando(claveDe(c));
     try {
-      await contratosPorVencerAPI.dejarVencer(c.userProjectId, c.fechaBaja);
+      await contratosPorVencerAPI.dejarVencer(c.userProjectId, c.fechaBaja, calificacion);
+      setCalificando(null);
       setPorVencer((prev) => (prev || []).filter((x) => claveDe(x) !== claveDe(c)));
       sweetAlert.success("Listo", "El contrato va a terminar en su fecha.");
-    } catch (e: any) {
-      sweetAlert.error("No se pudo guardar", e?.response?.data?.error || "Probá de nuevo en un momento.");
     } finally {
       setProcesando(null);
     }
@@ -565,6 +580,23 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         </button>
       </div>
 
+
+      <CalificarModal
+        isOpen={!!calificando}
+        onClose={() => setCalificando(null)}
+        titulo={calificando?.decision === "renovar" ? "Calificar y renovar" : "Calificar y dejar vencer"}
+        nombre={calificando?.contrato.nombre || ""}
+        detalle={
+          calificando
+            ? calificando.decision === "renovar"
+              ? `Después se abre la renovación del contrato en ${calificando.contrato.proyectoNombre}.`
+              : `El contrato en ${calificando.contrato.proyectoNombre} termina el ${fechaCorta(calificando.contrato.fechaBaja)} y no se renueva. Sale de esta lista.`
+            : undefined
+        }
+        textoConfirmar={calificando?.decision === "renovar" ? "Seguir con la renovación" : "Dejar vencer"}
+        peligro={calificando?.decision === "dejar_vencer"}
+        onConfirmar={confirmarCalificacion}
+      />
 
       <UserRegistrationModal
         isOpen={showRegistrationModal}

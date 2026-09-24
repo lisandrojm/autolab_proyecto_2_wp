@@ -11,6 +11,9 @@ import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects"
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
+import { calificacionesAPI, ResumenCalificacion } from "../../../../api/calificaciones";
+import { CalificacionesModal } from "../../../../components/calificaciones/CalificacionesModal";
+import { EstrellasVista } from "../../../../components/calificaciones/Estrellas";
 
 interface MyTeamsProps {
   onNavigate: (view: ViewType) => void;
@@ -99,6 +102,12 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   const [contratoDe, setContratoDe] = useState<{ userId: string; nombre: string } | null>(null);
   /** La ficha del proyecto (cliente, sede, centro de costo, empresas): la misma que el escritorio. */
   const [verInfoProyecto, setVerInfoProyecto] = useState(false);
+  /*
+    CALIFICACIONES: el promedio de cada persona del proyecto (una sola llamada) y a quién se está
+    calificando. Desde acá se suma una calificación extra por una buena o mala actitud.
+  */
+  const [calificaciones, setCalificaciones] = useState<Record<string, ResumenCalificacion>>({});
+  const [calificandoA, setCalificandoA] = useState<{ userId: string; nombre: string } | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -203,6 +212,12 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       .getProjectMembersStatus(proyectoId)
       .then((ms) => !cancelado && setPersonas(ms))
       .catch(() => !cancelado && setPersonas([]));
+    // Sin calificaciones la pantalla sigue andando: las estrellas son un dato más, no el equipo.
+    setCalificaciones({});
+    calificacionesAPI
+      .resumenEquipo(proyectoId)
+      .then((r) => !cancelado && setCalificaciones(r))
+      .catch(() => {});
     return () => {
       cancelado = true;
     };
@@ -330,6 +345,25 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 active:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:active:bg-slate-800"
         >
           <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
+        </button>
+      )}
+      {/* Sus estrellas, y tocarlas es calificar. A uno mismo no se lo califica. */}
+      {!misIds.has(String(m._id)) && (
+        <button
+          type="button"
+          onClick={() => setCalificandoA({ userId: m._id, nombre: nombreDe(m) })}
+          title="Calificaciones"
+          aria-label={`Calificar a ${nombreDe(m)}`}
+          className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold text-slate-600 active:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:active:bg-slate-800"
+        >
+          {calificaciones[m._id] ? (
+            <>
+              <EstrellasVista valor={calificaciones[m._id].promedio} className="text-[9px]" />
+              {calificaciones[m._id].promedio.toFixed(1)}
+            </>
+          ) : (
+            <EstrellasVista valor={0} className="text-[9px]" />
+          )}
         </button>
       )}
       <div className="flex shrink-0 flex-col items-end gap-1">
@@ -583,6 +617,21 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
           </>
         )}
       </div>
+
+      <CalificacionesModal
+        isOpen={!!calificandoA && !!equipo}
+        onClose={() => setCalificandoA(null)}
+        nombre={calificandoA?.nombre || ""}
+        ayuda="Una calificación extra, por una buena o mala actitud."
+        cargar={() => calificacionesAPI.historialEquipo(equipo!.proyecto._id, calificandoA!.userId)}
+        calificar={(c) => calificacionesAPI.calificarEquipo(equipo!.proyecto._id, calificandoA!.userId, c)}
+        onCalificada={() =>
+          calificacionesAPI
+            .resumenEquipo(proyectoId)
+            .then(setCalificaciones)
+            .catch(() => {})
+        }
+      />
 
       <ContratoMiembroModal isOpen={!!contratoDe && !!equipo} onClose={() => setContratoDe(null)} projectId={equipo?.proyecto._id || ""} userId={contratoDe?.userId || ""} nombre={contratoDe?.nombre || ""} />
 

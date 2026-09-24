@@ -4,6 +4,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { User } from "../models/User.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
+import { calificarFinDeContrato, leerCalificacion } from "../services/calificaciones.js";
 import { DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 
 /*
@@ -12,6 +13,10 @@ import { DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarCont
 
   La renovación NO pasa por acá: se pide creando la solicitud de contratación, y el alta anota la
   decisión (ver `POST /users` en `routes/users.ts`), así solicitud y decisión no pueden quedar a medias.
+
+  CALIFICACIÓN: al decidir, se califica la actuación de la persona en ese contrato (ver
+  `models/Calificacion.ts`). «Dejar vencer» la trae en el mismo pedido; «Renovar» la manda antes de abrir
+  el formulario, por `/calificar`.
 */
 const router = Router();
 
@@ -47,6 +52,12 @@ router.post("/dejar-vencer", requireTenant, authenticateToken, async (req: Authe
       res.status(400).json({ error: "Falta indicar qué contrato." });
       return;
     }
+    // La calificación es obligatoria: se decide Y se califica.
+    const calificacion = leerCalificacion(req.body);
+    if ("error" in calificacion) {
+      res.status(400).json({ error: calificacion.error });
+      return;
+    }
     // El permiso ES la lista: sólo se decide sobre un contrato que hoy le aparece a quien decide.
     const lista = await listarContratosPorVencer(req.tenantObjectId!, req.user!.userId);
     const contrato = lista.find((c) => c.userProjectId === String(userProjectId) && c.fechaBaja === String(fechaBajaContrato));
@@ -71,12 +82,41 @@ router.post("/dejar-vencer", requireTenant, authenticateToken, async (req: Authe
       },
       { upsert: true },
     );
+    await calificarFinDeContrato({ tenantId: req.tenantObjectId!, contrato, ...calificacion, decision: "dejar_vencer", calificadoPor: req.user!.userId });
     // La decisión cambia la lista de todos los que ven ese contrato, no sólo la de quien decidió.
     olvidarContratosPorVencer();
     res.json({ ok: true });
   } catch (error) {
     console.error("Dejar vencer contrato error:", error);
     res.status(500).json({ error: "No se pudo guardar la decisión." });
+  }
+});
+
+/*
+  Calificar al RENOVAR. Va antes de abrir el formulario de renovación, que es otro pedido (`POST /users`).
+  Si el formulario se cierra sin mandar, el contrato sigue en la lista y la próxima vez se corrige esta
+  misma calificación en lugar de sumar otra (una por contrato).
+*/
+router.post("/calificar", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { userProjectId, fechaBajaContrato } = req.body || {};
+    const calificacion = leerCalificacion(req.body);
+    if ("error" in calificacion) {
+      res.status(400).json({ error: calificacion.error });
+      return;
+    }
+    // Mismo control que al dejar vencer: sólo sobre un contrato que hoy le aparece a quien califica.
+    const lista = await listarContratosPorVencer(req.tenantObjectId!, req.user!.userId);
+    const contrato = lista.find((c) => c.userProjectId === String(userProjectId) && c.fechaBaja === String(fechaBajaContrato));
+    if (!contrato) {
+      res.status(404).json({ error: "Ese contrato ya no está por vencer o no está a tu cargo." });
+      return;
+    }
+    await calificarFinDeContrato({ tenantId: req.tenantObjectId!, contrato, ...calificacion, decision: "renovar", calificadoPor: req.user!.userId });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Calificar contrato por vencer error:", error);
+    res.status(500).json({ error: "No se pudo guardar la calificación." });
   }
 });
 
