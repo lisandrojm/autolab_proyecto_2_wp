@@ -62,6 +62,7 @@ router.post("/:id/contratar", ...movil, manejar(async (req, res) => {
     return r;
 }));
 // ── Escritorio: las generales ──
-const escritorio = [requireTenant, authenticateToken, requirePermission("admin_contracts:view")];
+// Permiso propio: quien arma las plantillas generales no tiene por qué ver los contratos, ni al revés.
+const escritorio = [requireTenant, authenticateToken, requirePermission("admin_hiring_templates:view")];
 const generalesRouter = rutasDe("general", escritorio);
 export { router as plantillasEquipoRoutes, generalesRouter as plantillasGeneralesRoutes };

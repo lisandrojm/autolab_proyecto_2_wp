@@ -26,7 +26,7 @@ import {
 
    - MÓVIL, `/api/v1/plantillas-equipo` (`mobile_hiring_templates`): las PERSONALES de cada supervisor
      —sólo las de quien pide—, más la lista de las GENERALES para copiarlas a las propias («Usar»).
-   - ESCRITORIO, `/api/v1/plantillas-equipo-generales` (`admin_contracts`, Contratación): las GENERALES,
+   - ESCRITORIO, `/api/v1/plantillas-equipo-generales` (`admin_hiring_templates`, Contratación): las GENERALES,
      sin proyecto ni personas. No se contratan: se usan desde el móvil.
 */
 type Req = AuthenticatedRequest & TenantRequest;
@@ -93,7 +93,8 @@ router.post("/:id/contratar", ...movil, manejar(async (req, res) => {
 }));
 
 // ── Escritorio: las generales ──
-const escritorio = [requireTenant, authenticateToken, requirePermission("admin_contracts:view")] as unknown as RequestHandler[];
+// Permiso propio: quien arma las plantillas generales no tiene por qué ver los contratos, ni al revés.
+const escritorio = [requireTenant, authenticateToken, requirePermission("admin_hiring_templates:view")] as unknown as RequestHandler[];
 const generalesRouter = rutasDe("general", escritorio);
 
 export { router as plantillasEquipoRoutes, generalesRouter as plantillasGeneralesRoutes };

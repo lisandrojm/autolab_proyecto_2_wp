@@ -431,7 +431,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('admin_sedes:view')) base.push({ permiso: 'admin_sedes:view', path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
       if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global', pendientes: pendientes.contratos });
       // Las plantillas GENERALES de equipo (puestos por rol): cada supervisor las copia en el móvil.
-      if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/plantillas-equipo', icon: faPeopleGroup, label: 'Plantillas', scope: 'global' });
+      if (hasPermission('admin_hiring_templates:view')) base.push({ permiso: 'admin_hiring_templates:view', path: '/admin/plantillas-equipo', icon: faPeopleGroup, label: 'Plantillas', scope: 'global' });
       // Los vigentes que no dicen qué días se trabaja (casi todos vienen de FRAME): se completan ahí.
       if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contratos-sin-dias', icon: faCalendarXmark, label: 'Sin días', scope: 'global' });
       // Solicitudes va pegada a Contratos porque son los dos extremos del mismo ciclo: lo que se

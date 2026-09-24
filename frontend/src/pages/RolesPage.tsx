@@ -69,6 +69,7 @@ export const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     */
     permissions: [
       "admin_contracts:view",
+      "admin_hiring_templates:view",
       "admin_hr_documents:view",
       "admin_activity_logs:view",
       "admin_orders:view",
@@ -159,6 +160,8 @@ export const MODULE_LABELS: Record<string, string> = {
 
   // Admin GENERAL
   "admin_contracts:view": "Contratos",
+  // Las GENERALES (puestos por rol, sin proyecto): cada supervisor las copia en el móvil.
+  "admin_hiring_templates:view": "Plantillas de equipo",
   "admin_hr_documents:view": "Documentos",
   "admin_activity_logs:view": "Novedades",
   "admin_orders:view": "Pedidos",

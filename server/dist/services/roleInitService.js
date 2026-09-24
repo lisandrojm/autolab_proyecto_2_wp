@@ -37,6 +37,7 @@ const ADMIN_PERMISSIONS = [
     'admin_projects:view', // Proyectos
     'admin_sedes:view', // Sedes
     'admin_contracts:view', // Contratos
+    'admin_hiring_templates:view', // Plantillas de equipo (generales)
     'admin_orders:view', // Pedidos
     'admin_vacations:view', // Vacaciones
     'admin_activity_logs:view', // Novedades
