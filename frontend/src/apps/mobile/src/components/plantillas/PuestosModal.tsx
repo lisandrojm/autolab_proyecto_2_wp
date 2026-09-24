@@ -3,23 +3,28 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../Modal";
 import { RoleFrameItem } from "../../../../../api/roleFrames";
+import { OpcionAreaTurno } from "./useCatalogosContratacion";
 
 /*
   ARMAR EL EQUIPO POR ROLES: «1 director, 1 playout, 2 cámaras, 1 microfonista…».
 
-  Se busca el rol empresa y se elige cuántos puestos de ese rol hacen falta. Los puestos quedan SIN
-  ASIGNAR: la persona se pone después (en el editor, para siempre) o al contratar (sólo esa vez). Se
-  agregan en el orden en que se fueron eligiendo, que es el orden del equipo.
+  Se busca el rol empresa y se elige cuántos puestos de ese rol hacen falta. Opcionalmente, en qué área
+  y turno: todos los que se agregan de una vez toman ese turno, con su horario y sus días (después cada
+  puesto se puede cambiar). Quién ocupa cada puesto se elige en los equipos. Se agregan en el orden en
+  que se fueron eligiendo.
 */
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   roleFrames: RoleFrameItem[];
-  onAgregar: (puestos: { rolId: string; cantidad: number }[]) => void;
+  /** Las áreas y turnos del proyecto. `undefined` = plantilla general (sin áreas). */
+  areas?: OpcionAreaTurno[] | null;
+  onAgregar: (puestos: { rolId: string; cantidad: number }[], turno: OpcionAreaTurno | null) => void;
 }
 
-export default function PuestosModal({ isOpen, onClose, roleFrames, onAgregar }: Props) {
+export default function PuestosModal({ isOpen, onClose, roleFrames, areas, onAgregar }: Props) {
   const [busca, setBusca] = useState("");
+  const [turno, setTurno] = useState("");
   // Un array y no un Map: el orden en que se eligen es el orden de los puestos.
   const [elegidos, setElegidos] = useState<{ rolId: string; cantidad: number }[]>([]);
 
@@ -27,7 +32,9 @@ export default function PuestosModal({ isOpen, onClose, roleFrames, onAgregar }:
     if (!isOpen) return;
     setBusca("");
     setElegidos([]);
+    setTurno("");
   }, [isOpen]);
+  const turnoElegido = (areas || []).find((o) => `${o.areaId}::${o.shiftId}` === turno) || null;
 
   const roles = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -61,7 +68,7 @@ export default function PuestosModal({ isOpen, onClose, roleFrames, onAgregar }:
             type="button"
             disabled={total === 0}
             onClick={() => {
-              onAgregar(elegidos);
+              onAgregar(elegidos, turnoElegido);
               onClose();
             }}
             className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50"
@@ -72,6 +79,16 @@ export default function PuestosModal({ isOpen, onClose, roleFrames, onAgregar }:
       }
     >
       <div className="flex h-[60vh] flex-col gap-3">
+        {areas !== undefined && (
+          <select value={turno} onChange={(e) => setTurno(e.target.value)} className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white" aria-label="Área y turno de estos puestos">
+            <option value="">Área y turno: lo elijo después en cada puesto</option>
+            {(areas || []).map((o) => (
+              <option key={`${o.areaId}::${o.shiftId}`} value={`${o.areaId}::${o.shiftId}`}>
+                {o.areaNombre} · {o.turnoNombre} {o.inicio && o.fin ? `· ${o.inicio} a ${o.fin}` : ""}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="relative shrink-0">
           <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           <input autoFocus value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar rol (Director, Cámara, Microfonista…)" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />

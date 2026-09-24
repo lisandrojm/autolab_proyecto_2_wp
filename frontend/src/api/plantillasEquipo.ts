@@ -6,30 +6,45 @@ import axios from "./axiosConfig";
  * `models/PlantillaEquipo.ts` y `utils/planDeLote.ts`.
  */
 
-export interface AreaTurno {
-  areaId: string;
-  shiftIds: string[];
-}
-
-/** Un PUESTO del equipo: su rol empresa y, si ya se sabe, la persona (`userId: null` = sin asignar). */
-export interface Integrante {
+/**
+ * Un PUESTO de la plantilla: su rol, su área y turno, su horario y sus días (todo por puesto: una
+ * plantilla cubre varias áreas y turnos), su categoría y, si se fijó, su importe. Quién lo ocupa lo dice
+ * cada EQUIPO.
+ */
+export interface Puesto {
   _id: string;
-  userId: string | null;
-  /** Vacío si el puesto está sin asignar. */
-  nombre: string;
-  activo: boolean;
   rolesFrame: string[];
   orden: number;
-  /** Lo propio de esta persona. `null` = usa el valor del equipo. */
-  categoriaSatId: string | null;
+  areaId: string | null;
+  shiftId: string | null;
   inTime: string | null;
   outTime: string | null;
+  diasSemana: number[];
+  diasPorSemana: number | null;
+  diasRotativos: boolean;
+  categoriaSatId: string | null;
   dailyRateManual: number | null;
   escalaAlFijar: number | null;
   comentarios: string | null;
+}
+
+/** Quién ocupa un puesto en un equipo. */
+export interface Asignacion {
+  puestoId: string;
+  userId: string;
+  nombre: string;
+  activo: boolean;
   reemplazadoDePersonaId: string | null;
   reemplazadoDeNombre: string;
   reemplazadoEl: string | null;
+}
+
+/** Un equipo guardado dentro de la plantilla («Semana A»): quién ocupa cada puesto. */
+export interface Equipo {
+  _id: string;
+  nombre: string;
+  ultimaContratacionEl: string | null;
+  asignaciones: Asignacion[];
 }
 
 export interface Plantilla {
@@ -44,14 +59,10 @@ export interface Plantilla {
   contratoId: string | null;
   nombreContrato: string;
   tipoImpositivo: string;
-  areaShiftAssignments: AreaTurno[];
-  inTime: string;
-  outTime: string;
-  diasSemana: number[];
-  diasPorSemana: number | null;
-  diasRotativos: boolean;
   comentarios: string;
-  integrantes: Integrante[];
+  /** Los puestos (el nombre del campo es histórico). */
+  integrantes: Puesto[];
+  equipos: Equipo[];
   ultimaContratacionEl: string | null;
 }
 
@@ -61,35 +72,39 @@ export interface PlantillaResumen {
   projectId: string | null;
   alcance: "personal" | "general";
   nombreContrato: string;
-  areaShiftAssignments: AreaTurno[];
-  inTime: string;
-  outTime: string;
-  integrantes: number;
-  /** Puestos sin persona: se completan al contratar o se excluyen. */
-  sinAsignar: number;
+  puestos: number;
+  equipos: { _id: string; nombre: string; asignados: number; ultimaContratacionEl: string | null }[];
   ultimaContratacionEl: string | null;
 }
 
-/** Los valores comunes (sin integrantes) que se pueden mandar al crear o editar. */
-export type ComunesPlantilla = Partial<Omit<Plantilla, "_id" | "integrantes" | "ultimaContratacionEl">>;
+/** Lo de la hoja general que se puede mandar al crear o editar. */
+export type ComunesPlantilla = Partial<Pick<Plantilla, "nombre" | "empresaContratoId" | "convenioId" | "contratoId" | "nombreContrato" | "tipoImpositivo" | "comentarios">>;
 
-/** Un puesto nuevo: con persona, o sólo con su rol (y `cantidad` para repetirlo: «2 cámaras»). */
-export interface NuevoIntegrante {
-  userId?: string | null;
-  cantidad?: number;
+/** Un puesto nuevo (o los cambios de uno). `cantidad` lo repite («2 cámaras»); `userId` lo asigna en el equipo. */
+export interface NuevoPuesto {
   rolesFrame?: string[];
-  categoriaSatId?: string | null;
+  cantidad?: number;
+  userId?: string;
+  areaId?: string | null;
+  shiftId?: string | null;
   inTime?: string | null;
   outTime?: string | null;
+  diasSemana?: number[];
+  diasPorSemana?: number | null;
+  diasRotativos?: boolean;
+  categoriaSatId?: string | null;
   dailyRateManual?: number | null;
   comentarios?: string | null;
+  orden?: number;
 }
 
 /** Lo que se pisa SÓLO en esta contratación, por integrante (`_id` del integrante). */
 export interface Puntual {
   excluido?: boolean;
-  /** Para un puesto sin asignar: quién lo ocupa en esta contratación. */
+  /** Quién ocupa el puesto ESTA vez, en lugar de la persona del equipo (o si está sin asignar). */
   userId?: string;
+  /** Días rotativos: las jornadas de este puesto. */
+  jornadas?: number;
   categoriaSatId?: string;
   inTime?: string;
   outTime?: string;
@@ -102,6 +117,10 @@ export interface Puntual {
 }
 
 export interface PedidoDeContratacion {
+  /** El equipo elegido: de ahí sale quién ocupa cada puesto. */
+  equipoId?: string;
+  /** Las personas cambiadas esta vez quedan también en el equipo. */
+  guardarEnEquipo?: boolean;
   fechas?: string[];
   desde?: string;
   hasta?: string;
@@ -154,9 +173,6 @@ const crudDe = (base: string) => ({
   async obtener(id: string): Promise<Plantilla> {
     return (await axios.get(`${base}/${id}`)).data;
   },
-  async crear(datos: ComunesPlantilla & { projectId?: string; nombre: string; integrantes?: NuevoIntegrante[] }): Promise<Plantilla> {
-    return (await axios.post(`${base}`, datos)).data;
-  },
   async actualizar(id: string, datos: ComunesPlantilla): Promise<Plantilla> {
     return (await axios.put(`${base}/${id}`, datos)).data;
   },
@@ -166,19 +182,18 @@ const crudDe = (base: string) => ({
   async duplicar(id: string, nombre?: string): Promise<Plantilla> {
     return (await axios.post(`${base}/${id}/duplicar`, { nombre })).data;
   },
-  async agregarIntegrantes(id: string, integrantes: NuevoIntegrante[]): Promise<Plantilla> {
-    return (await axios.post(`${base}/${id}/integrantes`, { integrantes })).data;
+  async crear(datos: ComunesPlantilla & { projectId?: string; nombre: string; puestos?: NuevoPuesto[] }): Promise<Plantilla> {
+    return (await axios.post(`${base}`, datos)).data;
   },
-  /** `null` o "" en un campo = volver al valor del equipo. */
-  async actualizarIntegrante(id: string, integranteId: string, datos: Partial<NuevoIntegrante> & { orden?: number }): Promise<Plantilla> {
-    return (await axios.put(`${base}/${id}/integrantes/${integranteId}`, datos)).data;
+  async agregarPuestos(id: string, puestos: NuevoPuesto[], equipoId?: string): Promise<Plantilla> {
+    return (await axios.post(`${base}/${id}/puestos`, { puestos, equipoId })).data;
   },
-  async quitarIntegrante(id: string, integranteId: string): Promise<Plantilla> {
-    return (await axios.delete(`${base}/${id}/integrantes/${integranteId}`)).data;
+  /** `null` o "" en un campo = sin ese dato. */
+  async actualizarPuesto(id: string, puestoId: string, datos: NuevoPuesto): Promise<Plantilla> {
+    return (await axios.put(`${base}/${id}/puestos/${puestoId}`, datos)).data;
   },
-  /** Cambia a una persona por otra PARA SIEMPRE (no es el «¿Reemplazo?» de una solicitud). */
-  async reemplazarIntegrante(id: string, integranteId: string, userId: string): Promise<Plantilla> {
-    return (await axios.post(`${base}/${id}/integrantes/${integranteId}/reemplazar`, { userId })).data;
+  async quitarPuesto(id: string, puestoId: string): Promise<Plantilla> {
+    return (await axios.delete(`${base}/${id}/puestos/${puestoId}`)).data;
   },
 });
 
@@ -187,6 +202,20 @@ export const plantillasEquipoAPI = {
   ...crudDe("/plantillas-equipo"),
   async preview(id: string, pedido: PedidoDeContratacion): Promise<Preview> {
     return (await axios.post(`/plantillas-equipo/${id}/preview`, pedido)).data;
+  },
+  // ── Los equipos (quién ocupa cada puesto) ──
+  async crearEquipo(id: string, nombre: string, copiarDe?: string): Promise<Plantilla> {
+    return (await axios.post(`/plantillas-equipo/${id}/equipos`, { nombre, copiarDe })).data;
+  },
+  async renombrarEquipo(id: string, equipoId: string, nombre: string): Promise<Plantilla> {
+    return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}`, { nombre })).data;
+  },
+  async borrarEquipo(id: string, equipoId: string): Promise<Plantilla> {
+    return (await axios.delete(`/plantillas-equipo/${id}/equipos/${equipoId}`)).data;
+  },
+  /** `null` deja el puesto sin asignar en ese equipo. */
+  async asignar(id: string, equipoId: string, puestoId: string, userId: string | null): Promise<Plantilla> {
+    return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}/puestos/${puestoId}`, { userId })).data;
   },
   /** Las generales del escritorio (sin proyecto ni personas), para elegir una y «Usarla». */
   async listarGenerales(): Promise<PlantillaResumen[]> {

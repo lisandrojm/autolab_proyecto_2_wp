@@ -2,74 +2,84 @@ import mongoose, { Schema, Types } from "mongoose";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
- * PLANTILLA DE EQUIPO: un grupo fijo de personas que se contrata junto
+ * PLANTILLA DE EQUIPO: puestos por rol, y los equipos que los ocupan
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Casi siempre se contrata a los mismos equipos de jornaleros. La plantilla guarda lo que se repite
- * —proyecto, empresa, tipo de contrato, área y turno, horario, días— y a cada integrante con su rol y
- * su categoría; al contratarla salen N solicitudes de contratación idénticas a las del formulario
- * individual (ver `services/plantillasEquipo.ts`).
+ * Casi siempre se contrata a los mismos equipos de jornaleros. Una plantilla tiene TRES niveles:
+ *
+ *  1. GENERAL: nombre, empresa (y convenio), tipo de contrato y comentario. Nada de áreas ni horarios.
+ *  2. PUESTOS (`integrantes`): cada uno con su rol empresa, su área y turno, su horario y sus días (los
+ *     del turno, modificables), su categoría y, si se fijó, su importe. Una plantilla puede cubrir
+ *     varias áreas y turnos: cada puesto dice el suyo.
+ *  3. EQUIPOS (`equipos`): quién ocupa cada puesto. Se guardan varios con nombre («Semana A», «Semana
+ *     B») para repetirlos cuando haga falta. Al contratar se elige uno, se cambia a alguien sólo esa vez
+ *     o se guarda el cambio en el equipo.
+ *
+ * Al contratar salen N solicitudes idénticas a las del formulario individual (`services/plantillasEquipo.ts`).
  *
  * LO QUE NO GUARDA, A PROPÓSITO:
  *  - FECHAS NI DÍAS DEL CALENDARIO: se eligen en cada contratación.
- *  - IMPORTES CALCULADOS: se recalculan al contratar con la escala VIGENTE. Guarda la categoría y, si
- *    alguien fijó a mano el importe de un integrante (`dailyRateManual`), la escala que regía en ese
- *    momento (`escalaAlFijar`): si después cambió, la contratación lo avisa («antes X, ahora Y»).
+ *  - IMPORTES CALCULADOS: se recalculan al contratar con la escala VIGENTE. Si alguien fijó a mano el
+ *    importe de un puesto (`dailyRateManual`), se guarda la escala de ese momento (`escalaAlFijar`): si
+ *    después cambió, la contratación lo avisa («antes X, ahora Y»).
  *
- * CADA INTEGRANTE ES UN PUESTO: un rol empresa (Director, Cámara, Microfonista…) y, si ya se sabe, la
- * persona que lo ocupa. El equipo se arma primero por roles —«1 director, 2 cámaras, 1 sonido»— y la
- * gente se asigna después; un puesto sin persona se completa al contratar (sólo esa vez) o se excluye.
+ * ALCANCE: `personal` = de un supervisor (`creadoPor`), en un proyecto; sólo él la ve y la usa (móvil).
+ * `general` = del escritorio, sin proyecto ni personas ni áreas: puestos por rol que cada supervisor
+ * copia («Usar») a una personal.
  *
- * Los integrantes van EMBEBIDOS (decisión D1 del plan): una plantilla se lee y se escribe entera, sus
- * integrantes no existen fuera de ella y el orden es el del array. Una persona no puede estar dos
- * veces (los puestos sin asignar sí pueden repetirse): lo controla el servicio.
+ * Todo va EMBEBIDO (decisión D1 del plan): una plantilla se lee y se escribe entera. Una persona no
+ * puede ocupar dos puestos del mismo equipo: lo controla el servicio.
  */
 
-export interface IIntegrantePlantilla {
+export interface IPuesto {
   _id: Types.ObjectId;
-  /** La persona del puesto. `null` = puesto sin asignar. */
-  userId: Types.ObjectId | null;
   rolesFrame: Types.ObjectId[];
   orden: number;
-  // Lo propio de esta persona. `null`/ausente = usa el valor de la plantilla.
-  categoriaSatId?: Types.ObjectId | null;
+  areaId?: Types.ObjectId | null;
+  shiftId?: Types.ObjectId | null;
   inTime?: string | null;
   outTime?: string | null;
+  diasSemana?: number[];
+  diasPorSemana?: number | null;
+  diasRotativos?: boolean;
+  categoriaSatId?: Types.ObjectId | null;
   dailyRateManual?: number | null;
   /** La escala (ya multiplicada) cuando se fijó `dailyRateManual`: para avisar si cambió. */
   escalaAlFijar?: number | null;
   comentarios?: string | null;
-  /** Si reemplazó a otro integrante de la plantilla: a quién y cuándo. Sólo informativo. */
+}
+
+export interface IAsignacion {
+  puestoId: Types.ObjectId;
+  userId: Types.ObjectId;
+  /** Si entró en lugar de otra persona en ese puesto de este equipo: a quién y cuándo. Informativo. */
   reemplazadoDePersonaId?: Types.ObjectId | null;
   reemplazadoEl?: Date | null;
 }
 
+export interface IEquipo {
+  _id: Types.ObjectId;
+  nombre: string;
+  asignaciones: IAsignacion[];
+  ultimaContratacionEl?: Date | null;
+}
+
 export interface IPlantillaEquipo {
   tenantId: Types.ObjectId;
-  /**
-   * `personal`: de un supervisor (el que la creó, `creadoPor`), en un proyecto. Sólo él la ve y la usa.
-   * `general`: del escritorio, SIN proyecto: puestos por rol y valores de base. En el móvil se copia a
-   * una personal («Usar»); no se contrata directo ni lleva personas.
-   */
   alcance: "personal" | "general";
   /** `null` en las generales. */
   projectId: Types.ObjectId | null;
   nombre: string;
   empresaContratoId?: Types.ObjectId | null;
-  /** Derivado de la empresa (y del CCT de su rol), guardado para detectar que cambió. */
+  /** Derivado de la empresa, guardado para detectar que cambió. */
   convenioId?: Types.ObjectId | null;
   contratoId?: Types.ObjectId | null;
   nombreContrato?: string;
   /** El trámite del tipo de contrato («constancia_cuit» = servicios). Lo resuelve la pantalla, igual que en el alta individual. */
   tipoImpositivo?: string;
-  areaShiftAssignments: { areaId: Types.ObjectId; shiftIds: Types.ObjectId[] }[];
-  inTime: string;
-  outTime: string;
-  diasSemana: number[];
-  diasPorSemana?: number | null;
-  diasRotativos: boolean;
   comentarios?: string;
-  integrantes: IIntegrantePlantilla[];
+  integrantes: IPuesto[];
+  equipos: IEquipo[];
   activo: boolean;
   creadoPor: Types.ObjectId;
   ultimaContratacionEl?: Date | null;
@@ -78,18 +88,34 @@ export interface IPlantillaEquipo {
   updatedAt?: Date;
 }
 
-const integranteSchema = new Schema<IIntegrantePlantilla>({
-  userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+const puestoSchema = new Schema<IPuesto>({
   rolesFrame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
   orden: { type: Number, default: 0 },
-  categoriaSatId: { type: Schema.Types.ObjectId, ref: "CategoriaSat", default: null },
+  areaId: { type: Schema.Types.ObjectId, ref: "Area", default: null },
+  shiftId: { type: Schema.Types.ObjectId, ref: "Shift", default: null },
   inTime: { type: String, default: null },
   outTime: { type: String, default: null },
+  diasSemana: { type: [Number], default: [] },
+  diasPorSemana: { type: Number, default: null },
+  diasRotativos: { type: Boolean, default: false },
+  categoriaSatId: { type: Schema.Types.ObjectId, ref: "CategoriaSat", default: null },
   dailyRateManual: { type: Number, default: null },
   escalaAlFijar: { type: Number, default: null },
   comentarios: { type: String, default: null },
-  reemplazadoDePersonaId: { type: Schema.Types.ObjectId, ref: "User", default: null },
-  reemplazadoEl: { type: Date, default: null },
+});
+
+const equipoSchema = new Schema<IEquipo>({
+  nombre: { type: String, required: true, trim: true, maxlength: 80 },
+  asignaciones: [
+    {
+      _id: false,
+      puestoId: { type: Schema.Types.ObjectId, required: true },
+      userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+      reemplazadoDePersonaId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+      reemplazadoEl: { type: Date, default: null },
+    },
+  ],
+  ultimaContratacionEl: { type: Date, default: null },
 });
 
 const plantillaEquipoSchema = new Schema<IPlantillaEquipo>(
@@ -103,20 +129,9 @@ const plantillaEquipoSchema = new Schema<IPlantillaEquipo>(
     contratoId: { type: Schema.Types.ObjectId, ref: "Contrato", default: null },
     nombreContrato: { type: String, default: "" },
     tipoImpositivo: { type: String, default: "" },
-    areaShiftAssignments: [
-      {
-        _id: false,
-        areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-        shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
-      },
-    ],
-    inTime: { type: String, default: "" },
-    outTime: { type: String, default: "" },
-    diasSemana: { type: [Number], default: [] },
-    diasPorSemana: { type: Number, default: null },
-    diasRotativos: { type: Boolean, default: false },
     comentarios: { type: String, default: "" },
-    integrantes: { type: [integranteSchema], default: [] },
+    integrantes: { type: [puestoSchema], default: [] },
+    equipos: { type: [equipoSchema], default: [] },
     activo: { type: Boolean, default: true },
     creadoPor: { type: Schema.Types.ObjectId, ref: "User", required: true },
     ultimaContratacionEl: { type: Date, default: null },
@@ -127,8 +142,7 @@ const plantillaEquipoSchema = new Schema<IPlantillaEquipo>(
 
 plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, activo: 1 });
 // El nombre no se repite entre las plantillas vivas (las borradas quedan con `activo: false`): las de un
-// supervisor, dentro de su proyecto; las generales, en todo el tenant. Dos supervisores sí pueden tener
-// cada uno su «Equipo noche».
+// supervisor, dentro de su proyecto; las generales, en todo el tenant.
 plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, nombre: 1 }, { unique: true, name: "nombre_personal_unico", partialFilterExpression: { activo: true, alcance: "personal" } });
 plantillaEquipoSchema.index({ tenantId: 1, nombre: 1 }, { unique: true, name: "nombre_general_unico", partialFilterExpression: { activo: true, alcance: "general" } });
 

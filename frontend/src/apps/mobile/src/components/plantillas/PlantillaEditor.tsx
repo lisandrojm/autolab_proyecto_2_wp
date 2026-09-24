@@ -1,26 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faPen, faPlus, faRightLeft, faSpinner, faTrash, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faPen, faPlus, faRightLeft, faSpinner, faTrash, faUserPlus, faUserXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
+import Swal from "sweetalert2";
 import { Modal } from "../Modal";
-import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
-import { Integrante, Plantilla, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
+import { Equipo, Plantilla, plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo";
 import { Project } from "../../../../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./useCatalogosContratacion";
 import PersonaPickerModal from "./PersonaPickerModal";
-import IntegranteModal from "./IntegranteModal";
+import PuestoModal from "./PuestoModal";
 import PuestosModal from "./PuestosModal";
-import { Badge, CLASE_CAMPO, CLASE_HORA, DIAS, Rotulo, textoDias } from "./comun";
+import { Badge, CLASE_CAMPO, Rotulo, textoDias } from "./comun";
 
 /*
-  CREAR O EDITAR UNA PLANTILLA DE EQUIPO.
+  CREAR O EDITAR UNA PLANTILLA DE EQUIPO, en tres hojas:
 
-  Arriba, lo que comparte todo el equipo: empresa (y con ella el convenio), tipo de contrato, área y
-  turno, horario, días y comentario. Abajo, los integrantes: cada uno con sus roles y su categoría, y
-  —marcado «personalizado»— lo que tenga distinto al equipo.
-
-  REEMPLAZAR a un integrante cambia a la persona PARA SIEMPRE en la plantilla, conservando su rol y lo
-  propio (se puede editar después). No es el «¿Reemplazo?» de una solicitud, que se marca al contratar.
+   1. GENERAL: nombre, empresa (y con ella el convenio), tipo de contrato y comentario. Nada más: ni
+      áreas ni horarios, que son de cada puesto.
+   2. PUESTOS: por rol («1 director, 2 cámaras…»), cada uno con su área y turno, su horario y sus días
+      (los del turno, modificables), su categoría. Se editan uno por uno.
+   3. EQUIPOS: quién ocupa cada puesto. Se guardan varios con nombre («Semana A», «Semana B») para
+      repetirlos cuando haga falta; al contratar se elige uno.
 
   Las fechas y los importes NO se guardan acá: se eligen y se calculan en cada contratación.
 */
@@ -34,132 +34,99 @@ interface Props {
   onCambio: () => void;
 }
 
-interface Comunes {
+interface General {
   nombre: string;
   empresaContratoId: string;
   convenioId: string;
   contratoId: string;
-  areaId: string;
-  shiftId: string;
-  inTime: string;
-  outTime: string;
-  diasSemana: number[];
-  diasPorSemana: string;
-  diasRotativos: boolean;
   comentarios: string;
 }
-
-const vacio: Comunes = { nombre: "", empresaContratoId: "", convenioId: "", contratoId: "", areaId: "", shiftId: "", inTime: "", outTime: "", diasSemana: [], diasPorSemana: "", diasRotativos: false, comentarios: "" };
+const vacio: General = { nombre: "", empresaContratoId: "", convenioId: "", contratoId: "", comentarios: "" };
 
 export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto, catalogos, onCambio }: Props) {
   const [plantilla, setPlantilla] = useState<Plantilla | null>(null);
-  const [c, setC] = useState<Comunes>(vacio);
+  const [g, setG] = useState<General>(vacio);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [sucio, setSucio] = useState(false);
-  const [agregando, setAgregando] = useState(false);
+  const [hoja, setHoja] = useState<1 | 2 | 3>(1);
   const [agregandoPuestos, setAgregandoPuestos] = useState(false);
-  const [reemplazando, setReemplazando] = useState<Integrante | null>(null);
-  const [editando, setEditando] = useState<Integrante | null>(null);
+  const [editando, setEditando] = useState<Puesto | null>(null);
+  const [equipoId, setEquipoId] = useState("");
+  const [asignando, setAsignando] = useState<Puesto | null>(null);
   const areas = useAreasDelProyecto(isOpen ? proyecto?._id : null);
 
   const aplicar = (p: Plantilla) => {
     setPlantilla(p);
-    const a = p.areaShiftAssignments?.[0];
-    setC({
-      nombre: p.nombre,
-      empresaContratoId: p.empresaContratoId || "",
-      convenioId: p.convenioId || "",
-      contratoId: p.contratoId || "",
-      areaId: a?.areaId || "",
-      shiftId: a?.shiftIds?.[0] || "",
-      inTime: p.inTime || "",
-      outTime: p.outTime || "",
-      diasSemana: p.diasSemana || [],
-      diasPorSemana: p.diasPorSemana ? String(p.diasPorSemana) : "",
-      diasRotativos: !!p.diasRotativos,
-      comentarios: p.comentarios || "",
-    });
+    setG({ nombre: p.nombre, empresaContratoId: p.empresaContratoId || "", convenioId: p.convenioId || "", contratoId: p.contratoId || "", comentarios: p.comentarios || "" });
     setSucio(false);
+    setEquipoId((actual) => (p.equipos.some((e) => e._id === actual) ? actual : p.equipos[0]?._id || ""));
   };
 
   useEffect(() => {
     if (!isOpen) return;
     setPlantilla(null);
-    setC(vacio);
+    setG(vacio);
     setSucio(false);
+    setHoja(1);
+    setEquipoId("");
     if (!plantillaId) return;
     setCargando(true);
     plantillasEquipoAPI
       .obtener(plantillaId)
-      .then(aplicar)
+      .then((p) => {
+        aplicar(p);
+        setHoja(p.integrantes.length ? 3 : 2);
+      })
       .catch(() => sweetAlert.error("No se pudo abrir la plantilla"))
       .finally(() => setCargando(false));
   }, [isOpen, plantillaId]);
 
-  const cambiar = (x: Partial<Comunes>) => {
-    setC((p) => ({ ...p, ...x }));
+  const cambiar = (x: Partial<General>) => {
+    setG((p) => ({ ...p, ...x }));
     setSucio(true);
   };
 
   // La cadena del alta individual: empresa del proyecto → convenio. Con una sola opción, se elige sola.
   const empresas = catalogos.empresasDelProyecto(proyecto);
   useEffect(() => {
-    if (!isOpen || cargando) return;
-    if (!c.empresaContratoId && empresas.length === 1) cambiar({ empresaContratoId: empresas[0]._id });
+    if (!isOpen || cargando || plantilla) return;
+    if (!g.empresaContratoId && empresas.length === 1) cambiar({ empresaContratoId: empresas[0]._id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, cargando, empresas.length]);
-  const convenios = catalogos.conveniosDisponibles(proyecto, c.empresaContratoId, c.convenioId);
+  const convenios = catalogos.conveniosDisponibles(proyecto, g.empresaContratoId, g.convenioId);
   useEffect(() => {
     if (!isOpen || cargando) return;
-    const valido = convenios.some((x) => catalogos.convenioPorCct(x.externalId)?._id === c.convenioId);
+    const valido = convenios.some((x) => catalogos.convenioPorCct(x.externalId)?._id === g.convenioId);
     if (!valido && convenios.length === 1) {
       const id = catalogos.convenioPorCct(convenios[0].externalId)?._id || "";
-      if (id && id !== c.convenioId) cambiar({ convenioId: id });
+      if (id && id !== g.convenioId) cambiar({ convenioId: id });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, cargando, c.empresaContratoId, convenios.length]);
+  }, [isOpen, cargando, g.empresaContratoId, convenios.length]);
 
-  const contrato = catalogos.contratos.find((x) => x._id === c.contratoId);
-  const tramite = c.contratoId ? catalogos.tramitePorContrato.get(c.contratoId) || "" : "";
+  const contrato = catalogos.contratos.find((x) => x._id === g.contratoId);
+  const tramite = g.contratoId ? catalogos.tramitePorContrato.get(g.contratoId) || "" : "";
   const esServicios = tramite === "constancia_cuit";
   const porDiasSueltos = (contrato as any)?.data?.modoFechas === "dias";
 
-  const elegirTurno = (valor: string) => {
-    const [areaId, shiftId] = valor.split("::");
-    const t = (areas || []).find((o) => o.areaId === areaId && o.shiftId === shiftId);
-    // El horario y los días salen del turno, igual que en el alta: se pueden cambiar después.
-    cambiar({ areaId, shiftId, inTime: t?.inicio || c.inTime, outTime: t?.fin || c.outTime, ...(t?.dias.length ? { diasSemana: t.dias, diasPorSemana: String(t.dias.length) } : {}) });
-  };
-
-  const guardarComunes = async (): Promise<Plantilla | null> => {
-    if (!c.nombre.trim()) {
-      sweetAlert.warning("Falta el nombre", "Poné un nombre a la plantilla (ej. «Equipo cámara noche»).");
+  const guardarGeneral = async (): Promise<Plantilla | null> => {
+    if (!g.nombre.trim()) {
+      sweetAlert.warning("Falta el nombre", "Poné un nombre a la plantilla (ej. «Noticiero LN+»).");
       return null;
     }
     if (!proyecto) return null;
-    const datos = {
-      nombre: c.nombre.trim(),
-      empresaContratoId: c.empresaContratoId || null,
-      convenioId: esServicios ? null : c.convenioId || null,
-      contratoId: c.contratoId || null,
-      nombreContrato: contrato?.name || "",
-      tipoImpositivo: tramite,
-      areaShiftAssignments: c.areaId && c.shiftId ? [{ areaId: c.areaId, shiftIds: [c.shiftId] }] : [],
-      inTime: c.inTime,
-      outTime: c.outTime,
-      diasSemana: c.diasSemana,
-      diasPorSemana: Number(c.diasPorSemana) || c.diasSemana.length || null,
-      diasRotativos: c.diasRotativos,
-      comentarios: c.comentarios,
-    };
+    const datos = { nombre: g.nombre.trim(), empresaContratoId: g.empresaContratoId || null, convenioId: esServicios ? null : g.convenioId || null, contratoId: g.contratoId || null, nombreContrato: contrato?.name || "", tipoImpositivo: tramite, comentarios: g.comentarios };
     setGuardando(true);
     try {
       const nueva = !plantilla;
       const p = plantilla ? await plantillasEquipoAPI.actualizar(plantilla._id, datos) : await plantillasEquipoAPI.crear({ ...datos, projectId: proyecto._id });
       aplicar(p);
       onCambio();
-      if (nueva) void sweetAlert.alert("Plantilla creada", "Ahora armá los puestos: «Por rol» para agregarlos (ej. 1 director, 2 cámaras) y tocá cada uno para asignar la persona, la categoría o un horario propio.", "info");
+      if (nueva) {
+        setHoja(2);
+        void sweetAlert.alert("Plantilla creada", "Ahora armá los puestos: «Agregar puestos» por rol (ej. 1 director, 2 cámaras), cada uno con su área y turno. Después, en Equipos, elegí quién ocupa cada puesto.", "info");
+      }
       return p;
     } catch (e: any) {
       sweetAlert.error("No se pudo guardar", e?.response?.data?.error || "Probá de nuevo.");
@@ -169,12 +136,9 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
     }
   };
 
-  /**
-   * Una operación sobre los integrantes. Si hay valores comunes sin guardar se guardan antes: la respuesta
-   * del server trae la plantilla entera y, si no, pisaría lo que se estaba editando arriba.
-   */
+  /** Una operación sobre puestos o equipos; si la hoja general tiene cambios sin guardar, se guardan antes. */
   const conPlantilla = async (fn: (p: Plantilla) => Promise<Plantilla>, tirar = false) => {
-    const p = !plantilla || sucio ? await guardarComunes() : plantilla;
+    const p = !plantilla || sucio ? await guardarGeneral() : plantilla;
     if (!p) return;
     try {
       aplicar(await fn(p));
@@ -185,25 +149,68 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
     }
   };
 
-  const quitar = async (i: Integrante) => {
-    const r: any = await sweetAlert.confirm("¿Sacar el puesto?", `${i.nombre ? `${i.nombre} y su puesto dejan` : "El puesto deja"} de estar en «${plantilla?.nombre}». Las solicitudes ya pedidas no cambian.`, "Sacar", "Cancelar");
-    if (!(r === true || r?.isConfirmed)) return;
-    await conPlantilla((p) => plantillasEquipoAPI.quitarIntegrante(p._id, i._id));
-  };
-
   const nombreRol = useMemo(() => new Map(catalogos.roleFrames.map((r) => [r._id, r.name])), [catalogos.roleFrames]);
   const nombreCategoria = useMemo(() => new Map(catalogos.categoriasSat.map((x) => [x._id, x.name])), [catalogos.categoriasSat]);
-  const categoriaValida = (i: Integrante) => esServicios || (!!i.categoriaSatId && catalogos.categoriasPara(proyecto, c.empresaContratoId, c.convenioId, i.rolesFrame).documentos.some((x) => x._id === i.categoriaSatId));
+  const rolDe = (p: Puesto) => p.rolesFrame.map((r) => nombreRol.get(r) || "Rol").join(", ") || "Sin rol";
+  const turnoDe = (p: Puesto) => {
+    const t = (areas || []).find((o) => o.areaId === p.areaId && o.shiftId === p.shiftId);
+    return t ? `${t.areaNombre} · ${t.turnoNombre}` : "";
+  };
+  const equipo: Equipo | undefined = plantilla?.equipos.find((e) => e._id === equipoId);
+  const quienEn = (puestoId: string) => equipo?.asignaciones.find((a) => a.puestoId === puestoId);
 
-  const areasAgrupadas = useMemo(() => {
-    const m = new Map<string, { nombre: string; turnos: typeof areas }>();
-    for (const o of areas || []) {
-      const g = m.get(o.areaId) || { nombre: o.areaNombre, turnos: [] as any };
-      g.turnos!.push(o);
-      m.set(o.areaId, g);
-    }
-    return [...m.entries()];
-  }, [areas]);
+  const quitarPuesto = async (p: Puesto, n: number) => {
+    const r: any = await sweetAlert.confirm(`¿Sacar el puesto ${n}?`, `${rolDe(p)} deja de estar en la plantilla (y en todos sus equipos). Las solicitudes ya pedidas no cambian.`, "Sacar", "Cancelar");
+    if (!(r === true || r?.isConfirmed)) return;
+    await conPlantilla((pl) => plantillasEquipoAPI.quitarPuesto(pl._id, p._id));
+  };
+
+  const nuevoEquipo = async () => {
+    if (!plantilla) return;
+    const r = await Swal.fire({
+      title: "Nuevo equipo",
+      html: `<p style="font-size:.85em;margin-bottom:.5em">Un equipo es quién ocupa cada puesto (ej. «Semana A»).</p>`,
+      input: "text",
+      inputPlaceholder: `Equipo ${plantilla.equipos.length + 1}`,
+      showCancelButton: true,
+      showDenyButton: !!equipo,
+      confirmButtonText: "Vacío",
+      denyButtonText: equipo ? `Copiar «${equipo.nombre}»` : undefined,
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#3b82f6",
+      denyButtonColor: "#10b981",
+      customClass: { popup: "mobile-swal-popup", title: "mobile-swal-title" },
+      // Con «Copiar» el texto no viaja en `value`: se lee del campo antes de que se cierre.
+      preDeny: () => (Swal.getInput() as HTMLInputElement | null)?.value || "",
+    });
+    if (r.isDismissed) return;
+    const nombre = String(r.value || "").trim();
+    await conPlantilla(async (pl) => {
+      const nueva = await plantillasEquipoAPI.crearEquipo(pl._id, nombre, r.isDenied ? equipo?._id : undefined);
+      setEquipoId(nueva.equipos[nueva.equipos.length - 1]?._id || "");
+      return nueva;
+    });
+  };
+
+  const renombrarEquipo = async () => {
+    if (!plantilla || !equipo) return;
+    const r = await Swal.fire({ title: "Nombre del equipo", input: "text", inputValue: equipo.nombre, showCancelButton: true, confirmButtonText: "Guardar", cancelButtonText: "Cancelar", confirmButtonColor: "#3b82f6", customClass: { popup: "mobile-swal-popup", title: "mobile-swal-title" } });
+    if (!r.isConfirmed || !String(r.value || "").trim()) return;
+    await conPlantilla((pl) => plantillasEquipoAPI.renombrarEquipo(pl._id, equipo._id, String(r.value).trim()));
+  };
+
+  const borrarEquipo = async () => {
+    if (!plantilla || !equipo) return;
+    const r: any = await sweetAlert.confirm("¿Borrar el equipo?", `«${equipo.nombre}» deja de estar en la plantilla. Los puestos no cambian.`, "Borrar", "Cancelar");
+    if (!(r === true || r?.isConfirmed)) return;
+    await conPlantilla((pl) => plantillasEquipoAPI.borrarEquipo(pl._id, equipo._id));
+  };
+
+  const hojas = [
+    { n: 1 as const, t: "General", hecho: !!plantilla },
+    { n: 2 as const, t: `Puestos${plantilla ? ` (${plantilla.integrantes.length})` : ""}`, hecho: !!plantilla?.integrantes.length },
+    { n: 3 as const, t: `Equipos${plantilla ? ` (${plantilla.equipos.length})` : ""}`, hecho: !!plantilla?.equipos.some((e) => e.asignaciones.length) },
+  ];
 
   return (
     <Modal
@@ -218,10 +225,24 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-slate-700 py-3 text-sm font-bold text-white">
             {sucio ? "Cerrar sin guardar" : "Cerrar"}
           </button>
-          <button type="button" onClick={() => void guardarComunes()} disabled={guardando || (!sucio && !!plantilla)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50">
-            {guardando && <FontAwesomeIcon icon={faSpinner} spin />}
-            {plantilla ? "Guardar cambios" : "Crear plantilla"}
-          </button>
+          {hoja === 1 && (
+            <button type="button" onClick={() => void guardarGeneral()} disabled={guardando || (!sucio && !!plantilla)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50">
+              {guardando && <FontAwesomeIcon icon={faSpinner} spin />}
+              {plantilla ? "Guardar cambios" : "Crear plantilla"}
+            </button>
+          )}
+          {hoja === 2 && (
+            <button type="button" onClick={() => setAgregandoPuestos(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white">
+              <FontAwesomeIcon icon={faPlus} />
+              Agregar puestos
+            </button>
+          )}
+          {hoja === 3 && (
+            <button type="button" onClick={() => void nuevoEquipo()} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white">
+              <FontAwesomeIcon icon={faPlus} />
+              Nuevo equipo
+            </button>
+          )}
         </div>
       }
     >
@@ -232,280 +253,239 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
-          {/*
-            EL ORDEN DE CARGA, dicho arriba: primero lo que comparte todo el equipo y «Crear plantilla»;
-            recién con la plantilla creada se arman los puestos y se edita cada uno. Marca en qué paso está.
-          */}
-          <ol className="grid grid-cols-2 gap-2 text-[11px]">
-            {[
-              { n: 1, t: "Valores del equipo", d: "Empresa, contrato, área y turno, horario y días. Tocá «Crear plantilla»." },
-              { n: 2, t: "Puestos, uno por uno", d: "Agregalos por rol y editá cada uno: persona, categoría u horario propio." },
-            ].map((paso) => {
-              const actual = plantilla ? paso.n === 2 : paso.n === 1;
-              const hecho = !!plantilla && paso.n === 1;
-              return (
-                <li key={paso.n} className={`rounded-xl border p-2.5 ${actual ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-slate-200 dark:border-slate-700"} ${!actual && !hecho ? "opacity-60" : ""}`}>
-                  <p className={`flex items-center gap-1.5 font-bold ${actual ? "text-blue-700 dark:text-blue-300" : "text-slate-600 dark:text-slate-300"}`}>
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${hecho ? "bg-green-600 text-white" : actual ? "bg-blue-600 text-white" : "bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-slate-200"}`}>{hecho ? "✓" : paso.n}</span>
-                    {paso.t}
-                  </p>
-                  <p className="mt-1 text-slate-500 dark:text-slate-400">{paso.d}</p>
-                </li>
-              );
-            })}
-          </ol>
+        <div className="space-y-5">
+          {/* LAS TRES HOJAS: primero lo general; los puestos y los equipos, con la plantilla ya creada. */}
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
+            {hojas.map((t) => (
+              <button
+                key={t.n}
+                type="button"
+                disabled={t.n > 1 && !plantilla}
+                onClick={() => setHoja(t.n)}
+                className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors disabled:opacity-40 ${hoja === t.n ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}
+              >
+                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] ${t.hecho ? "bg-green-600 text-white" : "bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-slate-200"}`}>{t.hecho ? "✓" : t.n}</span>
+                {t.t}
+              </button>
+            ))}
+          </div>
 
-          {/* ── VALORES COMUNES ── */}
-          <section className="space-y-4">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Valores del equipo</h4>
-            <div>
-              <Rotulo obligatorio>Nombre</Rotulo>
-              <input value={c.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} placeholder="Ej. Equipo cámara noche" className={CLASE_CAMPO} maxLength={120} />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* ── 1. GENERAL ── */}
+          {hoja === 1 && (
+            <section className="space-y-4">
+              <p className="rounded-xl bg-blue-50 p-3 text-[11px] text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                Primero lo general, que vale para todo el equipo. Con la plantilla creada armás los <b>puestos</b> (cada uno con su área, turno y horario) y después los <b>equipos</b> (quién ocupa cada puesto).
+              </p>
               <div>
-                <Rotulo>Empresa que contrata</Rotulo>
-                <select value={c.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
-                  <option value="">Elegí la empresa…</option>
-                  {empresas.map((e) => (
-                    <option key={e._id} value={e._id}>
-                      {(e as any).razonSocial || (e as any).name}
-                    </option>
-                  ))}
-                </select>
+                <Rotulo obligatorio>Nombre</Rotulo>
+                <input value={g.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} placeholder="Ej. Noticiero LN+" className={CLASE_CAMPO} maxLength={120} />
               </div>
-              {!esServicios && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <Rotulo>Convenio</Rotulo>
-                  <select value={c.convenioId} onChange={(e) => cambiar({ convenioId: e.target.value })} className={CLASE_CAMPO} disabled={convenios.length <= 1}>
-                    <option value="">{convenios.length ? "Elegí el convenio…" : "Sale de la empresa"}</option>
-                    {convenios.map((x) => {
-                      const doc = catalogos.convenioPorCct(x.externalId);
-                      return doc ? (
-                        <option key={doc._id} value={doc._id}>
-                          {x.externalId} {doc.name ? `· ${doc.name}` : ""}
-                        </option>
-                      ) : null;
-                    })}
+                  <Rotulo>Empresa que contrata</Rotulo>
+                  <select value={g.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
+                    <option value="">Elegí la empresa…</option>
+                    {empresas.map((e) => (
+                      <option key={e._id} value={e._id}>
+                        {(e as any).razonSocial || (e as any).name}
+                      </option>
+                    ))}
                   </select>
-                  {c.convenioId && plantilla && sucio && plantilla.convenioId !== c.convenioId && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">Cambió el convenio: las categorías que no sean de él quedan «a completar».</p>}
                 </div>
-              )}
-            </div>
-
-            <div>
-              <Rotulo obligatorio>Tipo de contrato</Rotulo>
-              <select value={c.contratoId} onChange={(e) => cambiar({ contratoId: e.target.value })} className={CLASE_CAMPO}>
-                <option value="">Elegí el tipo de contrato…</option>
-                {catalogos.contratos.map((x) => (
-                  <option key={x._id} value={x._id}>
-                    {x.name} {catalogos.tramitePorContrato.get(x._id) === "constancia_cuit" ? "· PEDIDO DE SERVICIOS" : catalogos.tramitePorContrato.get(x._id) ? "· PEDIDO DE ARCA" : ""}
-                  </option>
-                ))}
-              </select>
-              {porDiasSueltos && <p className="mt-1 text-[11px] text-slate-400">Se pide por días sueltos: los días se eligen en cada contratación, uno por jornada.</p>}
-            </div>
-
-            <div>
-              <Rotulo obligatorio>Área y turno</Rotulo>
-              {areas === null ? (
-                <div className="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
-              ) : (
-                <select value={c.areaId && c.shiftId ? `${c.areaId}::${c.shiftId}` : ""} onChange={(e) => elegirTurno(e.target.value)} className={CLASE_CAMPO}>
-                  <option value="">Elegí el área y el turno…</option>
-                  {areasAgrupadas.map(([areaId, g]) => (
-                    <optgroup key={areaId} label={g.nombre}>
-                      {(g.turnos || []).map((t) => (
-                        <option key={t.shiftId} value={`${t.areaId}::${t.shiftId}`}>
-                          {t.turnoNombre} {t.inicio && t.fin ? `· ${t.inicio} a ${t.fin}` : ""} {t.diasTexto ? `· ${t.diasTexto}` : ""}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div>
-              <Rotulo obligatorio>Horario (entrada - salida)</Rotulo>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <SelectorHora valor={c.inTime} onCambio={(h) => cambiar({ inTime: h })} etiqueta="Entrada" placeholder="Entrada" className={CLASE_HORA} zIndex={110} />
-                </div>
-                <FontAwesomeIcon icon={faArrowRight} className="text-xs text-slate-400" />
-                <div className="flex-1">
-                  <SelectorHora valor={c.outTime} onCambio={(h) => cambiar({ outTime: h })} etiqueta="Salida" placeholder="Salida" desde={c.inTime} className={CLASE_HORA} zIndex={110} />
-                </div>
-              </div>
-            </div>
-
-            {!porDiasSueltos && (
-              <div>
-                <Rotulo
-                  obligatorio
-                  accion={
-                    <label className="flex items-center gap-2 text-xs text-slate-500">
-                      Días rotativos
-                      <input type="checkbox" checked={c.diasRotativos} onChange={(e) => cambiar({ diasRotativos: e.target.checked })} className="h-4 w-4" />
-                    </label>
-                  }
-                >
-                  Días que trabaja
-                </Rotulo>
-                <div className="flex flex-wrap gap-1.5">
-                  {DIAS.map((d) => {
-                    const on = c.diasSemana.includes(d.i);
-                    return (
-                      <button
-                        key={d.i}
-                        type="button"
-                        onClick={() => {
-                          const dias = on ? c.diasSemana.filter((x) => x !== d.i) : [...c.diasSemana, d.i].sort();
-                          cambiar({ diasSemana: dias, diasPorSemana: c.diasRotativos ? c.diasPorSemana : String(dias.length) });
-                        }}
-                        className={`h-10 w-11 rounded-lg text-xs font-bold ${on ? "bg-blue-700 text-white" : "border border-slate-200 text-slate-500 dark:border-slate-700"}`}
-                      >
-                        {d.corto}
-                      </button>
-                    );
-                  })}
-                </div>
-                {c.diasRotativos && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Días por semana</span>
-                    <input type="number" min={1} max={7} value={c.diasPorSemana} onChange={(e) => cambiar({ diasPorSemana: e.target.value })} className={`${CLASE_CAMPO} h-10 w-20`} />
+                {!esServicios && (
+                  <div>
+                    <Rotulo>Convenio</Rotulo>
+                    <select value={g.convenioId} onChange={(e) => cambiar({ convenioId: e.target.value })} className={CLASE_CAMPO} disabled={convenios.length <= 1}>
+                      <option value="">{convenios.length ? "Elegí el convenio…" : "Sale de la empresa"}</option>
+                      {convenios.map((x) => {
+                        const doc = catalogos.convenioPorCct(x.externalId);
+                        return doc ? (
+                          <option key={doc._id} value={doc._id}>
+                            {x.externalId} {doc.name ? `· ${doc.name}` : ""}
+                          </option>
+                        ) : null;
+                      })}
+                    </select>
                   </div>
                 )}
               </div>
-            )}
-
-            <div>
-              <Rotulo>Comentario (para cada solicitud)</Rotulo>
-              <textarea rows={2} value={c.comentarios} onChange={(e) => cambiar({ comentarios: e.target.value })} placeholder="Opcional" className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
-            </div>
-          </section>
-
-          {/* ── PUESTOS ── */}
-          <section className="space-y-3 border-t border-slate-200 pt-5 dark:border-slate-700">
-            <div className="flex items-center justify-between gap-2">
-              <h4 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-                <FontAwesomeIcon icon={faUsers} className="text-blue-500" />
-                Puestos {plantilla ? `(${plantilla.integrantes.length})` : ""}
-              </h4>
-              <div className="flex gap-1.5">
-                <button type="button" onClick={() => setAgregandoPuestos(true)} disabled={!plantilla} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
-                  <FontAwesomeIcon icon={faPlus} />
-                  Por rol
-                </button>
-                <button type="button" onClick={() => setAgregando(true)} disabled={!plantilla} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 px-3 py-2 text-xs font-bold text-blue-600 disabled:opacity-40 dark:text-blue-400">
-                  <FontAwesomeIcon icon={faUserPlus} />
-                  Personas
-                </button>
+              <div>
+                <Rotulo obligatorio>Tipo de contrato</Rotulo>
+                <select value={g.contratoId} onChange={(e) => cambiar({ contratoId: e.target.value })} className={CLASE_CAMPO}>
+                  <option value="">Elegí el tipo de contrato…</option>
+                  {catalogos.contratos.map((x) => (
+                    <option key={x._id} value={x._id}>
+                      {x.name} {catalogos.tramitePorContrato.get(x._id) === "constancia_cuit" ? "· PEDIDO DE SERVICIOS" : catalogos.tramitePorContrato.get(x._id) ? "· PEDIDO DE ARCA" : ""}
+                    </option>
+                  ))}
+                </select>
+                {porDiasSueltos && <p className="mt-1 text-[11px] text-slate-400">Se pide por días sueltos: los días se eligen en cada contratación, uno por jornada.</p>}
               </div>
-            </div>
-            {!plantilla && <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500 dark:border-slate-700">Primero completá los valores del equipo y tocá «Crear plantilla». Después vas a poder agregar los puestos y editarlos uno por uno.</p>}
-            {plantilla && plantilla.integrantes.length === 0 && (
-              <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
-                Armá el equipo por roles («Por rol»: 1 director, 2 cámaras, 1 microfonista…) y asigná a la gente después, o agregá directamente a las personas.
-              </p>
-            )}
-            {plantilla?.integrantes.map((i, n) => {
-              const personalizado = !!(i.inTime || i.outTime || i.dailyRateManual || i.comentarios);
-              const catOk = categoriaValida(i);
-              const rol = i.rolesFrame.map((r) => nombreRol.get(r) || "Rol").join(", ") || "Sin rol";
-              const vacante = !i.userId;
-              return (
-                <div key={i._id} className={`rounded-xl border p-3 ${!i.activo || (!catOk && i.categoriaSatId) ? "border-red-300 dark:border-red-900/60" : vacante ? "border-dashed border-amber-400 dark:border-amber-700" : "border-slate-200 dark:border-slate-700"} bg-white dark:bg-slate-900/60`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <button type="button" onClick={() => setEditando(i)} className="min-w-0 flex-1 text-left">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-400">{n + 1}.</span>
-                        <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{rol}</span>
-                        {personalizado && <Badge tono="azul">Personalizado</Badge>}
-                        {!i.activo && <Badge tono="rojo">Inactiva</Badge>}
-                        {!catOk && i.categoriaSatId && <Badge tono="rojo">Categoría a completar</Badge>}
+              <div>
+                <Rotulo>Comentario (para cada solicitud)</Rotulo>
+                <textarea rows={2} value={g.comentarios} onChange={(e) => cambiar({ comentarios: e.target.value })} placeholder="Opcional" className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+              </div>
+            </section>
+          )}
+
+          {/* ── 2. PUESTOS ── */}
+          {hoja === 2 && plantilla && (
+            <section className="space-y-2">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Cada puesto tiene su rol, su área y turno y su horario. Tocá uno para editarlo.</p>
+              {plantilla.integrantes.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay puestos. Con «Agregar puestos» elegís los roles y cuántos de cada uno.</p>
+              )}
+              {plantilla.integrantes.map((p, n) => {
+                const turno = turnoDe(p);
+                const falta = !turno || !p.inTime || !p.outTime || (!esServicios && !p.categoriaSatId);
+                return (
+                  <div key={p._id} className={`rounded-xl border bg-white p-3 dark:bg-slate-900/60 ${falta ? "border-dashed border-amber-400 dark:border-amber-700" : "border-slate-200 dark:border-slate-700"}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <button type="button" onClick={() => setEditando(p)} className="min-w-0 flex-1 text-left">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-400">{n + 1}.</span>
+                          <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{rolDe(p)}</span>
+                          {falta && <Badge tono="ambar">Completar</Badge>}
+                        </div>
+                        <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                          {turno || "Sin área y turno"} · {p.inTime && p.outTime ? `${p.inTime} a ${p.outTime}` : "sin horario"} {!porDiasSueltos && p.diasSemana?.length ? `· ${textoDias(p.diasSemana)}` : ""}
+                        </p>
+                        {!esServicios && (
+                          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                            {p.categoriaSatId ? nombreCategoria.get(p.categoriaSatId) || "Categoría" : "Sin categoría"}
+                            {p.dailyRateManual ? ` · $ ${p.dailyRateManual.toLocaleString("es-AR")} fijado` : ""}
+                          </p>
+                        )}
+                      </button>
+                      <div className="flex shrink-0 gap-1">
+                        <button type="button" onClick={() => setEditando(p)} aria-label={`Editar el puesto ${n + 1}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
+                        </button>
+                        <button type="button" onClick={() => void quitarPuesto(p, n + 1)} aria-label={`Sacar el puesto ${n + 1}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-red-500 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                        </button>
                       </div>
-                      <p className={`mt-0.5 truncate text-xs ${vacante ? "font-semibold text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-200"}`}>{vacante ? "Sin asignar" : i.nombre}</p>
-                      <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {!esServicios && `${i.categoriaSatId ? nombreCategoria.get(i.categoriaSatId) || "Categoría" : "Sin categoría"} · `}
-                        {(i.inTime || c.inTime || "—") + " a " + (i.outTime || c.outTime || "—")}
-                        {i.dailyRateManual ? ` · $ ${i.dailyRateManual.toLocaleString("es-AR")} fijado` : ""}
-                      </p>
-                      {i.reemplazadoDeNombre && <p className="text-[10px] text-slate-400">Entró en lugar de {i.reemplazadoDeNombre}</p>}
-                    </button>
-                    <div className="flex shrink-0 gap-1">
-                      <button type="button" onClick={() => setEditando(i)} aria-label={`Editar el puesto ${n + 1}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
-                        <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setReemplazando(i)}
-                        aria-label={vacante ? `Asignar persona al puesto ${n + 1}` : `Cambiar a ${i.nombre}`}
-                        title={vacante ? "Asignar persona" : "Cambiar por otra persona"}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg ${vacante ? "bg-amber-500 text-white" : "border border-slate-200 text-slate-500 dark:border-slate-700"}`}
-                      >
-                        <FontAwesomeIcon icon={vacante ? faUserPlus : faRightLeft} className="h-3 w-3" />
-                      </button>
-                      <button type="button" onClick={() => void quitar(i)} aria-label={`Sacar el puesto ${n + 1}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-red-500 dark:border-slate-700">
-                        <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
-                      </button>
                     </div>
                   </div>
-                  {!vacante && (
-                    <button type="button" onClick={() => void conPlantilla((p) => plantillasEquipoAPI.actualizarIntegrante(p._id, i._id, { userId: null }))} className="mt-1 text-[11px] font-semibold text-slate-400 hover:text-slate-600">
-                      Dejar el puesto sin asignar
+                );
+              })}
+            </section>
+          )}
+
+          {/* ── 3. EQUIPOS ── */}
+          {hoja === 3 && plantilla && (
+            <section className="space-y-3">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Un equipo es quién ocupa cada puesto. Guardá los que repetís (ej. «Semana A», «Semana B») y al contratar elegís cuál.</p>
+              {plantilla.equipos.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {plantilla.equipos.map((e) => (
+                    <button key={e._id} type="button" onClick={() => setEquipoId(e._id)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${e._id === equipoId ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}>
+                      <FontAwesomeIcon icon={faUsers} className="mr-1.5" />
+                      {e.nombre} ({e.asignaciones.length}/{plantilla.integrantes.length})
                     </button>
-                  )}
+                  ))}
                 </div>
-              );
-            })}
-            {plantilla && plantilla.integrantes.some((i) => !i.userId) && <p className="text-[11px] text-amber-600 dark:text-amber-400">Los puestos sin asignar se completan acá (para siempre) o al contratar (sólo esa vez).</p>}
-            {plantilla && plantilla.integrantes.length > 0 && <p className="text-[11px] text-slate-500">Días del equipo: {porDiasSueltos ? "se eligen al contratar" : textoDias(c.diasSemana)}.</p>}
-          </section>
+              )}
+              {equipo && (
+                <div className="flex gap-3 text-[11px] font-semibold">
+                  <button type="button" onClick={() => void renombrarEquipo()} className="text-blue-600 dark:text-blue-400">
+                    <FontAwesomeIcon icon={faPen} className="mr-1" />
+                    Renombrar
+                  </button>
+                  <button type="button" onClick={() => void borrarEquipo()} className="text-red-500">
+                    <FontAwesomeIcon icon={faTrash} className="mr-1" />
+                    Borrar equipo
+                  </button>
+                </div>
+              )}
+              {plantilla.integrantes.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Primero armá los puestos.</p>}
+              {equipo &&
+                plantilla.integrantes.map((p, n) => {
+                  const a = quienEn(p._id);
+                  return (
+                    <div key={p._id} className={`flex items-center gap-2 rounded-xl border bg-white p-3 dark:bg-slate-900/60 ${a ? (a.activo ? "border-slate-200 dark:border-slate-700" : "border-red-300 dark:border-red-900/60") : "border-dashed border-amber-400 dark:border-amber-700"}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-slate-500 dark:text-slate-400">
+                          {n + 1}. {rolDe(p)} {turnoDe(p) ? `· ${turnoDe(p)}` : ""}
+                        </p>
+                        <p className={`truncate text-sm font-semibold ${a ? "text-slate-900 dark:text-white" : "text-amber-600 dark:text-amber-400"}`}>
+                          {a ? a.nombre : "Sin asignar"} {a && !a.activo && <Badge tono="rojo">Inactiva</Badge>}
+                        </p>
+                        {a?.reemplazadoDeNombre && <p className="text-[10px] text-slate-400">Entró en lugar de {a.reemplazadoDeNombre}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAsignando(p)}
+                        aria-label={a ? `Cambiar a ${a.nombre}` : `Asignar el puesto ${n + 1}`}
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${a ? "border border-slate-200 text-slate-500 dark:border-slate-700" : "bg-amber-500 text-white"}`}
+                      >
+                        <FontAwesomeIcon icon={a ? faRightLeft : faUserPlus} className="h-3 w-3" />
+                      </button>
+                      {a && (
+                        <button type="button" onClick={() => void conPlantilla((pl) => plantillasEquipoAPI.asignar(pl._id, equipo._id, p._id, null))} aria-label={`Dejar sin asignar el puesto ${n + 1}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faUserXmark} className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              {equipo && (
+                <button type="button" onClick={() => void nuevoEquipo()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-500 dark:border-slate-700">
+                  <FontAwesomeIcon icon={faCopy} />
+                  Otro equipo (vacío o copiando «{equipo.nombre}»)
+                </button>
+              )}
+            </section>
+          )}
         </div>
       )}
 
-      <PuestosModal
-        isOpen={agregandoPuestos}
-        onClose={() => setAgregandoPuestos(false)}
-        roleFrames={catalogos.roleFrames}
-        onAgregar={(puestos) => void conPlantilla((p) => plantillasEquipoAPI.agregarIntegrantes(p._id, puestos.map((x) => ({ userId: null, rolesFrame: [x.rolId], cantidad: x.cantidad }))))}
-      />
-      <PersonaPickerModal
-        isOpen={agregando}
-        onClose={() => setAgregando(false)}
-        titulo="Agregar personas al equipo"
-        multiple
-        excluir={(plantilla?.integrantes.map((i) => i.userId).filter(Boolean) as string[]) || []}
-        roleFrames={catalogos.roleFrames}
-        onElegir={(ps) => void conPlantilla((p) => plantillasEquipoAPI.agregarIntegrantes(p._id, ps.map((x) => ({ userId: x._id, rolesFrame: x.rolesFrame }))))}
-      />
-      <PersonaPickerModal
-        isOpen={!!reemplazando}
-        onClose={() => setReemplazando(null)}
-        titulo={reemplazando ? (reemplazando.userId ? `¿Quién entra en lugar de ${reemplazando.nombre}?` : `¿Quién ocupa el puesto de ${reemplazando.rolesFrame.map((r) => nombreRol.get(r)).filter(Boolean).join(", ") || "este rol"}?`) : ""}
-        excluir={(plantilla?.integrantes.map((i) => i.userId).filter(Boolean) as string[]) || []}
-        roleFrames={catalogos.roleFrames}
-        rolInicial={reemplazando ? nombreRol.get(reemplazando.rolesFrame[0]) : undefined}
-        onElegir={(ps) => {
-          const i = reemplazando;
-          if (!i || !ps[0]) return;
-          void conPlantilla((p) => plantillasEquipoAPI.reemplazarIntegrante(p._id, i._id, ps[0]._id));
-        }}
-      />
       {plantilla && (
-        <IntegranteModal
-          isOpen={!!editando}
-          onClose={() => setEditando(null)}
-          plantilla={{ ...plantilla, empresaContratoId: c.empresaContratoId || null, convenioId: c.convenioId || null, tipoImpositivo: tramite, inTime: c.inTime, outTime: c.outTime, comentarios: c.comentarios }}
-          proyecto={proyecto}
-          integrante={editando}
-          catalogos={catalogos}
-          onGuardar={(cambios) => conPlantilla((p) => plantillasEquipoAPI.actualizarIntegrante(p._id, editando!._id, cambios), true)}
+        <PuestosModal
+          isOpen={agregandoPuestos}
+          onClose={() => setAgregandoPuestos(false)}
+          roleFrames={catalogos.roleFrames}
+          areas={areas}
+          onAgregar={(puestos, turno) =>
+            void conPlantilla((pl) =>
+              plantillasEquipoAPI.agregarPuestos(
+                pl._id,
+                puestos.map((x) => ({
+                  rolesFrame: [x.rolId],
+                  cantidad: x.cantidad,
+                  ...(turno ? { areaId: turno.areaId, shiftId: turno.shiftId, inTime: turno.inicio || null, outTime: turno.fin || null, diasSemana: turno.dias, diasPorSemana: turno.dias.length || null } : {}),
+                })),
+              ),
+            )
+          }
         />
       )}
+      {plantilla && (
+        <PuestoModal
+          isOpen={!!editando}
+          onClose={() => setEditando(null)}
+          plantilla={{ ...plantilla, empresaContratoId: g.empresaContratoId || null, convenioId: g.convenioId || null, contratoId: g.contratoId || null, tipoImpositivo: tramite }}
+          proyecto={proyecto}
+          puesto={editando}
+          numero={editando ? plantilla.integrantes.findIndex((x) => x._id === editando._id) + 1 : 0}
+          areas={areas}
+          catalogos={catalogos}
+          onGuardar={(cambios) => conPlantilla((pl) => plantillasEquipoAPI.actualizarPuesto(pl._id, editando!._id, cambios), true)}
+        />
+      )}
+      <PersonaPickerModal
+        isOpen={!!asignando}
+        onClose={() => setAsignando(null)}
+        titulo={asignando ? `¿Quién ocupa el puesto de ${rolDe(asignando)}?` : ""}
+        excluir={equipo?.asignaciones.filter((a) => a.puestoId !== asignando?._id).map((a) => a.userId) || []}
+        roleFrames={catalogos.roleFrames}
+        rolInicial={asignando ? nombreRol.get(asignando.rolesFrame[0]) : undefined}
+        onElegir={(ps) => {
+          const p = asignando;
+          if (!p || !ps[0] || !equipo) return;
+          void conPlantilla((pl) => plantillasEquipoAPI.asignar(pl._id, equipo._id, p._id, ps[0]._id));
+        }}
+      />
     </Modal>
   );
 }
