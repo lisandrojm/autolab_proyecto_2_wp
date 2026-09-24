@@ -11,7 +11,7 @@ import { Project } from "../../../../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./useCatalogosContratacion";
 import PersonaPickerModal from "./PersonaPickerModal";
-import { Badge, CLASE_CAMPO, CLASE_HORA, esc, fechaCorta, fechaDeHoy, pesos, Rotulo, textoDias } from "./comun";
+import { Badge, CLASE_CAMPO, CLASE_HORA, esc, fechaCorta, fechaDeHoy, pesos, Rotulo } from "./comun";
 
 /*
   CONTRATAR UN EQUIPO: una solicitud por integrante, todas juntas.
@@ -42,7 +42,10 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
   const [fechas, setFechas] = useState<string[]>([]);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
-  const [jornadasRotativos, setJornadasRotativos] = useState("");
+  /** El equipo guardado que se contrata: de ahí sale quién ocupa cada puesto. */
+  const [equipoId, setEquipoId] = useState("");
+  /** Guardar en ese equipo las personas cambiadas esta vez. */
+  const [guardarEnEquipo, setGuardarEnEquipo] = useState(false);
   const [puntuales, setPuntuales] = useState<Record<string, Puntual>>({});
   const [abierto, setAbierto] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -60,7 +63,10 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
     setFechas([]);
     setDesde("");
     setHasta("");
-    setJornadasRotativos("");
+    // El equipo contratado más recientemente es el que se suele repetir.
+    const ordenados = [...(plantilla?.equipos || [])].sort((a, b) => String(b.ultimaContratacionEl || "").localeCompare(String(a.ultimaContratacionEl || "")));
+    setEquipoId(ordenados[0]?._id || "");
+    setGuardarEnEquipo(false);
     setPuntuales({});
     setAbierto(null);
     setPreview(null);
@@ -73,18 +79,22 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
   const porDiasSueltos = (contrato as any)?.data?.modoFechas === "dias";
   const indeterminado = !!(contrato as any)?.data?.esTiempoIndeterminado;
   const esServicios = plantilla?.tipoImpositivo === "constancia_cuit";
-  const turno = useMemo(() => {
-    const a = plantilla?.areaShiftAssignments?.[0];
-    return (areas || []).find((o) => o.areaId === a?.areaId && o.shiftId === a?.shiftIds?.[0]) || null;
-  }, [areas, plantilla]);
+  const equipo = plantilla?.equipos.find((e) => e._id === equipoId);
+  const asignacionDe = (puestoId: string) => equipo?.asignaciones.find((a) => a.puestoId === puestoId);
+  const turnoDe = (areaId: string | null, shiftId: string | null) => {
+    const t = (areas || []).find((o) => o.areaId === areaId && o.shiftId === shiftId);
+    return t ? `${t.areaNombre} · ${t.turnoNombre}` : "Sin área y turno";
+  };
+  const cambiados = Object.values(puntuales).filter((x) => x.userId).length;
 
   const pedido = useMemo(
     () => ({
       ...(porDiasSueltos ? { fechas } : { desde, hasta: indeterminado ? undefined : hasta }),
-      jornadasRotativos: plantilla?.diasRotativos && Number(jornadasRotativos) > 0 ? Number(jornadasRotativos) : undefined,
+      equipoId: equipoId || undefined,
+      guardarEnEquipo,
       puntuales,
     }),
-    [porDiasSueltos, fechas, desde, hasta, indeterminado, jornadasRotativos, puntuales, plantilla?.diasRotativos],
+    [porDiasSueltos, fechas, desde, hasta, indeterminado, equipoId, guardarEnEquipo, puntuales],
   );
 
   // El preview se vuelve a pedir con cada cambio, con una pausa: el server es el que calcula.
@@ -137,13 +147,14 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
         const avisos = f.advertencias.length ? `<div style="color:${f.superposicionHorario ? "#f87171" : "#fbbf24"};font-size:11px">⚠ ${f.advertencias.map(esc).join("<br>⚠ ")}</div>` : "";
         return `<div style="padding:8px 0;border-bottom:1px solid rgba(148,163,184,.25)">
           <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(f.nombre)}</b><b>${pesos(f.importes.total)}</b></div>
-          <div style="font-size:11px;opacity:.8">${esc(f.categoriaNombre || (esServicios ? "Servicio" : "—"))} · ${esc(f.inTime)} a ${esc(f.outTime)} · ${f.jornadas} jornada${f.jornadas === 1 ? "" : "s"} × ${pesos(f.importes.jornada)}</div>
+          <div style="font-size:11px;opacity:.8">${esc(nombreRol(plantilla.integrantes.find((x) => x._id === f.integranteId)?.rolesFrame || []))} · ${esc(f.categoriaNombre || (esServicios ? "Servicio" : "—"))} · ${esc(f.inTime)} a ${esc(f.outTime)} · ${f.jornadas} jornada${f.jornadas === 1 ? "" : "s"} × ${pesos(f.importes.jornada)}</div>
           ${reemplazo}${avisos}</div>`;
       })
       .join("");
     const html = `<div style="font-size:12px;line-height:1.45">
-      <div style="margin-bottom:8px;opacity:.9"><b>${esc(plantilla.nombre)}</b><br>${esc(proyecto ? etiquetaProyecto(proyecto) : "")}<br>${esc(empresa?.razonSocial || "Sin empresa")} · ${esc(plantilla.nombreContrato || "—")}<br>${esc(turno ? `${turno.areaNombre} · ${turno.turnoNombre}` : "")} · ${esc(periodo)}</div>
+      <div style="margin-bottom:8px;opacity:.9"><b>${esc(plantilla.nombre)}</b><br>${esc(proyecto ? etiquetaProyecto(proyecto) : "")}<br>${esc(empresa?.razonSocial || "Sin empresa")} · ${esc(plantilla.nombreContrato || "—")}<br>${esc(equipo ? `Equipo «${equipo.nombre}»` : "Sin equipo")} · ${esc(periodo)}</div>
       ${filasHtml}
+      ${guardarEnEquipo && cambiados ? `<div style="margin-top:8px;font-size:11px;opacity:.85">Las ${cambiados} persona(s) cambiadas quedan también en el equipo «${esc(equipo?.nombre || "")}».</div>` : ""}
       <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px"><b>${incluidas.length} ${incluidas.length === 1 ? "persona" : "personas"} · ${preview.totales.jornadas} jornadas</b><b>${pesos(preview.totales.importe)}</b></div>
     </div>`;
 
@@ -206,13 +217,31 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
       }
     >
       <div className="space-y-5">
-        {/* ── LO DEL EQUIPO ── */}
-        <div className="rounded-xl border border-slate-200 p-3 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">
-          <p>
-            <b>{plantilla.nombreContrato || "Sin tipo de contrato"}</b> · {turno ? `${turno.areaNombre} · ${turno.turnoNombre}` : "Sin área y turno"}
-          </p>
-          <p>
-            {plantilla.inTime || "—"} a {plantilla.outTime || "—"} · {porDiasSueltos ? "por días sueltos" : textoDias(plantilla.diasSemana)} · {plantilla.integrantes.length} integrantes
+        {/* ── EL EQUIPO QUE SE CONTRATA ── */}
+        <div className="space-y-2">
+          <Rotulo obligatorio>Equipo</Rotulo>
+          {plantilla.equipos.length === 0 ? (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">La plantilla no tiene equipos: elegí quién ocupa cada puesto abajo, o armá un equipo en la plantilla.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {plantilla.equipos.map((e) => (
+                <button
+                  key={e._id}
+                  type="button"
+                  onClick={() => {
+                    setEquipoId(e._id);
+                    // Otro equipo: las personas cambiadas «sólo esta vez» se refieren al anterior.
+                    setPuntuales((prev) => Object.fromEntries(Object.entries(prev).map(([k, v]) => [k, { ...v, userId: undefined }])));
+                  }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${e._id === equipoId ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}
+                >
+                  {e.nombre} ({e.asignaciones.length}/{plantilla.integrantes.length})
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {plantilla.nombreContrato || "Sin tipo de contrato"} · {plantilla.integrantes.length} puestos {porDiasSueltos ? "· por días sueltos" : ""}
           </p>
         </div>
 
@@ -229,30 +258,27 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
               {indeterminado ? <p className="self-end pb-3 text-[11px] text-slate-400">Tiempo indeterminado: sin fecha de baja.</p> : <CustomDatePicker label="Hasta" value={hasta} onChange={setHasta} />}
             </div>
           )}
-          {plantilla.diasRotativos && !porDiasSueltos && (
-            <div>
-              <Rotulo obligatorio>Jornadas (días rotativos)</Rotulo>
-              <input type="number" min={1} value={jornadasRotativos} onChange={(e) => setJornadasRotativos(e.target.value)} className={CLASE_CAMPO} placeholder="Cuántas jornadas trabaja cada uno" />
-            </div>
-          )}
+
           {preview && preview.errores.length > 0 && hayFechas && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{preview.errores.join(" ")}</p>}
         </div>
 
         {/* ── INTEGRANTES ── */}
         <div className="space-y-2">
-          <h4 className="text-sm font-bold text-slate-900 dark:text-white">Integrantes</h4>
+          <h4 className="text-sm font-bold text-slate-900 dark:text-white">Puestos</h4>
           {!hayFechas && <p className="text-[11px] text-slate-500">Elegí las fechas para ver cuánto sale cada uno.</p>}
           {plantilla.integrantes.map((i, n) => {
             const p = puntuales[i._id] || {};
-            const vacante = !i.userId;
-            const nombrePersona = vacante ? (p.userId ? nombresElegidos[i._id] || "Elegida" : "") : i.nombre;
+            const asig = asignacionDe(i._id);
+            // La persona: la cambiada esta vez, o la del equipo. Sin ninguna, el puesto está sin asignar.
+            const nombrePersona = p.userId ? nombresElegidos[i._id] || "Elegida" : asig?.nombre || "";
+            const vacante = !nombrePersona;
             const f = filaDe(i._id);
             const excluido = !!p.excluido;
             const estado = excluido ? "excluido" : !f ? "sin" : f.errores.length ? "error" : f.advertencias.length ? "aviso" : "ok";
             const abiertoAca = abierto === i._id;
-            const pisado = !!(p.inTime || p.outTime || p.dailyRate || p.categoriaSatId || p.fechas?.length);
-            // Entró en la plantilla en lugar de otra persona desde la última contratación: se sugiere (sin activarlo).
-            const sugerirCubre = !!i.reemplazadoDePersonaId && (!plantilla.ultimaContratacionEl || (i.reemplazadoEl && i.reemplazadoEl > plantilla.ultimaContratacionEl)) && !p.isReplacement;
+            const pisado = !!(p.userId || p.inTime || p.outTime || p.dailyRate || p.categoriaSatId || p.fechas?.length || p.jornadas);
+            // Entró al equipo en lugar de otra persona desde la última vez que se contrató: se sugiere (sin activarlo).
+            const sugerirCubre = !p.userId && !!asig?.reemplazadoDePersonaId && (!equipo?.ultimaContratacionEl || (!!asig.reemplazadoEl && asig.reemplazadoEl > equipo.ultimaContratacionEl)) && !p.isReplacement;
             const categorias = catalogos.categoriasPara(proyecto, plantilla.empresaContratoId, plantilla.convenioId, i.rolesFrame).documentos;
             return (
               <div key={i._id} id={`integrante-${i._id}`} className={`rounded-xl border bg-white dark:bg-slate-900/60 ${estado === "error" ? "border-red-400 dark:border-red-800" : estado === "aviso" ? (f?.superposicionHorario ? "border-red-300 dark:border-red-900/60" : "border-amber-300 dark:border-amber-800/60") : "border-slate-200 dark:border-slate-700"} ${excluido ? "opacity-50" : ""}`}>
@@ -267,6 +293,9 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
                         {pisado && !excluido && <Badge tono="azul">Sólo esta vez</Badge>}
                         {p.isReplacement && !excluido && <Badge tono="ambar">Reemplazo</Badge>}
                       </div>
+                      <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                        {turnoDe(i.areaId, i.shiftId)} · {(p.inTime || i.inTime || "—") + " a " + (p.outTime || i.outTime || "—")}
+                      </p>
                       <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                         {excluido ? "No se contrata esta vez" : f ? `${f.jornadas} jornadas × ${pesos(f.importes.jornada)} = ${pesos(f.importes.total)}` : "—"}
                       </p>
@@ -294,23 +323,30 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
                   </ul>
                 )}
 
-                {vacante && !excluido && (
-                  <div className="mx-3 mb-2 flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                    <span>{p.userId ? `Esta vez lo ocupa ${nombrePersona}.` : "Puesto sin asignar: elegí quién lo ocupa esta vez, o destildalo."}</span>
-                    <button type="button" onClick={() => setCompletandoPuesto(i._id)} className="shrink-0 rounded-lg bg-amber-500 px-2.5 py-1 font-bold text-white">
-                      {p.userId ? "Cambiar" : "Elegí quién"}
-                    </button>
+                {!excluido && (
+                  <div className={`mx-3 mb-2 flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[11px] ${vacante ? "bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300" : "bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300"}`}>
+                    <span>{vacante ? "Puesto sin asignar: elegí quién lo ocupa, o destildalo." : p.userId ? `Esta vez lo ocupa ${nombrePersona}${asig ? ` (en el equipo: ${asig.nombre})` : ""}.` : "Del equipo."}</span>
+                    <span className="flex shrink-0 gap-1.5">
+                      {p.userId && (
+                        <button type="button" onClick={() => pisar(i._id, { userId: undefined })} className="font-bold underline">
+                          Volver
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setCompletandoPuesto(i._id)} className={`rounded-lg px-2.5 py-1 font-bold text-white ${vacante ? "bg-amber-500" : "bg-slate-500"}`}>
+                        {vacante ? "Elegí quién" : "Cambiar esta vez"}
+                      </button>
+                    </span>
                   </div>
                 )}
 
                 {sugerirCubre && !excluido && (
                   <div className="mx-3 mb-2 flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                    <span>Entró en lugar de {i.reemplazadoDeNombre}. ¿Lo cubre en esta contratación?</span>
+                    <span>Entró al equipo en lugar de {asig?.reemplazadoDeNombre}. ¿Lo cubre en esta contratación?</span>
                     <button
                       type="button"
                       onClick={() => {
-                        pisar(i._id, { isReplacement: true, replacedUserId: i.reemplazadoDePersonaId || undefined });
-                        setNombresReemplazados((n) => ({ ...n, [i._id]: i.reemplazadoDeNombre }));
+                        pisar(i._id, { isReplacement: true, replacedUserId: asig?.reemplazadoDePersonaId || undefined });
+                        setNombresReemplazados((n) => ({ ...n, [i._id]: asig?.reemplazadoDeNombre || "" }));
                         setAbierto(i._id);
                       }}
                       className="shrink-0 font-bold underline"
@@ -323,15 +359,21 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
                 {abiertoAca && !excluido && (
                   <div className="space-y-4 border-t border-slate-100 p-3 dark:border-slate-800">
                     <p className="text-[11px] text-slate-500">Lo que cambies acá vale sólo para esta contratación: la plantilla no cambia.</p>
+                    {i.diasRotativos && !porDiasSueltos && (
+                      <div>
+                        <Rotulo obligatorio>Jornadas (días rotativos)</Rotulo>
+                        <input type="number" min={1} value={p.jornadas ?? ""} onChange={(e) => pisar(i._id, { jornadas: Number(e.target.value) > 0 ? Number(e.target.value) : undefined })} className={CLASE_CAMPO} placeholder="Cuántas jornadas trabaja" />
+                      </div>
+                    )}
                     <div>
-                      <Rotulo accion={p.inTime || p.outTime ? <button type="button" onClick={() => pisar(i._id, { inTime: undefined, outTime: undefined })} className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">Volver al de la plantilla</button> : undefined}>Horario</Rotulo>
+                      <Rotulo accion={p.inTime || p.outTime ? <button type="button" onClick={() => pisar(i._id, { inTime: undefined, outTime: undefined })} className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">Volver al del puesto</button> : undefined}>Horario</Rotulo>
                       <div className="flex items-center gap-2">
                         <div className="flex-1">
-                          <SelectorHora valor={p.inTime || ""} onCambio={(h) => pisar(i._id, { inTime: h || undefined })} etiqueta="Entrada" placeholder={i.inTime || plantilla.inTime || "Entrada"} className={CLASE_HORA} zIndex={110} />
+                          <SelectorHora valor={p.inTime || ""} onCambio={(h) => pisar(i._id, { inTime: h || undefined })} etiqueta="Entrada" placeholder={i.inTime || "Entrada"} className={CLASE_HORA} zIndex={110} />
                         </div>
                         <FontAwesomeIcon icon={faArrowRight} className="text-xs text-slate-400" />
                         <div className="flex-1">
-                          <SelectorHora valor={p.outTime || ""} onCambio={(h) => pisar(i._id, { outTime: h || undefined })} etiqueta="Salida" placeholder={i.outTime || plantilla.outTime || "Salida"} desde={p.inTime || i.inTime || plantilla.inTime} className={CLASE_HORA} zIndex={110} />
+                          <SelectorHora valor={p.outTime || ""} onCambio={(h) => pisar(i._id, { outTime: h || undefined })} etiqueta="Salida" placeholder={i.outTime || "Salida"} desde={p.inTime || i.inTime || ""} className={CLASE_HORA} zIndex={110} />
                         </div>
                       </div>
                     </div>
@@ -391,6 +433,12 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
               </div>
             );
           })}
+          {equipo && cambiados > 0 && (
+            <label className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+              <input type="checkbox" checked={guardarEnEquipo} onChange={(e) => setGuardarEnEquipo(e.target.checked)} className="h-4 w-4" />
+              Guardar {cambiados === 1 ? "la persona cambiada" : `las ${cambiados} personas cambiadas`} en el equipo «{equipo.nombre}» (si no, vale sólo para esta vez).
+            </label>
+          )}
         </div>
       </div>
 
@@ -405,7 +453,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
           const i = plantilla.integrantes.find((x) => x._id === completandoPuesto);
           return i ? catalogos.roleFrames.find((r) => r._id === i.rolesFrame[0])?.name : undefined;
         })()}
-        excluir={[...(plantilla.integrantes.map((x) => x.userId).filter(Boolean) as string[]), ...Object.entries(puntuales).filter(([k, v]) => k !== completandoPuesto && v.userId).map(([, v]) => v.userId!)]}
+        excluir={[...(equipo?.asignaciones.filter((a) => a.puestoId !== completandoPuesto && !puntuales[a.puestoId]?.userId).map((a) => a.userId) || []), ...Object.entries(puntuales).filter(([k, v]) => k !== completandoPuesto && v.userId).map(([, v]) => v.userId!)]}
         roleFrames={catalogos.roleFrames}
         onElegir={(ps) => {
           const id = completandoPuesto;

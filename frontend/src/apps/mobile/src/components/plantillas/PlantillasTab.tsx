@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClock, faCopy, faFileSignature, faLayerGroup, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { etiquetaProyecto, useAreasDelProyecto, useCatalogosContratacion } from "./useCatalogosContratacion";
+import { etiquetaProyecto, useCatalogosContratacion } from "./useCatalogosContratacion";
 import PlantillaEditor from "./PlantillaEditor";
 import ContratarEquipoModal from "./ContratarEquipoModal";
 import { CLASE_CAMPO, fechaCorta } from "./comun";
@@ -40,7 +40,6 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
     if (!proyectos.some((p) => p._id === projectId) && proyectos.length > 0) setProjectId(proyectos[0]._id);
   }, [proyectos, projectId]);
   const proyecto = useMemo(() => proyectos?.find((p) => p._id === projectId) || null, [proyectos, projectId]);
-  const areas = useAreasDelProyecto(projectId);
 
   useEffect(() => {
     plantillasEquipoAPI.listarGenerales().then(setGenerales).catch(() => setGenerales([]));
@@ -76,12 +75,6 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
-
-  const turnoDe = (p: PlantillaResumen) => {
-    const a = p.areaShiftAssignments?.[0];
-    const t = (areas || []).find((o) => o.areaId === a?.areaId && o.shiftId === a?.shiftIds?.[0]);
-    return t ? `${t.areaNombre} · ${t.turnoNombre}` : "Sin área y turno";
-  };
 
   const duplicar = async (p: PlantillaResumen) => {
     try {
@@ -148,7 +141,7 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{g.nombre}</p>
                 <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {g.integrantes} {g.integrantes === 1 ? "puesto" : "puestos"} · {g.nombreContrato || "Sin tipo de contrato"}
+                  {g.puestos} {g.puestos === 1 ? "puesto" : "puestos"} · {g.nombreContrato || "Sin tipo de contrato"}
                 </p>
               </div>
               <button type="button" onClick={() => void usar(g)} className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">
@@ -174,11 +167,11 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
               <div className="min-w-0">
                 <h4 className="truncate font-bold text-slate-900 dark:text-slate-100">{p.nombre}</h4>
                 <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {p.integrantes} {p.integrantes === 1 ? "puesto" : "puestos"}
-                  {p.sinAsignar > 0 && <span className="font-semibold text-amber-600 dark:text-amber-400"> ({p.sinAsignar} sin asignar)</span>} · {p.nombreContrato || "Sin tipo de contrato"}
+                  {p.puestos} {p.puestos === 1 ? "puesto" : "puestos"} · {p.nombreContrato || "Sin tipo de contrato"}
                 </p>
+                {/* Los equipos guardados, con cuántos puestos tiene cubiertos cada uno. */}
                 <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {turnoDe(p)} · {p.inTime || "—"} a {p.outTime || "—"}
+                  {p.equipos.length ? p.equipos.map((e) => `${e.nombre} (${e.asignados}/${p.puestos})`).join(" · ") : "Sin equipos"}
                 </p>
               </div>
               <div className="flex shrink-0 gap-1">
@@ -198,7 +191,7 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
                 <FontAwesomeIcon icon={faClock} className="h-3 w-3" />
                 {p.ultimaContratacionEl ? `Última contratación: ${fechaCorta(p.ultimaContratacionEl)}` : "Nunca contratada"}
               </span>
-              <button type="button" onClick={() => void abrirContratar(p)} disabled={p.integrantes === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+              <button type="button" onClick={() => void abrirContratar(p)} disabled={p.puestos === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
                 <FontAwesomeIcon icon={faFileSignature} />
                 Contratar
               </button>

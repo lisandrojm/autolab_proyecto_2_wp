@@ -16,33 +16,20 @@ import { tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
   PLANTILLAS GENERALES DE EQUIPO (Contratación → Plantillas, escritorio).
 
   Son la ESTRUCTURA de un equipo que se repite en muchos proyectos: los puestos por rol empresa
-  («1 director, 1 playout, 2 cámaras, 1 microfonista…») y, si se quiere, el tipo de contrato, el horario y
-  los días. No tienen proyecto ni personas, y no se contratan desde acá: cada supervisor, en el móvil, la
-  «Usa» y queda una copia PROPIA en su proyecto, donde asigna a su gente, la empresa y el área/turno.
+  («1 director, 1 playout, 2 cámaras, 1 microfonista…») y, si se quiere, el tipo de contrato. No tienen
+  proyecto, áreas, horarios ni personas, y no se contratan desde acá: cada supervisor, en el móvil, la
+  «Usa» y queda una copia PROPIA en su proyecto, donde completa el área, el turno y el horario de cada
+  puesto y arma sus equipos.
   Cambiar una general después no toca las copias ya hechas.
 */
-const DIAS = [
-  { i: 1, t: "Lu" },
-  { i: 2, t: "Ma" },
-  { i: 3, t: "Mi" },
-  { i: 4, t: "Ju" },
-  { i: 5, t: "Vi" },
-  { i: 6, t: "Sá" },
-  { i: 0, t: "Do" },
-];
 const CAMPO = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 interface Comunes {
   nombre: string;
   contratoId: string;
-  inTime: string;
-  outTime: string;
-  diasSemana: number[];
-  diasRotativos: boolean;
-  diasPorSemana: string;
   comentarios: string;
 }
-const vacio: Comunes = { nombre: "", contratoId: "", inTime: "", outTime: "", diasSemana: [], diasRotativos: false, diasPorSemana: "", comentarios: "" };
+const vacio: Comunes = { nombre: "", contratoId: "", comentarios: "" };
 
 export const PlantillasGeneralesPage: React.FC = () => {
   const [lista, setLista] = useState<PlantillaResumen[] | null>(null);
@@ -131,9 +118,8 @@ export const PlantillasGeneralesPage: React.FC = () => {
                   <button type="button" onClick={() => setEditando({ id: p._id })} className="min-w-0 text-left">
                     <p className="truncate font-bold text-gray-900 dark:text-gray-100">{p.nombre}</p>
                     <p className="text-xs text-gray-500">
-                      {p.integrantes} {p.integrantes === 1 ? "puesto" : "puestos"} · {p.nombreContrato || "Sin tipo de contrato"}
+                      {p.puestos} {p.puestos === 1 ? "puesto" : "puestos"} · {p.nombreContrato || "Sin tipo de contrato"}
                     </p>
-                    <p className="text-xs text-gray-500">{p.inTime && p.outTime ? `${p.inTime} a ${p.outTime}` : "Sin horario fijo"}</p>
                   </button>
                   <div className="flex shrink-0 gap-1">
                     <button type="button" onClick={() => setEditando({ id: p._id })} title="Editar" className="p-2 text-gray-400 hover:text-blue-600">
@@ -177,7 +163,7 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
 
   const aplicar = (p: Plantilla) => {
     setPlantilla(p);
-    setC({ nombre: p.nombre, contratoId: p.contratoId || "", inTime: p.inTime || "", outTime: p.outTime || "", diasSemana: p.diasSemana || [], diasRotativos: !!p.diasRotativos, diasPorSemana: p.diasPorSemana ? String(p.diasPorSemana) : "", comentarios: p.comentarios || "" });
+    setC({ nombre: p.nombre, contratoId: p.contratoId || "", comentarios: p.comentarios || "" });
   };
   useEffect(() => {
     if (!id) return;
@@ -202,11 +188,6 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
       contratoId: c.contratoId || null,
       nombreContrato: contrato?.name || "",
       tipoImpositivo: c.contratoId ? tramiteDe(c.contratoId) : "",
-      inTime: c.inTime,
-      outTime: c.outTime,
-      diasSemana: c.diasSemana,
-      diasPorSemana: Number(c.diasPorSemana) || c.diasSemana.length || null,
-      diasRotativos: c.diasRotativos,
       comentarios: c.comentarios,
     };
   };
@@ -236,7 +217,7 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
     if (!pid) return;
     try {
       const orden = Object.keys(cantidades);
-      aplicar(await plantillasGeneralesAPI.agregarIntegrantes(pid, orden.map((rolId) => ({ userId: null, rolesFrame: [rolId], cantidad: cantidades[rolId] }))));
+      aplicar(await plantillasGeneralesAPI.agregarPuestos(pid, orden.map((rolId) => ({ rolesFrame: [rolId], cantidad: cantidades[rolId] }))));
       setCantidades({});
       setBusca("");
       onCambio();
@@ -247,7 +228,7 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
   const quitarPuesto = async (integranteId: string) => {
     if (!plantilla) return;
     try {
-      aplicar(await plantillasGeneralesAPI.quitarIntegrante(plantilla._id, integranteId));
+      aplicar(await plantillasGeneralesAPI.quitarPuesto(plantilla._id, integranteId));
       onCambio();
     } catch (e: any) {
       sweetAlert.error("No se pudo quitar", e?.response?.data?.error || "Probá de nuevo.");
@@ -259,7 +240,7 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
       isOpen
       onClose={onClose}
       title={plantilla ? plantilla.nombre : "Nueva plantilla general"}
-      subtitle="Puestos por rol y valores de base. Sin proyecto ni personas."
+      subtitle="Puestos por rol. Sin proyecto, áreas, horarios ni personas: eso lo completa cada supervisor en su copia."
       size="lg"
       footer={
         <>
@@ -281,7 +262,7 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Nombre *</label>
             <input value={c.nombre} onChange={(e) => setC({ ...c, nombre: e.target.value })} placeholder="Ej. Estudio noticiero" className={CAMPO} maxLength={120} />
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Tipo de contrato</label>
               <select value={c.contratoId} onChange={(e) => setC({ ...c, contratoId: e.target.value })} className={CAMPO}>
@@ -292,32 +273,6 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Horario</label>
-              <div className="flex items-center gap-2">
-                <input type="time" value={c.inTime} onChange={(e) => setC({ ...c, inTime: e.target.value })} className={CAMPO} />
-                <span className="text-gray-400">→</span>
-                <input type="time" value={c.outTime} onChange={(e) => setC({ ...c, outTime: e.target.value })} className={CAMPO} />
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Días que trabaja</label>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {DIAS.map((d) => {
-                const on = c.diasSemana.includes(d.i);
-                return (
-                  <button key={d.i} type="button" onClick={() => setC({ ...c, diasSemana: on ? c.diasSemana.filter((x) => x !== d.i) : [...c.diasSemana, d.i].sort() })} className={`h-9 w-10 rounded-md text-xs font-bold ${on ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-500 dark:border-gray-700"}`}>
-                    {d.t}
-                  </button>
-                );
-              })}
-              <label className="ml-3 flex items-center gap-2 text-xs text-gray-500">
-                <input type="checkbox" checked={c.diasRotativos} onChange={(e) => setC({ ...c, diasRotativos: e.target.checked })} />
-                Rotativos
-              </label>
-              {c.diasRotativos && <input type="number" min={1} max={7} value={c.diasPorSemana} onChange={(e) => setC({ ...c, diasPorSemana: e.target.value })} placeholder="Días/sem." className="w-24 rounded-md border border-gray-200 px-2 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-900" />}
             </div>
           </div>
           <div>

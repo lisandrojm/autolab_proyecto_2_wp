@@ -1,16 +1,31 @@
 import mongoose, { Schema } from "mongoose";
-const integranteSchema = new Schema({
-    userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+const puestoSchema = new Schema({
     rolesFrame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
     orden: { type: Number, default: 0 },
-    categoriaSatId: { type: Schema.Types.ObjectId, ref: "CategoriaSat", default: null },
+    areaId: { type: Schema.Types.ObjectId, ref: "Area", default: null },
+    shiftId: { type: Schema.Types.ObjectId, ref: "Shift", default: null },
     inTime: { type: String, default: null },
     outTime: { type: String, default: null },
+    diasSemana: { type: [Number], default: [] },
+    diasPorSemana: { type: Number, default: null },
+    diasRotativos: { type: Boolean, default: false },
+    categoriaSatId: { type: Schema.Types.ObjectId, ref: "CategoriaSat", default: null },
     dailyRateManual: { type: Number, default: null },
     escalaAlFijar: { type: Number, default: null },
     comentarios: { type: String, default: null },
-    reemplazadoDePersonaId: { type: Schema.Types.ObjectId, ref: "User", default: null },
-    reemplazadoEl: { type: Date, default: null },
+});
+const equipoSchema = new Schema({
+    nombre: { type: String, required: true, trim: true, maxlength: 80 },
+    asignaciones: [
+        {
+            _id: false,
+            puestoId: { type: Schema.Types.ObjectId, required: true },
+            userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+            reemplazadoDePersonaId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+            reemplazadoEl: { type: Date, default: null },
+        },
+    ],
+    ultimaContratacionEl: { type: Date, default: null },
 });
 const plantillaEquipoSchema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
@@ -22,20 +37,9 @@ const plantillaEquipoSchema = new Schema({
     contratoId: { type: Schema.Types.ObjectId, ref: "Contrato", default: null },
     nombreContrato: { type: String, default: "" },
     tipoImpositivo: { type: String, default: "" },
-    areaShiftAssignments: [
-        {
-            _id: false,
-            areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-            shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
-        },
-    ],
-    inTime: { type: String, default: "" },
-    outTime: { type: String, default: "" },
-    diasSemana: { type: [Number], default: [] },
-    diasPorSemana: { type: Number, default: null },
-    diasRotativos: { type: Boolean, default: false },
     comentarios: { type: String, default: "" },
-    integrantes: { type: [integranteSchema], default: [] },
+    integrantes: { type: [puestoSchema], default: [] },
+    equipos: { type: [equipoSchema], default: [] },
     activo: { type: Boolean, default: true },
     creadoPor: { type: Schema.Types.ObjectId, ref: "User", required: true },
     ultimaContratacionEl: { type: Date, default: null },
@@ -43,8 +47,7 @@ const plantillaEquipoSchema = new Schema({
 }, { timestamps: true, collection: "plantillas_equipo" });
 plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, activo: 1 });
 // El nombre no se repite entre las plantillas vivas (las borradas quedan con `activo: false`): las de un
-// supervisor, dentro de su proyecto; las generales, en todo el tenant. Dos supervisores sí pueden tener
-// cada uno su «Equipo noche».
+// supervisor, dentro de su proyecto; las generales, en todo el tenant.
 plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, nombre: 1 }, { unique: true, name: "nombre_personal_unico", partialFilterExpression: { activo: true, alcance: "personal" } });
 plantillaEquipoSchema.index({ tenantId: 1, nombre: 1 }, { unique: true, name: "nombre_general_unico", partialFilterExpression: { activo: true, alcance: "general" } });
 export const PlantillaEquipo = mongoose.model("PlantillaEquipo", plantillaEquipoSchema);

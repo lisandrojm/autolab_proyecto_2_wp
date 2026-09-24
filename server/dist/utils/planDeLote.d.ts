@@ -28,22 +28,21 @@ export interface PlantillaParaPlan {
     contratoId?: string;
     nombreContrato?: string;
     tipoImpositivo?: string;
-    areaShiftAssignments: {
-        areaId: string;
-        shiftIds: string[];
-    }[];
-    inTime: string;
-    outTime: string;
-    diasSemana: number[];
-    diasPorSemana?: number | null;
-    diasRotativos: boolean;
     comentarios?: string;
 }
-/** Un puesto de la plantilla: un rol y, si ya se sabe, la persona (`userId` vacío = sin asignar). */
+/**
+ * Un PUESTO: su rol, su área y turno, su horario y sus días (todo por puesto: una plantilla cubre varias
+ * áreas y turnos), y la persona que lo ocupa en el equipo elegido (`userId` vacío = sin asignar).
+ */
 export interface IntegranteParaPlan {
     _id: string;
     userId: string;
     rolesFrame: string[];
+    areaId?: string | null;
+    shiftId?: string | null;
+    diasSemana?: number[];
+    diasPorSemana?: number | null;
+    diasRotativos?: boolean;
     categoriaSatId?: string | null;
     inTime?: string | null;
     outTime?: string | null;
@@ -64,8 +63,10 @@ export interface FechasDeContratacion {
 /** Lo que se pisa SÓLO en esta contratación, sin tocar la plantilla. */
 export interface Puntual {
     excluido?: boolean;
-    /** Para un puesto SIN ASIGNAR: quién lo ocupa en esta contratación (la plantilla no cambia). */
+    /** Quién ocupa el puesto en ESTA contratación, en vez de la persona del equipo (o si está sin asignar). */
     userId?: string;
+    /** Días rotativos: las jornadas de este puesto en esta contratación. */
+    jornadas?: number;
     categoriaSatId?: string;
     inTime?: string;
     outTime?: string;

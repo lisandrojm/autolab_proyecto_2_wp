@@ -41,9 +41,8 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
     const esServicios = plantilla.tipoImpositivo === "constancia_cuit";
     const multiplicador = Number(ctx.contrato?.multiplicadorDiario) > 0 ? Number(ctx.contrato.multiplicadorDiario) : 1;
     const limiteHoras = ctx.contrato?.horasPorJornada ?? null;
-    const areaTurnoElegido = plantilla.areaShiftAssignments.some((a) => a.areaId && a.shiftIds.length > 0);
-    // La persona de cada puesto: la de la plantilla o, si está sin asignar, la elegida para esta vez.
-    const personaDelPuesto = (integ) => integ.userId || puntuales[integ._id]?.userId || "";
+    // La persona de cada puesto: la elegida para esta vez o, si no, la del equipo.
+    const personaDelPuesto = (integ) => puntuales[integ._id]?.userId || integ.userId || "";
     const veces = new Map();
     for (const integ of integrantes) {
         const uid = personaDelPuesto(integ);
@@ -58,22 +57,23 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const nombre = sinPersona ? "Puesto sin asignar" : persona?.nombre || "Persona no encontrada";
         const errores = [];
         const advertencias = [];
-        const inTime = p.inTime || integ.inTime || plantilla.inTime;
-        const outTime = p.outTime || integ.outTime || plantilla.outTime;
+        const inTime = p.inTime || integ.inTime || "";
+        const outTime = p.outTime || integ.outTime || "";
+        const areaShiftAssignments = integ.areaId && integ.shiftId ? [{ areaId: String(integ.areaId), shiftIds: [String(integ.shiftId)] }] : [];
         const categoriaSatId = esServicios ? "" : p.categoriaSatId || integ.categoriaSatId || "";
         const categoria = categoriaSatId ? ctx.categorias.get(categoriaSatId) : undefined;
         // ── Las fechas de esta persona ──
         const fechasSueltas = porDiasSueltos ? [...new Set((p.fechas?.length ? p.fechas : contratacion.fechas) || [])].sort() : [];
         const desde = porDiasSueltos ? fechasSueltas[0] || "" : contratacion.desde || "";
         const hasta = porDiasSueltos ? fechasSueltas[fechasSueltas.length - 1] || "" : indeterminado ? "" : contratacion.hasta || "";
-        const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : plantilla.diasSemana;
-        const diasPorSemana = porDiasSueltos ? diasSemana.length : Number(plantilla.diasPorSemana) || diasSemana.length;
-        const rotativos = porDiasSueltos ? false : plantilla.diasRotativos;
+        const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : integ.diasSemana || [];
+        const diasPorSemana = porDiasSueltos ? diasSemana.length : Number(integ.diasPorSemana) || diasSemana.length;
+        const rotativos = porDiasSueltos ? false : !!integ.diasRotativos;
         // Igual que el formulario individual: `periodoDeCalculo` con el `indeterminado` del contrato, y las
         // jornadas con la regla compartida.
         const periodo = periodoDeCalculo(desde, hasta, indeterminado);
         const calculadas = jornadasCalculadasDelPedido({ porDiasSueltos, fechas: fechasSueltas, rotativos, desde: periodo.desde, hasta: periodo.hasta, dias: diasSemana });
-        const jornadas = rotativos ? Number(contratacion.jornadasRotativos) || 0 : calculadas || 0;
+        const jornadas = rotativos ? Number(p.jornadas) || Number(contratacion.jornadasRotativos) || 0 : calculadas || 0;
         // ── Lo que se paga por jornada ──
         const escala = categoria ? importePorJornada(categoria.neto, multiplicador) : 0;
         let dailyRate = 0;
@@ -113,13 +113,13 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
             errores.push("La misma persona está en más de un puesto.");
         if (!esServicios && !categoriaSatId)
             errores.push("Falta la categoría (a completar).");
-        if (!areaTurnoElegido)
-            errores.push("La plantilla no tiene área y turno.");
+        if (!areaShiftAssignments.length)
+            errores.push("El puesto no tiene área y turno.");
         if (!plantilla.contratoId && ctx.hayContratos)
             errores.push("La plantilla no tiene tipo de contrato.");
         const horas = horasDelHorario(inTime, outTime);
         if (!inTime || !outTime)
-            errores.push("Falta el horario.");
+            errores.push("El puesto no tiene horario.");
         else if (limiteHoras != null && horas != null && horas > limiteHoras)
             errores.push(`El horario suma ${horas.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h y «${plantilla.nombreContrato || "el contrato"}» admite hasta ${limiteHoras} h por jornada.`);
         if (esServicios && !(dailyRate > 0))
@@ -191,7 +191,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
                 tipoImpositivo: plantilla.tipoImpositivo,
                 contratoId: plantilla.contratoId,
                 nombreContrato: plantilla.nombreContrato,
-                areaShiftAssignments: plantilla.areaShiftAssignments,
+                areaShiftAssignments,
             }
             : null;
         return {

@@ -1712,6 +1712,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     if (!r.isConfirmed) return;
     setGuardandoPlantilla(true);
     try {
+      /*
+        La plantilla nace con UN puesto —el de este pedido: rol, área y turno, horario, días, categoría—
+        y la persona asignada en «Equipo 1». Lo general (empresa, convenio, contrato) va a la plantilla.
+      */
+      const asignacion = formData.areaShiftAssignments.find((a) => a.areaId && a.shiftIds.length);
       await plantillasEquipoAPI.crear({
         projectId: formData.projectIds[0],
         nombre: String(r.value).trim(),
@@ -1720,24 +1725,25 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         contratoId: formData.contratoId || null,
         nombreContrato: contratoElegido?.name || "",
         tipoImpositivo: formData.tipoImpositivo || "",
-        areaShiftAssignments: formData.areaShiftAssignments,
-        inTime: formData.inTime,
-        outTime: formData.outTime,
-        diasSemana: porDiasSueltos ? [] : formData.diasSemana,
-        diasPorSemana: porDiasSueltos ? null : Number(formData.diasPorSemana) || null,
-        diasRotativos: porDiasSueltos ? false : formData.diasRotativos,
         comentarios: formData.comentarios.trim(),
-        integrantes: [
+        puestos: [
           {
             userId: selectedUser._id,
             rolesFrame: formData.roleFrameIds,
+            areaId: asignacion?.areaId || null,
+            shiftId: asignacion?.shiftIds[0] || null,
+            inTime: formData.inTime || null,
+            outTime: formData.outTime || null,
+            diasSemana: porDiasSueltos ? [] : formData.diasSemana,
+            diasPorSemana: porDiasSueltos ? null : Number(formData.diasPorSemana) || null,
+            diasRotativos: porDiasSueltos ? false : formData.diasRotativos,
             categoriaSatId: esServicios ? null : formData.categoriaSatId || null,
             // Sólo si se pisó la escala (o es un servicio, que no tiene escala): si no, que la tome al contratar.
             dailyRateManual: esServicios || diferenciaContraEscala ? Number(formData.dailyRate) || null : null,
           },
         ],
       });
-      sweetAlert.success("Plantilla guardada", "Sumale más gente y contratala desde Contratación → Plantillas.");
+      sweetAlert.success("Plantilla guardada", "Sumale más puestos y armá sus equipos desde Contratación → Plantillas.");
     } catch (e: any) {
       sweetAlert.error("No se pudo guardar la plantilla", e?.response?.data?.error || "Probá de nuevo.");
     } finally {

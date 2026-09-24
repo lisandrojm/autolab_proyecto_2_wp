@@ -14,15 +14,10 @@ const plantilla = {
     contratoId: "c5x7",
     nombreContrato: "Plazo fijo 5x7",
     tipoImpositivo: "alta_temprana",
-    areaShiftAssignments: [{ areaId: "a1", shiftIds: ["s1"] }],
-    inTime: "10:00",
-    outTime: "18:00",
-    diasSemana: LU_VI,
-    diasPorSemana: 5,
-    diasRotativos: false,
     comentarios: "Equipo de siempre",
 };
-const integ = (id, x = {}) => ({ _id: `i${id}`, userId: `u${id}`, rolesFrame: ["rf1"], categoriaSatId: "cat1", ...x });
+// Cada puesto trae su área y turno, su horario y sus días.
+const integ = (id, x = {}) => ({ _id: `i${id}`, userId: `u${id}`, rolesFrame: ["rf1"], categoriaSatId: "cat1", areaId: "a1", shiftId: "s1", inTime: "10:00", outTime: "18:00", diasSemana: LU_VI, diasPorSemana: 5, diasRotativos: false, ...x });
 const ctx = (x = {}) => ({
     contrato: { modoFechas: "periodo", esTiempoIndeterminado: false, multiplicadorDiario: 0, horasPorJornada: 9 },
     hayContratos: true,
@@ -226,4 +221,21 @@ test("la misma persona en dos puestos: error en los dos", () => {
     const { filas } = planDeLote(plantilla, [integ("1"), integ("P", { userId: "" })], SEPT, { iP: { userId: "u1" } }, ctx());
     assert.ok(filas[0].errores.some((e) => /más de un puesto/.test(e)));
     assert.ok(filas[1].errores.some((e) => /más de un puesto/.test(e)));
+});
+test("la persona elegida sólo esta vez manda sobre la del equipo", () => {
+    const { filas } = planDeLote(plantilla, [integ("1")], SEPT, { i1: { userId: "u3" } }, ctx());
+    assert.equal(filas[0].nombre, "Caro Tres");
+    assert.equal(filas[0].datos.solicitudUserId, "u3");
+});
+test("cada puesto con su área, turno, horario y días (una plantilla cubre varios turnos)", () => {
+    const noche = integ("2", { areaId: "a2", shiftId: "s9", inTime: "18:00", outTime: "00:00", diasSemana: [5, 6], diasPorSemana: 2 });
+    const { filas } = planDeLote(plantilla, [integ("1"), noche], SEPT, {}, ctx());
+    assert.deepEqual(filas[1].datos.areaShiftAssignments, [{ areaId: "a2", shiftIds: ["s9"] }]);
+    assert.equal(filas[1].datos.inTime, "18:00");
+    // Viernes y sábados de septiembre 2026: 4 + 4.
+    assert.equal(filas[1].jornadas, 8);
+    assert.equal(filas[0].jornadas, 22);
+    const sinTurno = planDeLote(plantilla, [integ("1", { areaId: null, shiftId: null, inTime: null })], SEPT, {}, ctx());
+    assert.ok(sinTurno.filas[0].errores.some((e) => /no tiene área y turno/.test(e)));
+    assert.ok(sinTurno.filas[0].errores.some((e) => /no tiene horario/.test(e)));
 });

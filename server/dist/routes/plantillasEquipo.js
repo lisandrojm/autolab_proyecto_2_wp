@@ -3,7 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { MOBILE_HIRING_TEMPLATES } from "../utils/permisosMobile.js";
-import { actualizarIntegrante, actualizarPlantilla, agregarIntegrantes, borrarPlantilla, contratarPlantilla, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarIntegrante, reemplazarIntegrante, usarGeneral, } from "../services/plantillasEquipo.js";
+import { actualizarPlantilla, actualizarPuesto, agregarPuestos, asignarPuesto, borrarEquipo, borrarPlantilla, contratarPlantilla, crearEquipo, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarPuesto, renombrarEquipo, usarGeneral, } from "../services/plantillasEquipo.js";
 const manejar = (fn) => async (req, res) => {
     try {
         const r = await fn(req, res);
@@ -36,9 +36,9 @@ function rutasDe(alcance, mw) {
         return { ok: true };
     }));
     r.post("/:id/duplicar", ...mw, manejar((req) => duplicarPlantilla(a(req), req.params.id, req.body?.nombre)));
-    r.post("/:id/integrantes", ...mw, manejar((req) => agregarIntegrantes(a(req), req.params.id, req.body?.integrantes || [])));
-    r.put("/:id/integrantes/:integranteId", ...mw, manejar((req) => actualizarIntegrante(a(req), req.params.id, req.params.integranteId, req.body || {})));
-    r.delete("/:id/integrantes/:integranteId", ...mw, manejar((req) => quitarIntegrante(a(req), req.params.id, req.params.integranteId)));
+    r.post("/:id/puestos", ...mw, manejar((req) => agregarPuestos(a(req), req.params.id, req.body?.puestos || [], req.body?.equipoId)));
+    r.put("/:id/puestos/:puestoId", ...mw, manejar((req) => actualizarPuesto(a(req), req.params.id, req.params.puestoId, req.body || {})));
+    r.delete("/:id/puestos/:puestoId", ...mw, manejar((req) => quitarPuesto(a(req), req.params.id, req.params.puestoId)));
     return r;
 }
 // ── Móvil: las personales ──
@@ -52,7 +52,12 @@ router.post("/generales/:id/usar", ...movil, manejar(async (req, res) => {
     return usarGeneral(acceso(req, "personal"), req.params.id, String(req.body?.projectId || ""), req.body?.nombre);
 }));
 router.use(rutasDe("personal", movil));
-router.post("/:id/integrantes/:integranteId/reemplazar", ...movil, manejar((req) => reemplazarIntegrante(acceso(req, "personal"), req.params.id, req.params.integranteId, String(req.body?.userId || ""))));
+// Los equipos (quién ocupa cada puesto): sólo en las personales.
+router.post("/:id/equipos", ...movil, manejar((req) => crearEquipo(acceso(req, "personal"), req.params.id, String(req.body?.nombre || ""), req.body?.copiarDe)));
+router.put("/:id/equipos/:equipoId", ...movil, manejar((req) => renombrarEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, String(req.body?.nombre || ""))));
+router.delete("/:id/equipos/:equipoId", ...movil, manejar((req) => borrarEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId)));
+// `userId: null` deja el puesto sin asignar en ese equipo.
+router.put("/:id/equipos/:equipoId/puestos/:puestoId", ...movil, manejar((req) => asignarPuesto(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body?.userId ?? null)));
 // No escribe nada: lo que saldría, con importes, errores y advertencias por puesto.
 router.post("/:id/preview", ...movil, manejar((req) => previewDeContratacion(acceso(req, "personal"), req.params.id, req.body || {})));
 // Todo o nada, con `idempotencyKey`.
