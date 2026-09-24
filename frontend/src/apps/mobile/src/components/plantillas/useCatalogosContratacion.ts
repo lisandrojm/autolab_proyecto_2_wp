@@ -8,7 +8,8 @@ import { contratosAPI, ContratoItem } from "../../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../../api/contratosFrame";
 import { infoAPI, InfoItem } from "../../../../../api/info";
 import { activityLogTypesAPI, RequestConfig } from "../../../../../api/requestConfig";
-import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from "../../../../../utils/seleccionConvenioCategoria";
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from "../../../../../utils/seleccionConvenioCategoria";
+import { idValoracionDe, useValoraciones } from "../../../../../components/proyectos/ChipValoracion";
 import { TipoImpositivo, tipoImpositivoDeContrato } from "../../../../../utils/tramiteImpositivo";
 import { claveOrdenTurno, textoDeDias } from "../../../../../utils/jerarquiaTurnos";
 import { useProfile } from "../../hooks/useProfile";
@@ -70,6 +71,7 @@ export function useCatalogosContratacion(activo = true) {
   const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
   const [estados, setEstados] = useState<InfoItem[]>([]);
   const [motivos, setMotivos] = useState<RequestConfig[]>([]);
+  const valoraciones = useValoraciones();
 
   useEffect(() => {
     if (!activo) return;
@@ -161,18 +163,47 @@ export function useCatalogosContratacion(activo = true) {
   /**
    * Las categorías que se le pueden dar a alguien con esos roles, dentro del convenio: el mismo cruce
    * que el formulario individual. Devuelve los documentos del catálogo (`_id`), que es lo que se guarda.
+   * Por defecto, sólo las de la valoración del proyecto; con `verTodasLasValoraciones`, todas.
    */
-  const categoriasPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[], verTodasDelConvenio = false) => {
+  const categoriasPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[], verTodasDelConvenio = false, verTodasLasValoraciones = false) => {
     const r = categoriasOfrecidas({
       rolesFrame: roleFrames.filter((rf) => rolesFrameIds.includes(rf._id)),
       convenioElegido: cctDeConvenio(convenioId),
       codigosEmpleadora: codigosEmpleadora(proyecto, empresaId),
       categorias: categoriasSat,
       verTodasDelConvenio,
-      valoracionProyecto: proyecto?.valoracionId ? (typeof proyecto.valoracionId === "object" ? String((proyecto.valoracionId as any)._id) : String(proyecto.valoracionId)) : "",
+      verTodasLasValoraciones,
+      valoracionProyecto: idValoracionDe(proyecto?.valoracionId),
     });
     const porDataId = new Map(categoriasSat.map((c) => [String(c.data?.id), c]));
-    return { ...r, documentos: r.categorias.map((c) => porDataId.get(String(c.id))).filter(Boolean) as CategoriaSatItem[] };
+    // El nivel (Oro, Plata…) de cada categoría EN ESA FUNCIÓN, por `_id` del documento.
+    const nivelPorId = new Map<string, { nombre: string; color: string }>();
+    for (const c of r.categorias) {
+      const doc = porDataId.get(String(c.id));
+      const v = c.valoracionId ? valoraciones.find((x) => String(x._id) === String(c.valoracionId)) : undefined;
+      if (doc && v) nivelPorId.set(doc._id, { nombre: String(v.name), color: String(v.color || "") });
+    }
+    return { ...r, documentos: r.categorias.map((c) => porDataId.get(String(c.id))).filter(Boolean) as CategoriaSatItem[], nivelPorId };
+  };
+
+  /** La valoración del proyecto (Plata, Oro…), o `null` si no está valorado. */
+  const valoracionDe = (proyecto: Project | null | undefined) => {
+    const id = idValoracionDe(proyecto?.valoracionId);
+    const v = id ? valoraciones.find((x) => String(x._id) === id) : undefined;
+    return v ? { id, nombre: String(v.name), color: String(v.color || "") } : null;
+  };
+
+  /**
+   * LA CATEGORÍA QUE VIENE POR DEFECTO en un puesto: la del nivel del proyecto (un proyecto Plata, la
+   * Plata de la función) con la MISMA regla del alta individual (`categoriaPorDefecto`). `""` si el dato
+   * no alcanza para decidir (sin empresa, sin categorías o ninguna valorada).
+   */
+  const categoriaPorDefectoPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[]) => {
+    if (!empresaId || !rolesFrameIds.length) return "";
+    const r = categoriasPara(proyecto, empresaId, convenioId, rolesFrameIds, false, true);
+    const elegida = categoriaPorDefecto({ categorias: r.categorias, valoracionProyecto: idValoracionDe(proyecto?.valoracionId), niveles: valoraciones.map((v) => ({ _id: String(v._id), orden: Number((v as any).orden) })) });
+    if (!elegida) return "";
+    return categoriasSat.find((c) => String(c.data?.id) === elegida.id)?._id || "";
   };
 
   return {
@@ -191,6 +222,9 @@ export function useCatalogosContratacion(activo = true) {
     convenioPorCct,
     cctDeConvenio,
     categoriasPara,
+    valoraciones,
+    valoracionDe,
+    categoriaPorDefectoPara,
   };
 }
 

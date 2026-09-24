@@ -7,12 +7,16 @@ import { NuevoPuesto, Plantilla, Puesto } from "../../../../../api/plantillasEqu
 import { Project } from "../../../../../api/projects";
 import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { CLASE_CAMPO, CLASE_HORA, DIAS, Rotulo } from "./comun";
+import { ChipValoracion } from "../../../../../components/proyectos/ChipValoracion";
 
 /*
   UN PUESTO, uno por uno: su rol, su TIPO DE CONTRATO (cada persona contratada puede ir con uno
   distinto: uno por jornada, otro a plazo fijo, otro de servicios), su ÁREA Y TURNO, su HORARIO y sus DÍAS (al elegir el turno se
   completan con los del turno, y se pueden cambiar), su categoría y, si hace falta, un importe fijado a
   mano y un comentario. Quién lo ocupa se elige en los equipos, no acá.
+
+  LA CATEGORÍA viene por defecto la del nivel del proyecto (proyecto Plata → la Plata de su función),
+  con la misma regla del alta individual. Se puede cambiar por una de otra valoración.
 
   El importe fijado se guarda con la escala de ese momento (lo hace el server): si la escala cambia
   después, la contratación lo avisa en vez de pagar de más o de menos sin que se note.
@@ -41,6 +45,7 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
   const [rotativos, setRotativos] = useState(false);
   const [porSemana, setPorSemana] = useState("");
   const [categoriaSatId, setCategoriaSatId] = useState("");
+  const [otrasValoraciones, setOtrasValoraciones] = useState(false);
   const [importe, setImporte] = useState("");
   const [comentarios, setComentarios] = useState("");
   const [buscaRol, setBuscaRol] = useState("");
@@ -58,6 +63,7 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
     setRotativos(!!puesto.diasRotativos);
     setPorSemana(puesto.diasPorSemana ? String(puesto.diasPorSemana) : "");
     setCategoriaSatId(puesto.categoriaSatId || "");
+    setOtrasValoraciones(false);
     setImporte(puesto.dailyRateManual ? String(puesto.dailyRateManual) : "");
     setComentarios(puesto.comentarios || "");
     setBuscaRol("");
@@ -67,8 +73,18 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
   const tramite = contratoId ? catalogos.tramitePorContrato.get(contratoId) || "" : "";
   const esServicios = tramite === "constancia_cuit";
   const porDiasSueltos = (catalogos.contratos.find((c) => c._id === contratoId) as any)?.data?.modoFechas === "dias";
-  const categorias = useMemo(() => (general ? [] : catalogos.categoriasPara(proyecto, plantilla.empresaContratoId, plantilla.convenioId, roles).documentos), [general, catalogos, proyecto, plantilla.empresaContratoId, plantilla.convenioId, roles]);
+  const ofrecidas = useMemo(() => (general ? null : catalogos.categoriasPara(proyecto, plantilla.empresaContratoId, plantilla.convenioId, roles, false, otrasValoraciones)), [general, catalogos, proyecto, plantilla.empresaContratoId, plantilla.convenioId, roles, otrasValoraciones]);
+  const categorias = ofrecidas?.documentos || [];
   const categoriaFueraDeLista = !!categoriaSatId && !categorias.some((c) => c._id === categoriaSatId);
+  const valoracion = catalogos.valoracionDe(proyecto);
+  const porDefecto = general ? "" : catalogos.categoriaPorDefectoPara(proyecto, plantilla.empresaContratoId, plantilla.convenioId, roles);
+
+  // Sin categoría elegida, viene la del nivel del proyecto (también al cambiar los roles). Nunca pisa una elegida.
+  useEffect(() => {
+    if (!isOpen || categoriaSatId || !porDefecto) return;
+    setCategoriaSatId(porDefecto);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, porDefecto]);
   const rolesFiltrados = useMemo(() => {
     const q = buscaRol.trim().toLowerCase();
     return [...catalogos.roleFrames].filter((r) => !q || r.name.toLowerCase().includes(q)).sort((a, b) => Number(roles.includes(b._id)) - Number(roles.includes(a._id)) || a.name.localeCompare(b.name));
@@ -252,16 +268,41 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
 
         {!general && !esServicios && (
           <div>
-            <Rotulo>Categoría</Rotulo>
+            <Rotulo
+              accion={
+                valoracion ? (
+                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                    Ver otras valoraciones
+                    <input type="checkbox" checked={otrasValoraciones} onChange={(e) => setOtrasValoraciones(e.target.checked)} className="h-4 w-4" />
+                  </label>
+                ) : undefined
+              }
+            >
+              Categoría
+            </Rotulo>
             <select value={categoriaSatId} onChange={(e) => setCategoriaSatId(e.target.value)} className={CLASE_CAMPO}>
               <option value="">Elegí la categoría…</option>
-              {categoriaFueraDeLista && <option value={categoriaSatId}>{catalogos.categoriasSat.find((c) => c._id === categoriaSatId)?.name || "Categoría anterior"} (a completar)</option>}
-              {categorias.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
+              {categoriaFueraDeLista && <option value={categoriaSatId}>{catalogos.categoriasSat.find((c) => c._id === categoriaSatId)?.name || "Categoría anterior"} {otrasValoraciones ? "(a completar)" : "(otra valoración)"}</option>}
+              {categorias.map((c) => {
+                const nivel = ofrecidas?.nivelPorId.get(c._id);
+                return (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                    {nivel ? ` · ${nivel.nombre}` : ""}
+                  </option>
+                );
+              })}
             </select>
+            {valoracion && (
+              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                El proyecto es <ChipValoracion nombre={valoracion.nombre} color={valoracion.color} />
+                {categoriaSatId && categoriaSatId === porDefecto ? "· viene la categoría de ese nivel; la podés cambiar." : categoriaSatId && porDefecto ? (
+                  <button type="button" onClick={() => setCategoriaSatId(porDefecto)} className="font-semibold text-blue-600 dark:text-blue-400">
+                    Volver a la de {valoracion.nombre}
+                  </button>
+                ) : null}
+              </p>
+            )}
             {categorias.length === 0 && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{plantilla.empresaContratoId ? "Sus roles no tienen categorías en el convenio de la plantilla." : "Elegí la empresa en la hoja general para ver las categorías."}</p>}
           </div>
         )}

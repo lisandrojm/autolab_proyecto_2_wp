@@ -11,6 +11,7 @@ import PersonaPickerModal from "./PersonaPickerModal";
 import PuestoModal from "./PuestoModal";
 import PuestosModal from "./PuestosModal";
 import CampoConvenio from "./CampoConvenio";
+import { ChipSinValorar, ChipValoracion } from "../../../../../components/proyectos/ChipValoracion";
 import { Badge, CLASE_CAMPO, Rotulo, textoDias } from "./comun";
 
 /*
@@ -19,7 +20,8 @@ import { Badge, CLASE_CAMPO, Rotulo, textoDias } from "./comun";
    1. GENERAL: nombre, empresa (y con ella el convenio) y comentario. Nada más: ni tipo de contrato, ni
       áreas, ni horarios, que son de cada persona contratada (de cada puesto).
    2. PUESTOS: por rol («1 director, 2 cámaras…»), cada uno con su tipo de contrato, su área y turno,
-      su horario y sus días (los del turno, modificables), su categoría. Se editan uno por uno.
+      su horario y sus días (los del turno, modificables), su categoría. Se editan uno por uno. La
+      categoría viene la del nivel del proyecto (Plata, Oro…), y se puede cambiar.
    3. EQUIPOS: quién ocupa cada puesto. Se guardan varios con nombre («Semana A», «Semana B») para
       repetirlos cuando haga falta; al contratar se elige uno.
 
@@ -100,6 +102,27 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
   // El tipo de contrato es de cada puesto: de él salen el trámite (servicios o no) y si va por días sueltos.
   const esServiciosP = (p: Puesto) => p.tipoImpositivo === "constancia_cuit";
   const porDiasSueltosP = (p: Puesto) => (catalogos.contratos.find((x) => x._id === p.contratoId) as any)?.data?.modoFechas === "dias";
+  // La valoración del proyecto decide la categoría que viene en cada puesto (la misma regla del alta individual).
+  const valoracion = catalogos.valoracionDe(proyecto);
+  const categoriaDefecto = (roles: string[]) => catalogos.categoriaPorDefectoPara(proyecto, g.empresaContratoId, convenioId, roles);
+  const chipValoracion = valoracion ? <ChipValoracion nombre={valoracion.nombre} color={valoracion.color} /> : <ChipSinValorar title="El proyecto no tiene valoración: no hay categoría por defecto." />;
+  const [completando, setCompletando] = useState(false);
+  /** Los puestos sin categoría a los que la valoración les da una. */
+  const sinCategoria = (plantilla?.integrantes || []).filter((p) => !p.categoriaSatId && p.tipoImpositivo !== "constancia_cuit" && categoriaDefecto(p.rolesFrame));
+  const completarCategorias = async () => {
+    if (!plantilla || !sinCategoria.length) return;
+    setCompletando(true);
+    try {
+      let ultima: Plantilla | null = null;
+      for (const p of sinCategoria) ultima = await plantillasEquipoAPI.actualizarPuesto(plantilla._id, p._id, { categoriaSatId: categoriaDefecto(p.rolesFrame) });
+      if (ultima) aplicar(ultima);
+      onCambio();
+    } catch (e: any) {
+      sweetAlert.error("No se pudieron completar todas", e?.response?.data?.error || "Probá de nuevo.");
+    } finally {
+      setCompletando(false);
+    }
+  };
   const etiquetaContrato = (id: string) => {
     const x = catalogos.contratos.find((c) => c._id === id);
     const t = catalogos.tramitePorContrato.get(id);
@@ -276,6 +299,13 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
                 <Rotulo obligatorio>Nombre</Rotulo>
                 <input value={g.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} placeholder="Ej. Noticiero LN+" className={CLASE_CAMPO} maxLength={120} />
               </div>
+              <div>
+                <Rotulo>Valoración del proyecto</Rotulo>
+                <p className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                  {chipValoracion}
+                  {valoracion ? `Las categorías de los puestos vienen en ${valoracion.nombre}; en cada puesto se pueden cambiar.` : ""}
+                </p>
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Rotulo>Empresa que contrata</Rotulo>
@@ -301,6 +331,17 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           {hoja === 2 && plantilla && (
             <section className="space-y-2">
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Cada puesto tiene su rol, su tipo de contrato, su área y turno y su horario. Tocá uno para editarlo.</p>
+              <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 p-2.5 text-[11px] text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <span>Valoración</span>
+                {chipValoracion}
+                {sinCategoria.length > 0 && (
+                  <button type="button" onClick={() => void completarCategorias()} disabled={completando} className="ml-auto flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1.5 font-bold text-white disabled:opacity-50">
+                    {completando && <FontAwesomeIcon icon={faSpinner} spin />}
+                    Poner categorías {valoracion?.nombre || ""} ({sinCategoria.length})
+                  </button>
+                )}
+                {!g.empresaContratoId && <span className="w-full text-amber-600 dark:text-amber-400">Elegí la empresa en la hoja General para que vengan las categorías.</span>}
+              </div>
               {plantilla.integrantes.length === 0 && (
                 <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay puestos. Con «Agregar puestos» elegís los roles y cuántos de cada uno.</p>
               )}
@@ -325,6 +366,10 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
                         {!esServicios && (
                           <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                             {p.categoriaSatId ? nombreCategoria.get(p.categoriaSatId) || "Categoría" : "Sin categoría"}
+                            {p.categoriaSatId && (() => {
+                              const nivel = catalogos.categoriasPara(proyecto, g.empresaContratoId, convenioId, p.rolesFrame, false, true).nivelPorId.get(p.categoriaSatId);
+                              return nivel ? ` · ${nivel.nombre}` : "";
+                            })()}
                             {p.dailyRateManual ? ` · $ ${p.dailyRateManual.toLocaleString("es-AR")} fijado` : ""}
                           </p>
                         )}
@@ -426,6 +471,8 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
                 puestos.map((x) => ({
                   rolesFrame: [x.rolId],
                   cantidad: x.cantidad,
+                  // La categoría del nivel del proyecto, como en el alta individual (después se cambia en el puesto).
+                  ...(categoriaDefecto([x.rolId]) ? { categoriaSatId: categoriaDefecto([x.rolId]) } : {}),
                   ...(contratoId ? { contratoId, nombreContrato: catalogos.contratos.find((c) => c._id === contratoId)?.name || null, tipoImpositivo: catalogos.tramitePorContrato.get(contratoId) || null } : {}),
                   ...(turno ? { areaId: turno.areaId, shiftId: turno.shiftId, inTime: turno.inicio || null, outTime: turno.fin || null, diasSemana: turno.dias, diasPorSemana: turno.dias.length || null } : {}),
                 })),
