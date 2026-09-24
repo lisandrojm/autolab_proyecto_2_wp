@@ -6,6 +6,7 @@ import { usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
+import { armarPayloadDeSolicitud } from "@compartido/solicitudDeContratacion";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
@@ -1723,84 +1724,52 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
     setSubmitting(true);
     try {
-      const timestamp = Date.now();
-      const placeholderEmail = `solicitud_${timestamp}@pending.com`;
-      const placeholderPassword = `pass_${timestamp}`;
-
-      const submitData = {
-        email: placeholderEmail,
-        password: placeholderPassword,
-        firstName: formData.fullName.split(" ")[0] || "Pendiente",
-        lastName: formData.fullName.split(" ").slice(1).join(" ") || "Pendiente",
-        isActive: false,
-        hireDate: formData.startDate || new Date().toISOString(),
-        metadata: {
-          fullName: formData.fullName,
-          projectIds: formData.projectIds,
-          // Si el alta se pidió para alguien que YA es usuario, se guarda el vínculo: así la
-          // solicitud se muestra dentro de su ficha en vez de crear una tarjeta duplicada. Si el
-          // nombre se escribió a mano (persona que todavía no existe), queda vacío.
-          solicitudUserId: selectedUser?._id || undefined,
-          roles_frame: formData.roleFrameIds,
-          categoriaSatId: esServicios ? undefined : formData.categoriaSatId,
-          startDate: formData.startDate,
-          // Un tiempo indeterminado no tiene fecha de baja: viaja vacía aunque el formulario traiga una.
-          dueDate: indeterminado && !porDiasSueltos ? "" : formData.dueDate,
-          // Lo que se liquida. De dónde salió viaja al lado, para auditarlo sin recalcular.
-          workdaysCount: Number(formData.workdaysCount),
-          // El calculado se guarda SIEMPRE, haya ajuste o no: las reglas del calendario pueden cambiar.
-          workdaysCalculated: jornadasCalculadas,
-          workdaysOverridden: hayAjuste(datosJornadas),
-          workdaysOverrideReason: hayAjuste(datosJornadas) ? formData.workdaysOverrideReason : null,
-          workdaysOverrideNote: hayAjuste(datosJornadas) ? formData.workdaysOverrideNote.trim() || null : null,
-          diasPorSemana: Number(formData.diasPorSemana) || undefined,
-          diasSemana: formData.diasSemana,
-          diasRotativos: formData.diasRotativos,
-          /*
-            LOS DÍAS EXACTOS, cuando el contrato se pide por días sueltos.
-
-            `diasSemana` y el período no alcanzan para reconstruirlos: «los martes de septiembre» y
-            «el 2, el 9 y el 23» tienen los mismos días de la semana y el mismo desde/hasta.
-          */
-          fechasTrabajadas: formData.fechasTrabajadas.length > 0 ? formData.fechasTrabajadas : undefined,
-          schedule: `${formData.inTime} - ${formData.outTime}`,
-          // Con qué CUIT se contrata y bajo qué CCT. Sin esto el alta llega sin empleadora y hay que
-          // deducirla del proyecto más tarde, cuando ya nadie recuerda cuál de las tres era.
-          empresaContratoId: formData.empresaContratoId || undefined,
-          convenioId: esServicios ? undefined : formData.convenioId || undefined,
-          dailyRate: Number(formData.dailyRate),
-          isReplacement: formData.isReplacement,
-          // A quién reemplaza. Los dos identificadores: el numérico que usa el contrato (puede
-          // faltar en fichas no sincronizadas) y el `_id`, que siempre está.
-          empleado_id_reemplezado: formData.isReplacement ? formData.empleado_id_reemplezado || undefined : undefined,
-          replacedUserId: formData.isReplacement ? formData.replacedUserId || undefined : undefined,
-          // El motivo viaja como id del tipo de novedad, no como texto: el nombre lo pone quien lo
-          // muestre, leyéndolo del mismo catálogo que Novedades.
-          motivoReemplazoId: formData.isReplacement ? formData.motivoReemplazoId || undefined : undefined,
-          // Se manda solo si tiene algo: un string vacío guardado se lee después como "hay un
-          // comentario" en cualquier chequeo por presencia.
-          comentarios: formData.comentarios.trim() || undefined,
-          // El trámite declarado viaja con la solicitud: es lo que después precarga el wizard.
-          tipoImpositivo: formData.tipoImpositivo || undefined,
-          /*
-            El tipo de contrato elegido y el área/turno que coordina quien pide. Los dos existían ya
-            como precarga del wizard de aprobación (`metadata.contratoId`, `areaShiftAssignments`):
-            lo que faltaba era que la solicitud los trajera, en vez de volver a cargarlos al aprobar.
-          */
-          contratoId: formData.contratoId || undefined,
-          nombre_contrato: contratoElegido?.name || undefined,
-          // Siempre: la solicitud no se envía sin área y turno, y es lo que precarga el wizard de aprobación.
-          areaShiftAssignments: formData.areaShiftAssignments,
-          /*
-            RENOVACIÓN: la etiqueta y QUÉ contrato renueva. Al crearla, el server anota la decisión y el
-            contrato sale de «Por vencer». Al editar una renovación se conservan: si no, guardarla de
-            nuevo le borraría la etiqueta.
-          */
-          esRenovacion: renovacion ? true : (editingUser?.metadata as any)?.esRenovacion || undefined,
-          renovacionDe: renovacion ? { userProjectId: renovacion.userProjectId, fechaBajaContrato: renovacion.fechaBajaContrato } : (editingUser?.metadata as any)?.renovacionDe || undefined,
-          isSolicitud: true,
-        },
-      };
+      /*
+        EL PAYLOAD LO ARMA LA FUNCIÓN COMPARTIDA con el alta masiva de plantillas de equipo
+        (`server/src/compartido/solicitudDeContratacion.ts`): así una solicitud individual y una del lote
+        son idénticas por construcción. Acá sólo se le pasan los datos del formulario.
+      */
+      const submitData = armarPayloadDeSolicitud({
+        fullName: formData.fullName,
+        projectIds: formData.projectIds,
+        solicitudUserId: selectedUser?._id || undefined,
+        roleFrameIds: formData.roleFrameIds,
+        esServicios,
+        categoriaSatId: formData.categoriaSatId,
+        startDate: formData.startDate,
+        dueDate: formData.dueDate,
+        indeterminado,
+        porDiasSueltos,
+        workdaysCount: formData.workdaysCount,
+        workdaysCalculated: jornadasCalculadas,
+        ajusteJornadas: hayAjuste(datosJornadas),
+        motivoAjuste: formData.workdaysOverrideReason,
+        notaAjuste: formData.workdaysOverrideNote,
+        diasPorSemana: formData.diasPorSemana,
+        diasSemana: formData.diasSemana,
+        diasRotativos: formData.diasRotativos,
+        fechasTrabajadas: formData.fechasTrabajadas,
+        inTime: formData.inTime,
+        outTime: formData.outTime,
+        empresaContratoId: formData.empresaContratoId,
+        convenioId: formData.convenioId,
+        dailyRate: formData.dailyRate,
+        isReplacement: formData.isReplacement,
+        empleado_id_reemplezado: formData.empleado_id_reemplezado,
+        replacedUserId: formData.replacedUserId,
+        motivoReemplazoId: formData.motivoReemplazoId,
+        comentarios: formData.comentarios,
+        tipoImpositivo: formData.tipoImpositivo,
+        contratoId: formData.contratoId,
+        nombreContrato: contratoElegido?.name,
+        areaShiftAssignments: formData.areaShiftAssignments,
+        /*
+          RENOVACIÓN: la etiqueta y QUÉ contrato renueva. Al editar una renovación se conservan: si no,
+          guardarla de nuevo le borraría la etiqueta.
+        */
+        esRenovacion: renovacion ? true : (editingUser?.metadata as any)?.esRenovacion || undefined,
+        renovacionDe: renovacion ? { userProjectId: renovacion.userProjectId, fechaBajaContrato: renovacion.fechaBajaContrato } : (editingUser?.metadata as any)?.renovacionDe || undefined,
+      });
 
       if (editingUser) {
         await usersAPI.update(editingUser._id, submitData as any);

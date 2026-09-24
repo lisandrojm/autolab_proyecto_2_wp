@@ -18,6 +18,7 @@
  */
 
 import { CategoriaSatItem, esElegible } from "../api/categoriasSat";
+import { importePorJornada } from "@compartido/jornadas";
 import { Company } from "../api/companies";
 import { RoleFrameItem } from "../api/roleFrames";
 import { SimpleCatalogItem } from "../api/simpleCatalog";
@@ -286,11 +287,7 @@ export const convenioDeCategoria = (categoriaId: string | number | undefined, ca
  *
  * Sin multiplicador cargado (0, vacío o ausente) se usa 1: es «sin multiplicador», no «por cero».
  */
-export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undefined, multiplicadorDiario?: number | null): number => {
-  if (!categoria) return 0;
-  const multiplicador = Number(multiplicadorDiario) > 0 ? Number(multiplicadorDiario) : 1;
-  return Number(((Number(categoria.data?.neto ?? 0) / 30) * multiplicador).toFixed(2));
-};
+export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undefined, multiplicadorDiario?: number | null): number => (categoria ? importePorJornada(categoria.data?.neto, multiplicadorDiario) : 0);
 
 /** Un nivel del catálogo de Valoraciones. Para compararlos alcanza con el orden. */
 export interface NivelDeValoracion {

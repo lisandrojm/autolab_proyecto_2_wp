@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 /**
  * Las descargas de archivos NO caen en el fallback de la SPA.
@@ -59,7 +59,16 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), sinFallbackDeSPA()],
+    /*
+      CÓDIGO COMPARTIDO CON EL SERVER (`server/src/compartido/`): el cálculo de jornadas e importes, una
+      sola copia para el alta individual y el alta masiva. El mismo alias está en `tsconfig.json`.
+    */
+    resolve: {
+      alias: { "@compartido": resolve(__dirname, "../server/src/compartido") },
+    },
     server: {
+      // Esa carpeta está fuera de `frontend/`: el server de desarrollo sólo sirve lo que se le permite.
+      fs: { allow: [".", "../server/src/compartido"] },
       port: 5173,
       host: true,
       proxy:

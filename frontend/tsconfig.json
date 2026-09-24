@@ -15,7 +15,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    // Código compartido con el server: ver `server/src/compartido/jornadas.ts`. Mismo alias en vite.config.ts.
+    "paths": { "@compartido/*": ["../server/src/compartido/*"] }
   },
   // Los tests se chequean con tsconfig.test.json, que sí trae los tipos de Node.
   "include": ["src", "vite-env.d.ts"],

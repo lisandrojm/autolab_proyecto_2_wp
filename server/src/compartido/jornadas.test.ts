@@ -1,8 +1,9 @@
 /**
  * EL CÁLCULO DE JORNADAS E IMPORTES DE UNA SOLICITUD, TAL COMO ESTÁ HOY.
  *
- * Son la red de seguridad antes de mover este módulo al server para compartirlo con el alta masiva
- * (plantillas de equipo): si al moverlo cambia un solo número, estos tests lo dicen.
+ * Nacieron como red de seguridad ANTES de mover el módulo del frontend al server (commit a1a92e1f,
+ * contra el código original) y siguen pasando igual: moverlo no cambió un solo número. Es el cálculo
+ * que comparten el alta individual y el alta masiva de plantillas de equipo.
  *
  * Los valores esperados se pueden verificar a mano con un calendario:
  *  - septiembre 2026 empieza en martes y tiene 30 días → 22 días hábiles Lu–Vi;
@@ -11,8 +12,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { anclaDesdeJornada, derivarImportes, diasCorridos, erroresDeJornadas, hayAjuste, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo, DatosJornadas } from "./jornadas";
-import { importePorJornadaDeCategoria } from "./seleccionConvenioCategoria";
+import { anclaDesdeJornada, derivarImportes, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo, DatosJornadas } from "./jornadas.js";
 
 const LU_VI = [1, 2, 3, 4, 5];
 const cerca = (a: number | null, b: number) => assert.ok(a !== null && Math.abs(a - b) < 1e-9, `${a} ≠ ${b}`);
@@ -130,13 +130,12 @@ test("hayAjuste / erroresDeJornadas: pisar el calendario exige motivo, y «Otro�
   assert.deepEqual(erroresDeJornadas({ ...ajustado, motivo: "otro", nota: "llovió dos días" }), {});
 });
 
-test("importePorJornadaDeCategoria: neto ÷ 30 × multiplicador del tipo de contrato (sin multiplicador = 1)", () => {
-  const categoria: any = { data: { neto: 30000 } };
-  assert.equal(importePorJornadaDeCategoria(categoria), 1000);
-  assert.equal(importePorJornadaDeCategoria(categoria, 1.5), 1500);
-  assert.equal(importePorJornadaDeCategoria(categoria, 0), 1000);
-  assert.equal(importePorJornadaDeCategoria(categoria, null), 1000);
+test("importePorJornada: neto ÷ 30 × multiplicador del tipo de contrato (sin multiplicador = 1)", () => {
+  assert.equal(importePorJornada(30000), 1000);
+  assert.equal(importePorJornada(30000, 1.5), 1500);
+  assert.equal(importePorJornada(30000, 0), 1000);
+  assert.equal(importePorJornada(30000, null), 1000);
   // Redondea a centavos DESPUÉS de multiplicar.
-  assert.equal(importePorJornadaDeCategoria({ data: { neto: 1176624.4 } } as any, 1.5), 58831.22);
-  assert.equal(importePorJornadaDeCategoria(undefined, 1.5), 0);
+  assert.equal(importePorJornada(1176624.4, 1.5), 58831.22);
+  assert.equal(importePorJornada(undefined, 1.5), 0);
 });

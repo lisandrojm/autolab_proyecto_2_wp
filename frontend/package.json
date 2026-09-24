@@ -26,8 +26,7 @@
     "test:cbu": "tsx --test src/utils/cbu.test.ts",
     "test:cascada-arca": "tsx --test src/components/contratos/cascadaArca.test.ts",
     "test:dias": "tsx --test src/components/contratos/diasDeTrabajo.test.ts",
-    "test:seleccion-categoria": "tsx --test src/utils/seleccionConvenioCategoria.test.ts",
-    "test:jornadas": "tsx --test src/utils/jornadas.test.ts"
+    "test:seleccion-categoria": "tsx --test src/utils/seleccionConvenioCategoria.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
