@@ -51,6 +51,43 @@ export const sweetAlert = {
   },
 
   /**
+   * EL RESUMEN DE UNA CONTRATACIÓN EN LOTE, para confirmar antes de mandar.
+   *
+   * Casi todo el ancho y con scroll adentro: en un celular, un equipo de 20 personas no entra en un
+   * cartel común. `html` lo arma quien llama (con los datos ya escapados). Al confirmar corre `enviar`
+   * con el cartel en modo «cargando»: no se puede tocar dos veces ni cerrar mientras tanto. Devuelve lo
+   * que devolvió `enviar`, o `{ error }` si falló, o `null` si se volvió a editar.
+   */
+  resumenLote: async <T,>(opts: { title: string; html: string; confirmText: string; cancelText?: string; enviar: () => Promise<T> }): Promise<{ ok: true; valor: T } | { ok: false; error: any } | null> => {
+    let resultado: { ok: true; valor: T } | { ok: false; error: any } | null = null;
+    const r = await Swal.fire({
+      title: opts.title,
+      html: `<div style="max-height:58vh;overflow-y:auto;text-align:left">${opts.html}</div>`,
+      width: "96%",
+      padding: "1rem",
+      showCancelButton: true,
+      confirmButtonText: opts.confirmText,
+      cancelButtonText: opts.cancelText || "Volver a editar",
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#6b7280",
+      reverseButtons: true,
+      showLoaderOnConfirm: true,
+      allowOutsideClick: () => !Swal.isLoading(),
+      allowEscapeKey: () => !Swal.isLoading(),
+      customClass: { popup: "mobile-swal-popup", title: "mobile-swal-title" },
+      preConfirm: async () => {
+        try {
+          resultado = { ok: true, valor: await opts.enviar() };
+        } catch (error) {
+          resultado = { ok: false, error };
+        }
+        return true;
+      },
+    });
+    return r.isConfirmed ? resultado : null;
+  },
+
+  /**
    * Confirmación con una LISTA de puntos (cada uno en su renglón). `confirm` usa `text`, y ahí los saltos
    * de línea se pierden. El contenido se escapa: son mensajes armados con datos de la base.
    */

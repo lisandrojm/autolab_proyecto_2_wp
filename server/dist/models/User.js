@@ -160,6 +160,7 @@ const userSchema = new Schema({
         // Ver el comentario de la interfaz.
         loteId: { type: Schema.Types.ObjectId, ref: "LoteContratacion" },
         plantillaEquipoId: { type: Schema.Types.ObjectId, ref: "PlantillaEquipo" },
+        loteNombre: { type: String },
         projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
         roles_frame: {
             type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

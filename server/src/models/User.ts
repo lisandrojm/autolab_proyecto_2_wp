@@ -292,6 +292,8 @@ export interface IUserMetadata {
   /** Salió de un alta masiva: el lote y la plantilla de equipo (ver `models/LoteContratacion.ts`). */
   loteId?: Types.ObjectId;
   plantillaEquipoId?: Types.ObjectId;
+  /** El nombre de la plantilla al contratar (para agrupar en el Historial sin buscar el lote). */
+  loteNombre?: string;
   projectIds?: Types.ObjectId[];
   rolesFrameIds?: string[] | Types.ObjectId[];
 }
@@ -487,6 +489,7 @@ const userSchema = new Schema<IUser>(
       // Ver el comentario de la interfaz.
       loteId: { type: Schema.Types.ObjectId, ref: "LoteContratacion" },
       plantillaEquipoId: { type: Schema.Types.ObjectId, ref: "PlantillaEquipo" },
+      loteNombre: { type: String },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
       roles_frame: {
         type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

@@ -36,7 +36,9 @@ import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFr
 import { EstadoBadge } from "../../../../components/EstadoSelect";
 import { useAuthStore } from "../../../../stores/authStore";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
-import { MOBILE_REGISTRO, PROJECT_SUPERVISOR } from "../../../../utils/permisosMobile";
+import { MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR } from "../../../../utils/permisosMobile";
+import { plantillasEquipoAPI } from "../../../../api/plantillasEquipo";
+import Swal from "sweetalert2";
 import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
 
 /** Importes de la escala, como se leen en un recibo. Sin número cargado, un guion: 0 no es «no sabemos». */
@@ -1685,6 +1687,64 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const importesBloqueados = !esServicios && !formData.categoriaSatId;
 
 
+  /*
+    «GUARDAR COMO PLANTILLA DE EQUIPO»: arma una plantilla con esta persona y estos valores (proyecto,
+    empresa, convenio, tipo de contrato, área y turno, horario, días y comentario), para después sumarle
+    más gente en la pestaña Plantillas. No envía la solicitud: es otra cosa. Las fechas y los importes no
+    se guardan (se eligen al contratar); el importe sólo si se pisó a mano la escala, y queda «fijado».
+  */
+  const puedeGuardarPlantilla = !editingUser && !renovacion && !!selectedUser && formData.projectIds.length === 1 && (yo?.permissions || []).includes(MOBILE_HIRING_TEMPLATES) && !permisoInactivo(MOBILE_HIRING_TEMPLATES);
+  const [guardandoPlantilla, setGuardandoPlantilla] = useState(false);
+  const guardarComoPlantilla = async () => {
+    if (!selectedUser) return;
+    const r = await Swal.fire({
+      title: "Guardar como plantilla",
+      input: "text",
+      inputLabel: "Nombre del equipo",
+      inputPlaceholder: "Ej. Equipo cámara noche",
+      showCancelButton: true,
+      confirmButtonText: "Guardar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#3b82f6",
+      customClass: { popup: "mobile-swal-popup", title: "mobile-swal-title" },
+      inputValidator: (v) => (!String(v || "").trim() ? "Poné un nombre" : undefined),
+    });
+    if (!r.isConfirmed) return;
+    setGuardandoPlantilla(true);
+    try {
+      await plantillasEquipoAPI.crear({
+        projectId: formData.projectIds[0],
+        nombre: String(r.value).trim(),
+        empresaContratoId: formData.empresaContratoId || null,
+        convenioId: esServicios ? null : formData.convenioId || null,
+        contratoId: formData.contratoId || null,
+        nombreContrato: contratoElegido?.name || "",
+        tipoImpositivo: formData.tipoImpositivo || "",
+        areaShiftAssignments: formData.areaShiftAssignments,
+        inTime: formData.inTime,
+        outTime: formData.outTime,
+        diasSemana: porDiasSueltos ? [] : formData.diasSemana,
+        diasPorSemana: porDiasSueltos ? null : Number(formData.diasPorSemana) || null,
+        diasRotativos: porDiasSueltos ? false : formData.diasRotativos,
+        comentarios: formData.comentarios.trim(),
+        integrantes: [
+          {
+            userId: selectedUser._id,
+            rolesFrame: formData.roleFrameIds,
+            categoriaSatId: esServicios ? null : formData.categoriaSatId || null,
+            // Sólo si se pisó la escala (o es un servicio, que no tiene escala): si no, que la tome al contratar.
+            dailyRateManual: esServicios || diferenciaContraEscala ? Number(formData.dailyRate) || null : null,
+          },
+        ],
+      });
+      sweetAlert.success("Plantilla guardada", "Sumale más gente y contratala desde Contratación → Plantillas.");
+    } catch (e: any) {
+      sweetAlert.error("No se pudo guardar la plantilla", e?.response?.data?.error || "Probá de nuevo.");
+    } finally {
+      setGuardandoPlantilla(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (sinPersona) {
       sweetAlert.warning("Falta la persona", puedeCompartirLink ? "Elegí a una persona registrada. Si todavía no se registró, mandale tu link de registro desde el buscador." : "Elegí a una persona registrada. Si todavía no se registró, pedí el link de registro para mandarle.");
@@ -1921,7 +1981,14 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         </div>
       }
       footer={
-        <div className="flex w-full gap-3 p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-shrink-0 sticky bottom-0 z-50">
+        <div className="w-full border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-shrink-0 sticky bottom-0 z-50">
+        {puedeGuardarPlantilla && (
+          <button type="button" onClick={() => void guardarComoPlantilla()} disabled={submitting || guardandoPlantilla} className="mx-4 mt-3 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-lg border border-dashed border-blue-400 py-2 text-xs font-bold text-blue-600 disabled:opacity-50 dark:text-blue-400">
+            <FontAwesomeIcon icon={guardandoPlantilla ? faSpinner : faPlus} className={guardandoPlantilla ? "animate-spin" : ""} />
+            Guardar como plantilla de equipo
+          </button>
+        )}
+        <div className="flex w-full gap-3 p-4">
           <button onClick={onClose} className="flex-1 rounded h-12 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
             Cancelar
           </button>
@@ -1929,6 +1996,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             {submitting ? "Cargando..." : eraRechazada ? "Corregir y Reenviar" : editingUser ? "Actualizar Solicitud" : renovacion ? "Enviar Renovación" : "Enviar Solicitud"}
             <FontAwesomeIcon icon={faCheck} />
           </button>
+        </div>
         </div>
       }
     >

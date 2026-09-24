@@ -297,6 +297,8 @@ export interface IUserMetadata {
     /** Salió de un alta masiva: el lote y la plantilla de equipo (ver `models/LoteContratacion.ts`). */
     loteId?: Types.ObjectId;
     plantillaEquipoId?: Types.ObjectId;
+    /** El nombre de la plantilla al contratar (para agrupar en el Historial sin buscar el lote). */
+    loteNombre?: string;
     projectIds?: Types.ObjectId[];
     rolesFrameIds?: string[] | Types.ObjectId[];
 }

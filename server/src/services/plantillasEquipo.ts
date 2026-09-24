@@ -457,6 +457,8 @@ export async function contratarPlantilla(tenantId: Types.ObjectId, creadorId: st
         normalizarRolesFrame(data.metadata);
         data.metadata.loteId = loteId;
         data.metadata.plantillaEquipoId = p._id;
+        // Congelado al contratar: renombrar la plantilla después no cambia cómo se llamó este lote.
+        data.metadata.loteNombre = p.nombre;
         const rechazo = await prepararSolicitudNueva(tenantId, creadorId, data.metadata);
         if (rechazo) throw new ErrorPlantilla(422, `${f.nombre}: ${rechazo}`);
         const [u] = await User.create([{ ...data, roles, tenantId }], { session: sesion });

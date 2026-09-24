@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
@@ -21,6 +21,10 @@ import { sweetAlert } from "../utils/sweetAlert";
 import AvisoNovedades from "../components/AvisoNovedades";
 import { useNovedades } from "../hooks/useNovedades";
 import { NOVEDADES_CONTRATACION } from "../../../../api/personnel";
+import { useAuthStore } from "../../../../stores/authStore";
+import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
+import { MOBILE_HIRING_TEMPLATES } from "../../../../utils/permisosMobile";
+import PlantillasTab from "../components/plantillas/PlantillasTab";
 import { CalificarModal } from "../../../../components/calificaciones/CalificarModal";
 import { NuevaCalificacion } from "../../../../api/calificaciones";
 
@@ -72,12 +76,17 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   /** Qué solicitudes son nuevas (aviso sin leer) y cómo marcarlas leídas, de a una o todas. */
   const novedades = useNovedades(NOVEDADES_CONTRATACION);
 
+  /* La pestaña Plantillas: mismo criterio que `App.tsx` (el permiso está Y no está marcado «en desarrollo»). */
+  const { user: yo } = useAuthStore();
+  const permisoInactivo = usePermisoInactivo();
+  const puedePlantillas = (yo?.permissions || []).includes(MOBILE_HIRING_TEMPLATES) && !permisoInactivo(MOBILE_HIRING_TEMPLATES);
+
   /*
     POR VENCER: los contratos de la gente a cargo que terminan en la próxima semana, para renovarlos o
     dejarlos vencer. Qué entra y quién lo ve lo decide el server (`services/contratosPorVencer.ts`).
     Se piden al entrar y no al abrir la pestaña: el número va en la pestaña, y avisar es el punto.
   */
-  const [pestana, setPestana] = useState<"historial" | "por_vencer">("historial");
+  const [pestana, setPestana] = useState<"historial" | "por_vencer" | "plantillas">("historial");
   const [porVencer, setPorVencer] = useState<ContratoPorVencer[] | null>(null);
   const [procesando, setProcesando] = useState<string | null>(null);
   /** El contrato que se está renovando: abre el formulario de solicitud ya completo. */
@@ -287,6 +296,147 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
   };
 
   /*
+    LAS SOLICITUDES DE UN MISMO LOTE (contratación de una plantilla de equipo) VAN JUNTAS, bajo el nombre
+    del equipo y cerradas: veinte tarjetas iguales una debajo de otra no se leen. Se abren tocándolas.
+  */
+  const [lotesAbiertos, setLotesAbiertos] = useState<Set<string>>(new Set());
+  type Entrada = { tipo: "sola"; user: User } | { tipo: "lote"; loteId: string; nombre: string; users: User[] };
+  const entradasHistorial = useMemo<Entrada[]>(() => {
+    const out: Entrada[] = [];
+    const lotes = new Map<string, Extract<Entrada, { tipo: "lote" }>>();
+    for (const u of users) {
+      const m: any = u.metadata || {};
+      const loteId = m.loteId ? String(m.loteId) : "";
+      if (!loteId) {
+        out.push({ tipo: "sola", user: u });
+        continue;
+      }
+      let g = lotes.get(loteId);
+      if (!g) {
+        g = { tipo: "lote", loteId, nombre: m.loteNombre || "Equipo", users: [] };
+        lotes.set(loteId, g);
+        out.push(g);
+      }
+      g.users.push(u);
+    }
+    return out;
+  }, [users]);
+  const resumenEstados = (lista: User[]) => {
+    const cuenta = new Map<string, number>();
+    for (const u of lista) {
+      const m: any = u.metadata || {};
+      const k = String(m.solicitudStatus || (m.isSolicitud ? "pendiente" : "aprobada"));
+      cuenta.set(k, (cuenta.get(k) || 0) + 1);
+    }
+    return [...cuenta.entries()].map(([k, n]) => `${n} ${(ESTADOS_SOLICITUD[k]?.label || k).toLowerCase()}`).join(" · ");
+  };
+
+  const tarjeta = (user: User) => {
+    const meta: any = user.metadata || {};
+    const displayName = meta.fullName || `${user.firstName} ${user.lastName}`.trim();
+    // Fallback para las solicitudes anteriores al campo `solicitudStatus`, igual que en el detalle.
+    const estadoClave = String(meta.solicitudStatus || (meta.isSolicitud ? "pendiente" : "aprobada"));
+    const estado = ESTADOS_SOLICITUD[estadoClave] || ESTADOS_SOLICITUD.pendiente;
+    const periodo = [fechaCorta(meta.startDate), meta.dueDate ? fechaCorta(meta.dueDate) : "indeterminado"].join(" → ");
+    /*
+      APROBADA, PERO NO COMO LA PEDISTE.
+
+      Quien aprueba muchas veces corrige algo antes de guardar. Sin decirlo en la tarjeta, la
+      solicitud se ve igual que una que salió tal cual y nadie la abre: el cambio —y lo que
+      quien aprobó dejó explicado— no lo lee nunca, y el mismo error se carga de nuevo.
+    */
+    const revision: any = meta.solicitudRevision || null;
+    /** Se rechazó, se corrigió y volvió a la bandeja (ver `solicitudReenviada`). */
+    const reenviada: any = meta.solicitudReenviada?.el ? meta.solicitudReenviada : null;
+    const cantidadDeCambios = revision?.cambios?.length || 0;
+    const hayRevision = cantidadDeCambios > 0 || !!revision?.comentario;
+
+    return (
+      <div
+        key={user._id}
+        onClick={() => {
+          setSelectedUser(user);
+          setShowDetailModal(true);
+          // Abrirla ES mirarla: queda leído su aviso y no el de las otras.
+          void novedades.marcarLeido(user._id);
+        }}
+        className={`relative bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer ${borrando === user._id ? "opacity-50" : ""}`}
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</h4>
+              <div className="flex shrink-0 items-center gap-1">
+                {/* Sin mirar todavía. Se marca leída al abrirla, o todas desde el banner. */}
+                {novedades.esNuevo(user._id) && <span className="rounded bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">Nueva</span>}
+                {/* Renueva un contrato que vencía: no es un ingreso nuevo. */}
+                {meta.esRenovacion && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
+                {/* Ya se corrigió después de un rechazo: la que está esperando es la corregida. */}
+                {reenviada && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                    Corregida{(reenviada.veces || 1) > 1 ? ` ×${reenviada.veces}` : ""}
+                  </span>
+                )}
+                {/* Se aprobó con correcciones: el detalle dice cuáles y por qué (ver `solicitudRevision`). */}
+                {hayRevision && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                    {cantidadDeCambios > 0 ? `${cantidadDeCambios} ${cantidadDeCambios === 1 ? "cambio" : "cambios"}` : "Comentario"}
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${estado.cls}`}>{estado.label}</span>
+              </div>
+            </div>
+            {/* El período pedido: es lo que distingue una solicitud de otra de la misma persona. */}
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3 opacity-70" />
+              <span className="truncate">{periodo}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pr-10 pt-2 dark:border-slate-800">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+            <FontAwesomeIcon icon={faFileContract} className="w-3 h-3 opacity-70 text-primary" />
+            <span className="truncate">{meta.nombre_contrato || "Sin tipo de contrato"}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+            <FontAwesomeIcon icon={faClock} className="w-3 h-3 opacity-70 text-primary" />
+            <span className="truncate">{meta.schedule || "Sin horario"}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+            <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3 opacity-70 text-primary" />
+            <span>Solicitado: {new Date(user.createdAt).toLocaleDateString("es-ES")}</span>
+          </div>
+        </div>
+
+        {/*
+          BORRAR LA SOLICITUD.
+
+          Para lo que no aporta historial —una prueba, una cargada dos veces—: lo que sí se
+          pidió y se dio de baja se cancela, y queda registrado como cancelado. El server no
+          deja borrar una aprobada, que ya es una contratación.
+        */}
+        {/* Una aprobada no se borra: ya es una contratación, y el server la rechaza igual. */}
+        {estadoClave !== "aprobada" && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            void borrarSolicitud(user);
+          }}
+          disabled={borrando === user._id}
+          aria-label={`Borrar la solicitud de ${displayName}`}
+          title="Borrar la solicitud"
+          className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors active:scale-95 disabled:opacity-50 dark:border-slate-700 dark:text-slate-500"
+        >
+          <FontAwesomeIcon icon={borrando === user._id ? faSpinner : faTrash} className={`h-3.5 w-3.5 ${borrando === user._id ? "animate-spin" : ""}`} />
+        </button>
+        )}
+      </div>
+    );
+  };
+
+  /*
     CANCELAR LA SOLICITUD: la da de baja quien la pidió, mientras nadie la decidió todavía.
 
     NO SE BORRA: queda con estado «cancelada», para que el historial diga que se pidió y se dio de baja
@@ -353,12 +503,14 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
       <div className="px-4 pt-4">
         <AvisoNovedades tipos={NOVEDADES_CONTRATACION} texto={(n) => (n === 1 ? "1 novedad de contratación" : `${n} novedades de contratación`)} />
         {/* Lo que se pidió, y lo que hay que decidir antes de que venza. */}
-        <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-xl bg-slate-100 dark:bg-slate-800/60">
+        <div className={`grid ${puedePlantillas ? "grid-cols-3" : "grid-cols-2"} gap-1 p-1 mb-4 rounded-xl bg-slate-100 dark:bg-slate-800/60`}>
           {(
             [
               { id: "historial", label: "Historial" },
               { id: "por_vencer", label: "Por vencer" },
-            ] as const
+              // Pestaña propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
+              ...(puedePlantillas ? [{ id: "plantillas", label: "Plantillas" }] : []),
+            ] as { id: "historial" | "por_vencer" | "plantillas"; label: string }[]
           ).map((t) => (
             <button key={t.id} type="button" onClick={() => setPestana(t.id)} className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors ${pestana === t.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
               {t.label}
@@ -367,7 +519,9 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           ))}
         </div>
 
-        {pestana === "por_vencer" ? (
+        {pestana === "plantillas" && puedePlantillas ? (
+          <PlantillasTab onContratado={refetch} />
+        ) : pestana === "por_vencer" ? (
           renderPorVencer()
         ) : loading ? (
           <div className="space-y-3">
@@ -385,110 +539,27 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-3">
-            {users.map((user) => {
-              const meta: any = user.metadata || {};
-              const displayName = meta.fullName || `${user.firstName} ${user.lastName}`.trim();
-              // Fallback para las solicitudes anteriores al campo `solicitudStatus`, igual que en el detalle.
-              const estadoClave = String(meta.solicitudStatus || (meta.isSolicitud ? "pendiente" : "aprobada"));
-              const estado = ESTADOS_SOLICITUD[estadoClave] || ESTADOS_SOLICITUD.pendiente;
-              const periodo = [fechaCorta(meta.startDate), meta.dueDate ? fechaCorta(meta.dueDate) : "indeterminado"].join(" → ");
-              /*
-                APROBADA, PERO NO COMO LA PEDISTE.
-
-                Quien aprueba muchas veces corrige algo antes de guardar. Sin decirlo en la tarjeta, la
-                solicitud se ve igual que una que salió tal cual y nadie la abre: el cambio —y lo que
-                quien aprobó dejó explicado— no lo lee nunca, y el mismo error se carga de nuevo.
-              */
-              const revision: any = meta.solicitudRevision || null;
-              /** Se rechazó, se corrigió y volvió a la bandeja (ver `solicitudReenviada`). */
-              const reenviada: any = meta.solicitudReenviada?.el ? meta.solicitudReenviada : null;
-              const cantidadDeCambios = revision?.cambios?.length || 0;
-              const hayRevision = cantidadDeCambios > 0 || !!revision?.comentario;
-
-              return (
-                <div
-                  key={user._id}
-                  onClick={() => {
-                    setSelectedUser(user);
-                    setShowDetailModal(true);
-                    // Abrirla ES mirarla: queda leído su aviso y no el de las otras.
-                    void novedades.marcarLeido(user._id);
-                  }}
-                  className={`relative bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer ${borrando === user._id ? "opacity-50" : ""}`}
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</h4>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {/* Sin mirar todavía. Se marca leída al abrirla, o todas desde el banner. */}
-                          {novedades.esNuevo(user._id) && <span className="rounded bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">Nueva</span>}
-                          {/* Renueva un contrato que vencía: no es un ingreso nuevo. */}
-                          {meta.esRenovacion && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
-                          {/* Ya se corrigió después de un rechazo: la que está esperando es la corregida. */}
-                          {reenviada && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                              Corregida{(reenviada.veces || 1) > 1 ? ` ×${reenviada.veces}` : ""}
-                            </span>
-                          )}
-                          {/* Se aprobó con correcciones: el detalle dice cuáles y por qué (ver `solicitudRevision`). */}
-                          {hayRevision && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                              {cantidadDeCambios > 0 ? `${cantidadDeCambios} ${cantidadDeCambios === 1 ? "cambio" : "cambios"}` : "Comentario"}
-                            </span>
-                          )}
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${estado.cls}`}>{estado.label}</span>
-                        </div>
-                      </div>
-                      {/* El período pedido: es lo que distingue una solicitud de otra de la misma persona. */}
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3 opacity-70" />
-                        <span className="truncate">{periodo}</span>
-                      </div>
+            {entradasHistorial.map((e) =>
+              e.tipo === "sola" ? (
+                <div key={e.user._id}>{tarjeta(e.user)}</div>
+              ) : (
+                <div key={e.loteId} className="rounded-xl border border-blue-200 bg-blue-50/40 dark:border-blue-900/60 dark:bg-blue-950/20">
+                  <button type="button" onClick={() => setLotesAbiertos((p) => { const n = new Set(p); if (n.has(e.loteId)) n.delete(e.loteId); else n.add(e.loteId); return n; })} className="flex w-full items-center justify-between gap-2 p-3 text-left">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                        <FontAwesomeIcon icon={faUsers} className="mr-1.5 text-blue-500" />
+                        {e.nombre}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {e.users.length} solicitudes del equipo · {new Date(e.users[0].createdAt).toLocaleDateString("es-ES")} · {resumenEstados(e.users)}
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pr-10 pt-2 dark:border-slate-800">
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      <FontAwesomeIcon icon={faFileContract} className="w-3 h-3 opacity-70 text-primary" />
-                      <span className="truncate">{meta.nombre_contrato || "Sin tipo de contrato"}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      <FontAwesomeIcon icon={faClock} className="w-3 h-3 opacity-70 text-primary" />
-                      <span className="truncate">{meta.schedule || "Sin horario"}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3 opacity-70 text-primary" />
-                      <span>Solicitado: {new Date(user.createdAt).toLocaleDateString("es-ES")}</span>
-                    </div>
-                  </div>
-
-                  {/*
-                    BORRAR LA SOLICITUD.
-
-                    Para lo que no aporta historial —una prueba, una cargada dos veces—: lo que sí se
-                    pidió y se dio de baja se cancela, y queda registrado como cancelado. El server no
-                    deja borrar una aprobada, que ya es una contratación.
-                  */}
-                  {/* Una aprobada no se borra: ya es una contratación, y el server la rechaza igual. */}
-                  {estadoClave !== "aprobada" && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void borrarSolicitud(user);
-                    }}
-                    disabled={borrando === user._id}
-                    aria-label={`Borrar la solicitud de ${displayName}`}
-                    title="Borrar la solicitud"
-                    className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors active:scale-95 disabled:opacity-50 dark:border-slate-700 dark:text-slate-500"
-                  >
-                    <FontAwesomeIcon icon={borrando === user._id ? faSpinner : faTrash} className={`h-3.5 w-3.5 ${borrando === user._id ? "animate-spin" : ""}`} />
+                    <span className="shrink-0 text-xs font-bold text-blue-600 dark:text-blue-400">{lotesAbiertos.has(e.loteId) ? "Ocultar" : "Ver"}</span>
                   </button>
-                  )}
+                  {lotesAbiertos.has(e.loteId) && <div className="space-y-3 px-2 pb-2">{e.users.map((u) => <div key={u._id}>{tarjeta(u)}</div>)}</div>}
                 </div>
-              );
-            })}
+              ),
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 dark:bg-slate-800/50">

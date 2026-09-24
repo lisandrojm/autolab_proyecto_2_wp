@@ -2037,7 +2037,7 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
           aprobación, el registro público): se arrastran del documento actual cuando no vienen en el body.
         */
         if (data.metadata && currentUser.metadata) {
-            const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "solicitudReenviada", "solicitudRevision", "registro", "loteId", "plantillaEquipoId"];
+            const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "solicitudReenviada", "solicitudRevision", "registro", "loteId", "plantillaEquipoId", "loteNombre"];
             deGestion.forEach((campo) => {
                 const actual = currentUser.metadata[campo];
                 if (data.metadata[campo] === undefined && actual !== undefined)
