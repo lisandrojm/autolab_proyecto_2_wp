@@ -289,6 +289,9 @@ export interface IUserMetadata {
    * editar la solicitud (ver `services/superposicion.ts`); nunca viene del cliente.
    */
   avisosSuperposicion?: { tipo: "horario" | "fechas"; origen: "contrato" | "solicitud"; proyectoNombre: string; desde: string; hasta: string; vigente: boolean; sinDatos: string[]; mensaje: string }[];
+  /** Salió de un alta masiva: el lote y la plantilla de equipo (ver `models/LoteContratacion.ts`). */
+  loteId?: Types.ObjectId;
+  plantillaEquipoId?: Types.ObjectId;
   projectIds?: Types.ObjectId[];
   rolesFrameIds?: string[] | Types.ObjectId[];
 }
@@ -481,6 +484,9 @@ const userSchema = new Schema<IUser>(
         type: [{ _id: false, tipo: String, origen: String, proyectoNombre: String, desde: String, hasta: String, vigente: Boolean, sinDatos: [String], mensaje: String }],
         default: undefined,
       },
+      // Ver el comentario de la interfaz.
+      loteId: { type: Schema.Types.ObjectId, ref: "LoteContratacion" },
+      plantillaEquipoId: { type: Schema.Types.ObjectId, ref: "PlantillaEquipo" },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
       roles_frame: {
         type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

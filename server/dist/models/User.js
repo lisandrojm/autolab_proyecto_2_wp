@@ -157,6 +157,9 @@ const userSchema = new Schema({
             type: [{ _id: false, tipo: String, origen: String, proyectoNombre: String, desde: String, hasta: String, vigente: Boolean, sinDatos: [String], mensaje: String }],
             default: undefined,
         },
+        // Ver el comentario de la interfaz.
+        loteId: { type: Schema.Types.ObjectId, ref: "LoteContratacion" },
+        plantillaEquipoId: { type: Schema.Types.ObjectId, ref: "PlantillaEquipo" },
         projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
         roles_frame: {
             type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

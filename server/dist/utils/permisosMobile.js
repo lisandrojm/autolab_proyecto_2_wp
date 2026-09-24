@@ -31,9 +31,11 @@ export const MOBILE_TEAMS = "mobile_teams:view"; // Mis equipos
 export const MOBILE_ORDERS = "mobile_orders:view"; // Pedidos
 export const MOBILE_VACATIONS = "mobile_vacations:view"; // Vacaciones
 export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes de alta)
+/** Plantillas de equipo: pestaña de Contratación para contratar a un equipo fijo de una vez. */
+export const MOBILE_HIRING_TEMPLATES = "mobile_hiring_templates:view";
 /** Registro: generar el link de registro (7 días, se renueva solo) y ver, sin editar, quiénes se registraron. */
 export const MOBILE_REGISTRO = "mobile_registro:view";
-export const ALL_MOBILE_PERMISSIONS = [MOBILE_ACTIVITY_LOGS, MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_USERS, MOBILE_REGISTRO];
+export const ALL_MOBILE_PERMISSIONS = [MOBILE_ACTIVITY_LOGS, MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO];
 /** Lo que veía un Colaborador: sus pedidos y sus vacaciones. Es el piso de cualquier alta. */
 export const MOBILE_BASE_PERMISSIONS = [MOBILE_ORDERS, MOBILE_VACATIONS];
 /**
@@ -63,8 +65,8 @@ export const ALL_CAPACIDADES = [PROJECT_SUPERVISOR, PROJECT_COORDINATOR];
  * Con qué nacen los roles de sistema. Son los mismos que ofrecen las plantillas del editor de roles
  * (`frontend/src/utils/permisosMobile.ts`): si se cambia uno, se cambia el otro.
  */
-export const PERMISOS_COORDINADOR = [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR];
-export const PERMISOS_SUPERVISOR = [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, PROJECT_SUPERVISOR];
+export const PERMISOS_COORDINADOR = [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR];
+export const PERMISOS_SUPERVISOR = [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR];
 export const esCapacidad = (permiso) => permiso.endsWith(":eligible");
 /** Permisos que este cambio retira. Se traducen en `migrateMobileYResponsable`. */
 export const LEGACY_MOBILE_COLLABORATOR = "mobile_collaborator:view";

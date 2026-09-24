@@ -31,6 +31,8 @@ export const MOBILE_VACATIONS = "mobile_vacations:view"; // Vacaciones
 // La CLAVE sigue diciendo `users` porque renombrarla es migrar los roles de todos los tenants; lo
 // que se ve es «Contratación», que es lo que la tarjeta hace: pedir un alta, no administrar gente.
 export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes de alta)
+/** Plantillas de equipo: una pestaña más de Contratación para contratar a un equipo fijo de una vez. */
+export const MOBILE_HIRING_TEMPLATES = "mobile_hiring_templates:view";
 export const MOBILE_REGISTRO = "mobile_registro:view"; // Registro: link de registro y registrados
 
 /**
@@ -50,6 +52,8 @@ export const MOBILE_ITEMS = [
   { permiso: MOBILE_ACTIVITY_COMPLIANCE, label: "Cumplimiento de novedades", grupo: "Novedades", dentroDe: MOBILE_ACTIVITY_LOGS, ayuda: "Agrega a Novedades la pestaña Cumplimiento: quién envió las suyas y a quién le falta. Es del coordinador. Se puede dar solo: quien no carga novedades entra y ve únicamente esta pestaña." },
   { permiso: MOBILE_TEAMS, label: "Mis equipos", grupo: "Equipo", ayuda: "Agrega «Equipos» a la barra de abajo de la app: las áreas y turnos que tiene a cargo, con su gente. Lo llevan las dos plantillas que trabajan con equipo, Supervisor y Coordinador." },
   { permiso: MOBILE_USERS, label: "Contratación", grupo: "Contratación", ayuda: "Pedir altas de personal." },
+  // No es una tarjeta propia: es otra pestaña de Contratación, por eso va `dentroDe`.
+  { permiso: MOBILE_HIRING_TEMPLATES, label: "Plantillas de equipo", grupo: "Contratación", dentroDe: MOBILE_USERS, ayuda: "Agrega a Contratación la pestaña Plantillas: equipos fijos de personas con sus valores, que se contratan todos juntos (una solicitud por persona, iguales a las del alta individual)." },
   { permiso: MOBILE_REGISTRO, label: "Registro", grupo: "Contratación", ayuda: "Compartir el link para que la gente se registre (vence según lo configurado en Usuarios → Link y se renueva solo) y ver, sin editar, quiénes se registraron." },
   { permiso: MOBILE_ORDERS, label: "Pedidos", grupo: "Personal", ayuda: "Sus propios pedidos." },
   { permiso: MOBILE_VACATIONS, label: "Vacaciones", grupo: "Personal", ayuda: "Sus propias vacaciones." },
@@ -87,8 +91,8 @@ export const CAPACIDAD_PERMISSIONS = CAPACIDAD_ITEMS.map((i) => i.permiso);
  */
 export const PLANTILLAS_ROL = [
   { nombre: "Colaborador", descripcion: "Carga lo suyo: pedidos y vacaciones.", permisos: [MOBILE_ORDERS, MOBILE_VACATIONS] },
-  { nombre: "Supervisor", descripcion: "Supervisa áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
-  { nombre: "Coordinador", descripcion: "Coordina a los supervisores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_REGISTRO, PROJECT_SUPERVISOR] },
+  { nombre: "Supervisor", descripcion: "Supervisa áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
+  { nombre: "Coordinador", descripcion: "Coordina a los supervisores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR] },
 ];
 
 /**

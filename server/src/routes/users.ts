@@ -19,6 +19,7 @@ import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { pedidoDesdeSolicitud, superposicionesDeAlta } from "../services/superposicion.js";
+import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
@@ -44,6 +45,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requireAnyPermission, requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
+import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSchemas.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
@@ -172,40 +174,7 @@ async function resolveProjectTeamFilterIds(projectId: string, filtros: TeamFilte
   return ids;
 }
 
-/**
- * En el modelo el campo real es `metadata.roles_frame` y `rolesFrameIds` es un alias de Mongoose
- * (ver models/User.ts). Los alias NO se aplican en rutas anidadas: mandar
- * `metadata.rolesFrameIds` guardaba un array VACÍO y el rol frame se perdía en silencio (así se
- * creaban las solicitudes de alta, que después figuraban "Sin rol"). Se normaliza acá y no en cada
- * cliente para que valga también para los que ya están publicados.
- */
-const normalizarRolesFrame = (metadata: any): void => {
-  if (!metadata || typeof metadata !== "object") return;
-  const alias = metadata.rolesFrameIds;
-  if (Array.isArray(alias) && alias.length > 0 && (!Array.isArray(metadata.roles_frame) || metadata.roles_frame.length === 0)) {
-    metadata.roles_frame = alias;
-  }
-  delete metadata.rolesFrameIds;
-};
 
-const createUserSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
-    firstName: z.string().optional(),
-    lastName: z.string().optional(),
-    roles: z.array(z.string()).default([]),
-    // Puede quedar a cargo de un proyecto. Es de la persona, no de sus roles: ver GET /eligible-responsables.
-    isProjectResponsible: z.boolean().optional(),
-    hireDate: z
-      .string()
-      .or(z.date())
-      .transform((val) => new Date(val)),
-    extraVacationDays: z.number().default(0),
-    clientIds: z.array(z.string()).default([]),
-    projectIds: z.array(z.string()).default([]),
-    name: z.string().optional(),
-    metadata: z.any().optional(),
-  });
 
 const updateUserSchema = z
   .object({
@@ -1615,38 +1584,16 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
     const data = createUserSchema.parse(req.body);
     normalizarRolesFrame((data as any).metadata);
 
-    // Toda solicitud de alta nace "pendiente" (ciclo de vida tipo Pedido).
     /*
-      UNA SOLICITUD DE ALTA NUEVA TRAE ÁREA Y TURNO.
-
-      Es lo que precarga el wizard de aprobación: sin eso llega vacía y quien aprueba tiene que elegir
-      el área sabiendo menos que quien pidió el alta. La pantalla ya lo exige; esto es para que no se
-      pueda saltear llamando al API. Sólo al CREAR: editar una solicitud vieja o aprobarla no se frena.
+      UNA SOLICITUD DE CONTRATACIÓN: lo que el server valida y sella antes de guardarla vive en
+      `services/solicitudes.ts`, compartido con el alta masiva de plantillas de equipo.
     */
     if ((data as any).metadata?.isSolicitud === true) {
-      const asignaciones = (data as any).metadata.areaShiftAssignments;
-      const tieneAreaYTurno = Array.isArray(asignaciones) && asignaciones.some((a: any) => a?.areaId && Array.isArray(a.shiftIds) && a.shiftIds.length > 0);
-      if (!tieneAreaYTurno) {
-        res.status(400).json({ error: "La solicitud tiene que traer el área y el turno de la persona." });
+      const rechazo = await prepararSolicitudNueva(req.tenantObjectId!, req.user!.userId, (data as any).metadata);
+      if (rechazo) {
+        res.status(400).json({ error: rechazo });
         return;
       }
-    }
-
-    if ((data as any).metadata?.isSolicitud === true && !(data as any).metadata.solicitudStatus) {
-      (data as any).metadata.solicitudStatus = "pendiente";
-    }
-
-    // Quién la pidió, puesto por el servidor: es a quien se le avisa cómo terminó. Nunca del body.
-    // Y nace INACTIVA: no es una persona hasta que se aprueba (ver `services/conteoUsuariosTenant.ts`).
-    if ((data as any).metadata?.isSolicitud === true) {
-      (data as any).metadata.solicitudCreadaPor = new Types.ObjectId(String(req.user!.userId));
-      (data as any).metadata.activo = false;
-      /*
-        LA FOTO DE LOS AVISOS DE SUPERPOSICIÓN, para quien la aprueba: si al pedirla la persona ya tenía
-        algo en esas fechas u horario, el que aprueba lo ve en el detalle sin tener que buscarlo. La pone
-        el server (nunca del body) y sirve igual para el alta individual y la masiva.
-      */
-      (data as any).metadata.avisosSuperposicion = await superposicionesDeAlta(req.tenantObjectId!, (data as any).metadata.solicitudUserId, pedidoDesdeSolicitud((data as any).metadata));
     }
 
     // Verificar que no existe usuario con el mismo email en el tenant
@@ -1662,20 +1609,7 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
 
     // Si no se especifican roles, asignar rol por defecto
     let rolesToAssign = data.roles;
-    if (!rolesToAssign || rolesToAssign.length === 0) {
-      const defaultRole = await Role.findOne({
-        tenantId: req.tenantObjectId,
-        isDefault: true,
-      });
-
-      if (!defaultRole) {
-        console.warn(`[User Creation] No default role found for tenant: ${req.tenantObjectId}`);
-      } else {
-        console.log(`[User Creation] Assigning default role: ${defaultRole.name} (${defaultRole._id})`);
-      }
-
-      rolesToAssign = defaultRole ? [(defaultRole._id as any).toString()] : [];
-    }
+    if (!rolesToAssign || rolesToAssign.length === 0) rolesToAssign = await rolesPorDefecto(req.tenantObjectId!);
 
     // Verificar que todos los roles existen en el tenant
     if (rolesToAssign.length > 0) {
@@ -1749,60 +1683,8 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
 
     await user.save();
 
-    /*
-      RENOVACIÓN DE UN CONTRATO POR VENCER: se anota la decisión, y con eso el contrato sale de «Por
-      vencer» (ver `services/contratosPorVencer.ts`). Va DESPUÉS de guardar la solicitud: anotada antes,
-      un guardado fallido sacaría el contrato de la lista sin que nadie lo haya renovado. Con su propio
-      catch: la solicitud ya existe, y eso es lo que no se puede perder.
-    */
-    const renovacionDe: any = (user.metadata as any)?.esRenovacion ? (user.metadata as any)?.renovacionDe : null;
-    if (renovacionDe?.userProjectId && renovacionDe?.fechaBajaContrato) {
-      try {
-        const up: any = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId").lean();
-        if (up) {
-          const quien: any = await User.findById(req.user!.userId).select("firstName lastName").lean();
-          await RenovacionContrato.updateOne(
-            { tenantId: req.tenantObjectId, userProjectId: up._id, fechaBajaContrato: String(renovacionDe.fechaBajaContrato) },
-            {
-              $set: {
-                userId: up.userId,
-                projectId: up.projectId,
-                decision: "renovar",
-                solicitudId: user._id,
-                decididoPor: new Types.ObjectId(req.user!.userId),
-                decididoPorNombre: `${quien?.firstName || ""} ${quien?.lastName || ""}`.trim(),
-                decididoEl: new Date(),
-              },
-            },
-            { upsert: true },
-          );
-          olvidarContratosPorVencer();
-        }
-      } catch (e) {
-        console.error("[RENOVACION] No se pudo anotar la renovación del contrato:", e);
-      }
-    }
-
-    /*
-      AVISAR QUE ENTRÓ UNA SOLICITUD, a quien la tiene que aprobar.
-
-      Va al coordinador del proyecto (el responsable): es quien la aprueba desde el escritorio. Antes la
-      solicitud quedaba esperando sin que nadie se enterara, y el que la cargó tenía que avisar aparte.
-      No se avisa a quien la acaba de cargar: ya sabe.
-    */
-    if ((user.metadata as any)?.isSolicitud === true) {
-      // Los proyectos de una solicitud vienen en `metadata`; los de un alta normal, en la raíz.
-      const proyectos = [...(((user.metadata as any)?.projectIds || []) as any[]), ...((user.projectIds || []) as any[])];
-      await notificar({
-        tenantId: req.tenantObjectId!,
-        destinatarios: await responsablesDeProyectos(req.tenantObjectId!, proyectos),
-        type: NOVEDAD_SOLICITUD,
-        title: (user.metadata as any)?.esRenovacion ? "Renovación de contrato pedida" : "Nueva solicitud de contratación",
-        refId: user._id as Types.ObjectId,
-        message: `${nombreDePersona(user)} · pedida por ${nombreDePersona(await User.findById(req.user!.userId).select("firstName lastName metadata.fullName").lean())}`,
-        excepto: req.user!.userId,
-      });
-    }
+    // Los efectos de una solicitud nueva (renovación, aviso a quien aprueba): `services/solicitudes.ts`.
+    if ((user.metadata as any)?.isSolicitud === true) await efectosDeSolicitudNueva(req.tenantObjectId!, req.user!.userId, user);
 
     // Sync projects: Add this user to assignedUsers of selected projects
     if (user.projectIds && user.projectIds.length > 0) {
@@ -2299,7 +2181,7 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
       aprobación, el registro público): se arrastran del documento actual cuando no vienen en el body.
     */
     if ((data as any).metadata && currentUser.metadata) {
-      const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "solicitudReenviada", "solicitudRevision", "registro"];
+      const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "solicitudReenviada", "solicitudRevision", "registro", "loteId", "plantillaEquipoId"];
       deGestion.forEach((campo) => {
         const actual = (currentUser.metadata as any)[campo];
         if ((data as any).metadata[campo] === undefined && actual !== undefined) (data as any).metadata[campo] = actual;

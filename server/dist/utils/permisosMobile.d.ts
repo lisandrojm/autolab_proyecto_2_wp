@@ -24,6 +24,8 @@ export declare const MOBILE_TEAMS = "mobile_teams:view";
 export declare const MOBILE_ORDERS = "mobile_orders:view";
 export declare const MOBILE_VACATIONS = "mobile_vacations:view";
 export declare const MOBILE_USERS = "mobile_users:view";
+/** Plantillas de equipo: pestaña de Contratación para contratar a un equipo fijo de una vez. */
+export declare const MOBILE_HIRING_TEMPLATES = "mobile_hiring_templates:view";
 /** Registro: generar el link de registro (7 días, se renueva solo) y ver, sin editar, quiénes se registraron. */
 export declare const MOBILE_REGISTRO = "mobile_registro:view";
 export declare const ALL_MOBILE_PERMISSIONS: string[];
