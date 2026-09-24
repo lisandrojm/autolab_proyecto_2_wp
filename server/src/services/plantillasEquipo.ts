@@ -77,9 +77,27 @@ function leerComunes(body: any): Partial<IPlantillaEquipo> {
   return c;
 }
 
-async function cargar(tenantId: Types.ObjectId, id: string) {
+/**
+ * QUIÉN PIDE Y SOBRE QUÉ PLANTILLAS.
+ *
+ *  - `personal` (móvil): las de cada supervisor. Sólo las ve, edita y contrata quien las creó.
+ *  - `general` (escritorio): las del tenant, sin proyecto: puestos por rol y valores de base. No tienen
+ *    personas ni se contratan: en el móvil se COPIAN a una personal («Usar»), en un proyecto.
+ *
+ * Las plantillas creadas antes de que existieran las generales no tienen `alcance`: son personales.
+ */
+export interface Acceso {
+  tenantId: Types.ObjectId;
+  userId: string;
+  alcance: "personal" | "general";
+}
+
+const filtroDeAlcance = (acc: Acceso) => (acc.alcance === "general" ? { alcance: "general" } : { creadoPor: oid(acc.userId), alcance: { $ne: "general" } });
+
+async function cargar(acc: Acceso, id: string) {
+  const tenantId = acc.tenantId;
   if (!idOk(id)) throw new ErrorPlantilla(404, "No se encontró la plantilla.");
-  const p = await PlantillaEquipo.findOne({ _id: oid(id), tenantId, activo: true });
+  const p = await PlantillaEquipo.findOne({ _id: oid(id), tenantId, activo: true, ...filtroDeAlcance(acc) });
   if (!p) throw new ErrorPlantilla(404, "No se encontró la plantilla.");
   return p;
 }
@@ -89,13 +107,18 @@ const nombreRepetido = (e: any) => e?.code === 11000;
 // ── Lectura ─────────────────────────────────────────────────────────────
 
 /** Las plantillas de un proyecto, para la lista (con cuántos integrantes y la última contratación). */
-export async function listarPlantillas(tenantId: Types.ObjectId, projectId: string) {
-  if (!idOk(projectId)) return [];
-  const lista: any[] = await PlantillaEquipo.find({ tenantId, projectId: oid(projectId), activo: true }).sort({ nombre: 1 }).lean();
+export async function listarPlantillas(acc: Acceso, projectId: string) {
+  const tenantId = acc.tenantId;
+  // Las personales, del proyecto; las generales, todas (no tienen proyecto).
+  if (acc.alcance === "personal" && !idOk(projectId)) return [];
+  const lista: any[] = await PlantillaEquipo.find({ tenantId, activo: true, ...filtroDeAlcance(acc), ...(acc.alcance === "personal" ? { projectId: oid(projectId) } : {}) })
+    .sort({ nombre: 1 })
+    .lean();
   return lista.map((p) => ({
     _id: String(p._id),
     nombre: p.nombre,
-    projectId: String(p.projectId),
+    projectId: p.projectId ? String(p.projectId) : null,
+    alcance: p.alcance || "personal",
     nombreContrato: p.nombreContrato || "",
     areaShiftAssignments: p.areaShiftAssignments,
     inTime: p.inTime,
@@ -107,8 +130,9 @@ export async function listarPlantillas(tenantId: Types.ObjectId, projectId: stri
 }
 
 /** Una plantilla con sus integrantes resueltos a nombre (para el editor). */
-export async function obtenerPlantilla(tenantId: Types.ObjectId, id: string) {
-  const p: any = (await cargar(tenantId, id)).toObject();
+export async function obtenerPlantilla(acc: Acceso, id: string) {
+  const tenantId = acc.tenantId;
+  const p: any = (await cargar(acc, id)).toObject();
   const userIds = [...(p.integrantes || []).map((i: any) => i.userId), ...(p.integrantes || []).map((i: any) => i.reemplazadoDePersonaId)].filter(Boolean);
   const personas: any[] = userIds.length ? await User.find({ _id: { $in: userIds }, tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.isSolicitud").lean() : [];
   const persona = new Map(personas.map((u) => [String(u._id), u]));
@@ -132,44 +156,54 @@ export async function obtenerPlantilla(tenantId: Types.ObjectId, id: string) {
 
 // ── Escritura ───────────────────────────────────────────────────────────
 
-export async function crearPlantilla(tenantId: Types.ObjectId, creadorId: string, body: any) {
-  if (!idOk(body?.projectId) || !(await Project.exists({ _id: oid(body.projectId), tenantId }))) throw new ErrorPlantilla(400, "Elegí el proyecto de la plantilla.");
+export async function crearPlantilla(acc: Acceso, body: any) {
+  const tenantId = acc.tenantId;
+  const creadorId = acc.userId;
+  const general = acc.alcance === "general";
+  if (!general && (!idOk(body?.projectId) || !(await Project.exists({ _id: oid(body.projectId), tenantId })))) throw new ErrorPlantilla(400, "Elegí el proyecto de la plantilla.");
   const comunes = leerComunes({ nombre: "", ...body });
+  // Una general no tiene proyecto, y por eso tampoco empresa, convenio ni área/turno: se eligen al usarla.
+  if (general) Object.assign(comunes, { empresaContratoId: null, convenioId: null, areaShiftAssignments: [] });
   try {
-    const p = await PlantillaEquipo.create({ ...comunes, tenantId, projectId: oid(body.projectId), creadoPor: oid(creadorId), integrantes: [] });
+    const p = await PlantillaEquipo.create({ ...comunes, tenantId, alcance: acc.alcance, projectId: general ? null : oid(body.projectId), creadoPor: oid(creadorId), integrantes: [] });
     // Puede nacer con integrantes (ej. «Guardar como plantilla» desde el alta individual).
-    if (Array.isArray(body.integrantes) && body.integrantes.length) await agregarIntegrantes(tenantId, String(p._id), body.integrantes);
-    return obtenerPlantilla(tenantId, String(p._id));
+    if (Array.isArray(body.integrantes) && body.integrantes.length) await agregarIntegrantes(acc, String(p._id), body.integrantes);
+    return obtenerPlantilla(acc, String(p._id));
   } catch (e) {
-    if (nombreRepetido(e)) throw new ErrorPlantilla(409, "Ya hay una plantilla con ese nombre en el proyecto.");
+    if (nombreRepetido(e)) throw new ErrorPlantilla(409, general ? "Ya hay una plantilla general con ese nombre." : "Ya tenés una plantilla con ese nombre en el proyecto.");
     throw e;
   }
 }
 
-export async function actualizarPlantilla(tenantId: Types.ObjectId, id: string, body: any) {
-  const p = await cargar(tenantId, id);
+export async function actualizarPlantilla(acc: Acceso, id: string, body: any) {
+  const tenantId = acc.tenantId;
+  const p = await cargar(acc, id);
   const comunes = leerComunes(body);
+  if (acc.alcance === "general") Object.assign(comunes, { empresaContratoId: null, convenioId: null, areaShiftAssignments: [] });
   // Cambiar la empresa cambia el convenio: las categorías que no sean del nuevo quedan «a completar»
   // (el plan las marca como error hasta que se corrijan; no se borran para no perder qué eran).
   Object.assign(p, comunes);
   try {
     await p.save();
   } catch (e) {
-    if (nombreRepetido(e)) throw new ErrorPlantilla(409, "Ya hay una plantilla con ese nombre en el proyecto.");
+    if (nombreRepetido(e)) throw new ErrorPlantilla(409, "Ya hay una plantilla con ese nombre.");
     throw e;
   }
-  return obtenerPlantilla(tenantId, id);
+  return obtenerPlantilla(acc, id);
 }
 
 /** Borrar = dar de baja: los lotes ya contratados siguen apuntando a ella. */
-export async function borrarPlantilla(tenantId: Types.ObjectId, id: string) {
-  const p = await cargar(tenantId, id);
+export async function borrarPlantilla(acc: Acceso, id: string) {
+  const tenantId = acc.tenantId;
+  const p = await cargar(acc, id);
   p.activo = false;
   await p.save();
 }
 
-export async function duplicarPlantilla(tenantId: Types.ObjectId, creadorId: string, id: string, nombre?: string) {
-  const p: any = (await cargar(tenantId, id)).toObject();
+export async function duplicarPlantilla(acc: Acceso, id: string, nombre?: string) {
+  const tenantId = acc.tenantId;
+  const creadorId = acc.userId;
+  const p: any = (await cargar(acc, id)).toObject();
   const base = (nombre || `${p.nombre} (copia)`).trim().slice(0, 120);
   for (let n = 0; n < 20; n++) {
     const candidato = n === 0 ? base : `${base} ${n + 1}`;
@@ -185,7 +219,46 @@ export async function duplicarPlantilla(tenantId: Types.ObjectId, creadorId: str
         createdAt: undefined,
         updatedAt: undefined,
       });
-      return obtenerPlantilla(tenantId, String(copia._id));
+      return obtenerPlantilla(acc, String(copia._id));
+    } catch (e) {
+      if (!nombreRepetido(e)) throw e;
+    }
+  }
+  throw new ErrorPlantilla(409, "No se pudo elegir un nombre libre para la copia.");
+}
+
+/**
+ * USAR UNA GENERAL: se copia como plantilla PERSONAL de quien la usa, en su proyecto. Se copian los
+ * puestos (sin personas: las generales no tienen) y los valores de base; la empresa, el convenio y el
+ * área/turno se completan después en la copia. La general no cambia.
+ */
+export async function usarGeneral(acc: Acceso, generalId: string, projectId: string, nombre?: string) {
+  const tenantId = acc.tenantId;
+  if (!idOk(projectId) || !(await Project.exists({ _id: oid(projectId), tenantId }))) throw new ErrorPlantilla(400, "Elegí el proyecto donde usarla.");
+  const g: any = (await cargar({ ...acc, alcance: "general" }, generalId)).toObject();
+  const base = (nombre || g.nombre).trim().slice(0, 120);
+  for (let n = 0; n < 20; n++) {
+    const candidato = n === 0 ? base : `${base} ${n + 1}`;
+    try {
+      const copia = await PlantillaEquipo.create({
+        tenantId,
+        alcance: "personal",
+        projectId: oid(projectId),
+        nombre: candidato,
+        contratoId: g.contratoId,
+        nombreContrato: g.nombreContrato,
+        tipoImpositivo: g.tipoImpositivo,
+        areaShiftAssignments: [],
+        inTime: g.inTime,
+        outTime: g.outTime,
+        diasSemana: g.diasSemana,
+        diasPorSemana: g.diasPorSemana,
+        diasRotativos: g.diasRotativos,
+        comentarios: g.comentarios,
+        integrantes: (g.integrantes || []).map((i: any) => ({ ...i, _id: new Types.ObjectId(), userId: null, reemplazadoDePersonaId: null, reemplazadoEl: null })),
+        creadoPor: oid(acc.userId),
+      });
+      return obtenerPlantilla({ ...acc, alcance: "personal" }, String(copia._id));
     } catch (e) {
       if (!nombreRepetido(e)) throw e;
     }
@@ -207,8 +280,9 @@ async function escalaDe(plantilla: any, categoriaSatId: any): Promise<number | n
  * sabe, la persona —sin roles, se toman los de su ficha—. `cantidad` repite un puesto sin asignar
  * («2 cámaras»). Nadie dos veces; los puestos sin asignar sí se repiten.
  */
-export async function agregarIntegrantes(tenantId: Types.ObjectId, id: string, nuevos: any[]) {
-  const p = await cargar(tenantId, id);
+export async function agregarIntegrantes(acc: Acceso, id: string, nuevos: any[]) {
+  const tenantId = acc.tenantId;
+  const p = await cargar(acc, id);
   const ya = new Set(p.integrantes.filter((i) => i.userId).map((i) => String(i.userId)));
   const entradas = (Array.isArray(nuevos) ? nuevos : []).flatMap((n: any) => {
     if (idOk(n?.userId)) return [n];
@@ -216,6 +290,7 @@ export async function agregarIntegrantes(tenantId: Types.ObjectId, id: string, n
     return Array.from({ length: veces }, () => ({ ...n, userId: null }));
   });
   const conPersona = entradas.filter((n) => n.userId);
+  if (acc.alcance === "general" && conPersona.length) throw new ErrorPlantilla(400, "Una plantilla general no lleva personas: sólo puestos por rol. La gente se asigna en la copia de cada supervisor.");
   const repetidos = conPersona.filter((n) => ya.has(String(n.userId)));
   if (repetidos.length) throw new ErrorPlantilla(409, repetidos.length === 1 ? "Esa persona ya está en la plantilla." : `${repetidos.length} de esas personas ya están en la plantilla.`);
   if (new Set(conPersona.map((n) => String(n.userId))).size !== conPersona.length) throw new ErrorPlantilla(400, "Hay una persona repetida en lo que se quiere agregar.");
@@ -243,15 +318,16 @@ export async function agregarIntegrantes(tenantId: Types.ObjectId, id: string, n
     } as any);
   }
   await p.save();
-  return obtenerPlantilla(tenantId, id);
+  return obtenerPlantilla(acc, id);
 }
 
 /**
  * Cambia lo propio de un integrante. `null` o "" en un campo = volver al valor del equipo. Fijar el importe
  * guarda la escala de ese momento, para avisar si después cambia.
  */
-export async function actualizarIntegrante(tenantId: Types.ObjectId, id: string, integranteId: string, body: any) {
-  const p = await cargar(tenantId, id);
+export async function actualizarIntegrante(acc: Acceso, id: string, integranteId: string, body: any) {
+  const tenantId = acc.tenantId;
+  const p = await cargar(acc, id);
   const i: any = p.integrantes.find((x) => String(x._id) === String(integranteId));
   if (!i) throw new ErrorPlantilla(404, "Ese integrante ya no está en la plantilla.");
   if (body.rolesFrame !== undefined) {
@@ -280,26 +356,29 @@ export async function actualizarIntegrante(tenantId: Types.ObjectId, id: string,
   if (body.orden !== undefined && Number.isFinite(Number(body.orden))) i.orden = Number(body.orden);
   p.markModified("integrantes");
   await p.save();
-  return obtenerPlantilla(tenantId, id);
+  return obtenerPlantilla(acc, id);
 }
 
-export async function quitarIntegrante(tenantId: Types.ObjectId, id: string, integranteId: string) {
-  const p = await cargar(tenantId, id);
+export async function quitarIntegrante(acc: Acceso, id: string, integranteId: string) {
+  const tenantId = acc.tenantId;
+  const p = await cargar(acc, id);
   const antes = p.integrantes.length;
   p.integrantes = p.integrantes.filter((x) => String(x._id) !== String(integranteId)) as any;
   if (p.integrantes.length === antes) throw new ErrorPlantilla(404, "Ese integrante ya no está en la plantilla.");
   await p.save();
-  return obtenerPlantilla(tenantId, id);
+  return obtenerPlantilla(acc, id);
 }
 
 /**
  * REEMPLAZAR A UN INTEGRANTE por otra persona, para siempre (no es el «¿Reemplazo?» de una solicitud).
  * Se conservan rol/es y lo propio (horario, categoría, importe), y queda anotado a quién reemplazó.
  */
-export async function reemplazarIntegrante(tenantId: Types.ObjectId, id: string, integranteId: string, nuevoUserId: string) {
-  const p = await cargar(tenantId, id);
+export async function reemplazarIntegrante(acc: Acceso, id: string, integranteId: string, nuevoUserId: string) {
+  const tenantId = acc.tenantId;
+  const p = await cargar(acc, id);
   const i: any = p.integrantes.find((x) => String(x._id) === String(integranteId));
   if (!i) throw new ErrorPlantilla(404, "Ese integrante ya no está en la plantilla.");
+  if (acc.alcance === "general") throw new ErrorPlantilla(400, "Una plantilla general no lleva personas.");
   if (!idOk(nuevoUserId)) throw new ErrorPlantilla(400, "Elegí a la persona que entra.");
   if (i.userId && String(i.userId) === String(nuevoUserId)) throw new ErrorPlantilla(400, "Es la misma persona.");
   if (p.integrantes.some((x) => x.userId && String(x.userId) === String(nuevoUserId))) throw new ErrorPlantilla(409, "Esa persona ya está en la plantilla.");
@@ -313,7 +392,7 @@ export async function reemplazarIntegrante(tenantId: Types.ObjectId, id: string,
   i.userId = oid(nuevoUserId);
   p.markModified("integrantes");
   await p.save();
-  return obtenerPlantilla(tenantId, id);
+  return obtenerPlantilla(acc, id);
 }
 
 // ── Plan: preview y contratar ───────────────────────────────────────────
@@ -436,8 +515,9 @@ const paraMostrar = (plan: PlanDeLote) => ({
   errores: erroresDelLote(plan),
 });
 
-export async function previewDeContratacion(tenantId: Types.ObjectId, id: string, body: any) {
-  const p = await cargar(tenantId, id);
+export async function previewDeContratacion(acc: Acceso, id: string, body: any) {
+  const tenantId = acc.tenantId;
+  const p = await cargar(acc, id);
   return paraMostrar(await planificar(tenantId, p.toObject(), body));
 }
 
@@ -445,14 +525,16 @@ export async function previewDeContratacion(tenantId: Types.ObjectId, id: string
  * CONTRATAR: revalida TODO (no confía en el preview que vio el cliente) y, sin errores, crea las N
  * solicitudes + el lote en una transacción. Con la misma `idempotencyKey` devuelve el lote ya creado.
  */
-export async function contratarPlantilla(tenantId: Types.ObjectId, creadorId: string, id: string, body: any) {
+export async function contratarPlantilla(acc: Acceso, id: string, body: any) {
+  const tenantId = acc.tenantId;
+  const creadorId = acc.userId;
   const clave = str(body?.idempotencyKey).trim();
   if (!clave || clave.length > 100) throw new ErrorPlantilla(400, "Falta la clave de la contratación (idempotencyKey).");
 
   const yaHecho: any = await LoteContratacion.findOne({ tenantId, idempotencyKey: clave }).lean();
   if (yaHecho) return { repetido: true, loteId: String(yaHecho._id), solicitudIds: yaHecho.solicitudIds.map(String), totales: yaHecho.totales, nombrePlantilla: yaHecho.nombrePlantilla };
 
-  const p = await cargar(tenantId, id);
+  const p = await cargar(acc, id);
   const plantillaObj: any = p.toObject();
   const plan = await planificar(tenantId, plantillaObj, body);
   const errores = erroresDelLote(plan);

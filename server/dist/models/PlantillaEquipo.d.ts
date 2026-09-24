@@ -42,7 +42,14 @@ export interface IIntegrantePlantilla {
 }
 export interface IPlantillaEquipo {
     tenantId: Types.ObjectId;
-    projectId: Types.ObjectId;
+    /**
+     * `personal`: de un supervisor (el que la creó, `creadoPor`), en un proyecto. Sólo él la ve y la usa.
+     * `general`: del escritorio, SIN proyecto: puestos por rol y valores de base. En el móvil se copia a
+     * una personal («Usar»); no se contrata directo ni lleva personas.
+     */
+    alcance: "personal" | "general";
+    /** `null` en las generales. */
+    projectId: Types.ObjectId | null;
     nombre: string;
     empresaContratoId?: Types.ObjectId | null;
     /** Derivado de la empresa (y del CCT de su rol), guardado para detectar que cambió. */

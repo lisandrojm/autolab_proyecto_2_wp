@@ -14,7 +14,8 @@ const integranteSchema = new Schema({
 });
 const plantillaEquipoSchema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
+    alcance: { type: String, enum: ["personal", "general"], default: "personal" },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project", default: null },
     nombre: { type: String, required: true, trim: true, maxlength: 120 },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
     convenioId: { type: Schema.Types.ObjectId, default: null },
@@ -40,7 +41,10 @@ const plantillaEquipoSchema = new Schema({
     ultimaContratacionEl: { type: Date, default: null },
     ultimoLoteId: { type: Schema.Types.ObjectId, ref: "LoteContratacion", default: null },
 }, { timestamps: true, collection: "plantillas_equipo" });
-plantillaEquipoSchema.index({ tenantId: 1, projectId: 1, activo: 1 });
-// El nombre no se repite dentro del proyecto entre las plantillas vivas (las borradas quedan con `activo: false`).
-plantillaEquipoSchema.index({ tenantId: 1, projectId: 1, nombre: 1 }, { unique: true, partialFilterExpression: { activo: true } });
+plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, activo: 1 });
+// El nombre no se repite entre las plantillas vivas (las borradas quedan con `activo: false`): las de un
+// supervisor, dentro de su proyecto; las generales, en todo el tenant. Dos supervisores sí pueden tener
+// cada uno su «Equipo noche».
+plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, nombre: 1 }, { unique: true, name: "nombre_personal_unico", partialFilterExpression: { activo: true, alcance: "personal" } });
+plantillaEquipoSchema.index({ tenantId: 1, nombre: 1 }, { unique: true, name: "nombre_general_unico", partialFilterExpression: { activo: true, alcance: "general" } });
 export const PlantillaEquipo = mongoose.model("PlantillaEquipo", plantillaEquipoSchema);

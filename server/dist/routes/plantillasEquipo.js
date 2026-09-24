@@ -3,13 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { MOBILE_HIRING_TEMPLATES } from "../utils/permisosMobile.js";
-import { actualizarIntegrante, actualizarPlantilla, agregarIntegrantes, borrarPlantilla, contratarPlantilla, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarIntegrante, reemplazarIntegrante, } from "../services/plantillasEquipo.js";
-/*
-  PLANTILLAS DE EQUIPO (pestaña «Plantillas» de Contratación, en el móvil). Todo en
-  `services/plantillasEquipo.ts`; acá sólo se traduce a HTTP. Permiso propio (`mobile_hiring_templates`).
-*/
-const router = Router();
-const acceso = [requireTenant, authenticateToken, requirePermission(MOBILE_HIRING_TEMPLATES)];
+import { actualizarIntegrante, actualizarPlantilla, agregarIntegrantes, borrarPlantilla, contratarPlantilla, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarIntegrante, reemplazarIntegrante, usarGeneral, } from "../services/plantillasEquipo.js";
 const manejar = (fn) => async (req, res) => {
     try {
         const r = await fn(req, res);
@@ -25,28 +19,49 @@ const manejar = (fn) => async (req, res) => {
         res.status(500).json({ error: "No se pudo completar la operación." });
     }
 };
-router.get("/", ...acceso, manejar((req) => listarPlantillas(req.tenantObjectId, String(req.query.projectId || ""))));
-router.post("/", ...acceso, manejar(async (req, res) => {
+const acceso = (req, alcance) => ({ tenantId: req.tenantObjectId, userId: req.user.userId, alcance });
+/** El CRUD de plantillas y de sus puestos, para un alcance. */
+function rutasDe(alcance, mw) {
+    const r = Router();
+    const a = (req) => acceso(req, alcance);
+    r.get("/", ...mw, manejar((req) => listarPlantillas(a(req), String(req.query.projectId || ""))));
+    r.post("/", ...mw, manejar(async (req, res) => {
+        res.status(201);
+        return crearPlantilla(a(req), req.body || {});
+    }));
+    r.get("/:id", ...mw, manejar((req) => obtenerPlantilla(a(req), req.params.id)));
+    r.put("/:id", ...mw, manejar((req) => actualizarPlantilla(a(req), req.params.id, req.body || {})));
+    r.delete("/:id", ...mw, manejar(async (req) => {
+        await borrarPlantilla(a(req), req.params.id);
+        return { ok: true };
+    }));
+    r.post("/:id/duplicar", ...mw, manejar((req) => duplicarPlantilla(a(req), req.params.id, req.body?.nombre)));
+    r.post("/:id/integrantes", ...mw, manejar((req) => agregarIntegrantes(a(req), req.params.id, req.body?.integrantes || [])));
+    r.put("/:id/integrantes/:integranteId", ...mw, manejar((req) => actualizarIntegrante(a(req), req.params.id, req.params.integranteId, req.body || {})));
+    r.delete("/:id/integrantes/:integranteId", ...mw, manejar((req) => quitarIntegrante(a(req), req.params.id, req.params.integranteId)));
+    return r;
+}
+// ── Móvil: las personales ──
+const movil = [requireTenant, authenticateToken, requirePermission(MOBILE_HIRING_TEMPLATES)];
+const router = Router();
+// Las generales, para elegir una y copiarla («Usar»). Van antes de `/:id` para que no las tome como id.
+router.get("/generales", ...movil, manejar((req) => listarPlantillas(acceso(req, "general"), "")));
+router.get("/generales/:id", ...movil, manejar((req) => obtenerPlantilla(acceso(req, "general"), req.params.id)));
+router.post("/generales/:id/usar", ...movil, manejar(async (req, res) => {
     res.status(201);
-    return crearPlantilla(req.tenantObjectId, req.user.userId, req.body || {});
+    return usarGeneral(acceso(req, "personal"), req.params.id, String(req.body?.projectId || ""), req.body?.nombre);
 }));
-router.get("/:id", ...acceso, manejar((req) => obtenerPlantilla(req.tenantObjectId, req.params.id)));
-router.put("/:id", ...acceso, manejar((req) => actualizarPlantilla(req.tenantObjectId, req.params.id, req.body || {})));
-router.delete("/:id", ...acceso, manejar(async (req) => {
-    await borrarPlantilla(req.tenantObjectId, req.params.id);
-    return { ok: true };
-}));
-router.post("/:id/duplicar", ...acceso, manejar((req) => duplicarPlantilla(req.tenantObjectId, req.user.userId, req.params.id, req.body?.nombre)));
-router.post("/:id/integrantes", ...acceso, manejar((req) => agregarIntegrantes(req.tenantObjectId, req.params.id, req.body?.integrantes || [])));
-router.put("/:id/integrantes/:integranteId", ...acceso, manejar((req) => actualizarIntegrante(req.tenantObjectId, req.params.id, req.params.integranteId, req.body || {})));
-router.delete("/:id/integrantes/:integranteId", ...acceso, manejar((req) => quitarIntegrante(req.tenantObjectId, req.params.id, req.params.integranteId)));
-router.post("/:id/integrantes/:integranteId/reemplazar", ...acceso, manejar((req) => reemplazarIntegrante(req.tenantObjectId, req.params.id, req.params.integranteId, String(req.body?.userId || ""))));
-// No escribe nada: lo que saldría, con importes, errores y advertencias por integrante.
-router.post("/:id/preview", ...acceso, manejar((req) => previewDeContratacion(req.tenantObjectId, req.params.id, req.body || {})));
+router.use(rutasDe("personal", movil));
+router.post("/:id/integrantes/:integranteId/reemplazar", ...movil, manejar((req) => reemplazarIntegrante(acceso(req, "personal"), req.params.id, req.params.integranteId, String(req.body?.userId || ""))));
+// No escribe nada: lo que saldría, con importes, errores y advertencias por puesto.
+router.post("/:id/preview", ...movil, manejar((req) => previewDeContratacion(acceso(req, "personal"), req.params.id, req.body || {})));
 // Todo o nada, con `idempotencyKey`.
-router.post("/:id/contratar", ...acceso, manejar(async (req, res) => {
-    const r = await contratarPlantilla(req.tenantObjectId, req.user.userId, req.params.id, req.body || {});
+router.post("/:id/contratar", ...movil, manejar(async (req, res) => {
+    const r = await contratarPlantilla(acceso(req, "personal"), req.params.id, req.body || {});
     res.status(r.repetido ? 200 : 201);
     return r;
 }));
-export { router as plantillasEquipoRoutes };
+// ── Escritorio: las generales ──
+const escritorio = [requireTenant, authenticateToken, requirePermission("admin_contracts:view")];
+const generalesRouter = rutasDe("general", escritorio);
+export { router as plantillasEquipoRoutes, generalesRouter as plantillasGeneralesRoutes };

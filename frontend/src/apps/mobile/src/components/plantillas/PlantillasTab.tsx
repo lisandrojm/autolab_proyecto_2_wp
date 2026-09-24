@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClock, faCopy, faFileSignature, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faClock, faCopy, faFileSignature, faLayerGroup, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, useAreasDelProyecto, useCatalogosContratacion } from "./useCatalogosContratacion";
@@ -27,6 +27,9 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
     }
   });
   const [lista, setLista] = useState<PlantillaResumen[] | null>(null);
+  /** Las generales del escritorio: se copian a las propias con «Usar». */
+  const [generales, setGenerales] = useState<PlantillaResumen[]>([]);
+  const [verGenerales, setVerGenerales] = useState(false);
   const [editando, setEditando] = useState<{ id: string | null } | null>(null);
   const [contratando, setContratando] = useState<Plantilla | null>(null);
 
@@ -38,6 +41,23 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
   }, [proyectos, projectId]);
   const proyecto = useMemo(() => proyectos?.find((p) => p._id === projectId) || null, [proyectos, projectId]);
   const areas = useAreasDelProyecto(projectId);
+
+  useEffect(() => {
+    plantillasEquipoAPI.listarGenerales().then(setGenerales).catch(() => setGenerales([]));
+  }, []);
+
+  const usar = async (g: PlantillaResumen) => {
+    if (!proyecto) return;
+    try {
+      const copia = await plantillasEquipoAPI.usarGeneral(g._id, proyecto._id);
+      sweetAlert.success("Plantilla copiada", `«${copia.nombre}» ya es tuya: completá la empresa, el área y el turno, y asigná a tu gente.`);
+      setVerGenerales(false);
+      cargar();
+      setEditando({ id: copia._id });
+    } catch (e: any) {
+      sweetAlert.error("No se pudo usar", e?.response?.data?.error || "Probá de nuevo.");
+    }
+  };
 
   const cargar = () => {
     if (!projectId) return;
@@ -105,18 +125,47 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
       )}
       {proyectos && proyectos.length === 1 && proyecto && <p className="text-xs font-semibold text-slate-500">{etiquetaProyecto(proyecto)}</p>}
 
-      <button type="button" onClick={() => setEditando({ id: null })} disabled={!proyecto} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-400 py-3 text-sm font-bold text-blue-600 disabled:opacity-40 dark:text-blue-400">
-        <FontAwesomeIcon icon={faPlus} />
-        Nueva plantilla
-      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setEditando({ id: null })} disabled={!proyecto} className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-blue-400 py-3 text-sm font-bold text-blue-600 disabled:opacity-40 dark:text-blue-400">
+          <FontAwesomeIcon icon={faPlus} />
+          Nueva
+        </button>
+        <button type="button" onClick={() => setVerGenerales((v) => !v)} disabled={!proyecto || generales.length === 0} className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 py-3 text-sm font-bold text-slate-600 disabled:opacity-40 dark:border-slate-600 dark:text-slate-300">
+          <FontAwesomeIcon icon={faLayerGroup} />
+          Generales ({generales.length})
+        </button>
+      </div>
+
+      {/*
+        LAS GENERALES (del escritorio): armadas por puestos, sin proyecto ni personas. «Usar» crea una
+        copia PROPIA en el proyecto elegido; la general no cambia y las demás personas no ven la copia.
+      */}
+      {verGenerales && (
+        <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">Plantillas generales: elegí una para copiarla a las tuyas en este proyecto.</p>
+          {generales.map((g) => (
+            <div key={g._id} className="flex items-center justify-between gap-2 rounded-lg bg-white p-2.5 dark:bg-slate-900/70">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{g.nombre}</p>
+                <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                  {g.integrantes} {g.integrantes === 1 ? "puesto" : "puestos"} · {g.nombreContrato || "Sin tipo de contrato"}
+                </p>
+              </div>
+              <button type="button" onClick={() => void usar(g)} className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">
+                Usar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {lista === null ? (
         [1, 2].map((i) => <div key={i} className="h-32 animate-pulse rounded-xl border bg-white dark:border-slate-800 dark:bg-slate-900/70" />)
       ) : lista.length === 0 ? (
         <div className="flex flex-col items-center rounded-xl border bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
           <FontAwesomeIcon icon={faUsers} className="mb-3 h-10 w-10 text-slate-300" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no hay plantillas en este proyecto</p>
-          <p className="mt-1 text-xs text-slate-400">Armá un equipo fijo con sus valores y contratalo entero de una vez, en vez de persona por persona.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no tenés plantillas en este proyecto</p>
+          <p className="mt-1 text-xs text-slate-400">Armá tu equipo por puestos —o partí de una general— y contratalo entero de una vez, en vez de persona por persona. Tus plantillas las ves sólo vos.</p>
         </div>
       ) : (
         lista.map((p) => (

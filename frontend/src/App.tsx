@@ -26,6 +26,7 @@ import { ClientProjectsPage } from "./pages/ClientProjectsPage";
 import { ContractsPage } from "./pages/ContractsPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
+import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { ProjectTeamPage } from "./pages/ProjectTeamPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -308,6 +309,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ContractsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/plantillas-equipo"
+                element={
+                  <ProtectedRoute>
+                    <PlantillasGeneralesPage />
                   </ProtectedRoute>
                 }
               />

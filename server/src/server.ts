@@ -67,7 +67,7 @@ import { paisResidenciaRoutes } from "./routes/paisesResidencia.js";
 import { terminosCondicionesRoutes } from "./routes/terminosCondiciones.js";
 import { contratosPorVencerRoutes } from "./routes/contratosPorVencer.js";
 import { calificacionesRoutes } from "./routes/calificaciones.js";
-import { plantillasEquipoRoutes } from "./routes/plantillasEquipo.js";
+import { plantillasEquipoRoutes, plantillasGeneralesRoutes } from "./routes/plantillasEquipo.js";
 import { contratosSinDiasRoutes } from "./routes/contratosSinDias.js";
 // Tablas oficiales de ARCA (Simplificación Registral) usadas para armar el TXT de alta masiva.
 import { arcaSucursalRoutes } from "./routes/arcaSucursales.js";
@@ -291,6 +291,7 @@ app.use("/api/v1/terminos-condiciones", terminosCondicionesRoutes);
 app.use("/api/v1/contratos-por-vencer", contratosPorVencerRoutes);
 app.use("/api/v1/calificaciones", calificacionesRoutes);
 app.use("/api/v1/plantillas-equipo", plantillasEquipoRoutes);
+app.use("/api/v1/plantillas-equipo-generales", plantillasGeneralesRoutes);
 app.use("/api/v1/contratos-sin-dias", contratosSinDiasRoutes);
 // ABM de categorías en la forma de ARCA: convenio → grupo (escala) → categoría. Toda la escritura.
 app.use("/api/v1/arca/categorias", arcaCategoriasRoutes);

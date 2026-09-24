@@ -153,7 +153,7 @@ const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empr
  * «Clientes»: acá el orden es el dato —dice qué va antes y qué después—, y alfabético quedaría
  * Contratos, Documentos, Solicitudes, que es el ciclo contado al revés.
  */
-const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/admin/contratos-sin-dias', '/documents'];
+const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/plantillas-equipo', '/admin/contracts', '/admin/contratos-sin-dias', '/documents'];
 /**
  * Subgrupo «Usuarios» de Configuración, con Roles adentro.
  *
@@ -430,6 +430,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_valoraciones:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/valoraciones', icon: faRankingStar, label: 'Valoraciones', scope: 'global' });
       if (hasPermission('admin_sedes:view')) base.push({ permiso: 'admin_sedes:view', path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
       if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global', pendientes: pendientes.contratos });
+      // Las plantillas GENERALES de equipo (puestos por rol): cada supervisor las copia en el móvil.
+      if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/plantillas-equipo', icon: faPeopleGroup, label: 'Plantillas', scope: 'global' });
       // Los vigentes que no dicen qué días se trabaja (casi todos vienen de FRAME): se completan ahí.
       if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contratos-sin-dias', icon: faCalendarXmark, label: 'Sin días', scope: 'global' });
       // Solicitudes va pegada a Contratos porque son los dos extremos del mismo ciclo: lo que se

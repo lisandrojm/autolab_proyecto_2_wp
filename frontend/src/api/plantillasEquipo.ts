@@ -34,7 +34,10 @@ export interface Integrante {
 
 export interface Plantilla {
   _id: string;
-  projectId: string;
+  /** `personal`: de un supervisor, en un proyecto (móvil). `general`: del escritorio, sin proyecto. */
+  alcance?: "personal" | "general";
+  /** `null` en las generales. */
+  projectId: string | null;
   nombre: string;
   empresaContratoId: string | null;
   convenioId: string | null;
@@ -55,7 +58,8 @@ export interface Plantilla {
 export interface PlantillaResumen {
   _id: string;
   nombre: string;
-  projectId: string;
+  projectId: string | null;
+  alcance: "personal" | "general";
   nombreContrato: string;
   areaShiftAssignments: AreaTurno[];
   inTime: string;
@@ -141,45 +145,66 @@ export interface ResultadoContratacion {
   nombrePlantilla: string;
 }
 
-export const plantillasEquipoAPI = {
+/** El CRUD de plantillas y de sus puestos, contra una base (`/plantillas-equipo` o `/plantillas-equipo-generales`). */
+const crudDe = (base: string) => ({
   async listar(projectId: string): Promise<PlantillaResumen[]> {
-    const { data } = await axios.get(`/plantillas-equipo`, { params: { projectId } });
+    const { data } = await axios.get(`${base}`, { params: { projectId } });
     return Array.isArray(data) ? data : [];
   },
   async obtener(id: string): Promise<Plantilla> {
-    return (await axios.get(`/plantillas-equipo/${id}`)).data;
+    return (await axios.get(`${base}/${id}`)).data;
   },
-  async crear(datos: ComunesPlantilla & { projectId: string; nombre: string; integrantes?: NuevoIntegrante[] }): Promise<Plantilla> {
-    return (await axios.post(`/plantillas-equipo`, datos)).data;
+  async crear(datos: ComunesPlantilla & { projectId?: string; nombre: string; integrantes?: NuevoIntegrante[] }): Promise<Plantilla> {
+    return (await axios.post(`${base}`, datos)).data;
   },
   async actualizar(id: string, datos: ComunesPlantilla): Promise<Plantilla> {
-    return (await axios.put(`/plantillas-equipo/${id}`, datos)).data;
+    return (await axios.put(`${base}/${id}`, datos)).data;
   },
   async borrar(id: string): Promise<void> {
-    await axios.delete(`/plantillas-equipo/${id}`);
+    await axios.delete(`${base}/${id}`);
   },
   async duplicar(id: string, nombre?: string): Promise<Plantilla> {
-    return (await axios.post(`/plantillas-equipo/${id}/duplicar`, { nombre })).data;
+    return (await axios.post(`${base}/${id}/duplicar`, { nombre })).data;
   },
   async agregarIntegrantes(id: string, integrantes: NuevoIntegrante[]): Promise<Plantilla> {
-    return (await axios.post(`/plantillas-equipo/${id}/integrantes`, { integrantes })).data;
+    return (await axios.post(`${base}/${id}/integrantes`, { integrantes })).data;
   },
   /** `null` o "" en un campo = volver al valor del equipo. */
   async actualizarIntegrante(id: string, integranteId: string, datos: Partial<NuevoIntegrante> & { orden?: number }): Promise<Plantilla> {
-    return (await axios.put(`/plantillas-equipo/${id}/integrantes/${integranteId}`, datos)).data;
+    return (await axios.put(`${base}/${id}/integrantes/${integranteId}`, datos)).data;
   },
   async quitarIntegrante(id: string, integranteId: string): Promise<Plantilla> {
-    return (await axios.delete(`/plantillas-equipo/${id}/integrantes/${integranteId}`)).data;
+    return (await axios.delete(`${base}/${id}/integrantes/${integranteId}`)).data;
   },
   /** Cambia a una persona por otra PARA SIEMPRE (no es el «¿Reemplazo?» de una solicitud). */
   async reemplazarIntegrante(id: string, integranteId: string, userId: string): Promise<Plantilla> {
-    return (await axios.post(`/plantillas-equipo/${id}/integrantes/${integranteId}/reemplazar`, { userId })).data;
+    return (await axios.post(`${base}/${id}/integrantes/${integranteId}/reemplazar`, { userId })).data;
   },
+});
+
+/** MÓVIL: las plantillas PERSONALES de quien usa la app, y las generales para copiarlas. */
+export const plantillasEquipoAPI = {
+  ...crudDe("/plantillas-equipo"),
   async preview(id: string, pedido: PedidoDeContratacion): Promise<Preview> {
     return (await axios.post(`/plantillas-equipo/${id}/preview`, pedido)).data;
+  },
+  /** Las generales del escritorio (sin proyecto ni personas), para elegir una y «Usarla». */
+  async listarGenerales(): Promise<PlantillaResumen[]> {
+    const { data } = await axios.get(`/plantillas-equipo/generales`);
+    return Array.isArray(data) ? data : [];
+  },
+  async obtenerGeneral(id: string): Promise<Plantilla> {
+    return (await axios.get(`/plantillas-equipo/generales/${id}`)).data;
+  },
+  /** Copia una general como plantilla PERSONAL en ese proyecto. Devuelve la copia. */
+  async usarGeneral(id: string, projectId: string, nombre?: string): Promise<Plantilla> {
+    return (await axios.post(`/plantillas-equipo/generales/${id}/usar`, { projectId, nombre })).data;
   },
   /** Todo o nada. La misma `idempotencyKey` en un reintento devuelve el lote ya creado. */
   async contratar(id: string, pedido: PedidoDeContratacion, idempotencyKey: string): Promise<ResultadoContratacion> {
     return (await axios.post(`/plantillas-equipo/${id}/contratar`, { ...pedido, idempotencyKey })).data;
   },
 };
+
+/** ESCRITORIO: las plantillas GENERALES (Contratación → Plantillas). */
+export const plantillasGeneralesAPI = crudDe("/plantillas-equipo-generales");

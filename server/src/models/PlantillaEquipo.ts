@@ -46,7 +46,14 @@ export interface IIntegrantePlantilla {
 
 export interface IPlantillaEquipo {
   tenantId: Types.ObjectId;
-  projectId: Types.ObjectId;
+  /**
+   * `personal`: de un supervisor (el que la creó, `creadoPor`), en un proyecto. Sólo él la ve y la usa.
+   * `general`: del escritorio, SIN proyecto: puestos por rol y valores de base. En el móvil se copia a
+   * una personal («Usar»); no se contrata directo ni lleva personas.
+   */
+  alcance: "personal" | "general";
+  /** `null` en las generales. */
+  projectId: Types.ObjectId | null;
   nombre: string;
   empresaContratoId?: Types.ObjectId | null;
   /** Derivado de la empresa (y del CCT de su rol), guardado para detectar que cambió. */
@@ -88,7 +95,8 @@ const integranteSchema = new Schema<IIntegrantePlantilla>({
 const plantillaEquipoSchema = new Schema<IPlantillaEquipo>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
+    alcance: { type: String, enum: ["personal", "general"], default: "personal" },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project", default: null },
     nombre: { type: String, required: true, trim: true, maxlength: 120 },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
     convenioId: { type: Schema.Types.ObjectId, default: null },
@@ -117,8 +125,11 @@ const plantillaEquipoSchema = new Schema<IPlantillaEquipo>(
   { timestamps: true, collection: "plantillas_equipo" },
 );
 
-plantillaEquipoSchema.index({ tenantId: 1, projectId: 1, activo: 1 });
-// El nombre no se repite dentro del proyecto entre las plantillas vivas (las borradas quedan con `activo: false`).
-plantillaEquipoSchema.index({ tenantId: 1, projectId: 1, nombre: 1 }, { unique: true, partialFilterExpression: { activo: true } });
+plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, activo: 1 });
+// El nombre no se repite entre las plantillas vivas (las borradas quedan con `activo: false`): las de un
+// supervisor, dentro de su proyecto; las generales, en todo el tenant. Dos supervisores sí pueden tener
+// cada uno su «Equipo noche».
+plantillaEquipoSchema.index({ tenantId: 1, creadoPor: 1, projectId: 1, nombre: 1 }, { unique: true, name: "nombre_personal_unico", partialFilterExpression: { activo: true, alcance: "personal" } });
+plantillaEquipoSchema.index({ tenantId: 1, nombre: 1 }, { unique: true, name: "nombre_general_unico", partialFilterExpression: { activo: true, alcance: "general" } });
 
 export const PlantillaEquipo = mongoose.model<IPlantillaEquipo>("PlantillaEquipo", plantillaEquipoSchema);
