@@ -10,15 +10,16 @@ import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./
 import PersonaPickerModal from "./PersonaPickerModal";
 import PuestoModal from "./PuestoModal";
 import PuestosModal from "./PuestosModal";
+import CampoConvenio from "./CampoConvenio";
 import { Badge, CLASE_CAMPO, Rotulo, textoDias } from "./comun";
 
 /*
   CREAR O EDITAR UNA PLANTILLA DE EQUIPO, en tres hojas:
 
-   1. GENERAL: nombre, empresa (y con ella el convenio), tipo de contrato y comentario. Nada más: ni
-      áreas ni horarios, que son de cada puesto.
-   2. PUESTOS: por rol («1 director, 2 cámaras…»), cada uno con su área y turno, su horario y sus días
-      (los del turno, modificables), su categoría. Se editan uno por uno.
+   1. GENERAL: nombre, empresa (y con ella el convenio) y comentario. Nada más: ni tipo de contrato, ni
+      áreas, ni horarios, que son de cada persona contratada (de cada puesto).
+   2. PUESTOS: por rol («1 director, 2 cámaras…»), cada uno con su tipo de contrato, su área y turno,
+      su horario y sus días (los del turno, modificables), su categoría. Se editan uno por uno.
    3. EQUIPOS: quién ocupa cada puesto. Se guardan varios con nombre («Semana A», «Semana B») para
       repetirlos cuando haga falta; al contratar se elige uno.
 
@@ -38,10 +39,9 @@ interface General {
   nombre: string;
   empresaContratoId: string;
   convenioId: string;
-  contratoId: string;
   comentarios: string;
 }
-const vacio: General = { nombre: "", empresaContratoId: "", convenioId: "", contratoId: "", comentarios: "" };
+const vacio: General = { nombre: "", empresaContratoId: "", convenioId: "", comentarios: "" };
 
 export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto, catalogos, onCambio }: Props) {
   const [plantilla, setPlantilla] = useState<Plantilla | null>(null);
@@ -58,7 +58,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
 
   const aplicar = (p: Plantilla) => {
     setPlantilla(p);
-    setG({ nombre: p.nombre, empresaContratoId: p.empresaContratoId || "", convenioId: p.convenioId || "", contratoId: p.contratoId || "", comentarios: p.comentarios || "" });
+    setG({ nombre: p.nombre, empresaContratoId: p.empresaContratoId || "", convenioId: p.convenioId || "", comentarios: p.comentarios || "" });
     setSucio(false);
     setEquipoId((actual) => (p.equipos.some((e) => e._id === actual) ? actual : p.equipos[0]?._id || ""));
   };
@@ -94,21 +94,17 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
     if (!g.empresaContratoId && empresas.length === 1) cambiar({ empresaContratoId: empresas[0]._id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, cargando, empresas.length]);
-  const convenios = catalogos.conveniosDisponibles(proyecto, g.empresaContratoId, g.convenioId);
-  useEffect(() => {
-    if (!isOpen || cargando) return;
-    const valido = convenios.some((x) => catalogos.convenioPorCct(x.externalId)?._id === g.convenioId);
-    if (!valido && convenios.length === 1) {
-      const id = catalogos.convenioPorCct(convenios[0].externalId)?._id || "";
-      if (id && id !== g.convenioId) cambiar({ convenioId: id });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, cargando, g.empresaContratoId, convenios.length]);
+  // El convenio: el único de la empresa se usa directo, aunque el efecto de `CampoConvenio` no haya corrido.
+  const convenioId = g.convenioId || catalogos.convenioUnico(proyecto, g.empresaContratoId)?._id || "";
 
-  const contrato = catalogos.contratos.find((x) => x._id === g.contratoId);
-  const tramite = g.contratoId ? catalogos.tramitePorContrato.get(g.contratoId) || "" : "";
-  const esServicios = tramite === "constancia_cuit";
-  const porDiasSueltos = (contrato as any)?.data?.modoFechas === "dias";
+  // El tipo de contrato es de cada puesto: de él salen el trámite (servicios o no) y si va por días sueltos.
+  const esServiciosP = (p: Puesto) => p.tipoImpositivo === "constancia_cuit";
+  const porDiasSueltosP = (p: Puesto) => (catalogos.contratos.find((x) => x._id === p.contratoId) as any)?.data?.modoFechas === "dias";
+  const etiquetaContrato = (id: string) => {
+    const x = catalogos.contratos.find((c) => c._id === id);
+    const t = catalogos.tramitePorContrato.get(id);
+    return `${x?.name || "Contrato"} ${t === "constancia_cuit" ? "· PEDIDO DE SERVICIOS" : t ? "· PEDIDO DE ARCA" : ""}`.trim();
+  };
 
   const guardarGeneral = async (): Promise<Plantilla | null> => {
     if (!g.nombre.trim()) {
@@ -116,7 +112,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
       return null;
     }
     if (!proyecto) return null;
-    const datos = { nombre: g.nombre.trim(), empresaContratoId: g.empresaContratoId || null, convenioId: esServicios ? null : g.convenioId || null, contratoId: g.contratoId || null, nombreContrato: contrato?.name || "", tipoImpositivo: tramite, comentarios: g.comentarios };
+    const datos = { nombre: g.nombre.trim(), empresaContratoId: g.empresaContratoId || null, convenioId: convenioId || null, comentarios: g.comentarios };
     setGuardando(true);
     try {
       const nueva = !plantilla;
@@ -125,7 +121,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
       onCambio();
       if (nueva) {
         setHoja(2);
-        void sweetAlert.alert("Plantilla creada", "Ahora armá los puestos: «Agregar puestos» por rol (ej. 1 director, 2 cámaras), cada uno con su área y turno. Después, en Equipos, elegí quién ocupa cada puesto.", "info");
+        void sweetAlert.alert("Plantilla creada", "Ahora armá los puestos: «Agregar puestos» por rol (ej. 1 director, 2 cámaras), cada uno con su tipo de contrato, su área y turno y su horario. Después, en Equipos, elegí quién ocupa cada puesto.", "info");
       }
       return p;
     } catch (e: any) {
@@ -274,7 +270,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           {hoja === 1 && (
             <section className="space-y-4">
               <p className="rounded-xl bg-blue-50 p-3 text-[11px] text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                Primero lo general, que vale para todo el equipo. Con la plantilla creada armás los <b>puestos</b> (cada uno con su área, turno y horario) y después los <b>equipos</b> (quién ocupa cada puesto).
+                Primero lo general, que vale para todo el equipo. Con la plantilla creada armás los <b>puestos</b> (cada uno con su tipo de contrato, área, turno y horario) y después los <b>equipos</b> (quién ocupa cada puesto).
               </p>
               <div>
                 <Rotulo obligatorio>Nombre</Rotulo>
@@ -292,34 +288,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
                     ))}
                   </select>
                 </div>
-                {!esServicios && (
-                  <div>
-                    <Rotulo>Convenio</Rotulo>
-                    <select value={g.convenioId} onChange={(e) => cambiar({ convenioId: e.target.value })} className={CLASE_CAMPO} disabled={convenios.length <= 1}>
-                      <option value="">{convenios.length ? "Elegí el convenio…" : "Sale de la empresa"}</option>
-                      {convenios.map((x) => {
-                        const doc = catalogos.convenioPorCct(x.externalId);
-                        return doc ? (
-                          <option key={doc._id} value={doc._id}>
-                            {x.externalId} {doc.name ? `· ${doc.name}` : ""}
-                          </option>
-                        ) : null;
-                      })}
-                    </select>
-                  </div>
-                )}
-              </div>
-              <div>
-                <Rotulo obligatorio>Tipo de contrato</Rotulo>
-                <select value={g.contratoId} onChange={(e) => cambiar({ contratoId: e.target.value })} className={CLASE_CAMPO}>
-                  <option value="">Elegí el tipo de contrato…</option>
-                  {catalogos.contratos.map((x) => (
-                    <option key={x._id} value={x._id}>
-                      {x.name} {catalogos.tramitePorContrato.get(x._id) === "constancia_cuit" ? "· PEDIDO DE SERVICIOS" : catalogos.tramitePorContrato.get(x._id) ? "· PEDIDO DE ARCA" : ""}
-                    </option>
-                  ))}
-                </select>
-                {porDiasSueltos && <p className="mt-1 text-[11px] text-slate-400">Se pide por días sueltos: los días se eligen en cada contratación, uno por jornada.</p>}
+                <CampoConvenio proyecto={proyecto} empresaId={g.empresaContratoId} convenioId={g.convenioId} catalogos={catalogos} onChange={(id) => (id !== g.convenioId ? cambiar({ convenioId: id }) : undefined)} />
               </div>
               <div>
                 <Rotulo>Comentario (para cada solicitud)</Rotulo>
@@ -331,13 +300,15 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           {/* ── 2. PUESTOS ── */}
           {hoja === 2 && plantilla && (
             <section className="space-y-2">
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Cada puesto tiene su rol, su área y turno y su horario. Tocá uno para editarlo.</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Cada puesto tiene su rol, su tipo de contrato, su área y turno y su horario. Tocá uno para editarlo.</p>
               {plantilla.integrantes.length === 0 && (
                 <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay puestos. Con «Agregar puestos» elegís los roles y cuántos de cada uno.</p>
               )}
               {plantilla.integrantes.map((p, n) => {
                 const turno = turnoDe(p);
-                const falta = !turno || !p.inTime || !p.outTime || (!esServicios && !p.categoriaSatId);
+                const esServicios = esServiciosP(p);
+                const porDiasSueltos = porDiasSueltosP(p);
+                const falta = !turno || !p.inTime || !p.outTime || (!p.contratoId && catalogos.contratos.length > 0) || (!esServicios && !p.categoriaSatId);
                 return (
                   <div key={p._id} className={`rounded-xl border bg-white p-3 dark:bg-slate-900/60 ${falta ? "border-dashed border-amber-400 dark:border-amber-700" : "border-slate-200 dark:border-slate-700"}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -347,7 +318,8 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
                           <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{rolDe(p)}</span>
                           {falta && <Badge tono="ambar">Completar</Badge>}
                         </div>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-600 dark:text-slate-300">{p.contratoId ? p.nombreContrato || etiquetaContrato(p.contratoId) : "Sin tipo de contrato"}</p>
+                        <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                           {turno || "Sin área y turno"} · {p.inTime && p.outTime ? `${p.inTime} a ${p.outTime}` : "sin horario"} {!porDiasSueltos && p.diasSemana?.length ? `· ${textoDias(p.diasSemana)}` : ""}
                         </p>
                         {!esServicios && (
@@ -446,13 +418,15 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           onClose={() => setAgregandoPuestos(false)}
           roleFrames={catalogos.roleFrames}
           areas={areas}
-          onAgregar={(puestos, turno) =>
+          contratos={catalogos.contratos.map((c) => ({ _id: c._id, etiqueta: etiquetaContrato(c._id) }))}
+          onAgregar={(puestos, turno, contratoId) =>
             void conPlantilla((pl) =>
               plantillasEquipoAPI.agregarPuestos(
                 pl._id,
                 puestos.map((x) => ({
                   rolesFrame: [x.rolId],
                   cantidad: x.cantidad,
+                  ...(contratoId ? { contratoId, nombreContrato: catalogos.contratos.find((c) => c._id === contratoId)?.name || null, tipoImpositivo: catalogos.tramitePorContrato.get(contratoId) || null } : {}),
                   ...(turno ? { areaId: turno.areaId, shiftId: turno.shiftId, inTime: turno.inicio || null, outTime: turno.fin || null, diasSemana: turno.dias, diasPorSemana: turno.dias.length || null } : {}),
                 })),
               ),
@@ -464,7 +438,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
         <PuestoModal
           isOpen={!!editando}
           onClose={() => setEditando(null)}
-          plantilla={{ ...plantilla, empresaContratoId: g.empresaContratoId || null, convenioId: g.convenioId || null, contratoId: g.contratoId || null, tipoImpositivo: tramite }}
+          plantilla={{ ...plantilla, empresaContratoId: g.empresaContratoId || null, convenioId: convenioId || null }}
           proyecto={proyecto}
           puesto={editando}
           numero={editando ? plantilla.integrantes.findIndex((x) => x._id === editando._id) + 1 : 0}

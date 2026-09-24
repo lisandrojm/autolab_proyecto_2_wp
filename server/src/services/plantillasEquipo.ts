@@ -113,13 +113,19 @@ function leerPuesto(body: any, acc: Acceso): Record<string, any> {
   if (body.categoriaSatId !== undefined) c.categoriaSatId = idOk(body.categoriaSatId) ? oid(body.categoriaSatId) : null;
   if (body.dailyRateManual !== undefined) c.dailyRateManual = Number(body.dailyRateManual) > 0 ? Number(body.dailyRateManual) : null;
   if (body.comentarios !== undefined) c.comentarios = body.comentarios ? str(body.comentarios).trim().slice(0, 1000) : null;
+  // El tipo de contrato es de cada persona contratada: va en el puesto. El trámite lo resuelve la pantalla.
+  if (body.contratoId !== undefined) c.contratoId = idOk(body.contratoId) ? oid(body.contratoId) : null;
+  if (body.nombreContrato !== undefined) c.nombreContrato = body.nombreContrato ? str(body.nombreContrato).slice(0, 200) : null;
+  if (body.tipoImpositivo !== undefined) c.tipoImpositivo = body.tipoImpositivo ? str(body.tipoImpositivo).slice(0, 60) : null;
   return c;
 }
 
-/** La escala (ya multiplicada) de una categoría con el tipo de contrato de la plantilla. */
-async function escalaDe(plantilla: any, categoriaSatId: any): Promise<number | null> {
+/** La escala (ya multiplicada) de una categoría con el tipo de contrato del puesto (o el viejo de la plantilla). */
+async function escalaDe(plantilla: any, puesto: any): Promise<number | null> {
+  const categoriaSatId = puesto?.categoriaSatId;
   if (!idOk(categoriaSatId)) return null;
-  const [cat, contrato]: any[] = await Promise.all([CategoriaSat.findById(categoriaSatId).select("data.neto").lean(), plantilla.contratoId ? Contrato.findById(plantilla.contratoId).select("data.multiplicadorDiario").lean() : null]);
+  const contratoId = puesto?.contratoId || plantilla.contratoId;
+  const [cat, contrato]: any[] = await Promise.all([CategoriaSat.findById(categoriaSatId).select("data.neto").lean(), contratoId ? Contrato.findById(contratoId).select("data.multiplicadorDiario").lean() : null]);
   return cat ? importePorJornada(cat.data?.neto, contrato?.data?.multiplicadorDiario) : null;
 }
 
@@ -136,12 +142,17 @@ export async function listarPlantillas(acc: Acceso, projectId: string) {
     nombre: p.nombre,
     projectId: p.projectId ? String(p.projectId) : null,
     alcance: p.alcance || "personal",
-    nombreContrato: p.nombreContrato || "",
+    // Los tipos de contrato de sus puestos («Jornada · Plazo fijo»), o el viejo de la plantilla.
+    nombreContrato: [...new Set((p.integrantes || []).map((i: any) => (i.contratoId ? i.nombreContrato : p.nombreContrato) || "").filter(Boolean))].join(" · "),
     puestos: (p.integrantes || []).length,
     equipos: (p.equipos || []).map((e: any) => ({ _id: String(e._id), nombre: e.nombre, asignados: (e.asignaciones || []).length, ultimaContratacionEl: e.ultimaContratacionEl || null })),
     ultimaContratacionEl: p.ultimaContratacionEl || null,
   }));
 }
+
+/** El tipo de contrato de un puesto; los de las plantillas viejas (que lo tenían general) heredan ése. */
+const contratoDelPuesto = (p: any, i: any) =>
+  i.contratoId ? { contratoId: String(i.contratoId), nombreContrato: i.nombreContrato || "", tipoImpositivo: i.tipoImpositivo || "" } : { contratoId: p.contratoId ? String(p.contratoId) : null, nombreContrato: p.nombreContrato || "", tipoImpositivo: p.tipoImpositivo || "" };
 
 /** Una plantilla con sus puestos y sus equipos, las personas resueltas a nombre (para el editor). */
 export async function obtenerPlantilla(acc: Acceso, id: string) {
@@ -154,7 +165,7 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
     _id: String(p._id),
     integrantes: [...(p.integrantes || [])]
       .sort((a: any, b: any) => (a.orden ?? 0) - (b.orden ?? 0))
-      .map((i: any) => ({ ...i, _id: String(i._id), rolesFrame: (i.rolesFrame || []).map(String), areaId: i.areaId ? String(i.areaId) : null, shiftId: i.shiftId ? String(i.shiftId) : null, categoriaSatId: i.categoriaSatId ? String(i.categoriaSatId) : null })),
+      .map((i: any) => ({ ...i, _id: String(i._id), rolesFrame: (i.rolesFrame || []).map(String), areaId: i.areaId ? String(i.areaId) : null, shiftId: i.shiftId ? String(i.shiftId) : null, categoriaSatId: i.categoriaSatId ? String(i.categoriaSatId) : null, ...contratoDelPuesto(p, i) })),
     equipos: (p.equipos || []).map((e: any) => ({
       _id: String(e._id),
       nombre: e.nombre,
@@ -302,7 +313,7 @@ export async function agregarPuestos(acc: Acceso, id: string, nuevos: any[], equ
     const datos = leerPuesto({ ...n, rolesFrame: Array.isArray(n.rolesFrame) && n.rolesFrame.length ? n.rolesFrame : u?.metadata?.roles_frame || [] }, acc);
     if (!datos.rolesFrame?.length) throw new ErrorPlantilla(400, "Cada puesto necesita su rol empresa.");
     const puestoId = new Types.ObjectId();
-    p.integrantes.push({ _id: puestoId, orden: ++orden, ...datos, escalaAlFijar: datos.dailyRateManual ? await escalaDe(p, datos.categoriaSatId) : null } as any);
+    p.integrantes.push({ _id: puestoId, orden: ++orden, ...datos, escalaAlFijar: datos.dailyRateManual ? await escalaDe(p, datos) : null } as any);
     if (u) {
       equipo.asignaciones.push({ puestoId, userId: oid(n.userId) });
       yaEnEquipo.add(String(n.userId));
@@ -322,7 +333,7 @@ export async function actualizarPuesto(acc: Acceso, id: string, puestoId: string
   const i: any = p.integrantes.find((x) => String(x._id) === String(puestoId));
   if (!i) throw new ErrorPlantilla(404, "Ese puesto ya no está en la plantilla.");
   Object.assign(i, leerPuesto(body, acc));
-  if (body.dailyRateManual !== undefined || body.categoriaSatId !== undefined) i.escalaAlFijar = i.dailyRateManual ? await escalaDe(p, i.categoriaSatId) : null;
+  if (body.dailyRateManual !== undefined || body.categoriaSatId !== undefined || body.contratoId !== undefined) i.escalaAlFijar = i.dailyRateManual ? await escalaDe(p, i) : null;
   if (body.orden !== undefined && Number.isFinite(Number(body.orden))) i.orden = Number(body.orden);
   p.markModified("integrantes");
   await p.save();
@@ -465,6 +476,9 @@ function paraPlan(p: any, equipoId: string): { plantilla: PlantillaParaPlan; int
         dailyRateManual: i.dailyRateManual ?? null,
         escalaAlFijar: i.escalaAlFijar ?? null,
         comentarios: i.comentarios || null,
+        contratoId: s(i.contratoId) || null,
+        nombreContrato: i.nombreContrato || null,
+        tipoImpositivo: i.tipoImpositivo || null,
       })),
   };
 }
@@ -472,8 +486,9 @@ function paraPlan(p: any, equipoId: string): { plantilla: PlantillaParaPlan; int
 /** Todo lo que el plan necesita de la base, en paralelo. */
 async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: IntegranteParaPlan[], puntuales: Record<string, Puntual>): Promise<Contexto> {
   const categoriaIds = [...integrantes.map((i) => i.categoriaSatId), ...Object.values(puntuales).map((x) => x.categoriaSatId)].filter(idOk).map(oid);
-  const [contrato, hayContratos, convenio, hayConvenios, categorias, personas, equipo, motivos]: any[] = await Promise.all([
-    p.contratoId ? Contrato.findById(p.contratoId).select("name data").lean() : null,
+  const contratoIds = [...new Set([p.contratoId, ...integrantes.map((i) => i.contratoId)].filter(idOk).map(String))].map(oid);
+  const [contratos, hayContratos, convenio, hayConvenios, categorias, personas, equipo, motivos]: any[] = await Promise.all([
+    contratoIds.length ? Contrato.find({ _id: { $in: contratoIds } }).select("name data").lean() : [],
     Contrato.exists({ isActive: { $ne: false } }),
     p.convenioId ? Convenio.findById(p.convenioId).select("externalId").lean() : null,
     Convenio.exists({}),
@@ -483,7 +498,7 @@ async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: Integra
     RequestConfig.find({ tenantId, isActive: true }).select("name").lean(),
   ]);
   return {
-    contrato: contrato ? { modoFechas: contrato.data?.modoFechas, esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado, multiplicadorDiario: contrato.data?.multiplicadorDiario, horasPorJornada: contrato.data?.horasPorJornada ?? null } : null,
+    contratos: new Map(contratos.map((c: any) => [String(c._id), { modoFechas: c.data?.modoFechas, esTiempoIndeterminado: !!c.data?.esTiempoIndeterminado, multiplicadorDiario: c.data?.multiplicadorDiario, horasPorJornada: c.data?.horasPorJornada ?? null }])),
     hayContratos: !!hayContratos,
     convenioCct: String(convenio?.externalId || "").trim(),
     hayConvenios: !!hayConvenios,
@@ -519,7 +534,7 @@ export async function planificar(tenantId: Types.ObjectId, p: any, body: any): P
 
 /** Sin `datos` (el payload), que es interno: al cliente le va lo que se muestra. */
 const paraMostrar = (plan: PlanDeLote) => ({
-  filas: plan.filas.map(({ datos, ...f }) => ({ ...f, fechasTrabajadas: datos?.fechasTrabajadas || [], desde: datos?.startDate || "", hasta: datos?.dueDate || "", comentarios: datos?.comentarios || "" })),
+  filas: plan.filas.map(({ datos, ...f }) => ({ ...f, fechasTrabajadas: datos?.fechasTrabajadas || [], desde: datos?.startDate || "", hasta: datos?.dueDate || "", comentarios: datos?.comentarios || "", nombreContrato: datos?.nombreContrato || "", porDiasSueltos: !!datos?.porDiasSueltos })),
   totales: plan.totales,
   errores: erroresDelLote(plan),
 });

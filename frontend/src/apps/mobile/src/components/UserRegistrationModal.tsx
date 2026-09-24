@@ -1714,7 +1714,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     try {
       /*
         La plantilla nace con UN puesto —el de este pedido: rol, área y turno, horario, días, categoría—
-        y la persona asignada en «Equipo 1». Lo general (empresa, convenio, contrato) va a la plantilla.
+        y la persona asignada en «Equipo 1». El tipo de contrato también va en el puesto (es de cada
+        persona contratada); la empresa y el convenio, en la plantilla.
       */
       const asignacion = formData.areaShiftAssignments.find((a) => a.areaId && a.shiftIds.length);
       await plantillasEquipoAPI.crear({
@@ -1722,14 +1723,14 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         nombre: String(r.value).trim(),
         empresaContratoId: formData.empresaContratoId || null,
         convenioId: esServicios ? null : formData.convenioId || null,
-        contratoId: formData.contratoId || null,
-        nombreContrato: contratoElegido?.name || "",
-        tipoImpositivo: formData.tipoImpositivo || "",
         comentarios: formData.comentarios.trim(),
         puestos: [
           {
             userId: selectedUser._id,
             rolesFrame: formData.roleFrameIds,
+            contratoId: formData.contratoId || null,
+            nombreContrato: contratoElegido?.name || null,
+            tipoImpositivo: formData.tipoImpositivo || null,
             areaId: asignacion?.areaId || null,
             shiftId: asignacion?.shiftIds[0] || null,
             inTime: formData.inTime || null,

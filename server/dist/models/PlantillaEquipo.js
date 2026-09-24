@@ -13,6 +13,9 @@ const puestoSchema = new Schema({
     dailyRateManual: { type: Number, default: null },
     escalaAlFijar: { type: Number, default: null },
     comentarios: { type: String, default: null },
+    contratoId: { type: Schema.Types.ObjectId, ref: "Contrato", default: null },
+    nombreContrato: { type: String, default: null },
+    tipoImpositivo: { type: String, default: null },
 });
 const equipoSchema = new Schema({
     nombre: { type: String, required: true, trim: true, maxlength: 80 },

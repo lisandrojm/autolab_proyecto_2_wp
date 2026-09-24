@@ -6,9 +6,9 @@ import mongoose, { Types } from "mongoose";
  *
  * Casi siempre se contrata a los mismos equipos de jornaleros. Una plantilla tiene TRES niveles:
  *
- *  1. GENERAL: nombre, empresa (y convenio), tipo de contrato y comentario. Nada de áreas ni horarios.
- *  2. PUESTOS (`integrantes`): cada uno con su rol empresa, su área y turno, su horario y sus días (los
- *     del turno, modificables), su categoría y, si se fijó, su importe. Una plantilla puede cubrir
+ *  1. GENERAL: nombre, empresa (y convenio) y comentario. Nada de áreas, horarios ni tipo de contrato.
+ *  2. PUESTOS (`integrantes`): cada uno con su rol empresa, su TIPO DE CONTRATO, su área y turno, su
+ *     horario y sus días (los del turno, modificables), su categoría y, si se fijó, su importe. Una plantilla puede cubrir
  *     varias áreas y turnos: cada puesto dice el suyo.
  *  3. EQUIPOS (`equipos`): quién ocupa cada puesto. Se guardan varios con nombre («Semana A», «Semana
  *     B») para repetirlos cuando haga falta. Al contratar se elige uno, se cambia a alguien sólo esa vez
@@ -45,6 +45,11 @@ export interface IPuesto {
     /** La escala (ya multiplicada) cuando se fijó `dailyRateManual`: para avisar si cambió. */
     escalaAlFijar?: number | null;
     comentarios?: string | null;
+    /** El tipo de contrato de quien ocupe el puesto (cada persona contratada puede ir con uno distinto). */
+    contratoId?: Types.ObjectId | null;
+    nombreContrato?: string | null;
+    /** El trámite del tipo de contrato («constancia_cuit» = servicios). Lo resuelve la pantalla. */
+    tipoImpositivo?: string | null;
 }
 export interface IAsignacion {
     puestoId: Types.ObjectId;
@@ -68,6 +73,7 @@ export interface IPlantillaEquipo {
     empresaContratoId?: Types.ObjectId | null;
     /** Derivado de la empresa, guardado para detectar que cambió. */
     convenioId?: Types.ObjectId | null;
+    /** VIEJO: el tipo de contrato ahora va por puesto. Los puestos sin uno propio heredan éste. */
     contratoId?: Types.ObjectId | null;
     nombreContrato?: string;
     /** El trámite del tipo de contrato («constancia_cuit» = servicios). Lo resuelve la pantalla, igual que en el alta individual. */

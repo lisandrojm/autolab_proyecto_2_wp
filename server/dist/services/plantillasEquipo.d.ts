@@ -23,7 +23,7 @@ export declare function listarPlantillas(acc: Acceso, projectId: string): Promis
     nombre: any;
     projectId: string;
     alcance: any;
-    nombreContrato: any;
+    nombreContrato: string;
     puestos: any;
     equipos: any;
     ultimaContratacionEl: any;
@@ -74,6 +74,8 @@ export declare function previewDeContratacion(acc: Acceso, id: string, body: any
         desde: string;
         hasta: string;
         comentarios: string;
+        nombreContrato: string;
+        porDiasSueltos: boolean;
         integranteId: string;
         userId: string;
         nombre: string;

@@ -26,6 +26,10 @@ export interface Puesto {
   dailyRateManual: number | null;
   escalaAlFijar: number | null;
   comentarios: string | null;
+  /** El tipo de contrato de quien lo ocupe (en las plantillas viejas, el que era de toda la plantilla). */
+  contratoId: string | null;
+  nombreContrato: string;
+  tipoImpositivo: string;
 }
 
 /** Quién ocupa un puesto en un equipo. */
@@ -56,6 +60,7 @@ export interface Plantilla {
   nombre: string;
   empresaContratoId: string | null;
   convenioId: string | null;
+  /** VIEJO: el tipo de contrato ahora va por puesto (`Puesto.contratoId`). */
   contratoId: string | null;
   nombreContrato: string;
   tipoImpositivo: string;
@@ -71,6 +76,7 @@ export interface PlantillaResumen {
   nombre: string;
   projectId: string | null;
   alcance: "personal" | "general";
+  /** Los tipos de contrato de sus puestos, juntos («Jornada · Plazo fijo»). */
   nombreContrato: string;
   puestos: number;
   equipos: { _id: string; nombre: string; asignados: number; ultimaContratacionEl: string | null }[];
@@ -95,6 +101,9 @@ export interface NuevoPuesto {
   categoriaSatId?: string | null;
   dailyRateManual?: number | null;
   comentarios?: string | null;
+  contratoId?: string | null;
+  nombreContrato?: string | null;
+  tipoImpositivo?: string | null;
   orden?: number;
 }
 
@@ -147,6 +156,9 @@ export interface FilaPreview {
   desde: string;
   hasta: string;
   comentarios: string;
+  /** El tipo de contrato de ese puesto. */
+  nombreContrato: string;
+  porDiasSueltos: boolean;
 }
 
 export interface Preview {

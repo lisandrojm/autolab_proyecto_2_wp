@@ -10,7 +10,7 @@
  * errores): por eso los dos no pueden diferir.
  *
  * LAS REGLAS SON LAS DEL FORMULARIO INDIVIDUAL (`UserRegistrationModal.handleSubmit`), una por una:
- * persona, roles, categoría (salvo servicios), área y turno, tipo de contrato, tope de horas del
+ * persona, roles, categoría (salvo servicios), área y turno, tipo de contrato (por puesto), tope de horas del
  * contrato, importe de servicios, convenio, categoría del convenio, reemplazo con reemplazado y motivo,
  * errores de jornadas. Y el cálculo es el mismo módulo (`compartido/jornadas.ts`). Lo único nuevo:
  *  - la persona tiene que existir y estar activa (en el individual se elige de una lista que ya filtra),
@@ -25,6 +25,7 @@ export interface PlantillaParaPlan {
     projectId: string;
     empresaContratoId?: string;
     convenioId?: string;
+    /** El tipo de contrato va POR PUESTO; éste es el de las plantillas viejas, que se usa si el puesto no tiene. */
     contratoId?: string;
     nombreContrato?: string;
     tipoImpositivo?: string;
@@ -49,9 +50,17 @@ export interface IntegranteParaPlan {
     dailyRateManual?: number | null;
     escalaAlFijar?: number | null;
     comentarios?: string | null;
+    /** El tipo de contrato de este puesto (cada persona contratada puede ir con uno distinto). */
+    contratoId?: string | null;
+    nombreContrato?: string | null;
+    /** El trámite del tipo de contrato («constancia_cuit» = servicios). */
+    tipoImpositivo?: string | null;
     reemplazadoDePersonaId?: string | null;
 }
-/** Las fechas de ESTA contratación, iguales para todo el equipo. */
+/**
+ * Las fechas de ESTA contratación, iguales para todo el equipo. Como el tipo de contrato es por puesto,
+ * puede haber de los dos: los puestos por días sueltos usan `fechas`, los demás `desde`/`hasta`.
+ */
 export interface FechasDeContratacion {
     /** Tipo de contrato por días sueltos («Jornada»): los días. */
     fechas?: string[];
@@ -83,13 +92,15 @@ export interface AvisoDeSuperposicionPlan {
     mensaje: string;
 }
 /** Lo que el plan necesita saber de la base. Lo arma `services/plantillasEquipo.ts`. */
+export interface ContratoDelPlan {
+    modoFechas?: string;
+    esTiempoIndeterminado?: boolean;
+    multiplicadorDiario?: number | null;
+    horasPorJornada?: number | null;
+}
 export interface Contexto {
-    contrato: {
-        modoFechas?: string;
-        esTiempoIndeterminado?: boolean;
-        multiplicadorDiario?: number | null;
-        horasPorJornada?: number | null;
-    } | null;
+    /** Los tipos de contrato de los puestos, por `_id`. */
+    contratos: Map<string, ContratoDelPlan>;
     /** Hay tipos de contrato cargados: sin ninguno, el individual no lo exige. */
     hayContratos: boolean;
     /** Código del CCT del convenio de la plantilla (`Convenio.externalId`). */

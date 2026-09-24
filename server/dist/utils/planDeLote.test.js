@@ -18,8 +18,13 @@ const plantilla = {
 };
 // Cada puesto trae su área y turno, su horario y sus días.
 const integ = (id, x = {}) => ({ _id: `i${id}`, userId: `u${id}`, rolesFrame: ["rf1"], categoriaSatId: "cat1", areaId: "a1", shiftId: "s1", inTime: "10:00", outTime: "18:00", diasSemana: LU_VI, diasPorSemana: 5, diasRotativos: false, ...x });
-const ctx = (x = {}) => ({
-    contrato: { modoFechas: "periodo", esTiempoIndeterminado: false, multiplicadorDiario: 0, horasPorJornada: 9 },
+// `contrato` pisa el de la plantilla («c5x7»); `c1x1` es una «Jornada» por días sueltos, para mezclar.
+const ctx = ({ contrato, ...x } = {}) => ({
+    contratos: new Map([
+        ["c5x7", contrato || { modoFechas: "periodo", esTiempoIndeterminado: false, multiplicadorDiario: 0, horasPorJornada: 9 }],
+        ["c1x1", { modoFechas: "dias", multiplicadorDiario: 1.5 }],
+        ["cServ", { modoFechas: "periodo" }],
+    ]),
     hayContratos: true,
     convenioCct: "634/11",
     hayConvenios: true,
@@ -238,4 +243,32 @@ test("cada puesto con su área, turno, horario y días (una plantilla cubre vari
     const sinTurno = planDeLote(plantilla, [integ("1", { areaId: null, shiftId: null, inTime: null })], SEPT, {}, ctx());
     assert.ok(sinTurno.filas[0].errores.some((e) => /no tiene área y turno/.test(e)));
     assert.ok(sinTurno.filas[0].errores.some((e) => /no tiene horario/.test(e)));
+});
+test("tipo de contrato por puesto: en el mismo lote uno por período y otro por días sueltos", () => {
+    const jornada = integ("2", { contratoId: "c1x1", nombreContrato: "Jornada", tipoImpositivo: "alta_temprana" });
+    const { filas } = planDeLote(plantilla, [integ("1"), jornada], { ...SEPT, fechas: ["2026-09-24", "2026-09-25"] }, {}, ctx());
+    assert.deepEqual(filas[0].errores, []);
+    assert.equal(filas[0].jornadas, 22);
+    assert.equal(filas[0].datos.contratoId, "c5x7");
+    assert.deepEqual(filas[1].errores, []);
+    assert.equal(filas[1].jornadas, 2);
+    assert.equal(filas[1].importes.jornada, 1500);
+    assert.equal(filas[1].datos.porDiasSueltos, true);
+    assert.equal(filas[1].datos.contratoId, "c1x1");
+    assert.equal(filas[1].datos.nombreContrato, "Jornada");
+});
+test("tipo de contrato por puesto: servicios en un puesto no vuelve servicios al resto", () => {
+    const serv = integ("2", { contratoId: "cServ", tipoImpositivo: "constancia_cuit", dailyRateManual: 5000 });
+    const { filas } = planDeLote(plantilla, [integ("1"), serv], SEPT, {}, ctx());
+    assert.equal(filas[0].datos.esServicios, false);
+    assert.equal(filas[0].importes.jornada, 1000);
+    assert.equal(filas[1].datos.esServicios, true);
+    assert.deepEqual(filas[1].errores, []);
+});
+test("puesto sin tipo de contrato (y plantilla sin uno viejo): error", () => {
+    const sinContrato = { ...plantilla, contratoId: undefined, nombreContrato: undefined, tipoImpositivo: undefined };
+    const { filas } = planDeLote(sinContrato, [integ("1")], SEPT, {}, ctx());
+    assert.ok(filas[0].errores.some((e) => /no tiene tipo de contrato/.test(e)));
+    const borrado = planDeLote(plantilla, [integ("1", { contratoId: "cBorrado" })], SEPT, {}, ctx()).filas[0];
+    assert.ok(borrado.errores.some((e) => /ya no existe/.test(e)));
 });

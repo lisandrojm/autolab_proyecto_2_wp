@@ -9,7 +9,8 @@ import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContrataci
 import { CLASE_CAMPO, CLASE_HORA, DIAS, Rotulo } from "./comun";
 
 /*
-  UN PUESTO, uno por uno: su rol, su ÁREA Y TURNO, su HORARIO y sus DÍAS (al elegir el turno se
+  UN PUESTO, uno por uno: su rol, su TIPO DE CONTRATO (cada persona contratada puede ir con uno
+  distinto: uno por jornada, otro a plazo fijo, otro de servicios), su ÁREA Y TURNO, su HORARIO y sus DÍAS (al elegir el turno se
   completan con los del turno, y se pueden cambiar), su categoría y, si hace falta, un importe fijado a
   mano y un comentario. Quién lo ocupa se elige en los equipos, no acá.
 
@@ -32,6 +33,7 @@ interface Props {
 
 export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, puesto, numero, areas, catalogos, general, onGuardar }: Props) {
   const [roles, setRoles] = useState<string[]>([]);
+  const [contratoId, setContratoId] = useState("");
   const [turno, setTurno] = useState("");
   const [inTime, setInTime] = useState("");
   const [outTime, setOutTime] = useState("");
@@ -48,6 +50,7 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
   useEffect(() => {
     if (!isOpen || !puesto) return;
     setRoles(puesto.rolesFrame || []);
+    setContratoId(puesto.contratoId || "");
     setTurno(puesto.areaId && puesto.shiftId ? `${puesto.areaId}::${puesto.shiftId}` : "");
     setInTime(puesto.inTime || "");
     setOutTime(puesto.outTime || "");
@@ -61,8 +64,9 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
     setError("");
   }, [isOpen, puesto]);
 
-  const esServicios = plantilla.tipoImpositivo === "constancia_cuit";
-  const porDiasSueltos = (catalogos.contratos.find((c) => c._id === plantilla.contratoId) as any)?.data?.modoFechas === "dias";
+  const tramite = contratoId ? catalogos.tramitePorContrato.get(contratoId) || "" : "";
+  const esServicios = tramite === "constancia_cuit";
+  const porDiasSueltos = (catalogos.contratos.find((c) => c._id === contratoId) as any)?.data?.modoFechas === "dias";
   const categorias = useMemo(() => (general ? [] : catalogos.categoriasPara(proyecto, plantilla.empresaContratoId, plantilla.convenioId, roles).documentos), [general, catalogos, proyecto, plantilla.empresaContratoId, plantilla.convenioId, roles]);
   const categoriaFueraDeLista = !!categoriaSatId && !categorias.some((c) => c._id === categoriaSatId);
   const rolesFiltrados = useMemo(() => {
@@ -100,12 +104,19 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
       setError("Elegí al menos un rol empresa.");
       return;
     }
+    if (!contratoId && catalogos.contratos.length > 0) {
+      setError("Elegí el tipo de contrato.");
+      return;
+    }
     const [areaId, shiftId] = turno ? turno.split("::") : [null, null];
     setGuardando(true);
     setError("");
     try {
       await onGuardar({
         rolesFrame: roles,
+        contratoId: contratoId || null,
+        nombreContrato: catalogos.contratos.find((c) => c._id === contratoId)?.name || null,
+        tipoImpositivo: tramite || null,
         ...(general ? {} : { areaId, shiftId }),
         inTime: inTime || null,
         outTime: outTime || null,
@@ -156,6 +167,19 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
               </label>
             ))}
           </div>
+        </div>
+
+        <div>
+          <Rotulo obligatorio>Tipo de contrato</Rotulo>
+          <select value={contratoId} onChange={(e) => setContratoId(e.target.value)} className={CLASE_CAMPO}>
+            <option value="">Elegí el tipo de contrato…</option>
+            {contratoId && !catalogos.contratos.some((c) => c._id === contratoId) && <option value={contratoId}>{puesto.nombreContrato || "Contrato anterior"} (ya no existe)</option>}
+            {catalogos.contratos.map((x) => (
+              <option key={x._id} value={x._id}>
+                {x.name} {catalogos.tramitePorContrato.get(x._id) === "constancia_cuit" ? "· PEDIDO DE SERVICIOS" : catalogos.tramitePorContrato.get(x._id) ? "· PEDIDO DE ARCA" : ""}
+              </option>
+            ))}
+          </select>
         </div>
 
         {!general && (

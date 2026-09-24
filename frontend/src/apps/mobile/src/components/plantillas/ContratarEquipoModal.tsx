@@ -6,7 +6,7 @@ import { Modal } from "../Modal";
 import { CustomDatePicker } from "../CustomDatePicker";
 import { CustomMultiDatePicker } from "../CustomMultiDatePicker";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
-import { FilaPreview, Plantilla, plantillasEquipoAPI, Preview, Puntual } from "../../../../../api/plantillasEquipo";
+import { FilaPreview, Plantilla, plantillasEquipoAPI, Preview, Puesto, Puntual } from "../../../../../api/plantillasEquipo";
 import { Project } from "../../../../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./useCatalogosContratacion";
@@ -16,8 +16,9 @@ import { Badge, CLASE_CAMPO, CLASE_HORA, esc, fechaCorta, fechaDeHoy, pesos, Rot
 /*
   CONTRATAR UN EQUIPO: una solicitud por integrante, todas juntas.
 
-  1. Las fechas, iguales para todo el equipo: con un contrato por días sueltos («Jornada») el mismo
-     calendario del alta individual; si no, desde/hasta.
+  1. Las fechas, iguales para todo el equipo. El tipo de contrato es de cada puesto: los que van por
+     días sueltos («Jornada») usan el calendario del alta individual y los demás desde/hasta. Si el
+     equipo mezcla los dos, se piden los dos.
   2. Por integrante: excluirlo sólo esta vez; pisar horario, categoría, importe o (Jornada) los días
      SÓLO en esta contratación —la plantilla no cambia—; y el «¿Reemplazo?» de la solicitud, con motivo
      y a quién reemplaza, igual que en el alta individual.
@@ -75,10 +76,16 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
     clave.current = nuevaClave();
   }, [isOpen, plantilla?._id]);
 
-  const contrato = catalogos.contratos.find((c) => c._id === plantilla?.contratoId);
-  const porDiasSueltos = (contrato as any)?.data?.modoFechas === "dias";
-  const indeterminado = !!(contrato as any)?.data?.esTiempoIndeterminado;
-  const esServicios = plantilla?.tipoImpositivo === "constancia_cuit";
+  // El tipo de contrato de cada puesto dice qué fechas pide: calendario (días sueltos) o desde/hasta.
+  const contratoDe = (i: Puesto) => catalogos.contratos.find((c) => c._id === i.contratoId) as any;
+  const porDiasSueltosDe = (i: Puesto) => contratoDe(i)?.data?.modoFechas === "dias";
+  const esServiciosDe = (i: Puesto) => i.tipoImpositivo === "constancia_cuit";
+  const incluidos = (plantilla?.integrantes || []).filter((i) => !puntuales[i._id]?.excluido);
+  const conDias = incluidos.some(porDiasSueltosDe);
+  const conPeriodo = incluidos.some((i) => !porDiasSueltosDe(i));
+  // Sin fecha de baja sólo si TODOS los de período son por tiempo indeterminado (a esos el server no les pone baja).
+  const indeterminado = conPeriodo && incluidos.filter((i) => !porDiasSueltosDe(i)).every((i) => !!contratoDe(i)?.data?.esTiempoIndeterminado);
+  const nombresContratos = [...new Set((plantilla?.integrantes || []).map((i) => i.nombreContrato).filter(Boolean))].join(" · ");
   const equipo = plantilla?.equipos.find((e) => e._id === equipoId);
   const asignacionDe = (puestoId: string) => equipo?.asignaciones.find((a) => a.puestoId === puestoId);
   const turnoDe = (areaId: string | null, shiftId: string | null) => {
@@ -89,18 +96,19 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
 
   const pedido = useMemo(
     () => ({
-      ...(porDiasSueltos ? { fechas } : { desde, hasta: indeterminado ? undefined : hasta }),
+      ...(conDias ? { fechas } : {}),
+      ...(conPeriodo ? { desde, hasta: indeterminado ? undefined : hasta } : {}),
       equipoId: equipoId || undefined,
       guardarEnEquipo,
       puntuales,
     }),
-    [porDiasSueltos, fechas, desde, hasta, indeterminado, equipoId, guardarEnEquipo, puntuales],
+    [conDias, conPeriodo, fechas, desde, hasta, indeterminado, equipoId, guardarEnEquipo, puntuales],
   );
 
   // El preview se vuelve a pedir con cada cambio, con una pausa: el server es el que calcula.
   useEffect(() => {
     if (!isOpen || !plantilla) return;
-    const hayFechas = porDiasSueltos ? fechas.length > 0 : !!desde;
+    const hayFechas = (!conDias || fechas.length > 0) && (!conPeriodo || !!desde);
     if (!hayFechas) {
       setPreview(null);
       return;
@@ -118,7 +126,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
       vigente = false;
       clearTimeout(t);
     };
-  }, [isOpen, plantilla, pedido, porDiasSueltos, fechas.length, desde]);
+  }, [isOpen, plantilla, pedido, conDias, conPeriodo, fechas.length, desde]);
 
   const filaDe = (integranteId: string): FilaPreview | undefined => preview?.filas.find((f) => f.integranteId === integranteId);
   const pisar = (id: string, x: Partial<Puntual>) => setPuntuales((p) => ({ ...p, [id]: { ...p[id], ...x } }));
@@ -138,7 +146,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
   const contratar = async () => {
     if (!preview) return;
     const incluidas = preview.filas.filter((f) => !f.excluido);
-    const periodo = porDiasSueltos ? `${fechas.length} ${fechas.length === 1 ? "jornada" : "jornadas"}: ${[...fechas].sort().map(fechaCorta).join(" · ")}` : `${fechaCorta(desde)} → ${indeterminado ? "sin fecha de baja" : fechaCorta(hasta)}`;
+    const periodo = [conDias ? `${fechas.length} ${fechas.length === 1 ? "jornada" : "jornadas"}: ${[...fechas].sort().map(fechaCorta).join(" · ")}` : "", conPeriodo ? `${fechaCorta(desde)} → ${indeterminado ? "sin fecha de baja" : fechaCorta(hasta)}` : ""].filter(Boolean).join(" / ");
     const empresa = catalogos.companies.find((c) => c._id === plantilla.empresaContratoId) as any;
     const filasHtml = incluidas
       .map((f) => {
@@ -147,12 +155,12 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
         const avisos = f.advertencias.length ? `<div style="color:${f.superposicionHorario ? "#f87171" : "#fbbf24"};font-size:11px">⚠ ${f.advertencias.map(esc).join("<br>⚠ ")}</div>` : "";
         return `<div style="padding:8px 0;border-bottom:1px solid rgba(148,163,184,.25)">
           <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(f.nombre)}</b><b>${pesos(f.importes.total)}</b></div>
-          <div style="font-size:11px;opacity:.8">${esc(nombreRol(plantilla.integrantes.find((x) => x._id === f.integranteId)?.rolesFrame || []))} · ${esc(f.categoriaNombre || (esServicios ? "Servicio" : "—"))} · ${esc(f.inTime)} a ${esc(f.outTime)} · ${f.jornadas} jornada${f.jornadas === 1 ? "" : "s"} × ${pesos(f.importes.jornada)}</div>
+          <div style="font-size:11px;opacity:.8">${esc(nombreRol(plantilla.integrantes.find((x) => x._id === f.integranteId)?.rolesFrame || []))} · ${esc(f.nombreContrato || "—")} · ${esc(f.categoriaNombre || (f.origenImporte === "servicios" || f.nombreContrato && !f.categoriaSatId ? "Servicio" : "—"))} · ${esc(f.inTime)} a ${esc(f.outTime)} · ${f.jornadas} jornada${f.jornadas === 1 ? "" : "s"} × ${pesos(f.importes.jornada)}</div>
           ${reemplazo}${avisos}</div>`;
       })
       .join("");
     const html = `<div style="font-size:12px;line-height:1.45">
-      <div style="margin-bottom:8px;opacity:.9"><b>${esc(plantilla.nombre)}</b><br>${esc(proyecto ? etiquetaProyecto(proyecto) : "")}<br>${esc(empresa?.razonSocial || "Sin empresa")} · ${esc(plantilla.nombreContrato || "—")}<br>${esc(equipo ? `Equipo «${equipo.nombre}»` : "Sin equipo")} · ${esc(periodo)}</div>
+      <div style="margin-bottom:8px;opacity:.9"><b>${esc(plantilla.nombre)}</b><br>${esc(proyecto ? etiquetaProyecto(proyecto) : "")}<br>${esc(empresa?.razonSocial || "Sin empresa")}<br>${esc(equipo ? `Equipo «${equipo.nombre}»` : "Sin equipo")} · ${esc(periodo)}</div>
       ${filasHtml}
       ${guardarEnEquipo && cambiados ? `<div style="margin-top:8px;font-size:11px;opacity:.85">Las ${cambiados} persona(s) cambiadas quedan también en el equipo «${esc(equipo?.nombre || "")}».</div>` : ""}
       <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px"><b>${incluidas.length} ${incluidas.length === 1 ? "persona" : "personas"} · ${preview.totales.jornadas} jornadas</b><b>${pesos(preview.totales.importe)}</b></div>
@@ -178,7 +186,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
     sweetAlert.error("No se envió ninguna solicitud", datos?.error || "Probá de nuevo en un momento.");
   };
 
-  const hayFechas = porDiasSueltos ? fechas.length > 0 : !!desde && (indeterminado || !!hasta);
+  const hayFechas = (!conDias || fechas.length > 0) && (!conPeriodo || (!!desde && (indeterminado || !!hasta)));
   const puedeContratar = !!preview && hayFechas && !calculando && preview.errores.length === 0;
 
   return (
@@ -241,22 +249,26 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
             </div>
           )}
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            {plantilla.nombreContrato || "Sin tipo de contrato"} · {plantilla.integrantes.length} puestos {porDiasSueltos ? "· por días sueltos" : ""}
+            {nombresContratos || "Sin tipo de contrato"} · {plantilla.integrantes.length} puestos
           </p>
         </div>
 
         {/* ── FECHAS ── */}
         <div className="space-y-2">
-          {porDiasSueltos ? (
+          {conDias && (
             <>
-              <CustomMultiDatePicker label="Días que trabaja el equipo" value={fechas} onChange={(d: string | string[]) => setFechas([...new Set(Array.isArray(d) ? d : d ? [d] : [])].sort())} minDate={fechaDeHoy()} />
-              <p className="text-[11px] text-slate-400">{fechas.length > 0 ? `${fechas.length} ${fechas.length === 1 ? "jornada" : "jornadas"}: ${fechas.map(fechaCorta).join(" · ")}` : "Cada día marcado es una jornada, igual para todo el equipo."}</p>
+              <CustomMultiDatePicker label={conPeriodo ? "Días de los puestos por jornada" : "Días que trabaja el equipo"} value={fechas} onChange={(d: string | string[]) => setFechas([...new Set(Array.isArray(d) ? d : d ? [d] : [])].sort())} minDate={fechaDeHoy()} />
+              <p className="text-[11px] text-slate-400">{fechas.length > 0 ? `${fechas.length} ${fechas.length === 1 ? "jornada" : "jornadas"}: ${fechas.map(fechaCorta).join(" · ")}` : conPeriodo ? "Para los puestos con contrato por días sueltos: cada día marcado es una jornada." : "Cada día marcado es una jornada, igual para todo el equipo."}</p>
             </>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <CustomDatePicker label="Desde" value={desde} onChange={setDesde} />
-              {indeterminado ? <p className="self-end pb-3 text-[11px] text-slate-400">Tiempo indeterminado: sin fecha de baja.</p> : <CustomDatePicker label="Hasta" value={hasta} onChange={setHasta} />}
-            </div>
+          )}
+          {conPeriodo && (
+            <>
+              {conDias && <p className="pt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">Período de los demás puestos</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <CustomDatePicker label="Desde" value={desde} onChange={setDesde} />
+                {indeterminado ? <p className="self-end pb-3 text-[11px] text-slate-400">Tiempo indeterminado: sin fecha de baja.</p> : <CustomDatePicker label="Hasta" value={hasta} onChange={setHasta} />}
+              </div>
+            </>
           )}
 
           {preview && preview.errores.length > 0 && hayFechas && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{preview.errores.join(" ")}</p>}
@@ -280,6 +292,8 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
             // Entró al equipo en lugar de otra persona desde la última vez que se contrató: se sugiere (sin activarlo).
             const sugerirCubre = !p.userId && !!asig?.reemplazadoDePersonaId && (!equipo?.ultimaContratacionEl || (!!asig.reemplazadoEl && asig.reemplazadoEl > equipo.ultimaContratacionEl)) && !p.isReplacement;
             const categorias = catalogos.categoriasPara(proyecto, plantilla.empresaContratoId, plantilla.convenioId, i.rolesFrame).documentos;
+            const esServicios = esServiciosDe(i);
+            const porDiasSueltos = porDiasSueltosDe(i);
             return (
               <div key={i._id} id={`integrante-${i._id}`} className={`rounded-xl border bg-white dark:bg-slate-900/60 ${estado === "error" ? "border-red-400 dark:border-red-800" : estado === "aviso" ? (f?.superposicionHorario ? "border-red-300 dark:border-red-900/60" : "border-amber-300 dark:border-amber-800/60") : "border-slate-200 dark:border-slate-700"} ${excluido ? "opacity-50" : ""}`}>
                 <div className="flex items-center gap-3 p-3">
@@ -294,7 +308,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
                         {p.isReplacement && !excluido && <Badge tono="ambar">Reemplazo</Badge>}
                       </div>
                       <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {turnoDe(i.areaId, i.shiftId)} · {(p.inTime || i.inTime || "—") + " a " + (p.outTime || i.outTime || "—")}
+                        {i.nombreContrato || "Sin tipo de contrato"} · {turnoDe(i.areaId, i.shiftId)} · {(p.inTime || i.inTime || "—") + " a " + (p.outTime || i.outTime || "—")}
                       </p>
                       <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                         {excluido ? "No se contrata esta vez" : f ? `${f.jornadas} jornadas × ${pesos(f.importes.jornada)} = ${pesos(f.importes.total)}` : "—"}

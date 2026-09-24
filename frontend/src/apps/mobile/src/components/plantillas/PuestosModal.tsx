@@ -10,7 +10,8 @@ import { OpcionAreaTurno } from "./useCatalogosContratacion";
 
   Se busca el rol empresa y se elige cuántos puestos de ese rol hacen falta. Opcionalmente, en qué área
   y turno: todos los que se agregan de una vez toman ese turno, con su horario y sus días (después cada
-  puesto se puede cambiar). Quién ocupa cada puesto se elige en los equipos. Se agregan en el orden en
+  puesto se puede cambiar). Lo mismo con el tipo de contrato: si todos van con el mismo, se elige acá;
+  si no, en cada puesto. Quién ocupa cada puesto se elige en los equipos. Se agregan en el orden en
   que se fueron eligiendo.
 */
 interface Props {
@@ -19,12 +20,15 @@ interface Props {
   roleFrames: RoleFrameItem[];
   /** Las áreas y turnos del proyecto. `undefined` = plantilla general (sin áreas). */
   areas?: OpcionAreaTurno[] | null;
-  onAgregar: (puestos: { rolId: string; cantidad: number }[], turno: OpcionAreaTurno | null) => void;
+  /** Los tipos de contrato que se pueden elegir, con su etiqueta («Jornada · PEDIDO DE ARCA»). */
+  contratos: { _id: string; etiqueta: string }[];
+  onAgregar: (puestos: { rolId: string; cantidad: number }[], turno: OpcionAreaTurno | null, contratoId: string) => void;
 }
 
-export default function PuestosModal({ isOpen, onClose, roleFrames, areas, onAgregar }: Props) {
+export default function PuestosModal({ isOpen, onClose, roleFrames, areas, contratos, onAgregar }: Props) {
   const [busca, setBusca] = useState("");
   const [turno, setTurno] = useState("");
+  const [contratoId, setContratoId] = useState("");
   // Un array y no un Map: el orden en que se eligen es el orden de los puestos.
   const [elegidos, setElegidos] = useState<{ rolId: string; cantidad: number }[]>([]);
 
@@ -33,6 +37,7 @@ export default function PuestosModal({ isOpen, onClose, roleFrames, areas, onAgr
     setBusca("");
     setElegidos([]);
     setTurno("");
+    setContratoId("");
   }, [isOpen]);
   const turnoElegido = (areas || []).find((o) => `${o.areaId}::${o.shiftId}` === turno) || null;
 
@@ -68,7 +73,7 @@ export default function PuestosModal({ isOpen, onClose, roleFrames, areas, onAgr
             type="button"
             disabled={total === 0}
             onClick={() => {
-              onAgregar(elegidos, turnoElegido);
+              onAgregar(elegidos, turnoElegido, contratoId);
               onClose();
             }}
             className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50"
@@ -79,6 +84,14 @@ export default function PuestosModal({ isOpen, onClose, roleFrames, areas, onAgr
       }
     >
       <div className="flex h-[60vh] flex-col gap-3">
+        <select value={contratoId} onChange={(e) => setContratoId(e.target.value)} className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white" aria-label="Tipo de contrato de estos puestos">
+          <option value="">Tipo de contrato: lo elijo después en cada puesto</option>
+          {contratos.map((c) => (
+            <option key={c._id} value={c._id}>
+              {c.etiqueta}
+            </option>
+          ))}
+        </select>
         {areas !== undefined && (
           <select value={turno} onChange={(e) => setTurno(e.target.value)} className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white" aria-label="Área y turno de estos puestos">
             <option value="">Área y turno: lo elijo después en cada puesto</option>

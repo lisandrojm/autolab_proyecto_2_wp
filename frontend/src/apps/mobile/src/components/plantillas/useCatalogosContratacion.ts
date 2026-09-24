@@ -63,6 +63,8 @@ export function useCatalogosContratacion(activo = true) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
+  /** Las categorías tardan (son más de mil): sin ellas no se sabe qué convenios ofrecer. */
+  const [categoriasCargadas, setCategoriasCargadas] = useState(false);
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
@@ -78,7 +80,11 @@ export function useCatalogosContratacion(activo = true) {
       .catch(() => setProyectosActivos([]));
     companiesAPI.list({ slim: true }).then(setCompanies).catch(() => undefined);
     conveniosApi.list().then(setConvenios).catch(() => undefined);
-    categoriaSatAPI.list().then(setCategoriasSat).catch(() => undefined);
+    categoriaSatAPI
+      .list()
+      .then(setCategoriasSat)
+      .catch(() => undefined)
+      .finally(() => setCategoriasCargadas(true));
     roleFrameAPI.list().then(setRoleFrames).catch(() => undefined);
     contratosAPI
       .list()
@@ -140,6 +146,19 @@ export function useCatalogosContratacion(activo = true) {
     conveniosOfrecidos({ codigosEmpleadora: codigosEmpleadora(proyecto, empresaId), convenioElegido: cctDeConvenio(convenioId), categorias: categoriasSat, convenios });
 
   /**
+   * EL CONVENIO DE LA EMPRESA, cuando es uno solo (el caso normal: 2030 y FZERO sólo tienen categorías
+   * en el 0634/11). Se muestra y se usa directamente, sin depender de que un efecto lo haya preseleccionado.
+   * `null` si hay que elegir entre varios, si no hay ninguno o si todavía no llegaron las categorías.
+   */
+  const convenioUnico = (proyecto: Project | null | undefined, empresaId: string | null | undefined) => {
+    if (!empresaId || !categoriasCargadas) return null;
+    const lista = conveniosOfrecidos({ codigosEmpleadora: codigosEmpleadora(proyecto, empresaId), convenioElegido: "", categorias: categoriasSat, convenios });
+    if (lista.length !== 1) return null;
+    const doc = convenioPorCct(lista[0].externalId);
+    return doc ? { _id: doc._id, cct: lista[0].externalId, nombre: doc.name || lista[0].name || "" } : null;
+  };
+
+  /**
    * Las categorías que se le pueden dar a alguien con esos roles, dentro del convenio: el mismo cruce
    * que el formulario individual. Devuelve los documentos del catálogo (`_id`), que es lo que se guarda.
    */
@@ -167,6 +186,8 @@ export function useCatalogosContratacion(activo = true) {
     tramitePorContrato,
     empresasDelProyecto,
     conveniosDisponibles,
+    convenioUnico,
+    categoriasCargadas,
     convenioPorCct,
     cctDeConvenio,
     categoriasPara,

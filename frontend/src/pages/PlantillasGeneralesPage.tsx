@@ -16,7 +16,8 @@ import { tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
   PLANTILLAS GENERALES DE EQUIPO (Contratación → Plantillas, escritorio).
 
   Son la ESTRUCTURA de un equipo que se repite en muchos proyectos: los puestos por rol empresa
-  («1 director, 1 playout, 2 cámaras, 1 microfonista…») y, si se quiere, el tipo de contrato. No tienen
+  («1 director, 1 playout, 2 cámaras, 1 microfonista…») y, si se quiere, el tipo de contrato de cada
+  puesto (cada persona contratada puede ir con uno distinto). No tienen
   proyecto, áreas, horarios ni personas, y no se contratan desde acá: cada supervisor, en el móvil, la
   «Usa» y queda una copia PROPIA en su proyecto, donde completa el área, el turno y el horario de cada
   puesto y arma sus equipos.
@@ -26,10 +27,9 @@ const CAMPO = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-
 
 interface Comunes {
   nombre: string;
-  contratoId: string;
   comentarios: string;
 }
-const vacio: Comunes = { nombre: "", contratoId: "", comentarios: "" };
+const vacio: Comunes = { nombre: "", comentarios: "" };
 
 export const PlantillasGeneralesPage: React.FC = () => {
   const [lista, setLista] = useState<PlantillaResumen[] | null>(null);
@@ -90,7 +90,7 @@ export const PlantillasGeneralesPage: React.FC = () => {
         title: "Plantillas de equipo",
         content: (
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-            <p>Una plantilla general es un equipo armado por puestos: «1 director, 1 playout, 2 cámaras, 1 microfonista…», con el tipo de contrato, el horario y los días si se quieren fijar.</p>
+            <p>Una plantilla general es un equipo armado por puestos: «1 director, 1 playout, 2 cámaras, 1 microfonista…», con el tipo de contrato de cada puesto si se quiere fijar.</p>
             <p>No tiene proyecto ni personas. En el móvil, cada supervisor la ve en Contratación → Plantillas → Generales y con «Usar» se hace una copia propia en su proyecto, donde asigna a su gente, la empresa y el área y turno.</p>
             <p>Las plantillas de cada supervisor son personales: sólo las ve quien las creó.</p>
           </div>
@@ -160,10 +160,11 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
   const [guardando, setGuardando] = useState(false);
   const [busca, setBusca] = useState("");
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
+  const [contratoNuevos, setContratoNuevos] = useState("");
 
   const aplicar = (p: Plantilla) => {
     setPlantilla(p);
-    setC({ nombre: p.nombre, contratoId: p.contratoId || "", comentarios: p.comentarios || "" });
+    setC({ nombre: p.nombre, comentarios: p.comentarios || "" });
   };
   useEffect(() => {
     if (!id) return;
@@ -181,16 +182,9 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
   }, [roles, busca]);
   const totalNuevos = Object.values(cantidades).reduce((s, n) => s + n, 0);
 
-  const datos = () => {
-    const contrato = contratos.find((x) => x._id === c.contratoId);
-    return {
-      nombre: c.nombre.trim(),
-      contratoId: c.contratoId || null,
-      nombreContrato: contrato?.name || "",
-      tipoImpositivo: c.contratoId ? tramiteDe(c.contratoId) : "",
-      comentarios: c.comentarios,
-    };
-  };
+  const datos = () => ({ nombre: c.nombre.trim(), comentarios: c.comentarios });
+  /** El tipo de contrato de un puesto, con su nombre y su trámite (lo que guarda el server). `""` = lo elige cada supervisor. */
+  const contratoPuesto = (contratoId: string) => ({ contratoId: contratoId || null, nombreContrato: contratos.find((x) => x._id === contratoId)?.name || null, tipoImpositivo: contratoId ? tramiteDe(contratoId) || null : null });
 
   /** Guarda los valores (creando la plantilla si es nueva) y devuelve su id. */
   const guardar = async (): Promise<string | null> => {
@@ -217,12 +211,21 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
     if (!pid) return;
     try {
       const orden = Object.keys(cantidades);
-      aplicar(await plantillasGeneralesAPI.agregarPuestos(pid, orden.map((rolId) => ({ rolesFrame: [rolId], cantidad: cantidades[rolId] }))));
+      aplicar(await plantillasGeneralesAPI.agregarPuestos(pid, orden.map((rolId) => ({ rolesFrame: [rolId], cantidad: cantidades[rolId], ...contratoPuesto(contratoNuevos) }))));
       setCantidades({});
       setBusca("");
       onCambio();
     } catch (e: any) {
       sweetAlert.error("No se pudieron agregar", e?.response?.data?.error || "Probá de nuevo.");
+    }
+  };
+  const cambiarContrato = async (integranteId: string, contratoId: string) => {
+    if (!plantilla) return;
+    try {
+      aplicar(await plantillasGeneralesAPI.actualizarPuesto(plantilla._id, integranteId, contratoPuesto(contratoId)));
+      onCambio();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo cambiar", e?.response?.data?.error || "Probá de nuevo.");
     }
   };
   const quitarPuesto = async (integranteId: string) => {
@@ -263,19 +266,6 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
             <input value={c.nombre} onChange={(e) => setC({ ...c, nombre: e.target.value })} placeholder="Ej. Estudio noticiero" className={CAMPO} maxLength={120} />
           </div>
           <div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Tipo de contrato</label>
-              <select value={c.contratoId} onChange={(e) => setC({ ...c, contratoId: e.target.value })} className={CAMPO}>
-                <option value="">Lo elige cada supervisor</option>
-                {contratos.map((x) => (
-                  <option key={x._id} value={x._id}>
-                    {x.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Comentario</label>
             <textarea rows={2} value={c.comentarios} onChange={(e) => setC({ ...c, comentarios: e.target.value })} className={CAMPO} placeholder="Opcional: va en cada solicitud" />
           </div>
@@ -285,11 +275,19 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
             {plantilla?.integrantes.length ? (
               <ol className="space-y-1">
                 {plantilla.integrantes.map((i, n) => (
-                  <li key={i._id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-sm dark:border-gray-800">
-                    <span>
+                  <li key={i._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm dark:border-gray-800">
+                    <span className="min-w-0 flex-1 truncate">
                       <span className="mr-2 text-xs font-bold text-gray-400">{n + 1}.</span>
                       {i.rolesFrame.map((r) => nombreRol.get(r) || "Rol").join(", ")}
                     </span>
+                    <select value={i.contratoId || ""} onChange={(e) => void cambiarContrato(i._id, e.target.value)} aria-label={`Tipo de contrato del puesto ${n + 1}`} className="w-48 shrink-0 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                      <option value="">Contrato: lo elige el supervisor</option>
+                      {contratos.map((x) => (
+                        <option key={x._id} value={x._id}>
+                          {x.name}
+                        </option>
+                      ))}
+                    </select>
                     <button type="button" onClick={() => void quitarPuesto(i._id)} title="Quitar el puesto" className="p-1 text-gray-400 hover:text-red-500">
                       <FontAwesomeIcon icon={faXmark} />
                     </button>
@@ -335,8 +333,16 @@ function EditorGeneral({ id, roles, contratos, tramiteDe, onClose, onCambio }: {
                 </div>
               )}
               {totalNuevos > 0 && (
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-300">{Object.entries(cantidades).map(([id, n]) => `${n} ${nombreRol.get(id)}`).join(", ")}</span>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <select value={contratoNuevos} onChange={(e) => setContratoNuevos(e.target.value)} aria-label="Tipo de contrato de los puestos nuevos" className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                    <option value="">Contrato: lo elige el supervisor</option>
+                    {contratos.map((x) => (
+                      <option key={x._id} value={x._id}>
+                        {x.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="flex-1 text-xs text-gray-600 dark:text-gray-300">{Object.entries(cantidades).map(([id, n]) => `${n} ${nombreRol.get(id)}`).join(", ")}</span>
                   <button type="button" onClick={() => void agregarPuestos()} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
                     Agregar {totalNuevos} {totalNuevos === 1 ? "puesto" : "puestos"}
                   </button>
