@@ -15,6 +15,7 @@ import https from "https";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
+import { PlantillaEquipo } from "./models/PlantillaEquipo.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { sembrarPaisesResidenciaUnaVez } from "./services/paisesResidenciaSeed.js";
@@ -323,6 +324,17 @@ connectDB()
     }
     catch (error) {
         console.error("❌ Failed to ensure superadmin:", error);
+    }
+    /*
+      Los índices de las plantillas de equipo cambiaron: el nombre ya no es único por proyecto sino por
+      supervisor (personales) y por tenant (generales). `syncIndexes` borra el viejo y crea los nuevos
+      —sólo en esta colección—; sin esto, dos supervisores no podrían tener cada uno su «Equipo noche».
+    */
+    try {
+        await PlantillaEquipo.syncIndexes();
+    }
+    catch (error) {
+        console.error("❌ No se pudieron sincronizar los índices de plantillas_equipo:", error);
     }
     try {
         console.log("🔍 Verifying all tenants have default roles...");
