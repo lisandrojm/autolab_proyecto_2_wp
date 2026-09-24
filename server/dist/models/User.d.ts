@@ -279,6 +279,21 @@ export interface IUserMetadata {
         userProjectId?: Types.ObjectId;
         fechaBajaContrato?: string;
     };
+    /**
+     * Con qué se superponía el alta cuando se pidió (contratos en cualquier proyecto y otras solicitudes
+     * pendientes de la misma persona): la foto que ve quien aprueba. La pone el server al crear y al
+     * editar la solicitud (ver `services/superposicion.ts`); nunca viene del cliente.
+     */
+    avisosSuperposicion?: {
+        tipo: "horario" | "fechas";
+        origen: "contrato" | "solicitud";
+        proyectoNombre: string;
+        desde: string;
+        hasta: string;
+        vigente: boolean;
+        sinDatos: string[];
+        mensaje: string;
+    }[];
     projectIds?: Types.ObjectId[];
     rolesFrameIds?: string[] | Types.ObjectId[];
 }

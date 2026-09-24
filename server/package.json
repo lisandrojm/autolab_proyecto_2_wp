@@ -147,7 +147,8 @@
     "test:backup": "tsx --test src/services/backupService.test.ts",
     "test:backup-mongo": "tsx --test src/services/backupDestinoMongo.test.ts",
     "test:nombre-backup": "tsx --test src/utils/nombreBackup.test.ts",
-    "test:jornadas": "tsx --test src/compartido/jornadas.test.ts src/compartido/solicitudDeContratacion.test.ts"
+    "test:jornadas": "tsx --test src/compartido/jornadas.test.ts src/compartido/solicitudDeContratacion.test.ts",
+    "test:superposicion": "tsx --test src/utils/superposicionContratos.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

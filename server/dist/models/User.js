@@ -152,6 +152,11 @@ const userSchema = new Schema({
             userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },
             fechaBajaContrato: { type: String },
         },
+        // Ver el comentario de la interfaz.
+        avisosSuperposicion: {
+            type: [{ _id: false, tipo: String, origen: String, proyectoNombre: String, desde: String, hasta: String, vigente: Boolean, sinDatos: [String], mensaje: String }],
+            default: undefined,
+        },
         projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
         roles_frame: {
             type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

@@ -283,6 +283,12 @@ export interface IUserMetadata {
   esRenovacion?: boolean;
   /** Qué contrato renueva: (UserProject, fecha de baja), que es como se identifica un contrato. */
   renovacionDe?: { userProjectId?: Types.ObjectId; fechaBajaContrato?: string };
+  /**
+   * Con qué se superponía el alta cuando se pidió (contratos en cualquier proyecto y otras solicitudes
+   * pendientes de la misma persona): la foto que ve quien aprueba. La pone el server al crear y al
+   * editar la solicitud (ver `services/superposicion.ts`); nunca viene del cliente.
+   */
+  avisosSuperposicion?: { tipo: "horario" | "fechas"; origen: "contrato" | "solicitud"; proyectoNombre: string; desde: string; hasta: string; vigente: boolean; sinDatos: string[]; mensaje: string }[];
   projectIds?: Types.ObjectId[];
   rolesFrameIds?: string[] | Types.ObjectId[];
 }
@@ -469,6 +475,11 @@ const userSchema = new Schema<IUser>(
       renovacionDe: {
         userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },
         fechaBajaContrato: { type: String },
+      },
+      // Ver el comentario de la interfaz.
+      avisosSuperposicion: {
+        type: [{ _id: false, tipo: String, origen: String, proyectoNombre: String, desde: String, hasta: String, vigente: Boolean, sinDatos: [String], mensaje: String }],
+        default: undefined,
       },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
       roles_frame: {

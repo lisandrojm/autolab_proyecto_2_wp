@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
-import { usersAPI } from "../../../../api/users";
+import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
 import { armarPayloadDeSolicitud } from "@compartido/solicitudDeContratacion";
+import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSuperposicion";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
@@ -1543,6 +1544,59 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const periodo = useMemo(() => periodoDeCalculo(formData.startDate, formData.dueDate, indeterminado), [formData.startDate, formData.dueDate, indeterminado]);
 
   /*
+    ¿SE SUPERPONE CON LO QUE LA PERSONA YA TIENE? Contratos en cualquier proyecto (también este) y otras
+    solicitudes pendientes suyas. Se pregunta al server mientras se carga —con una pausa, para no pedir
+    en cada tecla— y se muestra arriba de Comentarios; al enviar, si alguno es de HORARIO, se pide
+    confirmación. Regla en `server/src/utils/superposicionContratos.ts`. Son avisos: no frenan el alta.
+  */
+  const [avisosSuperposicion, setAvisosSuperposicion] = useState<AvisoSuperposicion[]>([]);
+  const claveSuperposicion = JSON.stringify([
+    selectedUser?._id,
+    formData.startDate,
+    indeterminado && !porDiasSueltos ? "" : formData.dueDate,
+    formData.fechasTrabajadas,
+    formData.diasSemana,
+    formData.diasRotativos,
+    formData.inTime,
+    formData.outTime,
+    formData.areaShiftAssignments,
+  ]);
+  useEffect(() => {
+    const personaId = selectedUser?._id;
+    const hayFechas = porDiasSueltos ? formData.fechasTrabajadas.length > 0 : !!formData.startDate;
+    if (!isOpen || !personaId || !hayFechas) {
+      setAvisosSuperposicion([]);
+      return;
+    }
+    let vigente = true;
+    const t = setTimeout(() => {
+      usersAPI
+        .superposiciones(
+          personaId,
+          {
+            desde: porDiasSueltos ? [...formData.fechasTrabajadas].sort()[0] : formData.startDate,
+            hasta: porDiasSueltos ? [...formData.fechasTrabajadas].sort().slice(-1)[0] : indeterminado ? "" : formData.dueDate,
+            fechas: porDiasSueltos ? formData.fechasTrabajadas : undefined,
+            dias: formData.diasSemana,
+            rotativos: formData.diasRotativos,
+            inTime: formData.inTime,
+            outTime: formData.outTime,
+            shiftIds: formData.areaShiftAssignments.flatMap((a) => a.shiftIds),
+          },
+          editingUser?._id,
+        )
+        .then((r) => vigente && setAvisosSuperposicion(r))
+        // Sin respuesta no hay aviso: el alta sigue su curso y el server vuelve a revisar al guardar.
+        .catch(() => vigente && setAvisosSuperposicion([]));
+    }, 500);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, claveSuperposicion, porDiasSueltos, editingUser?._id]);
+
+  /*
     Cambiar a tiempo indeterminado BORRA la fecha de baja que hubiera quedado cargada.
 
     Esconder el campo sin limpiarlo dejaría la fecha vieja viajando en la solicitud: no se ve, no se
@@ -1720,6 +1774,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       const bloque = erroresJornadas.fechas ? "bloque-fechas" : erroresJornadas.diasPorSemana || erroresJornadas.dias ? "bloque-dias" : "bloque-jornadas";
       document.getElementById(bloque)?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
+    }
+
+    /*
+      SUPERPOSICIÓN DE HORARIO: la persona ya tiene algo en esos días y ese horario. No se frena —los
+      contratos de FRAME no siempre traen días u horario, y el aviso puede ser por falta de datos— pero
+      se manda sólo con una confirmación explícita, con el detalle a la vista.
+    */
+    const deHorario = avisosSuperposicion.filter((a) => a.tipo === "horario");
+    if (deHorario.length > 0) {
+      const r: any = await sweetAlert.confirmLista("Se superpone con lo que ya tiene", deHorario.map((a) => a.mensaje), "¿Pedir el alta igual? Quien la apruebe va a ver este aviso.", "Pedir igual", "Revisar");
+      if (!(r === true || r?.isConfirmed)) return;
     }
 
     setSubmitting(true);
@@ -2573,6 +2638,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
           Vacío está bien: es opcional de verdad, no un obligatorio disfrazado.
         */}
+        <AvisosSuperposicion avisos={avisosSuperposicion} />
+
         <div className="space-y-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
             <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />

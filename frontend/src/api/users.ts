@@ -4,6 +4,30 @@ import { emitUsersChanged } from "../utils/navbarEvents";
 /* ---------- Tipos base ---------- */
 type ObjectIdString = string & { readonly __objectIdBrand: unique symbol };
 
+/** Lo que se pide, para revisar si se superpone (ver `utils/superposicionContratos.ts` en el server). */
+export interface PedidoParaSuperposicion {
+  desde: string;
+  hasta: string;
+  fechas?: string[];
+  dias: number[];
+  rotativos?: boolean;
+  inTime: string;
+  outTime: string;
+  shiftIds?: string[];
+}
+
+/** Un aviso de superposición: `horario` es el grave (misma hora, algún día en común), `fechas` el leve. */
+export interface AvisoSuperposicion {
+  tipo: "horario" | "fechas";
+  origen: "contrato" | "solicitud";
+  proyectoNombre: string;
+  desde: string;
+  hasta: string;
+  vigente: boolean;
+  sinDatos: string[];
+  mensaje: string;
+}
+
 export interface TenantRef {
   _id: ObjectIdString;
   slug?: string;
@@ -324,6 +348,8 @@ export interface User {
     /** La solicitud RENUEVA un contrato por vencer: se muestra con la etiqueta «Renovación». */
     esRenovacion?: boolean;
     renovacionDe?: { userProjectId?: string; fechaBajaContrato?: string };
+    /** Con qué se superponía el alta cuando se pidió. La pone el server. */
+    avisosSuperposicion?: AvisoSuperposicion[];
     roles_frame?: (string | { _id: string; name: string })[];
     activo?: boolean;
     roleFrameId?: string;
@@ -870,6 +896,16 @@ class UsersAPI {
   async contarContratosPendientes(): Promise<number> {
     const { data } = await axios.get("/users/contratos-pendientes/count", { headers: this.getHeaders() });
     return Number(data?.count) || 0;
+  }
+
+  /**
+   * ¿Lo que se está pidiendo se superpone con lo que la persona ya tiene? Contratos en cualquier
+   * proyecto (también el mismo) y otras solicitudes pendientes. Son avisos, no frenan nada.
+   * `excluirSolicitudId`: al editar, la solicitud no se cuenta a sí misma.
+   */
+  async superposiciones(userId: string, pedido: PedidoParaSuperposicion, excluirSolicitudId?: string): Promise<AvisoSuperposicion[]> {
+    const { data } = await axios.post(`/users/superposiciones`, { userId, pedido, excluirSolicitudId }, { headers: this.getHeaders() });
+    return Array.isArray(data?.superposiciones) ? data.superposiciones : [];
   }
 
   /**

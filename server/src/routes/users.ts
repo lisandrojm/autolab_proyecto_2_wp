@@ -18,6 +18,7 @@ import { borrarContratoDeSolicitud, buscarContratoDeSolicitud, datosDeSolicitud 
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
+import { pedidoDesdeSolicitud, superposicionesDeAlta } from "../services/superposicion.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
@@ -1572,6 +1573,43 @@ const permisoSobreSolicitudPropia = (opciones: { soloCancelar?: boolean; incluir
 };
 
 // POST /users - Crear usuario
+/*
+  ¿LO QUE SE ESTÁ PIDIENDO SE SUPERPONE CON LO QUE LA PERSONA YA TIENE?
+
+  Lo pregunta el formulario de solicitud mientras se carga, para avisar antes de mandar: contratos en
+  cualquier proyecto (también el mismo) y otras solicitudes pendientes. Regla en
+  `utils/superposicionContratos.ts`. Son avisos: no frena nada.
+*/
+router.post("/superposiciones", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { userId, excluirSolicitudId, pedido } = req.body || {};
+    if (!userId || !pedido) {
+      res.json({ superposiciones: [] });
+      return;
+    }
+    const p = pedido as any;
+    const lista = await superposicionesDeAlta(
+      req.tenantObjectId!,
+      String(userId),
+      {
+        desde: String(p.desde || ""),
+        hasta: String(p.hasta || ""),
+        fechas: Array.isArray(p.fechas) ? p.fechas.map(String) : undefined,
+        dias: Array.isArray(p.dias) ? p.dias.map(Number) : [],
+        rotativos: !!p.rotativos,
+        inTime: String(p.inTime || ""),
+        outTime: String(p.outTime || ""),
+        shiftIds: Array.isArray(p.shiftIds) ? p.shiftIds.map(String) : [],
+      },
+      excluirSolicitudId ? String(excluirSolicitudId) : undefined,
+    );
+    res.json({ superposiciones: lista });
+  } catch (error) {
+    console.error("Superposiciones error:", error);
+    res.status(500).json({ error: "No se pudo revisar si se superpone con otros contratos." });
+  }
+});
+
 router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = createUserSchema.parse(req.body);
@@ -1603,6 +1641,12 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
     if ((data as any).metadata?.isSolicitud === true) {
       (data as any).metadata.solicitudCreadaPor = new Types.ObjectId(String(req.user!.userId));
       (data as any).metadata.activo = false;
+      /*
+        LA FOTO DE LOS AVISOS DE SUPERPOSICIÓN, para quien la aprueba: si al pedirla la persona ya tenía
+        algo en esas fechas u horario, el que aprueba lo ve en el detalle sin tener que buscarlo. La pone
+        el server (nunca del body) y sirve igual para el alta individual y la masiva.
+      */
+      (data as any).metadata.avisosSuperposicion = await superposicionesDeAlta(req.tenantObjectId!, (data as any).metadata.solicitudUserId, pedidoDesdeSolicitud((data as any).metadata));
     }
 
     // Verificar que no existe usuario con el mismo email en el tenant
@@ -2262,7 +2306,11 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
       });
       // Mientras siga siendo una solicitud, inactiva: como `metadata` se reemplaza entero, sin esto el
       // `activo: true` por defecto del modelo la volvería a activar al editarla.
-      if ((data as any).metadata.isSolicitud === true) (data as any).metadata.activo = false;
+      if ((data as any).metadata.isSolicitud === true) {
+        (data as any).metadata.activo = false;
+        // Editada, la foto de superposiciones se vuelve a sacar (sin contarse a sí misma).
+        (data as any).metadata.avisosSuperposicion = await superposicionesDeAlta(req.tenantObjectId!, (data as any).metadata.solicitudUserId, pedidoDesdeSolicitud((data as any).metadata), String(req.params.id));
+      }
     }
 
     /*

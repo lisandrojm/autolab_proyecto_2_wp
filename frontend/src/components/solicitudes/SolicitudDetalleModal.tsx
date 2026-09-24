@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faCommentDots, faTriangleExclamation , faPenToSquare , faRotateLeft, faStar } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
+import { AvisosSuperposicion } from "./AvisosSuperposicion";
 import { usersAPI, User } from "../../api/users";
 import { companiesAPI, Company } from "../../api/companies";
 import { contratosAPI, ContratoItem } from "../../api/contratos";
@@ -344,6 +345,13 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
 
       {!cargando && !error && (
         <div className="space-y-4">
+          {/*
+            SE SUPERPONÍA CON LO QUE LA PERSONA YA TENÍA cuando se pidió (contratos en cualquier proyecto u
+            otras solicitudes suyas): la foto la sacó el server al crearla. Arriba, porque cambia qué se
+            aprueba. Ver `server/src/services/superposicion.ts`.
+          */}
+          {Array.isArray(m.avisosSuperposicion) && m.avisosSuperposicion.length > 0 && <AvisosSuperposicion avisos={m.avisosSuperposicion} titulo="Al pedirla, se superponía con lo que ya tenía" />}
+
           {/* Por qué se rechazó: lo primero, porque explica todo lo que sigue. */}
           {estado === "rechazada" && m.solicitudMotivoRechazo && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">

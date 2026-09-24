@@ -50,6 +50,30 @@ export const sweetAlert = {
     });
   },
 
+  /**
+   * Confirmación con una LISTA de puntos (cada uno en su renglón). `confirm` usa `text`, y ahí los saltos
+   * de línea se pierden. El contenido se escapa: son mensajes armados con datos de la base.
+   */
+  confirmLista: (title: string, items: string[], pie: string, confirmText = "Confirmar", cancelText = "Cancelar") => {
+    const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return Swal.fire({
+      title,
+      html: `<ul style="text-align:left;margin:0;padding-left:1.1em;font-size:.85em;line-height:1.45">${items.map((i) => `<li style="margin-bottom:.4em">${esc(i)}</li>`).join("")}</ul><p style="margin-top:.8em;font-size:.85em">${esc(pie)}</p>`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: confirmText,
+      cancelButtonText: cancelText,
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
+      },
+    });
+  },
+
   confirm: (title: string, text: string, confirmText = "Confirmar", cancelText = "Cancelar") => {
     return Swal.fire({
       title,
