@@ -46,6 +46,9 @@
     "convenios-sin-paritaria:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/marcarConveniosSinParitaria.ts",
     "convenios-sin-paritaria": "dotenv -e .env.production -- tsx src/scripts/marcarConveniosSinParitaria.ts",
     "convenios-sin-paritaria:revertir": "dotenv -e .env.production -- tsx src/scripts/marcarConveniosSinParitaria.ts",
+    "solicitudes-conteo:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/sacarSolicitudesDelConteo.ts",
+    "solicitudes-conteo": "dotenv -e .env.production -- tsx src/scripts/sacarSolicitudesDelConteo.ts",
+    "solicitudes-conteo:revertir": "dotenv -e .env.production -- tsx src/scripts/sacarSolicitudesDelConteo.ts",
     "escalas-periodo:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarEscalasPeriodo.ts",
     "escalas-periodo": "dotenv -e .env.production -- tsx src/scripts/migrarEscalasPeriodo.ts",
     "escalas-periodo:revertir": "dotenv -e .env.production -- tsx src/scripts/migrarEscalasPeriodo.ts",
@@ -143,7 +146,8 @@
     "restaurar:backup": "tsx src/scripts/restaurarBackup.ts",
     "test:backup": "tsx --test src/services/backupService.test.ts",
     "test:backup-mongo": "tsx --test src/services/backupDestinoMongo.test.ts",
-    "test:nombre-backup": "tsx --test src/utils/nombreBackup.test.ts"
+    "test:nombre-backup": "tsx --test src/utils/nombreBackup.test.ts",
+    "test:jornadas": "tsx --test src/compartido/jornadas.test.ts src/compartido/solicitudDeContratacion.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

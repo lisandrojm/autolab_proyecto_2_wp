@@ -17,6 +17,7 @@ import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { borrarContratoDeSolicitud, buscarContratoDeSolicitud, datosDeSolicitud } from "../services/contratoDeSolicitud.js";
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
+import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
@@ -1598,8 +1599,10 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
     }
 
     // Quién la pidió, puesto por el servidor: es a quien se le avisa cómo terminó. Nunca del body.
+    // Y nace INACTIVA: no es una persona hasta que se aprueba (ver `services/conteoUsuariosTenant.ts`).
     if ((data as any).metadata?.isSolicitud === true) {
       (data as any).metadata.solicitudCreadaPor = new Types.ObjectId(String(req.user!.userId));
+      (data as any).metadata.activo = false;
     }
 
     // Verificar que no existe usuario con el mismo email en el tenant
@@ -1762,11 +1765,8 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
       await Project.updateMany({ _id: { $in: user.projectIds }, tenantId: req.tenantObjectId }, { $addToSet: { assignedUsers: user._id } });
     }
 
-    // Agregar usuario al array userIds del tenant
-    await Tenant.findByIdAndUpdate(req.tenantObjectId, {
-      $addToSet: { userIds: user._id },
-      $inc: { "usage.users.current": 1 },
-    });
+    // Cuenta como usuario del tenant. Una solicitud NO: entra al aprobarse (ver `services/conteoUsuariosTenant.ts`).
+    if ((user.metadata as any)?.isSolicitud !== true) await sumarAlConteo(req.tenantObjectId!, user._id as Types.ObjectId);
 
     // Devolver usuario sin password y con roles poblados
     const userResponse = await User.findById(user._id)
@@ -2260,6 +2260,9 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
         const actual = (currentUser.metadata as any)[campo];
         if ((data as any).metadata[campo] === undefined && actual !== undefined) (data as any).metadata[campo] = actual;
       });
+      // Mientras siga siendo una solicitud, inactiva: como `metadata` se reemplaza entero, sin esto el
+      // `activo: true` por defecto del modelo la volvería a activar al editarla.
+      if ((data as any).metadata.isSolicitud === true) (data as any).metadata.activo = false;
     }
 
     /*
@@ -2664,7 +2667,8 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
 
     await User.deleteOne({ _id: id, tenantId: req.tenantObjectId });
     await Promise.all([
-      Tenant.findByIdAndUpdate(req.tenantObjectId, { $pull: { userIds: id }, $inc: { "usage.users.current": -1 } }),
+      // Sólo resta si contaba: una solicitud nunca aprobada no está en el conteo.
+      quitarDelConteo(req.tenantObjectId!, id),
       Project.updateMany({ tenantId: req.tenantObjectId, assignedUsers: id }, { $pull: { assignedUsers: id } }),
       Client.updateMany({ tenantId: req.tenantObjectId, "usuarios.userId": id }, { $pull: { usuarios: { userId: id } } }),
       UserProject.deleteMany({ userId: id }),
@@ -2864,6 +2868,8 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
     }
 
     await User.findByIdAndUpdate(userId, { $set: updatePayload });
+    // La solicitud se convirtió en la persona: recién ahora cuenta como usuario del tenant.
+    await sumarAlConteo(req.tenantObjectId!, userId);
 
     // Return the updated user
     const updatedUser = await User.findById(userId)
@@ -2910,13 +2916,8 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
-    // Remover usuario del array userIds del tenant
-    if (user.tenantId) {
-      await Tenant.findByIdAndUpdate(user.tenantId, {
-        $pull: { userIds: user._id },
-        $inc: { "usage.users.current": -1 },
-      });
-    }
+    // Sale del conteo del tenant, si contaba: una solicitud nunca aprobada no estaba.
+    if (user.tenantId) await quitarDelConteo(user.tenantId, user._id as Types.ObjectId);
 
     res.json({ message: "User deleted successfully" });
   } catch (error) {

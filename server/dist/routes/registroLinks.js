@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { quitarDelConteo } from "../services/conteoUsuariosTenant.js";
 import crypto from "crypto";
 import { Types } from "mongoose";
 import { RegistroLink, getRegistroLinkExpiry } from "../models/RegistroLink.js";
@@ -483,7 +484,7 @@ router.delete("/mis-registrados/:userId", requireTenant, authenticateToken, requ
             UserProject.deleteMany({ userId }),
             Client.updateMany({ tenantId, "usuarios.userId": userId }, { $pull: { usuarios: { userId } } }),
             Project.updateMany({ tenantId, assignedUsers: userId }, { $pull: { assignedUsers: userId } }),
-            Tenant.findByIdAndUpdate(tenantId, { $pull: { userIds: userId }, $inc: { "usage.users.current": -1 } }),
+            quitarDelConteo(tenantId, userId),
             // Y los avisos que hablaban de este registro: contarían una novedad que ya no lleva a ninguna parte.
             Notification.deleteMany({ tenantId, refId: userId }),
         ]);

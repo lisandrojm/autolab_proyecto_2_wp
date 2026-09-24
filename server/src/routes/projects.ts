@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { z } from "zod";
 import multer from "multer";
@@ -2075,6 +2076,9 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       }
     }
     await User.findByIdAndUpdate(userId, userUpdate);
+    // Quien recibe el contrato cuenta como usuario del tenant. Si era la solicitud misma (persona nueva),
+    // entra recién ahora; si ya existía, ya contaba y esto no hace nada (ver `services/conteoUsuariosTenant.ts`).
+    if (idSolicitud) await sumarAlConteo(req.tenantObjectId!, userId);
 
     /*
       AVISARLE A QUIEN PIDIÓ EL ALTA que se aprobó.
