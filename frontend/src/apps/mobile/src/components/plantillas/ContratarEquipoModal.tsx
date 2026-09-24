@@ -176,7 +176,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
       onClose={onClose}
       title={`Contratar: ${plantilla.nombre}`}
       subtitle={proyecto ? etiquetaProyecto(proyecto) : undefined}
-      size="fullscreen"
+      size="lg"
       zIndex={60}
       footer={
         <div className="w-full space-y-2">

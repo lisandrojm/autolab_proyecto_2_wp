@@ -155,9 +155,11 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
     };
     setGuardando(true);
     try {
+      const nueva = !plantilla;
       const p = plantilla ? await plantillasEquipoAPI.actualizar(plantilla._id, datos) : await plantillasEquipoAPI.crear({ ...datos, projectId: proyecto._id });
       aplicar(p);
       onCambio();
+      if (nueva) void sweetAlert.alert("Plantilla creada", "Ahora armá los puestos: «Por rol» para agregarlos (ej. 1 director, 2 cámaras) y tocá cada uno para asignar la persona, la categoría o un horario propio.", "info");
       return p;
     } catch (e: any) {
       sweetAlert.error("No se pudo guardar", e?.response?.data?.error || "Probá de nuevo.");
@@ -209,7 +211,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
       onClose={onClose}
       title={plantilla ? plantilla.nombre : "Nueva plantilla"}
       subtitle={proyecto ? etiquetaProyecto(proyecto) : undefined}
-      size="fullscreen"
+      size="lg"
       zIndex={60}
       footer={
         <div className="flex w-full gap-2">
@@ -231,6 +233,29 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
         </div>
       ) : (
         <div className="space-y-6">
+          {/*
+            EL ORDEN DE CARGA, dicho arriba: primero lo que comparte todo el equipo y «Crear plantilla»;
+            recién con la plantilla creada se arman los puestos y se edita cada uno. Marca en qué paso está.
+          */}
+          <ol className="grid grid-cols-2 gap-2 text-[11px]">
+            {[
+              { n: 1, t: "Valores del equipo", d: "Empresa, contrato, área y turno, horario y días. Tocá «Crear plantilla»." },
+              { n: 2, t: "Puestos, uno por uno", d: "Agregalos por rol y editá cada uno: persona, categoría u horario propio." },
+            ].map((paso) => {
+              const actual = plantilla ? paso.n === 2 : paso.n === 1;
+              const hecho = !!plantilla && paso.n === 1;
+              return (
+                <li key={paso.n} className={`rounded-xl border p-2.5 ${actual ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-slate-200 dark:border-slate-700"} ${!actual && !hecho ? "opacity-60" : ""}`}>
+                  <p className={`flex items-center gap-1.5 font-bold ${actual ? "text-blue-700 dark:text-blue-300" : "text-slate-600 dark:text-slate-300"}`}>
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${hecho ? "bg-green-600 text-white" : actual ? "bg-blue-600 text-white" : "bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-slate-200"}`}>{hecho ? "✓" : paso.n}</span>
+                    {paso.t}
+                  </p>
+                  <p className="mt-1 text-slate-500 dark:text-slate-400">{paso.d}</p>
+                </li>
+              );
+            })}
+          </ol>
+
           {/* ── VALORES COMUNES ── */}
           <section className="space-y-4">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">Valores del equipo</h4>
@@ -370,17 +395,17 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
                 Puestos {plantilla ? `(${plantilla.integrantes.length})` : ""}
               </h4>
               <div className="flex gap-1.5">
-                <button type="button" onClick={() => setAgregandoPuestos(true)} disabled={!plantilla && !c.nombre.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+                <button type="button" onClick={() => setAgregandoPuestos(true)} disabled={!plantilla} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
                   <FontAwesomeIcon icon={faPlus} />
                   Por rol
                 </button>
-                <button type="button" onClick={() => setAgregando(true)} disabled={!plantilla && !c.nombre.trim()} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 px-3 py-2 text-xs font-bold text-blue-600 disabled:opacity-40 dark:text-blue-400">
+                <button type="button" onClick={() => setAgregando(true)} disabled={!plantilla} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500 px-3 py-2 text-xs font-bold text-blue-600 disabled:opacity-40 dark:text-blue-400">
                   <FontAwesomeIcon icon={faUserPlus} />
                   Personas
                 </button>
               </div>
             </div>
-            {!plantilla && <p className="text-[11px] text-slate-500">Al agregar el primer puesto se crea la plantilla con estos valores.</p>}
+            {!plantilla && <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500 dark:border-slate-700">Primero completá los valores del equipo y tocá «Crear plantilla». Después vas a poder agregar los puestos y editarlos uno por uno.</p>}
             {plantilla && plantilla.integrantes.length === 0 && (
               <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
                 Armá el equipo por roles («Por rol»: 1 director, 2 cámaras, 1 microfonista…) y asigná a la gente después, o agregá directamente a las personas.
