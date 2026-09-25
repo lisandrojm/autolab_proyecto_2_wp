@@ -93,7 +93,7 @@ router.post("/generales/:id/usar", ...movil, manejar(async (req, res) => {
 router.use(rutasDe("personal", movil));
 // Los equipos (quién ocupa cada puesto): sólo en las personales.
 // Nombre + condiciones (el turno) en el mismo pedido; `copiarDe` trae las personas de otro equipo.
-router.post("/:id/equipos", ...movil, manejar((req) => crearEquipo(acceso(req, "personal"), req.params.id, String(req.body?.nombre || ""), req.body?.copiarDe, req.body?.condiciones, { projectId: req.body?.projectId, empresaContratoId: req.body?.empresaContratoId, convenioId: req.body?.convenioId, categorias: req.body?.categorias })));
+router.post("/:id/equipos", ...movil, manejar((req) => crearEquipo(acceso(req, "personal"), req.params.id, String(req.body?.nombre || ""), req.body?.copiarDe, req.body?.condiciones, { projectId: req.body?.projectId, empresaContratoId: req.body?.empresaContratoId, convenioId: req.body?.convenioId, categorias: req.body?.categorias, condicionesPorPuesto: req.body?.condicionesPorPuesto })));
 // Las condiciones del equipo (contrato, área y turno, horario, días): valen para todos sus puestos.
 router.put("/:id/equipos/:equipoId/condiciones", ...movil, manejar((req) => condicionesDelEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.body || {})));
 // Nombre y/o proyecto (con empresa y convenio) del equipo; `categorias` = las del nivel de su proyecto.

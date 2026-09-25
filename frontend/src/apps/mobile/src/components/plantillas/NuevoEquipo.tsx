@@ -41,7 +41,10 @@ interface Borrador {
   empresaContratoId: string;
   convenioId: string;
   contratoId: string;
-  turno: string; // "areaId::shiftId"
+  /** Las áreas y turnos que cubre el equipo ("areaId::shiftId"); el PRIMERO es el principal (el del equipo). */
+  turnos: string[];
+  /** A cuál va cada puesto (por número), si no es el principal. */
+  turnoPorPuesto: Record<number, string>;
   inTime: string;
   outTime: string;
   diasSemana: number[];
@@ -51,7 +54,7 @@ interface Borrador {
   personas: Record<number, { _id: string; nombre: string }>;
 }
 
-const vacio = (projectId = "", grupoId = ""): Borrador => ({ projectId, grupoId, nombreGrupo: "", roles: [], empresaContratoId: "", convenioId: "", contratoId: "", turno: "", inTime: "", outTime: "", diasSemana: [], nombre: "", copiarDe: "", personas: {} });
+const vacio = (projectId = "", grupoId = ""): Borrador => ({ projectId, grupoId, nombreGrupo: "", roles: [], empresaContratoId: "", convenioId: "", contratoId: "", turnos: [], turnoPorPuesto: {}, inTime: "", outTime: "", diasSemana: [], nombre: "", copiarDe: "", personas: {} });
 
 /** Rótulo de campo, igual al de la solicitud individual. */
 function Rotulo({ icono, children, obligatorio }: { icono: any; children: React.ReactNode; obligatorio?: boolean }) {
@@ -72,7 +75,8 @@ export default function NuevoEquipo() {
     try {
       const guardado = JSON.parse(sessionStorage.getItem(CLAVE) || "null");
       const grupo = query.get("grupo") || "";
-      if (guardado && (!grupo || guardado.grupoId === grupo)) return guardado;
+      // Un borrador de antes (un solo turno) se lee como la lista nueva.
+      if (guardado && (!grupo || guardado.grupoId === grupo)) return { ...vacio(), ...guardado, turnos: guardado.turnos || (guardado.turno ? [guardado.turno] : []), turnoPorPuesto: guardado.turnoPorPuesto || {} };
       return vacio(query.get("proyecto") || "", grupo);
     } catch {
       return vacio(query.get("proyecto") || "", query.get("grupo") || "");
@@ -147,7 +151,10 @@ export default function NuevoEquipo() {
 
   const contrato = catalogos.contratos.find((c) => c._id === b.contratoId);
   const sueltos = porDiasSueltos(catalogos, b.contratoId);
-  const turno = (areas || []).find((o) => `${o.areaId}::${o.shiftId}` === b.turno);
+  const opcion = (v?: string) => (areas || []).find((o) => `${o.areaId}::${o.shiftId}` === v);
+  /** El principal: el primero que se eligió. Define el horario, los días y el nombre del equipo. */
+  const turno = opcion(b.turnos[0]);
+  const elegidos = b.turnos.map(opcion).filter(Boolean) as OpcionAreaTurno[];
   const areasAgrupadas = useMemo(() => {
     const m = new Map<string, { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }>();
     for (const o of areas || []) {
@@ -159,13 +166,25 @@ export default function NuevoEquipo() {
   }, [areas]);
   // Con un solo turno en el proyecto, elegido solo.
   useEffect(() => {
-    if (areas?.length === 1 && !b.turno) elegirTurno(areas[0]);
+    if (areas?.length === 1 && !b.turnos.length) elegirTurno(areas[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areas?.length]);
 
+  /**
+   * Tildar o destildar un área y turno. El equipo puede cubrir varios (cada puesto va a uno); el primero
+   * es el principal: su horario y sus días son los del equipo. Si se saca el principal, el siguiente pasa a serlo.
+   */
   const elegirTurno = (o: OpcionAreaTurno) => {
-    const c = cambiosDeTurno(o);
-    setB((p) => ({ ...p, turno: `${o.areaId}::${o.shiftId}`, inTime: c.inTime || "", outTime: c.outTime || "", diasSemana: c.diasSemana || p.diasSemana, nombre: p.nombre || o.turnoNombre }));
+    const v = `${o.areaId}::${o.shiftId}`;
+    setB((p) => {
+      const turnos = p.turnos.includes(v) ? p.turnos.filter((x) => x !== v) : [...p.turnos, v];
+      const turnoPorPuesto = Object.fromEntries(Object.entries(p.turnoPorPuesto).filter(([, t]) => turnos.includes(t) && t !== turnos[0]));
+      const principal = opcion(turnos[0]);
+      if (!principal) return { ...p, turnos, turnoPorPuesto, inTime: "", outTime: "" };
+      if (principal && turnos[0] === p.turnos[0]) return { ...p, turnos, turnoPorPuesto };
+      const c = cambiosDeTurno(principal);
+      return { ...p, turnos, turnoPorPuesto, inTime: c.inTime || "", outTime: c.outTime || "", diasSemana: c.diasSemana || p.diasSemana, nombre: p.nombre || principal.turnoNombre };
+    });
   };
 
   // Qué falta, en el orden del formulario.
@@ -185,7 +204,7 @@ export default function NuevoEquipo() {
                 ? { texto: "Elegí el convenio", id: "campo-roles" }
             : !b.contratoId && catalogos.contratos.length > 0
               ? { texto: "Elegí el tipo de contrato", id: "campo-contrato" }
-              : !b.turno && (areas?.length || 0) > 0
+              : !b.turnos.length && (areas?.length || 0) > 0
                 ? { texto: "Elegí el área y el turno", id: "campo-turno" }
                 : !b.nombre.trim()
                   ? { texto: "Poné el nombre del equipo", id: "campo-nombre" }
@@ -200,7 +219,7 @@ export default function NuevoEquipo() {
   const okGrupo = okProyecto && !!b.grupoId && (!esNuevo || !!b.nombreGrupo.trim());
   const okRoles = okGrupo && puestos.length > 0 && !!b.empresaContratoId && (!falta || !["campo-grupo", "campo-roles"].includes(falta.id));
   const okContrato = okRoles && (!!b.contratoId || catalogos.contratos.length === 0);
-  const okTurno = okContrato && (!!b.turno || (areas?.length ?? 1) === 0);
+  const okTurno = okContrato && (b.turnos.length > 0 || (areas?.length ?? 1) === 0);
   const okNombre = okTurno && !!b.nombre.trim();
   // Lo que aparece por un toque se trae a la vista: la PRIMERA sección nueva (con el turno aparecen
   // horario y personas juntas). Lo que aparece escribiendo, no: movería la pantalla mientras se tipea.
@@ -240,7 +259,16 @@ export default function NuevoEquipo() {
       };
       // El equipo lleva su proyecto, su empresa, su convenio y la categoría de cada puesto en el nivel de ESE proyecto.
       const categorias = categoriasDelNivel(catalogos, proyecto, b.empresaContratoId, convenioId, p.integrantes);
-      p = await plantillasEquipoAPI.crearEquipo(p._id, b.nombre.trim(), b.copiarDe || undefined, condiciones as any, { projectId: proyecto._id, empresaContratoId: b.empresaContratoId || null, convenioId: convenioId || null, categorias });
+      // Los puestos que van a otra área o turno que el principal: su horario y sus días son los de ESE turno.
+      const condicionesPorPuesto: Record<string, any> = {};
+      for (const [n, v] of Object.entries(b.turnoPorPuesto)) {
+        const o = opcion(v);
+        const puesto = p.integrantes[Number(n) - 1];
+        if (!o || !puesto || v === b.turnos[0]) continue;
+        const c = cambiosDeTurno(o);
+        condicionesPorPuesto[puesto._id] = sueltos ? { areaId: c.areaId, shiftId: c.shiftId, inTime: c.inTime, outTime: c.outTime } : c;
+      }
+      p = await plantillasEquipoAPI.crearEquipo(p._id, b.nombre.trim(), b.copiarDe || undefined, condiciones as any, { projectId: proyecto._id, empresaContratoId: b.empresaContratoId || null, convenioId: convenioId || null, categorias, condicionesPorPuesto });
       const equipo = p.equipos[p.equipos.length - 1];
       // 3. Las personas elegidas acá.
       for (const [n, persona] of Object.entries(b.personas)) {
@@ -430,17 +458,18 @@ export default function NuevoEquipo() {
             <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">El proyecto no tiene áreas y turnos configurados.</p>
           ) : (
             <>
-              <p className="text-xs text-slate-600 dark:text-slate-300">El horario y los días se completan con los del turno; abajo los podés cambiar.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">Podés tildar varios: cada puesto va a uno (lo elegís abajo, en Puestos). El primero es el principal: su horario y sus días son los del equipo.</p>
               <div className="space-y-2">
                 {areasAgrupadas.map((area) => {
-                  const abierta = areasAbiertas.has(area.areaId) || turno?.areaId === area.areaId;
+                  const enArea = elegidos.filter((o) => o.areaId === area.areaId);
+                  const abierta = areasAbiertas.has(area.areaId) || enArea.length > 0;
                   return (
                     <div key={area.areaId} className={`rounded-lg border ${error("campo-turno") ? "border-red-400" : "border-slate-200 dark:border-slate-700"}`}>
                       <button type="button" onClick={() => setAreasAbiertas((s) => { const n = new Set(s); if (n.has(area.areaId)) n.delete(area.areaId); else n.add(area.areaId); return n; })} aria-expanded={abierta} className="flex min-h-[44px] w-full items-center gap-2 px-3 text-left">
                         <FontAwesomeIcon icon={abierta ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-slate-500" />
                         <span className="min-w-0 flex-1 truncate text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">{area.nombre}</span>
-                        {turno?.areaId === area.areaId ? (
-                          <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{turno.turnoNombre}</span>
+                        {enArea.length > 0 ? (
+                          <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{enArea.map((o) => o.turnoNombre).join(" · ")}</span>
                         ) : (
                           <span className="shrink-0 text-[11px] text-slate-600 dark:text-slate-300">{area.turnos.length} {area.turnos.length === 1 ? "turno" : "turnos"}</span>
                         )}
@@ -448,12 +477,17 @@ export default function NuevoEquipo() {
                       {abierta && (
                         <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-2">
                           {area.turnos.map((t) => {
-                            const elegido = turno?.areaId === t.areaId && turno?.shiftId === t.shiftId;
+                            const v = `${t.areaId}::${t.shiftId}`;
+                            const elegido = b.turnos.includes(v);
+                            const principal = b.turnos[0] === v && b.turnos.length > 1;
                             return (
                               <button key={t.shiftId} type="button" onClick={() => elegirTurno(t)} aria-pressed={elegido} className={`flex min-h-[48px] items-center gap-2 rounded-lg border px-2.5 text-left ${elegido ? "border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-900/20 dark:text-blue-200" : "border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"}`}>
-                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-400"}`}>{elegido && <span className="h-2 w-2 rounded-full bg-blue-600" />}</span>
+                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${elegido ? "border-blue-600 bg-blue-600 text-white" : "border-slate-400"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />}</span>
                                 <span className="min-w-0">
-                                  <span className="block truncate text-sm font-medium">{t.turnoNombre}</span>
+                                  <span className="block truncate text-sm font-medium">
+                                    {t.turnoNombre}
+                                    {principal && <span className="ml-1.5 rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
+                                  </span>
                                   <span className="block text-[11px] text-slate-600 dark:text-slate-300">{[t.inicio && t.fin ? `${t.inicio}–${t.fin}` : "", t.diasTexto].filter(Boolean).join(" · ")}</span>
                                 </span>
                               </button>
@@ -522,9 +556,9 @@ export default function NuevoEquipo() {
           <div id="campo-personas" className="space-y-2 scroll-mt-24">
             <div className="flex items-center justify-between gap-2">
               <Rotulo icono={faUserPlus}>
-                Personas · {asignadas}/{puestos.length}
+                Puestos · personas {asignadas}/{puestos.length}
               </Rotulo>
-              <span className="text-xs text-slate-600 dark:text-slate-300">Opcional: también después</span>
+              <span className="text-xs text-slate-600 dark:text-slate-300">Personas: opcional</span>
             </div>
             {!esNuevo && (grupo?.equipos.length || 0) > 0 && (
               <select value={b.copiarDe} onChange={(e) => cambiar({ copiarDe: e.target.value, personas: {} })} className={CLASE_CAMPO} aria-label="Copiar personas de otro equipo">
@@ -536,7 +570,7 @@ export default function NuevoEquipo() {
                 ))}
               </select>
             )}
-            {!b.copiarDe && (
+            {(!b.copiarDe || elegidos.length > 1) && (
               <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70">
                 {puestos.map((x) => {
                   const persona = b.personas[x.n];
@@ -545,9 +579,29 @@ export default function NuevoEquipo() {
                       <span className="w-5 text-center text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">{x.n}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span>
-                        <span className={`block truncate text-sm font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>{persona ? persona.nombre : "Sin asignar"}</span>
+                        {!b.copiarDe && <span className={`block truncate text-sm font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>{persona ? persona.nombre : "Sin asignar"}</span>}
+                        {/* Con varias áreas y turnos, a cuál va este puesto (por defecto, el principal). */}
+                        {elegidos.length > 1 && (
+                          <select
+                            value={b.turnoPorPuesto[x.n] || b.turnos[0]}
+                            onChange={(e) => {
+                              const t = { ...b.turnoPorPuesto };
+                              if (e.target.value === b.turnos[0]) delete t[x.n];
+                              else t[x.n] = e.target.value;
+                              cambiar({ turnoPorPuesto: t });
+                            }}
+                            aria-label={`Área y turno del puesto ${x.n}`}
+                            className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs font-medium text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                          >
+                            {elegidos.map((o) => (
+                              <option key={`${o.areaId}::${o.shiftId}`} value={`${o.areaId}::${o.shiftId}`}>
+                                {o.areaNombre} · {o.turnoNombre}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </span>
-                      {persona ? (
+                      {b.copiarDe ? null : persona ? (
                         <button type="button" onClick={() => { const n = { ...b.personas }; delete n[x.n]; cambiar({ personas: n }); }} className="min-h-[40px] shrink-0 rounded-lg px-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
                           Quitar
                         </button>
@@ -572,7 +626,7 @@ export default function NuevoEquipo() {
       <HojaInferior abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto">
         <div className="space-y-2">
           {(proyectos || []).map((p) => (
-            <button key={p._id} type="button" onClick={() => { cambiar({ projectId: p._id, empresaContratoId: "", convenioId: "", turno: "", inTime: "", outTime: "", diasSemana: [] }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${p._id === b.projectId ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-200 text-slate-900 dark:border-slate-700 dark:text-white"}`}>
+            <button key={p._id} type="button" onClick={() => { cambiar({ projectId: p._id, empresaContratoId: "", convenioId: "", turnos: [], turnoPorPuesto: {}, inTime: "", outTime: "", diasSemana: [] }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${p._id === b.projectId ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-200 text-slate-900 dark:border-slate-700 dark:text-white"}`}>
               {p._id === b.projectId && <FontAwesomeIcon icon={faCheck} />}
               {etiquetaProyecto(p)}
             </button>

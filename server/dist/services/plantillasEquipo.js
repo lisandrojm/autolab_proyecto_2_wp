@@ -583,6 +583,7 @@ export async function crearEquipo(acc, id, nombre, copiarDeId, condiciones, dato
     });
     const nuevo = p.equipos[p.equipos.length - 1];
     aplicarCategorias(p, nuevo, datos?.categorias);
+    aplicarCondicionesPorPuesto(p, nuevo, datos?.condicionesPorPuesto, acc);
     p.markModified("equipos");
     await p.save();
     return obtenerPlantilla(acc, id);
@@ -623,6 +624,28 @@ function aplicarCategorias(p, e, categorias) {
         a.condiciones = Object.keys(resto).length ? resto : null;
     }
     e.asignaciones = e.asignaciones.filter((a) => !vacia(a));
+}
+/**
+ * LO DISTINTO DE CADA PUESTO al crear el equipo (un equipo que cubre varias áreas y turnos: cada puesto
+ * va a uno). Se suma a lo que ya tenga (la categoría), y sólo lo que difiere de las del equipo.
+ */
+function aplicarCondicionesPorPuesto(p, e, porPuesto, acc) {
+    if (!porPuesto || typeof porPuesto !== "object")
+        return;
+    for (const [puestoId, cond] of Object.entries(porPuesto)) {
+        const puesto = (p.integrantes || []).find((i) => String(i._id) === String(puestoId));
+        if (!puesto)
+            continue;
+        const pedidas = leerCondicionesDeEquipo(cond, acc);
+        const base = puestoEnEquipo(puesto.toObject ? puesto.toObject() : puesto, null, e);
+        const distintas = Object.fromEntries(Object.entries(pedidas).filter(([k, v]) => comparable(v) !== comparable(base[k])));
+        if (!Object.keys(distintas).length)
+            continue;
+        let a = (e.asignaciones || []).find((x) => String(x.puestoId) === String(puestoId));
+        if (!a)
+            e.asignaciones.push((a = { puestoId: oid(puestoId), userId: null, condiciones: null, excluido: false }));
+        a.condiciones = { ...(a.condiciones || {}), ...distintas };
+    }
 }
 /**
  * CAMBIAR UN EQUIPO: su nombre y/o su proyecto (con empresa y convenio). Pasarlo a otro proyecto vacía

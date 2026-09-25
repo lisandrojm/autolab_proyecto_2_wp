@@ -82,6 +82,8 @@ export interface DatosDeEquipo {
   empresaContratoId?: string | null;
   convenioId?: string | null;
   categorias?: Record<string, string>;
+  /** Al crear: lo distinto de cada puesto (el área y turno de un equipo que cubre varios). */
+  condicionesPorPuesto?: Record<string, CondicionesEquipo>;
 }
 
 /** El puesto con las condiciones del EQUIPO, sin la diferencia del puesto: «igual que el equipo». */
