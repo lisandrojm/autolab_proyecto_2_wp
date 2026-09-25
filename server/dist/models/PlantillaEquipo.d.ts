@@ -10,11 +10,16 @@ import mongoose, { Types } from "mongoose";
  *  2. PUESTOS (`integrantes`): cada uno con su rol empresa, su TIPO DE CONTRATO, su área y turno, su
  *     horario y sus días (los del turno, modificables), su categoría y, si se fijó, su importe. Una plantilla puede cubrir
  *     varias áreas y turnos: cada puesto dice el suyo.
- *  3. EQUIPOS (`equipos`): quién ocupa cada puesto y, si hace falta, CON QUÉ CONDICIONES PROPIAS
- *     (`asignaciones[].condiciones`: otro horario, otros días, otra área y turno, otro contrato…). Los
- *     puestos son la plantilla que se reutiliza; cada equipo es un caso guardado sobre ellos («Semana A»,
- *     «Equipo noche»). Lo que el equipo no pisa sale del puesto. Al contratar se elige uno, se cambia a
- *     alguien sólo esa vez o se guarda el cambio en el equipo.
+ *  3. EQUIPOS (`equipos`): cada uno con sus CONDICIONES DEL EQUIPO (`equipos[].condiciones`: tipo de
+ *     contrato, área y turno, horario, días), que valen para todos sus puestos, y quién ocupa cada
+ *     puesto. Si un puesto difiere del equipo, la DIFERENCIA va en `asignaciones[].condiciones` (sólo lo
+ *     distinto). El valor que rige se resuelve siempre igual: puesto → equipo → diferencia del puesto
+ *     (`puestoEnEquipo` en el servicio), y las pantallas muestran de cuál de las tres viene.
+ *
+ *  REEMPLAZO: explícito, en `asignaciones[].reemplazo` (a quién y por qué). Es lo único que crea un
+ *  reemplazo: cambiar a la persona de un puesto NUNCA lo hace. Al contratar se vuelve `isReplacement` /
+ *  `replacedUserId` / `motivoReemplazoId` de la solicitud, igual que el alta individual, y se borra del
+ *  equipo (los reemplazos son de una vez: vacaciones, compensatorio).
  *
  * Al contratar salen N solicitudes idénticas a las del formulario individual (`services/plantillasEquipo.ts`).
  *
@@ -76,6 +81,15 @@ export interface ICondiciones {
 }
 /** Los campos de un puesto que un equipo puede pisar (todos menos el rol y el orden). */
 export declare const CAMPOS_DE_CONDICIONES: readonly ["areaId", "shiftId", "inTime", "outTime", "diasSemana", "diasPorSemana", "diasRotativos", "categoriaSatId", "dailyRateManual", "comentarios", "contratoId", "nombreContrato", "tipoImpositivo"];
+/** Las condiciones que un equipo pone para todos sus puestos. */
+export declare const CAMPOS_DE_EQUIPO: readonly ["contratoId", "nombreContrato", "tipoImpositivo", "areaId", "shiftId", "inTime", "outTime", "diasSemana", "diasPorSemana", "diasRotativos"];
+/** A quién reemplaza quien ocupa el puesto, y por qué (los motivos de Novedades). */
+export interface IReemplazo {
+    replacedUserId: Types.ObjectId;
+    motivoReemplazoId?: Types.ObjectId | null;
+    /** Vino de un «Entró en lugar de» viejo (sin motivo): hay que revisarlo antes de contratar. */
+    revisarMotivo?: boolean;
+}
 export interface IAsignacion {
     puestoId: Types.ObjectId;
     /** `null` = el puesto no tiene persona en este equipo, pero sí condiciones propias. */
@@ -83,13 +97,16 @@ export interface IAsignacion {
     condiciones?: ICondiciones | null;
     /** El equipo NO usa este puesto: no se asigna, no se contrata, no cuenta. Sigue en la plantilla para los demás equipos. */
     excluido?: boolean;
-    /** Si entró en lugar de otra persona en ese puesto de este equipo: a quién y cuándo. Informativo. */
+    reemplazo?: IReemplazo | null;
+    /** VIEJO: «Entró en lugar de» implícito. Lo pasa a `reemplazo` el script `migrar-plantillas`. */
     reemplazadoDePersonaId?: Types.ObjectId | null;
     reemplazadoEl?: Date | null;
 }
 export interface IEquipo {
     _id: Types.ObjectId;
     nombre: string;
+    /** Las condiciones del equipo (`CAMPOS_DE_EQUIPO`): valen para todos sus puestos. */
+    condiciones?: Record<string, any> | null;
     asignaciones: IAsignacion[];
     ultimaContratacionEl?: Date | null;
 }

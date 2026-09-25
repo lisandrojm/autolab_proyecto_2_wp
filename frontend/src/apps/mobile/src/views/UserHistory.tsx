@@ -24,7 +24,8 @@ import { NOVEDADES_CONTRATACION } from "../../../../api/personnel";
 import { useAuthStore } from "../../../../stores/authStore";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { MOBILE_HIRING_TEMPLATES } from "../../../../utils/permisosMobile";
-import PlantillasTab from "../components/plantillas/PlantillasTab";
+import ListaGrupos from "../components/plantillas/ListaGrupos";
+import { ProveedorPlantillas } from "../components/plantillas/contexto";
 import { CalificarModal } from "../../../../components/calificaciones/CalificarModal";
 import { NuevaCalificacion } from "../../../../api/calificaciones";
 
@@ -59,10 +60,12 @@ const leerDiasGuardados = (): number => {
 };
 
 interface UserHistoryProps {
+  /** Con qué pestaña abre (al volver desde las pantallas de Plantillas). */
+  pestanaInicial?: "historial" | "por_vencer" | "plantillas";
   onNavigate: (view: ViewType) => void;
 }
 
-export default function UserHistory({ onNavigate }: UserHistoryProps) {
+export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryProps) {
   const { users, loading, refetch } = useUserHistory();
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -86,7 +89,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
     dejarlos vencer. Qué entra y quién lo ve lo decide el server (`services/contratosPorVencer.ts`).
     Se piden al entrar y no al abrir la pestaña: el número va en la pestaña, y avisar es el punto.
   */
-  const [pestana, setPestana] = useState<"historial" | "por_vencer" | "plantillas">("historial");
+  const [pestana, setPestana] = useState<"historial" | "por_vencer" | "plantillas">(pestanaInicial || "historial");
   const [porVencer, setPorVencer] = useState<ContratoPorVencer[] | null>(null);
   const [procesando, setProcesando] = useState<string | null>(null);
   /** El contrato que se está renovando: abre el formulario de solicitud ya completo. */
@@ -521,7 +524,9 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         </div>
 
         {pestana === "plantillas" && puedePlantillas ? (
-          <PlantillasTab onContratado={refetch} />
+          <ProveedorPlantillas>
+            <ListaGrupos embebida />
+          </ProveedorPlantillas>
         ) : pestana === "por_vencer" ? (
           renderPorVencer()
         ) : loading ? (

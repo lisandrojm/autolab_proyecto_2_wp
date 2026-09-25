@@ -46,6 +46,8 @@
     "convenios-sin-paritaria:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/marcarConveniosSinParitaria.ts",
     "convenios-sin-paritaria": "dotenv -e .env.production -- tsx src/scripts/marcarConveniosSinParitaria.ts",
     "convenios-sin-paritaria:revertir": "dotenv -e .env.production -- tsx src/scripts/marcarConveniosSinParitaria.ts",
+    "migrar-plantillas:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarPlantillasEquipo.ts",
+    "migrar-plantillas": "dotenv -e .env.production -- tsx src/scripts/migrarPlantillasEquipo.ts",
     "contratos-dias:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/completarDiasDesdeTurno.ts",
     "contratos-dias": "dotenv -e .env.production -- tsx src/scripts/completarDiasDesdeTurno.ts",
     "contratos-dias:revertir": "dotenv -e .env.production -- tsx src/scripts/completarDiasDesdeTurno.ts",
@@ -152,7 +154,7 @@
     "test:nombre-backup": "tsx --test src/utils/nombreBackup.test.ts",
     "test:jornadas": "tsx --test src/compartido/jornadas.test.ts src/compartido/solicitudDeContratacion.test.ts",
     "test:superposicion": "tsx --test src/utils/superposicionContratos.test.ts",
-    "test:plantillas": "tsx --test src/compartido/jornadas.test.ts src/compartido/solicitudDeContratacion.test.ts src/utils/superposicionContratos.test.ts src/utils/planDeLote.test.ts"
+    "test:plantillas": "tsx --test src/compartido/jornadas.test.ts src/compartido/solicitudDeContratacion.test.ts src/utils/superposicionContratos.test.ts src/utils/planDeLote.test.ts src/services/plantillasEquipo.capas.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

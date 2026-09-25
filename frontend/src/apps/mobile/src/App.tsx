@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import RutasPlantillas from "./components/plantillas/RutasPlantillas";
 import { ViewType } from "./types";
 // import TopBar from "./components/TopBar";
 import BottomNav from "./components/BottomNav";
@@ -21,10 +23,23 @@ import { usePermisoInactivo } from "../../../stores/permisosInactivosStore";
 import { useNotifications } from "./hooks/useNotifications";
 import { useRefrescoEnFoco } from "./hooks/useRefrescoEnFoco";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
-import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
+import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_HIRING_TEMPLATES, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
+  const location = useLocation();
+  /*
+    VOLVER DESDE PLANTILLAS: esas pantallas tienen URL propia, el resto de la app no. Al volver a
+    `/mobile` dicen a qué vista y pestaña (por `state`), para no caer en el inicio.
+  */
+  const [pestanaContratacion, setPestanaContratacion] = useState<string | undefined>();
+  useEffect(() => {
+    const st = location.state as { vista?: ViewType; pestana?: string } | null;
+    if (st?.vista) {
+      setCurrentView(st.vista);
+      setPestanaContratacion(st.pestana);
+    }
+  }, [location.key]);
   // Intent para abrir Pedidos con un tipo preseleccionado y bloqueado (ej: desde el perfil).
   const [ordersInitialType, setOrdersInitialType] = useState<string | null>(null);
   const { user, tenantId, setTenantId } = useAuthStore();
@@ -122,7 +137,7 @@ function App() {
       case "activity_logs":
         return puede(MOBILE_ACTIVITY_LOGS) || puede(MOBILE_ACTIVITY_COMPLIANCE) ? <Novedades onNavigate={setCurrentView} /> : inicio;
       case "user_history":
-        return puede(MOBILE_USERS) ? <UserHistory onNavigate={setCurrentView} /> : inicio;
+        return puede(MOBILE_USERS) ? <UserHistory key={location.key} onNavigate={setCurrentView} pestanaInicial={pestanaContratacion as any} /> : inicio;
       case "my_teams":
         return puede(MOBILE_TEAMS) ? <MyTeams onNavigate={setCurrentView} /> : inicio;
       // Cumplimiento dejó de ser una pantalla propia: es una pestaña. Se conserva para que los avisos
@@ -172,6 +187,16 @@ function App() {
     entra con cualquier permiso del móvil, y ese permiso ES una tarjeta. Quien no tiene ninguno cae
     en el bloqueo de arriba, que dice lo que hay que hacer.
   */
+
+  // Las pantallas de Plantillas (con URL): a pantalla completa, sin la barra de abajo.
+  if (location.pathname.startsWith("/mobile/plantillas")) {
+    const permitido = puede(MOBILE_USERS) && puede(MOBILE_HIRING_TEMPLATES);
+    return (
+      <div className="w-full dark:bg-gray-900 flex justify-center">
+        <div className="relative flex min-h-screen flex-col text-slate-800 dark:text-slate-200 font-display w-full xl:w-1/2">{permitido ? <RutasPlantillas /> : <div className="p-6 text-center text-sm">No tenés acceso a Plantillas. <a href="/mobile" className="font-bold text-blue-600 underline">Volver</a></div>}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full dark:bg-gray-900 flex justify-center">

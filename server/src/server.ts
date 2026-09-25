@@ -396,42 +396,45 @@ connectDB()
       console.error("❌ No se pudo cargar el catálogo de Países de residencia:", error);
     }
 
-    // Initialize the Import Users Background Scheduler
-    try {
-      initCronScheduler();
-    } catch (error) {
-      console.error("❌ Failed to initialize background scheduler:", error);
+    /*
+      LAS TAREAS PROGRAMADAS (importación, backups, Dropbox, paritarias, centros de costo, Dropbox Sign).
+      `SIN_TAREAS_PROGRAMADAS=true` las apaga: para levantar una copia local contra la base real sin
+      duplicar backups ni sincronizaciones del servidor publicado.
+    */
+    if (process.env.SIN_TAREAS_PROGRAMADAS === "true") {
+      console.log("⏸️  SIN_TAREAS_PROGRAMADAS: no se inician las tareas programadas.");
+    } else {
+      // Initialize the Import Users Background Scheduler
+      try {
+        initCronScheduler();
+      } catch (error) {
+        console.error("❌ Failed to initialize background scheduler:", error);
+      }
+
+      // Backup de la base a Dropbox, cada 12 horas (tab «DDBB» de Documentos).
+      try {
+        initBackupScheduler();
+      } catch (error) {
+        console.error("❌ Failed to initialize backup scheduler:", error);
+      }
+
+      // Initialize the Estado auto-transition Dropbox folder scanner
+      try {
+        initEstadoDropboxScheduler();
+        initParitariasScheduler();
+        // El catálogo de centros de costo, de los Tango de las tres empresas.
+        initCentrosCostoScheduler();
+      } catch (error) {
+        console.error("❌ Failed to initialize estado-dropbox scheduler:", error);
+      }
+
+      // Lectura de la casilla de Dropbox Sign: detecta los envíos a firmar y los archiva en Pendbox.
+      try {
+        initDropboxSignMailScheduler();
+      } catch (error) {
+        console.error("❌ Failed to initialize dropbox-sign mail scheduler:", error);
+      }
     }
-
-    // Backup de la base a Dropbox, cada 12 horas (tab «DDBB» de Documentos).
-    try {
-      initBackupScheduler();
-    } catch (error) {
-      console.error("❌ Failed to initialize backup scheduler:", error);
-    }
-
-    // Initialize the Estado auto-transition Dropbox folder scanner
-    try {
-      initEstadoDropboxScheduler();
-      initParitariasScheduler();
-      // El catálogo de centros de costo, de los Tango de las tres empresas.
-      initCentrosCostoScheduler();
-    } catch (error) {
-      console.error("❌ Failed to initialize estado-dropbox scheduler:", error);
-    }
-
-    // Lectura de la casilla de Dropbox Sign: detecta los envíos a firmar y los archiva en Pendbox.
-    try {
-      initDropboxSignMailScheduler();
-    } catch (error) {
-      console.error("❌ Failed to initialize dropbox-sign mail scheduler:", error);
-    }
-
-
-
-
-
-
 
     if (String(env.SEED_ON_START) === "true") {
       try {

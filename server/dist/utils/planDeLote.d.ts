@@ -86,6 +86,8 @@ export interface Puntual {
     motivoReemplazoId?: string;
     replacedUserId?: string;
     empleado_id_reemplezado?: string | number;
+    /** El comentario de ESTA solicitud (en la revisión). Sin él, el del puesto o el de la plantilla. */
+    comentarios?: string;
 }
 export interface AvisoDeSuperposicionPlan {
     tipo: "horario" | "fechas";

@@ -17,8 +17,18 @@ export interface Acceso {
     userId: string;
     alcance: "personal" | "general";
 }
-/** El puesto tal como lo ocupa ESE equipo: lo del puesto, pisado por las condiciones del equipo. */
-export declare function puestoEnEquipo(puesto: any, asignacion: any): any;
+/**
+ * El puesto tal como lo ocupa ESE equipo. Tres capas, siempre en este orden: lo del PUESTO (rol y
+ * categoría por defecto; en las plantillas viejas, también contrato y horario) → las CONDICIONES DEL
+ * EQUIPO → la DIFERENCIA de ese puesto en el equipo.
+ */
+export declare function puestoEnEquipo(puesto: any, asignacion: any, equipo?: any): any;
+/** El reemplazo de una asignación; los «Entró en lugar de» viejos se leen como reemplazo sin motivo, a revisar. */
+export declare function reemplazoDe(a: any): {
+    replacedUserId: string;
+    motivoReemplazoId: string | null;
+    revisarMotivo: boolean;
+} | null;
 /** Las plantillas para la lista: las personales del proyecto; las generales, todas. */
 export declare function listarPlantillas(acc: Acceso, projectId: string): Promise<{
     _id: string;
@@ -57,14 +67,13 @@ export declare function actualizarPuesto(acc: Acceso, id: string, puestoId: stri
 /** Saca un puesto (y a quien lo ocupaba en cada equipo). */
 export declare function quitarPuesto(acc: Acceso, id: string, puestoId: string): Promise<any>;
 /** Un equipo nuevo, vacío o copiando otro —personas y condiciones propias— («Semana B» a partir de «Semana A»). */
-export declare function crearEquipo(acc: Acceso, id: string, nombre: string, copiarDeId?: string): Promise<any>;
+export declare function crearEquipo(acc: Acceso, id: string, nombre: string, copiarDeId?: string, condiciones?: any): Promise<any>;
 export declare function renombrarEquipo(acc: Acceso, id: string, equipoId: string, nombre: string): Promise<any>;
 export declare function borrarEquipo(acc: Acceso, id: string, equipoId: string): Promise<any>;
 /**
- * Quién ocupa un puesto en un equipo. `userId: null` lo deja sin asignar (las condiciones propias del
- * puesto en el equipo, si tiene, se conservan). Si ya había alguien, queda anotado a quién reemplazó
- * (informativo, y para sugerir «¿Cubre a X?» al contratar). La misma persona PUEDE ocupar otro puesto
- * del equipo: si se pisan, el equipo lo avisa (`avisos`), no se bloquea.
+ * Quién ocupa un puesto en un equipo. `userId: null` lo deja sin asignar (lo distinto del puesto y el
+ * reemplazo, si tiene, se conservan). Cambiar a la persona no crea un reemplazo. La misma persona PUEDE
+ * ocupar otro puesto del equipo: si se pisan, el equipo lo avisa (`avisos`), no se bloquea.
  */
 export declare function asignarPuesto(acc: Acceso, id: string, equipoId: string, puestoId: string, userId: string | null): Promise<any>;
 /**
@@ -73,6 +82,18 @@ export declare function asignarPuesto(acc: Acceso, id: string, equipoId: string,
  * lo que difiere del puesto. `restablecer: true` vuelve a las del puesto.
  */
 export declare function condicionesEnEquipo(acc: Acceso, id: string, equipoId: string, puestoId: string, body: any): Promise<any>;
+/**
+ * LAS CONDICIONES DEL EQUIPO: tipo de contrato, área y turno, horario y días, para TODOS sus puestos de
+ * una vez. Lo que viene se pisa; lo que no viene queda. Las diferencias de los puestos que quedaron
+ * iguales al equipo se borran: ya no son diferencia.
+ */
+export declare function condicionesDelEquipo(acc: Acceso, id: string, equipoId: string, body: any): Promise<any>;
+/**
+ * EL REEMPLAZO de un puesto en un equipo: a quién reemplaza quien lo ocupa y por qué. Es el ÚNICO
+ * lugar donde se crea uno. `{ quitar: true }` lo saca. Al contratar se vuelve el reemplazo de la
+ * solicitud (y se borra del equipo).
+ */
+export declare function reemplazoEnEquipo(acc: Acceso, id: string, equipoId: string, puestoId: string, body: any): Promise<any>;
 /**
  * SACAR UN PUESTO DE UN EQUIPO (o volver a usarlo). Armado el equipo, los puestos que no usa se sacan
  * de ESE equipo: no se asignan, no se contratan, no cuentan. Siguen en la plantilla de puestos para los
@@ -123,7 +144,6 @@ export declare function previewDeContratacion(acc: Acceso, id: string, body: any
 /**
  * CONTRATAR: revalida TODO (no confía en el preview que vio el cliente) y, sin errores, crea las N
  * solicitudes + el lote en una transacción. Con la misma `idempotencyKey` devuelve el lote ya creado.
- * Con `guardarEnEquipo`, lo cambiado «sólo esta vez» queda también en el equipo elegido.
  */
 export declare function contratarPlantilla(acc: Acceso, id: string, body: any): Promise<{
     repetido: boolean;

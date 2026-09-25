@@ -45,25 +45,46 @@ export interface Asignacion {
   /** El equipo no usa este puesto (sigue en la plantilla para los demás equipos). */
   excluido: boolean;
   activo: boolean;
-  reemplazadoDePersonaId: string | null;
-  reemplazadoDeNombre: string;
-  reemplazadoEl: string | null;
+  /** A quién reemplaza y por qué. `revisarMotivo`: vino de un «Entró en lugar de» viejo, sin motivo. */
+  reemplazo: Reemplazo | null;
 }
+
+export interface Reemplazo {
+  replacedUserId: string;
+  nombre: string;
+  motivoReemplazoId: string | null;
+  revisarMotivo: boolean;
+}
+
+/** Las condiciones del equipo: valen para todos sus puestos. */
+export type CondicionesEquipo = Partial<Pick<Puesto, "contratoId" | "nombreContrato" | "tipoImpositivo" | "areaId" | "shiftId" | "inTime" | "outTime" | "diasSemana" | "diasPorSemana" | "diasRotativos">>;
+export const CAMPOS_DE_EQUIPO = ["contratoId", "nombreContrato", "tipoImpositivo", "areaId", "shiftId", "inTime", "outTime", "diasSemana", "diasPorSemana", "diasRotativos"] as const;
 
 /** Un equipo guardado dentro de la plantilla («Semana A»): quién ocupa cada puesto y con qué condiciones. */
 export interface Equipo {
   _id: string;
   nombre: string;
   ultimaContratacionEl: string | null;
+  /** Las condiciones del equipo (contrato, área y turno, horario, días). */
+  condiciones: CondicionesEquipo | null;
   asignaciones: Asignacion[];
-  /** Por puesto: la misma persona en dos puestos que se pisan. Avisos, no bloquean. */
+  /** Por puesto: la persona se pisa con otro puesto o con un contrato. Avisos, no bloquean. */
   avisos: Record<string, string[]>;
 }
 
-/** El puesto tal como lo ocupa ese equipo: lo del puesto, pisado por las condiciones del equipo. */
+/** El puesto con las condiciones del EQUIPO, sin la diferencia del puesto: «igual que el equipo». */
+export const puestoBaseEnEquipo = (puesto: Puesto, equipo?: Equipo | null): Puesto => {
+  const c = (equipo?.condiciones || {}) as Record<string, any>;
+  const efectivo: any = { ...puesto };
+  for (const k of CAMPOS_DE_EQUIPO) if (k in c) efectivo[k] = c[k];
+  return efectivo;
+};
+
+/** El puesto tal como lo ocupa ese equipo: puesto → condiciones del equipo → diferencia del puesto (el mismo orden que el server). */
 export const puestoEnEquipo = (puesto: Puesto, equipo?: Equipo | null): Puesto => {
   const c = equipo?.asignaciones.find((a) => a.puestoId === puesto._id)?.condiciones;
-  return c ? { ...puesto, ...c } : puesto;
+  const base = puestoBaseEnEquipo(puesto, equipo);
+  return c ? { ...base, ...c } : base;
 };
 
 /** ¿El equipo usa ese puesto? */
@@ -102,7 +123,7 @@ export interface PlantillaResumen {
   puestos: number;
   /** `propias` = puestos con condiciones propias en ese equipo; `avisos` = puestos que se pisan. */
   /** `puestos` = los que usa ese equipo (la plantilla menos los que sacó). */
-  equipos: { _id: string; nombre: string; asignados: number; puestos: number; propias: number; avisos: number; ultimaContratacionEl: string | null }[];
+  equipos: { _id: string; nombre: string; asignados: number; puestos: number; propias: number; avisos: number; reemplazos: number; revisar: number; condiciones: CondicionesEquipo | null; ultimaContratacionEl: string | null }[];
   ultimaContratacionEl: string | null;
 }
 
@@ -147,13 +168,13 @@ export interface Puntual {
   motivoReemplazoId?: string;
   replacedUserId?: string;
   empleado_id_reemplezado?: string | number;
+  /** El comentario de esta solicitud (opcional, en la revisión). */
+  comentarios?: string;
 }
 
 export interface PedidoDeContratacion {
   /** El equipo elegido: de ahí sale quién ocupa cada puesto. */
   equipoId?: string;
-  /** Lo cambiado esta vez (personas, horario, categoría, importe) queda también en el equipo. */
-  guardarEnEquipo?: boolean;
   fechas?: string[];
   desde?: string;
   hasta?: string;
@@ -218,7 +239,8 @@ const crudDe = (base: string) => ({
   async duplicar(id: string, nombre?: string): Promise<Plantilla> {
     return (await axios.post(`${base}/${id}/duplicar`, { nombre })).data;
   },
-  async crear(datos: ComunesPlantilla & { projectId?: string; nombre: string; puestos?: NuevoPuesto[] }): Promise<Plantilla> {
+  /** `sinEquipos`: nace sin «Equipo 1» (los equipos se crean con su turno). */
+  async crear(datos: ComunesPlantilla & { projectId?: string; nombre: string; puestos?: NuevoPuesto[]; sinEquipos?: boolean }): Promise<Plantilla> {
     return (await axios.post(`${base}`, datos)).data;
   },
   async agregarPuestos(id: string, puestos: NuevoPuesto[], equipoId?: string): Promise<Plantilla> {
@@ -240,8 +262,17 @@ export const plantillasEquipoAPI = {
     return (await axios.post(`/plantillas-equipo/${id}/preview`, pedido)).data;
   },
   // ── Los equipos (quién ocupa cada puesto) ──
-  async crearEquipo(id: string, nombre: string, copiarDe?: string): Promise<Plantilla> {
-    return (await axios.post(`/plantillas-equipo/${id}/equipos`, { nombre, copiarDe })).data;
+  /** Nombre + condiciones (el turno) en un paso; `copiarDe` trae las personas de otro equipo. */
+  async crearEquipo(id: string, nombre: string, copiarDe?: string, condiciones?: CondicionesEquipo): Promise<Plantilla> {
+    return (await axios.post(`/plantillas-equipo/${id}/equipos`, { nombre, copiarDe, condiciones })).data;
+  },
+  /** Las condiciones del equipo: valen para todos sus puestos. Lo que no viene, queda. */
+  async condicionesEquipo(id: string, equipoId: string, datos: CondicionesEquipo): Promise<Plantilla> {
+    return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}/condiciones`, datos)).data;
+  },
+  /** El reemplazo del puesto (único lugar donde se crea uno), o `{ quitar: true }`. */
+  async reemplazo(id: string, equipoId: string, puestoId: string, datos: { replacedUserId: string; motivoReemplazoId?: string | null } | { motivoReemplazoId: string | null; replacedUserId: string } | { quitar: true }): Promise<Plantilla> {
+    return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}/puestos/${puestoId}/reemplazo`, datos)).data;
   },
   async renombrarEquipo(id: string, equipoId: string, nombre: string): Promise<Plantilla> {
     return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}`, { nombre })).data;

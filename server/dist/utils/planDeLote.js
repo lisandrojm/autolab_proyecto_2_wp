@@ -188,7 +188,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
                 empleado_id_reemplezado: p.empleado_id_reemplezado,
                 replacedUserId: p.replacedUserId,
                 motivoReemplazoId: p.motivoReemplazoId,
-                comentarios: integ.comentarios || plantilla.comentarios || "",
+                comentarios: p.comentarios ?? (integ.comentarios || plantilla.comentarios || ""),
                 tipoImpositivo,
                 contratoId,
                 nombreContrato,

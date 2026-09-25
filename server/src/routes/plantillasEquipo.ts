@@ -10,6 +10,8 @@ import {
   agregarPuestos,
   asignarPuesto,
   condicionesEnEquipo,
+  condicionesDelEquipo,
+  reemplazoEnEquipo,
   usoDelPuestoEnEquipo,
   borrarEquipo,
   borrarPlantilla,
@@ -90,7 +92,10 @@ router.post("/generales/:id/usar", ...movil, manejar(async (req, res) => {
 
 router.use(rutasDe("personal", movil));
 // Los equipos (quién ocupa cada puesto): sólo en las personales.
-router.post("/:id/equipos", ...movil, manejar((req) => crearEquipo(acceso(req, "personal"), req.params.id, String(req.body?.nombre || ""), req.body?.copiarDe)));
+// Nombre + condiciones (el turno) en el mismo pedido; `copiarDe` trae las personas de otro equipo.
+router.post("/:id/equipos", ...movil, manejar((req) => crearEquipo(acceso(req, "personal"), req.params.id, String(req.body?.nombre || ""), req.body?.copiarDe, req.body?.condiciones)));
+// Las condiciones del equipo (contrato, área y turno, horario, días): valen para todos sus puestos.
+router.put("/:id/equipos/:equipoId/condiciones", ...movil, manejar((req) => condicionesDelEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.body || {})));
 router.put("/:id/equipos/:equipoId", ...movil, manejar((req) => renombrarEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, String(req.body?.nombre || ""))));
 router.delete("/:id/equipos/:equipoId", ...movil, manejar((req) => borrarEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId)));
 // `userId: null` deja el puesto sin asignar en ese equipo.
@@ -99,6 +104,8 @@ router.put("/:id/equipos/:equipoId/puestos/:puestoId", ...movil, manejar((req) =
 router.put("/:id/equipos/:equipoId/puestos/:puestoId/condiciones", ...movil, manejar((req) => condicionesEnEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body || {})));
 // `excluido: true` saca el puesto de ESE equipo (sigue en la plantilla); `false` lo vuelve a usar.
 router.put("/:id/equipos/:equipoId/puestos/:puestoId/uso", ...movil, manejar((req) => usoDelPuestoEnEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body?.excluido === true)));
+// El reemplazo del puesto: `{ replacedUserId, motivoReemplazoId }`, o `{ quitar: true }`. Único lugar donde se crea uno.
+router.put("/:id/equipos/:equipoId/puestos/:puestoId/reemplazo", ...movil, manejar((req) => reemplazoEnEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body || {})));
 // No escribe nada: lo que saldría, con importes, errores y advertencias por puesto.
 router.post("/:id/preview", ...movil, manejar((req) => previewDeContratacion(acceso(req, "personal"), req.params.id, req.body || {})));
 // Todo o nada, con `idempotencyKey`.

@@ -90,6 +90,8 @@ export interface Puntual {
   motivoReemplazoId?: string;
   replacedUserId?: string;
   empleado_id_reemplezado?: string | number;
+  /** El comentario de ESTA solicitud (en la revisión). Sin él, el del puesto o el de la plantilla. */
+  comentarios?: string;
 }
 
 export interface AvisoDeSuperposicionPlan {
@@ -300,7 +302,7 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
           empleado_id_reemplezado: p.empleado_id_reemplezado,
           replacedUserId: p.replacedUserId,
           motivoReemplazoId: p.motivoReemplazoId,
-          comentarios: integ.comentarios || plantilla.comentarios || "",
+          comentarios: p.comentarios ?? (integ.comentarios || plantilla.comentarios || ""),
           tipoImpositivo,
           contratoId,
           nombreContrato,
