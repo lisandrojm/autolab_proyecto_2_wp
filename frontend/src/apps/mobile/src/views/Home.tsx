@@ -136,10 +136,10 @@ export default function Home({ onNavigate }: HomeProps) {
   };
 
   const userCreateAction = {
-    // «Contratación» y no «Usuarios»: lo que se hace acá es pedir un alta, no administrar gente. El
-    // nombre viejo prometía una pantalla de usuarios que esta no es.
+    // «Contratos» y no «Usuarios»: lo que se hace acá es pedir altas y renovar contratos, no administrar
+    // gente. El nombre viejo prometía una pantalla de usuarios que esta no es.
     icon: faUsers,
-    title: "Contratación",
+    title: "Contratos",
     view: "user_history" as ViewType,
     disabled: false,
     /*
@@ -330,7 +330,7 @@ export default function Home({ onNavigate }: HomeProps) {
               */}
               <FontAwesomeIcon icon={action.icon} className={`h-4 w-4 shrink-0 ${action.disabled ? "text-slate-400 dark:text-slate-500" : "text-primary"}`} />
               {/* Con contador, el título deja libre la esquina: si no, un nombre largo le pasa por debajo. */}
-              <h2 className={`min-w-0 break-words text-base font-bold leading-tight text-slate-900 dark:text-slate-100 ${(action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
+              <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight sm:text-base text-slate-900 dark:text-slate-100 ${(action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
 
               {/*
                 CUÁNTO HAY SIN MIRAR: EN LA ESQUINA, CHICO Y VERDE.

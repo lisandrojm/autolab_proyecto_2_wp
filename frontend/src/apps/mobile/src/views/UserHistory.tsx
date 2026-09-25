@@ -514,7 +514,8 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           ).map((t) => (
             <button key={t.id} type="button" onClick={() => setPestana(t.id)} className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors ${pestana === t.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
               {t.label}
-              {t.id === "por_vencer" && porVencer && porVencer.length > 0 && <span className="min-w-[18px] rounded-full bg-amber-500 px-1.5 text-[10px] leading-[18px] text-white">{porVencer.length}</span>}
+              {/* Entre paréntesis, como texto: un globo de color en la pestaña pesa más que el nombre. */}
+              {t.id === "por_vencer" && porVencer && porVencer.length > 0 && ` (${porVencer.length})`}
             </button>
           ))}
         </div>
