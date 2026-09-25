@@ -6,6 +6,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, useCatalogosContratacion } from "./useCatalogosContratacion";
 import PlantillaEditor from "./PlantillaEditor";
 import ContratarEquipoModal from "./ContratarEquipoModal";
+import ContratarTodosModal from "./ContratarTodosModal";
 import { CLASE_CAMPO, fechaCorta } from "./comun";
 
 /*
@@ -35,6 +36,8 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
   const [verGenerales, setVerGenerales] = useState(false);
   const [editando, setEditando] = useState<{ id: string | null; equipoId?: string } | null>(null);
   const [contratando, setContratando] = useState<{ plantilla: Plantilla; equipoId?: string } | null>(null);
+  /** «Contratar todos»: los equipos de la plantilla de una vez. */
+  const [contratandoTodos, setContratandoTodos] = useState<Plantilla | null>(null);
 
   const proyectos = catalogos.proyectos;
   // El recordado, si sigue siendo suyo; si no, el primero.
@@ -103,6 +106,14 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
   const abrirContratar = async (p: PlantillaResumen, equipoId?: string) => {
     try {
       setContratando({ plantilla: await plantillasEquipoAPI.obtener(p._id), equipoId });
+    } catch {
+      sweetAlert.error("No se pudo abrir la plantilla");
+    }
+  };
+
+  const abrirContratarTodos = async (p: PlantillaResumen) => {
+    try {
+      setContratandoTodos(await plantillasEquipoAPI.obtener(p._id));
     } catch {
       sweetAlert.error("No se pudo abrir la plantilla");
     }
@@ -239,7 +250,8 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
                         {e.avisos > 0 && <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 text-amber-500" title="Hay puestos que se pisan" />}
                       </p>
                       <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {e.asignados}/{p.puestos} asignados
+                        {e.asignados}/{e.puestos ?? p.puestos} asignados
+                        {e.puestos != null && e.puestos < p.puestos ? ` · usa ${e.puestos} de ${p.puestos} puestos` : ""}
                         {e.propias > 0 && (
                           <>
                             {" · "}
@@ -277,12 +289,31 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
                 <FontAwesomeIcon icon={faPlus} />
                 Nuevo equipo con estos puestos
               </button>
+              {/* Con más de un equipo: todos juntos, cada uno con sus fechas, en un solo envío. */}
+              {p.equipos.length > 1 && (
+                <button type="button" onClick={() => void abrirContratarTodos(p)} disabled={p.puestos === 0} className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-bold text-white disabled:opacity-40">
+                  <FontAwesomeIcon icon={faFileSignature} />
+                  Contratar todos los equipos ({p.equipos.length})
+                </button>
+              )}
             </div>
           </div>
         ))
       )}
 
       <PlantillaEditor isOpen={!!editando} onClose={() => setEditando(null)} plantillaId={editando?.id ?? null} equipoInicial={editando?.equipoId ?? null} proyecto={proyecto} catalogos={catalogos} onCambio={cargar} onProyecto={setProjectId} />
+      <ContratarTodosModal
+        isOpen={!!contratandoTodos}
+        onClose={() => setContratandoTodos(null)}
+        plantilla={contratandoTodos}
+        proyecto={proyecto}
+        catalogos={catalogos}
+        onAjustar={(equipoId) => contratandoTodos && setContratando({ plantilla: contratandoTodos, equipoId })}
+        onContratada={() => {
+          cargar();
+          onContratado();
+        }}
+      />
       <ContratarEquipoModal
         isOpen={!!contratando}
         onClose={() => setContratando(null)}

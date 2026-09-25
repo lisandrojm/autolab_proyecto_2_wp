@@ -177,6 +177,10 @@ async function condicionesDesde(p, puesto, body, acc) {
     }
     return Object.keys(c).length ? c : null;
 }
+/** ¿El equipo usa este puesto? (`excluido` = lo sacaron de ese equipo, sigue en la plantilla). */
+const usaElPuesto = (equipo, puestoId) => !(equipo?.asignaciones || []).some((a) => String(a.puestoId) === String(puestoId) && a.excluido);
+/** Una asignación que ya no dice nada (sin persona, sin condiciones, sin excluir) se saca. */
+const vacia = (a) => !a.userId && !a.condiciones && !a.excluido;
 /** Condiciones para devolver al cliente: ids como texto. */
 const condicionesParaMostrar = (c) => (c ? Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v instanceof Types.ObjectId ? String(v) : v])) : null);
 /** Los compromisos de todas las personas asignadas en estas plantillas, una búsqueda por persona. */
@@ -196,7 +200,9 @@ async function compromisosDeLasPlantillas(tenantId, plantillas) {
 function avisosDelEquipo(p, equipo, porDiasSueltos, compromisos, hoy) {
     const puestos = [...(p.integrantes || [])]
         .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
-        .map((i, n) => {
+        .map((i, n) => ({ i, n }))
+        .filter(({ i }) => usaElPuesto(equipo, i._id))
+        .map(({ i, n }) => {
         const a = (equipo.asignaciones || []).find((x) => String(x.puestoId) === String(i._id));
         const e = puestoEnEquipo(i, a);
         const contratoId = String(e.contratoId || p.contratoId || "");
@@ -254,7 +260,9 @@ export async function listarPlantillas(acc, projectId) {
         equipos: (p.equipos || []).map((e) => ({
             _id: String(e._id),
             nombre: e.nombre,
-            asignados: (e.asignaciones || []).filter((a) => a.userId).length,
+            asignados: (e.asignaciones || []).filter((a) => a.userId && !a.excluido).length,
+            // Los puestos que usa ESTE equipo (los de la plantilla menos los que sacó).
+            puestos: (p.integrantes || []).filter((i) => usaElPuesto(e, i._id)).length,
             // Cuántos puestos tienen condiciones propias en este equipo (otro horario, otro turno…).
             propias: (e.asignaciones || []).filter((a) => a.condiciones && Object.keys(a.condiciones).length).length,
             avisos: Object.keys(avisosDelEquipo(p, e, porDiasSueltos, compromisos, hoy)).length,
@@ -295,6 +303,7 @@ export async function obtenerPlantilla(acc, id) {
                     nombre: !a.userId ? "" : u ? nombreDe(u) : "Persona no encontrada",
                     activo: !!u && u.metadata?.activo !== false,
                     condiciones: condicionesParaMostrar(a.condiciones),
+                    excluido: !!a.excluido,
                     reemplazadoDePersonaId: a.reemplazadoDePersonaId ? String(a.reemplazadoDePersonaId) : null,
                     reemplazadoDeNombre: a.reemplazadoDePersonaId ? nombreDe(persona.get(String(a.reemplazadoDePersonaId))) : "",
                     reemplazadoEl: a.reemplazadoEl || null,
@@ -507,7 +516,7 @@ export async function crearEquipo(acc, id, nombre, copiarDeId) {
     if (p.equipos.some((e) => e.nombre.toLowerCase() === n.toLowerCase()))
         throw new ErrorPlantilla(409, "Ya hay un equipo con ese nombre en la plantilla.");
     const origen = copiarDeId ? p.equipos.find((e) => String(e._id) === String(copiarDeId)) : null;
-    p.equipos.push({ nombre: n, asignaciones: origen ? origen.asignaciones.map((a) => ({ puestoId: a.puestoId, userId: a.userId, condiciones: a.condiciones || null })) : [] });
+    p.equipos.push({ nombre: n, asignaciones: origen ? origen.asignaciones.map((a) => ({ puestoId: a.puestoId, userId: a.userId, condiciones: a.condiciones || null, excluido: !!a.excluido })) : [] });
     await p.save();
     return obtenerPlantilla(acc, id);
 }
@@ -549,10 +558,11 @@ export async function asignarPuesto(acc, id, equipoId, puestoId, userId) {
         throw new ErrorPlantilla(404, "Ese puesto ya no está en la plantilla.");
     const actual = e.asignaciones.find((a) => String(a.puestoId) === String(puestoId));
     if (userId === null || userId === "") {
-        if (actual?.condiciones)
-            Object.assign(actual, { userId: null });
-        else
-            e.asignaciones = e.asignaciones.filter((a) => String(a.puestoId) !== String(puestoId));
+        if (actual) {
+            actual.userId = null;
+            if (vacia(actual))
+                e.asignaciones = e.asignaciones.filter((a) => a !== actual);
+        }
     }
     else {
         if (!idOk(userId))
@@ -590,11 +600,35 @@ export async function condicionesEnEquipo(acc, id, equipoId, puestoId, body) {
     const actual = e.asignaciones.find((a) => String(a.puestoId) === String(puestoId));
     if (actual) {
         actual.condiciones = condiciones;
-        if (!condiciones && !actual.userId)
+        if (vacia(actual))
             e.asignaciones = e.asignaciones.filter((a) => a !== actual);
     }
     else if (condiciones)
         e.asignaciones.push({ puestoId: oid(puestoId), userId: null, condiciones });
+    p.markModified("equipos");
+    await p.save();
+    return obtenerPlantilla(acc, id);
+}
+/**
+ * SACAR UN PUESTO DE UN EQUIPO (o volver a usarlo). Armado el equipo, los puestos que no usa se sacan
+ * de ESE equipo: no se asignan, no se contratan, no cuentan. Siguen en la plantilla de puestos para los
+ * demás equipos. Se conserva quién lo ocupaba y sus condiciones, por si se vuelve a usar.
+ */
+export async function usoDelPuestoEnEquipo(acc, id, equipoId, puestoId, excluido) {
+    const p = await cargar(acc, id);
+    const e = p.equipos.find((x) => String(x._id) === String(equipoId));
+    if (!e)
+        throw new ErrorPlantilla(404, "Ese equipo ya no está en la plantilla.");
+    if (!p.integrantes.some((x) => String(x._id) === String(puestoId)))
+        throw new ErrorPlantilla(404, "Ese puesto ya no está en la plantilla.");
+    const actual = e.asignaciones.find((a) => String(a.puestoId) === String(puestoId));
+    if (actual) {
+        actual.excluido = excluido;
+        if (vacia(actual))
+            e.asignaciones = e.asignaciones.filter((a) => a !== actual);
+    }
+    else if (excluido)
+        e.asignaciones.push({ puestoId: oid(puestoId), userId: null, condiciones: null, excluido: true });
     p.markModified("equipos");
     await p.save();
     return obtenerPlantilla(acc, id);
@@ -645,6 +679,8 @@ function paraPlan(p, equipoId) {
         },
         integrantes: [...(p.integrantes || [])]
             .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+            // Los que el equipo no usa no se contratan.
+            .filter((puesto) => !asignacion.get(String(puesto._id))?.excluido)
             // Lo del puesto, pisado por las condiciones propias del equipo elegido.
             .map((puesto) => ({ a: asignacion.get(String(puesto._id)), i: puestoEnEquipo(puesto, asignacion.get(String(puesto._id))) }))
             .map(({ a, i }) => ({
@@ -696,32 +732,41 @@ async function contextoDe(tenantId, p, integrantes, puntuales) {
     };
 }
 /**
- * El plan completo. Dos pasadas: la primera resuelve las fechas de cada persona (una puede tener otros
- * días), con eso se buscan sus superposiciones, y la segunda las suma como advertencias.
+ * Los planes de VARIOS equipos de la plantilla contratados juntos («Contratar todos»), o de uno. Dos
+ * pasadas: la primera resuelve las fechas de cada persona, con eso se buscan sus superposiciones —con
+ * lo que ya tiene en la base y con sus OTROS puestos de esta misma contratación, de cualquier equipo—,
+ * y la segunda las suma como advertencias.
  */
-export async function planificar(tenantId, p, body) {
-    const { plantilla, integrantes } = paraPlan(p, String(body?.equipoId || ""));
-    const { fechas, puntuales } = leerContratacion(body);
-    const ctx = await contextoDe(tenantId, p, integrantes, puntuales);
-    const borrador = planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
-    const conFechas = borrador.filas.filter((f) => !f.excluido && f.datos && (f.datos.startDate || f.datos.fechasTrabajadas.length));
-    const pedidos = new Map(conFechas.map((f) => [f.integranteId, pedidoDesdeSolicitud(armarPayloadDeSolicitud(f.datos).metadata)]));
-    const numero = new Map(integrantes.map((i, n) => [i._id, n + 1]));
-    const hoy = hoyArgentina();
-    await Promise.all(conFechas.map(async (f) => {
-        const pedido = pedidos.get(f.integranteId);
-        const avisos = await superposicionesDeAlta(tenantId, f.userId, pedido);
-        // La misma persona en otro puesto de ESTA contratación: todavía no existe en la base, se compara acá.
-        const otrosPuestos = conFechas
-            .filter((o) => o.integranteId !== f.integranteId && o.userId === f.userId)
-            .map((o) => {
-            const x = pedidos.get(o.integranteId);
-            return { origen: "lote", proyectoNombre: `puesto ${numero.get(o.integranteId)}`, desde: x.desde, hasta: x.hasta, fechas: x.fechas, dias: x.dias, rotativos: x.rotativos, inTime: x.inTime, outTime: x.outTime, shiftIds: x.shiftIds };
-        });
-        const delLote = superposiciones(pedido, otrosPuestos, hoy);
-        ctx.superposiciones.set(f.integranteId, [...delLote, ...avisos].map((a) => ({ tipo: a.tipo, mensaje: a.mensaje })));
+export async function planificarVarios(tenantId, p, bodies) {
+    const nombreEquipo = new Map((p.equipos || []).map((e) => [String(e._id), e.nombre]));
+    const partes = await Promise.all(bodies.map(async (body, k) => {
+        const equipoId = String(body?.equipoId || "");
+        const { plantilla, integrantes } = paraPlan(p, equipoId);
+        const { fechas, puntuales } = leerContratacion(body);
+        const ctx = await contextoDe(tenantId, p, integrantes, puntuales);
+        const borrador = planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
+        const numero = new Map(integrantes.map((i, n) => [i._id, n + 1]));
+        const conFechas = borrador.filas
+            .filter((f) => !f.excluido && f.datos && (f.datos.startDate || f.datos.fechasTrabajadas.length))
+            .map((f) => ({ k, f, pedido: pedidoDesdeSolicitud(armarPayloadDeSolicitud(f.datos).metadata), etiqueta: `puesto ${numero.get(f.integranteId)}`, equipo: nombreEquipo.get(equipoId) || "" }));
+        return { plantilla, integrantes, fechas, puntuales, ctx, conFechas };
     }));
-    return planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
+    const todas = partes.flatMap((x) => x.conFechas);
+    const hoy = hoyArgentina();
+    await Promise.all(todas.map(async (x) => {
+        const avisos = await superposicionesDeAlta(tenantId, x.f.userId, x.pedido);
+        // La misma persona en otro puesto de ESTA contratación (de este equipo o de otro): todavía no existe en la base.
+        const otrosPuestos = todas
+            .filter((o) => o !== x && o.f.userId === x.f.userId)
+            .map((o) => ({ ...o.pedido, origen: "lote", proyectoNombre: o.k === x.k ? o.etiqueta : `«${o.equipo}», ${o.etiqueta}` }));
+        const delLote = superposiciones(x.pedido, otrosPuestos, hoy);
+        partes[x.k].ctx.superposiciones.set(x.f.integranteId, [...delLote, ...avisos].map((a) => ({ tipo: a.tipo, mensaje: a.mensaje })));
+    }));
+    return partes.map((x) => planDeLote(x.plantilla, x.integrantes, x.fechas, x.puntuales, x.ctx));
+}
+/** El plan de un equipo. */
+export async function planificar(tenantId, p, body) {
+    return (await planificarVarios(tenantId, p, [body]))[0];
 }
 /** Sin `datos` (el payload), que es interno: al cliente le va lo que se muestra. */
 const paraMostrar = (plan) => ({
@@ -776,84 +821,128 @@ async function asignacionesConCambios(p, equipo, body) {
 /**
  * CONTRATAR: revalida TODO (no confía en el preview que vio el cliente) y, sin errores, crea las N
  * solicitudes + el lote en una transacción. Con la misma `idempotencyKey` devuelve el lote ya creado.
- * Con `guardarEnEquipo`, las personas cambiadas «sólo esta vez» quedan también en el equipo elegido.
+ * Con `guardarEnEquipo`, lo cambiado «sólo esta vez» queda también en el equipo elegido.
  */
 export async function contratarPlantilla(acc, id, body) {
+    const r = await contratarLotes(acc, id, [body], body?.idempotencyKey);
+    const [l] = r.lotes;
+    return { repetido: r.repetido, loteId: l.loteId, solicitudIds: l.solicitudIds, totales: l.totales, nombrePlantilla: l.nombrePlantilla };
+}
+/** «CONTRATAR TODOS»: el preview de varios equipos a la vez (cada uno con sus fechas). */
+export async function previewDeVarios(acc, id, body) {
+    const pedidos = leerPedidosDeVarios(body);
+    const p = await cargar(acc, id);
+    const planes = await planificarVarios(acc.tenantId, p.toObject(), pedidos);
+    return { equipos: planes.map((plan, k) => ({ equipoId: String(pedidos[k].equipoId || ""), ...paraMostrar(plan) })) };
+}
+/** «CONTRATAR TODOS»: todos los equipos pedidos, TODO O NADA, un lote por equipo. */
+export async function contratarVarios(acc, id, body) {
+    return contratarLotes(acc, id, leerPedidosDeVarios(body), body?.idempotencyKey);
+}
+function leerPedidosDeVarios(body) {
+    const pedidos = (Array.isArray(body?.equipos) ? body.equipos : []).filter((x) => idOk(x?.equipoId));
+    if (!pedidos.length)
+        throw new ErrorPlantilla(400, "Elegí al menos un equipo para contratar.");
+    if (new Set(pedidos.map((x) => String(x.equipoId))).size !== pedidos.length)
+        throw new ErrorPlantilla(400, "Un equipo vino dos veces.");
+    return pedidos;
+}
+/**
+ * EL NÚCLEO DE CONTRATAR: uno o varios equipos. Revalida todo y, si NINGUNO tiene errores, crea en UNA
+ * transacción las solicitudes y un lote por equipo (el Historial agrupa por lote: «Plantilla · Equipo»).
+ * La clave de idempotencia de cada lote es la del pedido más el equipo; si la del primero ya existe, es
+ * un reintento y se devuelve lo ya creado.
+ */
+async function contratarLotes(acc, id, pedidos, claveBase) {
     const tenantId = acc.tenantId;
     const creadorId = acc.userId;
-    const clave = str(body?.idempotencyKey).trim();
+    const clave = str(claveBase).trim();
     if (!clave || clave.length > 100)
         throw new ErrorPlantilla(400, "Falta la clave de la contratación (idempotencyKey).");
-    const yaHecho = await LoteContratacion.findOne({ tenantId, idempotencyKey: clave }).lean();
-    if (yaHecho)
-        return { repetido: true, loteId: String(yaHecho._id), solicitudIds: yaHecho.solicitudIds.map(String), totales: yaHecho.totales, nombrePlantilla: yaHecho.nombrePlantilla };
+    // Uno solo conserva la clave tal cual (los lotes viejos se buscan así); varios, clave + equipo.
+    const claveDe = (k) => (pedidos.length === 1 ? clave : `${clave.slice(0, 70)}:${String(pedidos[k]?.equipoId || k)}`);
+    const resumen = (l) => ({ loteId: String(l._id), solicitudIds: l.solicitudIds.map(String), totales: l.totales, nombrePlantilla: l.nombrePlantilla });
+    const yaHechos = await LoteContratacion.find({ tenantId, idempotencyKey: { $in: pedidos.map((_, k) => claveDe(k)) } }).lean();
+    if (yaHechos.length)
+        return { repetido: true, lotes: yaHechos.map(resumen) };
     const p = await cargar(acc, id);
     const plantillaObj = p.toObject();
-    const equipoId = String(body?.equipoId || "");
-    const equipo = plantillaObj.equipos?.find((e) => String(e._id) === equipoId);
-    const plan = await planificar(tenantId, plantillaObj, body);
-    const errores = erroresDelLote(plan);
-    if (errores.length)
-        throw new ErrorPlantilla(422, errores.join(" "), paraMostrar(plan));
-    const incluidas = plan.filas.filter((f) => !f.excluido);
+    const planes = await planificarVarios(tenantId, plantillaObj, pedidos);
+    const fallas = planes.map((plan, k) => ({ k, errores: erroresDelLote(plan) })).filter((x) => x.errores.length);
+    if (fallas.length) {
+        const nombre = (k) => plantillaObj.equipos?.find((e) => String(e._id) === String(pedidos[k]?.equipoId))?.nombre;
+        const mensaje = fallas.map((x) => (pedidos.length > 1 ? `«${nombre(x.k) || "Equipo"}»: ${x.errores.join(" ")}` : x.errores.join(" "))).join(" ");
+        const extra = pedidos.length === 1 ? paraMostrar(planes[0]) : { equipos: planes.map((plan, k) => ({ equipoId: String(pedidos[k].equipoId || ""), ...paraMostrar(plan) })) };
+        throw new ErrorPlantilla(422, mensaje, extra);
+    }
+    const personas = planes.reduce((s, plan) => s + plan.totales.personas, 0);
+    if (personas > MAX_INTEGRANTES_POR_LOTE * 4)
+        throw new ErrorPlantilla(400, `Son ${personas} personas: el máximo para contratar de una vez es ${MAX_INTEGRANTES_POR_LOTE * 4}.`);
     const ahora = Date.now();
     const aleatorio = Math.random().toString(36).slice(2, 7);
-    const nombreLote = equipo ? `${p.nombre} · ${equipo.nombre}` : p.nombre;
+    const lotes = pedidos.map((body, k) => {
+        const equipoId = String(body?.equipoId || "");
+        const equipo = plantillaObj.equipos?.find((e) => String(e._id) === equipoId);
+        return { body, equipoId, equipo, plan: planes[k], loteId: new Types.ObjectId(), nombre: equipo ? `${p.nombre} · ${equipo.nombre}` : p.nombre, creadas: [] };
+    });
+    // Lo que se guarda en cada equipo («Guardar en el equipo»): se calcula antes de abrir la transacción.
+    const cambiosEnEquipo = await Promise.all(lotes.map((l) => (l.equipo && l.body?.guardarEnEquipo === true ? asignacionesConCambios(p, l.equipo, l.body) : Promise.resolve(null))));
     const sesion = await mongoose.startSession().catch(() => null);
     if (!sesion)
         throw new ErrorPlantilla(503, "La base no permite guardar el lote entero de una vez (sin transacciones): no se creó nada.");
-    const loteId = new Types.ObjectId();
-    const creadas = [];
     try {
         await sesion.withTransaction(async () => {
-            creadas.length = 0;
+            for (const l of lotes)
+                l.creadas.length = 0;
             const roles = await rolesPorDefecto(tenantId, sesion);
-            for (let n = 0; n < incluidas.length; n++) {
-                const f = incluidas[n];
-                // El MISMO camino que `POST /users`: payload compartido, mismo esquema, mismos sellos del server.
-                const payload = armarPayloadDeSolicitud(f.datos, { ahora, sufijoEmail: `_${n + 1}_${aleatorio}` });
-                const data = createUserSchema.parse(payload);
-                normalizarRolesFrame(data.metadata);
-                data.metadata.loteId = loteId;
-                data.metadata.plantillaEquipoId = p._id;
-                // Congelado al contratar: renombrar la plantilla o el equipo después no cambia cómo se llamó este lote.
-                data.metadata.loteNombre = nombreLote;
-                const rechazo = await prepararSolicitudNueva(tenantId, creadorId, data.metadata);
-                if (rechazo)
-                    throw new ErrorPlantilla(422, `${f.nombre}: ${rechazo}`);
-                const [u] = await User.create([{ ...data, roles, tenantId }], { session: sesion });
-                creadas.push(u);
-            }
-            await LoteContratacion.create([
-                {
-                    _id: loteId,
-                    tenantId,
-                    plantillaEquipoId: p._id,
-                    projectId: p.projectId,
-                    nombrePlantilla: nombreLote,
-                    idempotencyKey: clave,
-                    creadoPor: oid(creadorId),
-                    solicitudIds: creadas.map((u) => u._id),
-                    totales: { personas: plan.totales.personas, jornadas: plan.totales.jornadas, importe: plan.totales.importe },
-                },
-            ], { session: sesion });
-            // El equipo: cuándo se contrató y, si se pidió, las personas cambiadas esta vez.
-            const set = { ultimaContratacionEl: new Date(), ultimoLoteId: loteId };
-            if (equipo) {
-                const idx = plantillaObj.equipos.findIndex((e) => String(e._id) === equipoId);
-                set[`equipos.${idx}.ultimaContratacionEl`] = new Date();
-                if (body?.guardarEnEquipo === true)
-                    set[`equipos.${idx}.asignaciones`] = await asignacionesConCambios(p, equipo, body);
+            let n = 0;
+            const set = { ultimaContratacionEl: new Date(), ultimoLoteId: lotes[lotes.length - 1].loteId };
+            for (const [k, l] of lotes.entries()) {
+                for (const f of l.plan.filas.filter((x) => !x.excluido)) {
+                    // El MISMO camino que `POST /users`: payload compartido, mismo esquema, mismos sellos del server.
+                    const payload = armarPayloadDeSolicitud(f.datos, { ahora, sufijoEmail: `_${++n}_${aleatorio}` });
+                    const data = createUserSchema.parse(payload);
+                    normalizarRolesFrame(data.metadata);
+                    data.metadata.loteId = l.loteId;
+                    data.metadata.plantillaEquipoId = p._id;
+                    // Congelado al contratar: renombrar la plantilla o el equipo después no cambia cómo se llamó este lote.
+                    data.metadata.loteNombre = l.nombre;
+                    const rechazo = await prepararSolicitudNueva(tenantId, creadorId, data.metadata);
+                    if (rechazo)
+                        throw new ErrorPlantilla(422, `${f.nombre}: ${rechazo}`);
+                    const [u] = await User.create([{ ...data, roles, tenantId }], { session: sesion });
+                    l.creadas.push(u);
+                }
+                await LoteContratacion.create([
+                    {
+                        _id: l.loteId,
+                        tenantId,
+                        plantillaEquipoId: p._id,
+                        projectId: p.projectId,
+                        nombrePlantilla: l.nombre,
+                        idempotencyKey: claveDe(k),
+                        creadoPor: oid(creadorId),
+                        solicitudIds: l.creadas.map((u) => u._id),
+                        totales: { personas: l.plan.totales.personas, jornadas: l.plan.totales.jornadas, importe: l.plan.totales.importe },
+                    },
+                ], { session: sesion });
+                // El equipo: cuándo se contrató y, si se pidió, lo cambiado esta vez.
+                if (l.equipo) {
+                    const idx = plantillaObj.equipos.findIndex((e) => String(e._id) === l.equipoId);
+                    set[`equipos.${idx}.ultimaContratacionEl`] = new Date();
+                    if (cambiosEnEquipo[k])
+                        set[`equipos.${idx}.asignaciones`] = cambiosEnEquipo[k];
+                }
             }
             await PlantillaEquipo.updateOne({ _id: p._id }, { $set: set }, { session: sesion });
         });
     }
     catch (e) {
-        // Doble toque que llegó a la vez: el otro pedido ya creó el lote con esta clave.
+        // Doble toque que llegó a la vez: el otro pedido ya creó los lotes con esta clave.
         if (e?.code === 11000 && /idempotencyKey/.test(String(e?.message || JSON.stringify(e?.keyPattern || {})))) {
-            const otro = await LoteContratacion.findOne({ tenantId, idempotencyKey: clave }).lean();
-            if (otro)
-                return { repetido: true, loteId: String(otro._id), solicitudIds: otro.solicitudIds.map(String), totales: otro.totales, nombrePlantilla: otro.nombrePlantilla };
+            const otros = await LoteContratacion.find({ tenantId, idempotencyKey: { $in: pedidos.map((_, k) => claveDe(k)) } }).lean();
+            if (otros.length)
+                return { repetido: true, lotes: otros.map(resumen) };
         }
         if (/Transaction numbers are only allowed|replica set/i.test(String(e?.message)))
             throw new ErrorPlantilla(503, "La base no permite guardar el lote entero de una vez (sin transacciones): no se creó nada.");
@@ -863,7 +952,7 @@ export async function contratarPlantilla(acc, id, body) {
         await sesion.endSession();
     }
     // Después del commit, como en el alta individual: un aviso por solicitud a quien aprueba.
-    for (const u of creadas) {
+    for (const u of lotes.flatMap((l) => l.creadas)) {
         try {
             await efectosDeSolicitudNueva(tenantId, creadorId, u);
         }
@@ -871,5 +960,5 @@ export async function contratarPlantilla(acc, id, body) {
             console.error("[PLANTILLA] Aviso de solicitud nueva falló:", e);
         }
     }
-    return { repetido: false, loteId: String(loteId), solicitudIds: creadas.map((u) => String(u._id)), totales: plan.totales, nombrePlantilla: nombreLote };
+    return { repetido: false, lotes: lotes.map((l) => ({ loteId: String(l.loteId), solicitudIds: l.creadas.map((u) => String(u._id)), totales: l.plan.totales, nombrePlantilla: l.nombre })) };
 }

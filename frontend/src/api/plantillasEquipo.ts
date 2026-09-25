@@ -42,6 +42,8 @@ export interface Asignacion {
   userId: string | null;
   nombre: string;
   condiciones: Condiciones | null;
+  /** El equipo no usa este puesto (sigue en la plantilla para los demás equipos). */
+  excluido: boolean;
   activo: boolean;
   reemplazadoDePersonaId: string | null;
   reemplazadoDeNombre: string;
@@ -64,8 +66,11 @@ export const puestoEnEquipo = (puesto: Puesto, equipo?: Equipo | null): Puesto =
   return c ? { ...puesto, ...c } : puesto;
 };
 
-/** Los puestos de la plantilla como los ocupa ese equipo. */
-export const puestosDelEquipo = (plantilla: Plantilla, equipo?: Equipo | null): Puesto[] => plantilla.integrantes.map((p) => puestoEnEquipo(p, equipo));
+/** ¿El equipo usa ese puesto? */
+export const usaElPuesto = (equipo: Equipo | null | undefined, puestoId: string) => !equipo?.asignaciones.some((a) => a.puestoId === puestoId && a.excluido);
+
+/** Los puestos que usa ese equipo, como los ocupa (sin los que sacó). */
+export const puestosDelEquipo = (plantilla: Plantilla, equipo?: Equipo | null): Puesto[] => plantilla.integrantes.filter((p) => usaElPuesto(equipo, p._id)).map((p) => puestoEnEquipo(p, equipo));
 
 export interface Plantilla {
   _id: string;
@@ -96,7 +101,8 @@ export interface PlantillaResumen {
   nombreContrato: string;
   puestos: number;
   /** `propias` = puestos con condiciones propias en ese equipo; `avisos` = puestos que se pisan. */
-  equipos: { _id: string; nombre: string; asignados: number; propias: number; avisos: number; ultimaContratacionEl: string | null }[];
+  /** `puestos` = los que usa ese equipo (la plantilla menos los que sacó). */
+  equipos: { _id: string; nombre: string; asignados: number; puestos: number; propias: number; avisos: number; ultimaContratacionEl: string | null }[];
   ultimaContratacionEl: string | null;
 }
 
@@ -254,6 +260,10 @@ export const plantillasEquipoAPI = {
   async condiciones(id: string, equipoId: string, puestoId: string, datos: NuevoPuesto | { restablecer: true }): Promise<Plantilla> {
     return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}/puestos/${puestoId}/condiciones`, datos)).data;
   },
+  /** `excluido: true` saca el puesto de ESE equipo (sigue en la plantilla); `false` lo vuelve a usar. */
+  async usoDelPuesto(id: string, equipoId: string, puestoId: string, excluido: boolean): Promise<Plantilla> {
+    return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}/puestos/${puestoId}/uso`, { excluido })).data;
+  },
   /** Las generales del escritorio (sin proyecto ni personas), para elegir una y «Usarla». */
   async listarGenerales(): Promise<PlantillaResumen[]> {
     const { data } = await axios.get(`/plantillas-equipo/generales`);
@@ -265,6 +275,14 @@ export const plantillasEquipoAPI = {
   /** Copia una general como plantilla PERSONAL en ese proyecto. Devuelve la copia. */
   async usarGeneral(id: string, projectId: string, nombre?: string): Promise<Plantilla> {
     return (await axios.post(`/plantillas-equipo/generales/${id}/usar`, { projectId, nombre })).data;
+  },
+  /** «Contratar todos»: el preview de varios equipos, cada uno con sus fechas. */
+  async previewVarios(id: string, equipos: PedidoDeContratacion[]): Promise<{ equipos: (Preview & { equipoId: string })[] }> {
+    return (await axios.post(`/plantillas-equipo/${id}/preview-varios`, { equipos })).data;
+  },
+  /** «Contratar todos»: todo o nada, un lote por equipo. */
+  async contratarVarios(id: string, equipos: PedidoDeContratacion[], idempotencyKey: string): Promise<{ repetido: boolean; lotes: Omit<ResultadoContratacion, "repetido">[] }> {
+    return (await axios.post(`/plantillas-equipo/${id}/contratar-varios`, { equipos, idempotencyKey })).data;
   },
   /** Todo o nada. La misma `idempotencyKey` en un reintento devuelve el lote ya creado. */
   async contratar(id: string, pedido: PedidoDeContratacion, idempotencyKey: string): Promise<ResultadoContratacion> {

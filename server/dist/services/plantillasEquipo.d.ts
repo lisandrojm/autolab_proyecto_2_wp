@@ -74,9 +74,19 @@ export declare function asignarPuesto(acc: Acceso, id: string, equipoId: string,
  */
 export declare function condicionesEnEquipo(acc: Acceso, id: string, equipoId: string, puestoId: string, body: any): Promise<any>;
 /**
- * El plan completo. Dos pasadas: la primera resuelve las fechas de cada persona (una puede tener otros
- * días), con eso se buscan sus superposiciones, y la segunda las suma como advertencias.
+ * SACAR UN PUESTO DE UN EQUIPO (o volver a usarlo). Armado el equipo, los puestos que no usa se sacan
+ * de ESE equipo: no se asignan, no se contratan, no cuentan. Siguen en la plantilla de puestos para los
+ * demás equipos. Se conserva quién lo ocupaba y sus condiciones, por si se vuelve a usar.
  */
+export declare function usoDelPuestoEnEquipo(acc: Acceso, id: string, equipoId: string, puestoId: string, excluido: boolean): Promise<any>;
+/**
+ * Los planes de VARIOS equipos de la plantilla contratados juntos («Contratar todos»), o de uno. Dos
+ * pasadas: la primera resuelve las fechas de cada persona, con eso se buscan sus superposiciones —con
+ * lo que ya tiene en la base y con sus OTROS puestos de esta misma contratación, de cualquier equipo—,
+ * y la segunda las suma como advertencias.
+ */
+export declare function planificarVarios(tenantId: Types.ObjectId, p: any, bodies: any[]): Promise<PlanDeLote[]>;
+/** El plan de un equipo. */
 export declare function planificar(tenantId: Types.ObjectId, p: any, body: any): Promise<PlanDeLote>;
 export declare function previewDeContratacion(acc: Acceso, id: string, body: any): Promise<{
     filas: {
@@ -113,7 +123,7 @@ export declare function previewDeContratacion(acc: Acceso, id: string, body: any
 /**
  * CONTRATAR: revalida TODO (no confía en el preview que vio el cliente) y, sin errores, crea las N
  * solicitudes + el lote en una transacción. Con la misma `idempotencyKey` devuelve el lote ya creado.
- * Con `guardarEnEquipo`, las personas cambiadas «sólo esta vez» quedan también en el equipo elegido.
+ * Con `guardarEnEquipo`, lo cambiado «sólo esta vez» queda también en el equipo elegido.
  */
 export declare function contratarPlantilla(acc: Acceso, id: string, body: any): Promise<{
     repetido: boolean;
@@ -121,4 +131,50 @@ export declare function contratarPlantilla(acc: Acceso, id: string, body: any): 
     solicitudIds: any;
     totales: any;
     nombrePlantilla: any;
+}>;
+/** «CONTRATAR TODOS»: el preview de varios equipos a la vez (cada uno con sus fechas). */
+export declare function previewDeVarios(acc: Acceso, id: string, body: any): Promise<{
+    equipos: {
+        filas: {
+            fechasTrabajadas: string[];
+            desde: string;
+            hasta: string;
+            comentarios: string;
+            nombreContrato: string;
+            porDiasSueltos: boolean;
+            integranteId: string;
+            userId: string;
+            nombre: string;
+            excluido: boolean;
+            categoriaSatId: string;
+            categoriaNombre: string;
+            inTime: string;
+            outTime: string;
+            jornadas: number;
+            importes: import("../compartido/jornadas.js").Importes;
+            origenImporte: "puntual" | "plantilla" | "escala" | "servicios";
+            errores: string[];
+            advertencias: string[];
+            superposicionHorario: boolean;
+        }[];
+        totales: {
+            personas: number;
+            jornadas: number;
+            importe: number;
+            conErrores: number;
+            conAdvertencias: number;
+        };
+        errores: string[];
+        equipoId: string;
+    }[];
+}>;
+/** «CONTRATAR TODOS»: todos los equipos pedidos, TODO O NADA, un lote por equipo. */
+export declare function contratarVarios(acc: Acceso, id: string, body: any): Promise<{
+    repetido: boolean;
+    lotes: {
+        loteId: string;
+        solicitudIds: any;
+        totales: any;
+        nombrePlantilla: any;
+    }[];
 }>;

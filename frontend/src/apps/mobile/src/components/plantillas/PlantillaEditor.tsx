@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCopy, faPen, faPlus, faRightLeft, faSliders, faSpinner, faTrash, faTriangleExclamation, faUserPlus, faUserXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faPen, faPlus, faRightLeft, faRotateLeft, faSliders, faSpinner, faTrash, faTriangleExclamation, faUserPlus, faUserXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { Modal } from "../Modal";
-import { Equipo, Plantilla, plantillasEquipoAPI, Puesto, puestoEnEquipo } from "../../../../../api/plantillasEquipo";
+import { Equipo, Plantilla, plantillasEquipoAPI, Puesto, puestoEnEquipo, usaElPuesto } from "../../../../../api/plantillasEquipo";
 import { Project } from "../../../../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./useCatalogosContratacion";
@@ -201,7 +201,31 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
   };
   const equipo: Equipo | undefined = plantilla?.equipos.find((e) => e._id === equipoId);
   const quienEn = (puestoId: string) => equipo?.asignaciones.find((a) => a.puestoId === puestoId);
-  const asignados = (e: Equipo) => e.asignaciones.filter((a) => a.userId).length;
+  const asignados = (e: Equipo) => e.asignaciones.filter((a) => a.userId && !a.excluido).length;
+  const usados = (e: Equipo) => (plantilla?.integrantes || []).filter((p) => usaElPuesto(e, p._id)).length;
+
+  /**
+   * Sacar un puesto que este equipo no usa. Por defecto sólo de ESTE equipo (sigue en la plantilla de
+   * puestos para los demás); también se puede sacar de la plantilla entera.
+   */
+  const sacarPuesto = async (p: Puesto, n: number) => {
+    if (!equipo) return;
+    const otros = (plantilla?.equipos.length || 1) - 1;
+    const r = await Swal.fire({
+      title: `¿Sacar el puesto ${n}?`,
+      html: `<p style="font-size:.85em">${rolDe(p)}. Sacarlo de «${equipo.nombre}» no lo contrata ni lo cuenta en este equipo; sigue en la plantilla${otros ? ` y en los otros ${otros} equipo(s)` : ""} y se puede volver a usar.</p>`,
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: "Sólo de este equipo",
+      denyButtonText: "De la plantilla (todos)",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#3b82f6",
+      denyButtonColor: "#ef4444",
+      customClass: { popup: "mobile-swal-popup", title: "mobile-swal-title" },
+    });
+    if (r.isConfirmed) await conPlantilla((pl) => plantillasEquipoAPI.usoDelPuesto(pl._id, equipo._id, p._id, true));
+    else if (r.isDenied) await quitarPuesto(p, n);
+  };
 
   const quitarPuesto = async (p: Puesto, n: number) => {
     const r: any = await sweetAlert.confirm(`¿Sacar el puesto ${n}?`, `${rolDe(p)} deja de estar en la plantilla (y en todos sus equipos). Las solicitudes ya pedidas no cambian.`, "Sacar", "Cancelar");
@@ -438,7 +462,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
                   {plantilla.equipos.map((e) => (
                     <button key={e._id} type="button" onClick={() => setEquipoId(e._id)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${e._id === equipoId ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}>
                       <FontAwesomeIcon icon={faUsers} className="mr-1.5" />
-                      {e.nombre} ({asignados(e)}/{plantilla.integrantes.length})
+                      {e.nombre} ({asignados(e)}/{usados(e)})
                       {Object.keys(e.avisos || {}).length > 0 && <FontAwesomeIcon icon={faTriangleExclamation} className={`ml-1.5 ${e._id === equipoId ? "text-amber-200" : "text-amber-500"}`} />}
                     </button>
                   ))}
@@ -459,6 +483,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
               {plantilla.integrantes.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Primero armá los puestos.</p>}
               {equipo &&
                 plantilla.integrantes.map((base, n) => {
+                  if (!usaElPuesto(equipo, base._id)) return null;
                   const a = quienEn(base._id);
                   const persona = a?.userId ? a : undefined;
                   const p = puestoEnEquipo(base, equipo);
@@ -499,6 +524,9 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
                             <FontAwesomeIcon icon={faUserXmark} className="h-3 w-3" />
                           </button>
                         )}
+                        <button type="button" onClick={() => void sacarPuesto(base, n + 1)} aria-label={`Sacar el puesto ${n + 1} de este equipo`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-red-500 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                        </button>
                       </div>
                       {avisos.map((m) => (
                         <p key={m} className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 p-2 text-[11px] text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
@@ -509,6 +537,25 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
                     </div>
                   );
                 })}
+              {/* Los que este equipo no usa: siguen en la plantilla, se pueden volver a usar. */}
+              {equipo && usados(equipo) < plantilla.integrantes.length && (
+                <div className="space-y-1.5 rounded-xl border border-dashed border-slate-300 p-3 dark:border-slate-700">
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">No se usan en «{equipo.nombre}» ({plantilla.integrantes.length - usados(equipo)})</p>
+                  {plantilla.integrantes.map((base, n) =>
+                    usaElPuesto(equipo, base._id) ? null : (
+                      <div key={base._id} className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="truncate">
+                          {n + 1}. {rolDe(base)}
+                        </span>
+                        <button type="button" onClick={() => void conPlantilla((pl) => plantillasEquipoAPI.usoDelPuesto(pl._id, equipo._id, base._id, false))} className="shrink-0 font-semibold text-blue-600 dark:text-blue-400">
+                          <FontAwesomeIcon icon={faRotateLeft} className="mr-1" />
+                          Volver a usar
+                        </button>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
               {equipo && (
                 <button type="button" onClick={() => void nuevoEquipo()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-500 dark:border-slate-700">
                   <FontAwesomeIcon icon={faCopy} />

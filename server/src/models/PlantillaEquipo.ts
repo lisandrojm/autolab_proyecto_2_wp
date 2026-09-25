@@ -86,6 +86,8 @@ export interface IAsignacion {
   /** `null` = el puesto no tiene persona en este equipo, pero sí condiciones propias. */
   userId: Types.ObjectId | null;
   condiciones?: ICondiciones | null;
+  /** El equipo NO usa este puesto: no se asigna, no se contrata, no cuenta. Sigue en la plantilla para los demás equipos. */
+  excluido?: boolean;
   /** Si entró en lugar de otra persona en ese puesto de este equipo: a quién y cuándo. Informativo. */
   reemplazadoDePersonaId?: Types.ObjectId | null;
   reemplazadoEl?: Date | null;
@@ -151,6 +153,7 @@ const equipoSchema = new Schema<IEquipo>({
       userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
       // Mixed: sólo las claves pisadas (un esquema con campos llenaría arrays vacíos que no son «pisar»).
       condiciones: { type: Schema.Types.Mixed, default: null },
+      excluido: { type: Boolean, default: false },
       reemplazadoDePersonaId: { type: Schema.Types.ObjectId, ref: "User", default: null },
       reemplazadoEl: { type: Date, default: null },
     },

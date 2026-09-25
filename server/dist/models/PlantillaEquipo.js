@@ -28,6 +28,7 @@ const equipoSchema = new Schema({
             userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
             // Mixed: sólo las claves pisadas (un esquema con campos llenaría arrays vacíos que no son «pisar»).
             condiciones: { type: Schema.Types.Mixed, default: null },
+            excluido: { type: Boolean, default: false },
             reemplazadoDePersonaId: { type: Schema.Types.ObjectId, ref: "User", default: null },
             reemplazadoEl: { type: Date, default: null },
         },

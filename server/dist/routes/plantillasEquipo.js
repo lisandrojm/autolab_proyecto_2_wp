@@ -3,7 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { MOBILE_HIRING_TEMPLATES } from "../utils/permisosMobile.js";
-import { actualizarPlantilla, actualizarPuesto, agregarPuestos, asignarPuesto, condicionesEnEquipo, borrarEquipo, borrarPlantilla, contratarPlantilla, crearEquipo, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarPuesto, renombrarEquipo, usarGeneral, } from "../services/plantillasEquipo.js";
+import { actualizarPlantilla, actualizarPuesto, agregarPuestos, asignarPuesto, condicionesEnEquipo, usoDelPuestoEnEquipo, borrarEquipo, borrarPlantilla, contratarPlantilla, contratarVarios, previewDeVarios, crearEquipo, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarPuesto, renombrarEquipo, usarGeneral, } from "../services/plantillasEquipo.js";
 const manejar = (fn) => async (req, res) => {
     try {
         const r = await fn(req, res);
@@ -60,11 +60,20 @@ router.delete("/:id/equipos/:equipoId", ...movil, manejar((req) => borrarEquipo(
 router.put("/:id/equipos/:equipoId/puestos/:puestoId", ...movil, manejar((req) => asignarPuesto(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body?.userId ?? null)));
 // Las condiciones propias del puesto en ese equipo (horario, días, área y turno, contrato…). `restablecer: true` vuelve a las del puesto.
 router.put("/:id/equipos/:equipoId/puestos/:puestoId/condiciones", ...movil, manejar((req) => condicionesEnEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body || {})));
+// `excluido: true` saca el puesto de ESE equipo (sigue en la plantilla); `false` lo vuelve a usar.
+router.put("/:id/equipos/:equipoId/puestos/:puestoId/uso", ...movil, manejar((req) => usoDelPuestoEnEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body?.excluido === true)));
 // No escribe nada: lo que saldría, con importes, errores y advertencias por puesto.
 router.post("/:id/preview", ...movil, manejar((req) => previewDeContratacion(acceso(req, "personal"), req.params.id, req.body || {})));
 // Todo o nada, con `idempotencyKey`.
 router.post("/:id/contratar", ...movil, manejar(async (req, res) => {
     const r = await contratarPlantilla(acceso(req, "personal"), req.params.id, req.body || {});
+    res.status(r.repetido ? 200 : 201);
+    return r;
+}));
+// «Contratar todos»: varios equipos de la plantilla, cada uno con sus fechas. Todo o nada, un lote por equipo.
+router.post("/:id/preview-varios", ...movil, manejar((req) => previewDeVarios(acceso(req, "personal"), req.params.id, req.body || {})));
+router.post("/:id/contratar-varios", ...movil, manejar(async (req, res) => {
+    const r = await contratarVarios(acceso(req, "personal"), req.params.id, req.body || {});
     res.status(r.repetido ? 200 : 201);
     return r;
 }));

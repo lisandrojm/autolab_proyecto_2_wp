@@ -248,13 +248,13 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
                   }}
                   className={`rounded-full px-3 py-1.5 text-xs font-bold ${e._id === equipoId ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}
                 >
-                  {e.nombre} ({e.asignaciones.filter((a) => a.userId).length}/{plantilla.integrantes.length})
+                  {e.nombre} ({e.asignaciones.filter((a) => a.userId && !a.excluido).length}/{puestosDelEquipo(plantilla, e).length})
                 </button>
               ))}
             </div>
           )}
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            {nombresContratos || "Sin tipo de contrato"} · {plantilla.integrantes.length} puestos
+            {nombresContratos || "Sin tipo de contrato"} · {puestos.length} puestos
             {equipo && equipo.asignaciones.some((a) => a.condiciones && Object.keys(a.condiciones).length) ? " · con condiciones propias del equipo" : ""}
           </p>
         </div>
