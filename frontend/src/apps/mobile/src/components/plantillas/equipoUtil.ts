@@ -1,5 +1,6 @@
 import { Asignacion, Equipo, Plantilla, Puesto, puestoBaseEnEquipo, puestoEnEquipo, usaElPuesto } from "../../../../../api/plantillasEquipo";
-import { OpcionAreaTurno } from "./useCatalogosContratacion";
+import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContratacion";
+import { Project } from "../../../../../api/projects";
 
 /*
   LO QUE LAS PANTALLAS SABEN DE UN EQUIPO, calculado en un solo lugar: qué puestos usa, quién los
@@ -77,3 +78,25 @@ export const rutas = {
 
 /** Volver a Contratación, en la pestaña pedida (la app de afuera no tiene rutas: se pasa por `state`). */
 export const aContratacion = (pestana: "plantillas" | "historial" = "plantillas") => ({ pathname: "/mobile", state: { vista: "user_history", pestana } });
+
+/**
+ * LA CATEGORÍA DE CADA PUESTO EN UN EQUIPO: la del nivel del proyecto de ESE equipo (Plata, Oro…), con
+ * la misma regla del alta individual. Como el grupo sirve en cualquier proyecto, se calcula por equipo.
+ */
+export function categoriasDelNivel(catalogos: CatalogosContratacion, proyecto: Project | null, empresaId: string | null | undefined, convenioId: string | null | undefined, puestos: Pick<Puesto, "_id" | "rolesFrame">[]): Record<string, string> {
+  const r: Record<string, string> = {};
+  if (!proyecto || !empresaId) return r;
+  for (const p of puestos) {
+    const cat = catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId || "", p.rolesFrame.slice(0, 1));
+    if (cat) r[p._id] = cat;
+  }
+  return r;
+}
+
+/** El proyecto, la empresa y el convenio de un equipo, resueltos contra los catálogos. */
+export function proyectoDelEquipo(catalogos: CatalogosContratacion, equipo: Pick<Equipo, "projectId" | "empresaContratoId" | "convenioId"> | null | undefined) {
+  const proyecto = catalogos.proyectos?.find((x) => x._id === equipo?.projectId) || null;
+  const empresaId = equipo?.empresaContratoId || (catalogos.empresasDelProyecto(proyecto).length === 1 ? catalogos.empresasDelProyecto(proyecto)[0]._id : "");
+  const convenioId = equipo?.convenioId || catalogos.convenioUnico(proyecto, empresaId)?._id || "";
+  return { proyecto, empresaId, convenioId };
+}

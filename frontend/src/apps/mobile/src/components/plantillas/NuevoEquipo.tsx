@@ -12,7 +12,7 @@ import { Pantalla } from "./Pantalla";
 import { HojaInferior } from "./HojaInferior";
 import { SelectorPersona } from "./SelectorPersona";
 import { cambiosDeContrato, cambiosDeTurno, porDiasSueltos } from "./Condiciones";
-import { rutas } from "./equipoUtil";
+import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 import { CLASE_CAMPO, CLASE_HORA, DIAS } from "./comun";
@@ -109,26 +109,21 @@ export default function NuevoEquipo() {
   const proyecto = proyectos?.find((p) => p._id === b.projectId) || null;
   const areas = areasDe(b.projectId);
 
-  // Los grupos del proyecto; sin ninguno, arranca uno nuevo.
+  // Los grupos de puestos (sirven en cualquier proyecto); sin ninguno, arranca uno nuevo.
   useEffect(() => {
-    if (!b.projectId) return;
     setGrupos(null);
     plantillasEquipoAPI
-      .listar(b.projectId)
+      .listar("")
       .then((l) => {
         setGrupos(l);
         setB((p) => (p.grupoId && (p.grupoId === NUEVO || l.some((g) => g._id === p.grupoId)) ? p : { ...p, grupoId: l.length === 1 ? l[0]._id : l.length ? "" : NUEVO }));
       })
       .catch(() => setGrupos([]));
-  }, [b.projectId]);
+  }, []);
   useEffect(() => {
     setGrupo(null);
     if (!b.grupoId || b.grupoId === NUEVO) return;
-    void cargar(b.grupoId).then((p) => {
-      setGrupo(p);
-      // La empresa del grupo manda.
-      if (p?.empresaContratoId) setB((x) => ({ ...x, empresaContratoId: p.empresaContratoId || "", convenioId: p.convenioId || "" }));
-    });
+    void cargar(b.grupoId).then(setGrupo);
   }, [b.grupoId, cargar]);
 
   // La empresa: con una sola, elegida sola (como en el alta individual).
@@ -205,20 +200,13 @@ export default function NuevoEquipo() {
     }
     setCreando(true);
     try {
-      // 1. El grupo, si es nuevo: sus puestos con la categoría del nivel del proyecto.
+      // 1. El grupo, si es nuevo: sólo roles y cantidades (sirve en cualquier proyecto).
       let p: Plantilla;
       if (esNuevo) {
-        p = await plantillasEquipoAPI.crear({ projectId: proyecto._id, nombre: b.nombreGrupo.trim(), empresaContratoId: b.empresaContratoId || null, convenioId: convenioId || null, sinEquipos: true });
-        p = await plantillasEquipoAPI.agregarPuestos(
-          p._id,
-          puestos.map((x) => {
-            const cat = catalogos.categoriaPorDefectoPara(proyecto, b.empresaContratoId, convenioId, [x.rolId]);
-            return { rolesFrame: [x.rolId], ...(cat ? { categoriaSatId: cat } : {}) };
-          }),
-        );
+        p = await plantillasEquipoAPI.crear({ nombre: b.nombreGrupo.trim(), sinEquipos: true });
+        p = await plantillasEquipoAPI.agregarPuestos(p._id, puestos.map((x) => ({ rolesFrame: [x.rolId] })));
       } else {
         p = grupo!;
-        if (!p.empresaContratoId && b.empresaContratoId) p = await plantillasEquipoAPI.actualizar(p._id, { empresaContratoId: b.empresaContratoId, convenioId: convenioId || null });
       }
       // 2. El equipo, con sus condiciones.
       const condiciones = {
@@ -228,7 +216,9 @@ export default function NuevoEquipo() {
         outTime: b.outTime || null,
         ...(sueltos ? {} : { diasSemana: b.diasSemana, diasPorSemana: b.diasSemana.length || null }),
       };
-      p = await plantillasEquipoAPI.crearEquipo(p._id, b.nombre.trim(), b.copiarDe || undefined, condiciones as any);
+      // El equipo lleva su proyecto, su empresa, su convenio y la categoría de cada puesto en el nivel de ESE proyecto.
+      const categorias = categoriasDelNivel(catalogos, proyecto, b.empresaContratoId, convenioId, p.integrantes);
+      p = await plantillasEquipoAPI.crearEquipo(p._id, b.nombre.trim(), b.copiarDe || undefined, condiciones as any, { projectId: proyecto._id, empresaContratoId: b.empresaContratoId || null, convenioId: convenioId || null, categorias });
       const equipo = p.equipos[p.equipos.length - 1];
       // 3. Las personas elegidas acá.
       for (const [n, persona] of Object.entries(b.personas)) {
@@ -517,7 +507,7 @@ export default function NuevoEquipo() {
       <HojaInferior abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto">
         <div className="space-y-2">
           {(proyectos || []).map((p) => (
-            <button key={p._id} type="button" onClick={() => { cambiar({ ...vacio(p._id), nombre: b.nombre }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${p._id === b.projectId ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-200 text-slate-900 dark:border-slate-700 dark:text-white"}`}>
+            <button key={p._id} type="button" onClick={() => { cambiar({ projectId: p._id, empresaContratoId: "", convenioId: "", turno: "", inTime: "", outTime: "", diasSemana: [] }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${p._id === b.projectId ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-200 text-slate-900 dark:border-slate-700 dark:text-white"}`}>
               {p._id === b.projectId && <FontAwesomeIcon icon={faCheck} />}
               {etiquetaProyecto(p)}
             </button>

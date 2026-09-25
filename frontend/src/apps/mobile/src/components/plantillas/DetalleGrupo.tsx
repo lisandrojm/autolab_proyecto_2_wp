@@ -4,22 +4,19 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Plantilla } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
 import { HojaInferior } from "./HojaInferior";
-import { aContratacion, estadoDe, nombreRoles, nombreTurno, rutas } from "./equipoUtil";
+import { aContratacion, categoriasDelNivel, estadoDe, nombreRoles, nombreTurno, proyectoDelEquipo, rutas } from "./equipoUtil";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, Pill, textoHorario } from "./comun";
-import CampoConvenio from "./CampoConvenio";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
-import { ChipValoracion } from "../../../../../components/proyectos/ChipValoracion";
 
 /*
   PANTALLA 2 · UN GRUPO DE PUESTOS: sus equipos (cada uno con su turno y cómo está), «Nuevo equipo»
   (nombre y turno en un solo paso) y «Editar puestos» (roles y cantidades, con + y −). Arriba, la
   empresa y el convenio, que definen qué categorías se ofrecen. Botón principal: «Contratar equipos».
 */
-type Hoja = null | "puestos" | "nombre" | "proyecto";
+type Hoja = null | "puestos" | "nombre";
 
 export default function DetalleGrupo() {
   const { id = "" } = useParams();
@@ -28,8 +25,6 @@ export default function DetalleGrupo() {
   const { catalogos, guardar, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
   const [hoja, setHoja] = useState<Hoja>(null);
-  const proyecto = catalogos.proyectos?.find((x) => x._id === p?.projectId) || null;
-  const areas = areasDe(p?.projectId);
 
   // Recién creado: se abre «Editar puestos» (lo pidió el usuario con «Crear y elegir puestos»).
   useEffect(() => {
@@ -43,9 +38,7 @@ export default function DetalleGrupo() {
   if (noEsta) return <Pantalla titulo="Grupo de puestos" atras={rutas.lista}><Vacio texto="Este grupo ya no está." accion="Ver los grupos" onAccion={() => navigate(rutas.lista)} /></Pantalla>;
   if (!p) return <Pantalla titulo="Grupo de puestos" atras={rutas.lista} listo={false}><div className="h-40 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" /></Pantalla>;
 
-  const empresas = catalogos.empresasDelProyecto(proyecto);
-  const valoracion = catalogos.valoracionDe(proyecto);
-  const convenioId = p.convenioId || catalogos.convenioUnico(proyecto, p.empresaContratoId)?._id || "";
+  const nombreProyecto = (id: string | null) => catalogos.proyectos?.find((x) => x._id === id)?.name || "Sin proyecto";
 
   const cambiarDatos = (datos: Partial<Plantilla>) => guardar(() => plantillasEquipoAPI.actualizar(p._id, datos as any));
 
@@ -71,7 +64,7 @@ export default function DetalleGrupo() {
   return (
     <Pantalla
       titulo={p.nombre}
-      contexto={proyecto ? etiquetaProyecto(proyecto) : undefined}
+      contexto="Grupo de puestos · para cualquier proyecto"
       atras={rutas.lista}
       boton={{
         texto: p.equipos.length > 1 ? `Contratar equipos (${p.equipos.length})` : "Contratar equipo",
@@ -95,7 +88,8 @@ export default function DetalleGrupo() {
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="truncate text-base font-bold text-slate-900 dark:text-white">{e.nombre}</p>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <ChipTurno inicio={c.inTime} texto={nombreTurno(areas, c.areaId, c.shiftId) || undefined} />
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">{nombreProyecto(e.projectId)}</span>
+                      <ChipTurno inicio={c.inTime} texto={nombreTurno(areasDe(e.projectId), c.areaId, c.shiftId) || undefined} />
                       <span className="text-xs text-slate-600 dark:text-slate-300">{textoHorario(c.inTime, c.outTime)}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -118,66 +112,16 @@ export default function DetalleGrupo() {
         <p className="text-sm text-slate-700 dark:text-slate-200">{resumenRoles(p, catalogos.roleFrames) || "Sin puestos"}</p>
       </Seccion>
 
-      <Seccion titulo="Empresa">
-        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-800 dark:text-slate-100">Empresa que contrata</span>
-            <select value={p.empresaContratoId || ""} onChange={(ev) => void cambiarDatos({ empresaContratoId: ev.target.value || null, convenioId: null })} className={CLASE_CAMPO}>
-              <option value="">Elegí la empresa</option>
-              {empresas.map((x) => (
-                <option key={x._id} value={x._id}>
-                  {(x as any).razonSocial || (x as any).name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <CampoConvenio proyecto={proyecto} empresaId={p.empresaContratoId || ""} convenioId={p.convenioId || ""} catalogos={catalogos} onChange={(cid) => (cid !== (p.convenioId || "") ? void cambiarDatos({ convenioId: cid || null }) : undefined)} />
-          {valoracion && (
-            <p className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
-              Valoración del proyecto <ChipValoracion nombre={valoracion.nombre} color={valoracion.color} />
-            </p>
-          )}
-          {!convenioId && p.empresaContratoId && <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">Elegí el convenio.</p>}
-        </div>
-      </Seccion>
-
       <Seccion titulo="Más">
         <div className="rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800/70">
           <AccionTexto onClick={() => setHoja("nombre")}>Cambiar el nombre</AccionTexto>
-          {(catalogos.proyectos?.length || 0) > 1 && <AccionTexto onClick={() => setHoja("proyecto")}>Pasar a otro proyecto</AccionTexto>}
           <AccionTexto onClick={() => void duplicar()}>Duplicar el grupo</AccionTexto>
           <AccionTexto peligro onClick={() => void eliminar()}>Eliminar el grupo</AccionTexto>
         </div>
       </Seccion>
 
-      <HojaPuestos abierta={hoja === "puestos"} onCerrar={() => setHoja(null)} plantilla={p} convenioId={convenioId} />
+      <HojaPuestos abierta={hoja === "puestos"} onCerrar={() => setHoja(null)} plantilla={p} />
       <HojaNombre abierta={hoja === "nombre"} onCerrar={() => setHoja(null)} actual={p.nombre} onGuardar={(nombre) => void cambiarDatos({ nombre })} />
-      <HojaInferior abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Pasar a otro proyecto" subtitulo="Los equipos quedan sin área y turno: son de cada proyecto">
-        <div className="space-y-2">
-          {(catalogos.proyectos || [])
-            .filter((x) => x._id !== p.projectId)
-            .map((x) => (
-              <button
-                key={x._id}
-                type="button"
-                onClick={async () => {
-                  setHoja(null);
-                  const r = await cambiarDatos({ projectId: x._id });
-                  if (r) {
-                    try {
-                      localStorage.setItem("plantillas:proyecto", x._id);
-                    } catch {
-                      /* sin storage */
-                    }
-                  }
-                }}
-                className="flex min-h-[48px] w-full items-center rounded-xl border border-slate-200 px-3 text-left text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white"
-              >
-                {etiquetaProyecto(x)}
-              </button>
-            ))}
-        </div>
-      </HojaInferior>
     </Pantalla>
   );
 }
@@ -237,10 +181,9 @@ export function ListaTurnos({ areas, valor, onElegir }: { areas: ReturnType<Retu
  * proyecto; restar saca primero un puesto que nadie ocupa en ningún equipo (si todos están ocupados,
  * pregunta).
  */
-function HojaPuestos({ abierta, onCerrar, plantilla: p, convenioId }: { abierta: boolean; onCerrar: () => void; plantilla: Plantilla; convenioId: string }) {
+function HojaPuestos({ abierta, onCerrar, plantilla: p }: { abierta: boolean; onCerrar: () => void; plantilla: Plantilla }) {
   const { catalogos, guardar } = usePlantillas();
   const [busca, setBusca] = useState("");
-  const proyecto = catalogos.proyectos?.find((x) => x._id === p.projectId) || null;
   const cuenta = useMemo(() => {
     const m = new Map<string, number>();
     for (const i of p.integrantes) if (i.rolesFrame[0]) m.set(i.rolesFrame[0], (m.get(i.rolesFrame[0]) || 0) + 1);
@@ -251,10 +194,18 @@ function HojaPuestos({ abierta, onCerrar, plantilla: p, convenioId }: { abierta:
     return [...catalogos.roleFrames].filter((r) => (q ? fuzzyMatch(r.name, busca) : cuenta.has(r._id))).sort((a, b) => a.name.localeCompare(b.name));
   }, [catalogos.roleFrames, busca, cuenta]);
 
-  const sumar = (rolId: string) => {
-    const categoria = catalogos.categoriaPorDefectoPara(proyecto, p.empresaContratoId, convenioId, [rolId]);
-    void guardar(() => plantillasEquipoAPI.agregarPuestos(p._id, [{ rolesFrame: [rolId], ...(categoria ? { categoriaSatId: categoria } : {}) }]));
-  };
+  // El puesto nuevo, y en cada equipo la categoría del nivel de SU proyecto (el grupo es de cualquier proyecto).
+  const sumar = (rolId: string) =>
+    void guardar(async () => {
+      let r = await plantillasEquipoAPI.agregarPuestos(p._id, [{ rolesFrame: [rolId] }]);
+      const nuevo = r.integrantes[r.integrantes.length - 1];
+      for (const e of r.equipos) {
+        const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, e);
+        const categorias = categoriasDelNivel(catalogos, proyecto, empresaId, convenioId, [nuevo]);
+        if (Object.keys(categorias).length) r = await plantillasEquipoAPI.actualizarEquipo(r._id, e._id, { categorias });
+      }
+      return r;
+    });
   const restar = async (rolId: string) => {
     const delRol = p.integrantes.filter((i) => i.rolesFrame[0] === rolId);
     const ocupado = (puestoId: string) => p.equipos.find((e) => e.asignaciones.some((a) => a.puestoId === puestoId && a.userId));

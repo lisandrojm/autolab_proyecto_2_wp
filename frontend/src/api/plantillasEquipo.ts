@@ -64,12 +64,24 @@ export const CAMPOS_DE_EQUIPO = ["contratoId", "nombreContrato", "tipoImpositivo
 export interface Equipo {
   _id: string;
   nombre: string;
+  /** El proyecto donde se contrata este equipo, con su empresa y su convenio (la plantilla es de cualquier proyecto). */
+  projectId: string | null;
+  empresaContratoId: string | null;
+  convenioId: string | null;
   ultimaContratacionEl: string | null;
   /** Las condiciones del equipo (contrato, área y turno, horario, días). */
   condiciones: CondicionesEquipo | null;
   asignaciones: Asignacion[];
   /** Por puesto: la persona se pisa con otro puesto o con un contrato. Avisos, no bloquean. */
   avisos: Record<string, string[]>;
+}
+
+/** Lo que un equipo tiene de su proyecto. `categorias`: por puesto, la categoría del nivel de ESE proyecto. */
+export interface DatosDeEquipo {
+  projectId?: string | null;
+  empresaContratoId?: string | null;
+  convenioId?: string | null;
+  categorias?: Record<string, string>;
 }
 
 /** El puesto con las condiciones del EQUIPO, sin la diferencia del puesto: «igual que el equipo». */
@@ -123,7 +135,7 @@ export interface PlantillaResumen {
   puestos: number;
   /** `propias` = puestos con condiciones propias en ese equipo; `avisos` = puestos que se pisan. */
   /** `puestos` = los que usa ese equipo (la plantilla menos los que sacó). */
-  equipos: { _id: string; nombre: string; asignados: number; puestos: number; propias: number; avisos: number; reemplazos: number; revisar: number; condiciones: CondicionesEquipo | null; ultimaContratacionEl: string | null }[];
+  equipos: { _id: string; nombre: string; projectId: string | null; empresaContratoId: string | null; convenioId: string | null; asignados: number; puestos: number; propias: number; avisos: number; reemplazos: number; revisar: number; condiciones: CondicionesEquipo | null; ultimaContratacionEl: string | null }[];
   ultimaContratacionEl: string | null;
 }
 
@@ -263,8 +275,12 @@ export const plantillasEquipoAPI = {
   },
   // ── Los equipos (quién ocupa cada puesto) ──
   /** Nombre + condiciones (el turno) en un paso; `copiarDe` trae las personas de otro equipo. */
-  async crearEquipo(id: string, nombre: string, copiarDe?: string, condiciones?: CondicionesEquipo): Promise<Plantilla> {
-    return (await axios.post(`/plantillas-equipo/${id}/equipos`, { nombre, copiarDe, condiciones })).data;
+  async crearEquipo(id: string, nombre: string, copiarDe?: string, condiciones?: CondicionesEquipo, datos?: DatosDeEquipo): Promise<Plantilla> {
+    return (await axios.post(`/plantillas-equipo/${id}/equipos`, { nombre, copiarDe, condiciones, ...(datos || {}) })).data;
+  },
+  /** Nombre y/o proyecto (con empresa y convenio) del equipo; `categorias` = las del nivel de su proyecto. */
+  async actualizarEquipo(id: string, equipoId: string, datos: DatosDeEquipo & { nombre?: string }): Promise<Plantilla> {
+    return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}`, datos)).data;
   },
   /** Las condiciones del equipo: valen para todos sus puestos. Lo que no viene, queda. */
   async condicionesEquipo(id: string, equipoId: string, datos: CondicionesEquipo): Promise<Plantilla> {

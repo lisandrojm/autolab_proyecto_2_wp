@@ -6,7 +6,8 @@ import { plantillasEquipoAPI, Preview } from "../../../../../api/plantillasEquip
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Seccion } from "./Pantalla";
 import { borrarEstado, EstadoContratar, guardarEstado, leerEstado, nuevaClave, pedidosDe } from "./estadoContratar";
-import { nombreRoles, nombreTurno, puestosDe, rutas } from "./equipoUtil";
+import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
+import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, pesos, Pill, textoHorario } from "./comun";
 import { Pasos } from "./Pasos";
 
@@ -37,8 +38,6 @@ export default function ContratarRevision() {
   const [enviando, setEnviando] = useState(false);
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
   const [comentando, setComentando] = useState<string | null>(null);
-  const areas = areasDe(p?.projectId);
-  const proyecto = catalogos.proyectos?.find((x) => x._id === p?.projectId) || null;
 
   const pedidos = useMemo(() => (p && estado ? pedidosDe(p, estado, catalogos) : []), [p, estado, catalogos]);
   // Se recalcula al entrar (también al volver de corregir un puesto). Los comentarios no cambian el cálculo.
@@ -74,9 +73,6 @@ export default function ContratarRevision() {
   }
 
   const equipos = p.equipos.filter((e) => estado.equipos[e._id]?.incluido);
-  const empresa = catalogos.companies.find((c) => c._id === p.empresaContratoId) as any;
-  const convenioId = p.convenioId || catalogos.convenioUnico(proyecto, p.empresaContratoId)?._id || "";
-  const convenio = catalogos.convenios.find((c) => c._id === convenioId);
 
   // Los problemas, con a dónde ir a corregirlos.
   const problemas: Problema[] = [];
@@ -187,6 +183,11 @@ export default function ContratarRevision() {
         const contratos = [...new Set(filas.map((x) => x.nombreContrato).filter(Boolean))].join(" · ");
         const fechas = f.fechas.length ? `${f.fechas.length} ${f.fechas.length === 1 ? "jornada" : "jornadas"}: ${f.fechas.map(fechaCorta).join(" · ")}` : f.desde ? `${fechaCorta(f.desde)} → ${f.hasta ? fechaCorta(f.hasta) : "sin baja"}` : "";
         const porPuesto = new Map(puestosDe(p, e).map((x) => [x.puesto._id, x]));
+        // Cada equipo va a SU proyecto, con su empresa y su convenio.
+        const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, e);
+        const empresa = catalogos.companies.find((c) => c._id === empresaId) as any;
+        const convenio = catalogos.convenios.find((c) => c._id === convenioId);
+        const areas = areasDe(e.projectId);
         return (
           <section key={e._id} className="mb-4 rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/70">
             <button type="button" onClick={() => setAbiertos((a) => ({ ...a, [e._id]: !abierto }))} aria-expanded={abierto} className="flex min-h-[56px] w-full items-center gap-3 px-3 text-left">
@@ -199,6 +200,7 @@ export default function ContratarRevision() {
             {abierto && (
               <div className="space-y-3 border-t border-slate-200 px-3 py-3 dark:border-slate-700">
                 <dl className="grid grid-cols-1 gap-1.5 text-sm">
+                  <Fila titulo="Proyecto" valor={proyecto ? etiquetaProyecto(proyecto) : "—"} />
                   <Fila titulo="Empresa" valor={empresa?.razonSocial || "—"} />
                   <Fila titulo="Convenio" valor={convenio ? `${convenio.externalId || ""} ${convenio.name || ""}`.trim() : "—"} />
                   <Fila titulo="Contrato" valor={contratos || "—"} />

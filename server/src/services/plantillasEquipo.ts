@@ -156,6 +156,15 @@ export function puestoEnEquipo(puesto: any, asignacion: any, equipo?: any) {
   return efectivo;
 }
 
+/**
+ * El proyecto, la empresa y el convenio de un equipo: los suyos o, en las plantillas viejas (que los
+ * tenían en la plantilla), los de la plantilla.
+ */
+export function datosDelEquipo(p: any, e: any) {
+  const s = (x: any) => (x ? String(x) : null);
+  return { projectId: s(e?.projectId || p?.projectId), empresaContratoId: s(e?.empresaContratoId || p?.empresaContratoId), convenioId: s(e?.convenioId || p?.convenioId) };
+}
+
 /** El reemplazo de una asignación; los «Entró en lugar de» viejos se leen como reemplazo sin motivo, a revisar. */
 export function reemplazoDe(a: any): { replacedUserId: string; motivoReemplazoId: string | null; revisarMotivo: boolean } | null {
   if (a?.reemplazo?.replacedUserId) return { replacedUserId: String(a.reemplazo.replacedUserId), motivoReemplazoId: a.reemplazo.motivoReemplazoId ? String(a.reemplazo.motivoReemplazoId) : null, revisarMotivo: !!a.reemplazo.revisarMotivo };
@@ -260,8 +269,9 @@ async function contratosPorDiasSueltos(plantillas: any[]): Promise<(contratoId: 
 
 /** Las plantillas para la lista: las personales del proyecto; las generales, todas. */
 export async function listarPlantillas(acc: Acceso, projectId: string) {
-  if (acc.alcance === "personal" && !idOk(projectId)) return [];
-  const lista: any[] = await PlantillaEquipo.find({ tenantId: acc.tenantId, activo: true, ...filtroDeAlcance(acc), ...(acc.alcance === "personal" ? { projectId: oid(projectId) } : {}) })
+  // Las plantillas no son de un proyecto: se listan todas las de quien pide (`projectId` ya no filtra).
+  void projectId;
+  const lista: any[] = await PlantillaEquipo.find({ tenantId: acc.tenantId, activo: true, ...filtroDeAlcance(acc) })
     .sort({ nombre: 1 })
     .lean();
   const [porDiasSueltos, compromisos] = await Promise.all([contratosPorDiasSueltos(lista), compromisosDeLasPlantillas(acc.tenantId, lista)]);
@@ -277,6 +287,7 @@ export async function listarPlantillas(acc: Acceso, projectId: string) {
     equipos: (p.equipos || []).map((e: any) => ({
       _id: String(e._id),
       nombre: e.nombre,
+      ...datosDelEquipo(p, e),
       asignados: (e.asignaciones || []).filter((a: any) => a.userId && !a.excluido).length,
       // Los puestos que usa ESTE equipo (los de la plantilla menos los que sacó).
       puestos: (p.integrantes || []).filter((i: any) => usaElPuesto(e, i._id)).length,
@@ -318,6 +329,7 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
       _id: String(e._id),
       nombre: e.nombre,
       ultimaContratacionEl: e.ultimaContratacionEl || null,
+      ...datosDelEquipo(p, e),
       condiciones: condicionesParaMostrar(e.condiciones),
       avisos: avisosDelEquipo(p, e, porDiasSueltos, compromisos, hoy),
       asignaciones: (e.asignaciones || []).map((a: any) => {
@@ -344,10 +356,11 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
 /** Una plantilla nueva. Las personales nacen con un equipo vacío («Equipo 1») para ir asignando gente. */
 export async function crearPlantilla(acc: Acceso, body: any) {
   const general = acc.alcance === "general";
-  if (!general && (!idOk(body?.projectId) || !(await Project.exists({ _id: oid(body.projectId), tenantId: acc.tenantId })))) throw new ErrorPlantilla(400, "Elegí el proyecto de la plantilla.");
+  // Sin proyecto: el grupo de puestos sirve en cualquiera (el proyecto es de cada equipo).
+  if (!general && idOk(body?.projectId) && !(await Project.exists({ _id: oid(body.projectId), tenantId: acc.tenantId }))) throw new ErrorPlantilla(400, "Ese proyecto no existe.");
   const datos = leerGeneral({ nombre: "", ...body }, acc);
   try {
-    const p = await PlantillaEquipo.create({ ...datos, tenantId: acc.tenantId, alcance: acc.alcance, projectId: general ? null : oid(body.projectId), creadoPor: oid(acc.userId), integrantes: [], equipos: general || body.sinEquipos === true ? [] : [{ nombre: "Equipo 1", asignaciones: [] }] });
+    const p = await PlantillaEquipo.create({ ...datos, tenantId: acc.tenantId, alcance: acc.alcance, projectId: general || !idOk(body?.projectId) ? null : oid(body.projectId), creadoPor: oid(acc.userId), integrantes: [], equipos: general || body.sinEquipos === true ? [] : [{ nombre: "Equipo 1", asignaciones: [] }] });
     // Puede nacer con puestos (ej. «Guardar como plantilla» desde el alta individual).
     if (Array.isArray(body.puestos) && body.puestos.length) await agregarPuestos(acc, String(p._id), body.puestos);
     return obtenerPlantilla(acc, String(p._id));
@@ -412,7 +425,12 @@ async function copiarComo(acc: Acceso, origen: any, destino: { alcance: Acceso["
   const equipos = destino.conEquipos
     ? (origen.equipos || []).map((e: any) => ({
         nombre: e.nombre,
-        condiciones: mismoProyecto ? e.condiciones || null : e.condiciones ? { ...e.condiciones, areaId: null, shiftId: null } : null,
+        // Cada equipo se lleva su proyecto, su empresa y su convenio (o los de la plantilla vieja).
+        ...(() => {
+          const d = datosDelEquipo(origen, e);
+          return { projectId: d.projectId ? oid(d.projectId) : null, empresaContratoId: d.empresaContratoId ? oid(d.empresaContratoId) : null, convenioId: d.convenioId ? oid(d.convenioId) : null };
+        })(),
+        condiciones: e.condiciones || null,
         // Los reemplazos son de una contratación: no se copian.
         asignaciones: (e.asignaciones || []).filter((a: any) => mapa.has(String(a.puestoId))).map((a: any) => ({ puestoId: mapa.get(String(a.puestoId)), userId: a.userId || null, condiciones: a.condiciones || null, excluido: !!a.excluido })),
         ultimaContratacionEl: null,
@@ -458,10 +476,11 @@ export async function duplicarPlantilla(acc: Acceso, id: string, nombre?: string
  * turno de cada puesto se completan en la copia. La general no cambia.
  */
 export async function usarGeneral(acc: Acceso, generalId: string, projectId: string, nombre?: string) {
-  if (!idOk(projectId) || !(await Project.exists({ _id: oid(projectId), tenantId: acc.tenantId }))) throw new ErrorPlantilla(400, "Elegí el proyecto donde usarla.");
+  // El proyecto ya no hace falta: la copia es un grupo de puestos para cualquier proyecto.
+  if (idOk(projectId) && !(await Project.exists({ _id: oid(projectId), tenantId: acc.tenantId }))) throw new ErrorPlantilla(400, "Ese proyecto no existe.");
   const g: any = (await cargar({ ...acc, alcance: "general" }, generalId)).toObject();
   const personal: Acceso = { ...acc, alcance: "personal" };
-  const nuevoId = await copiarComo(personal, g, { alcance: "personal", projectId: oid(projectId), nombre: (nombre || g.nombre).trim().slice(0, 120), conEquipos: false });
+  const nuevoId = await copiarComo(personal, g, { alcance: "personal", projectId: idOk(projectId) ? oid(projectId) : null, nombre: (nombre || g.nombre).trim().slice(0, 120), conEquipos: false });
   return obtenerPlantilla(personal, nuevoId);
 }
 
@@ -532,7 +551,7 @@ export async function quitarPuesto(acc: Acceso, id: string, puestoId: string) {
 // ── Escritura: los equipos ──────────────────────────────────────────────
 
 /** Un equipo nuevo, vacío o copiando otro —personas y condiciones propias— («Semana B» a partir de «Semana A»). */
-export async function crearEquipo(acc: Acceso, id: string, nombre: string, copiarDeId?: string, condiciones?: any) {
+export async function crearEquipo(acc: Acceso, id: string, nombre: string, copiarDeId?: string, condiciones?: any, datos: any = {}) {
   if (acc.alcance === "general") throw new ErrorPlantilla(400, "Una plantilla general no tiene equipos: se arman en la copia de cada supervisor.");
   const p = await cargar(acc, id);
   const n = String(nombre || "").trim().slice(0, 80) || `Equipo ${p.equipos.length + 1}`;
@@ -540,24 +559,83 @@ export async function crearEquipo(acc: Acceso, id: string, nombre: string, copia
   const origen = copiarDeId ? p.equipos.find((e) => String(e._id) === String(copiarDeId)) : null;
   // Las condiciones se piden al crearlo (el turno, en el mismo paso que el nombre); si no, las del copiado.
   const propias = condiciones && typeof condiciones === "object" ? leerCondicionesDeEquipo(condiciones, acc) : null;
+  const proyecto = await leerProyectoDelEquipo(acc, datos, origen ? datosDelEquipo(p, origen) : datosDelEquipo(p, null));
   p.equipos.push({
     nombre: n,
+    ...proyecto,
     condiciones: propias || (origen as any)?.condiciones || null,
     // Se copian las personas y lo distinto de cada puesto; los reemplazos no (son de una contratación).
     asignaciones: origen ? origen.asignaciones.map((a: any) => ({ puestoId: a.puestoId, userId: a.userId || null, condiciones: a.condiciones || null, excluido: !!a.excluido })) : [],
   } as any);
+  const nuevo: any = p.equipos[p.equipos.length - 1];
+  aplicarCategorias(p, nuevo, datos?.categorias);
+  p.markModified("equipos");
   await p.save();
   return obtenerPlantilla(acc, id);
 }
 
-export async function renombrarEquipo(acc: Acceso, id: string, equipoId: string, nombre: string) {
+/** El proyecto, la empresa y el convenio que vienen para un equipo, validados; lo que no viene sale de `base`. */
+async function leerProyectoDelEquipo(acc: Acceso, datos: any, base: { projectId: string | null; empresaContratoId: string | null; convenioId: string | null }) {
+  const projectId = datos?.projectId !== undefined ? (idOk(datos.projectId) ? String(datos.projectId) : null) : base.projectId;
+  if (projectId && projectId !== base.projectId && !(await Project.exists({ _id: oid(projectId), tenantId: acc.tenantId }))) throw new ErrorPlantilla(400, "Ese proyecto no existe.");
+  const otroProyecto = projectId !== base.projectId;
+  const id = (campo: "empresaContratoId" | "convenioId") => (datos?.[campo] !== undefined ? (idOk(datos[campo]) ? oid(datos[campo]) : null) : otroProyecto ? null : base[campo] ? oid(base[campo]!) : null);
+  return { projectId: projectId ? oid(projectId) : null, empresaContratoId: id("empresaContratoId"), convenioId: id("convenioId") };
+}
+
+/**
+ * La categoría de cada puesto EN ESTE EQUIPO (sale de la valoración de SU proyecto; la calcula la
+ * pantalla con la misma regla del alta individual). Se guarda como diferencia sólo si no es la del puesto.
+ */
+function aplicarCategorias(p: any, e: any, categorias: any) {
+  if (!categorias || typeof categorias !== "object") return;
+  for (const [puestoId, cat] of Object.entries(categorias)) {
+    const puesto = (p.integrantes || []).find((i: any) => String(i._id) === String(puestoId));
+    if (!puesto) continue;
+    let a = (e.asignaciones || []).find((x: any) => String(x.puestoId) === String(puestoId));
+    const valor = idOk(cat) ? oid(cat) : null;
+    const igual = String(valor || "") === String(puesto.categoriaSatId || "");
+    if (!a) {
+      if (igual) continue;
+      e.asignaciones.push((a = { puestoId: oid(puestoId), userId: null, condiciones: null, excluido: false }));
+    }
+    const resto: any = { ...(a.condiciones || {}) };
+    if (igual) delete resto.categoriaSatId;
+    else resto.categoriaSatId = valor;
+    a.condiciones = Object.keys(resto).length ? resto : null;
+  }
+  e.asignaciones = e.asignaciones.filter((a: any) => !vacia(a));
+}
+
+/**
+ * CAMBIAR UN EQUIPO: su nombre y/o su proyecto (con empresa y convenio). Pasarlo a otro proyecto vacía
+ * su área y turno (son de cada proyecto) y la de sus puestos; `categorias` trae las del nuevo nivel.
+ */
+export async function actualizarEquipo(acc: Acceso, id: string, equipoId: string, body: any) {
   const p = await cargar(acc, id);
-  const e = p.equipos.find((x) => String(x._id) === String(equipoId));
+  const e: any = p.equipos.find((x) => String(x._id) === String(equipoId));
   if (!e) throw new ErrorPlantilla(404, "Ese equipo ya no está en la plantilla.");
-  const n = String(nombre || "").trim().slice(0, 80);
-  if (!n) throw new ErrorPlantilla(400, "Poné un nombre al equipo.");
-  if (p.equipos.some((x) => x !== e && x.nombre.toLowerCase() === n.toLowerCase())) throw new ErrorPlantilla(409, "Ya hay un equipo con ese nombre en la plantilla.");
-  e.nombre = n;
+  if (body?.nombre !== undefined) {
+    const n = String(body.nombre || "").trim().slice(0, 80);
+    if (!n) throw new ErrorPlantilla(400, "Poné un nombre al equipo.");
+    if (p.equipos.some((x) => x !== e && x.nombre.toLowerCase() === n.toLowerCase())) throw new ErrorPlantilla(409, "Ya hay un equipo con ese nombre en la plantilla.");
+    e.nombre = n;
+  }
+  if (body?.projectId !== undefined || body?.empresaContratoId !== undefined || body?.convenioId !== undefined) {
+    const antes = datosDelEquipo(p, e);
+    const nuevo = await leerProyectoDelEquipo(acc, body, antes);
+    if (String(nuevo.projectId || "") !== String(antes.projectId || "")) {
+      if (e.condiciones) e.condiciones = { ...e.condiciones, areaId: null, shiftId: null };
+      for (const a of e.asignaciones || []) {
+        if (!a.condiciones) continue;
+        const { areaId, shiftId, ...resto } = a.condiciones;
+        a.condiciones = Object.keys(resto).length ? resto : null;
+      }
+    }
+    Object.assign(e, nuevo);
+  }
+  aplicarCategorias(p, e, body?.categorias);
+  p.markModified("equipos");
   await p.save();
   return obtenerPlantilla(acc, id);
 }
@@ -745,10 +823,11 @@ function paraPlan(p: any, equipoId: string): { plantilla: PlantillaParaPlan; int
   const equipo = (p.equipos || []).find((e: any) => String(e._id) === String(equipoId));
   const asignacion = new Map<string, any>((equipo?.asignaciones || []).map((a: any) => [String(a.puestoId), a]));
   return {
+    // El proyecto, la empresa y el convenio son del EQUIPO (o de la plantilla, en las viejas).
     plantilla: {
-      projectId: String(p.projectId),
-      empresaContratoId: s(p.empresaContratoId),
-      convenioId: s(p.convenioId),
+      projectId: String(datosDelEquipo(p, equipo).projectId || ""),
+      empresaContratoId: s(datosDelEquipo(p, equipo).empresaContratoId),
+      convenioId: s(datosDelEquipo(p, equipo).convenioId),
       contratoId: s(p.contratoId),
       nombreContrato: p.nombreContrato || "",
       tipoImpositivo: p.tipoImpositivo || "",
@@ -843,7 +922,8 @@ export async function planificarVarios(tenantId: Types.ObjectId, p: any, bodies:
       const equipoId = String(body?.equipoId || "");
       const { plantilla, integrantes } = paraPlan(p, equipoId);
       const { fechas, puntuales } = leerContratacion(body);
-      const ctx = await contextoDe(tenantId, p, integrantes, puntuales);
+      // El convenio y el equipo del proyecto (a quién se puede reemplazar) son los del proyecto del EQUIPO.
+      const ctx = await contextoDe(tenantId, { ...p, projectId: plantilla.projectId, convenioId: plantilla.convenioId }, integrantes, puntuales);
       const borrador = planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
       const numero = new Map(integrantes.map((i, n) => [i._id, n + 1]));
       const conFechas = borrador.filas
@@ -983,7 +1063,7 @@ async function contratarLotes(acc: Acceso, id: string, pedidos: any[], claveBase
               _id: l.loteId,
               tenantId,
               plantillaEquipoId: p._id,
-              projectId: p.projectId,
+              projectId: l.plan.filas.find((f) => f.datos)?.datos?.projectIds?.[0] || datosDelEquipo(p, l.equipo).projectId,
               nombrePlantilla: l.nombre,
               idempotencyKey: claveDe(k),
               creadoPor: oid(creadorId),

@@ -10,8 +10,11 @@ import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
 import { FilasCondiciones, HojaContratoYTurno } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { HojaNombre } from "./DetalleGrupo";
-import { estadoDe, nombreRoles, PuestoDelEquipo, puestosDe, rutas, sacadosDe } from "./equipoUtil";
-import { Pill } from "./comun";
+import { categoriasDelNivel, estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, rutas, sacadosDe } from "./equipoUtil";
+import { HojaInferior } from "./HojaInferior";
+import CampoConvenio from "./CampoConvenio";
+import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
+import { CLASE_CAMPO, Pill } from "./comun";
 
 /*
   PANTALLA 3 · UN EQUIPO. Arriba, «Condiciones del equipo»: contrato, área y turno, horario y días, UNA
@@ -39,10 +42,11 @@ export default function PantallaEquipo() {
   const navigate = useNavigate();
   const { catalogos, guardar, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
-  const [hoja, setHoja] = useState<null | "condiciones" | "nombre" | { asignar: PuestoDelEquipo }>(null);
+  const [hoja, setHoja] = useState<null | "condiciones" | "nombre" | "proyecto" | { asignar: PuestoDelEquipo }>(null);
   const equipo = p?.equipos.find((e) => e._id === equipoId);
-  const areas = areasDe(p?.projectId);
-  const proyecto = catalogos.proyectos?.find((x) => x._id === p?.projectId) || null;
+  // El proyecto es del EQUIPO (el grupo sirve en cualquiera): de él salen áreas, empresa, convenio y categorías.
+  const { proyecto, empresaId } = proyectoDelEquipo(catalogos, equipo);
+  const areas = areasDe(equipo?.projectId);
   const marcas = useMemo(() => (p && hoja && typeof hoja === "object" ? marcasParaSelector(p, equipoId, hoja.asignar.puesto._id) : undefined), [p, equipoId, hoja]);
 
   if (noEsta || (p && !equipo)) return <Pantalla titulo="Equipo" atras={rutas.grupo(id)}><Vacio texto="Este equipo ya no está." accion="Volver al grupo" onAccion={() => navigate(rutas.grupo(id))} /></Pantalla>;
@@ -53,6 +57,17 @@ export default function PantallaEquipo() {
   const est = estadoDe(p, equipo);
   const c = equipo.condiciones || {};
   const cambiar = (cambios: Record<string, any>) => void guardar(() => plantillasEquipoAPI.condicionesEquipo(p._id, equipo._id, cambios));
+
+  /** Otro proyecto, empresa o convenio: la empresa y el convenio únicos se eligen solos y las categorías se recalculan. */
+  const cambiarProyecto = (datos: { projectId?: string; empresaContratoId?: string | null; convenioId?: string | null }) => {
+    const nuevo = catalogos.proyectos?.find((x) => x._id === (datos.projectId ?? equipo.projectId)) || null;
+    const empresas = catalogos.empresasDelProyecto(nuevo);
+    const empresa = datos.empresaContratoId !== undefined ? datos.empresaContratoId : datos.projectId !== undefined ? (empresas.length === 1 ? empresas[0]._id : null) : equipo.empresaContratoId;
+    const convenio = datos.convenioId !== undefined ? datos.convenioId : catalogos.convenioUnico(nuevo, empresa)?._id || null;
+    const categorias = categoriasDelNivel(catalogos, nuevo, empresa, convenio, p.integrantes);
+    void guardar(() => plantillasEquipoAPI.actualizarEquipo(p._id, equipo._id, { projectId: nuevo?._id || null, empresaContratoId: empresa || null, convenioId: convenio || null, categorias }));
+  };
+  const empresas = catalogos.empresasDelProyecto(proyecto);
 
   const duplicar = async () => {
     const usados = new Set(p.equipos.map((x) => x.nombre.toLowerCase()));
@@ -72,10 +87,43 @@ export default function PantallaEquipo() {
   return (
     <Pantalla
       titulo={equipo.nombre}
-      contexto={`${p.nombre}${proyecto ? ` · ${etiquetaProyecto(proyecto)}` : ""}`}
+      contexto={`${p.nombre}${proyecto ? ` · ${etiquetaProyecto(proyecto)}` : " · sin proyecto"}`}
       atras={rutas.grupo(p._id)}
       boton={{ texto: "Contratar este equipo", onClick: () => navigate(rutas.contratar(p._id, [equipo._id])), deshabilitado: puestos.length === 0, motivo: "El equipo no usa ningún puesto", tono: "verde" }}
     >
+      <Seccion titulo="Proyecto">
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
+          <button type="button" onClick={() => setHoja("proyecto")} className="flex min-h-[48px] w-full items-center gap-3 text-left">
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Cliente | Proyecto</span>
+              <span className={`block truncate text-sm font-semibold ${proyecto ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{proyecto ? etiquetaProyecto(proyecto) : "Elegí el proyecto"}</span>
+            </span>
+            {proyecto && <ChipValoracionDelProyecto project={proyecto} valoraciones={catalogos.valoraciones} mostrarSinValorar className="shrink-0" />}
+            <FontAwesomeIcon icon={faChevronRight} className="shrink-0 text-slate-500" />
+          </button>
+          {proyecto && (
+            <>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Empresa que contrata</span>
+                {empresas.length === 1 ? (
+                  <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-900 dark:bg-slate-900 dark:text-white">{(empresas[0] as any).razonSocial}</p>
+                ) : (
+                  <select value={equipo.empresaContratoId || ""} onChange={(e) => cambiarProyecto({ empresaContratoId: e.target.value || null, convenioId: undefined })} className={CLASE_CAMPO}>
+                    <option value="">Elegí la empresa</option>
+                    {empresas.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {(c as any).razonSocial}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+              {empresaId && <CampoConvenio proyecto={proyecto} empresaId={empresaId} convenioId={equipo.convenioId || ""} catalogos={catalogos} onChange={(id) => id !== (equipo.convenioId || "") && cambiarProyecto({ empresaContratoId: empresaId, convenioId: id || null })} />}
+            </>
+          )}
+        </div>
+      </Seccion>
+
       <Seccion titulo="Condiciones del equipo">
         <FilasCondiciones valores={c} areas={areas} catalogos={catalogos} onAbrirContratoYTurno={() => setHoja("condiciones")} onCambio={cambiar} />
       </Seccion>
@@ -149,13 +197,22 @@ export default function PantallaEquipo() {
       </Seccion>
 
       <HojaContratoYTurno abierta={hoja === "condiciones"} onCerrar={() => setHoja(null)} titulo="Condiciones del equipo" areas={areas} catalogos={catalogos} valores={c} onCambio={cambiar} />
+      <HojaInferior abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto" subtitulo="El área y turno se eligen de nuevo; las categorías se recalculan">
+        <div className="space-y-2">
+          {(catalogos.proyectos || []).map((x) => (
+            <button key={x._id} type="button" onClick={() => { setHoja(null); if (x._id !== equipo.projectId) cambiarProyecto({ projectId: x._id }); }} className={`flex min-h-[48px] w-full items-center rounded-xl border px-3 text-left text-sm font-semibold ${x._id === equipo.projectId ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-200 text-slate-900 dark:border-slate-700 dark:text-white"}`}>
+              {etiquetaProyecto(x)}
+            </button>
+          ))}
+        </div>
+      </HojaInferior>
       <HojaNombre abierta={hoja === "nombre"} onCerrar={() => setHoja(null)} actual={equipo.nombre} titulo="Nombre del equipo" onGuardar={(nombre) => void guardar(() => plantillasEquipoAPI.renombrarEquipo(p._id, equipo._id, nombre))} />
       <SelectorPersona
         abierta={!!hoja && typeof hoja === "object"}
         onCerrar={() => setHoja(null)}
         titulo={hoja && typeof hoja === "object" ? `Puesto ${hoja.asignar.n} · ${nombreRoles(catalogos.roleFrames, hoja.asignar.puesto.rolesFrame)}` : ""}
         subtitulo={equipo.nombre}
-        projectId={p.projectId}
+        projectId={equipo.projectId}
         rol={hoja && typeof hoja === "object" ? catalogos.roleFrames.find((r) => r._id === hoja.asignar.puesto.rolesFrame[0])?.name : undefined}
         marcas={marcas}
         onElegir={(persona) => {

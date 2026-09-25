@@ -9,7 +9,7 @@ import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
 import { FilasCondiciones, HojaContratoYTurno } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { marcasParaSelector } from "./PantallaEquipo";
-import { nombreRoles, nombreTurno, puestosDe, rutas } from "./equipoUtil";
+import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { CLASE_CAMPO, pesos, textoHorario } from "./comun";
 
 /*
@@ -37,8 +37,9 @@ export default function DetallePuesto() {
   const equipo = p?.equipos.find((e) => e._id === equipoId);
   const numero = Number(n);
   const puesto: Puesto | undefined = p?.integrantes[numero - 1];
-  const areas = areasDe(p?.projectId);
-  const proyecto = catalogos.proyectos?.find((x) => x._id === p?.projectId) || null;
+  // El proyecto, la empresa y el convenio son del EQUIPO: de ahí salen áreas y categorías.
+  const { proyecto, empresaId: empresaDelEquipo, convenioId: convenioDelEquipo } = proyectoDelEquipo(catalogos, equipo);
+  const areas = areasDe(equipo?.projectId);
   const lista = useMemo(() => (p && equipo ? puestosDe(p, equipo) : []), [p, equipo]);
   const x = lista.find((y) => y.n === numero);
   const marcas = useMemo(() => (p && puesto ? marcasParaSelector(p, equipoId, puesto._id) : undefined), [p, equipoId, puesto]);
@@ -89,8 +90,8 @@ export default function DetallePuesto() {
 
   const quitarReemplazo = () => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { quitar: true }));
   const esServicios = efectivo.tipoImpositivo === "constancia_cuit";
-  const empresa = p.empresaContratoId;
-  const convenio = p.convenioId || catalogos.convenioUnico(proyecto, empresa)?._id || "";
+  const empresa = empresaDelEquipo;
+  const convenio = convenioDelEquipo;
   const categorias = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, false, true);
   const resumenEquipo = [nombreTurno(areas, base.areaId, base.shiftId), textoHorario(base.inTime, base.outTime), base.nombreContrato].filter(Boolean).join(" · ");
 
@@ -205,7 +206,7 @@ export default function DetallePuesto() {
         <Seccion titulo="Categoría e importe">
           <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
             <select value={efectivo.categoriaSatId || ""} onChange={(e) => void cambiar({ categoriaSatId: e.target.value || null })} className={CLASE_CAMPO} aria-label="Categoría">
-              <option value="">{empresa ? "Elegí la categoría" : "Elegí la empresa en el grupo"}</option>
+              <option value="">{empresa ? "Elegí la categoría" : "Elegí el proyecto y la empresa del equipo"}</option>
               {efectivo.categoriaSatId && !categorias.documentos.some((c) => c._id === efectivo.categoriaSatId) && <option value={efectivo.categoriaSatId}>{catalogos.categoriasSat.find((c) => c._id === efectivo.categoriaSatId)?.name || "Categoría anterior"}</option>}
               {categorias.documentos.map((c) => (
                 <option key={c._id} value={c._id}>
@@ -245,7 +246,7 @@ export default function DetallePuesto() {
         onCerrar={() => setHoja(null)}
         titulo={`Puesto ${numero} · ${rol}`}
         subtitulo={equipo.nombre}
-        projectId={p.projectId}
+        projectId={equipo.projectId}
         rol={catalogos.roleFrames.find((y) => y._id === puesto.rolesFrame[0])?.name}
         marcas={marcas}
         onElegir={(pe) => void guardar(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, pe._id))}
@@ -255,7 +256,7 @@ export default function DetallePuesto() {
         onCerrar={() => setHoja(null)}
         titulo="¿A quién reemplaza?"
         subtitulo="Del equipo del proyecto"
-        projectId={p.projectId}
+        projectId={equipo.projectId}
         soloProyecto
         onElegir={(pe) => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: pe._id, motivoReemplazoId: r?.motivoReemplazoId ?? null }))}
       />

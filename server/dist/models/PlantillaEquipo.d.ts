@@ -6,7 +6,10 @@ import mongoose, { Types } from "mongoose";
  *
  * Casi siempre se contrata a los mismos equipos de jornaleros. Una plantilla tiene TRES niveles:
  *
- *  1. GENERAL: nombre, empresa (y convenio) y comentario. Nada de áreas, horarios ni tipo de contrato.
+ *  1. GENERAL: nombre. AGNÓSTICA AL PROYECTO: el mismo grupo de puestos sirve en cualquier proyecto;
+ *     el proyecto (y con él la empresa, el convenio, las áreas y turnos y la categoría de cada puesto)
+ *     es de cada EQUIPO. Las plantillas viejas tienen `projectId`/empresa/convenio acá: sus equipos los
+ *     heredan (`datosDelEquipo` en el servicio).
  *  2. PUESTOS (`integrantes`): cada uno con su rol empresa, su TIPO DE CONTRATO, su área y turno, su
  *     horario y sus días (los del turno, modificables), su categoría y, si se fijó, su importe. Una plantilla puede cubrir
  *     varias áreas y turnos: cada puesto dice el suyo.
@@ -105,6 +108,10 @@ export interface IAsignacion {
 export interface IEquipo {
     _id: Types.ObjectId;
     nombre: string;
+    /** El proyecto donde se contrata ESTE equipo, con su empresa y su convenio. Vacío = el de la plantilla (viejas). */
+    projectId?: Types.ObjectId | null;
+    empresaContratoId?: Types.ObjectId | null;
+    convenioId?: Types.ObjectId | null;
     /** Las condiciones del equipo (`CAMPOS_DE_EQUIPO`): valen para todos sus puestos. */
     condiciones?: Record<string, any> | null;
     asignaciones: IAsignacion[];

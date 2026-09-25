@@ -48,7 +48,6 @@ export default function ContratarFechas() {
   const { catalogos, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
   const [estado, setEstado] = useState<EstadoContratar | null>(null);
-  const areas = areasDe(p?.projectId);
 
   // Lo guardado en la sesión; si se llegó desde un equipo (?equipos=), sólo ésos tildados.
   useEffect(() => {
@@ -97,7 +96,7 @@ export default function ContratarFechas() {
       ) : (
         <div className="space-y-3">
           {p.equipos.map((e) => (
-            <TarjetaEquipo key={e._id} equipo={e} p={p} f={estado.equipos[e._id] || { incluido: false, fechas: [], desde: "", hasta: "" }} areas={areas} catalogos={catalogos} onCambio={(x) => cambiar(e._id, x)} />
+            <TarjetaEquipo key={e._id} equipo={e} p={p} f={estado.equipos[e._id] || { incluido: false, fechas: [], desde: "", hasta: "" }} areas={areasDe(e.projectId)} catalogos={catalogos} onCambio={(x) => cambiar(e._id, x)} />
           ))}
         </div>
       )}

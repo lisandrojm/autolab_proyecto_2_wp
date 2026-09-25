@@ -23,6 +23,15 @@ export interface Acceso {
  * EQUIPO → la DIFERENCIA de ese puesto en el equipo.
  */
 export declare function puestoEnEquipo(puesto: any, asignacion: any, equipo?: any): any;
+/**
+ * El proyecto, la empresa y el convenio de un equipo: los suyos o, en las plantillas viejas (que los
+ * tenían en la plantilla), los de la plantilla.
+ */
+export declare function datosDelEquipo(p: any, e: any): {
+    projectId: string;
+    empresaContratoId: string;
+    convenioId: string;
+};
 /** El reemplazo de una asignación; los «Entró en lugar de» viejos se leen como reemplazo sin motivo, a revisar. */
 export declare function reemplazoDe(a: any): {
     replacedUserId: string;
@@ -67,8 +76,12 @@ export declare function actualizarPuesto(acc: Acceso, id: string, puestoId: stri
 /** Saca un puesto (y a quien lo ocupaba en cada equipo). */
 export declare function quitarPuesto(acc: Acceso, id: string, puestoId: string): Promise<any>;
 /** Un equipo nuevo, vacío o copiando otro —personas y condiciones propias— («Semana B» a partir de «Semana A»). */
-export declare function crearEquipo(acc: Acceso, id: string, nombre: string, copiarDeId?: string, condiciones?: any): Promise<any>;
-export declare function renombrarEquipo(acc: Acceso, id: string, equipoId: string, nombre: string): Promise<any>;
+export declare function crearEquipo(acc: Acceso, id: string, nombre: string, copiarDeId?: string, condiciones?: any, datos?: any): Promise<any>;
+/**
+ * CAMBIAR UN EQUIPO: su nombre y/o su proyecto (con empresa y convenio). Pasarlo a otro proyecto vacía
+ * su área y turno (son de cada proyecto) y la de sus puestos; `categorias` trae las del nuevo nivel.
+ */
+export declare function actualizarEquipo(acc: Acceso, id: string, equipoId: string, body: any): Promise<any>;
 export declare function borrarEquipo(acc: Acceso, id: string, equipoId: string): Promise<any>;
 /**
  * Quién ocupa un puesto en un equipo. `userId: null` lo deja sin asignar (lo distinto del puesto y el

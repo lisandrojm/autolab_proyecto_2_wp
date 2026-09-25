@@ -23,6 +23,9 @@ const puestoSchema = new Schema({
 });
 const equipoSchema = new Schema({
     nombre: { type: String, required: true, trim: true, maxlength: 80 },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project", default: null },
+    empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
+    convenioId: { type: Schema.Types.ObjectId, default: null },
     condiciones: { type: Schema.Types.Mixed, default: null },
     asignaciones: [
         {

@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { usePlantillas } from "./contexto";
 import { Pantalla, Vacio } from "./Pantalla";
 import { HojaInferior } from "./HojaInferior";
-import { aContratacion, nombreTurno, rutas } from "./equipoUtil";
-import { ChipTurno, CLASE_CAMPO, Pill } from "./comun";
+import { aContratacion, rutas } from "./equipoUtil";
+import { ChipTurno, Pill } from "./comun";
 
 /*
   PANTALLA 1 · LOS GRUPOS DE PUESTOS DEL PROYECTO. Una tarjeta por grupo: cuántos puestos, sus equipos
@@ -18,48 +17,26 @@ import { ChipTurno, CLASE_CAMPO, Pill } from "./comun";
   Se muestra como pantalla propia (`/mobile/plantillas`) y dentro de la pestaña Plantillas de
   Contratación (`embebida`, sin cabecera propia).
 */
-const CLAVE_PROYECTO = "plantillas:proyecto";
-
 export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
   const navigate = useNavigate();
-  const { catalogos, areasDe } = usePlantillas();
-  const [projectId, setProjectId] = useState<string>(() => {
-    try {
-      return localStorage.getItem(CLAVE_PROYECTO) || "";
-    } catch {
-      return "";
-    }
-  });
+  const { catalogos } = usePlantillas();
   const [lista, setLista] = useState<PlantillaResumen[] | null>(null);
   const [generales, setGenerales] = useState<PlantillaResumen[]>([]);
   const [hoja, setHoja] = useState<null | "generales">(null);
-
-  const proyectos = catalogos.proyectos;
-  useEffect(() => {
-    if (!proyectos) return;
-    if (!proyectos.some((p) => p._id === projectId) && proyectos.length > 0) setProjectId(proyectos[0]._id);
-  }, [proyectos, projectId]);
-  const proyecto = useMemo(() => proyectos?.find((p) => p._id === projectId) || null, [proyectos, projectId]);
-  const areas = areasDe(projectId);
+  // El proyecto es de cada equipo: acá se lo nombra, no se filtra por él.
+  const nombreProyecto = (id: string | null) => {
+    const p = catalogos.proyectos?.find((x) => x._id === id);
+    return p ? p.name : "Sin proyecto";
+  };
 
   useEffect(() => {
-    if (!projectId) return;
-    setLista(null);
-    plantillasEquipoAPI.listar(projectId).then(setLista).catch(() => setLista([]));
-    try {
-      localStorage.setItem(CLAVE_PROYECTO, projectId);
-    } catch {
-      /* sin storage, no se recuerda */
-    }
-  }, [projectId]);
-  useEffect(() => {
+    plantillasEquipoAPI.listar("").then(setLista).catch(() => setLista([]));
     plantillasEquipoAPI.listarGenerales().then(setGenerales).catch(() => setGenerales([]));
   }, []);
 
   const usar = async (g: PlantillaResumen) => {
-    if (!proyecto) return;
     try {
-      const copia = await plantillasEquipoAPI.usarGeneral(g._id, proyecto._id);
+      const copia = await plantillasEquipoAPI.usarGeneral(g._id, "");
       setHoja(null);
       navigate(rutas.grupo(copia._id));
     } catch (e: any) {
@@ -69,24 +46,11 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
 
   const contenido = (
     <div className="space-y-3">
-      {proyectos && proyectos.length > 0 && (
-        <label className="block">
-          <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Proyecto</span>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={proyectos.length < 2} className={`${CLASE_CAMPO} disabled:opacity-90`}>
-            {proyectos.map((p) => (
-              <option key={p._id} value={p._id}>
-                {etiquetaProyecto(p)}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
       {lista === null ? (
         [1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)
       ) : lista.length === 0 ? (
         // Como pantalla, la acción es el botón de abajo; dentro de la pestaña, va en el cartel.
-        <Vacio texto="Todavía no hay equipos en este proyecto." accion={embebida ? "Nuevo equipo" : undefined} onAccion={() => navigate(rutas.nuevo({ proyecto: projectId }))} />
+        <Vacio texto="Todavía no hay equipos." accion={embebida ? "Nuevo equipo" : undefined} onAccion={() => navigate(rutas.nuevo())} />
       ) : (
         lista.map((p) => {
           const asignados = p.equipos.reduce((s, e) => s + e.asignados, 0);
@@ -102,7 +66,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
                 {p.equipos.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {p.equipos.map((e) => (
-                      <ChipTurno key={e._id} inicio={e.condiciones?.inTime} texto={e.nombre || nombreTurno(areas, e.condiciones?.areaId, e.condiciones?.shiftId)} />
+                      <ChipTurno key={e._id} inicio={e.condiciones?.inTime} texto={`${e.nombre} · ${nombreProyecto(e.projectId)}`} />
                     ))}
                   </div>
                 )}
@@ -118,19 +82,19 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
       )}
 
       {embebida && lista && lista.length > 0 && (
-        <button type="button" onClick={() => navigate(rutas.nuevo({ proyecto: projectId }))} disabled={!proyecto} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-500 text-sm font-bold text-blue-700 disabled:opacity-40 dark:text-blue-300">
+        <button type="button" onClick={() => navigate(rutas.nuevo())} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-500 text-sm font-bold text-blue-700 disabled:opacity-40 dark:text-blue-300">
           <FontAwesomeIcon icon={faPlus} />
           Nuevo equipo
         </button>
       )}
       {generales.length > 0 && (
-        <button type="button" onClick={() => setHoja("generales")} disabled={!proyecto} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-700 disabled:opacity-40 dark:text-slate-200">
+        <button type="button" onClick={() => setHoja("generales")} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-700 disabled:opacity-40 dark:text-slate-200">
           <FontAwesomeIcon icon={faLayerGroup} />
           Partir de un grupo general ({generales.length})
         </button>
       )}
 
-      <HojaInferior abierta={hoja === "generales"} onCerrar={() => setHoja(null)} titulo="Partir de un grupo general" subtitulo="Se copia a este proyecto; el general no cambia">
+      <HojaInferior abierta={hoja === "generales"} onCerrar={() => setHoja(null)} titulo="Partir de un grupo general" subtitulo="Se copia a los tuyos; el general no cambia">
         <div className="space-y-2">
           {generales.map((g) => (
             <button key={g._id} type="button" onClick={() => void usar(g)} className="flex min-h-[52px] w-full items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 text-left dark:border-slate-700">
@@ -148,7 +112,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
 
   if (embebida) return contenido;
   return (
-    <Pantalla titulo="Plantillas" contexto={proyecto ? etiquetaProyecto(proyecto) : undefined} atras={aContratacion()} listo={lista !== null} boton={{ texto: "Nuevo equipo", onClick: () => navigate(rutas.nuevo({ proyecto: projectId })), deshabilitado: !proyecto }}>
+    <Pantalla titulo="Plantillas" contexto="Grupos de puestos, para cualquier proyecto" atras={aContratacion()} listo={lista !== null} boton={{ texto: "Nuevo equipo", onClick: () => navigate(rutas.nuevo()) }}>
       {contenido}
     </Pantalla>
   );
