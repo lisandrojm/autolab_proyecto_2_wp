@@ -7,11 +7,13 @@ import DetallePuesto from "./DetallePuesto";
 import ContratarFechas from "./ContratarFechas";
 import ContratarRevision from "./ContratarRevision";
 import ContratarEnviado from "./ContratarEnviado";
+import NuevoEquipo from "./NuevoEquipo";
 
 /*
   LAS PANTALLAS DE PLANTILLAS, con ruta propia (se recargan, se comparten y Atrás funciona):
 
     /mobile/plantillas                                   grupos de puestos del proyecto
+    /mobile/plantillas/nuevo                             nuevo equipo (y grupo), en el orden del alta individual
     /mobile/plantillas/:id                               un grupo: sus equipos
     /mobile/plantillas/:id/equipos/:equipoId             un equipo: condiciones + puestos
     /mobile/plantillas/:id/equipos/:equipoId/puesto/:n   un puesto
@@ -26,6 +28,7 @@ export default function RutasPlantillas() {
     <ProveedorPlantillas>
       <Routes>
         <Route path="plantillas" element={<ListaGrupos />} />
+        <Route path="plantillas/nuevo" element={<NuevoEquipo />} />
         <Route path="plantillas/:id" element={<DetalleGrupo />} />
         <Route path="plantillas/:id/equipos/:equipoId" element={<PantallaEquipo />} />
         <Route path="plantillas/:id/equipos/:equipoId/puesto/:n" element={<DetallePuesto />} />

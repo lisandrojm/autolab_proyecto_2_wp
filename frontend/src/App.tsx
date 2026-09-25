@@ -114,10 +114,19 @@ const AppLayout: React.FC = () => {
 // Al cambiar de ruta, cancela los GET en vuelo de la página anterior para que no se
 // apilen consultas pesadas contra el server al navegar rápido. La limpieza corre antes
 // de que la nueva página dispare sus propios fetch.
+//
+// SALVO ADENTRO DE PLANTILLAS DEL MÓVIL (`/mobile/plantillas/...`): esas pantallas comparten los
+// catálogos (roles, convenios, categorías, áreas) entre rutas, y cancelarlos al pasar de una a otra los
+// dejaba vacíos para siempre —el catálogo no se vuelve a pedir—. Salir de Plantillas cancela como siempre.
+const esDePlantillas = (path: string) => path.startsWith("/mobile/plantillas");
 const RouteChangeCanceller: React.FC = () => {
   const location = useLocation();
   useEffect(() => {
-    return () => cancelPendingGetRequests();
+    const desde = location.pathname;
+    // En la limpieza (antes de que la página nueva pida lo suyo); la URL ya es la de destino.
+    return () => {
+      if (!(esDePlantillas(desde) && esDePlantillas(window.location.pathname))) cancelPendingGetRequests();
+    };
   }, [location.pathname]);
   return null;
 };

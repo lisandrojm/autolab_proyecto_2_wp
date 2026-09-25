@@ -31,7 +31,7 @@ export default function CampoConvenio({ proyecto, empresaId, convenioId, catalog
 
   let contenido;
   if (!empresaId) contenido = <p className={`${CLASE_CAMPO} flex items-center text-slate-400`}>Elegí primero la empresa</p>;
-  else if (!catalogos.categoriasCargadas) contenido = <p className={`${CLASE_CAMPO} flex animate-pulse items-center text-slate-400`}>Cargando convenios…</p>;
+  else if (!catalogos.categoriasCargadas || !catalogos.conveniosCargados) contenido = <p className={`${CLASE_CAMPO} flex animate-pulse items-center text-slate-400`}>Cargando convenios…</p>;
   else if (unico)
     contenido = (
       <p className={`${CLASE_CAMPO} flex items-center gap-2`} title={unico.nombre}>

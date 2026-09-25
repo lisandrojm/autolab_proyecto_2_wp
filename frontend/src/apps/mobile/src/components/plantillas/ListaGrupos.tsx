@@ -32,9 +32,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
   });
   const [lista, setLista] = useState<PlantillaResumen[] | null>(null);
   const [generales, setGenerales] = useState<PlantillaResumen[]>([]);
-  const [hoja, setHoja] = useState<null | "nuevo" | "generales">(null);
-  const [nombre, setNombre] = useState("");
-  const [creando, setCreando] = useState(false);
+  const [hoja, setHoja] = useState<null | "generales">(null);
 
   const proyectos = catalogos.proyectos;
   useEffect(() => {
@@ -57,24 +55,6 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
   useEffect(() => {
     plantillasEquipoAPI.listarGenerales().then(setGenerales).catch(() => setGenerales([]));
   }, []);
-
-  const crear = async () => {
-    if (!proyecto || !nombre.trim()) return;
-    setCreando(true);
-    try {
-      // La empresa, si el proyecto tiene una sola, ya viene elegida: sin ella no hay categorías.
-      const empresas = catalogos.empresasDelProyecto(proyecto);
-      const empresa = empresas.length === 1 ? empresas[0]._id : null;
-      const convenio = empresa ? catalogos.convenioUnico(proyecto, empresa)?._id || null : null;
-      const p = await plantillasEquipoAPI.crear({ projectId: proyecto._id, nombre: nombre.trim(), empresaContratoId: empresa, convenioId: convenio, sinEquipos: true });
-      setHoja(null);
-      navigate(rutas.grupo(p._id), { state: { editarPuestos: true } });
-    } catch (e: any) {
-      sweetAlert.error("No se pudo crear", e?.response?.data?.error || "Probá de nuevo.");
-    } finally {
-      setCreando(false);
-    }
-  };
 
   const usar = async (g: PlantillaResumen) => {
     if (!proyecto) return;
@@ -106,7 +86,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
         [1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)
       ) : lista.length === 0 ? (
         // Como pantalla, la acción es el botón de abajo; dentro de la pestaña, va en el cartel.
-        <Vacio texto="Todavía no hay grupos de puestos en este proyecto." accion={embebida ? "Nuevo grupo de puestos" : undefined} onAccion={() => setHoja("nuevo")} />
+        <Vacio texto="Todavía no hay equipos en este proyecto." accion={embebida ? "Nuevo equipo" : undefined} onAccion={() => navigate(rutas.nuevo({ proyecto: projectId }))} />
       ) : (
         lista.map((p) => {
           const asignados = p.equipos.reduce((s, e) => s + e.asignados, 0);
@@ -138,9 +118,9 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
       )}
 
       {embebida && lista && lista.length > 0 && (
-        <button type="button" onClick={() => setHoja("nuevo")} disabled={!proyecto} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-500 text-sm font-bold text-blue-700 disabled:opacity-40 dark:text-blue-300">
+        <button type="button" onClick={() => navigate(rutas.nuevo({ proyecto: projectId }))} disabled={!proyecto} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-500 text-sm font-bold text-blue-700 disabled:opacity-40 dark:text-blue-300">
           <FontAwesomeIcon icon={faPlus} />
-          Nuevo grupo de puestos
+          Nuevo equipo
         </button>
       )}
       {generales.length > 0 && (
@@ -149,23 +129,6 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
           Partir de un grupo general ({generales.length})
         </button>
       )}
-
-      <HojaInferior
-        abierta={hoja === "nuevo"}
-        onCerrar={() => setHoja(null)}
-        titulo="Nuevo grupo de puestos"
-        subtitulo={proyecto ? etiquetaProyecto(proyecto) : undefined}
-        pie={
-          <button type="button" onClick={() => void crear()} disabled={!nombre.trim() || creando} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-40">
-            Crear y elegir puestos
-          </button>
-        }
-      >
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-800 dark:text-slate-100">Nombre</span>
-          <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void crear()} placeholder="Ej. Equipo Técnica" maxLength={120} className={CLASE_CAMPO} />
-        </label>
-      </HojaInferior>
 
       <HojaInferior abierta={hoja === "generales"} onCerrar={() => setHoja(null)} titulo="Partir de un grupo general" subtitulo="Se copia a este proyecto; el general no cambia">
         <div className="space-y-2">
@@ -185,7 +148,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
 
   if (embebida) return contenido;
   return (
-    <Pantalla titulo="Plantillas" contexto={proyecto ? etiquetaProyecto(proyecto) : undefined} atras={aContratacion()} listo={lista !== null} boton={{ texto: "Nuevo grupo de puestos", onClick: () => setHoja("nuevo"), deshabilitado: !proyecto }}>
+    <Pantalla titulo="Plantillas" contexto={proyecto ? etiquetaProyecto(proyecto) : undefined} atras={aContratacion()} listo={lista !== null} boton={{ texto: "Nuevo equipo", onClick: () => navigate(rutas.nuevo({ proyecto: projectId })), deshabilitado: !proyecto }}>
       {contenido}
     </Pantalla>
   );

@@ -63,6 +63,8 @@ export function useCatalogosContratacion(activo = true) {
   const [proyectosActivos, setProyectosActivos] = useState<Project[] | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
+  /** Ya contestó el catálogo de convenios (tarda): sin él no se sabe cuál es el de la empresa. */
+  const [conveniosCargados, setConveniosCargados] = useState(false);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
   /** Las categorías tardan (son más de mil): sin ellas no se sabe qué convenios ofrecer. */
   const [categoriasCargadas, setCategoriasCargadas] = useState(false);
@@ -81,7 +83,11 @@ export function useCatalogosContratacion(activo = true) {
       .then((ps) => setProyectosActivos(ps.filter((p) => p.status === "active")))
       .catch(() => setProyectosActivos([]));
     companiesAPI.list({ slim: true }).then(setCompanies).catch(() => undefined);
-    conveniosApi.list().then(setConvenios).catch(() => undefined);
+    conveniosApi
+      .list()
+      .then(setConvenios)
+      .catch(() => undefined)
+      .finally(() => setConveniosCargados(true));
     categoriaSatAPI
       .list()
       .then(setCategoriasSat)
@@ -219,6 +225,7 @@ export function useCatalogosContratacion(activo = true) {
     conveniosDisponibles,
     convenioUnico,
     categoriasCargadas,
+    conveniosCargados,
     convenioPorCct,
     cctDeConvenio,
     categoriasPara,

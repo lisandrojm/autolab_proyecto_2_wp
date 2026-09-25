@@ -65,6 +65,8 @@ export const nombreRoles = (roleFrames: { _id: string; name: string }[], ids: st
 /** Las rutas, en un solo lugar. */
 export const rutas = {
   lista: "/mobile/plantillas",
+  /** El formulario de «Nuevo equipo» (con el grupo o el proyecto ya elegidos, si vienen). */
+  nuevo: (x: { grupo?: string; proyecto?: string } = {}) => `/mobile/plantillas/nuevo${x.grupo ? `?grupo=${x.grupo}` : x.proyecto ? `?proyecto=${x.proyecto}` : ""}`,
   grupo: (id: string) => `/mobile/plantillas/${id}`,
   equipo: (id: string, equipoId: string) => `/mobile/plantillas/${id}/equipos/${equipoId}`,
   puesto: (id: string, equipoId: string, n: number) => `/mobile/plantillas/${id}/equipos/${equipoId}/puesto/${n}`,

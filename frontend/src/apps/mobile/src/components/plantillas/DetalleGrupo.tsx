@@ -11,6 +11,7 @@ import { HojaInferior } from "./HojaInferior";
 import { aContratacion, estadoDe, nombreRoles, nombreTurno, rutas } from "./equipoUtil";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, Pill, textoHorario } from "./comun";
 import CampoConvenio from "./CampoConvenio";
+import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 import { ChipValoracion } from "../../../../../components/proyectos/ChipValoracion";
 
 /*
@@ -18,7 +19,7 @@ import { ChipValoracion } from "../../../../../components/proyectos/ChipValoraci
   (nombre y turno en un solo paso) y «Editar puestos» (roles y cantidades, con + y −). Arriba, la
   empresa y el convenio, que definen qué categorías se ofrecen. Botón principal: «Contratar equipos».
 */
-type Hoja = null | "equipo" | "puestos" | "nombre" | "proyecto";
+type Hoja = null | "puestos" | "nombre" | "proyecto";
 
 export default function DetalleGrupo() {
   const { id = "" } = useParams();
@@ -77,13 +78,13 @@ export default function DetalleGrupo() {
         onClick: () => navigate(rutas.contratar(p._id)),
         deshabilitado: p.equipos.length === 0 || p.integrantes.length === 0,
         motivo: p.integrantes.length === 0 ? "Primero elegí los puestos" : "Primero creá un equipo",
-        onMotivo: () => setHoja(p.integrantes.length === 0 ? "puestos" : "equipo"),
+        onMotivo: () => (p.integrantes.length === 0 ? setHoja("puestos") : navigate(rutas.nuevo({ grupo: p._id }))),
         tono: "verde",
       }}
     >
-      <Seccion titulo="Equipos" accion={<button type="button" onClick={() => setHoja("equipo")} disabled={p.integrantes.length === 0} className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-blue-700 disabled:opacity-40 dark:text-blue-300"><FontAwesomeIcon icon={faPlus} className="mr-1.5" />Nuevo equipo</button>}>
+      <Seccion titulo="Equipos" accion={<button type="button" onClick={() => navigate(rutas.nuevo({ grupo: p._id }))} disabled={p.integrantes.length === 0} className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-blue-700 disabled:opacity-40 dark:text-blue-300"><FontAwesomeIcon icon={faPlus} className="mr-1.5" />Nuevo equipo</button>}>
         {p.equipos.length === 0 ? (
-          p.integrantes.length === 0 ? <Vacio texto="Todavía no hay puestos." accion="Elegir puestos" onAccion={() => setHoja("puestos")} /> : <Vacio texto="Todavía no hay equipos." accion="Crear equipo" onAccion={() => setHoja("equipo")} />
+          p.integrantes.length === 0 ? <Vacio texto="Todavía no hay puestos." accion="Elegir puestos" onAccion={() => setHoja("puestos")} /> : <Vacio texto="Todavía no hay equipos." accion="Crear equipo" onAccion={() => navigate(rutas.nuevo({ grupo: p._id }))} />
         ) : (
           <div className="space-y-2">
             {p.equipos.map((e) => {
@@ -149,7 +150,6 @@ export default function DetalleGrupo() {
         </div>
       </Seccion>
 
-      <HojaNuevoEquipo abierta={hoja === "equipo"} onCerrar={() => setHoja(null)} plantilla={p} />
       <HojaPuestos abierta={hoja === "puestos"} onCerrar={() => setHoja(null)} plantilla={p} convenioId={convenioId} />
       <HojaNombre abierta={hoja === "nombre"} onCerrar={() => setHoja(null)} actual={p.nombre} onGuardar={(nombre) => void cambiarDatos({ nombre })} />
       <HojaInferior abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Pasar a otro proyecto" subtitulo="Los equipos quedan sin área y turno: son de cada proyecto">
@@ -190,70 +190,6 @@ function resumenRoles(p: Plantilla, roleFrames: { _id: string; name: string }[])
     cuenta.set(n, (cuenta.get(n) || 0) + 1);
   }
   return [...cuenta.entries()].map(([n, c]) => `${c} ${n}`).join(" · ");
-}
-
-/** NUEVO EQUIPO: nombre y turno en el mismo paso; opcional, copiar las personas de otro equipo. */
-function HojaNuevoEquipo({ abierta, onCerrar, plantilla: p }: { abierta: boolean; onCerrar: () => void; plantilla: Plantilla }) {
-  const navigate = useNavigate();
-  const { guardar, areasDe } = usePlantillas();
-  const areas = areasDe(p.projectId);
-  const [nombre, setNombre] = useState("");
-  const [turno, setTurno] = useState("");
-  const [copiarDe, setCopiarDe] = useState("");
-  useEffect(() => {
-    if (!abierta) return;
-    setNombre("");
-    setTurno("");
-    setCopiarDe("");
-  }, [abierta]);
-  const t = (areas || []).find((o) => `${o.areaId}::${o.shiftId}` === turno);
-
-  const crear = async () => {
-    const origen = p.equipos.find((e) => e._id === copiarDe);
-    const condiciones = { ...(origen?.condiciones || {}), ...(t ? { areaId: t.areaId, shiftId: t.shiftId, inTime: t.inicio || null, outTime: t.fin || null, diasSemana: t.dias, diasPorSemana: t.dias.length || null } : {}) };
-    const r = await guardar(() => plantillasEquipoAPI.crearEquipo(p._id, nombre.trim() || (t ? t.turnoNombre : ""), copiarDe || undefined, condiciones));
-    if (!r) return;
-    onCerrar();
-    const nuevo = r.equipos[r.equipos.length - 1];
-    if (nuevo) navigate(rutas.equipo(p._id, nuevo._id));
-  };
-
-  return (
-    <HojaInferior
-      abierta={abierta}
-      onCerrar={onCerrar}
-      titulo="Nuevo equipo"
-      pie={
-        <button type="button" onClick={() => void crear()} disabled={!nombre.trim() && !t} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-40">
-          Crear equipo
-        </button>
-      }
-    >
-      <div className="space-y-4">
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-800 dark:text-slate-100">Nombre</span>
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Sábado noche" maxLength={80} className={CLASE_CAMPO} />
-        </label>
-        <div>
-          <span className="mb-1 block text-sm font-semibold text-slate-800 dark:text-slate-100">Turno</span>
-          <ListaTurnos areas={areas} valor={turno} onElegir={setTurno} />
-        </div>
-        {p.equipos.length > 0 && (
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-800 dark:text-slate-100">Copiar personas de</span>
-            <select value={copiarDe} onChange={(e) => setCopiarDe(e.target.value)} className={CLASE_CAMPO}>
-              <option value="">Nadie (vacío)</option>
-              {p.equipos.map((e) => (
-                <option key={e._id} value={e._id}>
-                  {e.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-    </HojaInferior>
-  );
 }
 
 /** Las áreas y turnos del proyecto como opciones grandes, agrupadas por área. */
@@ -312,7 +248,7 @@ function HojaPuestos({ abierta, onCerrar, plantilla: p, convenioId }: { abierta:
   }, [p.integrantes]);
   const roles = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    return [...catalogos.roleFrames].filter((r) => (q ? r.name.toLowerCase().includes(q) : cuenta.has(r._id))).sort((a, b) => a.name.localeCompare(b.name));
+    return [...catalogos.roleFrames].filter((r) => (q ? fuzzyMatch(r.name, busca) : cuenta.has(r._id))).sort((a, b) => a.name.localeCompare(b.name));
   }, [catalogos.roleFrames, busca, cuenta]);
 
   const sumar = (rolId: string) => {
@@ -337,7 +273,7 @@ function HojaPuestos({ abierta, onCerrar, plantilla: p, convenioId }: { abierta:
   return (
     <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo="Puestos" subtitulo={`${p.integrantes.length} en total`} pie={<button type="button" onClick={onCerrar} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white">Listo</button>}>
       <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Agregar un rol: buscalo acá" aria-label="Buscar rol" className={`${CLASE_CAMPO} mb-3`} />
-      {roles.length === 0 && <p className="py-4 text-center text-sm text-slate-700 dark:text-slate-200">{busca ? "Ningún rol coincide." : "Buscá un rol para agregar puestos."}</p>}
+      {roles.length === 0 && <p className="py-4 text-center text-sm text-slate-700 dark:text-slate-200">{catalogos.roleFrames.length === 0 ? "Cargando los roles…" : busca ? "Ningún rol coincide." : "Buscá un rol para agregar puestos."}</p>}
       <div className="space-y-1.5">
         {roles.map((r) => {
           const n = cuenta.get(r._id) || 0;
