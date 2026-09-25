@@ -1340,6 +1340,9 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
       }
     }
 
+    // El margen de antes: si cambia, la valoración vuelve al cálculo automático (ver abajo).
+    const margenAntes = currentProject.margen ?? null;
+
     // Apply updates to currentProject
     Object.assign(currentProject, updateData);
 
@@ -1366,12 +1369,16 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
     }
 
     /*
-      LA VALORACIÓN SE RECALCULA, SALVO QUE ALGUIEN LA HAYA FIJADO.
+      LA VALORACIÓN SE RECALCULA, SALVO QUE ALGUIEN LA HAYA FIJADO… Y EL MARGEN NO HAYA CAMBIADO.
 
       Corre después de aplicar el resto del update para leer el MARGEN ya actualizado, y sólo cuando
       el proyecto no está en manual: un proyecto puede ser Oro por acuerdo comercial aunque su margen
       diga Plata, y que eso se revierta solo al editar el nombre sería peor que no tener cálculo
       automático.
+
+      CAMBIAR EL MARGEN SÍ LA DESFIJA (pedido del usuario, 2026-09-25): lo fijado a mano vale para el
+      margen de ese momento; con un margen nuevo, el nivel vuelve a salir del margen. Salvo que en el
+      mismo pedido se fije una valoración: eso es alguien eligiéndola con el margen nuevo a la vista.
 
       Es el margen y no el presupuesto: un proyecto grande con margen flaco no puede pagar las
       categorías caras.
@@ -1384,7 +1391,8 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
     if (pidieronValoracion) {
       currentProject.valoracionManual = true;
     }
-    const vuelveAlAutomatico = updateData.valoracionManual === false;
+    const cambioElMargen = updateData.margen !== undefined && (updateData.margen ?? null) !== margenAntes;
+    const vuelveAlAutomatico = updateData.valoracionManual === false || (cambioElMargen && !pidieronValoracion);
     if (!currentProject.valoracionManual || vuelveAlAutomatico) {
       currentProject.valoracionId = (await valoracionParaMargen(req.tenantObjectId!, currentProject.margen)) as any;
       currentProject.valoracionManual = false;

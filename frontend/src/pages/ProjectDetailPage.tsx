@@ -516,7 +516,10 @@ export const ProjectDetailPage: React.FC = () => {
                     onChange={(e) => {
                       const crudo = e.target.value.replace(",", ".").replace(/(?!^-)[^0-9.]/g, "");
                       const partes = crudo.split(".");
-                      setProjectForm((p) => ({ ...p, margen: partes.length > 2 ? `${partes[0]}.${partes.slice(1).join("")}` : crudo }));
+                      const nuevo = partes.length > 2 ? `${partes[0]}.${partes.slice(1).join("")}` : crudo;
+                      setProjectForm((p) => ({ ...p, margen: nuevo }));
+                      // Cambiar el margen desfija la valoración: vuelve a salir del margen (igual que el server).
+                      if (nuevo !== (project?.margen == null ? "" : String(project.margen))) setValoracionElegida("");
                     }}
                     className="input-field"
                     placeholder="Sin margen cargado"

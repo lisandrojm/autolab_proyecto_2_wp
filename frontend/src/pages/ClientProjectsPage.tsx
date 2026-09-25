@@ -90,6 +90,8 @@ export const ClientProjectsPage: React.FC = () => {
     endDate: '',
     contratoEmpresas: [] as string[],
     convenioIds: [] as string[],
+    /* El margen (%) como texto mientras se edita; decide la valoración. */
+    margen: '',
     releaseEmpresas: [] as string[],
     objectives: [] as string[],
     targetAudience: '',
@@ -229,6 +231,7 @@ export const ClientProjectsPage: React.FC = () => {
       endDate: '',
       contratoEmpresas: [] as string[],
       convenioIds: [] as string[],
+      margen: '',
       releaseEmpresas: [] as string[],
       objectives: [],
       targetAudience: '',
@@ -276,6 +279,7 @@ export const ClientProjectsPage: React.FC = () => {
       endDate: project.endDate ? project.endDate.split('T')[0] : '',
       contratoEmpresas: project.contratoEmpresas || [],
       convenioIds: project.convenioIds || [],
+      margen: project.margen == null ? '' : String(project.margen),
       releaseEmpresas: project.releaseEmpresas || [],
       objectives: project.objectives || [],
       targetAudience: project.targetAudience || '',
@@ -345,6 +349,7 @@ export const ClientProjectsPage: React.FC = () => {
 
       const data = {
         ...formData,
+        margen: formData.margen.trim() === '' ? null : Number(formData.margen),
       };
 
       if (modalMode === 'create') {
@@ -551,7 +556,7 @@ export const ClientProjectsPage: React.FC = () => {
                       </select>
                     </div>
 
-                    <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} />
+                    <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} margen={formData.margen} onMargen={(v) => setFormData((p) => ({ ...p, margen: v }))} />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                       <div>

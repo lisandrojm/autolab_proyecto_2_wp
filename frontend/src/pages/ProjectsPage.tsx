@@ -76,6 +76,8 @@ export const ProjectsPage: React.FC = () => {
     endDate: '',
     contratoEmpresas: [] as string[],
     convenioIds: [] as string[],
+    /* El margen (%) como texto mientras se edita; decide la valoración. */
+    margen: '',
     releaseEmpresas: [] as string[],
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     metadata: {
@@ -225,6 +227,7 @@ export const ProjectsPage: React.FC = () => {
       endDate: '',
       contratoEmpresas: [] as string[],
       convenioIds: [] as string[],
+      margen: '',
       releaseEmpresas: [] as string[],
       areasConfig: [],
       metadata: {
@@ -254,6 +257,7 @@ export const ProjectsPage: React.FC = () => {
       endDate: project.endDate ? project.endDate.split('T')[0] : '',
       contratoEmpresas: project.contratoEmpresas || [],
       convenioIds: project.convenioIds || [],
+      margen: project.margen == null ? '' : String(project.margen),
       releaseEmpresas: project.releaseEmpresas || [],
       areasConfig: (project.areasConfig || []).map((ac: any) => ({
         areaId: typeof ac.areaId === 'string' ? ac.areaId : ac.areaId._id,
@@ -325,12 +329,14 @@ export const ProjectsPage: React.FC = () => {
       if (modalMode === 'edit' && editingProject) {
         await projectsAPI.updateProject(editingProject._id, {
           ...formData,
+          margen: formData.margen.trim() === '' ? null : Number(formData.margen),
           ...cambiosDeValoracion(valoracionElegida, editingProject),
         } as any);
         sweetAlert.success('Proyecto actualizado', 'El proyecto se ha actualizado correctamente');
       } else {
         await projectsAPI.createProject(selectedClientId, {
           ...formData,
+          margen: formData.margen.trim() === '' ? null : Number(formData.margen),
           ...cambiosDeValoracion(valoracionElegida),
         } as any);
         sweetAlert.success('Proyecto creado', 'El proyecto se ha creado correctamente');
@@ -797,7 +803,7 @@ export const ProjectsPage: React.FC = () => {
               </select>
             </div>
 
-            <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} />
+            <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} margen={formData.margen} onMargen={(v) => setFormData((p) => ({ ...p, margen: v }))} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
               <div>

@@ -91,10 +91,10 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
         margen: margen.trim() === "" ? null : Number(margen),
         presupuesto: presupuesto.trim() === "" ? null : Number(presupuesto),
       },
-      project.valoracionManual ? "Se guardó el margen. La valoración sigue fijada a mano." : "Se guardó el margen y se recalculó la valoración.",
+      project.valoracionManual && (margen.trim() === "" ? null : Number(margen)) === (project.margen ?? null) ? "Se guardó. La valoración sigue fijada a mano." : "Se guardó el margen y se recalculó la valoración.",
     );
 
-  const fijar = (valoracionId: string) => guardar({ valoracionId }, "La valoración quedó fijada a mano: cambiar el margen no la va a mover.");
+  const fijar = (valoracionId: string) => guardar({ valoracionId }, "La valoración quedó fijada a mano. Si cambia el margen, vuelve a calcularse según el margen.");
   const volverAlAutomatico = () => guardar({ valoracionManual: false }, "La valoración vuelve a calcularse según el margen.");
 
   const pendientes = (desalineados?.total || 0) - (desalineados?.conOverride || 0);
@@ -133,7 +133,7 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
               <div className="flex flex-wrap items-center gap-3 mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nivel actual</span>
                 {actual ? <ChipValoracion nombre={actual.nombre} color={actual.color} manual={project.valoracionManual} /> : <span className="text-sm text-gray-400">Sin valorar</span>}
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">{project.valoracionManual ? "Fijada a mano: el margen no la mueve." : "Calculada según el margen."}</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">{project.valoracionManual ? "Fijada a mano, hasta que cambie el margen." : "Calculada según el margen."}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -159,7 +159,7 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
             <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Fijar a mano</p>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3">
-                Para cuando el nivel no sale del margen —un acuerdo comercial puntual—. Queda fijado: cambiar el margen después no lo mueve, hasta que se vuelva al cálculo automático.
+                Para cuando el nivel no sale del margen —un acuerdo comercial puntual—. Queda fijado hasta que cambie el margen: con un margen nuevo vuelve al cálculo automático.
               </p>
               {elegibles.length === 0 ? (
                 <p className="text-sm text-gray-400">No hay valoraciones cargadas. Se crean en Configuración → Valoraciones.</p>
