@@ -192,6 +192,28 @@ export default function NuevoEquipo() {
                   : null;
   const irA = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
 
+  /*
+    SE VA MOSTRANDO A MEDIDA QUE SE COMPLETA: cada sección aparece recién cuando la anterior está
+    completa, en el orden del alta individual. Así nunca hay un campo que todavía no se puede llenar.
+  */
+  const okProyecto = !!proyecto;
+  const okGrupo = okProyecto && !!b.grupoId && (!esNuevo || !!b.nombreGrupo.trim());
+  const okRoles = okGrupo && puestos.length > 0 && !!b.empresaContratoId && (!falta || !["campo-grupo", "campo-roles"].includes(falta.id));
+  const okContrato = okRoles && (!!b.contratoId || catalogos.contratos.length === 0);
+  const okTurno = okContrato && (!!b.turno || (areas?.length ?? 1) === 0);
+  const okNombre = okTurno && !!b.nombre.trim();
+  // Lo que aparece por un toque se trae a la vista: la PRIMERA sección nueva (con el turno aparecen
+  // horario y personas juntas). Lo que aparece escribiendo, no: movería la pantalla mientras se tipea.
+  const secciones = [okRoles && "campo-contrato", okContrato && "campo-turno", okTurno && "campo-horario", okNombre && "campo-personas"].filter(Boolean) as string[];
+  const [vistas, setVistas] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (vistas === null) return setVistas(secciones);
+    const nueva = secciones.find((x) => !vistas.includes(x));
+    if (nueva) setTimeout(() => document.getElementById(nueva)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    if (secciones.join() !== vistas.join()) setVistas(secciones);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secciones.join()]);
+
   const crear = async () => {
     setIntento(true);
     if (falta || !proyecto) {
@@ -270,6 +292,8 @@ export default function NuevoEquipo() {
           </div>
         </div>
 
+        {okProyecto && (
+          <>
         {/* GRUPO DE PUESTOS */}
         <div id="campo-grupo" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faLayerGroup} obligatorio>
@@ -293,7 +317,11 @@ export default function NuevoEquipo() {
           {esNuevo && <input value={b.nombreGrupo} onChange={(e) => cambiar({ nombreGrupo: e.target.value })} placeholder="Nombre del grupo (ej. Equipo Técnica)" maxLength={120} className={`${CLASE_CAMPO} ${error("campo-grupo") ? "border-red-500" : ""}`} aria-label="Nombre del grupo" />}
           {error("campo-grupo") && <p className="text-xs font-medium text-red-600 dark:text-red-400">{falta?.texto}.</p>}
         </div>
+          </>
+        )}
 
+        {okGrupo && (
+          <>
         {/* ROL/ES EMPRESA + EMPRESA QUE CONTRATA */}
         <div id="campo-roles" className="grid grid-cols-1 gap-4 scroll-mt-24 md:grid-cols-2">
           <div className="space-y-2">
@@ -347,7 +375,11 @@ export default function NuevoEquipo() {
             {b.empresaContratoId && <CampoConvenio proyecto={proyecto} empresaId={b.empresaContratoId} convenioId={b.convenioId} catalogos={catalogos} onChange={(id) => id !== b.convenioId && cambiar({ convenioId: id })} />}
           </div>
         </div>
+          </>
+        )}
 
+        {okRoles && (
+          <>
         {/* TIPO DE CONTRATO */}
         <div id="campo-contrato" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faFileContract} obligatorio>
@@ -367,7 +399,11 @@ export default function NuevoEquipo() {
             )}
           </button>
         </div>
+          </>
+        )}
 
+        {okContrato && (
+          <>
         {/* ÁREA Y TURNO */}
         <div id="campo-turno" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faBriefcase} obligatorio>
@@ -417,9 +453,13 @@ export default function NuevoEquipo() {
             </>
           )}
         </div>
+          </>
+        )}
 
+        {okTurno && (
+          <>
         {/* HORARIO Y DÍAS */}
-        <div className="space-y-2">
+        <div id="campo-horario" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faClock}>Horario (entrada - salida)</Rotulo>
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -445,7 +485,11 @@ export default function NuevoEquipo() {
             </div>
           )}
         </div>
+          </>
+        )}
 
+        {okTurno && (
+          <>
         {/* NOMBRE DEL EQUIPO */}
         <div id="campo-nombre" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faUsers} obligatorio>
@@ -453,10 +497,14 @@ export default function NuevoEquipo() {
           </Rotulo>
           <input value={b.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} placeholder="Ej. Sábado noche" maxLength={80} className={`${CLASE_CAMPO} ${error("campo-nombre") ? "border-red-500" : ""}`} aria-label="Nombre del equipo" />
         </div>
+          </>
+        )}
 
+        {okNombre && (
+          <>
         {/* PERSONAS (opcional) */}
         {puestos.length > 0 && (
-          <div className="space-y-2">
+          <div id="campo-personas" className="space-y-2 scroll-mt-24">
             <div className="flex items-center justify-between gap-2">
               <Rotulo icono={faUserPlus}>
                 Personas · {asignadas}/{puestos.length}
@@ -500,6 +548,8 @@ export default function NuevoEquipo() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
 
