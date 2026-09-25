@@ -569,16 +569,6 @@ export const ClientProjectsPage: React.FC = () => {
                 />
                       </div>
 
-              {/*
-                LOS CONVENIOS DEL PROYECTO, debajo de la empresa que los aporta.
-
-                Van en su propia fila y no al lado del Release: el Release es otra empleadora y otra
-                cosa. Estos cuelgan de la Empresa del Contrato, y ponerlos en cualquier otro lado
-                rompe la única relación que los explica.
-              */}
-              <div className="md:col-span-2">
-                <ConveniosDelProyecto companies={companies as any} empresasContrato={formData.contratoEmpresas} value={formData.convenioIds} onChange={(ids) => setFormData((p) => ({ ...p, convenioIds: ids }))} />
-              </div>
 
                       <div>
                         <CompanyMultiSelect
@@ -594,6 +584,14 @@ export const ClientProjectsPage: React.FC = () => {
                   companies={companies} value={formData.releaseEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, releaseEmpresas: ids }))}
                 />
                       </div>
+
+              {/*
+                LOS CONVENIOS DEL PROYECTO, a lo ancho y después de las dos empresas: se eligen igual que ellas
+                (badges con ✕ y ventana con buscador) y salen de los que registró la Empresa del Contrato.
+              */}
+              <div className="md:col-span-2">
+                <ConveniosDelProyecto companies={companies as any} empresasContrato={formData.contratoEmpresas} value={formData.convenioIds} onChange={(ids) => setFormData((p) => ({ ...p, convenioIds: ids }))} />
+              </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

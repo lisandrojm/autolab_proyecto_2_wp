@@ -265,6 +265,8 @@ function normalizeProject(raw: any): Project {
     clientId: raw?.clientId && typeof raw.clientId === "object" ? { _id: String(raw.clientId._id ?? raw.clientId.id ?? ""), name: raw.clientId.name } : String(raw?.clientId ?? ""),
     contratoEmpresas: Array.isArray(raw?.contratoEmpresas) ? raw.contratoEmpresas.map((e: any) => String(e?._id ?? e)) : [],
     releaseEmpresas: Array.isArray(raw?.releaseEmpresas) ? raw.releaseEmpresas.map((e: any) => String(e?._id ?? e)) : [],
+    // Sin esto el formulario abría con los convenios vacíos y, al guardar, los borraba.
+    convenioIds: Array.isArray(raw?.convenioIds) ? raw.convenioIds.map((c: any) => String(c?._id ?? c)) : [],
     name: raw?.name ?? "",
     description: raw?.description ?? "",
     status: raw?.status ?? "active",
