@@ -17,7 +17,21 @@ import { fuzzyMatch } from "../../utils/searchHelpers";
 export interface OpcionSeleccion {
   id: string;
   nombre: string;
+  /** Datos chicos al lado del nombre, como badges (ej. las empresas a las que pertenece un convenio). */
+  etiquetas?: string[];
 }
+
+/** Los badges chicos de `etiquetas`. */
+const Etiquetas: React.FC<{ etiquetas?: string[] }> = ({ etiquetas }) =>
+  etiquetas && etiquetas.length > 0 ? (
+    <span className="inline-flex flex-wrap gap-1">
+      {etiquetas.map((e) => (
+        <span key={e} className="rounded bg-gray-100 px-1 py-px text-[9px] font-semibold text-gray-600 dark:bg-gray-700/70 dark:text-gray-300">
+          {e}
+        </span>
+      ))}
+    </span>
+  ) : null;
 
 interface Props {
   /** El nombre del campo, con su ⓘ si lo tiene. Va en la cabecera, al lado del [+]. */
@@ -41,6 +55,7 @@ export const SeleccionMultiple: React.FC<Props> = ({ label, opciones, valor, onC
   const [busqueda, setBusqueda] = useState("");
 
   const nombreDe = (id: string) => opciones.find((o) => o.id === id)?.nombre || "—";
+  const etiquetasDe = (id: string) => opciones.find((o) => o.id === id)?.etiquetas;
   const quitar = (id: string) => onChange(valor.filter((x) => x !== id));
   const alternar = (id: string) => (valor.includes(id) ? quitar(id) : onChange([...valor, id]));
   const filtradas = opciones.filter((o) => fuzzyMatch(o.nombre, busqueda));
@@ -54,6 +69,7 @@ export const SeleccionMultiple: React.FC<Props> = ({ label, opciones, valor, onC
       {valor.map((id, i) => (
         <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
           {nombreDe(id)}
+          <Etiquetas etiquetas={etiquetasDe(id)} />
           {principal && i === 0 && valor.length > 1 && <span className="rounded bg-blue-600/15 px-1 text-[9px] uppercase tracking-wide">{principal}</span>}
           <button type="button" onClick={() => quitar(id)} aria-label={`Quitar ${nombreDe(id)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
             <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
@@ -125,8 +141,11 @@ export const SeleccionMultiple: React.FC<Props> = ({ label, opciones, valor, onC
                 return (
                   <label key={o.id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${marcada ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
                     <input type="checkbox" checked={marcada} onChange={() => alternar(o.id)} className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0" />
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate" title={o.nombre}>
-                      {o.nombre}
+                    <span className="min-w-0 flex flex-col gap-1">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate" title={o.nombre}>
+                        {o.nombre}
+                      </span>
+                      <Etiquetas etiquetas={o.etiquetas} />
                     </span>
                   </label>
                 );

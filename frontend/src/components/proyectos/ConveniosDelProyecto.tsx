@@ -51,6 +51,16 @@ export const ConveniosDelProyecto: React.FC<Props> = ({ companies, empresasContr
     return catalogo.filter((c) => ids.has(c._id)).sort((a, b) => String(a.externalId || '').localeCompare(String(b.externalId || '')));
   }, [companies, empresasContrato, catalogo]);
 
+  /** Por convenio, las empresas del contrato elegidas que lo registraron. */
+  const empresasDe = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const e of companies) {
+      if (!empresasContrato.includes(e._id)) continue;
+      for (const id of e.convenioIds || []) m.set(String(id), [...(m.get(String(id)) || []), e.razonSocial]);
+    }
+    return m;
+  }, [companies, empresasContrato]);
+
   /*
     SACAR UNA EMPRESA SE LLEVA SUS CONVENIOS.
 
@@ -85,7 +95,8 @@ export const ConveniosDelProyecto: React.FC<Props> = ({ companies, empresasContr
         placeholder="Sin acotar: todos los de la empresa…"
         placeholderBusqueda="Buscar convenio o CCT..."
         vacio="Esa empleadora no tiene convenios registrados. Se registran en Configuración → ARCA → Convenios."
-        opciones={disponibles.map((c) => ({ id: c._id, nombre: `${c.externalId ? `${c.externalId} · ` : ''}${c.name}` }))}
+        // Al lado de cada convenio, de cuál de las empresas elegidas es (puede ser de más de una).
+        opciones={disponibles.map((c) => ({ id: c._id, nombre: `${c.externalId ? `${c.externalId} · ` : ''}${c.name}`, etiquetas: empresasDe.get(c._id) || [] }))}
         valor={value}
         onChange={onChange}
       />
