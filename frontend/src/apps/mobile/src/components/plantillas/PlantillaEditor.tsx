@@ -17,7 +17,7 @@ import { Badge, CLASE_CAMPO, Rotulo, textoDias } from "./comun";
 /*
   CREAR O EDITAR UNA PLANTILLA DE EQUIPO, en tres hojas:
 
-   1. GENERAL: nombre, empresa (y con ella el convenio) y comentario. Nada más: ni tipo de contrato, ni
+   1. GENERAL: el PROYECTO donde se contrata el equipo, nombre, empresa (y con ella el convenio) y comentario. Nada más: ni tipo de contrato, ni
       áreas, ni horarios, que son de cada persona contratada (de cada puesto).
    2. PUESTOS: por rol («1 director, 2 cámaras…»), cada uno con su tipo de contrato, su área y turno,
       su horario y sus días (los del turno, modificables), su categoría. Se editan uno por uno. La
@@ -36,20 +36,24 @@ interface Props {
   plantillaId: string | null;
   /** Abrir directo en la hoja Equipos, con ese equipo elegido. */
   equipoInicial?: string | null;
+  /** El proyecto elegido en la lista: el de una plantilla nueva (en la hoja General se puede cambiar). */
   proyecto: Project | null;
   catalogos: CatalogosContratacion;
   onCambio: () => void;
+  /** La plantilla pasó a otro proyecto: la lista se va a ese proyecto para seguir viéndola. */
+  onProyecto?: (projectId: string) => void;
 }
 
 interface General {
+  projectId: string;
   nombre: string;
   empresaContratoId: string;
   convenioId: string;
   comentarios: string;
 }
-const vacio: General = { nombre: "", empresaContratoId: "", convenioId: "", comentarios: "" };
+const vacio: General = { projectId: "", nombre: "", empresaContratoId: "", convenioId: "", comentarios: "" };
 
-export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoInicial, proyecto, catalogos, onCambio }: Props) {
+export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoInicial, proyecto: proyectoDeLaLista, catalogos, onCambio, onProyecto }: Props) {
   const [plantilla, setPlantilla] = useState<Plantilla | null>(null);
   const [g, setG] = useState<General>(vacio);
   const [cargando, setCargando] = useState(false);
@@ -62,11 +66,13 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
   const [asignando, setAsignando] = useState<Puesto | null>(null);
   /** El puesto (el de la plantilla, sin pisar) cuyas condiciones en el equipo se están editando. */
   const [condicionesDe, setCondicionesDe] = useState<Puesto | null>(null);
+  // El proyecto de la plantilla (el elegido en la hoja General; de él salen áreas, empresas y valoración).
+  const proyecto = catalogos.proyectos?.find((x) => x._id === g.projectId) ?? proyectoDeLaLista;
   const areas = useAreasDelProyecto(isOpen ? proyecto?._id : null);
 
   const aplicar = (p: Plantilla) => {
     setPlantilla(p);
-    setG({ nombre: p.nombre, empresaContratoId: p.empresaContratoId || "", convenioId: p.convenioId || "", comentarios: p.comentarios || "" });
+    setG({ projectId: p.projectId || "", nombre: p.nombre, empresaContratoId: p.empresaContratoId || "", convenioId: p.convenioId || "", comentarios: p.comentarios || "" });
     setSucio(false);
     setEquipoId((actual) => (p.equipos.some((e) => e._id === actual) ? actual : p.equipos[0]?._id || ""));
   };
@@ -74,7 +80,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
   useEffect(() => {
     if (!isOpen) return;
     setPlantilla(null);
-    setG(vacio);
+    setG({ ...vacio, projectId: proyectoDeLaLista?._id || "" });
     setSucio(false);
     setHoja(1);
     setEquipoId("");
@@ -100,10 +106,11 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
   // La cadena del alta individual: empresa del proyecto → convenio. Con una sola opción, se elige sola.
   const empresas = catalogos.empresasDelProyecto(proyecto);
   useEffect(() => {
-    if (!isOpen || cargando || plantilla) return;
+    // En una plantilla nueva, o al pasarla a otro proyecto (la empresa se vació).
+    if (!isOpen || cargando || (plantilla && plantilla.projectId === g.projectId)) return;
     if (!g.empresaContratoId && empresas.length === 1) cambiar({ empresaContratoId: empresas[0]._id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, cargando, empresas.length]);
+  }, [isOpen, cargando, empresas.length, g.projectId]);
   // El convenio: el único de la empresa se usa directo, aunque el efecto de `CampoConvenio` no haya corrido.
   const convenioId = g.convenioId || catalogos.convenioUnico(proyecto, g.empresaContratoId)?._id || "";
 
@@ -142,13 +149,22 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
       sweetAlert.warning("Falta el nombre", "Poné un nombre a la plantilla (ej. «Noticiero LN+»).");
       return null;
     }
-    if (!proyecto) return null;
-    const datos = { nombre: g.nombre.trim(), empresaContratoId: g.empresaContratoId || null, convenioId: convenioId || null, comentarios: g.comentarios };
+    if (!proyecto) {
+      sweetAlert.warning("Falta el proyecto", "Elegí en qué proyecto se contrata el equipo.");
+      return null;
+    }
+    const cambiaDeProyecto = !!plantilla && plantilla.projectId !== proyecto._id;
+    if (cambiaDeProyecto && plantilla!.integrantes.length) {
+      const r: any = await sweetAlert.confirm("¿Pasar la plantilla a otro proyecto?", `Pasa a ${etiquetaProyecto(proyecto)}. Las áreas y turnos son de cada proyecto: los puestos quedan sin área y turno para elegirlos de nuevo. Las personas y los demás datos se quedan.`, "Pasar", "Cancelar");
+      if (!(r === true || r?.isConfirmed)) return null;
+    }
+    const datos = { projectId: proyecto._id, nombre: g.nombre.trim(), empresaContratoId: g.empresaContratoId || null, convenioId: convenioId || null, comentarios: g.comentarios };
     setGuardando(true);
     try {
       const nueva = !plantilla;
-      const p = plantilla ? await plantillasEquipoAPI.actualizar(plantilla._id, datos) : await plantillasEquipoAPI.crear({ ...datos, projectId: proyecto._id });
+      const p = plantilla ? await plantillasEquipoAPI.actualizar(plantilla._id, datos) : await plantillasEquipoAPI.crear(datos);
       aplicar(p);
+      if (p.projectId && p.projectId !== proyectoDeLaLista?._id) onProyecto?.(p.projectId);
       onCambio();
       if (nueva) {
         setHoja(2);
@@ -304,6 +320,19 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoIn
               <p className="rounded-xl bg-blue-50 p-3 text-[11px] text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
                 Primero lo general, que vale para todo el equipo. Con la plantilla creada armás los <b>puestos</b> (cada uno con su tipo de contrato, área, turno y horario) y después los <b>equipos</b> (quién ocupa cada puesto).
               </p>
+              <div>
+                <Rotulo obligatorio>Proyecto donde se contrata</Rotulo>
+                <select value={g.projectId} onChange={(e) => cambiar({ projectId: e.target.value, empresaContratoId: "", convenioId: "" })} disabled={(catalogos.proyectos?.length || 0) < 2} className={`${CLASE_CAMPO} disabled:opacity-80`}>
+                  {!g.projectId && <option value="">Elegí el proyecto…</option>}
+                  {(catalogos.proyectos || []).map((x) => (
+                    <option key={x._id} value={x._id}>
+                      {etiquetaProyecto(x)}
+                    </option>
+                  ))}
+                </select>
+                {(catalogos.proyectos?.length || 0) < 2 && <p className="mt-1 text-[11px] text-slate-400">Es el único proyecto que tenés a cargo.</p>}
+                {plantilla && plantilla.projectId !== g.projectId && plantilla.integrantes.length > 0 && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">Al guardar, los puestos quedan sin área y turno (son de cada proyecto) para elegirlos de nuevo.</p>}
+              </div>
               <div>
                 <Rotulo obligatorio>Nombre</Rotulo>
                 <input value={g.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} placeholder="Ej. Noticiero LN+" className={CLASE_CAMPO} maxLength={120} />

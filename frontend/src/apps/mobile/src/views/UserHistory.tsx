@@ -466,7 +466,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
 
     Cancelar la deja registrada como cancelada —hubo un pedido y se dio de baja—. Borrar es para lo que
     no aporta historial: una prueba, una cargada dos veces. El server no deja borrar una aprobada y, si
-    era una renovación, al borrarla el contrato vuelve a «Por vencer» para decidirlo de nuevo.
+    era una renovación, al borrarla el contrato vuelve a «Vencimientos» para decidirlo de nuevo.
   */
   const borrarSolicitud = async (user: User) => {
     const nombre = user.metadata?.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim();
@@ -497,7 +497,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         icon={faUsers}
         titulo="Solicitud de Contratación"
         onBack={() => onNavigate("home")}
-        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Por vencer» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vencimientos» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
@@ -507,9 +507,9 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           {(
             [
               { id: "historial", label: "Historial" },
-              { id: "por_vencer", label: "Por vencer" },
               // Pestaña propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
               ...(puedePlantillas ? [{ id: "plantillas", label: "Plantillas" }] : []),
+              { id: "por_vencer", label: "Vencimientos" },
             ] as { id: "historial" | "por_vencer" | "plantillas"; label: string }[]
           ).map((t) => (
             <button key={t.id} type="button" onClick={() => setPestana(t.id)} className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors ${pestana === t.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
@@ -681,7 +681,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         onSuccess={() => {
           setShowRegistrationModal(false);
           setEditingUser(null);
-          // La renovación enviada saca al contrato de «Por vencer»: se vuelve a pedir la lista.
+          // La renovación enviada saca al contrato de «Vencimientos»: se vuelve a pedir la lista.
           if (renovacion) cargarPorVencer();
           setRenovacion(null);
           refetch();

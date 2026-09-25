@@ -101,7 +101,8 @@ export interface PlantillaResumen {
 }
 
 /** Lo de la hoja general que se puede mandar al crear o editar. */
-export type ComunesPlantilla = Partial<Pick<Plantilla, "nombre" | "empresaContratoId" | "convenioId" | "contratoId" | "nombreContrato" | "tipoImpositivo" | "comentarios">>;
+/** `projectId` en una personal = pasarla a otro proyecto (los puestos pierden área y turno). */
+export type ComunesPlantilla = Partial<Pick<Plantilla, "projectId" | "nombre" | "empresaContratoId" | "convenioId" | "contratoId" | "nombreContrato" | "tipoImpositivo" | "comentarios">>;
 
 /** Un puesto nuevo (o los cambios de uno). `cantidad` lo repite («2 cámaras»); `userId` lo asigna en el equipo. */
 export interface NuevoPuesto {

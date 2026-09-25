@@ -108,6 +108,31 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
     }
   };
 
+  /** Copia de un equipo (personas y condiciones propias) con un nombre libre: «Semana A (copia)», «… (copia 2)». */
+  const duplicarEquipo = async (p: PlantillaResumen, e: PlantillaResumen["equipos"][number]) => {
+    const usados = new Set(p.equipos.map((x) => x.nombre.toLowerCase()));
+    let nombre = `${e.nombre} (copia)`;
+    for (let n = 2; usados.has(nombre.toLowerCase()); n++) nombre = `${e.nombre} (copia ${n})`;
+    try {
+      await plantillasEquipoAPI.crearEquipo(p._id, nombre, e._id);
+      sweetAlert.success("Equipo duplicado", `Se creó «${nombre}» con la misma gente y condiciones.`);
+      cargar();
+    } catch (err: any) {
+      sweetAlert.error("No se pudo duplicar", err?.response?.data?.error || "Probá de nuevo.");
+    }
+  };
+
+  const eliminarEquipo = async (p: PlantillaResumen, e: PlantillaResumen["equipos"][number]) => {
+    const r: any = await sweetAlert.confirm("¿Eliminar el equipo?", `«${e.nombre}» deja de estar en «${p.nombre}». Los puestos no cambian y las solicitudes ya pedidas tampoco.`, "Eliminar", "Cancelar");
+    if (!(r === true || r?.isConfirmed)) return;
+    try {
+      await plantillasEquipoAPI.borrarEquipo(p._id, e._id);
+      cargar();
+    } catch (err: any) {
+      sweetAlert.error("No se pudo eliminar", err?.response?.data?.error || "Probá de nuevo.");
+    }
+  };
+
   /** Otro equipo sobre los mismos puestos: se crea vacío y se abre para asignar gente (y renombrarlo). */
   const nuevoEquipo = async (p: PlantillaResumen) => {
     try {
@@ -121,16 +146,19 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
 
   return (
     <div className="space-y-3">
-      {proyectos && proyectos.length > 1 && (
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={CLASE_CAMPO} aria-label="Proyecto">
-          {proyectos.map((p) => (
-            <option key={p._id} value={p._id}>
-              {etiquetaProyecto(p)}
-            </option>
-          ))}
-        </select>
+      {/* El proyecto donde se contratan los equipos de esta lista (una plantilla se puede pasar a otro en su hoja General). */}
+      {proyectos && proyectos.length > 0 && (
+        <div>
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Proyecto donde se contrata</p>
+          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={proyectos.length < 2} className={`${CLASE_CAMPO} disabled:opacity-80`} aria-label="Proyecto">
+            {proyectos.map((p) => (
+              <option key={p._id} value={p._id}>
+                {etiquetaProyecto(p)}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
-      {proyectos && proyectos.length === 1 && proyecto && <p className="text-xs font-semibold text-slate-500">{etiquetaProyecto(proyecto)}</p>}
 
       <div className="grid grid-cols-2 gap-2">
         <button type="button" onClick={() => setEditando({ id: null })} disabled={!proyecto} className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-blue-400 py-3 text-sm font-bold text-blue-600 disabled:opacity-40 dark:text-blue-400">
@@ -225,10 +253,23 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
                         {e.ultimaContratacionEl ? `Contratado el ${fechaCorta(e.ultimaContratacionEl)}` : "Nunca contratado"}
                       </p>
                     </button>
-                    <button type="button" onClick={() => void abrirContratar(p, e._id)} disabled={p.puestos === 0} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
-                      <FontAwesomeIcon icon={faFileSignature} />
-                      Contratar
-                    </button>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setEditando({ id: p._id, equipoId: e._id })} aria-label={`Editar el equipo ${e.nombre}`} className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
+                        </button>
+                        <button type="button" onClick={() => void duplicarEquipo(p, e)} aria-label={`Duplicar el equipo ${e.nombre}`} className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faCopy} className="h-3 w-3" />
+                        </button>
+                        <button type="button" onClick={() => void eliminarEquipo(p, e)} aria-label={`Eliminar el equipo ${e.nombre}`} className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-red-500 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <button type="button" onClick={() => void abrirContratar(p, e._id)} disabled={p.puestos === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+                        <FontAwesomeIcon icon={faFileSignature} />
+                        Contratar
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -241,7 +282,7 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
         ))
       )}
 
-      <PlantillaEditor isOpen={!!editando} onClose={() => setEditando(null)} plantillaId={editando?.id ?? null} equipoInicial={editando?.equipoId ?? null} proyecto={proyecto} catalogos={catalogos} onCambio={cargar} />
+      <PlantillaEditor isOpen={!!editando} onClose={() => setEditando(null)} plantillaId={editando?.id ?? null} equipoInicial={editando?.equipoId ?? null} proyecto={proyecto} catalogos={catalogos} onCambio={cargar} onProyecto={setProjectId} />
       <ContratarEquipoModal
         isOpen={!!contratando}
         onClose={() => setContratando(null)}

@@ -10,7 +10,7 @@ import { RequestConfig } from "../models/RequestConfig.js";
 import { importePorJornada } from "../compartido/jornadas.js";
 import { armarPayloadDeSolicitud } from "../compartido/solicitudDeContratacion.js";
 import { Contexto, erroresDelLote, FechasDeContratacion, IntegranteParaPlan, MAX_INTEGRANTES_POR_LOTE, PlanDeLote, planDeLote, PlantillaParaPlan, Puntual } from "../utils/planDeLote.js";
-import { superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
+import { compromisosDePersona, superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
 import { choquesDelEquipo, CompromisoExistente, superposiciones } from "../utils/superposicionContratos.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "./solicitudes.js";
@@ -176,21 +176,42 @@ async function condicionesDesde(p: any, puesto: any, body: any, acc: Acceso): Pr
 /** Condiciones para devolver al cliente: ids como texto. */
 const condicionesParaMostrar = (c: any) => (c ? Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v instanceof Types.ObjectId ? String(v) : v])) : null);
 
+/** Lo que cada persona ya tiene en CUALQUIER proyecto (contratos y solicitudes pendientes), por `userId`. */
+type Compromisos = Map<string, CompromisoExistente[]>;
+
+/** Los compromisos de todas las personas asignadas en estas plantillas, una búsqueda por persona. */
+async function compromisosDeLasPlantillas(tenantId: Types.ObjectId, plantillas: any[]): Promise<Compromisos> {
+  const ids = [...new Set(plantillas.flatMap((p) => (p.equipos || []).flatMap((e: any) => (e.asignaciones || []).map((a: any) => (a.userId ? String(a.userId) : "")))).filter(idOk))];
+  const listas = await Promise.all(ids.map((id) => compromisosDePersona(tenantId, id).catch(() => [] as CompromisoExistente[])));
+  return new Map(ids.map((id, n) => [id, listas[n]]));
+}
+
 /**
- * Los avisos de un equipo guardado, por puesto: la misma persona en dos puestos que se pisan. Sin
- * fechas (la plantilla no las tiene): se comparan los días de la semana y el horario.
+ * Los avisos de un equipo guardado, por puesto. GLOBALES: la persona
+ *  - ocupa otro puesto del MISMO equipo que se pisa (días de la semana y horario, o mismo turno), o
+ *  - ya tiene un contrato o una solicitud pendiente, en CUALQUIER proyecto, de hoy en adelante, que se
+ *    pisa en días y horario (o es el mismo turno) con lo que haría en este puesto.
+ * Sin fechas (la plantilla no las tiene), se mira desde hoy: al contratar se revisa otra vez con las
+ * fechas reales. Son avisos, nunca bloquean.
  */
-function avisosDelEquipo(p: any, equipo: any, porDiasSueltos: (contratoId: string) => boolean): Record<string, string[]> {
-  const puestos = [...(p.integrantes || [])].sort((a: any, b: any) => (a.orden ?? 0) - (b.orden ?? 0));
-  const choques = choquesDelEquipo(
-    puestos.map((i: any, n: number) => {
+function avisosDelEquipo(p: any, equipo: any, porDiasSueltos: (contratoId: string) => boolean, compromisos: Compromisos, hoy: string): Record<string, string[]> {
+  const puestos = [...(p.integrantes || [])]
+    .sort((a: any, b: any) => (a.orden ?? 0) - (b.orden ?? 0))
+    .map((i: any, n: number) => {
       const a = (equipo.asignaciones || []).find((x: any) => String(x.puestoId) === String(i._id));
       const e = puestoEnEquipo(i, a);
       const contratoId = String(e.contratoId || p.contratoId || "");
       return { puestoId: String(i._id), etiqueta: `puesto ${n + 1}`, userId: a?.userId ? String(a.userId) : "", dias: e.diasSemana || [], rotativos: !!e.diasRotativos, porDiasSueltos: porDiasSueltos(contratoId), inTime: e.inTime || "", outTime: e.outTime || "", shiftId: e.shiftId ? String(e.shiftId) : null };
-    }),
-  );
-  return Object.fromEntries(choques);
+    });
+  const avisos = choquesDelEquipo(puestos);
+  for (const x of puestos) {
+    if (!x.userId) continue;
+    // Lo que haría en este puesto, desde hoy y sin fin: los días por jornada se eligen al contratar (no se saben).
+    const pedido = { desde: hoy, hasta: "", dias: x.porDiasSueltos ? [] : x.dias, rotativos: x.porDiasSueltos || x.rotativos, inTime: x.inTime, outTime: x.outTime, shiftIds: x.shiftId ? [x.shiftId] : [] };
+    const pisan = superposiciones(pedido, compromisos.get(x.userId) || [], hoy).filter((s) => s.tipo === "horario");
+    if (pisan.length) avisos.set(x.puestoId, [...(avisos.get(x.puestoId) || []), ...pisan.map((s) => s.mensaje)]);
+  }
+  return Object.fromEntries(avisos);
 }
 
 /** Qué tipos de contrato van por días sueltos, de los que usan estas plantillas. */
@@ -215,7 +236,8 @@ export async function listarPlantillas(acc: Acceso, projectId: string) {
   const lista: any[] = await PlantillaEquipo.find({ tenantId: acc.tenantId, activo: true, ...filtroDeAlcance(acc), ...(acc.alcance === "personal" ? { projectId: oid(projectId) } : {}) })
     .sort({ nombre: 1 })
     .lean();
-  const porDiasSueltos = await contratosPorDiasSueltos(lista);
+  const [porDiasSueltos, compromisos] = await Promise.all([contratosPorDiasSueltos(lista), compromisosDeLasPlantillas(acc.tenantId, lista)]);
+  const hoy = hoyArgentina();
   return lista.map((p) => ({
     _id: String(p._id),
     nombre: p.nombre,
@@ -230,7 +252,7 @@ export async function listarPlantillas(acc: Acceso, projectId: string) {
       asignados: (e.asignaciones || []).filter((a: any) => a.userId).length,
       // Cuántos puestos tienen condiciones propias en este equipo (otro horario, otro turno…).
       propias: (e.asignaciones || []).filter((a: any) => a.condiciones && Object.keys(a.condiciones).length).length,
-      avisos: Object.keys(avisosDelEquipo(p, e, porDiasSueltos)).length,
+      avisos: Object.keys(avisosDelEquipo(p, e, porDiasSueltos, compromisos, hoy)).length,
       ultimaContratacionEl: e.ultimaContratacionEl || null,
     })),
     ultimaContratacionEl: p.ultimaContratacionEl || null,
@@ -245,10 +267,12 @@ const contratoDelPuesto = (p: any, i: any) =>
 export async function obtenerPlantilla(acc: Acceso, id: string) {
   const p: any = (await cargar(acc, id)).toObject();
   const userIds = (p.equipos || []).flatMap((e: any) => (e.asignaciones || []).flatMap((a: any) => [a.userId, a.reemplazadoDePersonaId])).filter(Boolean);
-  const [personas, porDiasSueltos]: [any[], (id: string) => boolean] = await Promise.all([
+  const [personas, porDiasSueltos, compromisos]: [any[], (id: string) => boolean, Compromisos] = await Promise.all([
     userIds.length ? User.find({ _id: { $in: userIds }, tenantId: acc.tenantId }).select("firstName lastName email metadata.fullName metadata.activo").lean() : Promise.resolve([]),
     contratosPorDiasSueltos([p]),
+    compromisosDeLasPlantillas(acc.tenantId, [p]),
   ]);
+  const hoy = hoyArgentina();
   const persona = new Map(personas.map((u) => [String(u._id), u]));
   return {
     ...p,
@@ -260,7 +284,7 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
       _id: String(e._id),
       nombre: e.nombre,
       ultimaContratacionEl: e.ultimaContratacionEl || null,
-      avisos: avisosDelEquipo(p, e, porDiasSueltos),
+      avisos: avisosDelEquipo(p, e, porDiasSueltos, compromisos, hoy),
       asignaciones: (e.asignaciones || []).map((a: any) => {
         const u = a.userId ? persona.get(String(a.userId)) : null;
         return {
@@ -298,6 +322,25 @@ export async function crearPlantilla(acc: Acceso, body: any) {
 
 export async function actualizarPlantilla(acc: Acceso, id: string, body: any) {
   const p = await cargar(acc, id);
+  /*
+    CAMBIAR DE PROYECTO (sólo las personales): el equipo se va a contratar en otro proyecto. Las áreas y
+    turnos son de cada proyecto, así que se vacían en los puestos y en las condiciones de los equipos, y
+    la empresa y el convenio también (se eligen de nuevo entre los del proyecto). Las personas se quedan.
+  */
+  if (acc.alcance === "personal" && body?.projectId !== undefined && String(body.projectId) !== String(p.projectId)) {
+    if (!idOk(body.projectId) || !(await Project.exists({ _id: oid(body.projectId), tenantId: acc.tenantId }))) throw new ErrorPlantilla(400, "Elegí el proyecto de la plantilla.");
+    p.projectId = oid(body.projectId);
+    for (const i of p.integrantes as any[]) Object.assign(i, { areaId: null, shiftId: null });
+    for (const e of p.equipos as any[])
+      for (const a of e.asignaciones || []) {
+        if (!a.condiciones) continue;
+        const { areaId, shiftId, ...resto } = a.condiciones;
+        a.condiciones = Object.keys(resto).length ? resto : null;
+      }
+    p.markModified("integrantes");
+    p.markModified("equipos");
+    if (body.empresaContratoId === undefined) Object.assign(p, { empresaContratoId: null, convenioId: null });
+  }
   // Cambiar la empresa cambia el convenio: las categorías que no sean del nuevo quedan «a completar»
   // (el plan las marca como error hasta que se corrijan; no se borran para no perder qué eran).
   Object.assign(p, leerGeneral(body, acc));

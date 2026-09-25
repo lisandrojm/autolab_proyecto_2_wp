@@ -49,7 +49,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const nuevasContrataciones = NOVEDADES_CONTRATACION.reduce((total, tipo) => total + (porTipo[tipo] || 0), 0);
   /*
     CONTRATOS POR VENCER: el aviso de la semana previa. Se muestra en la tarjeta Contratación, que es
-    donde se resuelven (pestaña «Por vencer»). Con su catch: sin el número, la tarjeta sigue igual.
+    donde se resuelven (pestaña «Vencimientos»). Con su catch: sin el número, la tarjeta sigue igual.
 
     Se vuelve a contar mientras la app está a la vista, igual que las novedades: un contrato entra en
     la ventana de aviso por el paso del tiempo, sin que nadie toque nada, y la app puede llevar días
