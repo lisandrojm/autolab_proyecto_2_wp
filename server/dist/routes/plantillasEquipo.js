@@ -3,7 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { MOBILE_HIRING_TEMPLATES } from "../utils/permisosMobile.js";
-import { actualizarPlantilla, actualizarPuesto, agregarPuestos, asignarPuesto, borrarEquipo, borrarPlantilla, contratarPlantilla, crearEquipo, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarPuesto, renombrarEquipo, usarGeneral, } from "../services/plantillasEquipo.js";
+import { actualizarPlantilla, actualizarPuesto, agregarPuestos, asignarPuesto, condicionesEnEquipo, borrarEquipo, borrarPlantilla, contratarPlantilla, crearEquipo, crearPlantilla, duplicarPlantilla, ErrorPlantilla, listarPlantillas, obtenerPlantilla, previewDeContratacion, quitarPuesto, renombrarEquipo, usarGeneral, } from "../services/plantillasEquipo.js";
 const manejar = (fn) => async (req, res) => {
     try {
         const r = await fn(req, res);
@@ -58,6 +58,8 @@ router.put("/:id/equipos/:equipoId", ...movil, manejar((req) => renombrarEquipo(
 router.delete("/:id/equipos/:equipoId", ...movil, manejar((req) => borrarEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId)));
 // `userId: null` deja el puesto sin asignar en ese equipo.
 router.put("/:id/equipos/:equipoId/puestos/:puestoId", ...movil, manejar((req) => asignarPuesto(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body?.userId ?? null)));
+// Las condiciones propias del puesto en ese equipo (horario, días, área y turno, contrato…). `restablecer: true` vuelve a las del puesto.
+router.put("/:id/equipos/:equipoId/puestos/:puestoId/condiciones", ...movil, manejar((req) => condicionesEnEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body || {})));
 // No escribe nada: lo que saldría, con importes, errores y advertencias por puesto.
 router.post("/:id/preview", ...movil, manejar((req) => previewDeContratacion(acceso(req, "personal"), req.params.id, req.body || {})));
 // Todo o nada, con `idempotencyKey`.

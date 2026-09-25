@@ -17,6 +17,8 @@ export interface Acceso {
     userId: string;
     alcance: "personal" | "general";
 }
+/** El puesto tal como lo ocupa ESE equipo: lo del puesto, pisado por las condiciones del equipo. */
+export declare function puestoEnEquipo(puesto: any, asignacion: any): any;
 /** Las plantillas para la lista: las personales del proyecto; las generales, todas. */
 export declare function listarPlantillas(acc: Acceso, projectId: string): Promise<{
     _id: string;
@@ -54,15 +56,23 @@ export declare function agregarPuestos(acc: Acceso, id: string, nuevos: any[], e
 export declare function actualizarPuesto(acc: Acceso, id: string, puestoId: string, body: any): Promise<any>;
 /** Saca un puesto (y a quien lo ocupaba en cada equipo). */
 export declare function quitarPuesto(acc: Acceso, id: string, puestoId: string): Promise<any>;
-/** Un equipo nuevo, vacío o copiando las asignaciones de otro («Semana B» a partir de «Semana A»). */
+/** Un equipo nuevo, vacío o copiando otro —personas y condiciones propias— («Semana B» a partir de «Semana A»). */
 export declare function crearEquipo(acc: Acceso, id: string, nombre: string, copiarDeId?: string): Promise<any>;
 export declare function renombrarEquipo(acc: Acceso, id: string, equipoId: string, nombre: string): Promise<any>;
 export declare function borrarEquipo(acc: Acceso, id: string, equipoId: string): Promise<any>;
 /**
- * Quién ocupa un puesto en un equipo. `userId: null` lo deja sin asignar. Si ya había alguien, queda
- * anotado a quién reemplazó (informativo, y para sugerir «¿Cubre a X?» al contratar).
+ * Quién ocupa un puesto en un equipo. `userId: null` lo deja sin asignar (las condiciones propias del
+ * puesto en el equipo, si tiene, se conservan). Si ya había alguien, queda anotado a quién reemplazó
+ * (informativo, y para sugerir «¿Cubre a X?» al contratar). La misma persona PUEDE ocupar otro puesto
+ * del equipo: si se pisan, el equipo lo avisa (`avisos`), no se bloquea.
  */
 export declare function asignarPuesto(acc: Acceso, id: string, equipoId: string, puestoId: string, userId: string | null): Promise<any>;
+/**
+ * Las CONDICIONES PROPIAS de un puesto en un equipo: área y turno, horario, días, tipo de contrato,
+ * categoría, importe, comentario. Se manda el puesto como debería quedar en este equipo y se guarda sólo
+ * lo que difiere del puesto. `restablecer: true` vuelve a las del puesto.
+ */
+export declare function condicionesEnEquipo(acc: Acceso, id: string, equipoId: string, puestoId: string, body: any): Promise<any>;
 /**
  * El plan completo. Dos pasadas: la primera resuelve las fechas de cada persona (una puede tener otros
  * días), con eso se buscan sus superposiciones, y la segunda las suma como advertencias.

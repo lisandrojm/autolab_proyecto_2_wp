@@ -6,7 +6,7 @@ import { Modal } from "../Modal";
 import { CustomDatePicker } from "../CustomDatePicker";
 import { CustomMultiDatePicker } from "../CustomMultiDatePicker";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
-import { FilaPreview, Plantilla, plantillasEquipoAPI, Preview, Puesto, Puntual } from "../../../../../api/plantillasEquipo";
+import { FilaPreview, Plantilla, plantillasEquipoAPI, Preview, Puesto, puestosDelEquipo, Puntual } from "../../../../../api/plantillasEquipo";
 import { Project } from "../../../../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./useCatalogosContratacion";
@@ -34,12 +34,14 @@ interface Props {
   plantilla: Plantilla | null;
   proyecto: Project | null;
   catalogos: CatalogosContratacion;
+  /** El equipo con el que abre (el que se tocó en la lista). Sin él, el contratado más recientemente. */
+  equipoInicial?: string | null;
   onContratada: () => void;
 }
 
 const nuevaClave = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proyecto, catalogos, onContratada }: Props) {
+export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proyecto, catalogos, equipoInicial, onContratada }: Props) {
   const [fechas, setFechas] = useState<string[]>([]);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
@@ -66,7 +68,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
     setHasta("");
     // El equipo contratado más recientemente es el que se suele repetir.
     const ordenados = [...(plantilla?.equipos || [])].sort((a, b) => String(b.ultimaContratacionEl || "").localeCompare(String(a.ultimaContratacionEl || "")));
-    setEquipoId(ordenados[0]?._id || "");
+    setEquipoId(equipoInicial && plantilla?.equipos.some((e) => e._id === equipoInicial) ? equipoInicial : ordenados[0]?._id || "");
     setGuardarEnEquipo(false);
     setPuntuales({});
     setAbierto(null);
@@ -74,25 +76,28 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
     setNombresReemplazados({});
     setNombresElegidos({});
     clave.current = nuevaClave();
-  }, [isOpen, plantilla?._id]);
+  }, [isOpen, plantilla?._id, equipoInicial]);
 
   // El tipo de contrato de cada puesto dice qué fechas pide: calendario (días sueltos) o desde/hasta.
   const contratoDe = (i: Puesto) => catalogos.contratos.find((c) => c._id === i.contratoId) as any;
   const porDiasSueltosDe = (i: Puesto) => contratoDe(i)?.data?.modoFechas === "dias";
   const esServiciosDe = (i: Puesto) => i.tipoImpositivo === "constancia_cuit";
-  const incluidos = (plantilla?.integrantes || []).filter((i) => !puntuales[i._id]?.excluido);
+  const equipo = plantilla?.equipos.find((e) => e._id === equipoId);
+  // Los puestos como los ocupa el equipo elegido: sus condiciones propias pisan las del puesto.
+  const puestos = useMemo(() => (plantilla ? puestosDelEquipo(plantilla, equipo) : []), [plantilla, equipo]);
+  const incluidos = puestos.filter((i) => !puntuales[i._id]?.excluido);
   const conDias = incluidos.some(porDiasSueltosDe);
   const conPeriodo = incluidos.some((i) => !porDiasSueltosDe(i));
   // Sin fecha de baja sólo si TODOS los de período son por tiempo indeterminado (a esos el server no les pone baja).
   const indeterminado = conPeriodo && incluidos.filter((i) => !porDiasSueltosDe(i)).every((i) => !!contratoDe(i)?.data?.esTiempoIndeterminado);
-  const nombresContratos = [...new Set((plantilla?.integrantes || []).map((i) => i.nombreContrato).filter(Boolean))].join(" · ");
-  const equipo = plantilla?.equipos.find((e) => e._id === equipoId);
+  const nombresContratos = [...new Set(puestos.map((i) => i.nombreContrato).filter(Boolean))].join(" · ");
   const asignacionDe = (puestoId: string) => equipo?.asignaciones.find((a) => a.puestoId === puestoId);
   const turnoDe = (areaId: string | null, shiftId: string | null) => {
     const t = (areas || []).find((o) => o.areaId === areaId && o.shiftId === shiftId);
     return t ? `${t.areaNombre} · ${t.turnoNombre}` : "Sin área y turno";
   };
-  const cambiados = Object.values(puntuales).filter((x) => x.userId).length;
+  // Lo que «Guardar en el equipo» puede guardar: la persona, el horario, la categoría y el importe.
+  const cambiados = Object.values(puntuales).filter((x) => !x.excluido && (x.userId || x.inTime || x.outTime || x.categoriaSatId || x.dailyRate)).length;
 
   const pedido = useMemo(
     () => ({
@@ -155,14 +160,14 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
         const avisos = f.advertencias.length ? `<div style="color:${f.superposicionHorario ? "#f87171" : "#fbbf24"};font-size:11px">⚠ ${f.advertencias.map(esc).join("<br>⚠ ")}</div>` : "";
         return `<div style="padding:8px 0;border-bottom:1px solid rgba(148,163,184,.25)">
           <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(f.nombre)}</b><b>${pesos(f.importes.total)}</b></div>
-          <div style="font-size:11px;opacity:.8">${esc(nombreRol(plantilla.integrantes.find((x) => x._id === f.integranteId)?.rolesFrame || []))} · ${esc(f.nombreContrato || "—")} · ${esc(f.categoriaNombre || (f.origenImporte === "servicios" || f.nombreContrato && !f.categoriaSatId ? "Servicio" : "—"))} · ${esc(f.inTime)} a ${esc(f.outTime)} · ${f.jornadas} jornada${f.jornadas === 1 ? "" : "s"} × ${pesos(f.importes.jornada)}</div>
+          <div style="font-size:11px;opacity:.8">${esc(nombreRol(puestos.find((x) => x._id === f.integranteId)?.rolesFrame || []))} · ${esc(f.nombreContrato || "—")} · ${esc(f.categoriaNombre || (f.origenImporte === "servicios" || f.nombreContrato && !f.categoriaSatId ? "Servicio" : "—"))} · ${esc(f.inTime)} a ${esc(f.outTime)} · ${f.jornadas} jornada${f.jornadas === 1 ? "" : "s"} × ${pesos(f.importes.jornada)}</div>
           ${reemplazo}${avisos}</div>`;
       })
       .join("");
     const html = `<div style="font-size:12px;line-height:1.45">
       <div style="margin-bottom:8px;opacity:.9"><b>${esc(plantilla.nombre)}</b><br>${esc(proyecto ? etiquetaProyecto(proyecto) : "")}<br>${esc(empresa?.razonSocial || "Sin empresa")}<br>${esc(equipo ? `Equipo «${equipo.nombre}»` : "Sin equipo")} · ${esc(periodo)}</div>
       ${filasHtml}
-      ${guardarEnEquipo && cambiados ? `<div style="margin-top:8px;font-size:11px;opacity:.85">Las ${cambiados} persona(s) cambiadas quedan también en el equipo «${esc(equipo?.nombre || "")}».</div>` : ""}
+      ${guardarEnEquipo && cambiados ? `<div style="margin-top:8px;font-size:11px;opacity:.85">Lo cambiado en ${cambiados} puesto(s) queda también en el equipo «${esc(equipo?.nombre || "")}».</div>` : ""}
       <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px"><b>${incluidas.length} ${incluidas.length === 1 ? "persona" : "personas"} · ${preview.totales.jornadas} jornadas</b><b>${pesos(preview.totales.importe)}</b></div>
     </div>`;
 
@@ -243,13 +248,14 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
                   }}
                   className={`rounded-full px-3 py-1.5 text-xs font-bold ${e._id === equipoId ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}
                 >
-                  {e.nombre} ({e.asignaciones.length}/{plantilla.integrantes.length})
+                  {e.nombre} ({e.asignaciones.filter((a) => a.userId).length}/{plantilla.integrantes.length})
                 </button>
               ))}
             </div>
           )}
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {nombresContratos || "Sin tipo de contrato"} · {plantilla.integrantes.length} puestos
+            {equipo && equipo.asignaciones.some((a) => a.condiciones && Object.keys(a.condiciones).length) ? " · con condiciones propias del equipo" : ""}
           </p>
         </div>
 
@@ -278,7 +284,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
         <div className="space-y-2">
           <h4 className="text-sm font-bold text-slate-900 dark:text-white">Puestos</h4>
           {!hayFechas && <p className="text-[11px] text-slate-500">Elegí las fechas para ver cuánto sale cada uno.</p>}
-          {plantilla.integrantes.map((i, n) => {
+          {puestos.map((i, n) => {
             const p = puntuales[i._id] || {};
             const asig = asignacionDe(i._id);
             // La persona: la cambiada esta vez, o la del equipo. Sin ninguna, el puesto está sin asignar.
@@ -450,7 +456,7 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
           {equipo && cambiados > 0 && (
             <label className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
               <input type="checkbox" checked={guardarEnEquipo} onChange={(e) => setGuardarEnEquipo(e.target.checked)} className="h-4 w-4" />
-              Guardar {cambiados === 1 ? "la persona cambiada" : `las ${cambiados} personas cambiadas`} en el equipo «{equipo.nombre}» (si no, vale sólo para esta vez).
+              Guardar {cambiados === 1 ? "lo cambiado en 1 puesto" : `lo cambiado en ${cambiados} puestos`} (persona, horario, categoría, importe) en el equipo «{equipo.nombre}». Si no, vale sólo para esta vez.
             </label>
           )}
         </div>
@@ -460,14 +466,13 @@ export default function ContratarEquipoModal({ isOpen, onClose, plantilla, proye
         isOpen={!!completandoPuesto}
         onClose={() => setCompletandoPuesto(null)}
         titulo={(() => {
-          const i = plantilla.integrantes.find((x) => x._id === completandoPuesto);
+          const i = puestos.find((x) => x._id === completandoPuesto);
           return i ? `¿Quién ocupa el puesto de ${nombreRol(i.rolesFrame)}?` : "";
         })()}
         rolInicial={(() => {
-          const i = plantilla.integrantes.find((x) => x._id === completandoPuesto);
+          const i = puestos.find((x) => x._id === completandoPuesto);
           return i ? catalogos.roleFrames.find((r) => r._id === i.rolesFrame[0])?.name : undefined;
         })()}
-        excluir={[...(equipo?.asignaciones.filter((a) => a.puestoId !== completandoPuesto && !puntuales[a.puestoId]?.userId).map((a) => a.userId) || []), ...Object.entries(puntuales).filter(([k, v]) => k !== completandoPuesto && v.userId).map(([, v]) => v.userId!)]}
         roleFrames={catalogos.roleFrames}
         onElegir={(ps) => {
           const id = completandoPuesto;

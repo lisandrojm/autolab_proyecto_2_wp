@@ -37,13 +37,8 @@ const diaDeSemana = (f) => new Date(`${f}T12:00:00Z`).getUTCDay();
 const pesos = (n) => `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx) {
     // La persona de cada puesto: la elegida para esta vez o, si no, la del equipo.
+    // Puede ser la misma en dos puestos: no es error. Si se pisan, lo avisa `superposiciones` (origen «lote»).
     const personaDelPuesto = (integ) => puntuales[integ._id]?.userId || integ.userId || "";
-    const veces = new Map();
-    for (const integ of integrantes) {
-        const uid = personaDelPuesto(integ);
-        if (uid && !puntuales[integ._id]?.excluido)
-            veces.set(uid, (veces.get(uid) || 0) + 1);
-    }
     const filas = integrantes.map((original) => {
         const p = puntuales[original._id] || {};
         const integ = { ...original, userId: personaDelPuesto(original) };
@@ -115,8 +110,6 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
             errores.push("La persona está inactiva.");
         if (integ.rolesFrame.length === 0)
             errores.push("Falta el rol empresa.");
-        if (!sinPersona && (veces.get(integ.userId) || 0) > 1)
-            errores.push("La misma persona está en más de un puesto.");
         if (!esServicios && !categoriaSatId)
             errores.push("Falta la categoría (a completar).");
         if (!areaShiftAssignments.length)
@@ -164,7 +157,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
                 if (m)
                     errores.push(m);
         }
-        const sup = ctx.superposiciones.get(integ.userId) || [];
+        const sup = ctx.superposiciones.get(integ._id) || [];
         for (const s of sup)
             advertencias.push(s.mensaje);
         const datos = persona

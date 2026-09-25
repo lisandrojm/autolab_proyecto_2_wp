@@ -121,7 +121,10 @@ export interface Contexto {
     equipo: Set<string>;
     /** Motivos de reemplazo válidos (los de Novedades). Vacío = el individual no lo exige. */
     motivos: Set<string>;
-    /** Superposiciones de cada persona con lo que ya tiene, para ESTAS fechas. */
+    /**
+     * Superposiciones de cada PUESTO (`_id` del integrante, no de la persona: la misma puede ocupar dos)
+     * con lo que la persona ya tiene y con sus otros puestos del lote, para ESTAS fechas.
+     */
     superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
 }
 export interface FilaDelPlan {

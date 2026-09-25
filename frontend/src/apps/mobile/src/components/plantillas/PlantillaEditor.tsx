@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCopy, faPen, faPlus, faRightLeft, faSpinner, faTrash, faUserPlus, faUserXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faPen, faPlus, faRightLeft, faSliders, faSpinner, faTrash, faTriangleExclamation, faUserPlus, faUserXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { Modal } from "../Modal";
-import { Equipo, Plantilla, plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo";
+import { Equipo, Plantilla, plantillasEquipoAPI, Puesto, puestoEnEquipo } from "../../../../../api/plantillasEquipo";
 import { Project } from "../../../../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CatalogosContratacion, etiquetaProyecto, useAreasDelProyecto } from "./useCatalogosContratacion";
@@ -22,8 +22,10 @@ import { Badge, CLASE_CAMPO, Rotulo, textoDias } from "./comun";
    2. PUESTOS: por rol («1 director, 2 cámaras…»), cada uno con su tipo de contrato, su área y turno,
       su horario y sus días (los del turno, modificables), su categoría. Se editan uno por uno. La
       categoría viene la del nivel del proyecto (Plata, Oro…), y se puede cambiar.
-   3. EQUIPOS: quién ocupa cada puesto. Se guardan varios con nombre («Semana A», «Semana B») para
-      repetirlos cuando haga falta; al contratar se elige uno.
+   3. EQUIPOS: quién ocupa cada puesto y, si hace falta, con CONDICIONES PROPIAS (otro horario, otros
+      días, otro turno, otro contrato…). Los puestos son la plantilla que se reutiliza; cada equipo es un
+      caso guardado sobre ellos («Semana A», «Equipo noche»). Al contratar se elige uno. Si la misma
+      persona queda en dos puestos que se pisan, se avisa: no se bloquea.
 
   Las fechas y los importes NO se guardan acá: se eligen y se calculan en cada contratación.
 */
@@ -32,6 +34,8 @@ interface Props {
   onClose: () => void;
   /** `null` = plantilla nueva. */
   plantillaId: string | null;
+  /** Abrir directo en la hoja Equipos, con ese equipo elegido. */
+  equipoInicial?: string | null;
   proyecto: Project | null;
   catalogos: CatalogosContratacion;
   onCambio: () => void;
@@ -45,7 +49,7 @@ interface General {
 }
 const vacio: General = { nombre: "", empresaContratoId: "", convenioId: "", comentarios: "" };
 
-export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto, catalogos, onCambio }: Props) {
+export default function PlantillaEditor({ isOpen, onClose, plantillaId, equipoInicial, proyecto, catalogos, onCambio }: Props) {
   const [plantilla, setPlantilla] = useState<Plantilla | null>(null);
   const [g, setG] = useState<General>(vacio);
   const [cargando, setCargando] = useState(false);
@@ -56,6 +60,8 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
   const [editando, setEditando] = useState<Puesto | null>(null);
   const [equipoId, setEquipoId] = useState("");
   const [asignando, setAsignando] = useState<Puesto | null>(null);
+  /** El puesto (el de la plantilla, sin pisar) cuyas condiciones en el equipo se están editando. */
+  const [condicionesDe, setCondicionesDe] = useState<Puesto | null>(null);
   const areas = useAreasDelProyecto(isOpen ? proyecto?._id : null);
 
   const aplicar = (p: Plantilla) => {
@@ -78,11 +84,13 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
       .obtener(plantillaId)
       .then((p) => {
         aplicar(p);
-        setHoja(p.integrantes.length ? 3 : 2);
+        // Desde un equipo de la lista, a sus personas y condiciones; si no, a los puestos.
+        setHoja(equipoInicial && p.integrantes.length ? 3 : 2);
+        if (equipoInicial && p.equipos.some((e) => e._id === equipoInicial)) setEquipoId(equipoInicial);
       })
       .catch(() => sweetAlert.error("No se pudo abrir la plantilla"))
       .finally(() => setCargando(false));
-  }, [isOpen, plantillaId]);
+  }, [isOpen, plantillaId, equipoInicial]);
 
   const cambiar = (x: Partial<General>) => {
     setG((p) => ({ ...p, ...x }));
@@ -177,6 +185,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
   };
   const equipo: Equipo | undefined = plantilla?.equipos.find((e) => e._id === equipoId);
   const quienEn = (puestoId: string) => equipo?.asignaciones.find((a) => a.puestoId === puestoId);
+  const asignados = (e: Equipo) => e.asignaciones.filter((a) => a.userId).length;
 
   const quitarPuesto = async (p: Puesto, n: number) => {
     const r: any = await sweetAlert.confirm(`¿Sacar el puesto ${n}?`, `${rolDe(p)} deja de estar en la plantilla (y en todos sus equipos). Las solicitudes ya pedidas no cambian.`, "Sacar", "Cancelar");
@@ -188,7 +197,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
     if (!plantilla) return;
     const r = await Swal.fire({
       title: "Nuevo equipo",
-      html: `<p style="font-size:.85em;margin-bottom:.5em">Un equipo es quién ocupa cada puesto (ej. «Semana A»).</p>`,
+      html: `<p style="font-size:.85em;margin-bottom:.5em">Un equipo es quién ocupa cada puesto y con qué condiciones (ej. «Semana A», «Equipo noche»). Copiando otro se copian también sus condiciones propias.</p>`,
       input: "text",
       inputPlaceholder: `Equipo ${plantilla.equipos.length + 1}`,
       showCancelButton: true,
@@ -228,7 +237,7 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
   const hojas = [
     { n: 1 as const, t: "General", hecho: !!plantilla },
     { n: 2 as const, t: `Puestos${plantilla ? ` (${plantilla.integrantes.length})` : ""}`, hecho: !!plantilla?.integrantes.length },
-    { n: 3 as const, t: `Equipos${plantilla ? ` (${plantilla.equipos.length})` : ""}`, hecho: !!plantilla?.equipos.some((e) => e.asignaciones.length) },
+    { n: 3 as const, t: `Equipos${plantilla ? ` (${plantilla.equipos.length})` : ""}`, hecho: !!plantilla?.equipos.some((e) => asignados(e) > 0) },
   ];
 
   return (
@@ -392,13 +401,16 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           {/* ── 3. EQUIPOS ── */}
           {hoja === 3 && plantilla && (
             <section className="space-y-3">
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Un equipo es quién ocupa cada puesto. Guardá los que repetís (ej. «Semana A», «Semana B») y al contratar elegís cuál.</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Un equipo es quién ocupa cada puesto y con qué condiciones. Los puestos se reutilizan: armá varios equipos sobre ellos (ej. «Semana A», «Equipo noche»), cada uno con su gente y, si hace falta, su horario, sus días o su turno. Al contratar elegís cuál.
+              </p>
               {plantilla.equipos.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
                   {plantilla.equipos.map((e) => (
                     <button key={e._id} type="button" onClick={() => setEquipoId(e._id)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${e._id === equipoId ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300"}`}>
                       <FontAwesomeIcon icon={faUsers} className="mr-1.5" />
-                      {e.nombre} ({e.asignaciones.length}/{plantilla.integrantes.length})
+                      {e.nombre} ({asignados(e)}/{plantilla.integrantes.length})
+                      {Object.keys(e.avisos || {}).length > 0 && <FontAwesomeIcon icon={faTriangleExclamation} className={`ml-1.5 ${e._id === equipoId ? "text-amber-200" : "text-amber-500"}`} />}
                     </button>
                   ))}
                 </div>
@@ -417,32 +429,54 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
               )}
               {plantilla.integrantes.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Primero armá los puestos.</p>}
               {equipo &&
-                plantilla.integrantes.map((p, n) => {
-                  const a = quienEn(p._id);
+                plantilla.integrantes.map((base, n) => {
+                  const a = quienEn(base._id);
+                  const persona = a?.userId ? a : undefined;
+                  const p = puestoEnEquipo(base, equipo);
+                  const propias = Object.keys(a?.condiciones || {}).length > 0;
+                  const avisos = equipo.avisos?.[base._id] || [];
+                  const turno = turnoDe(p);
                   return (
-                    <div key={p._id} className={`flex items-center gap-2 rounded-xl border bg-white p-3 dark:bg-slate-900/60 ${a ? (a.activo ? "border-slate-200 dark:border-slate-700" : "border-red-300 dark:border-red-900/60") : "border-dashed border-amber-400 dark:border-amber-700"}`}>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-bold text-slate-500 dark:text-slate-400">
-                          {n + 1}. {rolDe(p)} {turnoDe(p) ? `· ${turnoDe(p)}` : ""}
-                        </p>
-                        <p className={`truncate text-sm font-semibold ${a ? "text-slate-900 dark:text-white" : "text-amber-600 dark:text-amber-400"}`}>
-                          {a ? a.nombre : "Sin asignar"} {a && !a.activo && <Badge tono="rojo">Inactiva</Badge>}
-                        </p>
-                        {a?.reemplazadoDeNombre && <p className="text-[10px] text-slate-400">Entró en lugar de {a.reemplazadoDeNombre}</p>}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setAsignando(p)}
-                        aria-label={a ? `Cambiar a ${a.nombre}` : `Asignar el puesto ${n + 1}`}
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${a ? "border border-slate-200 text-slate-500 dark:border-slate-700" : "bg-amber-500 text-white"}`}
-                      >
-                        <FontAwesomeIcon icon={a ? faRightLeft : faUserPlus} className="h-3 w-3" />
-                      </button>
-                      {a && (
-                        <button type="button" onClick={() => void conPlantilla((pl) => plantillasEquipoAPI.asignar(pl._id, equipo._id, p._id, null))} aria-label={`Dejar sin asignar el puesto ${n + 1}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 dark:border-slate-700">
-                          <FontAwesomeIcon icon={faUserXmark} className="h-3 w-3" />
+                    <div key={base._id} className={`rounded-xl border bg-white p-3 dark:bg-slate-900/60 ${persona ? (!persona.activo ? "border-red-300 dark:border-red-900/60" : avisos.length ? "border-amber-400 dark:border-amber-700" : "border-slate-200 dark:border-slate-700") : "border-dashed border-amber-400 dark:border-amber-700"}`}>
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-1.5 truncate text-xs font-bold text-slate-500 dark:text-slate-400">
+                            {n + 1}. {rolDe(p)}
+                            {propias && <Badge tono="azul">Propias</Badge>}
+                          </p>
+                          <p className={`truncate text-sm font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-amber-600 dark:text-amber-400"}`}>
+                            {persona ? persona.nombre : "Sin asignar"} {persona && !persona.activo && <Badge tono="rojo">Inactiva</Badge>}
+                          </p>
+                          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                            {turno || "Sin área y turno"} · {p.inTime && p.outTime ? `${p.inTime} a ${p.outTime}` : "sin horario"}
+                            {!porDiasSueltosP(p) && p.diasSemana?.length ? ` · ${textoDias(p.diasSemana)}` : ""}
+                            {propias && p.contratoId !== base.contratoId ? ` · ${p.nombreContrato || etiquetaContrato(p.contratoId || "")}` : ""}
+                          </p>
+                          {a?.reemplazadoDeNombre && <p className="text-[10px] text-slate-400">Entró en lugar de {a.reemplazadoDeNombre}</p>}
+                        </div>
+                        <button type="button" onClick={() => setCondicionesDe(base)} aria-label={`Condiciones del puesto ${n + 1} en este equipo`} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${propias ? "bg-blue-600 text-white" : "border border-slate-200 text-slate-500 dark:border-slate-700"}`}>
+                          <FontAwesomeIcon icon={faSliders} className="h-3 w-3" />
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => setAsignando(base)}
+                          aria-label={persona ? `Cambiar a ${persona.nombre}` : `Asignar el puesto ${n + 1}`}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${persona ? "border border-slate-200 text-slate-500 dark:border-slate-700" : "bg-amber-500 text-white"}`}
+                        >
+                          <FontAwesomeIcon icon={persona ? faRightLeft : faUserPlus} className="h-3 w-3" />
+                        </button>
+                        {persona && (
+                          <button type="button" onClick={() => void conPlantilla((pl) => plantillasEquipoAPI.asignar(pl._id, equipo._id, base._id, null))} aria-label={`Dejar sin asignar el puesto ${n + 1}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 dark:border-slate-700">
+                            <FontAwesomeIcon icon={faUserXmark} className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      {avisos.map((m) => (
+                        <p key={m} className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 p-2 text-[11px] text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
+                          {m}
+                        </p>
+                      ))}
                     </div>
                   );
                 })}
@@ -494,11 +528,29 @@ export default function PlantillaEditor({ isOpen, onClose, plantillaId, proyecto
           onGuardar={(cambios) => conPlantilla((pl) => plantillasEquipoAPI.actualizarPuesto(pl._id, editando!._id, cambios), true)}
         />
       )}
+      {plantilla && equipo && (
+        <PuestoModal
+          isOpen={!!condicionesDe}
+          onClose={() => setCondicionesDe(null)}
+          plantilla={{ ...plantilla, empresaContratoId: g.empresaContratoId || null, convenioId: convenioId || null }}
+          proyecto={proyecto}
+          puesto={condicionesDe ? puestoEnEquipo(condicionesDe, equipo) : null}
+          numero={condicionesDe ? plantilla.integrantes.findIndex((x) => x._id === condicionesDe._id) + 1 : 0}
+          areas={areas}
+          catalogos={catalogos}
+          enEquipo={{
+            nombre: equipo.nombre,
+            propias: !!condicionesDe && Object.keys(quienEn(condicionesDe._id)?.condiciones || {}).length > 0,
+            onRestablecer: () => conPlantilla((pl) => plantillasEquipoAPI.condiciones(pl._id, equipo._id, condicionesDe!._id, { restablecer: true }), true),
+          }}
+          onGuardar={(cambios) => conPlantilla((pl) => plantillasEquipoAPI.condiciones(pl._id, equipo._id, condicionesDe!._id, cambios), true)}
+        />
+      )}
+      {/* La misma persona puede ocupar otro puesto del equipo: si se pisan, el equipo lo avisa. */}
       <PersonaPickerModal
         isOpen={!!asignando}
         onClose={() => setAsignando(null)}
         titulo={asignando ? `¿Quién ocupa el puesto de ${rolDe(asignando)}?` : ""}
-        excluir={equipo?.asignaciones.filter((a) => a.puestoId !== asignando?._id).map((a) => a.userId) || []}
         roleFrames={catalogos.roleFrames}
         rolInicial={asignando ? nombreRol.get(asignando.rolesFrame[0]) : undefined}
         onElegir={(ps) => {

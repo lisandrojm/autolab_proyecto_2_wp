@@ -1,5 +1,5 @@
 import mongoose, { Types } from "mongoose";
-import { PlantillaEquipo } from "../models/PlantillaEquipo.js";
+import { CAMPOS_DE_CONDICIONES, PlantillaEquipo } from "../models/PlantillaEquipo.js";
 import { LoteContratacion } from "../models/LoteContratacion.js";
 import { User } from "../models/User.js";
 import { Project } from "../models/Project.js";
@@ -11,6 +11,8 @@ import { importePorJornada } from "../compartido/jornadas.js";
 import { armarPayloadDeSolicitud } from "../compartido/solicitudDeContratacion.js";
 import { erroresDelLote, MAX_INTEGRANTES_POR_LOTE, planDeLote } from "../utils/planDeLote.js";
 import { superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
+import { choquesDelEquipo, superposiciones } from "../utils/superposicionContratos.js";
+import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "./solicitudes.js";
 import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSchemas.js";
 /*
@@ -128,6 +130,88 @@ async function escalaDe(plantilla, puesto) {
     const [cat, contrato] = await Promise.all([CategoriaSat.findById(categoriaSatId).select("data.neto").lean(), contratoId ? Contrato.findById(contratoId).select("data.multiplicadorDiario").lean() : null]);
     return cat ? importePorJornada(cat.data?.neto, contrato?.data?.multiplicadorDiario) : null;
 }
+// ── Las condiciones propias de un equipo ────────────────────────────────
+/** Un valor comparable: ids y fechas como texto, arrays como lista. Vacío/null/undefined, iguales. */
+const comparable = (v) => {
+    if (v === undefined || v === null || v === "")
+        return "";
+    if (Array.isArray(v))
+        return JSON.stringify(v.map((x) => String(x)));
+    return String(v);
+};
+/** El puesto tal como lo ocupa ESE equipo: lo del puesto, pisado por las condiciones del equipo. */
+export function puestoEnEquipo(puesto, asignacion) {
+    const c = asignacion?.condiciones || {};
+    const efectivo = { ...puesto };
+    for (const campo of [...CAMPOS_DE_CONDICIONES, "escalaAlFijar"])
+        if (campo in c)
+            efectivo[campo] = c[campo];
+    return efectivo;
+}
+/**
+ * De lo que se pidió para el puesto EN ESTE EQUIPO, sólo lo que difiere del puesto: lo igual no se
+ * guarda, así si después se cambia el puesto, el cambio llega también a este equipo.
+ */
+async function condicionesDesde(p, puesto, body, acc) {
+    const pedido = leerPuesto(body, acc);
+    delete pedido.rolesFrame;
+    const c = {};
+    for (const campo of CAMPOS_DE_CONDICIONES) {
+        if (!(campo in pedido))
+            continue;
+        if (comparable(pedido[campo]) !== comparable(puesto[campo]))
+            c[campo] = pedido[campo];
+    }
+    // El tipo de contrato viaja con su nombre y su trámite: si cambió uno, van los tres.
+    if ("contratoId" in c)
+        for (const campo of ["nombreContrato", "tipoImpositivo"])
+            if (campo in pedido)
+                c[campo] = pedido[campo];
+    if (!("contratoId" in c)) {
+        delete c.nombreContrato;
+        delete c.tipoImpositivo;
+    }
+    if ("dailyRateManual" in c || "categoriaSatId" in c || "contratoId" in c) {
+        const efectivo = { ...puesto, ...c };
+        c.escalaAlFijar = efectivo.dailyRateManual ? await escalaDe(p, efectivo) : null;
+    }
+    return Object.keys(c).length ? c : null;
+}
+/** Condiciones para devolver al cliente: ids como texto. */
+const condicionesParaMostrar = (c) => (c ? Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v instanceof Types.ObjectId ? String(v) : v])) : null);
+/**
+ * Los avisos de un equipo guardado, por puesto: la misma persona en dos puestos que se pisan. Sin
+ * fechas (la plantilla no las tiene): se comparan los días de la semana y el horario.
+ */
+function avisosDelEquipo(p, equipo, porDiasSueltos) {
+    const puestos = [...(p.integrantes || [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+    const choques = choquesDelEquipo(puestos.map((i, n) => {
+        const a = (equipo.asignaciones || []).find((x) => String(x.puestoId) === String(i._id));
+        const e = puestoEnEquipo(i, a);
+        const contratoId = String(e.contratoId || p.contratoId || "");
+        return { puestoId: String(i._id), etiqueta: `puesto ${n + 1}`, userId: a?.userId ? String(a.userId) : "", dias: e.diasSemana || [], rotativos: !!e.diasRotativos, porDiasSueltos: porDiasSueltos(contratoId), inTime: e.inTime || "", outTime: e.outTime || "", shiftId: e.shiftId ? String(e.shiftId) : null };
+    }));
+    return Object.fromEntries(choques);
+}
+/** Qué tipos de contrato van por días sueltos, de los que usan estas plantillas. */
+async function contratosPorDiasSueltos(plantillas) {
+    const ids = new Set();
+    for (const p of plantillas) {
+        if (p.contratoId)
+            ids.add(String(p.contratoId));
+        for (const i of p.integrantes || [])
+            if (i.contratoId)
+                ids.add(String(i.contratoId));
+        for (const e of p.equipos || [])
+            for (const a of e.asignaciones || [])
+                if (a.condiciones?.contratoId)
+                    ids.add(String(a.condiciones.contratoId));
+    }
+    const validos = [...ids].filter(idOk).map(oid);
+    const contratos = validos.length ? await Contrato.find({ _id: { $in: validos } }).select("data.modoFechas").lean() : [];
+    const dias = new Set(contratos.filter((c) => c.data?.modoFechas === "dias").map((c) => String(c._id)));
+    return (id) => dias.has(id);
+}
 // ── Lectura ─────────────────────────────────────────────────────────────
 /** Las plantillas para la lista: las personales del proyecto; las generales, todas. */
 export async function listarPlantillas(acc, projectId) {
@@ -136,6 +220,7 @@ export async function listarPlantillas(acc, projectId) {
     const lista = await PlantillaEquipo.find({ tenantId: acc.tenantId, activo: true, ...filtroDeAlcance(acc), ...(acc.alcance === "personal" ? { projectId: oid(projectId) } : {}) })
         .sort({ nombre: 1 })
         .lean();
+    const porDiasSueltos = await contratosPorDiasSueltos(lista);
     return lista.map((p) => ({
         _id: String(p._id),
         nombre: p.nombre,
@@ -144,7 +229,15 @@ export async function listarPlantillas(acc, projectId) {
         // Los tipos de contrato de sus puestos («Jornada · Plazo fijo»), o el viejo de la plantilla.
         nombreContrato: [...new Set((p.integrantes || []).map((i) => (i.contratoId ? i.nombreContrato : p.nombreContrato) || "").filter(Boolean))].join(" · "),
         puestos: (p.integrantes || []).length,
-        equipos: (p.equipos || []).map((e) => ({ _id: String(e._id), nombre: e.nombre, asignados: (e.asignaciones || []).length, ultimaContratacionEl: e.ultimaContratacionEl || null })),
+        equipos: (p.equipos || []).map((e) => ({
+            _id: String(e._id),
+            nombre: e.nombre,
+            asignados: (e.asignaciones || []).filter((a) => a.userId).length,
+            // Cuántos puestos tienen condiciones propias en este equipo (otro horario, otro turno…).
+            propias: (e.asignaciones || []).filter((a) => a.condiciones && Object.keys(a.condiciones).length).length,
+            avisos: Object.keys(avisosDelEquipo(p, e, porDiasSueltos)).length,
+            ultimaContratacionEl: e.ultimaContratacionEl || null,
+        })),
         ultimaContratacionEl: p.ultimaContratacionEl || null,
     }));
 }
@@ -154,7 +247,10 @@ const contratoDelPuesto = (p, i) => i.contratoId ? { contratoId: String(i.contra
 export async function obtenerPlantilla(acc, id) {
     const p = (await cargar(acc, id)).toObject();
     const userIds = (p.equipos || []).flatMap((e) => (e.asignaciones || []).flatMap((a) => [a.userId, a.reemplazadoDePersonaId])).filter(Boolean);
-    const personas = userIds.length ? await User.find({ _id: { $in: userIds }, tenantId: acc.tenantId }).select("firstName lastName email metadata.fullName metadata.activo").lean() : [];
+    const [personas, porDiasSueltos] = await Promise.all([
+        userIds.length ? User.find({ _id: { $in: userIds }, tenantId: acc.tenantId }).select("firstName lastName email metadata.fullName metadata.activo").lean() : Promise.resolve([]),
+        contratosPorDiasSueltos([p]),
+    ]);
     const persona = new Map(personas.map((u) => [String(u._id), u]));
     return {
         ...p,
@@ -166,13 +262,15 @@ export async function obtenerPlantilla(acc, id) {
             _id: String(e._id),
             nombre: e.nombre,
             ultimaContratacionEl: e.ultimaContratacionEl || null,
+            avisos: avisosDelEquipo(p, e, porDiasSueltos),
             asignaciones: (e.asignaciones || []).map((a) => {
-                const u = persona.get(String(a.userId));
+                const u = a.userId ? persona.get(String(a.userId)) : null;
                 return {
                     puestoId: String(a.puestoId),
-                    userId: String(a.userId),
-                    nombre: u ? nombreDe(u) : "Persona no encontrada",
+                    userId: a.userId ? String(a.userId) : null,
+                    nombre: !a.userId ? "" : u ? nombreDe(u) : "Persona no encontrada",
                     activo: !!u && u.metadata?.activo !== false,
+                    condiciones: condicionesParaMostrar(a.condiciones),
                     reemplazadoDePersonaId: a.reemplazadoDePersonaId ? String(a.reemplazadoDePersonaId) : null,
                     reemplazadoDeNombre: a.reemplazadoDePersonaId ? nombreDe(persona.get(String(a.reemplazadoDePersonaId))) : "",
                     reemplazadoEl: a.reemplazadoEl || null,
@@ -303,14 +401,11 @@ export async function agregarPuestos(acc, id, nuevos, equipoId) {
         throw new ErrorPlantilla(400, "Elegí en qué equipo asignar a las personas.");
     const personas = conPersona.length ? await User.find({ _id: { $in: conPersona.map((n) => oid(n.userId)) }, tenantId: acc.tenantId }).select("metadata.roles_frame metadata.isSolicitud").lean() : [];
     const persona = new Map(personas.map((u) => [String(u._id), u]));
-    const yaEnEquipo = new Set((equipo?.asignaciones || []).map((a) => String(a.userId)));
     let orden = p.integrantes.reduce((m, i) => Math.max(m, i.orden ?? 0), -1);
     for (const n of entradas) {
         const u = idOk(n?.userId) ? persona.get(String(n.userId)) : null;
         if (idOk(n?.userId) && (!u || u.metadata?.isSolicitud))
             throw new ErrorPlantilla(400, "Sólo se pueden agregar personas registradas.");
-        if (u && yaEnEquipo.has(String(n.userId)))
-            throw new ErrorPlantilla(409, "Esa persona ya ocupa un puesto en el equipo.");
         const datos = leerPuesto({ ...n, rolesFrame: Array.isArray(n.rolesFrame) && n.rolesFrame.length ? n.rolesFrame : u?.metadata?.roles_frame || [] }, acc);
         if (!datos.rolesFrame?.length)
             throw new ErrorPlantilla(400, "Cada puesto necesita su rol empresa.");
@@ -318,7 +413,6 @@ export async function agregarPuestos(acc, id, nuevos, equipoId) {
         p.integrantes.push({ _id: puestoId, orden: ++orden, ...datos, escalaAlFijar: datos.dailyRateManual ? await escalaDe(p, datos) : null });
         if (u) {
             equipo.asignaciones.push({ puestoId, userId: oid(n.userId) });
-            yaEnEquipo.add(String(n.userId));
         }
     }
     p.markModified("equipos");
@@ -357,7 +451,7 @@ export async function quitarPuesto(acc, id, puestoId) {
     return obtenerPlantilla(acc, id);
 }
 // ── Escritura: los equipos ──────────────────────────────────────────────
-/** Un equipo nuevo, vacío o copiando las asignaciones de otro («Semana B» a partir de «Semana A»). */
+/** Un equipo nuevo, vacío o copiando otro —personas y condiciones propias— («Semana B» a partir de «Semana A»). */
 export async function crearEquipo(acc, id, nombre, copiarDeId) {
     if (acc.alcance === "general")
         throw new ErrorPlantilla(400, "Una plantilla general no tiene equipos: se arman en la copia de cada supervisor.");
@@ -366,7 +460,7 @@ export async function crearEquipo(acc, id, nombre, copiarDeId) {
     if (p.equipos.some((e) => e.nombre.toLowerCase() === n.toLowerCase()))
         throw new ErrorPlantilla(409, "Ya hay un equipo con ese nombre en la plantilla.");
     const origen = copiarDeId ? p.equipos.find((e) => String(e._id) === String(copiarDeId)) : null;
-    p.equipos.push({ nombre: n, asignaciones: origen ? origen.asignaciones.map((a) => ({ puestoId: a.puestoId, userId: a.userId })) : [] });
+    p.equipos.push({ nombre: n, asignaciones: origen ? origen.asignaciones.map((a) => ({ puestoId: a.puestoId, userId: a.userId, condiciones: a.condiciones || null })) : [] });
     await p.save();
     return obtenerPlantilla(acc, id);
 }
@@ -394,8 +488,10 @@ export async function borrarEquipo(acc, id, equipoId) {
     return obtenerPlantilla(acc, id);
 }
 /**
- * Quién ocupa un puesto en un equipo. `userId: null` lo deja sin asignar. Si ya había alguien, queda
- * anotado a quién reemplazó (informativo, y para sugerir «¿Cubre a X?» al contratar).
+ * Quién ocupa un puesto en un equipo. `userId: null` lo deja sin asignar (las condiciones propias del
+ * puesto en el equipo, si tiene, se conservan). Si ya había alguien, queda anotado a quién reemplazó
+ * (informativo, y para sugerir «¿Cubre a X?» al contratar). La misma persona PUEDE ocupar otro puesto
+ * del equipo: si se pisan, el equipo lo avisa (`avisos`), no se bloquea.
  */
 export async function asignarPuesto(acc, id, equipoId, puestoId, userId) {
     const p = await cargar(acc, id);
@@ -406,23 +502,52 @@ export async function asignarPuesto(acc, id, equipoId, puestoId, userId) {
         throw new ErrorPlantilla(404, "Ese puesto ya no está en la plantilla.");
     const actual = e.asignaciones.find((a) => String(a.puestoId) === String(puestoId));
     if (userId === null || userId === "") {
-        e.asignaciones = e.asignaciones.filter((a) => String(a.puestoId) !== String(puestoId));
+        if (actual?.condiciones)
+            Object.assign(actual, { userId: null });
+        else
+            e.asignaciones = e.asignaciones.filter((a) => String(a.puestoId) !== String(puestoId));
     }
     else {
         if (!idOk(userId))
             throw new ErrorPlantilla(400, "Elegí a la persona.");
-        if (e.asignaciones.some((a) => String(a.userId) === String(userId) && String(a.puestoId) !== String(puestoId)))
-            throw new ErrorPlantilla(409, "Esa persona ya ocupa otro puesto en este equipo.");
         const u = await User.findOne({ _id: oid(userId), tenantId: acc.tenantId }).select("metadata.isSolicitud").lean();
         if (!u || u.metadata?.isSolicitud)
             throw new ErrorPlantilla(400, "Sólo se pueden asignar personas registradas.");
         if (actual) {
-            if (String(actual.userId) !== String(userId))
+            if (!actual.userId)
+                actual.userId = oid(userId);
+            else if (String(actual.userId) !== String(userId))
                 Object.assign(actual, { reemplazadoDePersonaId: actual.userId, reemplazadoEl: new Date(), userId: oid(userId) });
         }
         else
             e.asignaciones.push({ puestoId: oid(puestoId), userId: oid(userId) });
     }
+    p.markModified("equipos");
+    await p.save();
+    return obtenerPlantilla(acc, id);
+}
+/**
+ * Las CONDICIONES PROPIAS de un puesto en un equipo: área y turno, horario, días, tipo de contrato,
+ * categoría, importe, comentario. Se manda el puesto como debería quedar en este equipo y se guarda sólo
+ * lo que difiere del puesto. `restablecer: true` vuelve a las del puesto.
+ */
+export async function condicionesEnEquipo(acc, id, equipoId, puestoId, body) {
+    const p = await cargar(acc, id);
+    const e = p.equipos.find((x) => String(x._id) === String(equipoId));
+    if (!e)
+        throw new ErrorPlantilla(404, "Ese equipo ya no está en la plantilla.");
+    const puesto = p.integrantes.find((x) => String(x._id) === String(puestoId));
+    if (!puesto)
+        throw new ErrorPlantilla(404, "Ese puesto ya no está en la plantilla.");
+    const condiciones = body?.restablecer === true ? null : await condicionesDesde(p, puesto.toObject ? puesto.toObject() : puesto, body || {}, acc);
+    const actual = e.asignaciones.find((a) => String(a.puestoId) === String(puestoId));
+    if (actual) {
+        actual.condiciones = condiciones;
+        if (!condiciones && !actual.userId)
+            e.asignaciones = e.asignaciones.filter((a) => a !== actual);
+    }
+    else if (condiciones)
+        e.asignaciones.push({ puestoId: oid(puestoId), userId: null, condiciones });
     p.markModified("equipos");
     await p.save();
     return obtenerPlantilla(acc, id);
@@ -460,7 +585,7 @@ function leerContratacion(body) {
 function paraPlan(p, equipoId) {
     const s = (x) => (x ? String(x) : undefined);
     const equipo = (p.equipos || []).find((e) => String(e._id) === String(equipoId));
-    const quien = new Map((equipo?.asignaciones || []).map((a) => [String(a.puestoId), String(a.userId)]));
+    const asignacion = new Map((equipo?.asignaciones || []).map((a) => [String(a.puestoId), a]));
     return {
         plantilla: {
             projectId: String(p.projectId),
@@ -473,9 +598,11 @@ function paraPlan(p, equipoId) {
         },
         integrantes: [...(p.integrantes || [])]
             .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
-            .map((i) => ({
+            // Lo del puesto, pisado por las condiciones propias del equipo elegido.
+            .map((puesto) => ({ a: asignacion.get(String(puesto._id)), i: puestoEnEquipo(puesto, asignacion.get(String(puesto._id))) }))
+            .map(({ a, i }) => ({
             _id: String(i._id),
-            userId: quien.get(String(i._id)) || "",
+            userId: a?.userId ? String(a.userId) : "",
             rolesFrame: (i.rolesFrame || []).map(String),
             areaId: s(i.areaId) || null,
             shiftId: s(i.shiftId) || null,
@@ -530,12 +657,22 @@ export async function planificar(tenantId, p, body) {
     const { fechas, puntuales } = leerContratacion(body);
     const ctx = await contextoDe(tenantId, p, integrantes, puntuales);
     const borrador = planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
-    await Promise.all(borrador.filas
-        .filter((f) => !f.excluido && f.datos && (f.datos.startDate || f.datos.fechasTrabajadas.length))
-        .map(async (f) => {
-        const metadata = armarPayloadDeSolicitud(f.datos).metadata;
-        const avisos = await superposicionesDeAlta(tenantId, f.userId, pedidoDesdeSolicitud(metadata));
-        ctx.superposiciones.set(f.userId, avisos.map((a) => ({ tipo: a.tipo, mensaje: a.mensaje })));
+    const conFechas = borrador.filas.filter((f) => !f.excluido && f.datos && (f.datos.startDate || f.datos.fechasTrabajadas.length));
+    const pedidos = new Map(conFechas.map((f) => [f.integranteId, pedidoDesdeSolicitud(armarPayloadDeSolicitud(f.datos).metadata)]));
+    const numero = new Map(integrantes.map((i, n) => [i._id, n + 1]));
+    const hoy = hoyArgentina();
+    await Promise.all(conFechas.map(async (f) => {
+        const pedido = pedidos.get(f.integranteId);
+        const avisos = await superposicionesDeAlta(tenantId, f.userId, pedido);
+        // La misma persona en otro puesto de ESTA contratación: todavía no existe en la base, se compara acá.
+        const otrosPuestos = conFechas
+            .filter((o) => o.integranteId !== f.integranteId && o.userId === f.userId)
+            .map((o) => {
+            const x = pedidos.get(o.integranteId);
+            return { origen: "lote", proyectoNombre: `puesto ${numero.get(o.integranteId)}`, desde: x.desde, hasta: x.hasta, fechas: x.fechas, dias: x.dias, rotativos: x.rotativos, inTime: x.inTime, outTime: x.outTime, shiftIds: x.shiftIds };
+        });
+        const delLote = superposiciones(pedido, otrosPuestos, hoy);
+        ctx.superposiciones.set(f.integranteId, [...delLote, ...avisos].map((a) => ({ tipo: a.tipo, mensaje: a.mensaje })));
     }));
     return planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
 }
@@ -548,6 +685,46 @@ const paraMostrar = (plan) => ({
 export async function previewDeContratacion(acc, id, body) {
     const p = await cargar(acc, id);
     return paraMostrar(await planificar(acc.tenantId, p.toObject(), body));
+}
+/**
+ * «GUARDAR EN EL EQUIPO» lo cambiado esta vez: la persona y, si se pisaron, el horario, la categoría y
+ * el importe (como condiciones propias del puesto en el equipo, sólo lo que difiere del puesto).
+ */
+async function asignacionesConCambios(p, equipo, body) {
+    const { puntuales } = leerContratacion(body);
+    const asignaciones = (equipo.asignaciones || []).map((a) => ({ ...a }));
+    for (const [puestoId, x] of Object.entries(puntuales)) {
+        if (x.excluido)
+            continue;
+        const puesto = (p.integrantes || []).find((i) => String(i._id) === puestoId);
+        if (!puesto)
+            continue;
+        let a = asignaciones.find((y) => String(y.puestoId) === puestoId);
+        if (!a && (x.userId || x.inTime || x.outTime || x.categoriaSatId || x.dailyRate))
+            asignaciones.push((a = { puestoId: oid(puestoId), userId: null, condiciones: null }));
+        if (!a)
+            continue;
+        if (x.userId) {
+            if (a.userId && String(a.userId) !== x.userId)
+                Object.assign(a, { reemplazadoDePersonaId: a.userId, reemplazadoEl: new Date() });
+            a.userId = oid(x.userId);
+        }
+        const pisado = {};
+        if (x.inTime)
+            pisado.inTime = x.inTime;
+        if (x.outTime)
+            pisado.outTime = x.outTime;
+        if (x.categoriaSatId)
+            pisado.categoriaSatId = x.categoriaSatId;
+        if (x.dailyRate)
+            pisado.dailyRateManual = x.dailyRate;
+        if (Object.keys(pisado).length) {
+            const efectivo = puestoEnEquipo(puesto, a);
+            const nuevas = await condicionesDesde(p, puesto, { ...efectivo, ...pisado, rolesFrame: undefined }, { tenantId: p.tenantId, userId: "", alcance: "personal" });
+            a.condiciones = nuevas;
+        }
+    }
+    return asignaciones;
 }
 /**
  * CONTRATAR: revalida TODO (no confía en el preview que vio el cliente) y, sin errores, crea las N
@@ -618,20 +795,8 @@ export async function contratarPlantilla(acc, id, body) {
             if (equipo) {
                 const idx = plantillaObj.equipos.findIndex((e) => String(e._id) === equipoId);
                 set[`equipos.${idx}.ultimaContratacionEl`] = new Date();
-                if (body?.guardarEnEquipo === true) {
-                    const { puntuales } = leerContratacion(body);
-                    const asignaciones = [...(equipo.asignaciones || [])];
-                    for (const [puestoId, x] of Object.entries(puntuales)) {
-                        if (!x.userId)
-                            continue;
-                        const a = asignaciones.find((y) => String(y.puestoId) === puestoId);
-                        if (a && String(a.userId) !== x.userId)
-                            Object.assign(a, { reemplazadoDePersonaId: a.userId, reemplazadoEl: new Date(), userId: oid(x.userId) });
-                        else if (!a)
-                            asignaciones.push({ puestoId: oid(puestoId), userId: oid(x.userId) });
-                    }
-                    set[`equipos.${idx}.asignaciones`] = asignaciones;
-                }
+                if (body?.guardarEnEquipo === true)
+                    set[`equipos.${idx}.asignaciones`] = await asignacionesConCambios(p, equipo, body);
             }
             await PlantillaEquipo.updateOne({ _id: p._id }, { $set: set }, { session: sesion });
         });

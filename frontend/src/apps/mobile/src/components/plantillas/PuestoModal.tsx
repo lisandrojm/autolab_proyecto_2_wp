@@ -20,6 +20,10 @@ import { ChipValoracion } from "../../../../../components/proyectos/ChipValoraci
 
   El importe fijado se guarda con la escala de ese momento (lo hace el server): si la escala cambia
   después, la contratación lo avisa en vez de pagar de más o de menos sin que se note.
+
+  EN UN EQUIPO (`enEquipo`): el mismo formulario edita las CONDICIONES PROPIAS del puesto en ese equipo
+  (otro horario, otro turno, otro contrato…). El rol no se cambia: es del puesto. El server guarda sólo
+  lo que difiere del puesto, así lo que quedó igual sigue los cambios del puesto.
 */
 interface Props {
   isOpen: boolean;
@@ -32,10 +36,12 @@ interface Props {
   catalogos: CatalogosContratacion;
   /** Sin proyecto (plantilla general): no hay áreas ni categorías que elegir. */
   general?: boolean;
+  /** Editar las condiciones del puesto en ESE equipo. `propias`: ya tiene alguna (se puede volver a las del puesto). */
+  enEquipo?: { nombre: string; propias: boolean; onRestablecer: () => Promise<void> };
   onGuardar: (cambios: NuevoPuesto) => Promise<void>;
 }
 
-export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, puesto, numero, areas, catalogos, general, onGuardar }: Props) {
+export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, puesto, numero, areas, catalogos, general, enEquipo, onGuardar }: Props) {
   const [roles, setRoles] = useState<string[]>([]);
   const [contratoId, setContratoId] = useState("");
   const [turno, setTurno] = useState("");
@@ -155,7 +161,7 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Puesto ${numero}`}
+      title={enEquipo ? `Puesto ${numero} en «${enEquipo.nombre}»` : `Puesto ${numero}`}
       subtitle={roles.map((r) => catalogos.roleFrames.find((x) => x._id === r)?.name).filter(Boolean).join(", ") || "Sin rol"}
       size="lg"
       zIndex={80}
@@ -166,12 +172,38 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
           </button>
           <button type="button" onClick={guardar} disabled={guardando} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50">
             {guardando && <FontAwesomeIcon icon={faSpinner} spin />}
-            Guardar puesto
+            {enEquipo ? "Guardar en el equipo" : "Guardar puesto"}
           </button>
         </div>
       }
     >
       <div className="space-y-5">
+        {enEquipo && (
+          <div className="rounded-xl bg-blue-50 p-3 text-[11px] text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+            Estas condiciones valen sólo para el equipo «{enEquipo.nombre}». Lo que dejes igual que el puesto sigue al puesto (si después lo cambiás, cambia acá también).
+            {enEquipo.propias && (
+              <button
+                type="button"
+                disabled={guardando}
+                onClick={async () => {
+                  setGuardando(true);
+                  try {
+                    await enEquipo.onRestablecer();
+                    onClose();
+                  } catch (e: any) {
+                    setError(e?.response?.data?.error || "No se pudo guardar.");
+                  } finally {
+                    setGuardando(false);
+                  }
+                }}
+                className="mt-2 block font-bold text-blue-700 underline dark:text-blue-300"
+              >
+                Volver a las condiciones del puesto
+              </button>
+            )}
+          </div>
+        )}
+        {!enEquipo && (
         <div>
           <Rotulo obligatorio>Rol/es empresa</Rotulo>
           <input value={buscaRol} onChange={(e) => setBuscaRol(e.target.value)} placeholder="Buscar rol…" className={`${CLASE_CAMPO} mb-2 h-10`} />
@@ -184,6 +216,7 @@ export default function PuestoModal({ isOpen, onClose, plantilla, proyecto, pues
             ))}
           </div>
         </div>
+        )}
 
         <div>
           <Rotulo obligatorio>Tipo de contrato</Rotulo>

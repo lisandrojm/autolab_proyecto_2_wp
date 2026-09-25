@@ -1,4 +1,6 @@
 import mongoose, { Schema } from "mongoose";
+/** Los campos de un puesto que un equipo puede pisar (todos menos el rol y el orden). */
+export const CAMPOS_DE_CONDICIONES = ["areaId", "shiftId", "inTime", "outTime", "diasSemana", "diasPorSemana", "diasRotativos", "categoriaSatId", "dailyRateManual", "comentarios", "contratoId", "nombreContrato", "tipoImpositivo"];
 const puestoSchema = new Schema({
     rolesFrame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
     orden: { type: Number, default: 0 },
@@ -23,7 +25,9 @@ const equipoSchema = new Schema({
         {
             _id: false,
             puestoId: { type: Schema.Types.ObjectId, required: true },
-            userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+            userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+            // Mixed: sólo las claves pisadas (un esquema con campos llenaría arrays vacíos que no son «pisar»).
+            condiciones: { type: Schema.Types.Mixed, default: null },
             reemplazadoDePersonaId: { type: Schema.Types.ObjectId, ref: "User", default: null },
             reemplazadoEl: { type: Date, default: null },
         },

@@ -120,7 +120,10 @@ export interface Contexto {
   equipo: Set<string>;
   /** Motivos de reemplazo válidos (los de Novedades). Vacío = el individual no lo exige. */
   motivos: Set<string>;
-  /** Superposiciones de cada persona con lo que ya tiene, para ESTAS fechas. */
+  /**
+   * Superposiciones de cada PUESTO (`_id` del integrante, no de la persona: la misma puede ocupar dos)
+   * con lo que la persona ya tiene y con sus otros puestos del lote, para ESTAS fechas.
+   */
   superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
 }
 
@@ -167,12 +170,8 @@ const pesos = (n: number) => `$ ${n.toLocaleString("es-AR", { minimumFractionDig
 
 export function planDeLote(plantilla: PlantillaParaPlan, integrantes: IntegranteParaPlan[], contratacion: FechasDeContratacion, puntuales: Record<string, Puntual>, ctx: Contexto): PlanDeLote {
   // La persona de cada puesto: la elegida para esta vez o, si no, la del equipo.
+  // Puede ser la misma en dos puestos: no es error. Si se pisan, lo avisa `superposiciones` (origen «lote»).
   const personaDelPuesto = (integ: IntegranteParaPlan) => puntuales[integ._id]?.userId || integ.userId || "";
-  const veces = new Map<string, number>();
-  for (const integ of integrantes) {
-    const uid = personaDelPuesto(integ);
-    if (uid && !puntuales[integ._id]?.excluido) veces.set(uid, (veces.get(uid) || 0) + 1);
-  }
 
   const filas: FilaDelPlan[] = integrantes.map((original) => {
     const p = puntuales[original._id] || {};
@@ -243,7 +242,6 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     else if (persona.esSolicitud) errores.push("No es una persona registrada: es una solicitud de alta.");
     else if (!persona.activo) errores.push("La persona está inactiva.");
     if (integ.rolesFrame.length === 0) errores.push("Falta el rol empresa.");
-    if (!sinPersona && (veces.get(integ.userId) || 0) > 1) errores.push("La misma persona está en más de un puesto.");
     if (!esServicios && !categoriaSatId) errores.push("Falta la categoría (a completar).");
     if (!areaShiftAssignments.length) errores.push("El puesto no tiene área y turno.");
     if (!contratoId && ctx.hayContratos) errores.push("El puesto no tiene tipo de contrato.");
@@ -271,7 +269,7 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
       for (const m of Object.values(e)) if (m) errores.push(m);
     }
 
-    const sup = ctx.superposiciones.get(integ.userId) || [];
+    const sup = ctx.superposiciones.get(integ._id) || [];
     for (const s of sup) advertencias.push(s.mensaje);
 
     const datos: DatosSolicitud | null = persona

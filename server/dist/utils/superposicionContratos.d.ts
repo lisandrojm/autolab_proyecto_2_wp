@@ -33,7 +33,8 @@ export interface PedidoDeAlta {
     shiftIds?: string[];
 }
 export interface CompromisoExistente {
-    origen: "contrato" | "solicitud";
+    /** `lote` = otro puesto de la MISMA contratación en lote (la persona ocupa dos puestos). */
+    origen: "contrato" | "solicitud" | "lote";
     proyectoNombre: string;
     /** "YYYY-MM-DD" */
     desde: string;
@@ -72,3 +73,27 @@ export declare function horariosSePisan(a: {
     outTime?: string;
 }): boolean | null;
 export declare function superposiciones(pedido: PedidoDeAlta, existentes: CompromisoExistente[], hoy: string): Superposicion[];
+/**
+ * UN PUESTO DE UN EQUIPO GUARDADO, ya con sus condiciones (las del puesto pisadas por las del equipo).
+ * Sin fechas: una plantilla no las tiene, así que sólo se comparan los días de la semana y el horario.
+ */
+export interface PuestoDelEquipo {
+    puestoId: string;
+    /** Cómo se lo nombra en el aviso («puesto 3, Cámara»). */
+    etiqueta: string;
+    userId: string;
+    dias: number[];
+    rotativos?: boolean;
+    /** Por días sueltos: los días se eligen al contratar, no se saben. */
+    porDiasSueltos?: boolean;
+    inTime?: string;
+    outTime?: string;
+    shiftId?: string | null;
+}
+/**
+ * ¿La misma persona ocupa dos puestos del equipo que se pisan? Se permite (mañana en uno y noche en otro
+ * está bien) y se AVISA cuando comparten un día de la semana y el horario se pisa o es el mismo turno.
+ * Si falta el dato (días rotativos o sueltos, sin horario) se avisa que PODRÍA pisarse. Devuelve los
+ * avisos por `puestoId` (cada puesto del par recibe el suyo).
+ */
+export declare function choquesDelEquipo(puestos: PuestoDelEquipo[]): Map<string, string[]>;

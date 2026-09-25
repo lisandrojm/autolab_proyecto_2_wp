@@ -159,7 +159,7 @@ test("fechas faltantes o al revés: error", () => {
 });
 
 test("superposición: las de horario se marcan; son advertencias, no errores", () => {
-  const sup = new Map([["u1", [{ tipo: "horario" as const, mensaje: "Tiene un contrato vigente en LN+ …" }]]]);
+  const sup = new Map([["i1", [{ tipo: "horario" as const, mensaje: "Tiene un contrato vigente en LN+ …" }]]]);
   const { filas, totales } = planDeLote(plantilla, [integ("1")], SEPT, {}, ctx({ superposiciones: sup }));
   assert.equal(filas[0].superposicionHorario, true);
   assert.deepEqual(filas[0].errores, []);
@@ -247,10 +247,11 @@ test("puesto sin asignar: error hasta que se elige a alguien (sólo esta vez) o 
   assert.equal(excluido.totales.personas, 1);
 });
 
-test("la misma persona en dos puestos: error en los dos", () => {
+test("la misma persona en dos puestos: se permite (si se pisan, lo avisan las superposiciones)", () => {
   const { filas } = planDeLote(plantilla, [integ("1"), integ("P", { userId: "" })], SEPT, { iP: { userId: "u1" } }, ctx());
-  assert.ok(filas[0].errores.some((e) => /más de un puesto/.test(e)));
-  assert.ok(filas[1].errores.some((e) => /más de un puesto/.test(e)));
+  assert.deepEqual(filas[0].errores, []);
+  assert.deepEqual(filas[1].errores, []);
+  assert.equal(filas[1].datos!.solicitudUserId, "u1");
 });
 
 test("la persona elegida sólo esta vez manda sobre la del equipo", () => {

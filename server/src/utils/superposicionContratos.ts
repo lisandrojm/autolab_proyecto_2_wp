@@ -35,7 +35,8 @@ export interface PedidoDeAlta {
 }
 
 export interface CompromisoExistente {
-  origen: "contrato" | "solicitud";
+  /** `lote` = otro puesto de la MISMA contratación en lote (la persona ocupa dos puestos). */
+  origen: "contrato" | "solicitud" | "lote";
   proyectoNombre: string;
   /** "YYYY-MM-DD" */
   desde: string;
@@ -165,18 +166,68 @@ export function superposiciones(pedido: PedidoDeAlta, existentes: CompromisoExis
     const tipo: Superposicion["tipo"] = pisan === false ? "fechas" : "horario";
     const vigente = e.origen === "contrato" && e.desde <= hoy && (!e.hasta || e.hasta >= hoy);
 
-    const que = e.origen === "solicitud" ? "Tiene otra solicitud pendiente" : vigente ? "Tiene un contrato vigente" : "Tiene un contrato";
+    const que = e.origen === "lote" ? "Ocupa otro puesto de esta contratación" : e.origen === "solicitud" ? "Tiene otra solicitud pendiente" : vigente ? "Tiene un contrato vigente" : "Tiene un contrato";
     const periodo = e.hasta ? `del ${corta(e.desde)} al ${corta(e.hasta)}` : `desde el ${corta(e.desde)}, sin fecha de baja`;
     const horario = e.inTime && e.outTime ? ` (${e.inTime} a ${e.outTime}${e.turnoNombre ? `, ${e.turnoNombre}` : ""})` : e.turnoNombre ? ` (${e.turnoNombre})` : "";
     const falta = sinDatos.length ? ` No se pudo confirmar: ${sinDatos.map((s) => (s === "dias" ? "sin días cargados" : "sin horario cargado")).join(" y ")}.` : "";
     const mensaje =
       tipo === "horario"
-        ? `${que} en ${e.proyectoNombre || "otro proyecto"} ${periodo}${horario} que se superpone en días y horario${mismoTurno ? " (mismo turno)" : ""}.${falta}`
-        : `${que} en ${e.proyectoNombre || "otro proyecto"} ${periodo}${horario}: las fechas se cruzan, ${diaEnComun ? "en otro horario" : "en otros días de la semana"}.${falta}`;
+        ? `${que} ${e.origen === "lote" ? `(${e.proyectoNombre})` : `en ${e.proyectoNombre || "otro proyecto"}`} ${periodo}${horario} que se superpone en días y horario${mismoTurno ? " (mismo turno)" : ""}.${falta}`
+        : `${que} ${e.origen === "lote" ? `(${e.proyectoNombre})` : `en ${e.proyectoNombre || "otro proyecto"}`} ${periodo}${horario}: las fechas se cruzan, ${diaEnComun ? "en otro horario" : "en otros días de la semana"}.${falta}`;
 
     resultado.push({ tipo, origen: e.origen, proyectoNombre: e.proyectoNombre, desde: e.desde, hasta: e.hasta, vigente, sinDatos, mensaje });
   }
 
   // Primero lo grave.
   return resultado.sort((a, b) => (a.tipo === b.tipo ? a.desde.localeCompare(b.desde) : a.tipo === "horario" ? -1 : 1));
+}
+
+/**
+ * UN PUESTO DE UN EQUIPO GUARDADO, ya con sus condiciones (las del puesto pisadas por las del equipo).
+ * Sin fechas: una plantilla no las tiene, así que sólo se comparan los días de la semana y el horario.
+ */
+export interface PuestoDelEquipo {
+  puestoId: string;
+  /** Cómo se lo nombra en el aviso («puesto 3, Cámara»). */
+  etiqueta: string;
+  userId: string;
+  dias: number[];
+  rotativos?: boolean;
+  /** Por días sueltos: los días se eligen al contratar, no se saben. */
+  porDiasSueltos?: boolean;
+  inTime?: string;
+  outTime?: string;
+  shiftId?: string | null;
+}
+
+/**
+ * ¿La misma persona ocupa dos puestos del equipo que se pisan? Se permite (mañana en uno y noche en otro
+ * está bien) y se AVISA cuando comparten un día de la semana y el horario se pisa o es el mismo turno.
+ * Si falta el dato (días rotativos o sueltos, sin horario) se avisa que PODRÍA pisarse. Devuelve los
+ * avisos por `puestoId` (cada puesto del par recibe el suyo).
+ */
+export function choquesDelEquipo(puestos: PuestoDelEquipo[]): Map<string, string[]> {
+  const avisos = new Map<string, string[]>();
+  const sumar = (id: string, m: string) => avisos.set(id, [...(avisos.get(id) || []), m]);
+  const diasInciertos = (p: PuestoDelEquipo) => !!p.porDiasSueltos || !!p.rotativos || p.dias.length === 0;
+  const conPersona = puestos.filter((p) => p.userId);
+  for (let i = 0; i < conPersona.length; i++) {
+    for (let j = i + 1; j < conPersona.length; j++) {
+      const a = conPersona[i];
+      const b = conPersona[j];
+      if (a.userId !== b.userId) continue;
+      const inciertos = diasInciertos(a) || diasInciertos(b);
+      const comunes = inciertos ? [] : a.dias.filter((d) => b.dias.includes(d));
+      if (!inciertos && comunes.length === 0) continue; // días distintos: no se pisan
+      const mismoTurno = !!a.shiftId && a.shiftId === b.shiftId;
+      const pisan = mismoTurno ? true : horariosSePisan(a, b);
+      if (pisan === false) continue; // otro horario el mismo día: está bien
+      const falta = [inciertos ? "los días" : "", pisan === null ? "el horario" : ""].filter(Boolean).join(" y ");
+      const texto = (otro: PuestoDelEquipo) =>
+        falta ? `La misma persona ocupa también el ${otro.etiqueta}: podría pisarse (no se sabe ${falta}).` : `La misma persona ocupa también el ${otro.etiqueta} y se pisan en días y horario${mismoTurno ? " (mismo turno)" : ""}.`;
+      sumar(a.puestoId, texto(b));
+      sumar(b.puestoId, texto(a));
+    }
+  }
+  return avisos;
 }

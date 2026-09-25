@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClock, faCopy, faFileSignature, faLayerGroup, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faClock, faCopy, faFileSignature, faLayerGroup, faPen, faPlus, faSliders, faTrash, faTriangleExclamation, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, useCatalogosContratacion } from "./useCatalogosContratacion";
@@ -9,10 +9,13 @@ import ContratarEquipoModal from "./ContratarEquipoModal";
 import { CLASE_CAMPO, fechaCorta } from "./comun";
 
 /*
-  LA PESTAÑA «PLANTILLAS» DE CONTRATACIÓN: los equipos fijos del proyecto, para contratarlos de una vez.
+  LA PESTAÑA «PLANTILLAS» DE CONTRATACIÓN, en dos niveles:
 
-  Cada plantilla muestra cuántos integrantes tiene, con qué contrato y turno, y cuándo se contrató por
-  última vez. «Contratar» abre el alta del equipo entero; «Editar», los valores y los integrantes.
+   - La PLANTILLA DE PUESTOS (la tarjeta): los roles con sus condiciones, para reutilizar. El lápiz la
+     edita; lo que cambia ahí llega a todos sus equipos.
+   - Sus EQUIPOS (las filas de la tarjeta): quién ocupa cada puesto y, si hace falta, con condiciones
+     propias. Cada uno se edita y se contrata por separado; «Nuevo equipo» arma otro sobre los mismos
+     puestos.
   El proyecto elegido se recuerda en este teléfono (con muchos proyectos, se vuelve siempre al mismo).
 */
 const CLAVE_PROYECTO = "plantillas:proyecto";
@@ -30,8 +33,8 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
   /** Las generales del escritorio: se copian a las propias con «Usar». */
   const [generales, setGenerales] = useState<PlantillaResumen[]>([]);
   const [verGenerales, setVerGenerales] = useState(false);
-  const [editando, setEditando] = useState<{ id: string | null } | null>(null);
-  const [contratando, setContratando] = useState<Plantilla | null>(null);
+  const [editando, setEditando] = useState<{ id: string | null; equipoId?: string } | null>(null);
+  const [contratando, setContratando] = useState<{ plantilla: Plantilla; equipoId?: string } | null>(null);
 
   const proyectos = catalogos.proyectos;
   // El recordado, si sigue siendo suyo; si no, el primero.
@@ -97,11 +100,22 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
     }
   };
 
-  const abrirContratar = async (p: PlantillaResumen) => {
+  const abrirContratar = async (p: PlantillaResumen, equipoId?: string) => {
     try {
-      setContratando(await plantillasEquipoAPI.obtener(p._id));
+      setContratando({ plantilla: await plantillasEquipoAPI.obtener(p._id), equipoId });
     } catch {
       sweetAlert.error("No se pudo abrir la plantilla");
+    }
+  };
+
+  /** Otro equipo sobre los mismos puestos: se crea vacío y se abre para asignar gente (y renombrarlo). */
+  const nuevoEquipo = async (p: PlantillaResumen) => {
+    try {
+      const pl = await plantillasEquipoAPI.crearEquipo(p._id, "");
+      cargar();
+      setEditando({ id: p._id, equipoId: pl.equipos[pl.equipos.length - 1]?._id });
+    } catch (e: any) {
+      sweetAlert.error("No se pudo crear el equipo", e?.response?.data?.error || "Probá de nuevo.");
     }
   };
 
@@ -163,19 +177,17 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
       ) : (
         lista.map((p) => (
           <div key={p._id} className="rounded-xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+            {/* LA PLANTILLA DE PUESTOS */}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Plantilla de puestos</p>
                 <h4 className="truncate font-bold text-slate-900 dark:text-slate-100">{p.nombre}</h4>
                 <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                   {p.puestos} {p.puestos === 1 ? "puesto" : "puestos"} · {p.nombreContrato || "Sin tipo de contrato"}
                 </p>
-                {/* Los equipos guardados, con cuántos puestos tiene cubiertos cada uno. */}
-                <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {p.equipos.length ? p.equipos.map((e) => `${e.nombre} (${e.asignados}/${p.puestos})`).join(" · ") : "Sin equipos"}
-                </p>
               </div>
               <div className="flex shrink-0 gap-1">
-                <button type="button" onClick={() => setEditando({ id: p._id })} aria-label={`Editar ${p.nombre}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
+                <button type="button" onClick={() => setEditando({ id: p._id })} aria-label={`Editar los puestos de ${p.nombre}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
                   <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
                 </button>
                 <button type="button" onClick={() => void duplicar(p)} aria-label={`Duplicar ${p.nombre}`} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 dark:border-slate-700">
@@ -186,25 +198,55 @@ export default function PlantillasTab({ onContratado }: { onContratado: () => vo
                 </button>
               </div>
             </div>
-            <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-              <span className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                <FontAwesomeIcon icon={faClock} className="h-3 w-3" />
-                {p.ultimaContratacionEl ? `Última contratación: ${fechaCorta(p.ultimaContratacionEl)}` : "Nunca contratada"}
-              </span>
-              <button type="button" onClick={() => void abrirContratar(p)} disabled={p.puestos === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
-                <FontAwesomeIcon icon={faFileSignature} />
-                Contratar
+
+            {/* SUS EQUIPOS: cada uno con su gente y sus condiciones, y su propio «Contratar». */}
+            <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+              {p.equipos.map((e) => (
+                <div key={e._id} className="rounded-lg bg-slate-50 p-2.5 dark:bg-slate-800/60">
+                  <div className="flex items-center justify-between gap-2">
+                    <button type="button" onClick={() => setEditando({ id: p._id, equipoId: e._id })} className="min-w-0 flex-1 text-left">
+                      <p className="flex items-center gap-1.5 truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                        <FontAwesomeIcon icon={faUsers} className="h-3 w-3 text-slate-400" />
+                        {e.nombre}
+                        {e.avisos > 0 && <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 text-amber-500" title="Hay puestos que se pisan" />}
+                      </p>
+                      <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                        {e.asignados}/{p.puestos} asignados
+                        {e.propias > 0 && (
+                          <>
+                            {" · "}
+                            <FontAwesomeIcon icon={faSliders} className="h-2.5 w-2.5" /> {e.propias} con condiciones propias
+                          </>
+                        )}
+                        {e.avisos > 0 ? ` · ${e.avisos} ${e.avisos === 1 ? "puesto se pisa" : "puestos se pisan"}` : ""}
+                      </p>
+                      <p className="flex items-center gap-1 text-[10px] text-slate-400">
+                        <FontAwesomeIcon icon={faClock} className="h-2.5 w-2.5" />
+                        {e.ultimaContratacionEl ? `Contratado el ${fechaCorta(e.ultimaContratacionEl)}` : "Nunca contratado"}
+                      </p>
+                    </button>
+                    <button type="button" onClick={() => void abrirContratar(p, e._id)} disabled={p.puestos === 0} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+                      <FontAwesomeIcon icon={faFileSignature} />
+                      Contratar
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => void nuevoEquipo(p)} disabled={p.puestos === 0} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2 text-xs font-bold text-slate-500 disabled:opacity-40 dark:border-slate-700">
+                <FontAwesomeIcon icon={faPlus} />
+                Nuevo equipo con estos puestos
               </button>
             </div>
           </div>
         ))
       )}
 
-      <PlantillaEditor isOpen={!!editando} onClose={() => setEditando(null)} plantillaId={editando?.id ?? null} proyecto={proyecto} catalogos={catalogos} onCambio={cargar} />
+      <PlantillaEditor isOpen={!!editando} onClose={() => setEditando(null)} plantillaId={editando?.id ?? null} equipoInicial={editando?.equipoId ?? null} proyecto={proyecto} catalogos={catalogos} onCambio={cargar} />
       <ContratarEquipoModal
         isOpen={!!contratando}
         onClose={() => setContratando(null)}
-        plantilla={contratando}
+        plantilla={contratando?.plantilla ?? null}
+        equipoInicial={contratando?.equipoId ?? null}
         proyecto={proyecto}
         catalogos={catalogos}
         onContratada={() => {

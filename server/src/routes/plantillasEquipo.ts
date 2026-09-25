@@ -9,6 +9,7 @@ import {
   actualizarPuesto,
   agregarPuestos,
   asignarPuesto,
+  condicionesEnEquipo,
   borrarEquipo,
   borrarPlantilla,
   contratarPlantilla,
@@ -91,6 +92,8 @@ router.put("/:id/equipos/:equipoId", ...movil, manejar((req) => renombrarEquipo(
 router.delete("/:id/equipos/:equipoId", ...movil, manejar((req) => borrarEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId)));
 // `userId: null` deja el puesto sin asignar en ese equipo.
 router.put("/:id/equipos/:equipoId/puestos/:puestoId", ...movil, manejar((req) => asignarPuesto(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body?.userId ?? null)));
+// Las condiciones propias del puesto en ese equipo (horario, días, área y turno, contrato…). `restablecer: true` vuelve a las del puesto.
+router.put("/:id/equipos/:equipoId/puestos/:puestoId/condiciones", ...movil, manejar((req) => condicionesEnEquipo(acceso(req, "personal"), req.params.id, req.params.equipoId, req.params.puestoId, req.body || {})));
 // No escribe nada: lo que saldría, con importes, errores y advertencias por puesto.
 router.post("/:id/preview", ...movil, manejar((req) => previewDeContratacion(acceso(req, "personal"), req.params.id, req.body || {})));
 // Todo o nada, con `idempotencyKey`.

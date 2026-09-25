@@ -32,24 +32,40 @@ export interface Puesto {
   tipoImpositivo: string;
 }
 
-/** Quién ocupa un puesto en un equipo. */
+/** Lo que un equipo pisa de un puesto (sólo lo que difiere; lo demás sale del puesto). */
+export type Condiciones = Partial<Pick<Puesto, "areaId" | "shiftId" | "inTime" | "outTime" | "diasSemana" | "diasPorSemana" | "diasRotativos" | "categoriaSatId" | "dailyRateManual" | "escalaAlFijar" | "comentarios" | "contratoId" | "nombreContrato" | "tipoImpositivo">>;
+
+/** Quién ocupa un puesto en un equipo y con qué condiciones propias. */
 export interface Asignacion {
   puestoId: string;
-  userId: string;
+  /** `null` = sin persona, pero con condiciones propias en este equipo. */
+  userId: string | null;
   nombre: string;
+  condiciones: Condiciones | null;
   activo: boolean;
   reemplazadoDePersonaId: string | null;
   reemplazadoDeNombre: string;
   reemplazadoEl: string | null;
 }
 
-/** Un equipo guardado dentro de la plantilla («Semana A»): quién ocupa cada puesto. */
+/** Un equipo guardado dentro de la plantilla («Semana A»): quién ocupa cada puesto y con qué condiciones. */
 export interface Equipo {
   _id: string;
   nombre: string;
   ultimaContratacionEl: string | null;
   asignaciones: Asignacion[];
+  /** Por puesto: la misma persona en dos puestos que se pisan. Avisos, no bloquean. */
+  avisos: Record<string, string[]>;
 }
+
+/** El puesto tal como lo ocupa ese equipo: lo del puesto, pisado por las condiciones del equipo. */
+export const puestoEnEquipo = (puesto: Puesto, equipo?: Equipo | null): Puesto => {
+  const c = equipo?.asignaciones.find((a) => a.puestoId === puesto._id)?.condiciones;
+  return c ? { ...puesto, ...c } : puesto;
+};
+
+/** Los puestos de la plantilla como los ocupa ese equipo. */
+export const puestosDelEquipo = (plantilla: Plantilla, equipo?: Equipo | null): Puesto[] => plantilla.integrantes.map((p) => puestoEnEquipo(p, equipo));
 
 export interface Plantilla {
   _id: string;
@@ -79,7 +95,8 @@ export interface PlantillaResumen {
   /** Los tipos de contrato de sus puestos, juntos («Jornada · Plazo fijo»). */
   nombreContrato: string;
   puestos: number;
-  equipos: { _id: string; nombre: string; asignados: number; ultimaContratacionEl: string | null }[];
+  /** `propias` = puestos con condiciones propias en ese equipo; `avisos` = puestos que se pisan. */
+  equipos: { _id: string; nombre: string; asignados: number; propias: number; avisos: number; ultimaContratacionEl: string | null }[];
   ultimaContratacionEl: string | null;
 }
 
@@ -128,7 +145,7 @@ export interface Puntual {
 export interface PedidoDeContratacion {
   /** El equipo elegido: de ahí sale quién ocupa cada puesto. */
   equipoId?: string;
-  /** Las personas cambiadas esta vez quedan también en el equipo. */
+  /** Lo cambiado esta vez (personas, horario, categoría, importe) queda también en el equipo. */
   guardarEnEquipo?: boolean;
   fechas?: string[];
   desde?: string;
@@ -228,6 +245,13 @@ export const plantillasEquipoAPI = {
   /** `null` deja el puesto sin asignar en ese equipo. */
   async asignar(id: string, equipoId: string, puestoId: string, userId: string | null): Promise<Plantilla> {
     return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}/puestos/${puestoId}`, { userId })).data;
+  },
+  /**
+   * Las condiciones propias de un puesto en un equipo: se manda cómo debería quedar el puesto en ESE
+   * equipo y el server guarda sólo lo que difiere. `{ restablecer: true }` vuelve a las del puesto.
+   */
+  async condiciones(id: string, equipoId: string, puestoId: string, datos: NuevoPuesto | { restablecer: true }): Promise<Plantilla> {
+    return (await axios.put(`/plantillas-equipo/${id}/equipos/${equipoId}/puestos/${puestoId}/condiciones`, datos)).data;
   },
   /** Las generales del escritorio (sin proyecto ni personas), para elegir una y «Usarla». */
   async listarGenerales(): Promise<PlantillaResumen[]> {
