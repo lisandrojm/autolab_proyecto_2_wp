@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faChevronLeft, faChevronRight, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -52,6 +52,12 @@ export const SolicitudesPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [cargando, setCargando] = useState(true);
+  /*
+    SELECCIÓN PARA ELIMINAR DE A MUCHAS. Se guarda por id con su nombre y estado (para el aviso de las
+    aprobadas, que se llevan su contrato) y sobrevive al cambio de página; cambiar un filtro la limpia.
+  */
+  const [seleccion, setSeleccion] = useState<Map<string, { nombre: string; estado: string }>>(new Map());
+  const [eliminando, setEliminando] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
 
@@ -209,6 +215,62 @@ export const SolicitudesPage: React.FC = () => {
 
   const hayFiltros = !!(busqueda || filtroEstado || filtroCliente || filtroProyecto);
 
+  useEffect(() => {
+    setSeleccion(new Map());
+  }, [busqueda, filtroEstado, filtroCliente, filtroProyecto]);
+
+  const cambiarSeleccion = (ids: Set<string>) =>
+    setSeleccion((antes) => {
+      const nueva = new Map<string, { nombre: string; estado: string }>();
+      for (const id of ids) {
+        const s = solicitudes.find((x) => x._id === id);
+        nueva.set(id, s ? { nombre: s.nombre, estado: s.estado } : antes.get(id)!);
+      }
+      return nueva;
+    });
+
+  /** Todas las que coinciden con los filtros, de todas las páginas. */
+  const seleccionarTodas = async () => {
+    try {
+      const nueva = new Map(seleccion);
+      for (let pagina = 1, paginas = 1; pagina <= paginas; pagina++) {
+        const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: filtroEstado || undefined, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, page: pagina, limit: 100 });
+        paginas = resp.totalPages;
+        for (const r of resp.rows) nueva.set(r._id, { nombre: r.nombre, estado: r.estado });
+      }
+      setSeleccion(nueva);
+    } catch {
+      sweetAlert.error("Error", "No se pudieron seleccionar todas.");
+    }
+  };
+
+  const eliminarSeleccionadas = async () => {
+    const lista = [...seleccion.entries()];
+    const aprobadas = lista.filter(([, x]) => x.estado === "aprobada").length;
+    const r = await sweetAlert.confirm(
+      `¿Eliminar ${lista.length} ${lista.length === 1 ? "solicitud" : "solicitudes"}?`,
+      `${aprobadas ? `${aprobadas} ${aprobadas === 1 ? "está aprobada: se elimina también el contrato que creó" : "están aprobadas: se elimina también el contrato que creó cada una"}. ` : ""}Esta acción no se puede deshacer.`,
+      `Sí, eliminar ${lista.length}`,
+    );
+    if (!r.isConfirmed) return;
+    setEliminando(true);
+    // De a una, con el mismo endpoint que el botón de cada fila: cada una borra lo suyo (y su contrato, si estaba aprobada).
+    const fallidas: string[] = [];
+    for (const [id, x] of lista) {
+      try {
+        await usersAPI.eliminarSolicitud(id);
+      } catch {
+        fallidas.push(x.nombre);
+      }
+    }
+    setEliminando(false);
+    setSeleccion(new Map(lista.filter(([, x]) => fallidas.includes(x.nombre))));
+    const hechas = lista.length - fallidas.length;
+    if (fallidas.length) sweetAlert.error(`Se eliminaron ${hechas} de ${lista.length}`, `No se pudieron eliminar: ${fallidas.join(", ")}. Quedaron seleccionadas.`);
+    else sweetAlert.success("Solicitudes eliminadas", `Se eliminaron ${hechas} ${hechas === 1 ? "solicitud" : "solicitudes"}.`);
+    cargar(page);
+  };
+
   return (
     <PageLayout
       title="Solicitudes"
@@ -278,7 +340,28 @@ export const SolicitudesPage: React.FC = () => {
         </div>
       ) : (
         <div className={`space-y-3 transition-opacity ${refrescando ? "opacity-60" : ""}`}>
+          {seleccion.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm dark:border-blue-900 dark:bg-blue-950/40">
+              <span className="font-semibold text-blue-900 dark:text-blue-100">
+                {seleccion.size} {seleccion.size === 1 ? "seleccionada" : "seleccionadas"}
+              </span>
+              {seleccion.size < total && (
+                <button type="button" onClick={() => void seleccionarTodas()} className="font-semibold text-blue-700 hover:underline dark:text-blue-300">
+                  Seleccionar las {total}
+                </button>
+              )}
+              <button type="button" onClick={() => setSeleccion(new Map())} className="font-semibold text-gray-600 hover:underline dark:text-gray-300">
+                Quitar selección
+              </button>
+              <button type="button" onClick={() => void eliminarSeleccionadas()} disabled={eliminando} className="ml-auto inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                <FontAwesomeIcon icon={faTrash} />
+                {eliminando ? "Eliminando…" : `Eliminar ${seleccion.size}`}
+              </button>
+            </div>
+          )}
           <SolicitudesTable
+            seleccionadas={new Set(seleccion.keys())}
+            onCambiarSeleccion={cambiarSeleccion}
             solicitudes={solicitudes}
             catalogos={catalogos}
             mostrarProyectos

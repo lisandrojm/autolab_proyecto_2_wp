@@ -212,10 +212,28 @@ interface SolicitudesTableProps {
   tituloAprobar?: (s: SolicitudVista) => string;
   /** Abre el detalle completo de la solicitud. Sin esto la fila no es clickeable. */
   onVerDetalle?: (s: SolicitudVista) => void;
+  /** SELECCIÓN para acciones masivas (eliminar): con esto aparece la columna de casillas. */
+  seleccionadas?: Set<string>;
+  onCambiarSeleccion?: (ids: Set<string>) => void;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle }) => {
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle, seleccionadas, onCambiarSeleccion }) => {
   const { resolverRolFrame, resolverTramite } = catalogos;
+  const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
+  // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
+  const enPagina = solicitudes.filter((s) => seleccionadas?.has(s._id)).length;
+  const todasEnPagina = solicitudes.length > 0 && enPagina === solicitudes.length;
+  const alternarPagina = () => {
+    const nuevas = new Set(seleccionadas);
+    for (const s of solicitudes) (todasEnPagina ? nuevas.delete(s._id) : nuevas.add(s._id));
+    onCambiarSeleccion?.(nuevas);
+  };
+  const alternar = (id: string) => {
+    const nuevas = new Set(seleccionadas);
+    if (nuevas.has(id)) nuevas.delete(id);
+    else nuevas.add(id);
+    onCambiarSeleccion?.(nuevas);
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -223,6 +241,20 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {conSeleccion && (
+                <th className="w-10 pl-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={todasEnPagina}
+                    ref={(el) => {
+                      if (el) el.indeterminate = enPagina > 0 && !todasEnPagina;
+                    }}
+                    onChange={alternarPagina}
+                    aria-label={todasEnPagina ? "Desmarcar las de esta página" : "Marcar todas las de esta página"}
+                    className="h-4 w-4 rounded cursor-pointer"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 font-semibold">Nombre</th>
               {mostrarProyectos && (
                 <>
@@ -252,7 +284,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   necesita leerlos antes de decidir, no después. Los botones de la última columna
                   siguen funcionando como atajo, cortando la propagación del click.
                 */
-                <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""}`}>
+                <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}>
+                  {conSeleccion && (
+                    <td className="w-10 pl-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" checked={!!seleccionadas?.has(s._id)} onChange={() => alternar(s._id)} aria-label={`Seleccionar a ${s.nombre}`} className="h-4 w-4 rounded cursor-pointer" />
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
