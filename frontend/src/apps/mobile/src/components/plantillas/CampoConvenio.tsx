@@ -17,9 +17,11 @@ interface Props {
   convenioId: string;
   catalogos: CatalogosContratacion;
   onChange: (convenioId: string) => void;
+  /** Sin su rótulo (quien lo usa pone el suyo, con el estilo de su formulario). */
+  sinRotulo?: boolean;
 }
 
-export default function CampoConvenio({ proyecto, empresaId, convenioId, catalogos, onChange }: Props) {
+export default function CampoConvenio({ proyecto, empresaId, convenioId, catalogos, onChange, sinRotulo }: Props) {
   const unico = catalogos.convenioUnico(proyecto, empresaId);
   const opciones = catalogos.conveniosDisponibles(proyecto, empresaId, convenioId);
 
@@ -57,7 +59,7 @@ export default function CampoConvenio({ proyecto, empresaId, convenioId, catalog
 
   return (
     <div>
-      <Rotulo>Convenio</Rotulo>
+      {!sinRotulo && <Rotulo>Convenio</Rotulo>}
       {contenido}
     </div>
   );

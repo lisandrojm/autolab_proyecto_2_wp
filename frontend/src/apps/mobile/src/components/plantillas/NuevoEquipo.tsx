@@ -333,8 +333,36 @@ export default function NuevoEquipo() {
 
         {okGrupo && (
           <>
-        {/* ROL/ES EMPRESA + EMPRESA QUE CONTRATA */}
-        <div id="campo-roles" className="grid grid-cols-1 gap-4 scroll-mt-24 md:grid-cols-2">
+        {/* EMPRESA Y CONVENIO, uno al lado del otro; debajo, ROL/ES EMPRESA (como en el alta individual). */}
+        <div id="campo-roles" className="space-y-6 scroll-mt-24">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Rotulo icono={faBuilding}>Empresa que contrata</Rotulo>
+              {empresas.length === 0 ? (
+                <p className="py-2 text-xs text-amber-700 dark:text-amber-300">{proyecto ? "El proyecto no tiene empresa del contrato asignada." : "Elegí primero el proyecto."}</p>
+              ) : empresas.length === 1 ? (
+                <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-900 dark:bg-slate-800 dark:text-white">{(empresas[0] as any).razonSocial}</p>
+              ) : (
+                <select value={b.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
+                  <option value="">Elegí la empresa</option>
+                  {empresas.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {(c as any).razonSocial}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Rotulo icono={faFileContract}>Convenio</Rotulo>
+              {b.empresaContratoId ? (
+                <CampoConvenio sinRotulo proyecto={proyecto} empresaId={b.empresaContratoId} convenioId={b.convenioId} catalogos={catalogos} onChange={(id) => id !== b.convenioId && cambiar({ convenioId: id })} />
+              ) : (
+                <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">Elegí primero la empresa</p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Rotulo icono={faBriefcase} obligatorio>
               Rol/es empresa
@@ -343,22 +371,16 @@ export default function NuevoEquipo() {
               b.roles.length ? (
                 <div className="flex flex-wrap items-center gap-1.5">
                   {b.roles.map((r) => (
-                    <span key={r.rolId} className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 py-1 pl-2.5 pr-1.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
-                      {r.cantidad} × {nombreRol(r.rolId)}
-                      <button type="button" onClick={() => cambiar({ roles: b.roles.filter((x) => x.rolId !== r.rolId), personas: {} })} aria-label={`Quitar ${nombreRol(r.rolId)}`} className="rounded-full p-1 hover:bg-blue-200 dark:hover:bg-blue-800/60">
-                        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                      </button>
-                    </span>
+                    <BadgeRol key={r.rolId} nombre={nombreRol(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => cambiar({ roles: n > 0 ? b.roles.map((x) => (x.rolId === r.rolId ? { ...x, cantidad: n } : x)) : b.roles.filter((x) => x.rolId !== r.rolId), personas: {} })} />
                   ))}
-                  <button type="button" onClick={() => setHoja("roles")} className="min-h-[36px] rounded-full px-2 text-xs font-bold text-blue-700 dark:text-blue-300">
-                    <FontAwesomeIcon icon={faPlus} className="mr-1" />
-                    Roles
+                  <button type="button" onClick={() => setHoja("roles")} aria-label="Agregar roles" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
+                    <FontAwesomeIcon icon={faPlus} />
                   </button>
                 </div>
               ) : (
                 <button type="button" onClick={() => setHoja("roles")} className={`flex h-12 w-full items-center gap-2 rounded-xl border bg-slate-50 px-4 text-left dark:bg-slate-900 ${error("campo-roles") ? "border-red-500" : "border-slate-300 dark:border-slate-600"}`}>
                   <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-500" />
-                  <span className="truncate text-slate-600 dark:text-slate-300">Elegí los roles y cuántos de cada uno…</span>
+                  <span className="truncate text-slate-600 dark:text-slate-300">Elegí uno o más roles…</span>
                 </button>
               )
             ) : grupo ? (
@@ -366,24 +388,6 @@ export default function NuevoEquipo() {
             ) : (
               <p className="text-xs text-slate-600 dark:text-slate-300">{b.grupoId ? "Cargando los puestos…" : "Elegí primero el grupo."}</p>
             )}
-          </div>
-          <div className="space-y-2">
-            <Rotulo icono={faBuilding}>Empresa que contrata</Rotulo>
-            {empresas.length === 0 ? (
-              <p className="py-2 text-xs text-amber-700 dark:text-amber-300">{proyecto ? "El proyecto no tiene empresa del contrato asignada." : "Elegí primero el proyecto."}</p>
-            ) : empresas.length === 1 ? (
-              <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-900 dark:bg-slate-800 dark:text-white">{(empresas[0] as any).razonSocial}</p>
-            ) : (
-              <select value={b.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
-                <option value="">Elegí la empresa</option>
-                {empresas.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {(c as any).razonSocial}
-                  </option>
-                ))}
-              </select>
-            )}
-            {b.empresaContratoId && <CampoConvenio proyecto={proyecto} empresaId={b.empresaContratoId} convenioId={b.convenioId} catalogos={catalogos} onChange={(id) => id !== b.convenioId && cambiar({ convenioId: id })} />}
           </div>
         </div>
           </>
@@ -606,43 +610,92 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
   return [...cuenta.entries()].map(([id, c]) => `${c} ${nombre(id)}`).join(" · ");
 }
 
-/** Los roles del grupo nuevo, con + y −, y un buscador para sumar otros. */
+/** Un rol elegido: su nombre, cuántos (− y +) y ✕ para sacarlo. */
+function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; cantidad: number; onCantidad: (n: number) => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 py-0.5 pl-1 pr-1.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+      <button type="button" onClick={() => onCantidad(cantidad - 1)} aria-label={`Un ${nombre} menos`} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
+        <FontAwesomeIcon icon={faMinus} className="h-2.5 w-2.5" />
+      </button>
+      <span className="tabular-nums">{cantidad}</span>
+      <button type="button" onClick={() => onCantidad(cantidad + 1)} aria-label={`Un ${nombre} más`} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
+        <FontAwesomeIcon icon={faPlus} className="h-2.5 w-2.5" />
+      </button>
+      <span className="pl-0.5">{nombre}</span>
+      <button type="button" onClick={() => onCantidad(0)} aria-label={`Quitar ${nombre}`} className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
+        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+      </button>
+    </span>
+  );
+}
+
+/**
+ * ELEGIR LOS ROLES DEL GRUPO, como Rol/es Empresa del alta individual: arriba los elegidos (badges, con
+ * cuántos de cada uno), el buscador y todos los roles con su casilla. Tildar suma uno; los badges ajustan
+ * la cantidad («2 × Camarógrafo»).
+ */
 function HojaRoles({ abierta, onCerrar, roles, roleFrames, onCambio }: { abierta: boolean; onCerrar: () => void; roles: { rolId: string; cantidad: number }[]; roleFrames: { _id: string; name: string }[]; onCambio: (r: { rolId: string; cantidad: number }[]) => void }) {
   const [busca, setBusca] = useState("");
   useEffect(() => {
     if (abierta) setBusca("");
   }, [abierta]);
-  const cantidad = (id: string) => roles.find((r) => r.rolId === id)?.cantidad || 0;
+  const nombre = (id: string) => roleFrames.find((r) => r._id === id)?.name || "Rol";
   const poner = (id: string, n: number) => {
     if (n <= 0) onCambio(roles.filter((r) => r.rolId !== id));
     else if (roles.some((r) => r.rolId === id)) onCambio(roles.map((r) => (r.rolId === id ? { ...r, cantidad: n } : r)));
     else onCambio([...roles, { rolId: id, cantidad: n }]);
   };
-  const q = busca.trim().toLowerCase();
   // Sin tildes ni mayúsculas, como los demás buscadores: «camarografo» encuentra «Camarógrafo».
-  const lista = [...roleFrames].filter((r) => (q ? fuzzyMatch(r.name, busca) : cantidad(r._id) > 0)).sort((a, b) => a.name.localeCompare(b.name));
+  const lista = [...roleFrames].filter((r) => fuzzyMatch(r.name, busca)).sort((a, b) => a.name.localeCompare(b.name));
   const total = roles.reduce((s, r) => s + r.cantidad, 0);
   return (
-    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo="Rol/es empresa" subtitulo={`${total} ${total === 1 ? "puesto" : "puestos"}`} pie={<button type="button" onClick={onCerrar} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white">Listo</button>}>
-      <input autoFocus value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar un rol para agregar…" aria-label="Buscar rol" className={`${CLASE_CAMPO} mb-3`} />
-      {lista.length === 0 && <p className="py-4 text-center text-sm text-slate-700 dark:text-slate-200">{roleFrames.length === 0 ? "Cargando los roles…" : q ? "Ningún rol coincide." : "Buscá los roles del grupo (ej. Camarógrafo)."}</p>}
-      <div className="space-y-1.5">
-        {lista.map((r) => {
-          const n = cantidad(r._id);
-          return (
-            <div key={r._id} className="flex min-h-[52px] items-center gap-2 rounded-xl border border-slate-200 px-3 dark:border-slate-700">
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 dark:text-white">{r.name}</span>
-              <button type="button" onClick={() => poner(r._id, n - 1)} disabled={n === 0} aria-label={`Un ${r.name} menos`} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-300 text-slate-700 disabled:opacity-30 dark:border-slate-600 dark:text-slate-200">
-                <FontAwesomeIcon icon={faMinus} />
-              </button>
-              <span className="w-6 text-center text-base font-bold tabular-nums text-slate-900 dark:text-white">{n}</span>
-              <button type="button" onClick={() => poner(r._id, n + 1)} aria-label={`Un ${r.name} más`} className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
-                <FontAwesomeIcon icon={faPlus} />
-              </button>
-            </div>
-          );
-        })}
+    <HojaInferior
+      abierta={abierta}
+      onCerrar={onCerrar}
+      titulo="Rol/es empresa"
+      subtitulo={`${total} ${total === 1 ? "puesto" : "puestos"} · el oficio de cada puesto`}
+      pie={
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={() => onCambio([])} disabled={roles.length === 0} className="min-h-[44px] px-2 text-sm font-bold text-red-600 disabled:opacity-40 dark:text-red-400">
+            Limpiar
+          </button>
+          <button type="button" onClick={onCerrar} className="min-h-[44px] rounded-xl bg-blue-600 px-8 text-sm font-bold text-white">
+            Listo
+          </button>
+        </div>
+      }
+    >
+      {roles.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {roles.map((r) => (
+            <BadgeRol key={r.rolId} nombre={nombre(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => poner(r.rolId, n)} />
+          ))}
+        </div>
+      )}
+      <div className="relative mb-3">
+        <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+        <input autoFocus value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar especialidad…" aria-label="Buscar rol" className={`${CLASE_CAMPO} pl-9`} />
       </div>
+      {roleFrames.length === 0 ? (
+        <p className="py-4 text-center text-sm text-slate-700 dark:text-slate-200">Cargando los roles…</p>
+      ) : lista.length === 0 ? (
+        <p className="py-4 text-center text-sm text-slate-700 dark:text-slate-200">Ningún rol coincide.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {lista.map((r) => {
+            const n = roles.find((x) => x.rolId === r._id)?.cantidad || 0;
+            return (
+              <label key={r._id} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border px-3 ${n ? "border-blue-500 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"}`}>
+                <input type="checkbox" checked={n > 0} onChange={() => poner(r._id, n ? 0 : 1)} className="h-4 w-4 shrink-0 rounded" />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800 dark:text-slate-100" title={r.name}>
+                  {r.name}
+                </span>
+                {n > 1 && <span className="shrink-0 rounded bg-blue-600 px-1.5 text-xs font-bold text-white">×{n}</span>}
+              </label>
+            );
+          })}
+        </div>
+      )}
     </HojaInferior>
   );
 }
