@@ -613,7 +613,6 @@ export const ProjectDetailPage: React.FC = () => {
 
                   {/* Los convenios del proyecto cuelgan de la Empresa del Contrato: ver el componente. */}
                   <div className="md:col-span-2">
-                    <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">Convenios del proyecto</label>
                     <ConveniosDelProyecto companies={companies as any} empresasContrato={projectForm.contratoEmpresas} value={projectForm.convenioIds} onChange={(ids) => setProjectForm((p) => ({ ...p, convenioIds: ids }))} />
                   </div>
                 </div>
