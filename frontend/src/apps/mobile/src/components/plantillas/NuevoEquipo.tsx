@@ -172,7 +172,7 @@ export default function NuevoEquipo() {
   const falta = !proyecto
     ? { texto: "Elegí el proyecto", id: "campo-proyecto" }
     : !b.grupoId
-      ? { texto: "Elegí el grupo de puestos", id: "campo-grupo" }
+      ? { texto: "Elegí un grupo o creá uno nuevo", id: "campo-grupo" }
       : esNuevo && !b.nombreGrupo.trim()
         ? { texto: "Poné el nombre del grupo", id: "campo-grupo" }
         : puestos.length === 0
@@ -294,14 +294,14 @@ export default function NuevoEquipo() {
 
         {okProyecto && (
           <>
-        {/* GRUPO DE PUESTOS */}
+        {/* GRUPO DE PUESTOS: sin grupos todavía, directamente su nombre; con grupos, uno de ellos o «Nuevo grupo». */}
         <div id="campo-grupo" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faLayerGroup} obligatorio>
-            Grupo de puestos
+            {grupos && grupos.length === 0 ? "Nombre del grupo de puestos" : "Grupo de puestos"}
           </Rotulo>
           {grupos === null ? (
-            <p className="text-xs text-slate-600 dark:text-slate-300">Cargando los grupos del proyecto…</p>
-          ) : (
+            <p className="text-xs text-slate-600 dark:text-slate-300">Cargando tus grupos…</p>
+          ) : grupos.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {grupos.map((g) => (
                 <button key={g._id} type="button" aria-pressed={b.grupoId === g._id} onClick={() => cambiar({ grupoId: g._id, personas: {}, copiarDe: "" })} className={`min-h-[44px] rounded-lg border px-3 text-sm font-medium ${b.grupoId === g._id ? "border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`}>
@@ -313,8 +313,19 @@ export default function NuevoEquipo() {
                 Nuevo grupo
               </button>
             </div>
+          ) : null}
+          {/* El nombre aparece recién al elegir «Nuevo grupo» (o solo, si todavía no hay grupos). */}
+          {esNuevo && grupos !== null && (
+            <input
+              autoFocus={grupos.length > 0}
+              value={b.nombreGrupo}
+              onChange={(e) => cambiar({ nombreGrupo: e.target.value })}
+              placeholder="Ej. Equipo Técnica"
+              maxLength={120}
+              className={`${CLASE_CAMPO} ${error("campo-grupo") ? "border-red-500" : ""}`}
+              aria-label="Nombre del grupo"
+            />
           )}
-          {esNuevo && <input value={b.nombreGrupo} onChange={(e) => cambiar({ nombreGrupo: e.target.value })} placeholder="Nombre del grupo (ej. Equipo Técnica)" maxLength={120} className={`${CLASE_CAMPO} ${error("campo-grupo") ? "border-red-500" : ""}`} aria-label="Nombre del grupo" />}
           {error("campo-grupo") && <p className="text-xs font-medium text-red-600 dark:text-red-400">{falta?.texto}.</p>}
         </div>
           </>
