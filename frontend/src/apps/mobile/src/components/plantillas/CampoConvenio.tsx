@@ -35,12 +35,11 @@ export default function CampoConvenio({ proyecto, empresaId, convenioId, catalog
   if (!empresaId) contenido = <p className={`${CLASE_CAMPO} flex items-center text-slate-400`}>Elegí primero la empresa</p>;
   else if (!catalogos.categoriasCargadas || !catalogos.conveniosCargados) contenido = <p className={`${CLASE_CAMPO} flex animate-pulse items-center text-slate-400`}>Cargando convenios…</p>;
   else if (unico)
-    // Uno solo: no es una elección. Se muestra apagado y con el cartel, como la empresa única.
+    // Uno solo: no es una elección. Apagado y nada más — el gris ya dice que no se toca.
     contenido = (
-      <p className={`${CLASE_CAMPO} flex items-center gap-2 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300`} title={unico.nombre}>
+      <p className={`${CLASE_CAMPO} flex items-center gap-2 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400`} title={unico.nombre}>
         <span className="font-bold">{unico.cct}</span>
         <span className="truncate">{unico.nombre}</span>
-        <span className="ml-auto shrink-0 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-700 dark:text-slate-300">Fijo</span>
       </p>
     );
   else if (opciones.length === 0) contenido = <p className={`${CLASE_CAMPO} flex items-center text-amber-600 dark:text-amber-400`}>La empresa no tiene convenios con categorías</p>;

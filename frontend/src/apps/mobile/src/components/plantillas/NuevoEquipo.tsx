@@ -68,17 +68,6 @@ function Rotulo({ icono, children, obligatorio }: { icono: any; children: React.
   );
 }
 
-/**
- * LO QUE NO SE ELIGE PORQUE NO HAY NADA QUE ELEGIR.
- *
- * Una empresa sola, un convenio solo: el dato ya está decidido por el proyecto. Se muestra igual —
- * esconderlo deja la pantalla en blanco y nadie sabe si falta algo— pero apagado y con este cartel,
- * para que se lea de un vistazo qué hay que completar y qué viene dado.
- */
-function Fijo() {
-  return <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-700 dark:text-slate-300">Fijo</span>;
-}
-
 export default function NuevoEquipo() {
   const [query] = useSearchParams();
   const navigate = useNavigate();
@@ -383,15 +372,18 @@ export default function NuevoEquipo() {
         <div id="campo-roles" className="space-y-6 scroll-mt-24">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Rotulo icono={faBuilding}>Empresa que contrata</Rotulo>
+              <Rotulo icono={faBuilding} obligatorio>
+                Empresa que contrata
+              </Rotulo>
               {empresas.length === 0 ? (
                 <p className="py-2 text-xs text-amber-700 dark:text-amber-300">{proyecto ? "El proyecto no tiene empresa del contrato asignada." : "Elegí primero el proyecto."}</p>
               ) : empresas.length === 1 ? (
-                // Una sola: no es una elección, es el dato del proyecto. Apagada y rotulada como tal.
-                <p className="flex h-12 items-center gap-2 rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-                  <span className="truncate">{(empresas[0] as any).razonSocial}</span>
-                  <Fijo />
-                </p>
+                /*
+                  Una sola: no es una elección, es el dato del proyecto. Va apagada y nada más —un
+                  cartel que diga «fijo» es una palabra de más para algo que el gris ya dice, y encima
+                  compite por el lugar con el dato.
+                */
+                <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{(empresas[0] as any).razonSocial}</p>
               ) : (
                 <select value={b.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
                   <option value="">Elegí la empresa</option>
@@ -404,7 +396,9 @@ export default function NuevoEquipo() {
               )}
             </div>
             <div className="space-y-2">
-              <Rotulo icono={faFileContract}>Convenio</Rotulo>
+              <Rotulo icono={faFileContract} obligatorio>
+                Convenio
+              </Rotulo>
               {b.empresaContratoId ? (
                 <CampoConvenio sinRotulo proyecto={proyecto} empresaId={b.empresaContratoId} convenioId={b.convenioId} catalogos={catalogos} onChange={(id) => id !== b.convenioId && cambiar({ convenioId: id })} />
               ) : (
