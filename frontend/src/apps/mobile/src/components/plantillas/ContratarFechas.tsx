@@ -9,7 +9,7 @@ import { Pantalla, Vacio } from "./Pantalla";
 import { EstadoContratar, faltaDe, formaDe, guardarEstado, leerEstado, nuevaClave } from "./estadoContratar";
 import { estadoDe, nombreTurno, rutas } from "./equipoUtil";
 import { ChipTurno, fechaCorta, fechaDeHoy, Pill, textoHorario } from "./comun";
-import { Pasos } from "./Pasos";
+import { PASOS_CONTRATAR, Pasos } from "./Pasos";
 
 /*
   CONTRATAR · PASO 1 DE 2 · EQUIPOS Y FECHAS. El mismo paso para uno o para varios equipos: los
@@ -90,7 +90,7 @@ export default function ContratarFechas() {
         tono: "verde",
       }}
     >
-      <Pasos actual={1} />
+      <Pasos actual={1} pasos={PASOS_CONTRATAR} />
       {p.equipos.length === 0 ? (
         <Vacio texto="Este grupo no tiene equipos." accion="Volver al grupo" onAccion={() => navigate(atras)} />
       ) : (

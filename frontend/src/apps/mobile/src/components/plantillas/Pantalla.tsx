@@ -123,9 +123,19 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
           <button type="button" onClick={volver} aria-label="Atrás" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800">
             <FontAwesomeIcon icon={faArrowLeft} />
           </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-bold text-slate-900 dark:text-white">{titulo}</h1>
-            {contexto && <p className="truncate text-xs text-slate-600 dark:text-slate-300">{contexto}</p>}
+          {/*
+            EL TÍTULO Y EL PROYECTO, EN UN RENGLÓN.
+
+            El proyecto iba debajo del título y el encabezado gastaba tres renglones —título,
+            proyecto y chips— antes de que empezara el formulario. Al lado, el encabezado mide uno
+            menos y el proyecto se sigue leyendo: es contexto, no un dato que haya que deletrear.
+
+            El título no se achica (`shrink-0`) y el que se corta es el proyecto: entre «Nuevo
+            equipo» y «La Nación | LN+», lo que no puede faltar es saber qué pantalla es.
+          */}
+          <div className="flex min-w-0 flex-1 items-baseline gap-2">
+            <h1 className="shrink-0 text-base font-bold text-slate-900 dark:text-white">{titulo}</h1>
+            {contexto && <p className="min-w-0 truncate text-xs text-slate-600 dark:text-slate-300">{contexto}</p>}
           </div>
           <EstadoGuardado estado={estado} />
         </div>
