@@ -325,7 +325,16 @@ export default function NuevoEquipo() {
       // Lo que se va nombrando viaja en el encabezado: a la cuarta pantalla de scroll ya no se ve.
       chips={[esNuevo ? b.nombreGrupo.trim() : grupo?.nombre, b.nombre.trim()]}
       atras={b.grupoId && b.grupoId !== NUEVO ? rutas.grupo(b.grupoId) : rutas.lista}
-      boton={{ texto: esNuevo ? "Crear grupo y equipo" : "Crear equipo", onClick: () => void crear(), deshabilitado: !!falta, motivo: falta?.texto, onMotivo: falta ? () => irA(falta.id) : undefined, cargando: creando }}
+      /*
+        SIN EL CARTEL DE «QUÉ FALTA» DEBAJO DEL BOTÓN.
+
+        Decía «Poné el nombre del grupo» sobre un formulario donde ese campo está a la vista, con su
+        asterisco y su rótulo: era repetir en el pie lo que ya dice el campo, y encima ocupaba un
+        renglón fijo del poco alto que queda en un teléfono.
+
+        El botón apagado sigue diciendo que falta algo; qué falta lo dicen los asteriscos.
+      */
+      boton={{ texto: esNuevo ? "Crear grupo y equipo" : "Crear equipo", onClick: () => void crear(), deshabilitado: !!falta, cargando: creando }}
     >
       <div className="space-y-6">
         {/* CLIENTE | PROYECTO */}
