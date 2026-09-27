@@ -112,6 +112,16 @@ export default function NuevoEquipo() {
     segundo turno sin volver a la página.
   */
   const [areaEnHoja, setAreaEnHoja] = useState<string | null>(null);
+  /**
+   * LOS PUESTOS A LOS QUE SE LES ESTÁ CAMBIANDO EL ÁREA Y TURNO.
+   *
+   * Es un conjunto y no un puesto suelto porque lo normal es mover VARIOS a la vez: un equipo de
+   * catorce que cubre cinco áreas se reparte de a grupos —los cuatro de Vestuario, los tres de
+   * Postproducción—, y hacerlo de a uno son catorce idas y vueltas.
+   *
+   * `null` = cerrado. Se abre con el puesto que se tocó ya adentro, que es el caso de uno solo.
+   */
+  const [puestosEnHoja, setPuestosEnHoja] = useState<Set<number> | null>(null);
   const [creando, setCreando] = useState(false);
   const [intento, setIntento] = useState(false);
 
@@ -185,6 +195,19 @@ export default function NuevoEquipo() {
   const contrato = catalogos.contratos.find((c) => c._id === b.contratoId);
   const sueltos = porDiasSueltos(catalogos, b.contratoId);
   const opcion = (v?: string) => (areas || []).find((o) => `${o.areaId}::${o.shiftId}` === v);
+  const textoTurno = (v?: string) => {
+    const o = opcion(v);
+    return o ? `${o.areaNombre} · ${o.turnoNombre}` : "Sin turno";
+  };
+  /** Le pone el mismo área y turno a todos los puestos abiertos. El primero elegido no se guarda: es el que va por defecto. */
+  const ponerTurnoA = (puestosN: Set<number>, v: string) => {
+    const t = { ...b.turnoPorPuesto };
+    for (const n of puestosN) {
+      if (v === b.turnos[0]) delete t[n];
+      else t[n] = v;
+    }
+    cambiar({ turnoPorPuesto: t });
+  };
   /** El principal: el primero que se eligió. Define el horario, los días y el nombre del equipo. */
   const turno = opcion(b.turnos[0]);
   const elegidos = b.turnos.map(opcion).filter(Boolean) as OpcionAreaTurno[];
@@ -699,25 +722,24 @@ export default function NuevoEquipo() {
                         {catalogos.rolesCargados ? <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span> : <span className="block h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
                         {/* Sin persona no se escribe nada: el botón de al lado dice «Asignar», que ya es la respuesta. */}
                         {!b.copiarDe && persona && <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{persona.nombre}</span>}
-                        {/* Con varias áreas y turnos, a cuál va este puesto (por defecto, el principal). */}
+                        {/*
+                          A CUÁL DE LAS ÁREAS Y TURNOS VA ESTE PUESTO (por defecto, el primero).
+
+                          Un botón que abre una hoja, no un `<select>` nativo: el desplegable del
+                          sistema tapa la pantalla con su propia lista, no deja ver a qué puesto
+                          pertenece, y sobre todo mueve UNO SOLO. Repartir catorce puestos entre
+                          cinco áreas de a uno son catorce desplegables.
+                        */}
                         {elegidos.length > 1 && (
-                          <select
-                            value={b.turnoPorPuesto[x.n] || b.turnos[0]}
-                            onChange={(e) => {
-                              const t = { ...b.turnoPorPuesto };
-                              if (e.target.value === b.turnos[0]) delete t[x.n];
-                              else t[x.n] = e.target.value;
-                              cambiar({ turnoPorPuesto: t });
-                            }}
-                            aria-label={`Área y turno del puesto ${x.n}`}
-                            className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs font-medium text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                          <button
+                            type="button"
+                            onClick={() => setPuestosEnHoja(new Set([x.n]))}
+                            aria-label={`Cambiar el área y turno del puesto ${x.n}`}
+                            className="mt-1 flex h-9 w-full items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-2 text-left text-xs font-medium text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                           >
-                            {elegidos.map((o) => (
-                              <option key={`${o.areaId}::${o.shiftId}`} value={`${o.areaId}::${o.shiftId}`}>
-                                {o.areaNombre} · {o.turnoNombre}
-                              </option>
-                            ))}
-                          </select>
+                            <span className="min-w-0 flex-1 truncate">{textoTurno(b.turnoPorPuesto[x.n] || b.turnos[0])}</span>
+                            <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                          </button>
                         )}
                       </span>
                       {/*
@@ -861,6 +883,76 @@ export default function NuevoEquipo() {
               </button>
             );
           })}
+        </div>
+      </HojaModal>
+
+      {/*
+        EL ÁREA Y TURNO DE UNOS PUESTOS.
+
+        Arriba, los puestos: se abre con el que se tocó y se pueden sumar los demás. Abajo, los
+        turnos del equipo: tocar uno se lo pone a todos los que estén tildados y cierra.
+      */}
+      <HojaModal
+        abierta={!!puestosEnHoja}
+        onCerrar={() => setPuestosEnHoja(null)}
+        titulo="Área y turno del puesto"
+        subtitulo={puestosEnHoja && puestosEnHoja.size > 1 ? `${puestosEnHoja.size} puestos elegidos` : "Tildá los puestos que van al mismo turno"}
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Puestos</p>
+            <div className="flex flex-wrap gap-1.5">
+              {puestos.map((x) => {
+                const tildado = !!puestosEnHoja?.has(x.n);
+                return (
+                  <button
+                    key={x.n}
+                    type="button"
+                    onClick={() =>
+                      setPuestosEnHoja((prev) => {
+                        const n = new Set(prev || []);
+                        if (n.has(x.n)) n.delete(x.n);
+                        else n.add(x.n);
+                        // Sin ninguno no hay a quién aplicarle el turno: se deja el que se tocó.
+                        return n.size === 0 ? new Set([x.n]) : n;
+                      })
+                    }
+                    aria-pressed={tildado}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${tildado ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}
+                  >
+                    <span className="tabular-nums">{x.n}</span>
+                    <span className="max-w-[9rem] truncate font-normal">{nombreRol(x.rolId)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Va a</p>
+            <div className="space-y-2">
+              {elegidos.map((o) => {
+                const v = `${o.areaId}::${o.shiftId}`;
+                const todos = [...(puestosEnHoja || [])].every((n) => (b.turnoPorPuesto[n] || b.turnos[0]) === v);
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => {
+                      ponerTurnoA(puestosEnHoja || new Set(), v);
+                      setPuestosEnHoja(null);
+                    }}
+                    className={`flex min-h-[56px] w-full items-center gap-2 rounded-xl border px-3 text-left ${todos ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-slate-200 dark:border-slate-700"}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{o.areaNombre} · {o.turnoNombre}</span>
+                      <span className="block truncate text-[11px] text-slate-600 dark:text-slate-300">{[o.inicio && o.fin ? `${o.inicio}–${o.fin}` : "", o.diasTexto].filter(Boolean).join(" · ")}</span>
+                    </span>
+                    {todos && <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-300" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </HojaModal>
 
