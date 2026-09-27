@@ -5,6 +5,18 @@ export declare const DIAS_DE_AVISO = 7;
 export declare const DIAS_DE_AVISO_MAX = 60;
 export interface ContratoPorVencer {
     userProjectId: string;
+    /**
+     * LA POSICIÓN DEL CONTRATO EN `UserProject.contracts`. Es su identidad.
+     *
+     * Los contratos son subdocumentos SIN `_id`, así que nombrarlos es nombrar su posición — lo mismo
+     * que ya hacen editar, descargar y subir documentación (ver `GET /users/:id/contracts`, que manda
+     * el array en el orden de la base justamente por esto).
+     *
+     * Antes se los nombraba por (asignación, fecha de baja), dando por sentado que dos contratos de la
+     * misma asignación no terminan el mismo día. En la base hay 515 pares que lo desmienten: la
+     * pantalla dibujaba dos filas con la misma clave y decidir sobre una resolvía la otra.
+     */
+    indice: number;
     userId: string;
     nombre: string;
     projectId: string;

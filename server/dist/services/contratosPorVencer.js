@@ -122,7 +122,7 @@ async function calcular(tenantId, userId, hoy, dias) {
     for (const up of asignaciones) {
         const contratos = up.contracts || [];
         const pid = String(up.projectId);
-        for (const c of contratos) {
+        for (const [indice, c] of contratos.entries()) {
             const alta = fechaISO(c.fecha_alta_contrato);
             const baja = fechaISO(c.fecha_baja_contrato);
             // Sin alta no se sabe cuánto dura; sin baja es por tiempo indeterminado y no vence.
@@ -140,7 +140,7 @@ async function calcular(tenantId, userId, hoy, dias) {
                 if (!mios || !suyos.some((k) => mios.has(k)))
                     continue;
             }
-            candidatos.push({ up, c, alta, baja, pid });
+            candidatos.push({ up, c, alta, baja, pid, indice });
         }
     }
     if (candidatos.length === 0) {
@@ -158,7 +158,9 @@ async function calcular(tenantId, userId, hoy, dias) {
         RoleFrame.find({ "data.rol.id": { $in: candidatos.map((x) => Number(x.c.rol_frame_id)).filter((n) => Number.isFinite(n) && n > 0) } }).select("name data.rol.id").lean(),
     ]);
     // Una renovación rechazada, cancelada o borrada no resuelve nada.
-    const decisionDe = new Map(decisiones.map((d) => [`${d.userProjectId}::${d.fechaBajaContrato}`, d]));
+    // La clave lleva el índice: dos contratos de la misma asignación pueden terminar el mismo día, y
+    // sin él la decisión sobre uno sacaba de la lista a los dos.
+    const decisionDe = new Map(decisiones.map((d) => [`${d.userProjectId}::${d.fechaBajaContrato}::${d.indiceContrato ?? 0}`, d]));
     const solicitudIds = decisiones.filter((d) => d.decision === "renovar" && d.solicitudId).map((d) => d.solicitudId);
     const solicitudes = solicitudIds.length > 0 ? await User.find({ _id: { $in: solicitudIds } }).select("metadata.solicitudStatus").lean() : [];
     const estadoDe = new Map(solicitudes.map((u) => [String(u._id), u.metadata?.solicitudStatus]));
@@ -169,8 +171,8 @@ async function calcular(tenantId, userId, hoy, dias) {
     const rolDe = new Map(roles.map((r) => [Number(r.data?.rol?.id), r]));
     const resultado = [];
     candidatos.forEach((x, i) => {
-        const { up, c, alta, baja, pid } = x;
-        const d = decisionDe.get(`${up._id}::${baja}`);
+        const { up, c, alta, baja, pid, indice } = x;
+        const d = decisionDe.get(`${up._id}::${baja}::${indice}`);
         if (d?.decision === "dejar_vencer")
             return;
         const estado = d ? estadoDe.get(String(d.solicitudId)) : undefined;
@@ -187,6 +189,7 @@ async function calcular(tenantId, userId, hoy, dias) {
         const rolesDeLaPersona = (persona.metadata?.roles_frame || []).map(String);
         resultado.push({
             userProjectId: String(up._id),
+            indice,
             userId: String(up.userId),
             nombre,
             projectId: pid,

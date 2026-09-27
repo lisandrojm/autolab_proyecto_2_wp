@@ -6,9 +6,14 @@ import mongoose, { Types } from "mongoose";
  * `services/contratosPorVencer.ts`). Sin esto la lista no tiene memoria: el mismo contrato volvería a
  * aparecer cada día hasta su fecha de baja, aunque alguien ya lo hubiera resuelto.
  *
- * EL CONTRATO SE IDENTIFICA POR (UserProject, fecha de baja). Los contratos son subdocumentos sin `_id`
- * (`UserProject.contracts[]`), así que no hay otra forma estable de nombrarlos: dentro de una misma
- * asignación, dos contratos no terminan el mismo día.
+ * EL CONTRATO SE IDENTIFICA POR (UserProject, fecha de baja, POSICIÓN EN EL ARRAY). Los contratos son
+ * subdocumentos sin `_id` (`UserProject.contracts[]`), así que nombrarlos es nombrar su posición —lo
+ * mismo que ya hacen editar, descargar y subir documentación—.
+ *
+ * La posición se sumó porque acá decía que dentro de una misma asignación dos contratos no terminan
+ * el mismo día, y NO ES CIERTO: en la base hay 515 pares (asignación, fecha de baja) con más de un
+ * contrato. La lista dibujaba dos filas con la misma identidad y decidir sobre una resolvía la otra
+ * en silencio: se guardaba un solo registro y las dos desaparecían de «Por vencer».
  *
  * - `renovar`: se pidió una solicitud de contratación con la etiqueta «Renovación» (`solicitudId`). Si
  *   esa solicitud después se RECHAZA o se CANCELA, el contrato vuelve a la lista: la renovación no pasó.
@@ -21,8 +26,10 @@ export interface IRenovacionContrato {
     userProjectId: Types.ObjectId;
     userId?: Types.ObjectId;
     projectId?: Types.ObjectId;
-    /** "YYYY-MM-DD": junto con `userProjectId` es la identidad del contrato. */
+    /** "YYYY-MM-DD": junto con `userProjectId` e `indiceContrato`, la identidad del contrato. */
     fechaBajaContrato: string;
+    /** Posición del contrato en `UserProject.contracts`. Lo escrito antes de que esto existiera es 0. */
+    indiceContrato: number;
     decision: "renovar" | "dejar_vencer";
     /** La solicitud de renovación, cuando `decision` es "renovar". */
     solicitudId?: Types.ObjectId;
