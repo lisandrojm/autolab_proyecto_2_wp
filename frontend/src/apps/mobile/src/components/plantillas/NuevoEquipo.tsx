@@ -746,33 +746,49 @@ export default function NuevoEquipo() {
                           pertenece, y sobre todo mueve UNO SOLO. Repartir catorce puestos entre
                           cinco áreas de a uno son catorce desplegables.
                         */}
-                        {elegidos.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setPuestosEnHoja(new Set([x.n]))}
-                            aria-label={`Cambiar el área y turno del puesto ${x.n}`}
-                            className="mt-1 flex h-9 w-full items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-2 text-left text-xs font-medium text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-                          >
-                            <span className="min-w-0 flex-1 truncate">{textoTurno(b.turnoPorPuesto[x.n] || b.turnos[0])}</span>
-                            <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
-                          </button>
-                        )}
+                        {elegidos.length > 1 &&
+                          /*
+                            CON PERSONA, PASTILLA; SIN PERSONA, CONTROL.
+
+                            Es la misma distinción que en todo el formulario: lo que falta decidir se
+                            ve como un campo con su borde, y lo ya elegido como pastilla azul. Con el
+                            puesto cubierto, el renglón entero —persona y turno— se lee de un vistazo
+                            como resuelto en vez de parecer que todavía hay algo que tocar.
+
+                            Sigue abriendo la hoja en los dos casos: cambia el aspecto, no lo que hace.
+                          */
+                          (persona ? (
+                            <button type="button" onClick={() => setPuestosEnHoja(new Set([x.n]))} aria-label={`Cambiar el área y turno del puesto ${x.n}`} className={`mt-1 max-w-full ${pastillaDe("azul")} px-2.5 py-0.5`}>
+                              <span className="truncate">{textoTurno(b.turnoPorPuesto[x.n] || b.turnos[0])}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setPuestosEnHoja(new Set([x.n]))}
+                              aria-label={`Cambiar el área y turno del puesto ${x.n}`}
+                              className="mt-1 flex h-9 w-full items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-2 text-left text-xs font-medium text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                            >
+                              <span className="min-w-0 flex-1 truncate">{textoTurno(b.turnoPorPuesto[x.n] || b.turnos[0])}</span>
+                              <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                            </button>
+                          ))}
                       </span>
                       {/*
-                        LOS MISMOS DOS BOTONES QUE EN TODA LA PANTALLA: «+» azul para agregar, «×»
-                        gris para sacar.
+                        LOS MISMOS BOTONES QUE EN TODA LA PANTALLA: «+» azul para agregar, «×» gris
+                        para sacar, lápiz gris para cambiar.
 
                         Eran «Asignar» con un ícono de persona y «Quitar» en texto: dos formas más
-                        para las dos acciones que el resto de la pantalla ya resuelve con «+» y «×».
-                        En catorce renglones, además, la palabra repetida catorce veces pesa más que
-                        el nombre de la persona, que es lo que hay que leer.
+                        para lo que el resto de la pantalla ya resuelve con «+» y «×». En catorce
+                        renglones, además, la palabra repetida catorce veces pesa más que el nombre de
+                        la persona, que es lo que hay que leer.
+
+                        Con persona van EN COLUMNA y no uno al lado del otro: en fila se comían 80px
+                        de ancho del renglón y el nombre del turno quedaba cortado. La cruz arriba y
+                        el lápiz abajo; el lápiz CAMBIA a la persona y la cruz la saca. Sin el lápiz,
+                        cambiar a alguien era sacarlo y volver a buscar desde cero.
                       */}
                       {b.copiarDe ? null : persona ? (
-                        <span className="flex shrink-0 items-center gap-1.5">
-                          {/* El lápiz CAMBIA a la persona; la cruz la saca. Sin el lápiz, cambiar a alguien era sacarlo y volver a buscar. */}
-                          <button type="button" onClick={() => setHoja({ persona: x.n })} aria-label={`Cambiar a ${persona.nombre} en el puesto ${x.n}`} className={`${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}>
-                            <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
-                          </button>
+                        <span className="flex shrink-0 flex-col gap-1.5">
                           <button
                             type="button"
                             onClick={() => {
@@ -784,6 +800,9 @@ export default function NuevoEquipo() {
                             className={`${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}
                           >
                             <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                          </button>
+                          <button type="button" onClick={() => setHoja({ persona: x.n })} aria-label={`Cambiar a ${persona.nombre} en el puesto ${x.n}`} className={`${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}>
+                            <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
                           </button>
                         </span>
                       ) : (
