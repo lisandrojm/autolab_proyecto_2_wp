@@ -459,9 +459,26 @@ export default function NuevoEquipo() {
           <>
         {/* TIPO DE CONTRATO */}
         <div id="campo-contrato" className="space-y-2 scroll-mt-24">
-          <Rotulo icono={faFileContract} obligatorio>
-            Tipo de contrato
-          </Rotulo>
+          {/*
+            UNO SOLO PARA TODO EL EQUIPO, y hay que decirlo acá.
+
+            Es una decisión de practicidad: doce puestos son doce contratos, y elegir tipo por
+            puesto en el alta convierte un formulario en una planilla. Lo que se pierde no se pierde
+            —cada puesto se edita entero después— pero eso el que mira la pantalla no lo sabe, y sin
+            decirlo el campo se lee como «todos van a tener el mismo contrato y no hay vuelta atrás».
+          */}
+          <div className="flex items-center gap-1">
+            <Rotulo icono={faFileContract} obligatorio>
+              Tipo de contrato
+            </Rotulo>
+            <BotonInfo
+              icono={faFileContract}
+              titulo="Tipo de contrato"
+              texto={
+                "Acá elegís UN tipo de contrato para todo el equipo. Es por practicidad: en un grupo de doce puestos, elegirlo de a uno convierte el alta en una planilla.\n\nDespués, cada puesto se edita por separado y se le puede cambiar absolutamente todo —el tipo de contrato incluido, además del horario, los días, la categoría y el sueldo—.\n\nO sea que esto es el punto de partida del equipo, no una regla que después no se pueda tocar."
+              }
+            />
+          </div>
           <button type="button" onClick={() => setHoja("contrato")} className={`flex min-h-[48px] w-full items-center gap-3 rounded-lg border bg-white px-3 text-left dark:bg-slate-900 ${error("campo-contrato") ? "border-red-500" : "border-slate-300 dark:border-slate-600"}`}>
             {contrato ? (
               <>
