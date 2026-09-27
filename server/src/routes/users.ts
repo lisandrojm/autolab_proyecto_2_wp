@@ -83,20 +83,21 @@ async function resolveProjectTeamFilterIds(projectId: string, filtros: TeamFilte
   const project: any = await Project.findById(projectId).select("teamConfig coordinatorAssignments").lean();
   if (!project) return [];
 
-  const members = await User.find({ projectIds: projectId })
-    .select("_id firstName lastName roles metadata.projects")
-    .populate({ path: "roles", select: "name permissions", model: Role })
-    .populate({
-      path: "metadata.projects",
-      model: UserProject,
-      // `fecha_alta_contrato` y `fecha_carga` son obligatorios: `getContratoActivo` los usa para
-      // desempatar cuál es el contrato más reciente. Sin ellos, todos los contratos quedan con la
-      // misma "antigüedad" y el filtro termina resolviendo el contrato activo de forma distinta a
-      // como lo calcula el front (con los datos completos) — el filtro matchea un estado que
-      // después la tabla no muestra para esa misma persona.
-      select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.nombre_estado_empleado contracts.reemplazo",
-    })
-    .lean();
+  /*
+    LOS CONTRATOS NO VIAJAN: el que rige lo elige Mongo.
+
+    Esto poblaba `metadata.projects` con los contratos de cada miembro para quedarse con UNO por
+    persona. En LN+ son 256 vínculos con 29 contratos de promedio: medido contra la base, el picker de
+    personas tardaba 17,9 segundos en abrir — y lo mismo pagaba cada filtro de Gestionar Equipo.
+
+    `contratosQueRigenDelProyecto` aplica la MISMA regla que `getContratoActivo` adentro de la base
+    —está escrita para eso, y el comentario de allá avisa que si se toca una hay que tocar la otra— y
+    devuelve una fila chica por persona con los cuatro campos que estos filtros miran.
+  */
+  const [members, contratoDe] = await Promise.all([
+    User.find({ projectIds: projectId }).select("_id firstName lastName roles").populate({ path: "roles", select: "name permissions", model: Role }).lean(),
+    contratosQueRigenDelProyecto(projectId, hoyArgentina(), ["nombre_contrato", "nombre_estado_empleado", "reemplazo"]),
+  ]);
 
   const configByUser = new Map<string, any>((project.teamConfig || []).map((c: any) => [String(c.userId), c]));
 
@@ -119,15 +120,13 @@ async function resolveProjectTeamFilterIds(projectId: string, filtros: TeamFilte
   const ids: Types.ObjectId[] = [];
 
   for (const member of members) {
-    const up: any = ((member as any).metadata?.projects || []).find((p: any) => p && String(p.projectId) === String(projectId));
-    const contracts: any[] = up?.contracts || [];
-    // El contrato que representa su situación actual: el vigente más reciente (un tiempo
-    // indeterminado no tiene baja y siempre lo es), no simplemente el último cargado.
-    const contratoActivo = getContratoActivo(contracts);
+    // El contrato que representa su situación actual en ESTE proyecto, elegido en la base con la
+    // regla de `getContratoActivo`. `undefined` = la persona no tiene ningún contrato acá.
+    const contratoActivo = contratoDe.get(String(member._id));
 
     if (filtros.vigencia) {
       // Sin contratos se considera vigente, como se venía comportando el filtro.
-      const vigente = contracts.length === 0 || esContratoVigente(contratoActivo);
+      const vigente = !contratoActivo || esContratoVigente(contratoActivo);
       if (filtros.vigencia === "vigente" ? !vigente : vigente) continue;
     }
 
