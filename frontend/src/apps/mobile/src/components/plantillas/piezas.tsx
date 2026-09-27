@@ -108,14 +108,21 @@ export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-cente
     · AIRE_CON_CRUZ las que terminan en un botón redondo: menos aire de ese lado, que el botón ya lo trae.
     · AIRE_CONTROL  las que son SÓLO botones (el «− 1 +», el lápiz): el aire es el marco alrededor.
 
+  EL AIRE DE ARRIBA Y ABAJO ES EL MÍNIMO. Se probó con más y las pastillas salían gordas: quien manda
+  en el alto es el botón redondo de adentro (32 px), así que cada paso de padding vertical se suma
+  entero a un alto que ya alcanza, y catorce roles se volvían una columna de ladrillos. A lo ancho sí
+  hace falta —ahí el texto toca el borde—, y por eso las medidas no son simétricas.
+
   `SEPARACION` es lo que va entre una pastilla y la de al lado; `ENTRE` lo que va entre badges, que es
-  más, porque ahí el salto es de una cosa elegida a otra y no de una mitad a su otra mitad.
+  más, porque ahí el salto es de una cosa elegida a otra y no de una mitad a su otra mitad. Y sobre
+  eso, `MARGEN`: 1 px en cada badge, el pelo que despega dos bordes redondos que casi se tocan.
 */
-export const AIRE = "px-3 py-1";
-export const AIRE_CON_CRUZ = "py-1.5 pl-4 pr-1";
-export const AIRE_CONTROL = "p-1";
+export const AIRE = "px-3 py-0.5";
+export const AIRE_CON_CRUZ = "py-0.5 pl-4 pr-1";
+export const AIRE_CONTROL = "px-1 py-0.5";
 export const SEPARACION = "gap-2";
 export const ENTRE = "gap-2.5";
+export const MARGEN = "m-px";
 
 /**
  * UN ÁREA ELEGIDA: el lápiz a la izquierda, el área con sus turnos y la cruz a la derecha.
@@ -128,7 +135,7 @@ export const ENTRE = "gap-2.5";
  */
 export function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: string; turnos: string[]; onEditar: () => void; onQuitar: () => void }) {
   return (
-    <span className={`inline-flex items-center ${SEPARACION}`}>
+    <span className={`inline-flex items-center ${SEPARACION} ${MARGEN}`}>
       <span className={`${pastillaDe("neutro")} ${AIRE_CONTROL}`}>
         <button type="button" onClick={onEditar} aria-label={`Editar los turnos de ${nombre}`} className={redondoDe("neutro")}>
           <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
@@ -184,7 +191,7 @@ export function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; can
   const control = pastillaDe("neutro");
   const redondoControl = redondoDe("neutro");
   return (
-    <span className={`inline-flex items-center ${SEPARACION}`}>
+    <span className={`inline-flex items-center ${SEPARACION} ${MARGEN}`}>
       <span className={`${control} ${AIRE_CONTROL}`}>
         <button
           type="button"

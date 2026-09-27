@@ -16,7 +16,7 @@ import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
 import { CLASE_CAMPO } from "./comun";
 import { BotonInfo } from "../ModalInfo";
-import { AIRE, ENTRE, BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
+import { AIRE, ENTRE, MARGEN, BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
 
 /*
   NUEVO EQUIPO, EN CUATRO PASOS: UNA DECISIÓN POR PANTALLA.
@@ -69,17 +69,6 @@ interface Borrador {
   copiarDe: string;
   /** Personas por número de puesto (1, 2, …). */
   personas: Record<number, { _id: string; nombre: string }>;
-}
-
-/** Un renglón del resumen: qué es y cómo quedó. Sin valor no se dibuja — un «—» no informa nada. */
-function Fila({ titulo, valor }: { titulo: string; valor?: string | null }) {
-  if (!valor) return null;
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5">
-      <dt className="shrink-0 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{titulo}</dt>
-      <dd className="min-w-0 truncate text-right font-medium text-slate-900 dark:text-white">{valor}</dd>
-    </div>
-  );
 }
 
 const vacio = (projectId = "", grupoId = ""): Borrador => ({ projectId, grupoId, nombreGrupo: "", roles: [], empresaContratoId: "", convenioId: "", contratoId: "", turnos: [], turnoPorPuesto: {}, inTime: "", outTime: "", diasSemana: [], nombre: "", copiarDe: "", personas: {} });
@@ -382,6 +371,24 @@ export default function NuevoEquipo() {
   const convenioDoc = catalogos.convenios.find((c) => c._id === convenioId);
   const convenio = convenioId ? { cct: catalogos.cctDeConvenio(convenioId), nombre: convenioDoc?.name || "" } : null;
   const areasElegidas = [...new Set(elegidos.map((o) => o.areaNombre))].join(" · ");
+  /*
+    Lo elegido, como texto para el modal de ayuda: un renglón por dato y los vacíos afuera.
+
+    Un «—» no informa nada y suma renglones; si algo falta, el paso donde se elige está a un botón de
+    volver. Las personas van acá también, que en la tarjeta no entraban.
+  */
+  const resumen = ([
+    ["Grupo", esNuevo ? b.nombreGrupo.trim() : grupo?.nombre],
+    ["Equipo", b.nombre.trim()],
+    ["Empresa", (empresas.find((c) => c._id === b.empresaContratoId) as any)?.razonSocial],
+    ["Convenio", convenio && `${convenio.cct} ${convenio.nombre}`],
+    ["Áreas y turnos", areasElegidas],
+    ["Puestos", puestos.length ? String(puestos.length) : ""],
+    ["Personas asignadas", puestos.length ? `${asignadas} de ${puestos.length}` : ""],
+  ] as [string, string | null | undefined][])
+    .filter(([, valor]) => valor)
+    .map(([titulo, valor]) => `${titulo}: ${valor}`)
+    .join("\n");
 
   return (
     <Pantalla
@@ -680,25 +687,23 @@ export default function NuevoEquipo() {
         {paso === 4 && (
           <>
         {/*
-          TODO LO DECIDIDO, JUNTO Y ANTES DE CREAR.
+          TODO LO DECIDIDO, EN UN RENGLÓN Y SU «i».
 
-          Reemplaza a los dos chips que viajaban en el encabezado —«Grupo | Técnica», «Equipo |
-          Mañana»—, que eran un parche para una pantalla larga: mostraban dos de las ocho decisiones
-          porque eran las dos que entraban, y costaban un renglón fijo en los cuatro pasos. Partido
-          el alta, lo que hace falta no es acordarse a mitad de camino: es ver todo antes del OK.
+          Primero fue una tarjeta de seis renglones arriba de las personas. Decía lo que tenía que
+          decir, pero se llevaba media pantalla de teléfono para repetir cosas que ya se eligieron y
+          que casi nunca hace falta volver a mirar: lo que se está haciendo en este paso es asignar
+          gente, y de eso entraban dos puestos y medio.
 
-          Es de sólo lectura. Para cambiar algo está el botón de volver, que es de a un paso y no
-          pierde nada; un lápiz por renglón sería una segunda forma de llegar al mismo campo.
+          Como «i» ocupa un renglón y está a un toque. Es el mismo modal de ayuda que el resto de la
+          app —el de Rol/es empresa, el de Área y turno—, así que quien ya tocó una sabe qué va a
+          pasar; lo único distinto es que acá adentro no hay una explicación sino lo elegido.
+
+          De sólo lectura. Para cambiar algo está el botón de volver, que es de a un paso y no pierde
+          nada; un lápiz por renglón sería una segunda forma de llegar al mismo campo.
         */}
-        <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-          <dl className="divide-y divide-slate-200 text-sm dark:divide-slate-700">
-            <Fila titulo="Grupo" valor={esNuevo ? b.nombreGrupo.trim() : grupo?.nombre} />
-            <Fila titulo="Equipo" valor={b.nombre.trim()} />
-            <Fila titulo="Empresa" valor={(empresas.find((c) => c._id === b.empresaContratoId) as any)?.razonSocial} />
-            <Fila titulo="Convenio" valor={convenio ? `${convenio.cct} ${convenio.nombre}` : null} />
-            <Fila titulo="Áreas y turnos" valor={areasElegidas} />
-            <Fila titulo="Puestos" valor={String(puestos.length)} />
-          </dl>
+        <div className="flex items-center gap-1">
+          <Rotulo icono={faCheck}>Resumen</Rotulo>
+          <BotonInfo icono={faCheck} titulo="Resumen" texto={resumen} />
         </div>
 
         {/* PERSONAS (opcional) */}
@@ -742,7 +747,7 @@ export default function NuevoEquipo() {
                           Sin persona no se escribe nada: el «+» de al lado ya es la respuesta.
                         */}
                         {!b.copiarDe && persona && (
-                          <span className={`mt-0.5 max-w-full ${pastillaDe("verde")} ${AIRE}`}>
+                          <span className={`mt-0.5 max-w-full ${pastillaDe("verde")} ${AIRE} ${MARGEN}`}>
                             <span className="truncate">{persona.nombre}</span>
                           </span>
                         )}
@@ -766,7 +771,7 @@ export default function NuevoEquipo() {
                             Sigue abriendo la hoja en los dos casos: cambia el aspecto, no lo que hace.
                           */
                           (persona ? (
-                            <button type="button" onClick={() => setPuestosEnHoja(new Set([x.n]))} aria-label={`Cambiar el área y turno del puesto ${x.n}`} className={`mt-1 max-w-full ${pastillaDe("azul")} ${AIRE}`}>
+                            <button type="button" onClick={() => setPuestosEnHoja(new Set([x.n]))} aria-label={`Cambiar el área y turno del puesto ${x.n}`} className={`mt-1 max-w-full ${pastillaDe("azul")} ${AIRE} ${MARGEN}`}>
                               <span className="truncate">{textoTurno(b.turnoPorPuesto[x.n] || b.turnos[0])}</span>
                             </button>
                           ) : (
