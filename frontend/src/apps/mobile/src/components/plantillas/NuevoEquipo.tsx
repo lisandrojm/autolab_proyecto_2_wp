@@ -857,14 +857,23 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
  * con el botón de crear. Dos formas para lo mismo, en la misma pantalla, una debajo de la otra.
  *
  * Ahora las dos son DOS PASTILLAS: a la izquierda la acción —la cantidad o los turnos—, a la
- * derecha el nombre con su cruz. Lo único distinto es el color, y eso sí a propósito: separa de un
- * vistazo los oficios de las áreas sin pedirle a nadie que aprenda dos formas.
+ * derecha el nombre con su cruz.
+ *
+ * EL COLOR ES DEL DATO, NO DEL CONTROL. La pastilla del nombre va en color —azul los oficios, verde
+ * las áreas— porque eso es lo que hay que distinguir de un vistazo; la de la izquierda va NEUTRA en
+ * las dos, porque «− 1 +» y el lápiz son controles y no cambian de significado según el campo.
+ * Pintándolos del color del dato competían con él y el renglón terminaba siendo dos manchas.
  */
 const TONOS = {
   azul: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
   verde: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200",
+  neutro: "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200",
 };
-const HOVER = { azul: "hover:bg-blue-200 dark:hover:bg-blue-800/60", verde: "hover:bg-emerald-200 dark:hover:bg-emerald-800/60" };
+const HOVER = {
+  azul: "hover:bg-blue-200 dark:hover:bg-blue-800/60",
+  verde: "hover:bg-emerald-200 dark:hover:bg-emerald-800/60",
+  neutro: "hover:bg-slate-200 dark:hover:bg-slate-700",
+};
 const pastillaDe = (tono: keyof typeof TONOS) => `inline-flex items-center rounded-full border text-xs font-semibold ${TONOS[tono]}`;
 const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-center justify-center rounded-full ${HOVER[tono]}`;
 
@@ -880,8 +889,8 @@ const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-center justi
 function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: string; turnos: string[]; onEditar: () => void; onQuitar: () => void }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={`${pastillaDe("verde")} px-0.5`}>
-        <button type="button" onClick={onEditar} aria-label={`Editar los turnos de ${nombre}`} className={redondoDe("verde")}>
+      <span className={`${pastillaDe("neutro")} px-0.5`}>
+        <button type="button" onClick={onEditar} aria-label={`Editar los turnos de ${nombre}`} className={redondoDe("neutro")}>
           <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
         </button>
       </span>
@@ -931,21 +940,24 @@ function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; cantidad: 
   // Las dos pastillas viajan juntas: `inline-flex` acá adentro evita que una quede sola al final de un renglón.
   const pastilla = pastillaDe("azul");
   const redondo = redondoDe("azul");
+  // La de la cantidad, neutra: es un control, no el dato (ver TONOS).
+  const control = pastillaDe("neutro");
+  const redondoControl = redondoDe("neutro");
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={`${pastilla} px-0.5`}>
+      <span className={`${control} px-0.5`}>
         <button
           type="button"
           onClick={() => onCantidad(cantidad - 1)}
           disabled={cantidad <= 1}
           aria-label={cantidad <= 1 ? `${nombre}: para sacarlo, la cruz` : `Un ${nombre} menos`}
           title={cantidad <= 1 ? "Para sacar el rol, la cruz" : undefined}
-          className={`${redondo} disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent`}
+          className={`${redondoControl} disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent`}
         >
           <FontAwesomeIcon icon={faMinus} className="h-2.5 w-2.5" />
         </button>
         <span className="min-w-[1.25rem] text-center tabular-nums">{cantidad}</span>
-        <button type="button" onClick={() => onCantidad(cantidad + 1)} aria-label={`Un ${nombre} más`} className={redondo}>
+        <button type="button" onClick={() => onCantidad(cantidad + 1)} aria-label={`Un ${nombre} más`} className={redondoControl}>
           <FontAwesomeIcon icon={faPlus} className="h-2.5 w-2.5" />
         </button>
       </span>
