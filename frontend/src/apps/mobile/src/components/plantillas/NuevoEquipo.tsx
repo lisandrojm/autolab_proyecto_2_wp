@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
-import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, OpcionAreaTurno } from "./useCatalogosContratacion";
@@ -15,7 +14,7 @@ import { cambiosDeContrato, cambiosDeTurno, porDiasSueltos } from "./Condiciones
 import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
-import { CLASE_CAMPO, CLASE_HORA, DIAS } from "./comun";
+import { CLASE_CAMPO, DIAS } from "./comun";
 import { BotonInfo } from "../ModalInfo";
 import { EstadoBadge } from "../../../../../components/EstadoSelect";
 import { InfoItem } from "../../../../../api/info";
@@ -627,15 +626,28 @@ export default function NuevoEquipo() {
         {/* HORARIO Y DÍAS */}
         <div id="campo-horario" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faClock}>Horario (entrada - salida)</Rotulo>
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <SelectorHora valor={b.inTime} onCambio={(h) => cambiar({ inTime: h || "" })} etiqueta="Entrada" placeholder="Entrada" className={CLASE_HORA} zIndex={120} />
-            </div>
-            <FontAwesomeIcon icon={faArrowRight} className="text-xs text-slate-500" aria-hidden />
-            <div className="flex-1">
-              <SelectorHora valor={b.outTime} onCambio={(h) => cambiar({ outTime: h || "" })} etiqueta="Salida" placeholder="Salida" desde={b.inTime} className={CLASE_HORA} zIndex={120} />
-            </div>
-          </div>
+          {/*
+            EL HORARIO LO PONE EL TURNO. Acá se muestra, no se edita.
+
+            Eran dos selectores de hora que arrancaban con lo del turno y casi nunca se tocaban: el
+            horario de un equipo ES el de su turno. Editarlo acá además lo fijaba para los catorce
+            puestos, cuando lo que pasa de verdad es que uno entra antes o sale después.
+
+            Eso se corrige donde corresponde: en el puesto de cada persona, que tiene sus propias
+            condiciones (ver `DetallePuesto`).
+          */}
+          <p className="flex h-12 items-center gap-2 rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            {b.inTime && b.outTime ? (
+              <>
+                <span>{b.inTime}</span>
+                <FontAwesomeIcon icon={faArrowRight} className="text-xs" aria-hidden />
+                <span>{b.outTime}</span>
+              </>
+            ) : (
+              "Lo define el turno"
+            )}
+          </p>
+          <p className="text-xs text-slate-600 dark:text-slate-300">Sale del turno. Se puede cambiar puesto por puesto al asignar a cada persona.</p>
           {sueltos ? (
             <p className="text-xs text-slate-600 dark:text-slate-300">Por jornada: los días se eligen al contratar.</p>
           ) : (
@@ -696,7 +708,8 @@ export default function NuevoEquipo() {
                       <span className="w-5 text-center text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">{x.n}</span>
                       <span className="min-w-0 flex-1">
                         {catalogos.rolesCargados ? <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span> : <span className="block h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
-                        {!b.copiarDe && <span className={`block truncate text-sm font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>{persona ? persona.nombre : "Sin asignar"}</span>}
+                        {/* Sin persona no se escribe nada: el botón de al lado dice «Asignar», que ya es la respuesta. */}
+                        {!b.copiarDe && persona && <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{persona.nombre}</span>}
                         {/* Con varias áreas y turnos, a cuál va este puesto (por defecto, el principal). */}
                         {elegidos.length > 1 && (
                           <select
