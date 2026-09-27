@@ -9,7 +9,7 @@ import { borrarEstado, EstadoContratar, guardarEstado, leerEstado, nuevaClave, p
 import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, pesos, Pill, textoHorario } from "./comun";
-import { PASOS_CONTRATAR, Pasos } from "./Pasos";
+import { PASOS_CONTRATAR } from "./Pasos";
 
 /*
   CONTRATAR · PASO 2 DE 2 · REVISIÓN. Es LA SOLICITUD MÚLTIPLE: lo que se ve es exactamente lo que se
@@ -61,8 +61,7 @@ export default function ContratarRevision() {
   const atras = rutas.contratar(id);
   if (!p || (!previews && !fallo)) {
     return (
-      <Pantalla titulo="Revisión" contexto={p?.nombre} atras={atras} listo={false}>
-        <Pasos actual={2} pasos={PASOS_CONTRATAR} />
+      <Pantalla titulo="Revisión" contexto={p?.nombre} atras={atras} listo={false} pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}>
         <div className="space-y-3" aria-busy="true">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
@@ -140,9 +139,8 @@ export default function ContratarRevision() {
         tono: "verde",
       }}
       notaBoton="Se envían todas juntas: si una falla, no sale ninguna."
+      pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}
     >
-      <Pasos actual={2} pasos={PASOS_CONTRATAR} />
-
       <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800/70">
         <Dato titulo="Solicitudes" valor={String(solicitudes)} />
         <Dato titulo="Equipos" valor={String(equipos.length)} />

@@ -8,7 +8,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { usePlantillas } from "./contexto";
 import { Pantalla, TOPE_PEGADO } from "./Pantalla";
-import { Pasos, PASOS_EQUIPO } from "./Pasos";
+import { PASOS_EQUIPO } from "./Pasos";
 import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
 import { cambiosDeTurno } from "./Condiciones";
@@ -69,6 +69,17 @@ interface Borrador {
   copiarDe: string;
   /** Personas por número de puesto (1, 2, …). */
   personas: Record<number, { _id: string; nombre: string }>;
+}
+
+/** Un renglón del resumen: qué es y cómo quedó. Sin valor no se dibuja — un «—» no informa nada. */
+function Fila({ titulo, valor }: { titulo: string; valor?: string | null }) {
+  if (!valor) return null;
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1.5">
+      <dt className="shrink-0 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{titulo}</dt>
+      <dd className="min-w-0 truncate text-right font-medium text-slate-900 dark:text-white">{valor}</dd>
+    </div>
+  );
 }
 
 const vacio = (projectId = "", grupoId = ""): Borrador => ({ projectId, grupoId, nombreGrupo: "", roles: [], empresaContratoId: "", convenioId: "", contratoId: "", turnos: [], turnoPorPuesto: {}, inTime: "", outTime: "", diasSemana: [], nombre: "", copiarDe: "", personas: {} });
@@ -258,8 +269,8 @@ export default function NuevoEquipo() {
     primeroQueFalta([
       // Mientras cargan no se puede pasar de largo: sin la lista, «no hay turnos» y «todavía no llegaron» se ven igual.
       [areas === null, "Cargando las áreas y turnos…", "campo-turno"],
-      [!b.turnos.length && (areas?.length || 0) > 0, "Elegí el área y el turno", "campo-turno"],
       [!b.nombre.trim(), "Poné el nombre del equipo", "campo-nombre"],
+      [!b.turnos.length && (areas?.length || 0) > 0, "Elegí el área y el turno", "campo-turno"],
     ] as const),
     // Las personas son opcionales: el último paso nunca frena.
     null,
@@ -362,16 +373,21 @@ export default function NuevoEquipo() {
 
   const error = (id: string) => intento && faltaDelPaso?.id === id;
   const asignadas = Object.keys(b.personas).length;
+  /*
+    Para el resumen del último paso: el convenio con su número Y su nombre —«0634/11 TELEVISIÓN»—,
+    que es como se lee en el paso 1 y como se pidió que se muestre en todos lados. Sale del catálogo
+    directo (`cctDeConvenio` + el documento) y no de `conveniosDisponibles`, que devuelve la lista de
+    lo OFRECIDO, indexada por CCT y no por el `_id` que guarda el borrador.
+  */
+  const convenioDoc = catalogos.convenios.find((c) => c._id === convenioId);
+  const convenio = convenioId ? { cct: catalogos.cctDeConvenio(convenioId), nombre: convenioDoc?.name || "" } : null;
+  const areasElegidas = [...new Set(elegidos.map((o) => o.areaNombre))].join(" · ");
 
   return (
     <Pantalla
       titulo="Nuevo equipo"
       contexto={proyecto ? etiquetaProyecto(proyecto) : undefined}
-      // Lo que se va nombrando viaja en el encabezado: a la cuarta pantalla de scroll ya no se ve.
-      chips={[
-        { etiqueta: "Grupo", valor: esNuevo ? b.nombreGrupo.trim() : grupo?.nombre },
-        { etiqueta: "Equipo", valor: b.nombre.trim() },
-      ]}
+      pasos={{ actual: paso, etiquetas: PASOS_EQUIPO }}
       atras={b.grupoId && b.grupoId !== NUEVO ? rutas.grupo(b.grupoId) : rutas.lista}
       /*
         SIN EL CARTEL DE «QUÉ FALTA» DEBAJO DEL BOTÓN.
@@ -391,8 +407,6 @@ export default function NuevoEquipo() {
       }
     >
       <div className="space-y-6">
-        <Pasos actual={paso} pasos={PASOS_EQUIPO} />
-
         {paso === 1 && (
           <>
         {/* CLIENTE | PROYECTO */}
@@ -601,6 +615,25 @@ export default function NuevoEquipo() {
 
         {paso === 3 && (
           <>
+        {/*
+          EL NOMBRE DEL EQUIPO, PRIMERO.
+
+          Estaba debajo del área y turno porque es el turno el que lo propone, y parecía lógico que
+          apareciera donde sale. Pero en la pantalla es al revés: cinco áreas con sus turnos son
+          cinco renglones, y el nombre —el único campo que se escribe— quedaba empujado abajo de
+          todo, fuera de la vista y contra el botón. Primero se nombra y después se elige dónde y
+          cuándo, que es el orden en que se piensa.
+
+          El turno lo sigue proponiendo si el campo está vacío, y se ve llegar: está acá arriba.
+        */}
+        {/* EL NOMBRE DEL EQUIPO, DEBAJO DEL TURNO QUE LO PROPONE: ahí se entiende de dónde salió. */}
+        <div id="campo-nombre" className="space-y-2 scroll-mt-24">
+          <Rotulo icono={faUsers} obligatorio>
+            Nombre del equipo
+          </Rotulo>
+          <input value={b.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} placeholder="Ej. Sábado noche" maxLength={80} className={`${CLASE_CAMPO} ${error("campo-nombre") ? "border-red-500" : ""}`} aria-label="Nombre del equipo" />
+        </div>
+
         {/* ÁREA Y TURNO */}
         <div id="campo-turno" className="space-y-2 scroll-mt-24">
           {/*
@@ -641,19 +674,33 @@ export default function NuevoEquipo() {
             <ResumenTurnos elegidos={elegidos} onEditar={(areaId) => setAreaEnHoja(areaId)} onQuitarArea={(areaId) => elegidos.filter((o) => o.areaId === areaId).forEach(elegirTurno)} />
           ) : null}
         </div>
-
-        {/* EL NOMBRE DEL EQUIPO, DEBAJO DEL TURNO QUE LO PROPONE: ahí se entiende de dónde salió. */}
-        <div id="campo-nombre" className="space-y-2 scroll-mt-24">
-          <Rotulo icono={faUsers} obligatorio>
-            Nombre del equipo
-          </Rotulo>
-          <input value={b.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} placeholder="Ej. Sábado noche" maxLength={80} className={`${CLASE_CAMPO} ${error("campo-nombre") ? "border-red-500" : ""}`} aria-label="Nombre del equipo" />
-        </div>
           </>
         )}
 
         {paso === 4 && (
           <>
+        {/*
+          TODO LO DECIDIDO, JUNTO Y ANTES DE CREAR.
+
+          Reemplaza a los dos chips que viajaban en el encabezado —«Grupo | Técnica», «Equipo |
+          Mañana»—, que eran un parche para una pantalla larga: mostraban dos de las ocho decisiones
+          porque eran las dos que entraban, y costaban un renglón fijo en los cuatro pasos. Partido
+          el alta, lo que hace falta no es acordarse a mitad de camino: es ver todo antes del OK.
+
+          Es de sólo lectura. Para cambiar algo está el botón de volver, que es de a un paso y no
+          pierde nada; un lápiz por renglón sería una segunda forma de llegar al mismo campo.
+        */}
+        <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
+          <dl className="divide-y divide-slate-200 text-sm dark:divide-slate-700">
+            <Fila titulo="Grupo" valor={esNuevo ? b.nombreGrupo.trim() : grupo?.nombre} />
+            <Fila titulo="Equipo" valor={b.nombre.trim()} />
+            <Fila titulo="Empresa" valor={(empresas.find((c) => c._id === b.empresaContratoId) as any)?.razonSocial} />
+            <Fila titulo="Convenio" valor={convenio ? `${convenio.cct} ${convenio.nombre}` : null} />
+            <Fila titulo="Áreas y turnos" valor={areasElegidas} />
+            <Fila titulo="Puestos" valor={String(puestos.length)} />
+          </dl>
+        </div>
+
         {/* PERSONAS (opcional) */}
         {puestos.length > 0 && (
           <div id="campo-personas" className="space-y-2 scroll-mt-24">

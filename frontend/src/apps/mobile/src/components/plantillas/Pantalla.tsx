@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faCheck, faChevronRight, faCircleExclamation, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { usePlantillas } from "./contexto";
+import { Pasos } from "./Pasos";
 
 /*
   EL ESQUELETO DE CADA PANTALLA DE PLANTILLAS.
@@ -53,24 +54,28 @@ interface Props {
    */
   atrasPaso?: () => void;
   /**
-   * LO QUE SE VA NOMBRANDO, en el encabezado.
+   * EN QUÉ PASO SE ESTÁ, DEBAJO DEL TÍTULO Y FIJO CON ÉL.
    *
-   * Un formulario largo se scrollea, y a la cuarta pantalla ya no se ve cómo se llamó el grupo ni el
-   * equipo que se está armando. Como el encabezado está fijo, el nombre viaja con él.
-   *
-   * Los vacíos se descartan: aparecen a medida que se escriben.
+   * Estaba adentro del formulario y se iba con el primer scroll, que es justo cuando hace falta:
+   * mirás una lista de cinco áreas y ya no sabés si te quedan dos pantallas o media. Acá arriba «en
+   * cuál voy y cuántos son» se contesta siempre, y no cuesta nada, porque el encabezado ya estaba
+   * fijo. El alto lo mide el ResizeObserver de siempre, así que lo que se pega debajo se acomoda.
    */
-  /**
-   * Cada chip, con qué ES y cómo se llama: «Grupo | Técnica».
-   *
-   * Eran dos pastillas con dos nombres sueltos —«Técnica» y «Mañana»— y no había forma de saber
-   * cuál era el grupo y cuál el equipo: los dos son nombres que pone la misma persona en la misma
-   * pantalla. La etiqueta es lo que los distingue.
-   *
-   * Los que no tienen valor todavía no se dibujan: aparecen a medida que se escriben.
-   */
-  chips?: { etiqueta: string; valor?: string | null }[];
+  pasos?: { actual: number; etiquetas: string[] };
 }
+
+/*
+  SE FUERON LOS CHIPS de «Grupo | Técnica» y «Equipo | Mañana».
+
+  Existían porque el alta era una sola pantalla larga: a la cuarta pantalla de scroll ya no se veía
+  cómo se había llamado lo que se estaba armando, y dos nombres viajando en el encabezado lo
+  resolvían. Pero mostraban DOS de las ocho decisiones —las dos que entraban en un renglón— y ese
+  renglón se pagaba en todas las pantallas.
+
+  Partida el alta en pasos, el problema cambió: no hace falta acordarse a mitad de camino, hace falta
+  ver todo junto antes de crear. Eso es el resumen del último paso, que los reemplaza con ventaja
+  porque no tiene que caber en un renglón.
+*/
 
 const claveScroll = (path: string) => `plantillas:scroll:${path}`;
 
@@ -78,8 +83,8 @@ const claveScroll = (path: string) => `plantillas:scroll:${path}`;
  * CUÁNTO MIDE EL ENCABEZADO, para lo que quiera quedar pegado JUSTO DEBAJO.
  *
  * Sin saberlo, una sección `sticky` se pega al borde de la ventana y el encabezado se le monta
- * encima. Era un número fijo (61), y dejó de servir apenas el encabezado pasó a tener chips: con dos
- * renglones más, el rótulo pegado quedaba tapado.
+ * encima. Era un número fijo (61), y dejó de servir apenas el encabezado pasó a tener más de un
+ * renglón —los chips primero, los pasos después—: el rótulo pegado quedaba tapado.
  *
  * Ahora se MIDE y se publica como variable CSS en la pantalla, así que cualquier alto funciona y
  * nadie tiene que mantener una constante sincronizada con un padding. El 61 queda de respaldo por si
@@ -87,7 +92,7 @@ const claveScroll = (path: string) => `plantillas:scroll:${path}`;
  */
 export const TOPE_PEGADO = "var(--alto-encabezado, 61px)";
 
-export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo, chips, atrasPaso }: Props) {
+export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo, atrasPaso, pasos }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const { estado } = usePlantillas();
@@ -146,7 +151,7 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
             EL TÍTULO Y EL PROYECTO, EN UN RENGLÓN.
 
             El proyecto iba debajo del título y el encabezado gastaba tres renglones —título,
-            proyecto y chips— antes de que empezara el formulario. Al lado, el encabezado mide uno
+            proyecto y pasos— antes de que empezara el formulario. Al lado, el encabezado mide uno
             menos y el proyecto se sigue leyendo: es contexto, no un dato que haya que deletrear.
 
             El título no se achica (`shrink-0`) y el que se corta es el proyecto: entre «Nuevo
@@ -166,22 +171,7 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
           </div>
           <EstadoGuardado estado={estado} />
         </div>
-        {(chips || []).some((c) => c.valor) && (
-          <div className="flex flex-wrap gap-2 px-1 pb-0.5 pt-1.5">
-            {(chips || [])
-              .filter((c) => c.valor)
-              .map((c) => (
-                <span key={c.etiqueta} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
-                  {/* La etiqueta, más apagada: lo que se lee es el nombre; ella sólo dice de qué es. */}
-                  <span className="shrink-0 font-normal opacity-70">{c.etiqueta}</span>
-                  <span className="shrink-0 opacity-40" aria-hidden>
-                    |
-                  </span>
-                  <span className="truncate">{c.valor}</span>
-                </span>
-              ))}
-          </div>
-        )}
+        {pasos && <Pasos actual={pasos.actual} pasos={pasos.etiquetas} className="px-1 pb-0.5 pt-2" />}
       </header>
 
       <main className="flex-1 px-4 pb-6 pt-4">{children}</main>

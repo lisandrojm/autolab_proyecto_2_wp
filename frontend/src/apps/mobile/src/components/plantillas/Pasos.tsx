@@ -36,9 +36,9 @@ export const PASOS_EQUIPO = ["Proyecto y convenio", "Grupo", "Área y turno", "P
  *
  * El nombre sigue estando para quien usa lector de pantalla, que no tiene el título a mano.
  */
-export function Pasos({ actual, pasos }: { actual: number; pasos: string[] }) {
+export function Pasos({ actual, pasos, className = "mb-4" }: { actual: number; pasos: string[]; className?: string }) {
   return (
-    <nav aria-label="Pasos" className="mb-4 flex items-center gap-3">
+    <nav aria-label="Pasos" className={`flex items-center gap-3 ${className}`}>
       {pasos.map((texto, i) => {
         const n = i + 1;
         const hecho = actual > n;
