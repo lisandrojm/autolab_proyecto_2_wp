@@ -720,14 +720,31 @@ export default function NuevoEquipo() {
                           </select>
                         )}
                       </span>
+                      {/*
+                        LOS MISMOS DOS BOTONES QUE EN TODA LA PANTALLA: «+» azul para agregar, «×»
+                        gris para sacar.
+
+                        Eran «Asignar» con un ícono de persona y «Quitar» en texto: dos formas más
+                        para las dos acciones que el resto de la pantalla ya resuelve con «+» y «×».
+                        En catorce renglones, además, la palabra repetida catorce veces pesa más que
+                        el nombre de la persona, que es lo que hay que leer.
+                      */}
                       {b.copiarDe ? null : persona ? (
-                        <button type="button" onClick={() => { const n = { ...b.personas }; delete n[x.n]; cambiar({ personas: n }); }} className="min-h-[40px] shrink-0 rounded-lg px-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          Quitar
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const n = { ...b.personas };
+                            delete n[x.n];
+                            cambiar({ personas: n });
+                          }}
+                          aria-label={`Sacar a ${persona.nombre} del puesto ${x.n}`}
+                          className={`shrink-0 ${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
                         </button>
                       ) : (
-                        <button type="button" onClick={() => setHoja({ persona: x.n })} className="flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-lg border border-blue-500 px-2.5 text-xs font-bold text-blue-700 dark:text-blue-300">
-                          <FontAwesomeIcon icon={faUserPlus} />
-                          Asignar
+                        <button type="button" onClick={() => setHoja({ persona: x.n })} aria-label={`Asignar a alguien al puesto ${x.n}`} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+                          <FontAwesomeIcon icon={faPlus} />
                         </button>
                       )}
                     </div>
