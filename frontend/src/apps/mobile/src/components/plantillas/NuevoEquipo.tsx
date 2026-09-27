@@ -830,8 +830,9 @@ function BadgeTurno({ opcion, principal, onQuitar }: { opcion: OpcionAreaTurno; 
  * borrabas el rol. Separadas, cada grupo se lee por lo que hace y hay aire entre el «+» y la «×»,
  * que son las dos que no conviene confundir.
  *
- * La «×» sigue sacando el rol ENTERO, sin importar la cantidad: es lo que se espera de una cruz, y
- * bajar de a uno ya tiene su botón al lado.
+ * BORRAR ES SÓLO LA «×». Con uno, el «−» queda apagado: restar de uno sacaba el rol de la lista, así
+ * que el mismo botón bajaba la cantidad ocho veces y a la novena borraba todo — y en un teléfono eso
+ * pasa de más, tocando rápido sin mirar el número.
  */
 function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; cantidad: number; onCantidad: (n: number) => void }) {
   // Las dos pastillas viajan juntas: `inline-flex` acá adentro evita que una quede sola al final de un renglón.
@@ -840,7 +841,14 @@ function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; cantidad: 
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className={`${pastilla} px-0.5`}>
-        <button type="button" onClick={() => onCantidad(cantidad - 1)} aria-label={`Un ${nombre} menos`} className={redondo}>
+        <button
+          type="button"
+          onClick={() => onCantidad(cantidad - 1)}
+          disabled={cantidad <= 1}
+          aria-label={cantidad <= 1 ? `${nombre}: para sacarlo, la cruz` : `Un ${nombre} menos`}
+          title={cantidad <= 1 ? "Para sacar el rol, la cruz" : undefined}
+          className={`${redondo} disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent`}
+        >
           <FontAwesomeIcon icon={faMinus} className="h-2.5 w-2.5" />
         </button>
         <span className="min-w-[1.25rem] text-center tabular-nums">{cantidad}</span>
