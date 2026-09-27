@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
@@ -581,7 +581,7 @@ export default function NuevoEquipo() {
           ) : areas.length === 0 ? (
             <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">El proyecto no tiene áreas y turnos configurados.</p>
           ) : elegidos.length > 0 ? (
-            <ResumenTurnos elegidos={elegidos} />
+            <ResumenTurnos elegidos={elegidos} onEditar={(areaId) => setAreaEnHoja(areaId)} />
           ) : null}
         </div>
           </>
@@ -861,10 +861,11 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
  * renglones, y el horario se deja afuera: acá lo que hace falta saber es QUÉ quedó elegido; el
  * horario de cada turno está en la hoja, al lado de su casilla.
  *
- * NO LLEVA CRUZ: sacar uno se hace en la hoja, que es donde se eligieron. Dos lugares para lo mismo
- * obligan a mantener dos, y la cruz es justo lo que hacía que cada pastilla ocupara el doble.
+ * NO LLEVA CRUZ POR TURNO: cada área tiene su lápiz y abre SUS turnos, que es donde se tildan y se
+ * destildan. Una cruz por pastilla ocupaba el doble de alto y dejaba la misma decisión en dos
+ * lugares distintos; el lápiz lleva justo a donde se resuelve.
  */
-function ResumenTurnos({ elegidos }: { elegidos: OpcionAreaTurno[] }) {
+function ResumenTurnos({ elegidos, onEditar }: { elegidos: OpcionAreaTurno[]; onEditar: (areaId: string) => void }) {
   const porArea: { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }[] = [];
   for (const o of elegidos) {
     const g = porArea.find((x) => x.areaId === o.areaId);
@@ -876,16 +877,22 @@ function ResumenTurnos({ elegidos }: { elegidos: OpcionAreaTurno[] }) {
   return (
     <div className="space-y-1.5">
       {porArea.map((a) => (
-        <div key={a.areaId} className="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
-          <p className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{a.nombre}</p>
-          <div className="mt-1 flex flex-wrap gap-1">
+        <div key={a.areaId} className="flex items-start gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{a.nombre}</p>
+            <div className="mt-1 flex flex-wrap gap-1">
             {a.turnos.map((t) => (
               <span key={t.shiftId} className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
                 {t.turnoNombre}
                 {elegidos.length > 1 && principal && t.areaId === principal.areaId && t.shiftId === principal.shiftId && <span className="rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
               </span>
-            ))}
+              ))}
+            </div>
           </div>
+          {/* El lápiz abre los turnos de ESTA área, sin pasar por la lista de áreas: ya se sabe cuál es. */}
+          <button type="button" onClick={() => onEditar(a.areaId)} aria-label={`Editar los turnos de ${a.nombre}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
+          </button>
         </div>
       ))}
     </div>
