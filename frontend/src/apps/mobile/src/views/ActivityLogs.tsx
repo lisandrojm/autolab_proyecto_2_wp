@@ -3924,11 +3924,21 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
           </div>
         )}
 
-        <div className="mb-4 flex items-center justify-between gap-3">
+        {/*
+          EL TÍTULO ARRIBA, A TODO EL ANCHO, Y EL CONMUTADOR DEBAJO.
+
+          Estaban en la misma fila y en un teléfono no entran: «Historial de Novedades» se partía en
+          dos renglones y «Las que superviso» en otros dos, así que el encabezado quedaba de cuatro
+          líneas desparejas y el conmutador —que es lo que se toca— arrinconado contra el borde.
+
+          Separados, el título se lee de un saque y los dos botones quedan del mismo ancho, que es lo
+          que hace evidente que son las dos caras de una misma elección.
+        */}
+        <div className="mb-4 space-y-2">
           <h3 className="text-lg font-bold">Historial de Novedades</h3>
           {/* Sólo para quien tiene equipo a cargo: para el resto sería un conmutador de una opción. */}
           {puedeVerSupervisadas && (
-            <div className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800/60">
+            <div className="grid grid-cols-2 gap-0.5 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800/60">
               {(
                 [
                   { id: "mias", label: "Mías" },
@@ -3944,7 +3954,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                     setAlcanceHistorial(o.id);
                     void fetchReports(o.id);
                   }}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition-colors ${alcanceHistorial === o.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}
+                  className={`min-h-[36px] rounded-md px-2 text-xs font-bold transition-colors ${alcanceHistorial === o.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}
                 >
                   {o.label}
                 </button>
