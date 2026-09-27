@@ -106,9 +106,10 @@ export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-cente
 
     · AIRE          las que son sólo texto (una persona, un área de un puesto, un chip del encabezado).
     · AIRE_CON_CRUZ las que terminan en un botón redondo: menos aire de ese lado, que el botón ya lo trae.
-    · AIRE_DOS_LINEAS igual, pero para las que llevan un renglón chico debajo del nombre (un área con
-      sus turnos). Con el aire de las de un renglón, el nombre queda pegado al borde de arriba y el
-      subtítulo al de abajo: dos líneas necesitan margen arriba Y abajo, no el mismo que una.
+    · AIRE_DOS_LINEAS igual, pero para las que llevan renglones chicos debajo del nombre (un área
+      con sus turnos, uno por línea). Con el aire de las de un renglón, el nombre queda pegado al
+      borde de arriba y el último subtítulo al de abajo: varias líneas necesitan margen arriba Y
+      abajo, no el mismo que una.
     · AIRE_CONTROL  las que son SÓLO botones (el «− 1 +», el lápiz): el aire es el marco alrededor.
 
   EL AIRE DE ARRIBA Y ABAJO ES EL MÍNIMO. Se probó con más y las pastillas salían gordas: quien manda
@@ -147,7 +148,7 @@ export const BAJO_ROTULO = "pt-3";
  * La cruz saca el área entera. Destildar cinco casillas de a una para sacar un área de cinco turnos
  * era el trabajo que hacía falta ahorrar.
  */
-export function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: string; turnos: string[]; onEditar: () => void; onQuitar: () => void }) {
+export function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: string; turnos: OpcionAreaTurno[]; onEditar: () => void; onQuitar: () => void }) {
   return (
     <span className={`inline-flex items-center ${SEPARACION} ${MARGEN}`}>
       <span className={`${pastillaDe("neutro")} ${AIRE_CONTROL}`}>
@@ -158,7 +159,26 @@ export function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: stri
       <span className={`${pastillaDe("azul")} ${AIRE_DOS_LINEAS}`}>
         <span className="min-w-0">
           <span className="block truncate uppercase tracking-wide">{nombre}</span>
-          <span className="block truncate text-[10px] font-normal opacity-80">{turnos.join(" · ")}</span>
+          {/*
+            CADA TURNO CON SU HORARIO Y SUS DÍAS, uno por renglón.
+
+            Decía «Mañana · Tarde · Noche» y ahí se terminaba: tres nombres que no dicen a qué hora se
+            entra ni qué días se trabaja, que es justamente lo que hay que mirar para saber si el turno
+            elegido es el que se quería. Los nombres son convenciones del proyecto —la «Noche» de uno
+            no empieza a la misma hora que la de otro— y el equipo se arma sobre ese horario: de acá
+            salen el inTime, el outTime y los días que después viajan en las condiciones.
+
+            Uno por línea y no todos juntos: con dos turnos ya son cuarenta caracteres, y apilados se
+            leen en columna —hora contra hora, días contra días— en vez de como una tira que se corta.
+
+            El dato ya venía en la opción (`inicio`, `fin`, `diasTexto`); lo único que pasaba es que se
+            tiraba al dibujar.
+          */}
+          {turnos.map((t) => (
+            <span key={t.shiftId} className="block truncate text-[10px] font-normal opacity-80">
+              {[t.turnoNombre, t.inicio && t.fin ? `${t.inicio}–${t.fin}` : "", t.diasTexto].filter(Boolean).join(" · ")}
+            </span>
+          ))}
         </span>
         <button type="button" onClick={onQuitar} aria-label={`Sacar ${nombre} del equipo`} className={`ml-1 ${redondoDe("azul")}`}>
           <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
@@ -179,7 +199,7 @@ export function ResumenTurnos({ elegidos, onEditar, onQuitarArea }: { elegidos: 
   return (
     <div className={`flex flex-wrap items-center ${ENTRE} ${BAJO_ROTULO}`}>
       {porArea.map((a) => (
-        <BadgeArea key={a.areaId} nombre={a.nombre} turnos={a.turnos.map((t) => t.turnoNombre)} onEditar={() => onEditar(a.areaId)} onQuitar={() => onQuitarArea(a.areaId)} />
+        <BadgeArea key={a.areaId} nombre={a.nombre} turnos={a.turnos} onEditar={() => onEditar(a.areaId)} onQuitar={() => onQuitarArea(a.areaId)} />
       ))}
     </div>
   );
