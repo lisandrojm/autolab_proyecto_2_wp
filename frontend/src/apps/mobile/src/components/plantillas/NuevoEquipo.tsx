@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faPen, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faBuilding, faCheck, faChevronRight, faFileContract, faLayerGroup, faPen, faPlus, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -10,12 +10,12 @@ import { usePlantillas } from "./contexto";
 import { Pantalla, TOPE_PEGADO } from "./Pantalla";
 import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
-import { cambiosDeContrato, cambiosDeTurno, porDiasSueltos } from "./Condiciones";
+import { cambiosDeTurno } from "./Condiciones";
 import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
-import { CLASE_CAMPO, DIAS } from "./comun";
+import { CLASE_CAMPO } from "./comun";
 import { BotonInfo } from "../ModalInfo";
-import { BadgeRol, BadgeTramite, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
+import { BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
 
 /*
   NUEVO EQUIPO, EN UNA SOLA PANTALLA Y EN EL ORDEN DE LA SOLICITUD INDIVIDUAL.
@@ -162,8 +162,6 @@ export default function NuevoEquipo() {
   */
   const nombreRol = (id: string) => catalogos.roleFrames.find((r) => r._id === id)?.name || "Rol";
 
-  const contrato = catalogos.contratos.find((c) => c._id === b.contratoId);
-  const sueltos = porDiasSueltos(catalogos, b.contratoId);
   const opcion = (v?: string) => (areas || []).find((o) => `${o.areaId}::${o.shiftId}` === v);
   const textoTurno = (v?: string) => {
     const o = opcion(v);
@@ -230,8 +228,7 @@ export default function NuevoEquipo() {
       [!b.grupoId, "Elegí un grupo o creá uno nuevo", "campo-grupo"],
       [esNuevo && !b.nombreGrupo.trim(), "Poné el nombre del grupo", "campo-grupo"],
       [puestos.length === 0, "Elegí los roles del grupo", "campo-roles"],
-      [!b.contratoId && catalogos.contratos.length > 0, "Elegí el tipo de contrato", "campo-contrato"],
-      [!b.turnos.length && (areas?.length || 0) > 0, "Elegí el área y el turno", "campo-turno"],
+        [!b.turnos.length && (areas?.length || 0) > 0, "Elegí el área y el turno", "campo-turno"],
       [!b.nombre.trim(), "Poné el nombre del equipo", "campo-nombre"],
     ].reduce<{ texto: string; id: string } | null>((primera, [cond, texto, id]) => primera || (cond ? { texto: texto as string, id: id as string } : null), null);
   const irA = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -243,12 +240,11 @@ export default function NuevoEquipo() {
   const okProyecto = !!proyecto;
   const okGrupo = okProyecto && !!b.grupoId && (!esNuevo || !!b.nombreGrupo.trim());
   const okRoles = okGrupo && puestos.length > 0 && !!b.empresaContratoId && (!falta || !["campo-grupo", "campo-roles", "campo-empresa"].includes(falta.id));
-  const okContrato = okRoles && (!!b.contratoId || catalogos.contratos.length === 0);
-  const okTurno = okContrato && (b.turnos.length > 0 || (areas?.length ?? 1) === 0);
+  const okTurno = okRoles && (b.turnos.length > 0 || (areas?.length ?? 1) === 0);
   const okNombre = okTurno && !!b.nombre.trim();
   // Lo que aparece por un toque se trae a la vista: la PRIMERA sección nueva (con el turno aparecen
   // horario y personas juntas). Lo que aparece escribiendo, no: movería la pantalla mientras se tipea.
-  const secciones = [okRoles && "campo-contrato", okContrato && "campo-turno", okTurno && "campo-horario", okNombre && "campo-personas"].filter(Boolean) as string[];
+  const secciones = [okRoles && "campo-turno", okTurno && "campo-nombre", okNombre && "campo-personas"].filter(Boolean) as string[];
   const [vistas, setVistas] = useState<string[] | null>(null);
   useEffect(() => {
     if (vistas === null) return setVistas(secciones);
@@ -275,12 +271,21 @@ export default function NuevoEquipo() {
         p = grupo!;
       }
       // 2. El equipo, con sus condiciones.
+      /*
+        SIN TIPO DE CONTRATO: se elige en la pantalla del equipo, antes de contratar.
+
+        El equipo nace sin él y esa pantalla lo pide en ámbar («Elegí el contrato»), que es donde
+        corresponde: el tipo cambia entre una contratación y la siguiente, y fijarlo acá era fijar
+        justo lo que más cambia.
+
+        Los días y el horario salen del turno elegido (`cambiosDeTurno`), no de un campo propio.
+      */
       const condiciones = {
-        ...(b.contratoId ? cambiosDeContrato(catalogos, b.contratoId) : {}),
         ...(turno ? { areaId: turno.areaId, shiftId: turno.shiftId } : {}),
         inTime: b.inTime || null,
         outTime: b.outTime || null,
-        ...(sueltos ? {} : { diasSemana: b.diasSemana, diasPorSemana: b.diasSemana.length || null }),
+        diasSemana: b.diasSemana,
+        diasPorSemana: b.diasSemana.length || null,
       };
       // El equipo lleva su proyecto, su empresa, su convenio y la categoría de cada puesto en el nivel de ESE proyecto.
       const categorias = categoriasDelNivel(catalogos, proyecto, b.empresaContratoId, convenioId, p.integrantes);
@@ -290,8 +295,14 @@ export default function NuevoEquipo() {
         const o = opcion(v);
         const puesto = p.integrantes[Number(n) - 1];
         if (!o || !puesto || v === b.turnos[0]) continue;
-        const c = cambiosDeTurno(o);
-        condicionesPorPuesto[puesto._id] = sueltos ? { areaId: c.areaId, shiftId: c.shiftId, inTime: c.inTime, outTime: c.outTime } : c;
+        /*
+          Del turno de ESE puesto sale todo: área, turno, horario y días.
+
+          Antes, con contratos por jornada se le sacaban los días —los elige quien contrata— pero eso
+          ya no se sabe acá: el tipo de contrato se elige después. Los días del turno viajan siempre y
+          la contratación los reemplaza si corresponde, que es donde se conoce el contrato.
+        */
+        condicionesPorPuesto[puesto._id] = cambiosDeTurno(o);
       }
       p = await plantillasEquipoAPI.crearEquipo(p._id, b.nombre.trim(), b.copiarDe || undefined, condiciones as any, { projectId: proyecto._id, empresaContratoId: b.empresaContratoId || null, convenioId: convenioId || null, categorias, condicionesPorPuesto });
       const equipo = p.equipos[p.equipos.length - 1];
@@ -544,47 +555,6 @@ export default function NuevoEquipo() {
 
         {okRoles && (
           <>
-        {/* TIPO DE CONTRATO */}
-        <div id="campo-contrato" className="space-y-2 scroll-mt-24">
-          {/*
-            UNO SOLO PARA TODO EL EQUIPO, y hay que decirlo acá.
-
-            Es una decisión de practicidad: doce puestos son doce contratos, y elegir tipo por
-            puesto en el alta convierte un formulario en una planilla. Lo que se pierde no se pierde
-            —cada puesto se edita entero después— pero eso el que mira la pantalla no lo sabe, y sin
-            decirlo el campo se lee como «todos van a tener el mismo contrato y no hay vuelta atrás».
-          */}
-          <div className="flex items-center gap-1">
-            <Rotulo icono={faFileContract} obligatorio>
-              Tipo de contrato
-            </Rotulo>
-            <BotonInfo
-              icono={faFileContract}
-              titulo="Tipo de contrato"
-              texto={
-                "Acá elegís UN tipo de contrato para todo el equipo. Es por practicidad: en un grupo de doce puestos, elegirlo de a uno convierte el alta en una planilla.\n\nDespués, cada puesto se edita por separado y se le puede cambiar absolutamente todo —el tipo de contrato incluido, además del horario, los días, la categoría y el sueldo—.\n\nO sea que esto es el punto de partida del equipo, no una regla que después no se pueda tocar."
-              }
-            />
-          </div>
-          <button type="button" onClick={() => setHoja("contrato")} className={`flex min-h-[48px] w-full items-center gap-3 rounded-lg border bg-white px-3 text-left dark:bg-slate-900 ${error("campo-contrato") ? "border-red-500" : "border-slate-300 dark:border-slate-600"}`}>
-            {contrato ? (
-              <>
-                <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{contrato.name}</span>
-                <span className="text-[11px] font-bold uppercase text-slate-600 dark:text-slate-300">{catalogos.tramitePorContrato.get(contrato._id) === "constancia_cuit" ? "Pedido de servicios" : "Pedido de ARCA"}</span>
-              </>
-            ) : (
-              <>
-                <FontAwesomeIcon icon={faSearch} className="text-[10px] text-slate-500" />
-                <span className="flex-1 text-sm text-slate-600 dark:text-slate-300">Elegí el tipo de contrato…</span>
-              </>
-            )}
-          </button>
-        </div>
-          </>
-        )}
-
-        {okContrato && (
-          <>
         {/* ÁREA Y TURNO */}
         <div id="campo-turno" className="space-y-2 scroll-mt-24">
           {/*
@@ -624,38 +594,6 @@ export default function NuevoEquipo() {
           ) : elegidos.length > 0 ? (
             <ResumenTurnos elegidos={elegidos} onEditar={(areaId) => setAreaEnHoja(areaId)} onQuitarArea={(areaId) => elegidos.filter((o) => o.areaId === areaId).forEach(elegirTurno)} />
           ) : null}
-        </div>
-          </>
-        )}
-
-        {okTurno && (
-          <>
-        {/* DÍAS */}
-        <div id="campo-horario" className="space-y-2 scroll-mt-24">
-          {/*
-            ACÁ NO VA EL HORARIO. Lo pone el ÁREA Y TURNO, y no hay uno solo para todo el equipo:
-            cada turno tiene el suyo, y un equipo puede cubrir cuatro.
-
-            Había dos selectores de hora que arrancaban con los del primer turno elegido y fijaban ese
-            horario para los catorce puestos — o sea, el de Técnica · Mañana también para los de
-            Vestuario · Noche. Lo que cada puesto hace de verdad sale de SU turno, y se ajusta en el
-            puesto de cada persona, que tiene sus propias condiciones (ver `DetallePuesto`).
-          */}
-          <Rotulo icono={faClock}>Días</Rotulo>
-          {sueltos ? (
-            <p className="text-xs text-slate-600 dark:text-slate-300">Por jornada: los días se eligen al contratar.</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {DIAS.map((d) => {
-                const on = b.diasSemana.includes(d.i);
-                return (
-                  <button key={d.i} type="button" aria-pressed={on} onClick={() => cambiar({ diasSemana: on ? b.diasSemana.filter((x) => x !== d.i) : [...b.diasSemana, d.i].sort() })} className={`h-11 w-11 rounded-xl text-sm font-bold ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
-                    {d.corto}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
           </>
         )}
@@ -979,23 +917,6 @@ export default function NuevoEquipo() {
       </HojaModal>
 
       <HojaRoles abierta={hoja === "roles"} onCerrar={() => setHoja(null)} roles={b.roles} roleFrames={catalogos.roleFrames} onCambio={(roles) => cambiar({ roles, personas: {} })} />
-      <HojaModal abierta={hoja === "contrato"} onCerrar={() => setHoja(null)} titulo="Tipo de contrato">
-        <div className="space-y-2">
-          {catalogos.contratos.map((c) => (
-            <button key={c._id} type="button" onClick={() => { cambiar({ contratoId: c._id }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left ${c._id === b.contratoId ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30" : "border-slate-200 dark:border-slate-700"}`}>
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">{c.name}</span>
-              {/*
-                EL MISMO BADGE QUE EN DESK, con el texto corto.
-
-                El color es lo que distingue un contrato que va a ARCA de uno de servicios, y sale del
-                ABM igual que allá: en gris, el renglón no dice nada y hay que acordarse cuál es cuál.
-                El texto sí se acorta —«PEDIDO DE ARCA» al lado de cada nombre no entra en un teléfono—.
-              */}
-              <BadgeTramite estados={catalogos.estados} tramite={catalogos.tramitePorContrato.get(c._id)} />
-            </button>
-          ))}
-        </div>
-      </HojaModal>
       <SelectorPersona
         abierta={!!hoja && typeof hoja === "object"}
         onCerrar={() => setHoja(null)}
