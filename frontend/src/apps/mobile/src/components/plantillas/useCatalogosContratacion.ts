@@ -69,6 +69,14 @@ export function useCatalogosContratacion(activo = true) {
   /** Las categorías tardan (son más de mil): sin ellas no se sabe qué convenios ofrecer. */
   const [categoriasCargadas, setCategoriasCargadas] = useState(false);
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
+  /*
+    SI YA LLEGARON LOS ROLES, o todavía se están pidiendo.
+
+    Sin esto, `nombreRol` no podía distinguir «este id no existe» de «el catálogo todavía no
+    llegó», y devolvía "Rol" para los dos: la pantalla mostraba catorce pastillas que decían «Rol»
+    —que se lee como un error, no como una espera— y un segundo después se acomodaban solas.
+  */
+  const [rolesCargados, setRolesCargados] = useState(false);
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -93,7 +101,11 @@ export function useCatalogosContratacion(activo = true) {
       .then(setCategoriasSat)
       .catch(() => undefined)
       .finally(() => setCategoriasCargadas(true));
-    roleFrameAPI.list().then(setRoleFrames).catch(() => undefined);
+    roleFrameAPI
+      .list()
+      .then(setRoleFrames)
+      .catch(() => undefined)
+      .finally(() => setRolesCargados(true));
     contratosAPI
       .list()
       .then((cs) => setContratos(cs.filter((c) => c.isActive !== false)))
@@ -218,6 +230,7 @@ export function useCatalogosContratacion(activo = true) {
     convenios,
     categoriasSat,
     roleFrames,
+    rolesCargados,
     contratos,
     motivos,
     tramitePorContrato,

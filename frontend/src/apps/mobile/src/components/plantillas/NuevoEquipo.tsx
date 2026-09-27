@@ -174,6 +174,13 @@ export default function NuevoEquipo() {
     }
     return (grupo?.integrantes || []).map((i, k) => ({ n: k + 1, rolId: i.rolesFrame[0] || "" }));
   }, [esNuevo, b.roles, grupo]);
+  /*
+    EL NOMBRE DE UN ROL, o su respaldo.
+
+    «Rol» es lo que se ve cuando el id no está en el catálogo. Mientras el catálogo VIENE EN CAMINO,
+    en cambio, no se dibuja el respaldo sino un esqueleto: catorce pastillas que dicen «Rol» y se
+    acomodan solas un segundo después se leen como un error y no como una espera (ver `rolesCargados`).
+  */
   const nombreRol = (id: string) => catalogos.roleFrames.find((r) => r._id === id)?.name || "Rol";
 
   const contrato = catalogos.contratos.find((c) => c._id === b.contratoId);
@@ -496,11 +503,30 @@ export default function NuevoEquipo() {
             </div>
             {esNuevo ? (
               b.roles.length ? (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {b.roles.map((r) => (
-                    <BadgeRol key={r.rolId} nombre={nombreRol(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => cambiar({ roles: n > 0 ? b.roles.map((x) => (x.rolId === r.rolId ? { ...x, cantidad: n } : x)) : b.roles.filter((x) => x.rolId !== r.rolId), personas: {} })} />
-                  ))}
-                </div>
+                /*
+                  MIENTRAS NO ESTÉN LOS NOMBRES, UN ESQUELETO.
+
+                  Los roles se guardan por id y el nombre sale del catálogo, que llega por su cuenta.
+                  Entrando con un borrador ya cargado —volver de buscar una persona, o recargar— las
+                  pastillas se dibujaban con el respaldo «Rol»: catorce que decían lo mismo y se
+                  acomodaban solas un segundo después. Eso se lee como un error, no como una espera.
+                */
+                !catalogos.rolesCargados ? (
+                  <div className="flex flex-wrap items-center gap-1.5" aria-busy="true" aria-label="Cargando los roles">
+                    {b.roles.map((r) => (
+                      <span key={r.rolId} className="inline-flex items-center gap-1.5">
+                        <span className="h-9 w-[4.5rem] animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+                        <span className="h-9 w-28 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {b.roles.map((r) => (
+                      <BadgeRol key={r.rolId} nombre={nombreRol(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => cambiar({ roles: n > 0 ? b.roles.map((x) => (x.rolId === r.rolId ? { ...x, cantidad: n } : x)) : b.roles.filter((x) => x.rolId !== r.rolId), personas: {} })} />
+                    ))}
+                  </div>
+                )
               ) : null
             ) : grupo ? (
               <p className="text-sm text-slate-800 dark:text-slate-100">{resumenRoles(puestos.map((x) => x.rolId), nombreRol) || "Sin puestos"}</p>
@@ -669,7 +695,7 @@ export default function NuevoEquipo() {
                     <div key={x.n} className="flex min-h-[56px] items-center gap-3 px-3 py-1.5">
                       <span className="w-5 text-center text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">{x.n}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span>
+                        {catalogos.rolesCargados ? <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span> : <span className="block h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
                         {!b.copiarDe && <span className={`block truncate text-sm font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>{persona ? persona.nombre : "Sin asignar"}</span>}
                         {/* Con varias áreas y turnos, a cuál va este puesto (por defecto, el principal). */}
                         {elegidos.length > 1 && (
