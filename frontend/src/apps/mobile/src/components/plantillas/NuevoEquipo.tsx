@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTrash, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
@@ -562,7 +562,7 @@ export default function NuevoEquipo() {
               icono={faBriefcase}
               titulo="Área y turno"
               texto={
-                "Podés elegir varios: el equipo puede cubrir más de un área o turno, y después cada puesto va a uno (lo elegís abajo, en Puestos).\n\nEl PRIMERO que elijas es el principal: su horario y sus días son los del equipo, y de ahí sale el nombre que se propone.\n\nCon el + se abre la lista de áreas; tocá una para ver sus turnos."
+                "Podés elegir varios: el equipo puede cubrir más de un área o turno, y después cada puesto va a uno (lo elegís abajo, en Puestos).\n\nEl horario y los días que aparecen más abajo se precargan con los del PRIMER turno que elijas, y el nombre del equipo se propone desde ahí. Los dos se pueden cambiar a mano.\n\nCon el + se abre la lista de áreas; tocá una para ver sus turnos."
               }
             />
             {areas !== null && areas.length > 0 && (
@@ -581,7 +581,7 @@ export default function NuevoEquipo() {
           ) : areas.length === 0 ? (
             <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">El proyecto no tiene áreas y turnos configurados.</p>
           ) : elegidos.length > 0 ? (
-            <ResumenTurnos elegidos={elegidos} onEditar={(areaId) => setAreaEnHoja(areaId)} />
+            <ResumenTurnos elegidos={elegidos} onEditar={(areaId) => setAreaEnHoja(areaId)} onQuitarArea={(areaId) => elegidos.filter((o) => o.areaId === areaId).forEach(elegirTurno)} />
           ) : null}
         </div>
           </>
@@ -732,7 +732,7 @@ export default function NuevoEquipo() {
           setAreaEnHoja(null);
         }}
         titulo="Área y turno"
-        subtitulo={elegidos.length === 0 ? "Elegí el área y el turno…" : `${elegidos.length} elegido${elegidos.length === 1 ? "" : "s"} · el primero es el principal`}
+        subtitulo={elegidos.length === 0 ? "Elegí el área y el turno…" : `${elegidos.length} elegido${elegidos.length === 1 ? "" : "s"}`}
         pie={
           <div className="flex items-center justify-between gap-3">
             {/* «Limpiar» borra TODO lo elegido, que es lo que muestra esta hoja. El de la hoja de turnos, sólo lo de su área. */}
@@ -790,7 +790,6 @@ export default function NuevoEquipo() {
           {(areasAgrupadas.find((a) => a.areaId === areaEnHoja)?.turnos || []).map((t) => {
             const v = `${t.areaId}::${t.shiftId}`;
             const elegido = b.turnos.includes(v);
-            const principal = b.turnos[0] === v && b.turnos.length > 1;
             return (
               <button
                 key={t.shiftId}
@@ -802,10 +801,7 @@ export default function NuevoEquipo() {
               >
                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${elegido ? "border-blue-600 bg-blue-600 text-white" : "border-slate-400"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">
-                    {t.turnoNombre}
-                    {principal && <span className="ml-1.5 rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
-                  </span>
+                  <span className="block truncate text-sm font-semibold">{t.turnoNombre}</span>
                   <span className="block truncate text-[11px] text-slate-600 dark:text-slate-300">{[t.inicio && t.fin ? `${t.inicio}–${t.fin}` : "", t.diasTexto].filter(Boolean).join(" · ")}</span>
                 </span>
               </button>
@@ -861,19 +857,18 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
  * renglones, y el horario se deja afuera: acá lo que hace falta saber es QUÉ quedó elegido; el
  * horario de cada turno está en la hoja, al lado de su casilla.
  *
- * NO LLEVA CRUZ POR TURNO: cada área tiene su lápiz y abre SUS turnos, que es donde se tildan y se
- * destildan. Una cruz por pastilla ocupaba el doble de alto y dejaba la misma decisión en dos
- * lugares distintos; el lápiz lleva justo a donde se resuelve.
+ * DOS BOTONES POR ÁREA: el lápiz abre SUS turnos —donde se tilda y se destilda de a uno— y el tacho
+ * saca el área entera. Sacar un área de cinco turnos destildando cinco casillas de a una es el
+ * trabajo que el tacho ahorra; una cruz por pastilla, en cambio, ocupaba el doble de alto y dejaba
+ * la misma decisión en dos lugares distintos.
  */
-function ResumenTurnos({ elegidos, onEditar }: { elegidos: OpcionAreaTurno[]; onEditar: (areaId: string) => void }) {
+function ResumenTurnos({ elegidos, onEditar, onQuitarArea }: { elegidos: OpcionAreaTurno[]; onEditar: (areaId: string) => void; onQuitarArea: (areaId: string) => void }) {
   const porArea: { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }[] = [];
   for (const o of elegidos) {
     const g = porArea.find((x) => x.areaId === o.areaId);
     if (g) g.turnos.push(o);
     else porArea.push({ areaId: o.areaId, nombre: o.areaNombre, turnos: [o] });
   }
-  // El principal es el PRIMERO de todos, no el primero de su área: es el que le da horario al equipo.
-  const principal = elegidos[0];
   return (
     <div className="space-y-1.5">
       {porArea.map((a) => (
@@ -882,9 +877,8 @@ function ResumenTurnos({ elegidos, onEditar }: { elegidos: OpcionAreaTurno[]; on
             <p className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{a.nombre}</p>
             <div className="mt-1 flex flex-wrap gap-1">
             {a.turnos.map((t) => (
-              <span key={t.shiftId} className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+              <span key={t.shiftId} className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
                 {t.turnoNombre}
-                {elegidos.length > 1 && principal && t.areaId === principal.areaId && t.shiftId === principal.shiftId && <span className="rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
               </span>
               ))}
             </div>
@@ -892,6 +886,9 @@ function ResumenTurnos({ elegidos, onEditar }: { elegidos: OpcionAreaTurno[]; on
           {/* El lápiz abre los turnos de ESTA área, sin pasar por la lista de áreas: ya se sabe cuál es. */}
           <button type="button" onClick={() => onEditar(a.areaId)} aria-label={`Editar los turnos de ${a.nombre}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
             <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" onClick={() => onQuitarArea(a.areaId)} aria-label={`Sacar ${a.nombre} del equipo`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
           </button>
         </div>
       ))}
