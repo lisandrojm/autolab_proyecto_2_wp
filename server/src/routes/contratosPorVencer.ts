@@ -5,7 +5,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { User } from "../models/User.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { calificarFinDeContrato, leerCalificacion } from "../services/calificaciones.js";
-import { DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
+import { ContratoPorVencer, DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 
 /*
   «Por vencer» de Contratación (móvil). Qué contratos entran y quién los ve está en
@@ -44,6 +44,31 @@ router.get("/count", requireTenant, authenticateToken, async (req: Authenticated
   }
 });
 
+/**
+ * DE LO QUE MANDA LA PANTALLA AL CONTRATO, en la lista que esa persona puede ver.
+ *
+ * `indiceContrato` es la posición en `UserProject.contracts` y es lo que lo identifica: dentro de una
+ * misma asignación puede haber DOS contratos que terminan el mismo día (515 pares en la base), y
+ * buscando sólo por la fecha se resolvía el primero que apareciera, no el que se tocó.
+ *
+ * Sin `indiceContrato` se cae al criterio viejo —la fecha sola— para no romper a una app que todavía
+ * no lo manda, pero SÓLO si esa fecha identifica a uno solo. Si hay dos, se pide que lo aclare: elegir
+ * uno de los dos por orden de aparición es decidir sobre un contrato que nadie eligió.
+ */
+const contratoPedido = (lista: ContratoPorVencer[], body: any): { contrato: ContratoPorVencer } | { error: string; codigo: number } => {
+  const userProjectId = String(body?.userProjectId || "");
+  const fechaBaja = String(body?.fechaBajaContrato || "");
+  const suyos = lista.filter((c) => c.userProjectId === userProjectId && c.fechaBaja === fechaBaja);
+  if (suyos.length === 0) return { error: "Ese contrato ya no está por vencer o no está a tu cargo.", codigo: 404 };
+
+  const indice = Number(body?.indiceContrato);
+  if (Number.isInteger(indice)) {
+    const exacto = suyos.find((c) => c.indice === indice);
+    return exacto ? { contrato: exacto } : { error: "Ese contrato ya no está por vencer o no está a tu cargo.", codigo: 404 };
+  }
+  if (suyos.length > 1) return { error: "Hay más de un contrato que termina ese día en esta asignación. Actualizá la app para poder elegir cuál.", codigo: 409 };
+  return { contrato: suyos[0] };
+};
 // No se renueva: el contrato termina en su fecha y sale de la lista.
 router.post("/dejar-vencer", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -60,15 +85,16 @@ router.post("/dejar-vencer", requireTenant, authenticateToken, async (req: Authe
     }
     // El permiso ES la lista: sólo se decide sobre un contrato que hoy le aparece a quien decide.
     const lista = await listarContratosPorVencer(req.tenantObjectId!, req.user!.userId);
-    const contrato = lista.find((c) => c.userProjectId === String(userProjectId) && c.fechaBaja === String(fechaBajaContrato));
-    if (!contrato) {
-      res.status(404).json({ error: "Ese contrato ya no está por vencer o no está a tu cargo." });
+    const elegido = contratoPedido(lista, req.body);
+    if ("error" in elegido) {
+      res.status(elegido.codigo).json({ error: elegido.error });
       return;
     }
+    const contrato = elegido.contrato;
 
     const quien: any = await User.findById(req.user!.userId).select("firstName lastName").lean();
     await RenovacionContrato.updateOne(
-      { tenantId: req.tenantObjectId, userProjectId: new Types.ObjectId(contrato.userProjectId), fechaBajaContrato: contrato.fechaBaja },
+      { tenantId: req.tenantObjectId, userProjectId: new Types.ObjectId(contrato.userProjectId), fechaBajaContrato: contrato.fechaBaja, indiceContrato: contrato.indice },
       {
         $set: {
           userId: new Types.ObjectId(contrato.userId),
@@ -107,11 +133,12 @@ router.post("/calificar", requireTenant, authenticateToken, async (req: Authenti
     }
     // Mismo control que al dejar vencer: sólo sobre un contrato que hoy le aparece a quien califica.
     const lista = await listarContratosPorVencer(req.tenantObjectId!, req.user!.userId);
-    const contrato = lista.find((c) => c.userProjectId === String(userProjectId) && c.fechaBaja === String(fechaBajaContrato));
-    if (!contrato) {
-      res.status(404).json({ error: "Ese contrato ya no está por vencer o no está a tu cargo." });
+    const elegido = contratoPedido(lista, req.body);
+    if ("error" in elegido) {
+      res.status(elegido.codigo).json({ error: elegido.error });
       return;
     }
+    const contrato = elegido.contrato;
     await calificarFinDeContrato({ tenantId: req.tenantObjectId!, contrato, ...calificacion, decision: "renovar", calificadoPor: req.user!.userId });
     res.json({ ok: true });
   } catch (error) {

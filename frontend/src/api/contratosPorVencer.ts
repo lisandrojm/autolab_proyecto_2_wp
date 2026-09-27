@@ -10,6 +10,15 @@ import { NuevaCalificacion } from "./calificaciones";
  */
 export interface ContratoPorVencer {
   userProjectId: string;
+  /**
+   * LA POSICIÓN DEL CONTRATO en `UserProject.contracts`: es lo que lo identifica.
+   *
+   * Los contratos no tienen `_id` propio. Se los nombraba por (asignación, fecha de baja), dando por
+   * sentado que dos contratos de la misma asignación no terminan el mismo día; en la base hay 515
+   * pares que lo desmienten. Sin esto, la lista dibujaba dos filas idénticas para React y decidir
+   * sobre una resolvía la otra.
+   */
+  indice: number;
   userId: string;
   nombre: string;
   projectId: string;
@@ -22,7 +31,7 @@ export interface ContratoPorVencer {
   horario: string;
   /** "YYYY-MM-DD" */
   fechaAlta: string;
-  /** "YYYY-MM-DD". Junto con `userProjectId` identifica el contrato. */
+  /** "YYYY-MM-DD". Junto con `userProjectId` e `indice`, identifica el contrato. */
   fechaBaja: string;
   /** 0 = vence hoy. */
   diasRestantes: number;
@@ -50,13 +59,21 @@ export const contratosPorVencerAPI = {
     return Number(data?.count) || 0;
   },
 
+  /*
+    Las dos reciben EL CONTRATO ENTERO y no sus partes sueltas.
+
+    Su identidad son tres campos que tienen que viajar juntos; pasándolos de a uno, nada impide
+    mandar la fecha de una fila con el índice de otra, y el error sería una decisión aplicada al
+    contrato equivocado, en silencio.
+  */
+
   /** No se renueva: sale de la lista y el contrato termina en su fecha. Se decide calificando a la persona. */
-  async dejarVencer(userProjectId: string, fechaBajaContrato: string, calificacion: NuevaCalificacion): Promise<void> {
-    await axios.post(`/contratos-por-vencer/dejar-vencer`, { userProjectId, fechaBajaContrato, ...calificacion });
+  async dejarVencer(c: ContratoPorVencer, calificacion: NuevaCalificacion): Promise<void> {
+    await axios.post(`/contratos-por-vencer/dejar-vencer`, { userProjectId: c.userProjectId, fechaBajaContrato: c.fechaBaja, indiceContrato: c.indice, ...calificacion });
   },
 
   /** La calificación al renovar: va antes de abrir el formulario de la renovación. */
-  async calificar(userProjectId: string, fechaBajaContrato: string, calificacion: NuevaCalificacion): Promise<void> {
-    await axios.post(`/contratos-por-vencer/calificar`, { userProjectId, fechaBajaContrato, ...calificacion });
+  async calificar(c: ContratoPorVencer, calificacion: NuevaCalificacion): Promise<void> {
+    await axios.post(`/contratos-por-vencer/calificar`, { userProjectId: c.userProjectId, fechaBajaContrato: c.fechaBaja, indiceContrato: c.indice, ...calificacion });
   },
 };

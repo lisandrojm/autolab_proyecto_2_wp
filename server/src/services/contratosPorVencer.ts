@@ -38,6 +38,18 @@ export const DIAS_DE_AVISO_MAX = 60;
 
 export interface ContratoPorVencer {
   userProjectId: string;
+  /**
+   * LA POSICIÓN DEL CONTRATO EN `UserProject.contracts`. Es su identidad.
+   *
+   * Los contratos son subdocumentos SIN `_id`, así que nombrarlos es nombrar su posición — lo mismo
+   * que ya hacen editar, descargar y subir documentación (ver `GET /users/:id/contracts`, que manda
+   * el array en el orden de la base justamente por esto).
+   *
+   * Antes se los nombraba por (asignación, fecha de baja), dando por sentado que dos contratos de la
+   * misma asignación no terminan el mismo día. En la base hay 515 pares que lo desmienten: la
+   * pantalla dibujaba dos filas con la misma clave y decidir sobre una resolvía la otra.
+   */
+  indice: number;
   userId: string;
   nombre: string;
   projectId: string;
@@ -162,11 +174,11 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
     .lean();
   const t2 = Date.now();
 
-  const candidatos: { up: any; c: any; alta: string; baja: string; pid: string }[] = [];
+  const candidatos: { up: any; c: any; alta: string; baja: string; pid: string; indice: number }[] = [];
   for (const up of asignaciones) {
     const contratos: any[] = up.contracts || [];
     const pid = String(up.projectId);
-    for (const c of contratos) {
+    for (const [indice, c] of contratos.entries()) {
       const alta = fechaISO(c.fecha_alta_contrato);
       const baja = fechaISO(c.fecha_baja_contrato);
       // Sin alta no se sabe cuánto dura; sin baja es por tiempo indeterminado y no vence.
@@ -179,7 +191,7 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
         const suyos = combosDeContrato(c).flatMap((a) => a.shiftIds.map((s) => `${a.areaId}::${s}`));
         if (!mios || !suyos.some((k) => mios.has(k))) continue;
       }
-      candidatos.push({ up, c, alta, baja, pid });
+      candidatos.push({ up, c, alta, baja, pid, indice });
     }
   }
   if (candidatos.length === 0) {
@@ -199,7 +211,9 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
   ]);
 
   // Una renovación rechazada, cancelada o borrada no resuelve nada.
-  const decisionDe = new Map(decisiones.map((d) => [`${d.userProjectId}::${d.fechaBajaContrato}`, d]));
+  // La clave lleva el índice: dos contratos de la misma asignación pueden terminar el mismo día, y
+  // sin él la decisión sobre uno sacaba de la lista a los dos.
+  const decisionDe = new Map(decisiones.map((d) => [`${d.userProjectId}::${d.fechaBajaContrato}::${d.indiceContrato ?? 0}`, d]));
   const solicitudIds = decisiones.filter((d) => d.decision === "renovar" && d.solicitudId).map((d) => d.solicitudId);
   const solicitudes: any[] = solicitudIds.length > 0 ? await User.find({ _id: { $in: solicitudIds } }).select("metadata.solicitudStatus").lean() : [];
   const estadoDe = new Map(solicitudes.map((u) => [String(u._id), u.metadata?.solicitudStatus]));
@@ -212,8 +226,8 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
 
   const resultado: ContratoPorVencer[] = [];
   candidatos.forEach((x, i) => {
-    const { up, c, alta, baja, pid } = x;
-    const d = decisionDe.get(`${up._id}::${baja}`);
+    const { up, c, alta, baja, pid, indice } = x;
+    const d = decisionDe.get(`${up._id}::${baja}::${indice}`);
     if (d?.decision === "dejar_vencer") return;
     const estado = d ? estadoDe.get(String(d.solicitudId)) : undefined;
     if (d && (estado === "pendiente" || estado === "aprobada")) return;
@@ -230,6 +244,7 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
 
     resultado.push({
       userProjectId: String(up._id),
+      indice,
       userId: String(up.userId),
       nombre,
       projectId: pid,

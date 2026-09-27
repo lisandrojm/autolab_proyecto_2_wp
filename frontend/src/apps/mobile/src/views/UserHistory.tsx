@@ -135,8 +135,15 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const porVencerVisibles = (porVencer || []).filter((c) => tiposElegidos.length === 0 || tiposElegidos.includes(tipoDe(c)));
   const cantidadFiltros = tiposElegidos.length + (diasAviso === DIAS_DE_AVISO_OPCIONES[0] ? 0 : 1);
 
-  /** Un contrato no tiene `_id` propio: lo nombran su asignación y su fecha de baja. */
-  const claveDe = (c: ContratoPorVencer) => `${c.userProjectId}::${c.fechaBaja}`;
+  /*
+    Un contrato no tiene `_id` propio: lo nombran su asignación, su fecha de baja y SU POSICIÓN en el
+    array de contratos.
+
+    La posición hace falta de verdad: en la base hay 515 asignaciones con más de un contrato que
+    termina el mismo día. Sin ella, dos filas distintas compartían clave —React avisaba— y, peor,
+    decidir sobre una sacaba de la lista a las dos y guardaba una sola decisión.
+  */
+  const claveDe = (c: ContratoPorVencer) => `${c.userProjectId}::${c.fechaBaja}::${c.indice}`;
   const fechaCorta = (f: string) => {
     const [y, m, d] = String(f || "").slice(0, 10).split("-");
     return y && m && d ? `${d}/${m}/${y.slice(2)}` : f || "—";
@@ -159,7 +166,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     if (!calificando) return;
     const { contrato: c, decision } = calificando;
     if (decision === "renovar") {
-      await contratosPorVencerAPI.calificar(c.userProjectId, c.fechaBaja, calificacion);
+      await contratosPorVencerAPI.calificar(c, calificacion);
       setCalificando(null);
       setEditingUser(null);
       setRenovacion({ plantilla: c.plantilla, userProjectId: c.userProjectId, fechaBajaContrato: c.fechaBaja });
@@ -168,7 +175,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     }
     setProcesando(claveDe(c));
     try {
-      await contratosPorVencerAPI.dejarVencer(c.userProjectId, c.fechaBaja, calificacion);
+      await contratosPorVencerAPI.dejarVencer(c, calificacion);
       setCalificando(null);
       setPorVencer((prev) => (prev || []).filter((x) => claveDe(x) !== claveDe(c)));
       sweetAlert.success("Listo", "El contrato va a terminar en su fecha.");
