@@ -546,43 +546,47 @@ export default function NuevoEquipo() {
           <>
         {/* ÁREA Y TURNO */}
         <div id="campo-turno" className="space-y-2 scroll-mt-24">
-          <Rotulo icono={faBriefcase} obligatorio>
-            Área y turno
-          </Rotulo>
+          {/*
+            LA MISMA DISPOSICIÓN QUE ROL/ES EMPRESA: rótulo, «i» y «+», y el rótulo pegado debajo del
+            encabezado mientras haya algo elegido.
+
+            Son la misma clase de campo —una lista de cosas que se eligen de a varias en un modal— y
+            hasta acá se veían distintos: uno con «+» y badges, el otro con una caja de búsqueda que
+            desaparecía al primer turno. Dos formas para lo mismo se aprenden dos veces.
+          */}
+          <div className={`flex items-center gap-1 ${elegidos.length ? "sticky z-20 -mx-4 border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900" : ""}`} style={elegidos.length ? { top: ALTO_ENCABEZADO } : undefined}>
+            <Rotulo icono={faBriefcase} obligatorio>
+              Área y turno
+            </Rotulo>
+            <BotonInfo
+              icono={faBriefcase}
+              titulo="Área y turno"
+              texto={
+                "Podés elegir varios: el equipo puede cubrir más de un área o turno, y después cada puesto va a uno (lo elegís abajo, en Puestos).\n\nEl PRIMERO que elijas es el principal: su horario y sus días son los del equipo, y de ahí sale el nombre que se propone.\n\nCon el + se abre la lista de áreas; tocá una para ver sus turnos."
+              }
+            />
+            {areas !== null && areas.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setHoja("turno")}
+                aria-label="Elegí el área y el turno"
+                className={`ml-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white ${error("campo-turno") ? "ring-2 ring-red-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900" : ""}`}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
+            )}
+          </div>
           {areas === null ? (
             <p className="text-xs text-slate-600 dark:text-slate-300">Cargando las áreas y turnos del proyecto…</p>
           ) : areas.length === 0 ? (
             <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">El proyecto no tiene áreas y turnos configurados.</p>
-          ) : (
-            /*
-              ELEGIR ES UN MODAL, NO UN ACORDEÓN.
-
-              Abrir un área acá adentro empujaba media pantalla hacia abajo: había que bajar hasta el
-              área, abrirla, elegir el turno y volver a subir para ver qué había quedado. Con cuatro
-              áreas de cuatro turnos, eso es subir y bajar todo el tiempo.
-
-              Ahora la página muestra SÓLO lo elegido, como badges, y elegir pasa en hojas que se
-              abren encima y se cierran al tocar: la página no se mueve nunca.
-            */
-            <>
-              {elegidos.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {elegidos.map((o, i) => (
-                    <BadgeTurno key={`${o.areaId}::${o.shiftId}`} opcion={o} principal={i === 0 && elegidos.length > 1} onQuitar={() => elegirTurno(o)} />
-                  ))}
-                  <button type="button" onClick={() => setHoja("turno")} aria-label="Agregar área y turno" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
-                    <FontAwesomeIcon icon={faPlus} />
-                  </button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => setHoja("turno")} className={`flex h-12 w-full items-center gap-2 rounded-xl border bg-slate-50 px-4 text-left dark:bg-slate-900 ${error("campo-turno") ? "border-red-500" : "border-slate-300 dark:border-slate-600"}`}>
-                  <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-500" />
-                  <span className="truncate text-slate-600 dark:text-slate-300">Elegí el área y el turno…</span>
-                </button>
-              )}
-              <p className="text-xs text-slate-600 dark:text-slate-300">Podés elegir varios: cada puesto va a uno (lo elegís abajo, en Puestos). El primero es el principal: su horario y sus días son los del equipo.</p>
-            </>
-          )}
+          ) : elegidos.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {elegidos.map((o, i) => (
+                <BadgeTurno key={`${o.areaId}::${o.shiftId}`} opcion={o} principal={i === 0 && elegidos.length > 1} onQuitar={() => elegirTurno(o)} />
+              ))}
+            </div>
+          ) : null}
         </div>
           </>
         )}
@@ -722,7 +726,7 @@ export default function NuevoEquipo() {
         arriba y deja la de abajo, lista para el siguiente. La página nunca se mueve, y lo elegido se
         ve en los badges cuando las dos se cierran.
       */}
-      <HojaModal abierta={hoja === "turno"} onCerrar={() => { setHoja(null); setAreaEnHoja(null); }} titulo="Área y turno" subtitulo={elegidos.length > 0 ? `${elegidos.length} elegido${elegidos.length === 1 ? "" : "s"} · el primero es el principal` : "Tocá un área para ver sus turnos"}>
+      <HojaModal abierta={hoja === "turno"} onCerrar={() => { setHoja(null); setAreaEnHoja(null); }} titulo="Área y turno" subtitulo={elegidos.length === 0 ? "Elegí el área y el turno…" : `${elegidos.length} elegido${elegidos.length === 1 ? "" : "s"} · el primero es el principal`}>
         <div className="space-y-2">
           {areasAgrupadas.map((area) => {
             const enArea = elegidos.filter((o) => o.areaId === area.areaId);
