@@ -703,20 +703,19 @@ export default function NuevoEquipo() {
                       <span className="min-w-0 flex-1">
                         {catalogos.rolesCargados ? <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span> : <span className="block h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
                         {/*
-                          LA PERSONA ASIGNADA, COMO BADGE AZUL.
+                          LA PERSONA ASIGNADA, EN VERDE.
 
-                          Es el dato que cambia en esta lista —el rol y el turno ya estaban— y en
-                          texto plano pesaba lo mismo que el nombre del oficio de arriba. Con la
-                          pastilla, de un vistazo se ve cuántos puestos están cubiertos sin leer
-                          renglón por renglón.
+                          El verde es el único dato de este renglón que NO es una configuración: el
+                          rol y el turno son decisiones del equipo, la persona es un puesto cubierto.
+                          Contra catorce pastillas azules, las verdes dicen cuánto falta sin contar.
 
-                          Mismo azul y misma forma que los roles y las áreas: una cosa elegida se ve
-                          igual en toda la pantalla.
+                          Misma forma que las demás —lo elegido se ve igual en toda la pantalla—; lo
+                          que cambia es el color, y cambia porque significa otra cosa.
 
                           Sin persona no se escribe nada: el «+» de al lado ya es la respuesta.
                         */}
                         {!b.copiarDe && persona && (
-                          <span className={`mt-0.5 max-w-full ${pastillaDe("azul")} px-2.5 py-0.5`}>
+                          <span className={`mt-0.5 max-w-full ${pastillaDe("verde")} px-2.5 py-0.5`}>
                             <span className="truncate">{persona.nombre}</span>
                           </span>
                         )}
