@@ -16,7 +16,7 @@ import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
 import { CLASE_CAMPO } from "./comun";
 import { BotonInfo } from "../ModalInfo";
-import { AIRE, ENTRE, MARGEN, BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
+import { AIRE, BAJO_ROTULO, ENTRE, MARGEN, BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
 
 /*
   NUEVO EQUIPO, EN CUATRO PASOS: UNA DECISIÓN POR PANTALLA.
@@ -594,7 +594,7 @@ export default function NuevoEquipo() {
                   acomodaban solas un segundo después. Eso se lee como un error, no como una espera.
                 */
                 !catalogos.rolesCargados ? (
-                  <div className={`flex flex-wrap items-center ${ENTRE}`} aria-busy="true" aria-label="Cargando los roles">
+                  <div className={`flex flex-wrap items-center ${ENTRE} ${BAJO_ROTULO}`} aria-busy="true" aria-label="Cargando los roles">
                     {b.roles.map((r) => (
                       <span key={r.rolId} className="inline-flex items-center gap-1.5">
                         <span className="h-9 w-[4.5rem] animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
@@ -603,7 +603,7 @@ export default function NuevoEquipo() {
                     ))}
                   </div>
                 ) : (
-                  <div className={`flex flex-wrap items-center ${ENTRE}`}>
+                  <div className={`flex flex-wrap items-center ${ENTRE} ${BAJO_ROTULO}`}>
                     {b.roles.map((r) => (
                       <BadgeRol key={r.rolId} nombre={nombreRol(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => cambiar({ roles: n > 0 ? b.roles.map((x) => (x.rolId === r.rolId ? { ...x, cantidad: n } : x)) : b.roles.filter((x) => x.rolId !== r.rolId), personas: {} })} />
                     ))}

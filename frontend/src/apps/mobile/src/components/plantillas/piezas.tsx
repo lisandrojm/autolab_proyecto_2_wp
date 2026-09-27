@@ -129,6 +129,16 @@ export const ENTRE = "gap-2.5";
 export const MARGEN = "m-px";
 
 /**
+ * EL AIRE ENTRE EL RÓTULO PEGADO Y LA PRIMERA PASTILLA.
+ *
+ * Rol/es empresa y Área y turno se pegan debajo del encabezado con una línea abajo, y la lista
+ * arrancaba a 8 px de esa línea: al scrollear, la primera pastilla pasaba por debajo rozándola y
+ * parecía que el título la estaba tocando. Con 12 la línea se lee como lo que es —el piso del
+ * título— y no como el borde de la pastilla.
+ */
+export const BAJO_ROTULO = "pt-3";
+
+/**
  * UN ÁREA ELEGIDA: el lápiz a la izquierda, el área con sus turnos y la cruz a la derecha.
  *
  * Misma forma que un rol; en el lugar del «− 1 +» va el lápiz, porque lo que se ajusta acá no es una
@@ -167,7 +177,7 @@ export function ResumenTurnos({ elegidos, onEditar, onQuitarArea }: { elegidos: 
     else porArea.push({ areaId: o.areaId, nombre: o.areaNombre, turnos: [o] });
   }
   return (
-    <div className={`flex flex-wrap items-center ${ENTRE}`}>
+    <div className={`flex flex-wrap items-center ${ENTRE} ${BAJO_ROTULO}`}>
       {porArea.map((a) => (
         <BadgeArea key={a.areaId} nombre={a.nombre} turnos={a.turnos.map((t) => t.turnoNombre)} onEditar={() => onEditar(a.areaId)} onQuitar={() => onQuitarArea(a.areaId)} />
       ))}
