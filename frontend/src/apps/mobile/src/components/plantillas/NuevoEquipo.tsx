@@ -822,20 +822,38 @@ function BadgeTurno({ opcion, principal, onQuitar }: { opcion: OpcionAreaTurno; 
   );
 }
 
+/**
+ * UN ROL DEL GRUPO: DOS PASTILLAS SEPARADAS, la cantidad y el nombre.
+ *
+ * Eran una sola con cinco controles pegados —menos, número, más, nombre, quitar— y en un teléfono
+ * eso es una fila de blancos de siete milímetros donde el dedo no acierta: querías sumar uno y
+ * borrabas el rol. Separadas, cada grupo se lee por lo que hace y hay aire entre el «+» y la «×»,
+ * que son las dos que no conviene confundir.
+ *
+ * La «×» sigue sacando el rol ENTERO, sin importar la cantidad: es lo que se espera de una cruz, y
+ * bajar de a uno ya tiene su botón al lado.
+ */
 function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; cantidad: number; onCantidad: (n: number) => void }) {
+  // Las dos pastillas viajan juntas: `inline-flex` acá adentro evita que una quede sola al final de un renglón.
+  const pastilla = "inline-flex items-center rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200";
+  const redondo = "flex h-8 w-8 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60";
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 py-0.5 pl-1 pr-1.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
-      <button type="button" onClick={() => onCantidad(cantidad - 1)} aria-label={`Un ${nombre} menos`} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
-        <FontAwesomeIcon icon={faMinus} className="h-2.5 w-2.5" />
-      </button>
-      <span className="tabular-nums">{cantidad}</span>
-      <button type="button" onClick={() => onCantidad(cantidad + 1)} aria-label={`Un ${nombre} más`} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
-        <FontAwesomeIcon icon={faPlus} className="h-2.5 w-2.5" />
-      </button>
-      <span className="pl-0.5">{nombre}</span>
-      <button type="button" onClick={() => onCantidad(0)} aria-label={`Quitar ${nombre}`} className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
-        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-      </button>
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`${pastilla} px-0.5`}>
+        <button type="button" onClick={() => onCantidad(cantidad - 1)} aria-label={`Un ${nombre} menos`} className={redondo}>
+          <FontAwesomeIcon icon={faMinus} className="h-2.5 w-2.5" />
+        </button>
+        <span className="min-w-[1.25rem] text-center tabular-nums">{cantidad}</span>
+        <button type="button" onClick={() => onCantidad(cantidad + 1)} aria-label={`Un ${nombre} más`} className={redondo}>
+          <FontAwesomeIcon icon={faPlus} className="h-2.5 w-2.5" />
+        </button>
+      </span>
+      <span className={`${pastilla} py-0.5 pl-3 pr-0.5`}>
+        {nombre}
+        <button type="button" onClick={() => onCantidad(0)} aria-label={`Quitar ${nombre}`} className={`ml-1 ${redondo}`}>
+          <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+        </button>
+      </span>
     </span>
   );
 }
