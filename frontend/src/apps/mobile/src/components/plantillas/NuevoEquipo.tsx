@@ -867,12 +867,18 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
 const TONOS = {
   azul: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
   verde: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200",
-  neutro: "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200",
+  /*
+    EL GRIS TIENE QUE VERSE. El primer intento fue `slate-800` sobre un fondo `slate-900`: a simple
+    vista era la misma mancha oscura que la pastilla azul, y el cambio no se notaba. Va un escalón
+    MÁS CLARO que el fondo —al revés de lo que uno haría en claro, donde va más oscuro que el papel—,
+    que es lo que lo separa tanto del fondo como del color del dato.
+  */
+  neutro: "border-slate-400 bg-slate-200 text-slate-700 dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100",
 };
 const HOVER = {
   azul: "hover:bg-blue-200 dark:hover:bg-blue-800/60",
   verde: "hover:bg-emerald-200 dark:hover:bg-emerald-800/60",
-  neutro: "hover:bg-slate-200 dark:hover:bg-slate-700",
+  neutro: "hover:bg-slate-300 dark:hover:bg-slate-600",
 };
 const pastillaDe = (tono: keyof typeof TONOS) => `inline-flex items-center rounded-full border text-xs font-semibold ${TONOS[tono]}`;
 const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-center justify-center rounded-full ${HOVER[tono]}`;
