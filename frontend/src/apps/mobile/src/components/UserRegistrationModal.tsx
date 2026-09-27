@@ -1999,9 +1999,19 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           <button onClick={onClose} className="flex-1 rounded h-12 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
             Cancelar
           </button>
-          <button onClick={handleSubmit} disabled={submitting} className="flex-1 rounded h-12 bg-blue-500 text-white font-medium shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-            {submitting ? "Cargando..." : eraRechazada ? "Corregir y Reenviar" : editingUser ? "Actualizar Solicitud" : renovacion ? "Enviar Renovación" : "Enviar Solicitud"}
-            <FontAwesomeIcon icon={faCheck} />
+          {/*
+            EL VERBO SOLO, Y SIN TILDE.
+
+            «Enviar Solicitud» con un tilde al lado no entraba en medio botón de un teléfono: la
+            palabra se partía o se achicaba hasta perder peso. Y el tilde no agregaba nada — al lado
+            de «Cancelar», que es su par, ya se sabe cuál es cuál; un ícono que repite lo que dice el
+            texto sólo compite por el lugar.
+
+            Los otros tres casos conservan su palabra porque ahí SÍ cambia lo que va a pasar: no es
+            lo mismo enviar que corregir, actualizar o renovar.
+          */}
+          <button onClick={handleSubmit} disabled={submitting} className="flex-1 rounded h-12 bg-blue-500 text-white font-medium shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center">
+            {submitting ? "Cargando..." : eraRechazada ? "Corregir y Reenviar" : editingUser ? "Actualizar" : renovacion ? "Renovar" : "Enviar"}
           </button>
         </div>
         </div>

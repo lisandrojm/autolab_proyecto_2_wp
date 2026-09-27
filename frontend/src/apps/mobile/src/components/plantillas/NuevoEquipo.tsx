@@ -868,10 +868,13 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
  * Ahora las dos son DOS PASTILLAS: a la izquierda la acción —la cantidad o los turnos—, a la
  * derecha el nombre con su cruz.
  *
- * EL COLOR ES DEL DATO, NO DEL CONTROL. La pastilla del nombre va en color —azul los oficios, verde
- * las áreas— porque eso es lo que hay que distinguir de un vistazo; la de la izquierda va NEUTRA en
- * las dos, porque «− 1 +» y el lápiz son controles y no cambian de significado según el campo.
+ * EL COLOR ES DEL DATO, NO DEL CONTROL. La pastilla del nombre va en AZUL —el mismo de la selección
+ * de a una persona, para que una cosa elegida se vea igual en toda la app— y la de la izquierda va
+ * NEUTRA, porque «− 1 +» y el lápiz son controles y no cambian de significado según el campo.
  * Pintándolos del color del dato competían con él y el renglón terminaba siendo dos manchas.
+ *
+ * El verde quedó definido y sin usar a propósito: sirve para lo que de verdad signifique algo
+ * distinto, no para separar dos campos que ya se distinguen por su rótulo.
  */
 const TONOS = {
   azul: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
@@ -909,12 +912,12 @@ function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: string; tur
           <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
         </button>
       </span>
-      <span className={`${pastillaDe("verde")} py-0.5 pl-3 pr-0.5`}>
+      <span className={`${pastillaDe("azul")} py-0.5 pl-3 pr-0.5`}>
         <span className="min-w-0">
           <span className="block truncate uppercase tracking-wide">{nombre}</span>
           <span className="block truncate text-[10px] font-normal opacity-80">{turnos.join(" · ")}</span>
         </span>
-        <button type="button" onClick={onQuitar} aria-label={`Sacar ${nombre} del equipo`} className={`ml-1 ${redondoDe("verde")}`}>
+        <button type="button" onClick={onQuitar} aria-label={`Sacar ${nombre} del equipo`} className={`ml-1 ${redondoDe("azul")}`}>
           <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
         </button>
       </span>
