@@ -323,7 +323,10 @@ export default function NuevoEquipo() {
       titulo="Nuevo equipo"
       contexto={proyecto ? etiquetaProyecto(proyecto) : undefined}
       // Lo que se va nombrando viaja en el encabezado: a la cuarta pantalla de scroll ya no se ve.
-      chips={[esNuevo ? b.nombreGrupo.trim() : grupo?.nombre, b.nombre.trim()]}
+      chips={[
+        { etiqueta: "Grupo", valor: esNuevo ? b.nombreGrupo.trim() : grupo?.nombre },
+        { etiqueta: "Equipo", valor: b.nombre.trim() },
+      ]}
       atras={b.grupoId && b.grupoId !== NUEVO ? rutas.grupo(b.grupoId) : rutas.lista}
       /*
         SIN EL CARTEL DE «QUÉ FALTA» DEBAJO DEL BOTÓN.

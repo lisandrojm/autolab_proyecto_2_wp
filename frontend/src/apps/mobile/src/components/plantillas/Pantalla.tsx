@@ -50,7 +50,16 @@ interface Props {
    *
    * Los vacíos se descartan: aparecen a medida que se escriben.
    */
-  chips?: (string | undefined | null)[];
+  /**
+   * Cada chip, con qué ES y cómo se llama: «Grupo | Técnica».
+   *
+   * Eran dos pastillas con dos nombres sueltos —«Técnica» y «Mañana»— y no había forma de saber
+   * cuál era el grupo y cuál el equipo: los dos son nombres que pone la misma persona en la misma
+   * pantalla. La etiqueta es lo que los distingue.
+   *
+   * Los que no tienen valor todavía no se dibujan: aparecen a medida que se escriben.
+   */
+  chips?: { etiqueta: string; valor?: string | null }[];
 }
 
 const claveScroll = (path: string) => `plantillas:scroll:${path}`;
@@ -147,13 +156,20 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
           </div>
           <EstadoGuardado estado={estado} />
         </div>
-        {(chips || []).some(Boolean) && (
+        {(chips || []).some((c) => c.valor) && (
           <div className="flex flex-wrap gap-1.5 px-1 pb-0.5 pt-1.5">
-            {(chips || []).filter(Boolean).map((c) => (
-              <span key={c as string} className="inline-flex max-w-full items-center truncate rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
-                {c}
-              </span>
-            ))}
+            {(chips || [])
+              .filter((c) => c.valor)
+              .map((c) => (
+                <span key={c.etiqueta} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                  {/* La etiqueta, más apagada: lo que se lee es el nombre; ella sólo dice de qué es. */}
+                  <span className="shrink-0 font-normal opacity-70">{c.etiqueta}</span>
+                  <span className="shrink-0 opacity-40" aria-hidden>
+                    |
+                  </span>
+                  <span className="truncate">{c.valor}</span>
+                </span>
+              ))}
           </div>
         )}
       </header>
