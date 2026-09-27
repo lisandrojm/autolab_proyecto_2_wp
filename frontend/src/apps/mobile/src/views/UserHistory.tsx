@@ -144,6 +144,18 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     decidir sobre una sacaba de la lista a las dos y guardaba una sola decisión.
   */
   const claveDe = (c: ContratoPorVencer) => `${c.userProjectId}::${c.fechaBaja}::${c.indice}`;
+
+  /**
+   * LA CLAVE DE REACT, que además tiene que ser única AUNQUE EL SERVER NO MANDE LA POSICIÓN.
+   *
+   * Un server que todavía no la manda deja `indice` en `undefined`, y entonces `claveDe` vuelve a ser
+   * (asignación, fecha) — que es justamente lo que se repite. La posición en la lista la desempata.
+   *
+   * Va sólo en la clave y NO en `claveDe`: eso es la identidad del contrato, y la posición en una
+   * lista filtrada no lo es. Mezclarlas haría que decidir sobre una fila actuara sobre otra cuando
+   * el filtro de tipos cambia el orden.
+   */
+  const claveDeReact = (c: ContratoPorVencer, posicion: number) => (c.indice === undefined || c.indice === null ? `${claveDe(c)}::#${posicion}` : claveDe(c));
   const fechaCorta = (f: string) => {
     const [y, m, d] = String(f || "").slice(0, 10).split("-");
     return y && m && d ? `${d}/${m}/${y.slice(2)}` : f || "—";
@@ -254,11 +266,11 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     return (
       <div className="space-y-3">
         {barraDeFiltros}
-        {porVencerVisibles.map((c) => {
+        {porVencerVisibles.map((c, posicion) => {
           const clave = claveDe(c);
           const urgente = c.diasRestantes <= 2;
           return (
-            <div key={clave} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
+            <div key={claveDeReact(c, posicion)} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{c.nombre}</h4>

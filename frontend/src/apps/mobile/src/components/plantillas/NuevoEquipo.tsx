@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronDown, faChevronRight, faCircleInfo, faClock, faFileContract, faLayerGroup, faMinus, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronDown, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
@@ -16,6 +16,7 @@ import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 import { CLASE_CAMPO, CLASE_HORA, DIAS } from "./comun";
+import { BotonInfo } from "../ModalInfo";
 
 /*
   NUEVO EQUIPO, EN UNA SOLA PANTALLA Y EN EL ORDEN DE LA SOLICITUD INDIVIDUAL.
@@ -413,24 +414,29 @@ export default function NuevoEquipo() {
           </div>
 
           <div className="space-y-2">
-            <Rotulo icono={faBriefcase} obligatorio>
-              Rol/es empresa
-            </Rotulo>
             {/*
-              QUÉ SE ESPERA ACÁ, dicho antes de elegir y no después.
+              QUÉ SE ESPERA ACÁ, en la «i» de siempre y no en un recuadro adentro del formulario.
 
               Un grupo de puestos es una PLANTILLA: la lista completa de roles que hace falta para
-              armar ese equipo, con cuántos de cada uno. La palabra «rol» en singular invita a poner
-              uno y seguir, y después el equipo sale incompleto sin que nada lo avise.
+              armar ese equipo, con cuántos de cada uno. «Rol/es» invita a poner uno y seguir, y
+              después el equipo sale incompleto sin que nada lo avise.
+
+              La explicación va en el modal de ayuda —el mismo de todas las secciones— y no en un
+              cartel fijo: un texto de cuatro renglones arriba del campo empuja hacia abajo justo lo
+              que hay que completar, y se lee una sola vez en la vida.
             */}
-            {esNuevo && (
-              <p className="flex items-start gap-2 rounded-lg bg-blue-50 px-3 py-2 text-[11px] leading-snug text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 shrink-0 text-blue-500" />
-                <span>
-                  Poné <strong>todos los roles</strong> que hacen falta para armar este grupo, con cuántas personas de cada uno. Es una plantilla: lo que cargues acá es lo que se va a pedir cada vez que se use.
-                </span>
-              </p>
-            )}
+            <div className="flex items-center gap-1">
+              <Rotulo icono={faBriefcase} obligatorio>
+                Rol/es empresa
+              </Rotulo>
+              <BotonInfo
+                icono={faBriefcase}
+                titulo="Rol/es empresa"
+                texto={
+                  "Un grupo de puestos es una plantilla: poné TODOS los roles que hacen falta para armar este grupo, con cuántas personas de cada uno.\n\nLo que cargues acá es lo que se va a pedir cada vez que se use el grupo, así que conviene que esté completo: un rol que falte hay que agregarlo a mano en cada equipo.\n\nCon el + elegís roles y con los botones de cada uno cambiás la cantidad."
+                }
+              />
+            </div>
             {esNuevo ? (
               b.roles.length ? (
                 <div className="flex flex-wrap items-center gap-1.5">

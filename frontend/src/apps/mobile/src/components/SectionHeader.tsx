@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition, faArrowLeft, faCircleInfo, faSignOutAlt, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { IconDefinition, faArrowLeft, faCircleInfo, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
+import { ModalInfo } from "./ModalInfo";
 
 interface SectionHeaderProps {
   icon: IconDefinition;
@@ -74,38 +75,8 @@ export default function SectionHeader({ icon, titulo, subtitulo, info, onBack, e
         </div>
       </div>
 
-      {verInfo && (
-        // Centrado en la pantalla: pegado abajo se confundía con la barra de navegación.
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setVerInfo(false)}>
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <p className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-                <FontAwesomeIcon icon={icon} className="h-4 w-4" /> {titulo}
-              </p>
-              <button onClick={() => setVerInfo(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
-                <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4 p-4">
-              <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">{info}</p>
-              {extra && (
-                <button
-                  onClick={() => {
-                    setVerInfo(false);
-                    extra.onClick();
-                  }}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200"
-                >
-                  {extra.label}
-                </button>
-              )}
-              <button onClick={() => setVerInfo(false)} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* El mismo modal que usa cualquier «i» de la app: vive en ModalInfo.tsx. */}
+      {verInfo && <ModalInfo icono={icon} titulo={titulo} texto={info} extra={extra} onCerrar={() => setVerInfo(false)} />}
     </>
   );
 }
