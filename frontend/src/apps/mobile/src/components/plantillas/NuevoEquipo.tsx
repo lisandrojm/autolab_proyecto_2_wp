@@ -720,8 +720,24 @@ export default function NuevoEquipo() {
                       <span className="w-5 text-center text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">{x.n}</span>
                       <span className="min-w-0 flex-1">
                         {catalogos.rolesCargados ? <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span> : <span className="block h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
-                        {/* Sin persona no se escribe nada: el botón de al lado dice «Asignar», que ya es la respuesta. */}
-                        {!b.copiarDe && persona && <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{persona.nombre}</span>}
+                        {/*
+                          LA PERSONA ASIGNADA, COMO BADGE AZUL.
+
+                          Es el dato que cambia en esta lista —el rol y el turno ya estaban— y en
+                          texto plano pesaba lo mismo que el nombre del oficio de arriba. Con la
+                          pastilla, de un vistazo se ve cuántos puestos están cubiertos sin leer
+                          renglón por renglón.
+
+                          Mismo azul y misma forma que los roles y las áreas: una cosa elegida se ve
+                          igual en toda la pantalla.
+
+                          Sin persona no se escribe nada: el «+» de al lado ya es la respuesta.
+                        */}
+                        {!b.copiarDe && persona && (
+                          <span className={`mt-0.5 max-w-full ${pastillaDe("azul")} px-2.5 py-0.5`}>
+                            <span className="truncate">{persona.nombre}</span>
+                          </span>
+                        )}
                         {/*
                           A CUÁL DE LAS ÁREAS Y TURNOS VA ESTE PUESTO (por defecto, el primero).
 
