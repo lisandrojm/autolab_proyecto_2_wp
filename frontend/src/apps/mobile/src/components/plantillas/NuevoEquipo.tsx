@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronDown, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
@@ -9,7 +9,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { usePlantillas } from "./contexto";
 import { Pantalla } from "./Pantalla";
-import { HojaInferior } from "./HojaInferior";
+import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
 import { cambiosDeContrato, cambiosDeTurno, porDiasSueltos } from "./Condiciones";
 import { categoriasDelNivel, rutas } from "./equipoUtil";
@@ -104,8 +104,15 @@ export default function NuevoEquipo() {
   });
   const [grupos, setGrupos] = useState<PlantillaResumen[] | null>(null);
   const [grupo, setGrupo] = useState<Plantilla | null>(null);
-  const [hoja, setHoja] = useState<null | "proyecto" | "roles" | "contrato" | { persona: number }>(null);
-  const [areasAbiertas, setAreasAbiertas] = useState<Set<string>>(new Set());
+  const [hoja, setHoja] = useState<null | "proyecto" | "roles" | "contrato" | "turno" | { persona: number }>(null);
+  /*
+    EL ÁREA ABIERTA ENCIMA DE LA HOJA DE ÁREAS.
+
+    Va en su propio estado y no dentro de `hoja` justamente porque las dos tienen que estar abiertas a
+    la vez: elegir un turno cierra la de arriba y deja la de abajo, que es lo que permite elegir el
+    segundo turno sin volver a la página.
+  */
+  const [areaEnHoja, setAreaEnHoja] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
   const [intento, setIntento] = useState(false);
 
@@ -527,48 +534,33 @@ export default function NuevoEquipo() {
           ) : areas.length === 0 ? (
             <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">El proyecto no tiene áreas y turnos configurados.</p>
           ) : (
+            /*
+              ELEGIR ES UN MODAL, NO UN ACORDEÓN.
+
+              Abrir un área acá adentro empujaba media pantalla hacia abajo: había que bajar hasta el
+              área, abrirla, elegir el turno y volver a subir para ver qué había quedado. Con cuatro
+              áreas de cuatro turnos, eso es subir y bajar todo el tiempo.
+
+              Ahora la página muestra SÓLO lo elegido, como badges, y elegir pasa en hojas que se
+              abren encima y se cierran al tocar: la página no se mueve nunca.
+            */
             <>
-              <p className="text-xs text-slate-600 dark:text-slate-300">Podés tildar varios: cada puesto va a uno (lo elegís abajo, en Puestos). El primero es el principal: su horario y sus días son los del equipo.</p>
-              <div className="space-y-2">
-                {areasAgrupadas.map((area) => {
-                  const enArea = elegidos.filter((o) => o.areaId === area.areaId);
-                  const abierta = areasAbiertas.has(area.areaId) || enArea.length > 0;
-                  return (
-                    <div key={area.areaId} className={`rounded-lg border ${error("campo-turno") ? "border-red-400" : "border-slate-200 dark:border-slate-700"}`}>
-                      <button type="button" onClick={() => setAreasAbiertas((s) => { const n = new Set(s); if (n.has(area.areaId)) n.delete(area.areaId); else n.add(area.areaId); return n; })} aria-expanded={abierta} className="flex min-h-[44px] w-full items-center gap-2 px-3 text-left">
-                        <FontAwesomeIcon icon={abierta ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-slate-500" />
-                        <span className="min-w-0 flex-1 truncate text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">{area.nombre}</span>
-                        {enArea.length > 0 ? (
-                          <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{enArea.map((o) => o.turnoNombre).join(" · ")}</span>
-                        ) : (
-                          <span className="shrink-0 text-[11px] text-slate-600 dark:text-slate-300">{area.turnos.length} {area.turnos.length === 1 ? "turno" : "turnos"}</span>
-                        )}
-                      </button>
-                      {abierta && (
-                        <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-2">
-                          {area.turnos.map((t) => {
-                            const v = `${t.areaId}::${t.shiftId}`;
-                            const elegido = b.turnos.includes(v);
-                            const principal = b.turnos[0] === v && b.turnos.length > 1;
-                            return (
-                              <button key={t.shiftId} type="button" onClick={() => elegirTurno(t)} aria-pressed={elegido} className={`flex min-h-[48px] items-center gap-2 rounded-lg border px-2.5 text-left ${elegido ? "border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-900/20 dark:text-blue-200" : "border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"}`}>
-                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${elegido ? "border-blue-600 bg-blue-600 text-white" : "border-slate-400"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />}</span>
-                                <span className="min-w-0">
-                                  <span className="block truncate text-sm font-medium">
-                                    {t.turnoNombre}
-                                    {principal && <span className="ml-1.5 rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
-                                  </span>
-                                  <span className="block text-[11px] text-slate-600 dark:text-slate-300">{[t.inicio && t.fin ? `${t.inicio}–${t.fin}` : "", t.diasTexto].filter(Boolean).join(" · ")}</span>
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              {elegidos.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {elegidos.map((o, i) => (
+                    <BadgeTurno key={`${o.areaId}::${o.shiftId}`} opcion={o} principal={i === 0 && elegidos.length > 1} onQuitar={() => elegirTurno(o)} />
+                  ))}
+                  <button type="button" onClick={() => setHoja("turno")} aria-label="Agregar área y turno" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
+                    <FontAwesomeIcon icon={faPlus} />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setHoja("turno")} className={`flex h-12 w-full items-center gap-2 rounded-xl border bg-slate-50 px-4 text-left dark:bg-slate-900 ${error("campo-turno") ? "border-red-500" : "border-slate-300 dark:border-slate-600"}`}>
+                  <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-500" />
+                  <span className="truncate text-slate-600 dark:text-slate-300">Elegí el área y el turno…</span>
+                </button>
+              )}
+              <p className="text-xs text-slate-600 dark:text-slate-300">Podés elegir varios: cada puesto va a uno (lo elegís abajo, en Puestos). El primero es el principal: su horario y sus días son los del equipo.</p>
             </>
           )}
         </div>
@@ -693,7 +685,7 @@ export default function NuevoEquipo() {
       </div>
 
       {/* Paneles: uno por vez. */}
-      <HojaInferior abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto">
+      <HojaModal abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto">
         <div className="space-y-2">
           {(proyectos || []).map((p) => (
             <button key={p._id} type="button" onClick={() => { cambiar({ projectId: p._id, empresaContratoId: "", convenioId: "", turnos: [], turnoPorPuesto: {}, inTime: "", outTime: "", diasSemana: [] }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${p._id === b.projectId ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-200 text-slate-900 dark:border-slate-700 dark:text-white"}`}>
@@ -702,9 +694,71 @@ export default function NuevoEquipo() {
             </button>
           ))}
         </div>
-      </HojaInferior>
+      </HojaModal>
+      {/*
+        ÁREA Y TURNO: DOS HOJAS, UNA SOBRE OTRA.
+
+        La de abajo lista las áreas; tocar una abre sus turnos encima; tildar un turno cierra la de
+        arriba y deja la de abajo, lista para el siguiente. La página nunca se mueve, y lo elegido se
+        ve en los badges cuando las dos se cierran.
+      */}
+      <HojaModal abierta={hoja === "turno"} onCerrar={() => { setHoja(null); setAreaEnHoja(null); }} titulo="Área y turno" subtitulo={elegidos.length > 0 ? `${elegidos.length} elegido${elegidos.length === 1 ? "" : "s"} · el primero es el principal` : "Tocá un área para ver sus turnos"}>
+        <div className="space-y-2">
+          {areasAgrupadas.map((area) => {
+            const enArea = elegidos.filter((o) => o.areaId === area.areaId);
+            return (
+              <button key={area.areaId} type="button" onClick={() => setAreaEnHoja(area.areaId)} className="flex min-h-[56px] w-full items-center gap-2 rounded-xl border border-slate-200 px-3 text-left dark:border-slate-700">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">{area.nombre}</span>
+                  <span className="block truncate text-[11px] text-slate-600 dark:text-slate-300">
+                    {enArea.length > 0 ? enArea.map((o) => o.turnoNombre).join(" · ") : `${area.turnos.length} ${area.turnos.length === 1 ? "turno" : "turnos"}`}
+                  </span>
+                </span>
+                {enArea.length > 0 && <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{enArea.length}</span>}
+                <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+              </button>
+            );
+          })}
+        </div>
+      </HojaModal>
+
+      <HojaModal
+        nivel={2}
+        abierta={!!areaEnHoja}
+        onCerrar={() => setAreaEnHoja(null)}
+        titulo={areasAgrupadas.find((a) => a.areaId === areaEnHoja)?.nombre || "Turnos"}
+        subtitulo="Tocá el turno que va a cubrir el equipo"
+      >
+        <div className="space-y-2">
+          {(areasAgrupadas.find((a) => a.areaId === areaEnHoja)?.turnos || []).map((t) => {
+            const v = `${t.areaId}::${t.shiftId}`;
+            const elegido = b.turnos.includes(v);
+            const principal = b.turnos[0] === v && b.turnos.length > 1;
+            return (
+              <button
+                key={t.shiftId}
+                type="button"
+                // Elegir CIERRA: esta hoja ya cumplió, y lo que sigue —otro turno de otra área— está en la de abajo.
+                onClick={() => { elegirTurno(t); setAreaEnHoja(null); }}
+                aria-pressed={elegido}
+                className={`flex min-h-[56px] w-full items-center gap-2 rounded-xl border px-3 text-left ${elegido ? "border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-900/20 dark:text-blue-200" : "border-slate-200 text-slate-800 dark:border-slate-700 dark:text-slate-100"}`}
+              >
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${elegido ? "border-blue-600 bg-blue-600 text-white" : "border-slate-400"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">
+                    {t.turnoNombre}
+                    {principal && <span className="ml-1.5 rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
+                  </span>
+                  <span className="block truncate text-[11px] text-slate-600 dark:text-slate-300">{[t.inicio && t.fin ? `${t.inicio}–${t.fin}` : "", t.diasTexto].filter(Boolean).join(" · ")}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </HojaModal>
+
       <HojaRoles abierta={hoja === "roles"} onCerrar={() => setHoja(null)} roles={b.roles} roleFrames={catalogos.roleFrames} onCambio={(roles) => cambiar({ roles, personas: {} })} />
-      <HojaInferior abierta={hoja === "contrato"} onCerrar={() => setHoja(null)} titulo="Tipo de contrato">
+      <HojaModal abierta={hoja === "contrato"} onCerrar={() => setHoja(null)} titulo="Tipo de contrato">
         <div className="space-y-2">
           {catalogos.contratos.map((c) => (
             <button key={c._id} type="button" onClick={() => { cambiar({ contratoId: c._id }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left ${c._id === b.contratoId ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30" : "border-slate-200 dark:border-slate-700"}`}>
@@ -720,7 +774,7 @@ export default function NuevoEquipo() {
             </button>
           ))}
         </div>
-      </HojaInferior>
+      </HojaModal>
       <SelectorPersona
         abierta={!!hoja && typeof hoja === "object"}
         onCerrar={() => setHoja(null)}
@@ -742,6 +796,32 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
 }
 
 /** Un rol elegido: su nombre, cuántos (− y +) y ✕ para sacarlo. */
+/**
+ * UN TURNO ELEGIDO, en la página: área, turno y su horario, con la X para sacarlo.
+ *
+ * El horario va adentro del badge y no sólo en la hoja: es lo que distingue «Mañana» de «Tarde»
+ * cuando dos áreas tienen turnos con el mismo nombre, y sin él habría que abrir la hoja para saber
+ * cuál quedó.
+ */
+function BadgeTurno({ opcion, principal, onQuitar }: { opcion: OpcionAreaTurno; principal: boolean; onQuitar: () => void }) {
+  const horario = [opcion.inicio && opcion.fin ? `${opcion.inicio}–${opcion.fin}` : "", opcion.diasTexto].filter(Boolean).join(" · ");
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 py-1 pl-3 pr-1 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+      <span className="min-w-0">
+        <span className="block truncate">
+          {opcion.areaNombre} · {opcion.turnoNombre}
+          {/* El principal manda: su horario y sus días son los del equipo. Sin decirlo, el orden de los badges no significa nada. */}
+          {principal && <span className="ml-1.5 rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
+        </span>
+        {horario && <span className="block text-[10px] font-normal opacity-80">{horario}</span>}
+      </span>
+      <button type="button" onClick={onQuitar} aria-label={`Quitar ${opcion.areaNombre} ${opcion.turnoNombre}`} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
+        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+      </button>
+    </span>
+  );
+}
+
 function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; cantidad: number; onCantidad: (n: number) => void }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 py-0.5 pl-1 pr-1.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
@@ -780,7 +860,7 @@ function HojaRoles({ abierta, onCerrar, roles, roleFrames, onCambio }: { abierta
   const lista = [...roleFrames].filter((r) => fuzzyMatch(r.name, busca)).sort((a, b) => a.name.localeCompare(b.name));
   const total = roles.reduce((s, r) => s + r.cantidad, 0);
   return (
-    <HojaInferior
+    <HojaModal
       abierta={abierta}
       onCerrar={onCerrar}
       titulo="Rol/es empresa"
@@ -827,6 +907,6 @@ function HojaRoles({ abierta, onCerrar, roles, roleFrames, onCambio }: { abierta
           })}
         </div>
       )}
-    </HojaInferior>
+    </HojaModal>
   );
 }

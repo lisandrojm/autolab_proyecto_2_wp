@@ -11,7 +11,7 @@ import { FilasCondiciones, HojaContratoYTurno } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { HojaNombre } from "./DetalleGrupo";
 import { categoriasDelNivel, estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, rutas, sacadosDe } from "./equipoUtil";
-import { HojaInferior } from "./HojaInferior";
+import { HojaModal } from "./HojaModal";
 import CampoConvenio from "./CampoConvenio";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
 import { CLASE_CAMPO, Pill } from "./comun";
@@ -197,7 +197,7 @@ export default function PantallaEquipo() {
       </Seccion>
 
       <HojaContratoYTurno abierta={hoja === "condiciones"} onCerrar={() => setHoja(null)} titulo="Condiciones del equipo" areas={areas} catalogos={catalogos} valores={c} onCambio={cambiar} />
-      <HojaInferior abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto" subtitulo="El área y turno se eligen de nuevo; las categorías se recalculan">
+      <HojaModal abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto" subtitulo="El área y turno se eligen de nuevo; las categorías se recalculan">
         <div className="space-y-2">
           {(catalogos.proyectos || []).map((x) => (
             <button key={x._id} type="button" onClick={() => { setHoja(null); if (x._id !== equipo.projectId) cambiarProyecto({ projectId: x._id }); }} className={`flex min-h-[48px] w-full items-center rounded-xl border px-3 text-left text-sm font-semibold ${x._id === equipo.projectId ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" : "border-slate-200 text-slate-900 dark:border-slate-700 dark:text-white"}`}>
@@ -205,7 +205,7 @@ export default function PantallaEquipo() {
             </button>
           ))}
         </div>
-      </HojaInferior>
+      </HojaModal>
       <HojaNombre abierta={hoja === "nombre"} onCerrar={() => setHoja(null)} actual={equipo.nombre} titulo="Nombre del equipo" onGuardar={(nombre) => void guardar(() => plantillasEquipoAPI.renombrarEquipo(p._id, equipo._id, nombre))} />
       <SelectorPersona
         abierta={!!hoja && typeof hoja === "object"}

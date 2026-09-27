@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
-import { HojaInferior } from "./HojaInferior";
+import { HojaModal } from "./HojaModal";
 import { ListaTurnos } from "./DetalleGrupo";
 import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { ChipTurno, CLASE_HORA, DIAS, textoHorario } from "./comun";
@@ -50,7 +50,7 @@ interface HojaProps {
 
 export function HojaContratoYTurno({ abierta, onCerrar, titulo, areas, catalogos, valores, onCambio }: HojaProps) {
   return (
-    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo={titulo} subtitulo="Elegí el contrato y después el turno">
+    <HojaModal abierta={abierta} onCerrar={onCerrar} titulo={titulo} subtitulo="Elegí el contrato y después el turno">
       <div className="space-y-4">
         <div>
           <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Tipo de contrato</p>
@@ -79,7 +79,7 @@ export function HojaContratoYTurno({ abierta, onCerrar, titulo, areas, catalogos
           />
         </div>
       </div>
-    </HojaInferior>
+    </HojaModal>
   );
 }
 

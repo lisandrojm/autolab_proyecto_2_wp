@@ -6,7 +6,7 @@ import { PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/planti
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantillas } from "./contexto";
 import { Pantalla, Vacio } from "./Pantalla";
-import { HojaInferior } from "./HojaInferior";
+import { HojaModal } from "./HojaModal";
 import { aContratacion, rutas } from "./equipoUtil";
 import { ChipTurno, Pill } from "./comun";
 
@@ -94,7 +94,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
         </button>
       )}
 
-      <HojaInferior abierta={hoja === "generales"} onCerrar={() => setHoja(null)} titulo="Partir de un grupo general" subtitulo="Se copia a los tuyos; el general no cambia">
+      <HojaModal abierta={hoja === "generales"} onCerrar={() => setHoja(null)} titulo="Partir de un grupo general" subtitulo="Se copia a los tuyos; el general no cambia">
         <div className="space-y-2">
           {generales.map((g) => (
             <button key={g._id} type="button" onClick={() => void usar(g)} className="flex min-h-[52px] w-full items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 text-left dark:border-slate-700">
@@ -106,7 +106,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
             </button>
           ))}
         </div>
-      </HojaInferior>
+      </HojaModal>
     </div>
   );
 

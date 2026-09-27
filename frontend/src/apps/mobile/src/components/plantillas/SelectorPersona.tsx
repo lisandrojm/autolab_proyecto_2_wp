@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../../../../api/users";
-import { HojaInferior } from "./HojaInferior";
+import { HojaModal } from "./HojaModal";
 import { Pill } from "./comun";
 
 /*
@@ -100,7 +100,7 @@ export function SelectorPersona({ abierta, onCerrar, titulo, subtitulo, projectI
 
   const nada = resultado && resultado.delProyecto.length === 0 && resultado.otros.length === 0;
   return (
-    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo={titulo} subtitulo={subtitulo}>
+    <HojaModal abierta={abierta} onCerrar={onCerrar} titulo={titulo} subtitulo={subtitulo}>
       <div className="sticky -top-3 z-10 -mx-4 -mt-3 space-y-2 bg-white px-4 pb-2 pt-3 dark:bg-slate-900">
         <div className="relative">
           <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
@@ -147,6 +147,6 @@ export function SelectorPersona({ abierta, onCerrar, titulo, subtitulo, projectI
           )}
         </div>
       )}
-    </HojaInferior>
+    </HojaModal>
   );
 }

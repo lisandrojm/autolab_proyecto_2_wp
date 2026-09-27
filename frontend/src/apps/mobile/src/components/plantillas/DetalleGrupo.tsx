@@ -6,7 +6,7 @@ import { plantillasEquipoAPI, Plantilla } from "../../../../../api/plantillasEqu
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
-import { HojaInferior } from "./HojaInferior";
+import { HojaModal } from "./HojaModal";
 import { aContratacion, categoriasDelNivel, estadoDe, nombreRoles, nombreTurno, proyectoDelEquipo, rutas } from "./equipoUtil";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, Pill, textoHorario } from "./comun";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
@@ -222,7 +222,7 @@ function HojaPuestos({ abierta, onCerrar, plantilla: p }: { abierta: boolean; on
   };
 
   return (
-    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo="Puestos" subtitulo={`${p.integrantes.length} en total`} pie={<button type="button" onClick={onCerrar} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white">Listo</button>}>
+    <HojaModal abierta={abierta} onCerrar={onCerrar} titulo="Puestos" subtitulo={`${p.integrantes.length} en total`} pie={<button type="button" onClick={onCerrar} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white">Listo</button>}>
       <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Agregar un rol: buscalo acá" aria-label="Buscar rol" className={`${CLASE_CAMPO} mb-3`} />
       {roles.length === 0 && <p className="py-4 text-center text-sm text-slate-700 dark:text-slate-200">{catalogos.roleFrames.length === 0 ? "Cargando los roles…" : busca ? "Ningún rol coincide." : "Buscá un rol para agregar puestos."}</p>}
       <div className="space-y-1.5">
@@ -242,7 +242,7 @@ function HojaPuestos({ abierta, onCerrar, plantilla: p }: { abierta: boolean; on
           );
         })}
       </div>
-    </HojaInferior>
+    </HojaModal>
   );
 }
 
@@ -256,9 +256,9 @@ function HojaNombre({ abierta, onCerrar, actual, onGuardar, titulo = "Nombre del
     onCerrar();
   };
   return (
-    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo={titulo} pie={<button type="button" onClick={listo} disabled={!nombre.trim()} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-40">Guardar</button>}>
+    <HojaModal abierta={abierta} onCerrar={onCerrar} titulo={titulo} pie={<button type="button" onClick={listo} disabled={!nombre.trim()} className="min-h-[48px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-40">Guardar</button>}>
       <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && listo()} maxLength={120} className={CLASE_CAMPO} aria-label={titulo} />
-    </HojaInferior>
+    </HojaModal>
   );
 }
 
