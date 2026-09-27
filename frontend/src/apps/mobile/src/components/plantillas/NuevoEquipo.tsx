@@ -214,28 +214,27 @@ export default function NuevoEquipo() {
     });
   };
 
-  // Qué falta, en el orden del formulario.
-  const falta = !proyecto
-    ? { texto: "Elegí el proyecto", id: "campo-proyecto" }
-    : !b.grupoId
-      ? { texto: "Elegí un grupo o creá uno nuevo", id: "campo-grupo" }
-      : esNuevo && !b.nombreGrupo.trim()
-        ? { texto: "Poné el nombre del grupo", id: "campo-grupo" }
-        : puestos.length === 0
-          ? { texto: "Elegí los roles del grupo", id: "campo-roles" }
-          : !b.empresaContratoId
-            ? { texto: "Elegí la empresa que contrata", id: "campo-roles" }
-            : !convenioId && (!catalogos.categoriasCargadas || !catalogos.conveniosCargados)
-              ? { texto: "Cargando el convenio…", id: "campo-roles" }
-              : !convenioId && catalogos.conveniosDisponibles(proyecto, b.empresaContratoId, "").length > 0
-                ? { texto: "Elegí el convenio", id: "campo-roles" }
-            : !b.contratoId && catalogos.contratos.length > 0
-              ? { texto: "Elegí el tipo de contrato", id: "campo-contrato" }
-              : !b.turnos.length && (areas?.length || 0) > 0
-                ? { texto: "Elegí el área y el turno", id: "campo-turno" }
-                : !b.nombre.trim()
-                  ? { texto: "Poné el nombre del equipo", id: "campo-nombre" }
-                  : null;
+  /*
+    QUÉ FALTA, EN EL ORDEN DEL FORMULARIO.
+
+    Como lista y no como ternarios anidados: eran nueve, con la indentación ya rota en el medio —dos
+    ramas al mismo nivel que sus hermanas—, y agregar o mover un campo exigía contar signos de
+    pregunta. Acá el orden se lee de arriba abajo y es el mismo en el que están los campos en la
+    pantalla, que es lo que hace que «Elegí el convenio» lleve al de arriba y no al de abajo.
+  */
+  const falta =
+    [
+      [!proyecto, "Elegí el proyecto", "campo-proyecto"],
+      [!b.empresaContratoId, "Elegí la empresa que contrata", "campo-empresa"],
+      [!convenioId && (!catalogos.categoriasCargadas || !catalogos.conveniosCargados), "Cargando el convenio…", "campo-empresa"],
+      [!convenioId && catalogos.conveniosDisponibles(proyecto, b.empresaContratoId, "").length > 0, "Elegí el convenio", "campo-empresa"],
+      [!b.grupoId, "Elegí un grupo o creá uno nuevo", "campo-grupo"],
+      [esNuevo && !b.nombreGrupo.trim(), "Poné el nombre del grupo", "campo-grupo"],
+      [puestos.length === 0, "Elegí los roles del grupo", "campo-roles"],
+      [!b.contratoId && catalogos.contratos.length > 0, "Elegí el tipo de contrato", "campo-contrato"],
+      [!b.turnos.length && (areas?.length || 0) > 0, "Elegí el área y el turno", "campo-turno"],
+      [!b.nombre.trim(), "Poné el nombre del equipo", "campo-nombre"],
+    ].reduce<{ texto: string; id: string } | null>((primera, [cond, texto, id]) => primera || (cond ? { texto: texto as string, id: id as string } : null), null);
   const irA = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
 
   /*
@@ -244,7 +243,7 @@ export default function NuevoEquipo() {
   */
   const okProyecto = !!proyecto;
   const okGrupo = okProyecto && !!b.grupoId && (!esNuevo || !!b.nombreGrupo.trim());
-  const okRoles = okGrupo && puestos.length > 0 && !!b.empresaContratoId && (!falta || !["campo-grupo", "campo-roles"].includes(falta.id));
+  const okRoles = okGrupo && puestos.length > 0 && !!b.empresaContratoId && (!falta || !["campo-grupo", "campo-roles", "campo-empresa"].includes(falta.id));
   const okContrato = okRoles && (!!b.contratoId || catalogos.contratos.length === 0);
   const okTurno = okContrato && (b.turnos.length > 0 || (areas?.length ?? 1) === 0);
   const okNombre = okTurno && !!b.nombre.trim();
@@ -347,6 +346,53 @@ export default function NuevoEquipo() {
           </div>
         </div>
 
+        {/*
+          LA EMPRESA Y EL CONVENIO, ANTES DEL NOMBRE DEL GRUPO.
+
+          Estaban entre el nombre y los roles, y ahí llegan tarde: los roles que se ofrecen y las
+          categorías que se les pueden poner dependen del convenio, así que leerlo recién después
+          de nombrar el grupo obliga a volver para arriba para saber bajo qué convenio se está
+          armando. Van pegados al proyecto, que es de donde salen.
+
+          Y así, después del nombre del grupo vienen directamente sus roles.
+        */}
+        <div id="campo-empresa" className="grid scroll-mt-24 grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Rotulo icono={faBuilding} obligatorio>
+              Empresa que contrata
+            </Rotulo>
+            {empresas.length === 0 ? (
+              <p className="py-2 text-xs text-amber-700 dark:text-amber-300">{proyecto ? "El proyecto no tiene empresa del contrato asignada." : "Elegí primero el proyecto."}</p>
+            ) : empresas.length === 1 ? (
+              /*
+                Una sola: no es una elección, es el dato del proyecto. Va apagada y nada más —un
+                cartel que diga «fijo» es una palabra de más para algo que el gris ya dice, y encima
+                compite por el lugar con el dato.
+              */
+              <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{(empresas[0] as any).razonSocial}</p>
+            ) : (
+              <select value={b.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
+                <option value="">Elegí la empresa</option>
+                {empresas.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {(c as any).razonSocial}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Rotulo icono={faFileContract} obligatorio>
+              Convenio
+            </Rotulo>
+            {b.empresaContratoId ? (
+              <CampoConvenio sinRotulo proyecto={proyecto} empresaId={b.empresaContratoId} convenioId={b.convenioId} catalogos={catalogos} onChange={(id) => id !== b.convenioId && cambiar({ convenioId: id })} />
+            ) : (
+              <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">Elegí primero la empresa</p>
+            )}
+          </div>
+        </div>
+
         {okProyecto && (
           <>
         {/* GRUPO DE PUESTOS: sin grupos todavía, directamente su nombre; con grupos, uno de ellos o «Nuevo grupo». */}
@@ -394,44 +440,7 @@ export default function NuevoEquipo() {
           hay que distinguir no es «existe / no existe», es «esto lo tengo que completar» de «esto ya
           viene dado» — y eso se dice apagando el campo, no escondiéndolo.
         */}
-        {/* EMPRESA Y CONVENIO, uno al lado del otro; debajo, ROL/ES EMPRESA (como en el alta individual). */}
         <div id="campo-roles" className="space-y-6 scroll-mt-24">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Rotulo icono={faBuilding} obligatorio>
-                Empresa que contrata
-              </Rotulo>
-              {empresas.length === 0 ? (
-                <p className="py-2 text-xs text-amber-700 dark:text-amber-300">{proyecto ? "El proyecto no tiene empresa del contrato asignada." : "Elegí primero el proyecto."}</p>
-              ) : empresas.length === 1 ? (
-                /*
-                  Una sola: no es una elección, es el dato del proyecto. Va apagada y nada más —un
-                  cartel que diga «fijo» es una palabra de más para algo que el gris ya dice, y encima
-                  compite por el lugar con el dato.
-                */
-                <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{(empresas[0] as any).razonSocial}</p>
-              ) : (
-                <select value={b.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
-                  <option value="">Elegí la empresa</option>
-                  {empresas.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {(c as any).razonSocial}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Rotulo icono={faFileContract} obligatorio>
-                Convenio
-              </Rotulo>
-              {b.empresaContratoId ? (
-                <CampoConvenio sinRotulo proyecto={proyecto} empresaId={b.empresaContratoId} convenioId={b.convenioId} catalogos={catalogos} onChange={(id) => id !== b.convenioId && cambiar({ convenioId: id })} />
-              ) : (
-                <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">Elegí primero la empresa</p>
-              )}
-            </div>
-          </div>
 
           <div className="space-y-2">
             {/*
