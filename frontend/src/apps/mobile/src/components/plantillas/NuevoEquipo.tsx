@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTrash, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
@@ -850,18 +850,55 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
 
 /** Un rol elegido: su nombre, cuántos (− y +) y ✕ para sacarlo. */
 /**
- * LO ELEGIDO EN ÁREA Y TURNO, AGRUPADO POR ÁREA Y SÓLO PARA MIRAR.
+ * LA FORMA DE UNA COSA ELEGIDA, para los dos campos que eligen de a varias.
  *
- * Con una pastilla por turno —nombre, área, horario y su cruz— quince turnos ocupaban media
- * pantalla y había que scrollear el formulario entero para pasarlos. Agrupados por área son cinco
- * renglones, y el horario se deja afuera: acá lo que hace falta saber es QUÉ quedó elegido; el
- * horario de cada turno está en la hoja, al lado de su casilla.
+ * Rol/es empresa y Área y turno se habían ido cada uno para su lado: uno con pastillas y sus
+ * botones, el otro con tarjetas de borde gris, íconos sueltos a la derecha y un rojo que competía
+ * con el botón de crear. Dos formas para lo mismo, en la misma pantalla, una debajo de la otra.
  *
- * DOS BOTONES POR ÁREA: el lápiz abre SUS turnos —donde se tilda y se destilda de a uno— y el tacho
- * saca el área entera. Sacar un área de cinco turnos destildando cinco casillas de a una es el
- * trabajo que el tacho ahorra; una cruz por pastilla, en cambio, ocupaba el doble de alto y dejaba
- * la misma decisión en dos lugares distintos.
+ * Ahora las dos son DOS PASTILLAS: a la izquierda la acción —la cantidad o los turnos—, a la
+ * derecha el nombre con su cruz. Lo único distinto es el color, y eso sí a propósito: separa de un
+ * vistazo los oficios de las áreas sin pedirle a nadie que aprenda dos formas.
  */
+const TONOS = {
+  azul: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
+  verde: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200",
+};
+const HOVER = { azul: "hover:bg-blue-200 dark:hover:bg-blue-800/60", verde: "hover:bg-emerald-200 dark:hover:bg-emerald-800/60" };
+const pastillaDe = (tono: keyof typeof TONOS) => `inline-flex items-center rounded-full border text-xs font-semibold ${TONOS[tono]}`;
+const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-center justify-center rounded-full ${HOVER[tono]}`;
+
+/**
+ * UN ÁREA ELEGIDA: el lápiz a la izquierda, el área con sus turnos y la cruz a la derecha.
+ *
+ * Misma forma que un rol; en el lugar del «− 1 +» va el lápiz, porque lo que se ajusta acá no es una
+ * cantidad sino cuáles turnos. Abre los turnos de ESA área, sin pasar por la lista: ya se sabe cuál.
+ *
+ * La cruz saca el área entera. Destildar cinco casillas de a una para sacar un área de cinco turnos
+ * era el trabajo que hacía falta ahorrar.
+ */
+function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: string; turnos: string[]; onEditar: () => void; onQuitar: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`${pastillaDe("verde")} px-0.5`}>
+        <button type="button" onClick={onEditar} aria-label={`Editar los turnos de ${nombre}`} className={redondoDe("verde")}>
+          <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
+        </button>
+      </span>
+      <span className={`${pastillaDe("verde")} py-0.5 pl-3 pr-0.5`}>
+        <span className="min-w-0">
+          <span className="block truncate uppercase tracking-wide">{nombre}</span>
+          <span className="block truncate text-[10px] font-normal opacity-80">{turnos.join(" · ")}</span>
+        </span>
+        <button type="button" onClick={onQuitar} aria-label={`Sacar ${nombre} del equipo`} className={`ml-1 ${redondoDe("verde")}`}>
+          <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+        </button>
+      </span>
+    </span>
+  );
+}
+
+/** Lo elegido en Área y turno, agrupado por área: un badge por área, con sus turnos adentro. */
 function ResumenTurnos({ elegidos, onEditar, onQuitarArea }: { elegidos: OpcionAreaTurno[]; onEditar: (areaId: string) => void; onQuitarArea: (areaId: string) => void }) {
   const porArea: { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }[] = [];
   for (const o of elegidos) {
@@ -870,27 +907,9 @@ function ResumenTurnos({ elegidos, onEditar, onQuitarArea }: { elegidos: OpcionA
     else porArea.push({ areaId: o.areaId, nombre: o.areaNombre, turnos: [o] });
   }
   return (
-    <div className="space-y-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {porArea.map((a) => (
-        <div key={a.areaId} className="flex items-start gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{a.nombre}</p>
-            <div className="mt-1 flex flex-wrap gap-1">
-            {a.turnos.map((t) => (
-              <span key={t.shiftId} className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
-                {t.turnoNombre}
-              </span>
-              ))}
-            </div>
-          </div>
-          {/* El lápiz abre los turnos de ESTA área, sin pasar por la lista de áreas: ya se sabe cuál es. */}
-          <button type="button" onClick={() => onEditar(a.areaId)} aria-label={`Editar los turnos de ${a.nombre}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-            <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
-          </button>
-          <button type="button" onClick={() => onQuitarArea(a.areaId)} aria-label={`Sacar ${a.nombre} del equipo`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
-            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <BadgeArea key={a.areaId} nombre={a.nombre} turnos={a.turnos.map((t) => t.turnoNombre)} onEditar={() => onEditar(a.areaId)} onQuitar={() => onQuitarArea(a.areaId)} />
       ))}
     </div>
   );
@@ -910,8 +929,8 @@ function ResumenTurnos({ elegidos, onEditar, onQuitarArea }: { elegidos: OpcionA
  */
 function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; cantidad: number; onCantidad: (n: number) => void }) {
   // Las dos pastillas viajan juntas: `inline-flex` acá adentro evita que una quede sola al final de un renglón.
-  const pastilla = "inline-flex items-center rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200";
-  const redondo = "flex h-8 w-8 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60";
+  const pastilla = pastillaDe("azul");
+  const redondo = redondoDe("azul");
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className={`${pastilla} px-0.5`}>
