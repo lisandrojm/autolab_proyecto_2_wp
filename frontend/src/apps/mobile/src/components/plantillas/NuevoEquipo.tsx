@@ -17,6 +17,9 @@ import CampoConvenio from "./CampoConvenio";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 import { CLASE_CAMPO, CLASE_HORA, DIAS } from "./comun";
 import { BotonInfo } from "../ModalInfo";
+import { EstadoBadge } from "../../../../../components/EstadoSelect";
+import { InfoItem } from "../../../../../api/info";
+import { TipoImpositivo, estadoImpositivoPorTipo } from "../../../../../utils/tramiteImpositivo";
 
 /*
   NUEVO EQUIPO, EN UNA SOLA PANTALLA Y EN EL ORDEN DE LA SOLICITUD INDIVIDUAL.
@@ -66,6 +69,22 @@ function Rotulo({ icono, children, obligatorio }: { icono: any; children: React.
       {obligatorio && <span className="text-red-500">*</span>}
     </label>
   );
+}
+
+/**
+ * A QUÉ TRÁMITE VA ESE TIPO DE CONTRATO: ARCA o Servicios.
+ *
+ * El estado sale del ABM (`estadoImpositivoPorTipo`) y se dibuja con `EstadoBadge`, el mismo
+ * componente que usa desk, así que el color es idéntico en las dos pantallas. Sólo se acorta el
+ * texto: «PEDIDO DE ARCA» repetido en catorce renglones no entra en un teléfono.
+ *
+ * Sin estado configurado no se dibuja nada. Inventar un badge gris sería afirmar que el trámite es
+ * uno de los dos cuando lo que pasa es que todavía nadie lo configuró.
+ */
+function BadgeTramite({ estados, tramite }: { estados: InfoItem[]; tramite: TipoImpositivo | null | undefined }) {
+  const estado = estadoImpositivoPorTipo(estados, tramite || "");
+  if (!estado) return null;
+  return <EstadoBadge name={estado.name} etiqueta={tramite === "constancia_cuit" ? "Servicios" : "ARCA"} className="shrink-0" />;
 }
 
 export default function NuevoEquipo() {
@@ -690,7 +709,14 @@ export default function NuevoEquipo() {
           {catalogos.contratos.map((c) => (
             <button key={c._id} type="button" onClick={() => { cambiar({ contratoId: c._id }); setHoja(null); }} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left ${c._id === b.contratoId ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30" : "border-slate-200 dark:border-slate-700"}`}>
               <span className="text-sm font-semibold text-slate-900 dark:text-white">{c.name}</span>
-              <span className="shrink-0 text-[11px] font-bold uppercase text-slate-600 dark:text-slate-300">{catalogos.tramitePorContrato.get(c._id) === "constancia_cuit" ? "Servicios" : "ARCA"}</span>
+              {/*
+                EL MISMO BADGE QUE EN DESK, con el texto corto.
+
+                El color es lo que distingue un contrato que va a ARCA de uno de servicios, y sale del
+                ABM igual que allá: en gris, el renglón no dice nada y hay que acordarse cuál es cuál.
+                El texto sí se acorta —«PEDIDO DE ARCA» al lado de cada nombre no entra en un teléfono—.
+              */}
+              <BadgeTramite estados={catalogos.estados} tramite={catalogos.tramitePorContrato.get(c._id)} />
             </button>
           ))}
         </div>

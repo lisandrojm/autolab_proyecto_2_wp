@@ -221,6 +221,8 @@ export function useCatalogosContratacion(activo = true) {
     contratos,
     motivos,
     tramitePorContrato,
+    /** Los estados del ABM: de ahí salen el color y el nombre del badge del trámite. */
+    estados,
     empresasDelProyecto,
     conveniosDisponibles,
     convenioUnico,

@@ -132,7 +132,18 @@ export const colorTextoBadge = (hex: string, isDark: boolean): string => {
  * Badge de estado del contrato. Si el estado está configurado en el ABM (Configuración → Estados)
  * usa su color y su nombre dentro del contrato; si no, cae en los estilos por defecto.
  */
-export const EstadoBadge: React.FC<{ name: string; className?: string; children?: React.ReactNode }> = ({ name, className = "", children }) => {
+/**
+ * `etiqueta`: el mismo badge con OTRO TEXTO.
+ *
+ * En el móvil la lista de tipos de contrato no entra con «PEDIDO DE ARCA» al lado de cada nombre —
+ * catorce renglones de cuatro palabras—, pero el color tiene que ser el mismo que en desk: es el que
+ * distingue un contrato que va a ARCA de uno de servicios, y aprenderlo dos veces con dos colores
+ * distintos es peor que no tenerlo.
+ *
+ * Así que el texto se acorta y TODO LO DEMÁS sigue saliendo del ABM: el color, el ícono de estado
+ * impositivo y la existencia del estado. No es un badge nuevo, es este con menos letras.
+ */
+export const EstadoBadge: React.FC<{ name: string; etiqueta?: string; className?: string; children?: React.ReactNode }> = ({ name, etiqueta, className = "", children }) => {
   const estados = useEstadoCatalogStore((s) => s.estados);
   const ensureLoaded = useEstadoCatalogStore((s) => s.ensureLoaded);
   const theme = useThemeStore((s) => s.theme);
@@ -156,7 +167,7 @@ export const EstadoBadge: React.FC<{ name: string; className?: string; children?
     El ABM sigue mandando en el COLOR y en la existencia del estado; lo único que se le pisa es el
     texto viejo, que es un renombre del organismo y no una decisión de quien configuró el ABM.
   */
-  const texto = labelFor(configurado?.name || name);
+  const texto = etiqueta || labelFor(configurado?.name || name);
   const esImpositivo = !!configurado?.data?.esImpositivo;
 
   const clases = `inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap ${className}`;
