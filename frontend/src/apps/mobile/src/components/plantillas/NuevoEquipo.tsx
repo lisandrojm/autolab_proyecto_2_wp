@@ -720,13 +720,35 @@ export default function NuevoEquipo() {
         </div>
       </HojaModal>
       {/*
-        ÁREA Y TURNO: DOS HOJAS, UNA SOBRE OTRA.
+        ÁREA Y TURNO: DOS HOJAS, UNA SOBRE OTRA, Y NINGUNA SE CIERRA SOLA.
 
-        La de abajo lista las áreas; tocar una abre sus turnos encima; tildar un turno cierra la de
-        arriba y deja la de abajo, lista para el siguiente. La página nunca se mueve, y lo elegido se
-        ve en los badges cuando las dos se cierran.
+        La de abajo lista las áreas; tocar una abre sus turnos encima. Adentro se tildan los que haga
+        falta y se sale con «Listo» — como en Rol/es empresa.
+
+        Antes tildar un turno cerraba la hoja: la idea era no mover la pantalla, pero elegir cuatro
+        turnos de un área era abrir y cerrar cuatro veces. Cerrar es una decisión de quien elige, no
+        una consecuencia de tildar.
       */}
-      <HojaModal abierta={hoja === "turno"} onCerrar={() => { setHoja(null); setAreaEnHoja(null); }} titulo="Área y turno" subtitulo={elegidos.length === 0 ? "Elegí el área y el turno…" : `${elegidos.length} elegido${elegidos.length === 1 ? "" : "s"} · el primero es el principal`}>
+      <HojaModal
+        abierta={hoja === "turno"}
+        onCerrar={() => {
+          setHoja(null);
+          setAreaEnHoja(null);
+        }}
+        titulo="Área y turno"
+        subtitulo={elegidos.length === 0 ? "Elegí el área y el turno…" : `${elegidos.length} elegido${elegidos.length === 1 ? "" : "s"} · el primero es el principal`}
+        pie={
+          <div className="flex items-center justify-between gap-3">
+            {/* «Limpiar» borra TODO lo elegido, que es lo que muestra esta hoja. El de la hoja de turnos, sólo lo de su área. */}
+            <button type="button" onClick={() => b.turnos.forEach((v) => { const o = opcion(v); if (o) elegirTurno(o); })} disabled={elegidos.length === 0} className="min-h-[44px] px-2 text-sm font-bold text-red-600 disabled:opacity-40 dark:text-red-400">
+              Limpiar
+            </button>
+            <button type="button" onClick={() => { setHoja(null); setAreaEnHoja(null); }} className="min-h-[44px] rounded-xl bg-blue-600 px-8 text-sm font-bold text-white">
+              Listo
+            </button>
+          </div>
+        }
+      >
         <div className="space-y-2">
           {areasAgrupadas.map((area) => {
             const enArea = elegidos.filter((o) => o.areaId === area.areaId);
@@ -751,7 +773,22 @@ export default function NuevoEquipo() {
         abierta={!!areaEnHoja}
         onCerrar={() => setAreaEnHoja(null)}
         titulo={areasAgrupadas.find((a) => a.areaId === areaEnHoja)?.nombre || "Turnos"}
-        subtitulo="Tocá el turno que va a cubrir el equipo"
+        subtitulo="Tildá los turnos que va a cubrir el equipo"
+        pie={
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => (areasAgrupadas.find((a) => a.areaId === areaEnHoja)?.turnos || []).forEach((t) => b.turnos.includes(`${t.areaId}::${t.shiftId}`) && elegirTurno(t))}
+              disabled={!elegidos.some((o) => o.areaId === areaEnHoja)}
+              className="min-h-[44px] px-2 text-sm font-bold text-red-600 disabled:opacity-40 dark:text-red-400"
+            >
+              Limpiar
+            </button>
+            <button type="button" onClick={() => setAreaEnHoja(null)} className="min-h-[44px] rounded-xl bg-blue-600 px-8 text-sm font-bold text-white">
+              Listo
+            </button>
+          </div>
+        }
       >
         <div className="space-y-2">
           {(areasAgrupadas.find((a) => a.areaId === areaEnHoja)?.turnos || []).map((t) => {
@@ -762,8 +799,8 @@ export default function NuevoEquipo() {
               <button
                 key={t.shiftId}
                 type="button"
-                // Elegir CIERRA: esta hoja ya cumplió, y lo que sigue —otro turno de otra área— está en la de abajo.
-                onClick={() => { elegirTurno(t); setAreaEnHoja(null); }}
+                // Tildar NO cierra: se eligen todos los que hagan falta y se sale con «Listo».
+                onClick={() => elegirTurno(t)}
                 aria-pressed={elegido}
                 className={`flex min-h-[56px] w-full items-center gap-2 rounded-xl border px-3 text-left ${elegido ? "border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-900/20 dark:text-blue-200" : "border-slate-200 text-slate-800 dark:border-slate-700 dark:text-slate-100"}`}
               >
