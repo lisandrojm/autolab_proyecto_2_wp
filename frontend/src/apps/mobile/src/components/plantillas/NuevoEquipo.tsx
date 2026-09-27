@@ -455,7 +455,7 @@ export default function NuevoEquipo() {
               Sin roles no se pega: no hay nada que titular y un rótulo flotando sobre el vacío es un
               elemento de más.
             */}
-            <div className={`flex items-center gap-1 ${b.roles.length ? "sticky z-20 -mx-4 bg-slate-50 px-4 py-2 dark:bg-slate-900" : ""}`} style={b.roles.length ? { top: ALTO_ENCABEZADO } : undefined}>
+            <div className={`flex items-center gap-1 ${b.roles.length ? "sticky z-20 -mx-4 border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900" : ""}`} style={b.roles.length ? { top: ALTO_ENCABEZADO } : undefined}>
               <Rotulo icono={faBriefcase} obligatorio>
                 Rol/es empresa
               </Rotulo>
@@ -479,7 +479,7 @@ export default function NuevoEquipo() {
                   type="button"
                   onClick={() => setHoja("roles")}
                   aria-label="Elegí uno o más roles"
-                  className={`ml-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white ${error("campo-roles") ? "ring-2 ring-red-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900" : ""}`}
+                  className={`ml-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white ${error("campo-roles") ? "ring-2 ring-red-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900" : ""}`}
                 >
                   <FontAwesomeIcon icon={faPlus} />
                 </button>
