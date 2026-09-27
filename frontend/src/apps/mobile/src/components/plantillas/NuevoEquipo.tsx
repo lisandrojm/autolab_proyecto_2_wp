@@ -8,7 +8,7 @@ import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/C
 import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { usePlantillas } from "./contexto";
-import { Pantalla } from "./Pantalla";
+import { ALTO_ENCABEZADO, Pantalla } from "./Pantalla";
 import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
 import { cambiosDeContrato, cambiosDeTurno, porDiasSueltos } from "./Condiciones";
@@ -445,7 +445,17 @@ export default function NuevoEquipo() {
               cartel fijo: un texto de cuatro renglones arriba del campo empuja hacia abajo justo lo
               que hay que completar, y se lee una sola vez en la vida.
             */}
-            <div className="flex items-center gap-1">
+            {/*
+              EL RÓTULO SE PEGA DEBAJO DEL ENCABEZADO cuando ya hay roles.
+
+              La lista de badges es larga —catorce oficios son catorce pastillas— y al scrollear se
+              perdía de vista de qué eran: quedaban pastillas azules sueltas arriba del tipo de
+              contrato. Con el rótulo pegado, todo lo que se ve abajo tiene su título encima.
+
+              Sin roles no se pega: no hay nada que titular y un rótulo flotando sobre el vacío es un
+              elemento de más.
+            */}
+            <div className={`flex items-center gap-1 ${b.roles.length ? "sticky z-20 -mx-4 bg-slate-50 px-4 py-2 dark:bg-slate-900" : ""}`} style={b.roles.length ? { top: ALTO_ENCABEZADO } : undefined}>
               <Rotulo icono={faBriefcase} obligatorio>
                 Rol/es empresa
               </Rotulo>
@@ -456,6 +466,24 @@ export default function NuevoEquipo() {
                   "Un grupo de puestos es una plantilla: poné TODOS los roles que hacen falta para armar este grupo, con cuántas personas de cada uno.\n\nLo que cargues acá es lo que se va a pedir cada vez que se use el grupo, así que conviene que esté completo: un rol que falte hay que agregarlo a mano en cada equipo.\n\nCon el + elegís roles y con los botones de cada uno cambiás la cantidad."
                 }
               />
+              {/*
+                EL «+» ABRE EL MODAL, y vive al lado del rótulo.
+
+                Antes el disparador era una caja del ancho de la pantalla que decía «Elegí uno o más
+                roles…» y desaparecía en cuanto había uno: el control para agregar el segundo estaba
+                en otro lugar que el del primero. Ahora es siempre el mismo botón, esté vacío o con
+                catorce, y la frase pasó adentro del modal, que es donde se elige.
+              */}
+              {esNuevo && (
+                <button
+                  type="button"
+                  onClick={() => setHoja("roles")}
+                  aria-label="Elegí uno o más roles"
+                  className={`ml-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white ${error("campo-roles") ? "ring-2 ring-red-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900" : ""}`}
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </button>
+              )}
             </div>
             {esNuevo ? (
               b.roles.length ? (
@@ -463,16 +491,8 @@ export default function NuevoEquipo() {
                   {b.roles.map((r) => (
                     <BadgeRol key={r.rolId} nombre={nombreRol(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => cambiar({ roles: n > 0 ? b.roles.map((x) => (x.rolId === r.rolId ? { ...x, cantidad: n } : x)) : b.roles.filter((x) => x.rolId !== r.rolId), personas: {} })} />
                   ))}
-                  <button type="button" onClick={() => setHoja("roles")} aria-label="Agregar roles" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
-                    <FontAwesomeIcon icon={faPlus} />
-                  </button>
                 </div>
-              ) : (
-                <button type="button" onClick={() => setHoja("roles")} className={`flex h-12 w-full items-center gap-2 rounded-xl border bg-slate-50 px-4 text-left dark:bg-slate-900 ${error("campo-roles") ? "border-red-500" : "border-slate-300 dark:border-slate-600"}`}>
-                  <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-500" />
-                  <span className="truncate text-slate-600 dark:text-slate-300">Elegí uno o más roles…</span>
-                </button>
-              )
+              ) : null
             ) : grupo ? (
               <p className="text-sm text-slate-800 dark:text-slate-100">{resumenRoles(puestos.map((x) => x.rolId), nombreRol) || "Sin puestos"}</p>
             ) : (
@@ -890,7 +910,8 @@ function HojaRoles({ abierta, onCerrar, roles, roleFrames, onCambio }: { abierta
       abierta={abierta}
       onCerrar={onCerrar}
       titulo="Rol/es empresa"
-      subtitulo={`${total} ${total === 1 ? "puesto" : "puestos"} · el oficio de cada puesto`}
+      // Con ninguno, la instrucción; con alguno, el recuento. Lo que hace falta saber cambia según en cuál de los dos estás.
+      subtitulo={total === 0 ? "Elegí uno o más roles…" : `${total} ${total === 1 ? "puesto" : "puestos"} · el oficio de cada puesto`}
       pie={
         <div className="flex items-center justify-between gap-3">
           <button type="button" onClick={() => onCambio([])} disabled={roles.length === 0} className="min-h-[44px] px-2 text-sm font-bold text-red-600 disabled:opacity-40 dark:text-red-400">

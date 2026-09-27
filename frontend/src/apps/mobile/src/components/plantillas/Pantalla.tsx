@@ -46,6 +46,18 @@ interface Props {
 
 const claveScroll = (path: string) => `plantillas:scroll:${path}`;
 
+/**
+ * CUÁNTO MIDE EL ENCABEZADO de la pantalla (título + contexto), en píxeles.
+ *
+ * Lo necesita cualquier cosa que quiera quedar pegada JUSTO DEBAJO —el rótulo de una sección larga,
+ * por ejemplo—: sin saberlo, se pega al borde de la ventana y el encabezado se le monta encima.
+ *
+ * Vive acá porque acá está el encabezado: el día que cambie su padding, cambia este número al lado y
+ * no hay que salir a buscar quién más lo daba por sentado. Son los 44px del botón «Atrás» más los
+ * 8+8 del `py-2` y el borde de abajo.
+ */
+export const ALTO_ENCABEZADO = 61;
+
 export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
