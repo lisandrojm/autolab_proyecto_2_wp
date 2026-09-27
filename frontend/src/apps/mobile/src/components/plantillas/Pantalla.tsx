@@ -43,6 +43,16 @@ interface Props {
   /** Atrás va siempre a `atras` (ej. después de enviar, no se vuelve a la revisión). */
   atrasFijo?: boolean;
   /**
+   * VOLVER AL PASO ANTERIOR, pegado al botón que avanza.
+   *
+   * La flecha de arriba es la de la pantalla y en un teléfono queda lejos del pulgar. Retroceder un
+   * paso es el gemelo de avanzarlo, así que va donde está el que avanza: las dos direcciones del
+   * mismo movimiento, juntas y al alcance de la mano.
+   *
+   * Sólo el ícono: el texto es del botón que avanza, que es lo que casi siempre se quiere.
+   */
+  atrasPaso?: () => void;
+  /**
    * LO QUE SE VA NOMBRANDO, en el encabezado.
    *
    * Un formulario largo se scrollea, y a la cuarta pantalla ya no se ve cómo se llamó el grupo ni el
@@ -77,7 +87,7 @@ const claveScroll = (path: string) => `plantillas:scroll:${path}`;
  */
 export const TOPE_PEGADO = "var(--alto-encabezado, 61px)";
 
-export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo, chips }: Props) {
+export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo, chips, atrasPaso }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const { estado } = usePlantillas();
@@ -157,11 +167,11 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
           <EstadoGuardado estado={estado} />
         </div>
         {(chips || []).some((c) => c.valor) && (
-          <div className="flex flex-wrap gap-1.5 px-1 pb-0.5 pt-1.5">
+          <div className="flex flex-wrap gap-2 px-1 pb-0.5 pt-1.5">
             {(chips || [])
               .filter((c) => c.valor)
               .map((c) => (
-                <span key={c.etiqueta} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                <span key={c.etiqueta} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
                   {/* La etiqueta, más apagada: lo que se lee es el nombre; ella sólo dice de qué es. */}
                   <span className="shrink-0 font-normal opacity-70">{c.etiqueta}</span>
                   <span className="shrink-0 opacity-40" aria-hidden>
@@ -179,15 +189,22 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
       {pie && !boton && <footer className="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">{pie}</footer>}
       {boton && (
         <footer className="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
-          <button
-            type="button"
-            onClick={boton.onClick}
-            disabled={boton.deshabilitado || boton.cargando}
-            className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-white disabled:opacity-40 ${boton.tono === "verde" ? "bg-emerald-600" : "bg-blue-600"}`}
-          >
-            {boton.cargando && <FontAwesomeIcon icon={faSpinner} spin />}
-            {boton.texto}
-          </button>
+          <div className="flex items-center gap-2">
+            {atrasPaso && (
+              <button type="button" onClick={atrasPaso} aria-label="Volver al paso anterior" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200">
+                <FontAwesomeIcon icon={faArrowLeft} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={boton.onClick}
+              disabled={boton.deshabilitado || boton.cargando}
+              className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white disabled:opacity-40 ${boton.tono === "verde" ? "bg-emerald-600" : "bg-blue-600"}`}
+            >
+              {boton.cargando && <FontAwesomeIcon icon={faSpinner} spin />}
+              {boton.texto}
+            </button>
+          </div>
           {boton.deshabilitado && boton.motivo && (
             <button type="button" onClick={boton.onMotivo} disabled={!boton.onMotivo} className="mt-2 flex min-h-[32px] w-full items-center justify-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
               <FontAwesomeIcon icon={faCircleExclamation} />

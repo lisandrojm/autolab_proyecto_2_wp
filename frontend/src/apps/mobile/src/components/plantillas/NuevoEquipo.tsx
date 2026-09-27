@@ -8,6 +8,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { usePlantillas } from "./contexto";
 import { Pantalla, TOPE_PEGADO } from "./Pantalla";
+import { Pasos, PASOS_EQUIPO } from "./Pasos";
 import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
 import { cambiosDeTurno } from "./Condiciones";
@@ -15,18 +16,34 @@ import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
 import { CLASE_CAMPO } from "./comun";
 import { BotonInfo } from "../ModalInfo";
-import { BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
+import { AIRE, ENTRE, BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
 
 /*
-  NUEVO EQUIPO, EN UNA SOLA PANTALLA Y EN EL ORDEN DE LA SOLICITUD INDIVIDUAL.
+  NUEVO EQUIPO, EN CUATRO PASOS: UNA DECISIÓN POR PANTALLA.
 
-  Se completa de arriba abajo, igual que un alta de a uno: Cliente | Proyecto → Grupo de puestos
-  (uno que ya existe o uno nuevo, con sus roles y cantidades) y Empresa que contrata → Tipo de
-  contrato → Área y turno (completa horario y días) → Horario y días → Nombre → Personas (opcional:
-  se pueden asignar ahora o después). «Crear equipo» crea el grupo si es nuevo, el equipo con sus
-  condiciones y asigna a las personas elegidas.
+  Era una sola pantalla de siete campos que se iban destapando de a uno. En un teléfono eso son
+  cuatro pantallas de scroll: nunca se ve cuánto falta, el botón fijo de abajo tapa el campo que se
+  está completando, y al volver de elegir a alguien hay que buscar dónde se estaba. El formulario ya
+  venía partido por dentro —cada sección esperaba a que la anterior estuviera completa—; lo único
+  que faltaba era decirlo.
 
-  Lo cargado queda en la sesión: ir a buscar a alguien, volver o recargar no pierde nada.
+    1. PROYECTO Y CONVENIO — bajo qué condiciones se contrata. Casi siempre viene contestado solo:
+       el proyecto trae su empresa y la empresa su convenio.
+    2. GRUPO — uno que ya existe o uno nuevo, con sus roles y cuántos de cada uno. Es lo REUSABLE:
+       el grupo sirve en cualquier proyecto.
+    3. ÁREA Y TURNO — dónde y cuándo. Es lo que ata este equipo a ESTE proyecto, y de donde sale el
+       nombre que se le propone.
+    4. PERSONAS — quiénes lo cubren (opcional: se pueden asignar ahora o después).
+
+  Ninguno de los cortes se inventó: el 2, el 3 y el 4 son los que ya hacían los gates `okRoles`,
+  `okTurno` y `okNombre`. El 1 es el único agregado, y es el que más se nota: separa lo que casi
+  siempre ya está de lo único que hay que completar.
+
+  El paso vive en `?paso` y cada avance empuja al historial, así que el atrás del teléfono vuelve un
+  paso —no tira el formulario— y recargar cae donde se estaba. Lo cargado queda en la sesión: ir a
+  buscar a alguien, volver o recargar no pierde nada.
+
+  «Crear equipo» crea el grupo si es nuevo, el equipo con sus condiciones y asigna a las personas.
 */
 
 const CLAVE = "plantillas:nuevo-equipo";
@@ -57,7 +74,7 @@ interface Borrador {
 const vacio = (projectId = "", grupoId = ""): Borrador => ({ projectId, grupoId, nombreGrupo: "", roles: [], empresaContratoId: "", convenioId: "", contratoId: "", turnos: [], turnoPorPuesto: {}, inTime: "", outTime: "", diasSemana: [], nombre: "", copiarDe: "", personas: {} });
 
 export default function NuevoEquipo() {
-  const [query] = useSearchParams();
+  const [query, setQuery] = useSearchParams();
   const navigate = useNavigate();
   const { catalogos, areasDe, cargar } = usePlantillas();
   const [b, setB] = useState<Borrador>(() => {
@@ -212,47 +229,64 @@ export default function NuevoEquipo() {
   };
 
   /*
-    QUÉ FALTA, EN EL ORDEN DEL FORMULARIO.
+    QUÉ FALTA, UNA LISTA POR PASO Y EN EL ORDEN DE LOS CAMPOS.
 
-    Como lista y no como ternarios anidados: eran nueve, con la indentación ya rota en el medio —dos
+    Como listas y no como ternarios anidados: eran nueve, con la indentación ya rota en el medio —dos
     ramas al mismo nivel que sus hermanas—, y agregar o mover un campo exigía contar signos de
     pregunta. Acá el orden se lee de arriba abajo y es el mismo en el que están los campos en la
     pantalla, que es lo que hace que «Elegí el convenio» lleve al de arriba y no al de abajo.
+
+    Una por paso porque el botón de «Siguiente» sólo puede mirar lo de SU paso: con la lista entera
+    quedaría apagado en el 1 por un turno que todavía no se puede elegir.
+
+    `FALTAS` las pone en el orden de los pasos, y de ahí salen las tres respuestas que hacen falta:
+    hasta dónde se puede avanzar, qué le falta al paso en el que se está, y si ya se puede crear.
   */
-  const falta =
-    [
+  const primeroQueFalta = (lista: readonly (readonly [boolean, string, string])[]) => lista.reduce<{ texto: string; id: string } | null>((primera, [cond, texto, id]) => primera || (cond ? { texto, id } : null), null);
+  const FALTAS = [
+    primeroQueFalta([
       [!proyecto, "Elegí el proyecto", "campo-proyecto"],
       [!b.empresaContratoId, "Elegí la empresa que contrata", "campo-empresa"],
       [!convenioId && (!catalogos.categoriasCargadas || !catalogos.conveniosCargados), "Cargando el convenio…", "campo-empresa"],
       [!convenioId && catalogos.conveniosDisponibles(proyecto, b.empresaContratoId, "").length > 0, "Elegí el convenio", "campo-empresa"],
+    ] as const),
+    primeroQueFalta([
       [!b.grupoId, "Elegí un grupo o creá uno nuevo", "campo-grupo"],
       [esNuevo && !b.nombreGrupo.trim(), "Poné el nombre del grupo", "campo-grupo"],
       [puestos.length === 0, "Elegí los roles del grupo", "campo-roles"],
-        [!b.turnos.length && (areas?.length || 0) > 0, "Elegí el área y el turno", "campo-turno"],
+    ] as const),
+    primeroQueFalta([
+      // Mientras cargan no se puede pasar de largo: sin la lista, «no hay turnos» y «todavía no llegaron» se ven igual.
+      [areas === null, "Cargando las áreas y turnos…", "campo-turno"],
+      [!b.turnos.length && (areas?.length || 0) > 0, "Elegí el área y el turno", "campo-turno"],
       [!b.nombre.trim(), "Poné el nombre del equipo", "campo-nombre"],
-    ].reduce<{ texto: string; id: string } | null>((primera, [cond, texto, id]) => primera || (cond ? { texto: texto as string, id: id as string } : null), null);
+    ] as const),
+    // Las personas son opcionales: el último paso nunca frena.
+    null,
+  ];
+  const falta = FALTAS.find((f) => f) || null;
   const irA = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
 
   /*
-    SE VA MOSTRANDO A MEDIDA QUE SE COMPLETA: cada sección aparece recién cuando la anterior está
-    completa, en el orden del alta individual. Así nunca hay un campo que todavía no se puede llenar.
+    EN QUÉ PASO SE ESTÁ.
+
+    Sale de la URL para que el atrás del teléfono vuelva un paso y recargar caiga donde se estaba;
+    pero se recorta contra el PRIMER PASO INCOMPLETO, así que un `?paso=4` escrito a mano —o una
+    sesión vieja reabierta— no puede caer en una pantalla que depende de lo que todavía no se
+    eligió. Para atrás nunca se recorta: volver a revisar siempre se puede.
   */
-  const okProyecto = !!proyecto;
-  const okGrupo = okProyecto && !!b.grupoId && (!esNuevo || !!b.nombreGrupo.trim());
-  const okRoles = okGrupo && puestos.length > 0 && !!b.empresaContratoId && (!falta || !["campo-grupo", "campo-roles", "campo-empresa"].includes(falta.id));
-  const okTurno = okRoles && (b.turnos.length > 0 || (areas?.length ?? 1) === 0);
-  const okNombre = okTurno && !!b.nombre.trim();
-  // Lo que aparece por un toque se trae a la vista: la PRIMERA sección nueva (con el turno aparecen
-  // horario y personas juntas). Lo que aparece escribiendo, no: movería la pantalla mientras se tipea.
-  const secciones = [okRoles && "campo-turno", okTurno && "campo-nombre", okNombre && "campo-personas"].filter(Boolean) as string[];
-  const [vistas, setVistas] = useState<string[] | null>(null);
-  useEffect(() => {
-    if (vistas === null) return setVistas(secciones);
-    const nueva = secciones.find((x) => !vistas.includes(x));
-    if (nueva) setTimeout(() => document.getElementById(nueva)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
-    if (secciones.join() !== vistas.join()) setVistas(secciones);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secciones.join()]);
+  const incompleto = FALTAS.findIndex((f) => f);
+  const tope = incompleto === -1 ? PASOS_EQUIPO.length : incompleto + 1;
+  const paso = Math.min(Math.max(1, Number(query.get("paso")) || 1), tope);
+  const faltaDelPaso = FALTAS[paso - 1];
+  const irAlPaso = (n: number) => {
+    const q = new URLSearchParams(query);
+    q.set("paso", String(n));
+    // Empuja al historial —no reemplaza— para que el atrás del teléfono vuelva un paso.
+    setQuery(q);
+    setIntento(false);
+    window.scrollTo(0, 0);
+  };
 
   const crear = async () => {
     setIntento(true);
@@ -326,7 +360,7 @@ export default function NuevoEquipo() {
     }
   };
 
-  const error = (id: string) => intento && falta?.id === id;
+  const error = (id: string) => intento && faltaDelPaso?.id === id;
   const asignadas = Object.keys(b.personas).length;
 
   return (
@@ -348,9 +382,19 @@ export default function NuevoEquipo() {
 
         El botón apagado sigue diciendo que falta algo; qué falta lo dicen los asteriscos.
       */
-      boton={{ texto: esNuevo ? "Crear grupo y equipo" : "Crear equipo", onClick: () => void crear(), deshabilitado: !!falta, cargando: creando }}
+      /* Desde el 2 se puede volver un paso. En el 1 sobra: la flecha de arriba sale del formulario. */
+      atrasPaso={paso > 1 ? () => irAlPaso(paso - 1) : undefined}
+      boton={
+        paso < PASOS_EQUIPO.length
+          ? { texto: "Siguiente", onClick: () => irAlPaso(paso + 1), deshabilitado: !!faltaDelPaso }
+          : { texto: esNuevo ? "Crear grupo y equipo" : "Crear equipo", onClick: () => void crear(), deshabilitado: !!falta, cargando: creando }
+      }
     >
       <div className="space-y-6">
+        <Pasos actual={paso} pasos={PASOS_EQUIPO} />
+
+        {paso === 1 && (
+          <>
         {/* CLIENTE | PROYECTO */}
         <div id="campo-proyecto" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faBriefcase} obligatorio>
@@ -416,8 +460,10 @@ export default function NuevoEquipo() {
             )}
           </div>
         </div>
+          </>
+        )}
 
-        {okProyecto && (
+        {paso === 2 && (
           <>
         {/* GRUPO DE PUESTOS: sin grupos todavía, directamente su nombre; con grupos, uno de ellos o «Nuevo grupo». */}
         <div id="campo-grupo" className="space-y-2 scroll-mt-24">
@@ -451,10 +497,8 @@ export default function NuevoEquipo() {
               aria-label="Nombre del grupo"
             />
           )}
-          {error("campo-grupo") && <p className="text-xs font-medium text-red-600 dark:text-red-400">{falta?.texto}.</p>}
+          {error("campo-grupo") && <p className="text-xs font-medium text-red-600 dark:text-red-400">{faltaDelPaso?.texto}.</p>}
         </div>
-          </>
-        )}
 
         {/*
           ESTA SECCIÓN SE VE DESDE EL PRINCIPIO, no cuando el grupo ya tiene nombre.
@@ -529,7 +573,7 @@ export default function NuevoEquipo() {
                   acomodaban solas un segundo después. Eso se lee como un error, no como una espera.
                 */
                 !catalogos.rolesCargados ? (
-                  <div className="flex flex-wrap items-center gap-1.5" aria-busy="true" aria-label="Cargando los roles">
+                  <div className={`flex flex-wrap items-center ${ENTRE}`} aria-busy="true" aria-label="Cargando los roles">
                     {b.roles.map((r) => (
                       <span key={r.rolId} className="inline-flex items-center gap-1.5">
                         <span className="h-9 w-[4.5rem] animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
@@ -538,7 +582,7 @@ export default function NuevoEquipo() {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className={`flex flex-wrap items-center ${ENTRE}`}>
                     {b.roles.map((r) => (
                       <BadgeRol key={r.rolId} nombre={nombreRol(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => cambiar({ roles: n > 0 ? b.roles.map((x) => (x.rolId === r.rolId ? { ...x, cantidad: n } : x)) : b.roles.filter((x) => x.rolId !== r.rolId), personas: {} })} />
                     ))}
@@ -552,8 +596,10 @@ export default function NuevoEquipo() {
             )}
           </div>
         </div>
+          </>
+        )}
 
-        {okRoles && (
+        {paso === 3 && (
           <>
         {/* ÁREA Y TURNO */}
         <div id="campo-turno" className="space-y-2 scroll-mt-24">
@@ -595,12 +641,8 @@ export default function NuevoEquipo() {
             <ResumenTurnos elegidos={elegidos} onEditar={(areaId) => setAreaEnHoja(areaId)} onQuitarArea={(areaId) => elegidos.filter((o) => o.areaId === areaId).forEach(elegirTurno)} />
           ) : null}
         </div>
-          </>
-        )}
 
-        {okTurno && (
-          <>
-        {/* NOMBRE DEL EQUIPO */}
+        {/* EL NOMBRE DEL EQUIPO, DEBAJO DEL TURNO QUE LO PROPONE: ahí se entiende de dónde salió. */}
         <div id="campo-nombre" className="space-y-2 scroll-mt-24">
           <Rotulo icono={faUsers} obligatorio>
             Nombre del equipo
@@ -610,7 +652,7 @@ export default function NuevoEquipo() {
           </>
         )}
 
-        {okNombre && (
+        {paso === 4 && (
           <>
         {/* PERSONAS (opcional) */}
         {puestos.length > 0 && (
@@ -653,7 +695,7 @@ export default function NuevoEquipo() {
                           Sin persona no se escribe nada: el «+» de al lado ya es la respuesta.
                         */}
                         {!b.copiarDe && persona && (
-                          <span className={`mt-0.5 max-w-full ${pastillaDe("verde")} px-2.5 py-0.5`}>
+                          <span className={`mt-0.5 max-w-full ${pastillaDe("verde")} ${AIRE}`}>
                             <span className="truncate">{persona.nombre}</span>
                           </span>
                         )}
@@ -677,7 +719,7 @@ export default function NuevoEquipo() {
                             Sigue abriendo la hoja en los dos casos: cambia el aspecto, no lo que hace.
                           */
                           (persona ? (
-                            <button type="button" onClick={() => setPuestosEnHoja(new Set([x.n]))} aria-label={`Cambiar el área y turno del puesto ${x.n}`} className={`mt-1 max-w-full ${pastillaDe("azul")} px-2.5 py-0.5`}>
+                            <button type="button" onClick={() => setPuestosEnHoja(new Set([x.n]))} aria-label={`Cambiar el área y turno del puesto ${x.n}`} className={`mt-1 max-w-full ${pastillaDe("azul")} ${AIRE}`}>
                               <span className="truncate">{textoTurno(b.turnoPorPuesto[x.n] || b.turnos[0])}</span>
                             </button>
                           ) : (

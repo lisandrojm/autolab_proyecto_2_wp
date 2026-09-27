@@ -94,6 +94,29 @@ const HOVER = {
 export const pastillaDe = (tono: keyof typeof TONOS) => `inline-flex items-center rounded-full border text-xs font-semibold ${TONOS[tono]}`;
 export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-center justify-center rounded-full ${HOVER[tono]}`;
 
+/*
+  EL AIRE DE LAS PASTILLAS, EN UN SOLO LUGAR.
+
+  Estaban apretadas —el texto casi tocando el borde, y cinco renglones pegados uno al otro— porque se
+  dibujaban en una pantalla que no daba abasto: cada milímetro ahorrado era una sección más que
+  entraba. Partido el alta en pasos, el problema se dio vuelta: sobra media pantalla y lo que falta
+  es que cinco áreas no se lean como un bloque.
+
+  Tres medidas y no una, porque no todas las pastillas tienen la misma forma:
+
+    · AIRE          las que son sólo texto (una persona, un área de un puesto, un chip del encabezado).
+    · AIRE_CON_CRUZ las que terminan en un botón redondo: menos aire de ese lado, que el botón ya lo trae.
+    · AIRE_CONTROL  las que son SÓLO botones (el «− 1 +», el lápiz): el aire es el marco alrededor.
+
+  `SEPARACION` es lo que va entre una pastilla y la de al lado; `ENTRE` lo que va entre badges, que es
+  más, porque ahí el salto es de una cosa elegida a otra y no de una mitad a su otra mitad.
+*/
+export const AIRE = "px-3 py-1";
+export const AIRE_CON_CRUZ = "py-1.5 pl-4 pr-1";
+export const AIRE_CONTROL = "p-1";
+export const SEPARACION = "gap-2";
+export const ENTRE = "gap-2.5";
+
 /**
  * UN ÁREA ELEGIDA: el lápiz a la izquierda, el área con sus turnos y la cruz a la derecha.
  *
@@ -105,13 +128,13 @@ export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-cente
  */
 export function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: string; turnos: string[]; onEditar: () => void; onQuitar: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={`${pastillaDe("neutro")} px-0.5`}>
+    <span className={`inline-flex items-center ${SEPARACION}`}>
+      <span className={`${pastillaDe("neutro")} ${AIRE_CONTROL}`}>
         <button type="button" onClick={onEditar} aria-label={`Editar los turnos de ${nombre}`} className={redondoDe("neutro")}>
           <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
         </button>
       </span>
-      <span className={`${pastillaDe("azul")} py-0.5 pl-3 pr-0.5`}>
+      <span className={`${pastillaDe("azul")} ${AIRE_CON_CRUZ}`}>
         <span className="min-w-0">
           <span className="block truncate uppercase tracking-wide">{nombre}</span>
           <span className="block truncate text-[10px] font-normal opacity-80">{turnos.join(" · ")}</span>
@@ -133,7 +156,7 @@ export function ResumenTurnos({ elegidos, onEditar, onQuitarArea }: { elegidos: 
     else porArea.push({ areaId: o.areaId, nombre: o.areaNombre, turnos: [o] });
   }
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className={`flex flex-wrap items-center ${ENTRE}`}>
       {porArea.map((a) => (
         <BadgeArea key={a.areaId} nombre={a.nombre} turnos={a.turnos.map((t) => t.turnoNombre)} onEditar={() => onEditar(a.areaId)} onQuitar={() => onQuitarArea(a.areaId)} />
       ))}
@@ -161,8 +184,8 @@ export function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; can
   const control = pastillaDe("neutro");
   const redondoControl = redondoDe("neutro");
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={`${control} px-0.5`}>
+    <span className={`inline-flex items-center ${SEPARACION}`}>
+      <span className={`${control} ${AIRE_CONTROL}`}>
         <button
           type="button"
           onClick={() => onCantidad(cantidad - 1)}
@@ -178,7 +201,7 @@ export function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; can
           <FontAwesomeIcon icon={faPlus} className="h-2.5 w-2.5" />
         </button>
       </span>
-      <span className={`${pastilla} py-0.5 pl-3 pr-0.5`}>
+      <span className={`${pastilla} ${AIRE_CON_CRUZ}`}>
         {nombre}
         <button type="button" onClick={() => onCantidad(0)} aria-label={`Quitar ${nombre}`} className={`ml-1 ${redondo}`}>
           <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
@@ -226,7 +249,7 @@ export function HojaRoles({ abierta, onCerrar, roles, roleFrames, onCambio }: { 
       }
     >
       {roles.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
+        <div className={`mb-3 flex flex-wrap ${ENTRE}`}>
           {roles.map((r) => (
             <BadgeRol key={r.rolId} nombre={nombre(r.rolId)} cantidad={r.cantidad} onCantidad={(n) => poner(r.rolId, n)} />
           ))}
