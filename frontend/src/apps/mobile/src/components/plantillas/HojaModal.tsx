@@ -31,16 +31,34 @@ interface Props {
   nivel?: 1 | 2;
 }
 
+/**
+ * CUÁNTAS HOJAS HAY ABIERTAS, para no soltar el scroll antes de tiempo.
+ *
+ * Cada hoja bloqueaba el scroll del body al abrirse y guardaba el valor anterior para devolverlo al
+ * cerrarse. Con DOS apiladas eso se rompe: la de arriba guarda "hidden" —que lo puso la de abajo— y
+ * al cerrarse lo devuelve, así que el body quedaba bloqueado para siempre y la página no scrolleaba
+ * más. Pasaba justo al elegir área y turno, que es la única pantalla con dos hojas.
+ *
+ * Con un contador, el scroll se suelta cuando se cierra la ÚLTIMA, que es cuando corresponde.
+ */
+let hojasAbiertas = 0;
+let overflowOriginal = "";
+
 export function HojaModal({ abierta, titulo, subtitulo, onCerrar, children, pie, nivel = 1 }: Props) {
   useEffect(() => {
     if (!abierta) return;
     const tecla = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
     window.addEventListener("keydown", tecla);
-    const antes = document.body.style.overflow;
+    if (hojasAbiertas === 0) overflowOriginal = document.body.style.overflow;
+    hojasAbiertas += 1;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", tecla);
-      document.body.style.overflow = antes;
+      hojasAbiertas -= 1;
+      if (hojasAbiertas <= 0) {
+        hojasAbiertas = 0;
+        document.body.style.overflow = overflowOriginal;
+      }
     };
   }, [abierta, onCerrar]);
 

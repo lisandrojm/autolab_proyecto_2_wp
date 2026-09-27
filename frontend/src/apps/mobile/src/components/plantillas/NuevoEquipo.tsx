@@ -581,11 +581,7 @@ export default function NuevoEquipo() {
           ) : areas.length === 0 ? (
             <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">El proyecto no tiene áreas y turnos configurados.</p>
           ) : elegidos.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {elegidos.map((o, i) => (
-                <BadgeTurno key={`${o.areaId}::${o.shiftId}`} opcion={o} principal={i === 0 && elegidos.length > 1} onQuitar={() => elegirTurno(o)} />
-              ))}
-            </div>
+            <ResumenTurnos elegidos={elegidos} />
           ) : null}
         </div>
           </>
@@ -858,28 +854,41 @@ function resumenRoles(ids: string[], nombre: (id: string) => string) {
 
 /** Un rol elegido: su nombre, cuántos (− y +) y ✕ para sacarlo. */
 /**
- * UN TURNO ELEGIDO, en la página: área, turno y su horario, con la X para sacarlo.
+ * LO ELEGIDO EN ÁREA Y TURNO, AGRUPADO POR ÁREA Y SÓLO PARA MIRAR.
  *
- * El horario va adentro del badge y no sólo en la hoja: es lo que distingue «Mañana» de «Tarde»
- * cuando dos áreas tienen turnos con el mismo nombre, y sin él habría que abrir la hoja para saber
- * cuál quedó.
+ * Con una pastilla por turno —nombre, área, horario y su cruz— quince turnos ocupaban media
+ * pantalla y había que scrollear el formulario entero para pasarlos. Agrupados por área son cinco
+ * renglones, y el horario se deja afuera: acá lo que hace falta saber es QUÉ quedó elegido; el
+ * horario de cada turno está en la hoja, al lado de su casilla.
+ *
+ * NO LLEVA CRUZ: sacar uno se hace en la hoja, que es donde se eligieron. Dos lugares para lo mismo
+ * obligan a mantener dos, y la cruz es justo lo que hacía que cada pastilla ocupara el doble.
  */
-function BadgeTurno({ opcion, principal, onQuitar }: { opcion: OpcionAreaTurno; principal: boolean; onQuitar: () => void }) {
-  const horario = [opcion.inicio && opcion.fin ? `${opcion.inicio}–${opcion.fin}` : "", opcion.diasTexto].filter(Boolean).join(" · ");
+function ResumenTurnos({ elegidos }: { elegidos: OpcionAreaTurno[] }) {
+  const porArea: { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }[] = [];
+  for (const o of elegidos) {
+    const g = porArea.find((x) => x.areaId === o.areaId);
+    if (g) g.turnos.push(o);
+    else porArea.push({ areaId: o.areaId, nombre: o.areaNombre, turnos: [o] });
+  }
+  // El principal es el PRIMERO de todos, no el primero de su área: es el que le da horario al equipo.
+  const principal = elegidos[0];
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 py-1 pl-3 pr-1 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
-      <span className="min-w-0">
-        <span className="block truncate">
-          {opcion.areaNombre} · {opcion.turnoNombre}
-          {/* El principal manda: su horario y sus días son los del equipo. Sin decirlo, el orden de los badges no significa nada. */}
-          {principal && <span className="ml-1.5 rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
-        </span>
-        {horario && <span className="block text-[10px] font-normal opacity-80">{horario}</span>}
-      </span>
-      <button type="button" onClick={onQuitar} aria-label={`Quitar ${opcion.areaNombre} ${opcion.turnoNombre}`} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60">
-        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-      </button>
-    </span>
+    <div className="space-y-1.5">
+      {porArea.map((a) => (
+        <div key={a.areaId} className="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+          <p className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{a.nombre}</p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {a.turnos.map((t) => (
+              <span key={t.shiftId} className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                {t.turnoNombre}
+                {elegidos.length > 1 && principal && t.areaId === principal.areaId && t.shiftId === principal.shiftId && <span className="rounded bg-blue-600/15 px-1 text-[10px] font-bold uppercase">Principal</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
