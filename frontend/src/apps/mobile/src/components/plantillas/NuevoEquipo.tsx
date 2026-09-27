@@ -768,18 +768,24 @@ export default function NuevoEquipo() {
                         el nombre de la persona, que es lo que hay que leer.
                       */}
                       {b.copiarDe ? null : persona ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const n = { ...b.personas };
-                            delete n[x.n];
-                            cambiar({ personas: n });
-                          }}
-                          aria-label={`Sacar a ${persona.nombre} del puesto ${x.n}`}
-                          className={`shrink-0 ${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}
-                        >
-                          <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                        </button>
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          {/* El lápiz CAMBIA a la persona; la cruz la saca. Sin el lápiz, cambiar a alguien era sacarlo y volver a buscar. */}
+                          <button type="button" onClick={() => setHoja({ persona: x.n })} aria-label={`Cambiar a ${persona.nombre} en el puesto ${x.n}`} className={`${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}>
+                            <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const n = { ...b.personas };
+                              delete n[x.n];
+                              cambiar({ personas: n });
+                            }}
+                            aria-label={`Sacar a ${persona.nombre} del puesto ${x.n}`}
+                            className={`${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}
+                          >
+                            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                          </button>
+                        </span>
                       ) : (
                         <button type="button" onClick={() => setHoja({ persona: x.n })} aria-label={`Asignar a alguien al puesto ${x.n}`} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
                           <FontAwesomeIcon icon={faPlus} />

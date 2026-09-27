@@ -67,12 +67,18 @@ export function HojaModal({ abierta, titulo, subtitulo, onCerrar, children, pie,
     <div className={`fixed inset-0 flex items-center justify-center p-3 ${nivel === 2 ? "z-[80]" : "z-[70]"}`} role="dialog" aria-modal="true" aria-label={titulo}>
       <button type="button" aria-label="Cerrar" onClick={onCerrar} className="absolute inset-0 bg-black/50" />
       <div className="relative flex max-h-[86vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 xl:max-w-lg">
-        <div className="flex items-start gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">{titulo}</h2>
-            {subtitulo && <p className="truncate text-xs text-slate-600 dark:text-slate-300">{subtitulo}</p>}
-          </div>
-          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+        {/*
+          LA X VA EN LA ESQUINA, no en la fila del título.
+
+          Ocupaba una columna de 44px que el encabezado le restaba al texto, y el subtítulo —donde va
+          el horario y los días del turno— quedaba cortado a mitad de palabra. Flotando sobre la
+          esquina, el título y su detalle tienen el ancho entero; el `pr-12` es el hueco justo para
+          que la primera línea no se le meta debajo.
+        */}
+        <div className="relative border-b border-slate-200 px-4 py-3 pr-12 dark:border-slate-700">
+          <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-white">{titulo}</h2>
+          {subtitulo && <p className="mt-0.5 text-xs leading-snug text-slate-600 dark:text-slate-300">{subtitulo}</p>}
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
