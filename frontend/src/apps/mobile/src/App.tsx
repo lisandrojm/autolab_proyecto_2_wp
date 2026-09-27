@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import RutasPlantillas from "./components/plantillas/RutasPlantillas";
 import { ViewType } from "./types";
 // import TopBar from "./components/TopBar";
@@ -28,6 +28,7 @@ import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_HIRING_TEMPLAT
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const location = useLocation();
+  const navigate = useNavigate();
   /*
     VOLVER DESDE PLANTILLAS: esas pantallas tienen URL propia, el resto de la app no. Al volver a
     `/mobile` dicen a qué vista y pestaña (por `state`), para no caer en el inicio.
@@ -188,12 +189,30 @@ function App() {
     en el bloqueo de arriba, que dice lo que hay que hacer.
   */
 
-  // Las pantallas de Plantillas (con URL): a pantalla completa, sin la barra de abajo.
+  /*
+    LAS PANTALLAS DE PLANTILLAS (con URL propia), CON LA BARRA DE ABAJO COMO TODAS.
+
+    Estaban a pantalla completa y sin barra. La idea era darle el alto entero a un formulario largo,
+    pero el costo era que una vez adentro NO SE SALE: la única salida es la flecha de atrás, que
+    sube de a un nivel —puesto, equipo, grupo, lista—, y desde ahí todavía falta para llegar al
+    inicio. Quedarse sin ir a Avisos o al Perfil no es un detalle de estilo: es estar encerrado.
+
+    La barra vive fuera del router de Plantillas, así que navegar con ella tiene que SALIR de
+    `/mobile/plantillas` —si no, esta misma rama se vuelve a dibujar y no pasa nada—. Va por el
+    mismo camino que ya usa «volver a Contratación»: /mobile con la vista en el state.
+
+    `user_history` como vista activa: es de donde se entra a Plantillas, y además no es ninguno de
+    los cinco lugares de la barra, así que mientras se está acá no se enciende ninguno. Encender
+    «Inicio» —el valor por defecto de `currentView`— diría que estás en una pantalla donde no estás.
+  */
   if (location.pathname.startsWith("/mobile/plantillas")) {
     const permitido = puede(MOBILE_USERS) && puede(MOBILE_HIRING_TEMPLATES);
     return (
       <div className="w-full dark:bg-gray-900 flex justify-center">
-        <div className="relative flex min-h-screen flex-col text-slate-800 dark:text-slate-200 font-display w-full xl:w-1/2">{permitido ? <RutasPlantillas /> : <div className="p-6 text-center text-sm">No tenés acceso a Plantillas. <a href="/mobile" className="font-bold text-blue-600 underline">Volver</a></div>}</div>
+        <div className="relative flex min-h-screen flex-col text-slate-800 dark:text-slate-200 font-display w-full xl:w-1/2">
+          {permitido ? <RutasPlantillas /> : <div className="p-6 text-center text-sm">No tenés acceso a Plantillas. <a href="/mobile" className="font-bold text-blue-600 underline">Volver</a></div>}
+          <BottomNav currentView="user_history" onNavigate={(vista) => navigate("/mobile", { state: { vista } })} sinLeer={unreadCount} puedeEquipos={puede(MOBILE_TEAMS)} />
+        </div>
       </div>
     );
   }

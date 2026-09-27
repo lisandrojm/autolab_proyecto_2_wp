@@ -99,6 +99,15 @@ export const Pill: React.FC<{ children: React.ReactNode; tono?: "azul" | "ambar"
     verde: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-200",
     gris: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200",
   }[tono];
-  // Pasa a otra línea en vez de cortarse: «Reemplaza a Miguel Ángel Aguirre · Revisar motivo» se lee entero.
-  return <span className={`inline-flex max-w-full items-center whitespace-normal break-words rounded-xl px-2 py-0.5 text-xs font-semibold ${clases}`}>{children}</span>;
+  /*
+    REDONDA, como todo lo demás que es una pastilla.
+
+    Era el único `rounded-xl` entre puros `rounded-full`: al lado del chip del turno y de las
+    pastillas de roles quedaba como una etiqueta de otra familia, y una pantalla con las dos formas a
+    la vez se lee como si dijeran cosas de distinto orden cuando no es así.
+
+    Pasa a otra línea en vez de cortarse: «Reemplaza a Miguel Ángel Aguirre · Revisar motivo» se lee
+    entero.
+  */
+  return <span className={`inline-flex max-w-full items-center whitespace-normal break-words rounded-full px-2.5 py-0.5 text-xs font-semibold ${clases}`}>{children}</span>;
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCheck, faChevronRight, faCircleExclamation, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { IconDefinition, faArrowLeft, faCheck, faChevronRight, faCircleExclamation, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { usePlantillas } from "./contexto";
 import { Pasos } from "./Pasos";
 
@@ -140,8 +140,15 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
     return () => window.removeEventListener("scroll", guardar);
   }, [location.pathname]);
 
+  /*
+    LOS 64 PX DE ABAJO SON DE LA BARRA DE NAVEGACIÓN.
+
+    Estas pantallas se dibujaban sin barra y por eso llegaban hasta el piso. Ahora la barra está (ver
+    App.tsx: sin ella no había cómo salir de Plantillas) y va `fixed`, así que no empuja a nadie: el
+    lugar hay que dejárselo. Sin este padding, el último renglón queda debajo de los íconos.
+  */
   return (
-    <div ref={raiz} className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+    <div ref={raiz} className="flex min-h-screen flex-col bg-slate-50 pb-16 dark:bg-slate-900">
       <header ref={encabezado} className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
         <div className="flex items-center gap-2">
           <button type="button" onClick={volver} aria-label="Atrás" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800">
@@ -186,8 +193,9 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
       <main className="flex-1 px-4 pb-6 pt-4">{children}</main>
 
       {pie && !boton && <footer className="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">{pie}</footer>}
+      {/* El botón se pega A 64 PX DEL PISO y no al piso: abajo está la barra, y quedaría tapado por ella. */}
       {boton && (
-        <footer className="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+        <footer className="sticky bottom-16 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
           <div className="flex items-center gap-2">
             {atrasPaso && (
               <button type="button" onClick={atrasPaso} aria-label="Volver al paso anterior" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200">
@@ -258,9 +266,11 @@ export function Vacio({ texto, accion, onAccion }: { texto: string; accion?: str
 }
 
 /** Una acción secundaria con texto (nada de íconos sueltos). */
-export function AccionTexto({ children, onClick, peligro }: { children: React.ReactNode; onClick: () => void; peligro?: boolean }) {
+export function AccionTexto({ children, onClick, peligro, icono }: { children: React.ReactNode; onClick: () => void; peligro?: boolean; icono?: IconDefinition }) {
   return (
-    <button type="button" onClick={onClick} className={`flex min-h-[44px] w-full items-center rounded-xl px-3 text-left text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 ${peligro ? "text-red-600 dark:text-red-400" : "text-blue-700 dark:text-blue-300"}`}>
+    <button type="button" onClick={onClick} className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 ${peligro ? "text-red-600 dark:text-red-400" : "text-blue-700 dark:text-blue-300"}`}>
+      {/* El ícono dice cuál es cuál antes de leer; sin él, tres renglones azules se distinguen sólo por el texto. */}
+      {icono && <FontAwesomeIcon icon={icono} className="h-3.5 w-3.5 shrink-0 opacity-70" />}
       {children}
     </button>
   );

@@ -267,6 +267,32 @@ export function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; can
 }
 
 /**
+ * UN ROL, SIN BOTONES: sólo cuántos y de qué.
+ *
+ * Es `BadgeRol` sin los controles, para las pantallas que MUESTRAN un grupo en vez de armarlo. Ahí
+ * la lista de puestos era un párrafo —«1 Director de Programas · 1 Playout · 1 Operador de Video ·
+ * …»— que en un teléfono son cinco renglones de texto corrido donde no se distingue un oficio del
+ * siguiente ni se ve de un vistazo cuántos hay de cada uno.
+ *
+ * La misma forma y el mismo color que en el alta, a propósito: lo que se ve acá es lo que se eligió
+ * allá, y reconocerlo no debería costar un segundo esfuerzo. Lo único que falta son el «−», el «+» y
+ * la cruz, porque acá no se edita: para eso está «Editar puestos», que abre la hoja donde sí se
+ * puede.
+ */
+export function BadgeRolFijo({ nombre, cantidad }: { nombre: string; cantidad: number }) {
+  return (
+    <span className={`inline-flex items-center ${SEPARACION} ${MARGEN}`}>
+      <span className={`${pastillaDe("neutro")} ${AIRE} min-w-[2rem] justify-center tabular-nums`}>{cantidad}</span>
+      <span className={`${pastillaDe("azul")} ${AIRE}`}>
+        <span className="max-w-[13rem] truncate text-sm" title={nombre}>
+          {nombre}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/**
  * ELEGIR LOS ROLES DEL GRUPO, como Rol/es Empresa del alta individual: arriba los elegidos (badges, con
  * cuántos de cada uno), el buscador y todos los roles con su casilla. Tildar suma uno; los badges ajustan
  * la cantidad («2 × Camarógrafo»).

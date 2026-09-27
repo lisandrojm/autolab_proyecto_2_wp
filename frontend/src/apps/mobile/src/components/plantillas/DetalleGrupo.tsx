@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faChevronRight, faCopy, faEllipsis, faMinus, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Plantilla } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
@@ -9,6 +9,8 @@ import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
 import { HojaModal } from "./HojaModal";
 import { aContratacion, categoriasDelNivel, estadoDe, nombreRoles, nombreTurno, proyectoDelEquipo, rutas } from "./equipoUtil";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, Pill, textoHorario } from "./comun";
+import { AIRE, AIRE_DOS_LINEAS, BadgeRolFijo, MARGEN, Rotulo, pastillaDe } from "./piezas";
+import { textoDeDias } from "../../../../../utils/jerarquiaTurnos";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 
 /*
@@ -75,7 +77,26 @@ export default function DetalleGrupo() {
         tono: "verde",
       }}
     >
-      <Seccion titulo="Equipos" accion={<button type="button" onClick={() => navigate(rutas.nuevo({ grupo: p._id }))} disabled={p.integrantes.length === 0} className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-blue-700 disabled:opacity-40 dark:text-blue-300"><FontAwesomeIcon icon={faPlus} className="mr-1.5" />Nuevo equipo</button>}>
+      {/*
+        LA MISMA UI QUE EL ALTA, porque es la misma información.
+
+        Esta pantalla mostraba lo que el alta acababa de cargar, pero dibujado de otra manera: los
+        títulos sin el ícono que los distingue, los puestos como un párrafo de texto corrido y las
+        pastillas de estado cuadradas al lado de chips redondos. Quien venía de armar el equipo
+        llegaba acá y tenía que volver a aprender dónde mira cada cosa.
+
+        Ahora el rótulo, la pastilla y el «+» son los mismos de los cuatro pasos. Lo único propio de
+        esta pantalla es que acá NO se edita en el lugar: cada bloque tiene su acción —«Nuevo
+        equipo», «Editar puestos»— y lo que se ve es de sólo lectura.
+      */}
+      <Seccion
+        titulo={<Rotulo icono={faUsers}>Equipos</Rotulo>}
+        accion={
+          <button type="button" onClick={() => navigate(rutas.nuevo({ grupo: p._id }))} disabled={p.integrantes.length === 0} aria-label="Nuevo equipo" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white disabled:opacity-40">
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+        }
+      >
         {p.equipos.length === 0 ? (
           p.integrantes.length === 0 ? <Vacio texto="Todavía no hay puestos." accion="Elegir puestos" onAccion={() => setHoja("puestos")} /> : <Vacio texto="Todavía no hay equipos." accion="Crear equipo" onAccion={() => navigate(rutas.nuevo({ grupo: p._id }))} />
         ) : (
@@ -85,12 +106,22 @@ export default function DetalleGrupo() {
               const c = e.condiciones || {};
               return (
                 <button key={e._id} type="button" onClick={() => navigate(rutas.equipo(p._id, e._id))} className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-blue-400 dark:border-slate-700 dark:bg-slate-800/70">
-                  <div className="min-w-0 flex-1 space-y-1">
+                  <div className="min-w-0 flex-1 space-y-1.5">
                     <p className="truncate text-base font-bold text-slate-900 dark:text-white">{e.nombre}</p>
+                    {/*
+                      DÓNDE Y CUÁNDO, EN UNA PASTILLA COMO LA DEL ALTA: el área y el turno arriba, y
+                      debajo el horario con los días. Eran tres cosas sueltas en un renglón —el
+                      proyecto en negrita, el chip del turno y el horario en gris— que se leían como
+                      tres datos sin relación entre sí, cuando son uno solo: cuándo trabaja el equipo.
+                    */}
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">{nombreProyecto(e.projectId)}</span>
-                      <ChipTurno inicio={c.inTime} texto={nombreTurno(areasDe(e.projectId), c.areaId, c.shiftId) || undefined} />
-                      <span className="text-xs text-slate-600 dark:text-slate-300">{textoHorario(c.inTime, c.outTime)}</span>
+                      <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{nombreProyecto(e.projectId)}</span>
+                      <span className={`${pastillaDe("azul")} ${AIRE_DOS_LINEAS} ${MARGEN} min-w-0`}>
+                        <span className="min-w-0">
+                          <span className="block truncate uppercase tracking-wide">{nombreTurno(areasDe(e.projectId), c.areaId, c.shiftId) || "Sin turno"}</span>
+                          <span className="block truncate text-[10px] font-normal opacity-80">{[textoHorario(c.inTime, c.outTime), textoDeDias(c.diasSemana)].filter(Boolean).join(" · ")}</span>
+                        </span>
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {est.faltan === 0 ? <Pill tono="verde">{`${est.asignados}/${est.total} listos`}</Pill> : <Pill tono="ambar">{`${est.asignados}/${est.total} · faltan ${est.faltan}`}</Pill>}
@@ -108,15 +139,41 @@ export default function DetalleGrupo() {
         )}
       </Seccion>
 
-      <Seccion titulo={`Puestos · ${p.integrantes.length}`} accion={<button type="button" onClick={() => setHoja("puestos")} className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-blue-700 dark:text-blue-300">Editar puestos</button>}>
-        <p className="text-sm text-slate-700 dark:text-slate-200">{resumenRoles(p, catalogos.roleFrames) || "Sin puestos"}</p>
+      <Seccion
+        titulo={<Rotulo icono={faBriefcase}>Puestos · {p.integrantes.length}</Rotulo>}
+        accion={
+          <button type="button" onClick={() => setHoja("puestos")} aria-label="Editar los puestos" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+            <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
+          </button>
+        }
+      >
+        {/* Cada oficio con su cantidad, como en el alta. El párrafo de antes eran cinco renglones donde nada se distinguía de nada. */}
+        {p.integrantes.length === 0 ? (
+          <p className="text-sm text-slate-700 dark:text-slate-200">Sin puestos</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2.5">
+            {cuentaDeRoles(p, catalogos.roleFrames).map(([nombre, cantidad]) => (
+              <BadgeRolFijo key={nombre} nombre={nombre} cantidad={cantidad} />
+            ))}
+          </div>
+        )}
       </Seccion>
 
-      <Seccion titulo="Más">
+      <Seccion titulo={<Rotulo icono={faEllipsis}>Más</Rotulo>}>
+        {/*
+          CADA ACCIÓN CON SU ÍCONO. Eran tres renglones de texto azul, dos iguales y el tercero rojo:
+          el color era lo único que decía cuál no tiene vuelta atrás. El ícono lo dice antes de leer.
+        */}
         <div className="rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800/70">
-          <AccionTexto onClick={() => setHoja("nombre")}>Cambiar el nombre</AccionTexto>
-          <AccionTexto onClick={() => void duplicar()}>Duplicar el grupo</AccionTexto>
-          <AccionTexto peligro onClick={() => void eliminar()}>Eliminar el grupo</AccionTexto>
+          <AccionTexto icono={faPen} onClick={() => setHoja("nombre")}>
+            Cambiar el nombre
+          </AccionTexto>
+          <AccionTexto icono={faCopy} onClick={() => void duplicar()}>
+            Duplicar el grupo
+          </AccionTexto>
+          <AccionTexto icono={faTrash} peligro onClick={() => void eliminar()}>
+            Eliminar el grupo
+          </AccionTexto>
         </div>
       </Seccion>
 
@@ -126,14 +183,14 @@ export default function DetalleGrupo() {
   );
 }
 
-/** «2 Camarógrafo · 1 Director · …», en el orden de los puestos. */
-function resumenRoles(p: Plantilla, roleFrames: { _id: string; name: string }[]) {
+/** Cada oficio y cuántos hay, en el orden de los puestos: [«Camarógrafo», 2]. */
+function cuentaDeRoles(p: Plantilla, roleFrames: { _id: string; name: string }[]) {
   const cuenta = new Map<string, number>();
   for (const i of p.integrantes) {
     const n = nombreRoles(roleFrames, i.rolesFrame.slice(0, 1));
     cuenta.set(n, (cuenta.get(n) || 0) + 1);
   }
-  return [...cuenta.entries()].map(([n, c]) => `${c} ${n}`).join(" · ");
+  return [...cuenta.entries()];
 }
 
 /** Las áreas y turnos del proyecto como opciones grandes, agrupadas por área. */
