@@ -106,6 +106,9 @@ export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-cente
 
     · AIRE          las que son sólo texto (una persona, un área de un puesto, un chip del encabezado).
     · AIRE_CON_CRUZ las que terminan en un botón redondo: menos aire de ese lado, que el botón ya lo trae.
+    · AIRE_DOS_LINEAS igual, pero para las que llevan un renglón chico debajo del nombre (un área con
+      sus turnos). Con el aire de las de un renglón, el nombre queda pegado al borde de arriba y el
+      subtítulo al de abajo: dos líneas necesitan margen arriba Y abajo, no el mismo que una.
     · AIRE_CONTROL  las que son SÓLO botones (el «− 1 +», el lápiz): el aire es el marco alrededor.
 
   EL AIRE DE ARRIBA Y ABAJO ES EL MÍNIMO. Se probó con más y las pastillas salían gordas: quien manda
@@ -119,6 +122,7 @@ export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-cente
 */
 export const AIRE = "px-3 py-0.5";
 export const AIRE_CON_CRUZ = "py-0.5 pl-4 pr-1";
+export const AIRE_DOS_LINEAS = "py-1.5 pl-4 pr-1";
 export const AIRE_CONTROL = "px-1 py-0.5";
 export const SEPARACION = "gap-2";
 export const ENTRE = "gap-2.5";
@@ -141,7 +145,7 @@ export function BadgeArea({ nombre, turnos, onEditar, onQuitar }: { nombre: stri
           <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
         </button>
       </span>
-      <span className={`${pastillaDe("azul")} ${AIRE_CON_CRUZ}`}>
+      <span className={`${pastillaDe("azul")} ${AIRE_DOS_LINEAS}`}>
         <span className="min-w-0">
           <span className="block truncate uppercase tracking-wide">{nombre}</span>
           <span className="block truncate text-[10px] font-normal opacity-80">{turnos.join(" · ")}</span>
@@ -209,7 +213,21 @@ export function BadgeRol({ nombre, cantidad, onCantidad }: { nombre: string; can
         </button>
       </span>
       <span className={`${pastilla} ${AIRE_CON_CRUZ}`}>
-        {nombre}
+        {/*
+          EL NOMBRE DEL OFICIO, UN PUNTO MÁS GRANDE Y CON TOPE DE ANCHO.
+
+          Es el dato de la pastilla —lo demás son controles— y en 12 px competía de igual a igual con
+          el número de al lado. A 14 se lee primero, que es el orden en que hace falta: «cuántos» sólo
+          significa algo después de saber «de qué».
+
+          El tope es lo que lo deja crecer sin romper nada: «Asistente de Producción Ejecutiva» no
+          existe en el catálogo de hoy, pero el día que exista tiene que cortarse con puntos suspensivos
+          y no empujar la cruz fuera de la pantalla. El nombre entero queda en el `title` y en el
+          aria-label de la cruz, así que no se pierde.
+        */}
+        <span className="max-w-[13rem] truncate text-sm" title={nombre}>
+          {nombre}
+        </span>
         <button type="button" onClick={() => onCantidad(0)} aria-label={`Quitar ${nombre}`} className={`ml-1 ${redondo}`}>
           <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
         </button>

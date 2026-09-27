@@ -171,7 +171,16 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
           </div>
           <EstadoGuardado estado={estado} />
         </div>
-        {pasos && <Pasos actual={pasos.actual} pasos={pasos.etiquetas} className="px-1 pb-0.5 pt-2" />}
+        {/*
+          LOS NÚMEROS, ADENTRO DEL MARGEN DE LA PANTALLA.
+
+          El encabezado tiene 8 px de costado porque su primer elemento es la flecha de atrás, que es
+          un botón de 44 y ya trae su propio aire. Los pasos no: el primer círculo y el último apoyan
+          directo contra ese borde, que en un teléfono es donde están la curva de la pantalla y la
+          zona del gesto de volver. Con 12 px propios quedan a 20 del vidrio, adentro de la columna
+          donde vive el resto del formulario.
+        */}
+        {pasos && <Pasos actual={pasos.actual} pasos={pasos.etiquetas} className="px-3 pb-0.5 pt-2" />}
       </header>
 
       <main className="flex-1 px-4 pb-6 pt-4">{children}</main>
