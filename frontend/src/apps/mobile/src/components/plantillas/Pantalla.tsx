@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faCheck, faChevronRight, faCircleExclamation, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -42,26 +42,50 @@ interface Props {
   pie?: React.ReactNode;
   /** Atrás va siempre a `atras` (ej. después de enviar, no se vuelve a la revisión). */
   atrasFijo?: boolean;
+  /**
+   * LO QUE SE VA NOMBRANDO, en el encabezado.
+   *
+   * Un formulario largo se scrollea, y a la cuarta pantalla ya no se ve cómo se llamó el grupo ni el
+   * equipo que se está armando. Como el encabezado está fijo, el nombre viaja con él.
+   *
+   * Los vacíos se descartan: aparecen a medida que se escriben.
+   */
+  chips?: (string | undefined | null)[];
 }
 
 const claveScroll = (path: string) => `plantillas:scroll:${path}`;
 
 /**
- * CUÁNTO MIDE EL ENCABEZADO de la pantalla (título + contexto), en píxeles.
+ * CUÁNTO MIDE EL ENCABEZADO, para lo que quiera quedar pegado JUSTO DEBAJO.
  *
- * Lo necesita cualquier cosa que quiera quedar pegada JUSTO DEBAJO —el rótulo de una sección larga,
- * por ejemplo—: sin saberlo, se pega al borde de la ventana y el encabezado se le monta encima.
+ * Sin saberlo, una sección `sticky` se pega al borde de la ventana y el encabezado se le monta
+ * encima. Era un número fijo (61), y dejó de servir apenas el encabezado pasó a tener chips: con dos
+ * renglones más, el rótulo pegado quedaba tapado.
  *
- * Vive acá porque acá está el encabezado: el día que cambie su padding, cambia este número al lado y
- * no hay que salir a buscar quién más lo daba por sentado. Son los 44px del botón «Atrás» más los
- * 8+8 del `py-2` y el borde de abajo.
+ * Ahora se MIDE y se publica como variable CSS en la pantalla, así que cualquier alto funciona y
+ * nadie tiene que mantener una constante sincronizada con un padding. El 61 queda de respaldo por si
+ * se lee antes del primer render.
  */
-export const ALTO_ENCABEZADO = 61;
+export const TOPE_PEGADO = "var(--alto-encabezado, 61px)";
 
-export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo }: Props) {
+export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo, chips }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const { estado } = usePlantillas();
+  const encabezado = useRef<HTMLElement>(null);
+  const raiz = useRef<HTMLDivElement>(null);
+
+  // El alto real del encabezado, publicado para las secciones que se pegan debajo (ver TOPE_PEGADO).
+  useLayoutEffect(() => {
+    const el = encabezado.current;
+    const root = raiz.current;
+    if (!el || !root) return;
+    const medir = () => root.style.setProperty("--alto-encabezado", `${el.offsetHeight}px`);
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const volver = () => {
     // react-router guarda en `history.state.idx` cuántas pantallas de la app hay detrás.
@@ -93,16 +117,27 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-slate-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
-        <button type="button" onClick={volver} aria-label="Atrás" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800">
-          <FontAwesomeIcon icon={faArrowLeft} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-bold text-slate-900 dark:text-white">{titulo}</h1>
-          {contexto && <p className="truncate text-xs text-slate-600 dark:text-slate-300">{contexto}</p>}
+    <div ref={raiz} className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+      <header ref={encabezado} className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={volver} aria-label="Atrás" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800">
+            <FontAwesomeIcon icon={faArrowLeft} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-bold text-slate-900 dark:text-white">{titulo}</h1>
+            {contexto && <p className="truncate text-xs text-slate-600 dark:text-slate-300">{contexto}</p>}
+          </div>
+          <EstadoGuardado estado={estado} />
         </div>
-        <EstadoGuardado estado={estado} />
+        {(chips || []).some(Boolean) && (
+          <div className="flex flex-wrap gap-1.5 px-1 pb-0.5 pt-1.5">
+            {(chips || []).filter(Boolean).map((c) => (
+              <span key={c as string} className="inline-flex max-w-full items-center truncate rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                {c}
+              </span>
+            ))}
+          </div>
+        )}
       </header>
 
       <main className="flex-1 px-4 pb-6 pt-4">{children}</main>

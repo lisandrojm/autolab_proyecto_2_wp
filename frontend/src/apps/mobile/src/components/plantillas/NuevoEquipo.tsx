@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faBuilding, faCheck, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPen, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { usePlantillas } from "./contexto";
-import { ALTO_ENCABEZADO, Pantalla } from "./Pantalla";
+import { Pantalla, TOPE_PEGADO } from "./Pantalla";
 import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
 import { cambiosDeContrato, cambiosDeTurno, porDiasSueltos } from "./Condiciones";
@@ -329,6 +329,8 @@ export default function NuevoEquipo() {
     <Pantalla
       titulo="Nuevo equipo"
       contexto={proyecto ? etiquetaProyecto(proyecto) : undefined}
+      // Lo que se va nombrando viaja en el encabezado: a la cuarta pantalla de scroll ya no se ve.
+      chips={[esNuevo ? b.nombreGrupo.trim() : grupo?.nombre, b.nombre.trim()]}
       atras={b.grupoId && b.grupoId !== NUEVO ? rutas.grupo(b.grupoId) : rutas.lista}
       boton={{ texto: esNuevo ? "Crear grupo y equipo" : "Crear equipo", onClick: () => void crear(), deshabilitado: !!falta, motivo: falta?.texto, onMotivo: falta ? () => irA(falta.id) : undefined, cargando: creando }}
     >
@@ -470,7 +472,7 @@ export default function NuevoEquipo() {
               Sin roles no se pega: no hay nada que titular y un rótulo flotando sobre el vacío es un
               elemento de más.
             */}
-            <div className={`flex items-center gap-1 ${b.roles.length ? "sticky z-20 -mx-4 border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900" : ""}`} style={b.roles.length ? { top: ALTO_ENCABEZADO } : undefined}>
+            <div className={`flex items-center gap-1 ${b.roles.length ? "sticky z-20 -mx-4 border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900" : ""}`} style={b.roles.length ? { top: TOPE_PEGADO } : undefined}>
               <Rotulo icono={faBriefcase} obligatorio>
                 Rol/es empresa
               </Rotulo>
@@ -588,7 +590,7 @@ export default function NuevoEquipo() {
             hasta acá se veían distintos: uno con «+» y badges, el otro con una caja de búsqueda que
             desaparecía al primer turno. Dos formas para lo mismo se aprenden dos veces.
           */}
-          <div className={`flex items-center gap-1 ${elegidos.length ? "sticky z-20 -mx-4 border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900" : ""}`} style={elegidos.length ? { top: ALTO_ENCABEZADO } : undefined}>
+          <div className={`flex items-center gap-1 ${elegidos.length ? "sticky z-20 -mx-4 border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900" : ""}`} style={elegidos.length ? { top: TOPE_PEGADO } : undefined}>
             <Rotulo icono={faBriefcase} obligatorio>
               Área y turno
             </Rotulo>
@@ -623,31 +625,18 @@ export default function NuevoEquipo() {
 
         {okTurno && (
           <>
-        {/* HORARIO Y DÍAS */}
+        {/* DÍAS */}
         <div id="campo-horario" className="space-y-2 scroll-mt-24">
-          <Rotulo icono={faClock}>Horario (entrada - salida)</Rotulo>
           {/*
-            EL HORARIO LO PONE EL TURNO. Acá se muestra, no se edita.
+            ACÁ NO VA EL HORARIO. Lo pone el ÁREA Y TURNO, y no hay uno solo para todo el equipo:
+            cada turno tiene el suyo, y un equipo puede cubrir cuatro.
 
-            Eran dos selectores de hora que arrancaban con lo del turno y casi nunca se tocaban: el
-            horario de un equipo ES el de su turno. Editarlo acá además lo fijaba para los catorce
-            puestos, cuando lo que pasa de verdad es que uno entra antes o sale después.
-
-            Eso se corrige donde corresponde: en el puesto de cada persona, que tiene sus propias
-            condiciones (ver `DetallePuesto`).
+            Había dos selectores de hora que arrancaban con los del primer turno elegido y fijaban ese
+            horario para los catorce puestos — o sea, el de Técnica · Mañana también para los de
+            Vestuario · Noche. Lo que cada puesto hace de verdad sale de SU turno, y se ajusta en el
+            puesto de cada persona, que tiene sus propias condiciones (ver `DetallePuesto`).
           */}
-          <p className="flex h-12 items-center gap-2 rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            {b.inTime && b.outTime ? (
-              <>
-                <span>{b.inTime}</span>
-                <FontAwesomeIcon icon={faArrowRight} className="text-xs" aria-hidden />
-                <span>{b.outTime}</span>
-              </>
-            ) : (
-              "Lo define el turno"
-            )}
-          </p>
-          <p className="text-xs text-slate-600 dark:text-slate-300">Sale del turno. Se puede cambiar puesto por puesto al asignar a cada persona.</p>
+          <Rotulo icono={faClock}>Días</Rotulo>
           {sueltos ? (
             <p className="text-xs text-slate-600 dark:text-slate-300">Por jornada: los días se eligen al contratar.</p>
           ) : (
