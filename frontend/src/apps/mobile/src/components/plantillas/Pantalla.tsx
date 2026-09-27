@@ -135,7 +135,15 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
           */}
           <div className="flex min-w-0 flex-1 items-baseline gap-2">
             <h1 className="shrink-0 text-base font-bold text-slate-900 dark:text-white">{titulo}</h1>
-            {contexto && <p className="min-w-0 truncate text-xs text-slate-600 dark:text-slate-300">{contexto}</p>}
+            {contexto && (
+              <>
+                {/* La barra separa el título del contexto: pegados se leían como un solo nombre largo. */}
+                <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500" aria-hidden>
+                  |
+                </span>
+                <p className="min-w-0 truncate text-xs text-slate-600 dark:text-slate-300">{contexto}</p>
+              </>
+            )}
           </div>
           <EstadoGuardado estado={estado} />
         </div>
