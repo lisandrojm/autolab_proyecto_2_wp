@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronDown, faChevronRight, faClock, faFileContract, faLayerGroup, faMinus, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBriefcase, faBuilding, faCheck, faChevronDown, faChevronRight, faCircleInfo, faClock, faFileContract, faLayerGroup, faMinus, faPlus, faSearch, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Plantilla, PlantillaResumen, plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
@@ -65,6 +65,17 @@ function Rotulo({ icono, children, obligatorio }: { icono: any; children: React.
       {obligatorio && <span className="text-red-500">*</span>}
     </label>
   );
+}
+
+/**
+ * LO QUE NO SE ELIGE PORQUE NO HAY NADA QUE ELEGIR.
+ *
+ * Una empresa sola, un convenio solo: el dato ya está decidido por el proyecto. Se muestra igual —
+ * esconderlo deja la pantalla en blanco y nadie sabe si falta algo— pero apagado y con este cartel,
+ * para que se lea de un vistazo qué hay que completar y qué viene dado.
+ */
+function Fijo() {
+  return <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-700 dark:text-slate-300">Fijo</span>;
 }
 
 export default function NuevoEquipo() {
@@ -359,8 +370,14 @@ export default function NuevoEquipo() {
           </>
         )}
 
-        {okGrupo && (
-          <>
+        {/*
+          ESTA SECCIÓN SE VE DESDE EL PRINCIPIO, no cuando el grupo ya tiene nombre.
+
+          Estaba detrás de `okGrupo`, así que la pantalla quedaba con dos campos y el resto en blanco
+          hasta tipear la primera letra: no se sabía cuánto faltaba ni qué había que decidir. Lo que
+          hay que distinguir no es «existe / no existe», es «esto lo tengo que completar» de «esto ya
+          viene dado» — y eso se dice apagando el campo, no escondiéndolo.
+        */}
         {/* EMPRESA Y CONVENIO, uno al lado del otro; debajo, ROL/ES EMPRESA (como en el alta individual). */}
         <div id="campo-roles" className="space-y-6 scroll-mt-24">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -369,7 +386,11 @@ export default function NuevoEquipo() {
               {empresas.length === 0 ? (
                 <p className="py-2 text-xs text-amber-700 dark:text-amber-300">{proyecto ? "El proyecto no tiene empresa del contrato asignada." : "Elegí primero el proyecto."}</p>
               ) : empresas.length === 1 ? (
-                <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-900 dark:bg-slate-800 dark:text-white">{(empresas[0] as any).razonSocial}</p>
+                // Una sola: no es una elección, es el dato del proyecto. Apagada y rotulada como tal.
+                <p className="flex h-12 items-center gap-2 rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="truncate">{(empresas[0] as any).razonSocial}</span>
+                  <Fijo />
+                </p>
               ) : (
                 <select value={b.empresaContratoId} onChange={(e) => cambiar({ empresaContratoId: e.target.value, convenioId: "" })} className={CLASE_CAMPO}>
                   <option value="">Elegí la empresa</option>
@@ -395,6 +416,21 @@ export default function NuevoEquipo() {
             <Rotulo icono={faBriefcase} obligatorio>
               Rol/es empresa
             </Rotulo>
+            {/*
+              QUÉ SE ESPERA ACÁ, dicho antes de elegir y no después.
+
+              Un grupo de puestos es una PLANTILLA: la lista completa de roles que hace falta para
+              armar ese equipo, con cuántos de cada uno. La palabra «rol» en singular invita a poner
+              uno y seguir, y después el equipo sale incompleto sin que nada lo avise.
+            */}
+            {esNuevo && (
+              <p className="flex items-start gap-2 rounded-lg bg-blue-50 px-3 py-2 text-[11px] leading-snug text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 shrink-0 text-blue-500" />
+                <span>
+                  Poné <strong>todos los roles</strong> que hacen falta para armar este grupo, con cuántas personas de cada uno. Es una plantilla: lo que cargues acá es lo que se va a pedir cada vez que se use.
+                </span>
+              </p>
+            )}
             {esNuevo ? (
               b.roles.length ? (
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -418,8 +454,6 @@ export default function NuevoEquipo() {
             )}
           </div>
         </div>
-          </>
-        )}
 
         {okRoles && (
           <>
