@@ -32,6 +32,9 @@ import { TipoImpositivo, estadoImpositivoPorTipo } from "../../../../../utils/tr
   Lo cargado queda en la sesión: ir a buscar a alguien, volver o recargar no pierde nada.
 */
 
+/** Los botones de acción de un renglón: chicos, porque son acciones SOBRE el renglón y no el renglón. */
+const CHICO = "flex h-7 w-7 items-center justify-center rounded-full border border-slate-400 text-slate-600 hover:bg-slate-200 dark:border-slate-500 dark:text-slate-300 dark:hover:bg-slate-700";
+
 const CLAVE = "plantillas:nuevo-equipo";
 const NUEVO = "__nuevo__";
 
@@ -782,13 +785,16 @@ export default function NuevoEquipo() {
                         renglones, además, la palabra repetida catorce veces pesa más que el nombre de
                         la persona, que es lo que hay que leer.
 
-                        Con persona van EN COLUMNA y no uno al lado del otro: en fila se comían 80px
-                        de ancho del renglón y el nombre del turno quedaba cortado. La cruz arriba y
-                        el lápiz abajo; el lápiz CAMBIA a la persona y la cruz la saca. Sin el lápiz,
-                        cambiar a alguien era sacarlo y volver a buscar desde cero.
+                        Con persona son dos: el lápiz, que la CAMBIA —sin él, cambiar a alguien era
+                        sacarlo y volver a buscar desde cero—, y la cruz, que la saca. Chicos y en
+                        fila: son acciones sobre el renglón, no el renglón, y apilados le sumaban
+                        alto a una lista de catorce.
                       */}
                       {b.copiarDe ? null : persona ? (
-                        <span className="flex shrink-0 flex-col gap-1.5">
+                        <span className="flex shrink-0 items-center gap-1">
+                          <button type="button" onClick={() => setHoja({ persona: x.n })} aria-label={`Cambiar a ${persona.nombre} en el puesto ${x.n}`} className={CHICO}>
+                            <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
@@ -797,12 +803,9 @@ export default function NuevoEquipo() {
                               cambiar({ personas: n });
                             }}
                             aria-label={`Sacar a ${persona.nombre} del puesto ${x.n}`}
-                            className={`${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}
+                            className={CHICO}
                           >
-                            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                          </button>
-                          <button type="button" onClick={() => setHoja({ persona: x.n })} aria-label={`Cambiar a ${persona.nombre} en el puesto ${x.n}`} className={`${redondoDe("neutro")} border border-slate-400 dark:border-slate-500`}>
-                            <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
+                            <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
                           </button>
                         </span>
                       ) : (
