@@ -809,7 +809,10 @@ export async function usoDelPuestoEnEquipo(acc: Acceso, id: string, equipoId: st
 
 function leerContratacion(body: any): { fechas: FechasDeContratacion; puntuales: Record<string, Puntual> } {
   const fechasIso = (xs: any) => (Array.isArray(xs) ? xs.map(String).filter((f: string) => /^\d{4}-\d{2}-\d{2}$/.test(f)) : undefined);
+  // El tipo de contrato, con su nombre y su trámite (los tres o ninguno, como en el puesto).
+  const contrato = (x: any) => (idOk(x?.contratoId) ? { contratoId: String(x.contratoId), nombreContrato: str(x.nombreContrato).slice(0, 120) || undefined, tipoImpositivo: str(x.tipoImpositivo).slice(0, 60) || undefined } : {});
   const fechas: FechasDeContratacion = {
+    ...contrato(body),
     fechas: fechasIso(body?.fechas),
     desde: /^\d{4}-\d{2}-\d{2}$/.test(str(body?.desde)) ? str(body.desde) : undefined,
     hasta: /^\d{4}-\d{2}-\d{2}$/.test(str(body?.hasta)) ? str(body.hasta) : undefined,
@@ -832,6 +835,7 @@ function leerContratacion(body: any): { fechas: FechasDeContratacion; puntuales:
       replacedUserId: idOk(x.replacedUserId) ? String(x.replacedUserId) : undefined,
       empleado_id_reemplezado: x.empleado_id_reemplezado || undefined,
       comentarios: typeof x.comentarios === "string" ? x.comentarios.trim().slice(0, 1000) : undefined,
+      ...contrato(x),
     };
   }
   return { fechas, puntuales };
@@ -882,9 +886,10 @@ function paraPlan(p: any, equipoId: string): { plantilla: PlantillaParaPlan; int
 }
 
 /** Todo lo que el plan necesita de la base, en paralelo. */
-async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: IntegranteParaPlan[], puntuales: Record<string, Puntual>): Promise<Contexto> {
+async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: IntegranteParaPlan[], fechas: FechasDeContratacion, puntuales: Record<string, Puntual>): Promise<Contexto> {
   const categoriaIds = [...integrantes.map((i) => i.categoriaSatId), ...Object.values(puntuales).map((x) => x.categoriaSatId)].filter(idOk).map(oid);
-  const contratoIds = [...new Set([p.contratoId, ...integrantes.map((i) => i.contratoId)].filter(idOk).map(String))].map(oid);
+  // Los de los puestos, el general del pedido y los puntuales: cualquiera de ellos puede terminar rigiendo una fila.
+  const contratoIds = [...new Set([p.contratoId, fechas.contratoId, ...integrantes.map((i) => i.contratoId), ...Object.values(puntuales).map((x) => x.contratoId)].filter(idOk).map(String))].map(oid);
   const [contratos, hayContratos, convenio, hayConvenios, categorias, personas, equipo, motivos]: any[] = await Promise.all([
     contratoIds.length ? Contrato.find({ _id: { $in: contratoIds } }).select("name data").lean() : [],
     Contrato.exists({ isActive: { $ne: false } }),
@@ -943,7 +948,7 @@ export async function planificarVarios(tenantId: Types.ObjectId, p: any, bodies:
       const { plantilla, integrantes } = paraPlan(p, equipoId);
       const { fechas, puntuales } = leerContratacion(body);
       // El convenio y el equipo del proyecto (a quién se puede reemplazar) son los del proyecto del EQUIPO.
-      const ctx = await contextoDe(tenantId, { ...p, projectId: plantilla.projectId, convenioId: plantilla.convenioId }, integrantes, puntuales);
+      const ctx = await contextoDe(tenantId, { ...p, projectId: plantilla.projectId, convenioId: plantilla.convenioId }, integrantes, fechas, puntuales);
       const borrador = planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
       const numero = new Map(integrantes.map((i, n) => [i._id, n + 1]));
       const conFechas = borrador.filas

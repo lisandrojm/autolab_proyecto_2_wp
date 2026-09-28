@@ -184,11 +184,23 @@ export interface Puntual {
   empleado_id_reemplezado?: string | number;
   /** El comentario de esta solicitud (opcional, en la revisión). */
   comentarios?: string;
+  /** Otro tipo de contrato para esta persona, sólo esta vez. Con su nombre y su trámite. */
+  contratoId?: string;
+  nombreContrato?: string;
+  tipoImpositivo?: string;
 }
 
 export interface PedidoDeContratacion {
   /** El equipo elegido: de ahí sale quién ocupa cada puesto. */
   equipoId?: string;
+  /**
+   * El tipo de contrato de ESTA contratación, para todos los puestos (el que tenga otro lo trae en su
+   * puntual). Se elige al contratar y no al armar el equipo: es lo que más cambia entre una vez y la
+   * siguiente. Con su nombre y su trámite, como viajan siempre los tres.
+   */
+  contratoId?: string;
+  nombreContrato?: string;
+  tipoImpositivo?: string;
   fechas?: string[];
   desde?: string;
   hasta?: string;

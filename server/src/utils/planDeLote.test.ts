@@ -296,6 +296,29 @@ test("tipo de contrato por puesto: servicios en un puesto no vuelve servicios al
   assert.deepEqual(filas[1].errores, []);
 });
 
+test("tipo de contrato elegido al contratar: vale para todos y le gana al del puesto; el puntual le gana a todos", () => {
+  // La plantilla dice «c5x7» y el puesto 2 tiene guardado «cServ»; al contratar se eligió «Jornada» (c1x1) para todos.
+  const servicios = integ("2", { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit", dailyRateManual: 5000 });
+  const general = { ...SEPT, fechas: ["2026-09-05", "2026-09-06"], contratoId: "c1x1", nombreContrato: "Jornada", tipoImpositivo: "alta_temprana" };
+  const { filas } = planDeLote(plantilla, [integ("1"), servicios], general, {}, ctx());
+  // Los dos van por Jornada: el general pisa tanto a la plantilla como al contrato guardado en el puesto.
+  for (const f of filas) {
+    assert.deepEqual(f.errores, []);
+    assert.equal(f.datos!.contratoId, "c1x1");
+    assert.equal(f.datos!.nombreContrato, "Jornada");
+    assert.equal(f.datos!.tipoImpositivo, "alta_temprana");
+    assert.equal(f.datos!.esServicios, false);
+    assert.equal(f.datos!.porDiasSueltos, true);
+    assert.equal(f.jornadas, 2);
+  }
+  // El puesto 2 vuelve a Servicios sólo esta vez: el puntual manda sobre el general.
+  const conPuntual = planDeLote(plantilla, [integ("1"), servicios], general, { i2: { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit" } }, ctx());
+  assert.equal(conPuntual.filas[0].datos!.contratoId, "c1x1");
+  assert.equal(conPuntual.filas[1].datos!.contratoId, "cServ");
+  assert.equal(conPuntual.filas[1].datos!.esServicios, true);
+  assert.deepEqual(conPuntual.filas[1].errores, []);
+});
+
 test("puesto sin tipo de contrato (y plantilla sin uno viejo): error", () => {
   const sinContrato = { ...plantilla, contratoId: undefined, nombreContrato: undefined, tipoImpositivo: undefined };
   const { filas } = planDeLote(sinContrato, [integ("1")], SEPT, {}, ctx());

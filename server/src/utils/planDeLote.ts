@@ -61,10 +61,25 @@ export interface IntegranteParaPlan {
 }
 
 /**
- * Las fechas de ESTA contratación, iguales para todo el equipo. Como el tipo de contrato es por puesto,
- * puede haber de los dos: los puestos por días sueltos usan `fechas`, los demás `desde`/`hasta`.
+ * Lo de ESTA contratación, igual para todo el equipo: el tipo de contrato y las fechas.
+ *
+ * EL TIPO DE CONTRATO SE ELIGE AL CONTRATAR, no al armar el equipo. Medido en producción: de 867
+ * vínculos persona-proyecto, 227 tuvieron más de un tipo a lo largo de su historia; era el campo que
+ * más cambia entre una contratación y la siguiente, y el único que la plantilla congelaba. Acá viene
+ * uno general para todos los puestos —lo normal: un fin de semana de jornaleros va entero por
+ * «Jornada»— y quien necesite otro lo trae en su `Puntual`.
+ *
+ * Como puede haber de los dos modos en el mismo lote, viajan las dos formas de fecha: los puestos por
+ * días sueltos usan `fechas`, los demás `desde`/`hasta`.
  */
 export interface FechasDeContratacion {
+  /**
+   * El tipo de contrato general de esta contratación, con su nombre y su trámite: los tres viajan
+   * juntos siempre, como en el puesto y en el equipo. Sin él, vale el del puesto o el de la plantilla.
+   */
+  contratoId?: string;
+  nombreContrato?: string;
+  tipoImpositivo?: string;
   /** Tipo de contrato por días sueltos («Jornada»): los días. */
   fechas?: string[];
   desde?: string;
@@ -92,6 +107,10 @@ export interface Puntual {
   empleado_id_reemplezado?: string | number;
   /** El comentario de ESTA solicitud (en la revisión). Sin él, el del puesto o el de la plantilla. */
   comentarios?: string;
+  /** Otro tipo de contrato para esta persona, sólo esta vez (un Servicios entre Jornadas). Con nombre y trámite. */
+  contratoId?: string;
+  nombreContrato?: string;
+  tipoImpositivo?: string;
 }
 
 export interface AvisoDeSuperposicionPlan {
@@ -184,11 +203,19 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     const errores: string[] = [];
     const advertencias: string[] = [];
 
-    // ── El tipo de contrato de este puesto (o el de la plantilla, si es vieja) ──
-    const propio = !!integ.contratoId;
-    const contratoId = String((propio ? integ.contratoId : plantilla.contratoId) || "");
-    const nombreContrato = (propio ? integ.nombreContrato : plantilla.nombreContrato) || "";
-    const tipoImpositivo = (propio ? integ.tipoImpositivo : plantilla.tipoImpositivo) || "";
+    /*
+      ── El tipo de contrato de esta persona ──
+
+      Puntual → general del pedido → puesto → plantilla vieja. El general le gana al puesto a propósito:
+      lo que se elige al contratar es lo que vale para todos, y el que necesite otro lo dice en su fila.
+      Si el puesto tuviera un contrato propio guardado y pesara más que el general, «elegí Jornada para
+      todos» dejaría a uno en Plazo fijo sin que nada lo avise. El nombre y el trámite vienen de la
+      misma fuente que el id: nunca se mezclan los de una capa con el id de otra.
+    */
+    const fuente = p.contratoId ? p : contratacion.contratoId ? contratacion : integ.contratoId ? integ : plantilla;
+    const contratoId = String(fuente.contratoId || "");
+    const nombreContrato = fuente.nombreContrato || "";
+    const tipoImpositivo = fuente.tipoImpositivo || "";
     const contrato = contratoId ? ctx.contratos.get(contratoId) : undefined;
     const porDiasSueltos = contrato?.modoFechas === "dias";
     const indeterminado = !!contrato?.esTiempoIndeterminado;
