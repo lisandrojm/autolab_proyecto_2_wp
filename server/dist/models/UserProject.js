@@ -133,7 +133,20 @@ const userProjectSchema = new Schema({
 userProjectSchema.index({ projectId: 1, userId: 1 }, { unique: true });
 // Contratos por vencer: busca por fecha de baja en vez de leer todas las asignaciones de un proyecto.
 userProjectSchema.index({ "contracts.fecha_baja_contrato": 1 });
-// Optional index for legacy IDs if they exist
-userProjectSchema.index({ externalProjectId: 1, externalEmployeeId: 1 }, { unique: true, sparse: true });
+/*
+  EL PAR DE FRAME (proyecto, empleado) ES ÚNICO SÓLO CUANDO LOS DOS EXISTEN.
+
+  Era `{ unique: true, sparse: true }`, y en un índice COMPUESTO `sparse` no hace lo que parece: el
+  documento se indexa igual si tiene cualquiera de los dos campos. Una persona que entra por una
+  solicitud no tiene legajo en FRAME (`externalEmployeeId` null) pero el proyecto sí (705): quedaba
+  indexada como (705, null), y la segunda persona sin legajo en ese proyecto chocaba con la primera
+  —E11000 al guardar el contrato—. Pasaba lo mismo con el (0, 0) que usa el alta por solicitud.
+
+  Con el filtro parcial, sólo cuentan los pares reales (> 0). Otro NOMBRE a propósito: Mongoose crea
+  éste solo al arrancar, pero no borra el viejo; hasta que lo borre `scripts/indiceUserProjectFrame.ts`
+  el error sigue.
+*/
+export const INDICE_PAR_FRAME = "frame_proyecto_empleado_unico";
+userProjectSchema.index({ externalProjectId: 1, externalEmployeeId: 1 }, { unique: true, name: INDICE_PAR_FRAME, partialFilterExpression: { externalProjectId: { $gt: 0 }, externalEmployeeId: { $gt: 0 } } });
 const UserProject = model("UserProject", userProjectSchema);
 export default UserProject;

@@ -1994,9 +1994,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     if (idSolicitud) (enrichedContract as any).solicitudId = new Types.ObjectId(idSolicitud);
 
     // 2. Find or Create UserProject (assignment)
-    // Search by internal IDs first, then also by external IDs to prevent duplicate key errors
-    const extProjId = enrichedContract.proyecto_id;
-    const extEmpId = enrichedContract.empleado_id;
+    // Search by internal IDs first, then also by external IDs to prevent duplicate key errors.
+    // Sólo ids REALES de FRAME (> 0): quien entra por una solicitud no tiene legajo, y guardar un null
+    // o un 0 lo hacía parecer un par de FRAME (ver el índice en models/UserProject.ts).
+    const idFrame = (v: unknown) => (Number(v) > 0 ? Number(v) : undefined);
+    const extProjId = idFrame(enrichedContract.proyecto_id);
+    const extEmpId = idFrame(enrichedContract.empleado_id);
     
     let userProject = await UserProject.findOne({
       $or: [
@@ -2009,8 +2012,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       userProject = new UserProject({
         projectId: project._id,
         userId: user._id,
-        externalProjectId: enrichedContract.proyecto_id,
-        externalEmployeeId: enrichedContract.empleado_id,
+        ...(extProjId ? { externalProjectId: extProjId } : {}),
+        ...(extEmpId ? { externalEmployeeId: extEmpId } : {}),
         nombre_proyecto: project.name,
         nombre_rol_frame: rolFrameName,
         contracts: [enrichedContract],
@@ -2041,8 +2044,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       userProject.markModified("contracts");
       userProject.projectId = project._id;
       userProject.userId = user._id;
-      if (enrichedContract.proyecto_id) userProject.externalProjectId = enrichedContract.proyecto_id;
-      if (enrichedContract.empleado_id) userProject.externalEmployeeId = enrichedContract.empleado_id;
+      if (extProjId) userProject.externalProjectId = extProjId;
+      if (extEmpId) userProject.externalEmployeeId = extEmpId;
       if (rolFrameName) userProject.nombre_rol_frame = rolFrameName;
     }
 
@@ -2156,12 +2159,16 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         const { projectId } = req.params;
         const { userId, contract, isUpdate: isUpd } = req.body;
         
-        // Find the conflicting document by any matching criteria
+        /*
+          El documento con el que chocó. Buscaba además por `contract.externalProjectId/EmployeeId`,
+          campos que el contrato NO tiene (son `proyecto_id`/`empleado_id`): los dos llegaban undefined
+          y esa rama podía encontrar la asignación de OTRA persona —cualquiera sin ids de FRAME— y
+          reescribirle el proyecto y la persona. Ahora el par de FRAME entra sólo si es real.
+        */
+        const extP = Number(contract?.proyecto_id) > 0 ? Number(contract.proyecto_id) : null;
+        const extE = Number(contract?.empleado_id) > 0 ? Number(contract.empleado_id) : null;
         const existing = await UserProject.findOne({
-          $or: [
-            { projectId, userId },
-            { externalProjectId: contract?.externalProjectId, externalEmployeeId: contract?.externalEmployeeId },
-          ],
+          $or: [{ projectId, userId }, ...(extP && extE ? [{ externalProjectId: extP, externalEmployeeId: extE }] : [])],
         });
         
         if (existing) {

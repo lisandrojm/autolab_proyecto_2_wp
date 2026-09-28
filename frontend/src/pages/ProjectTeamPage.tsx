@@ -386,6 +386,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [, setWizardStep] = useState<1 | 2>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   const [showEstadoInfo, setShowEstadoInfo] = useState(false);
+  const [showComentarioInfo, setShowComentarioInfo] = useState(false);
   // De dónde salen las empresas del contrato y del release, y por qué a veces hay una sola.
   const [showEmpresasInfo, setShowEmpresasInfo] = useState(false);
   // La ventana para elegir a quién reemplaza (ver `SelectorMiembroModal`).
@@ -4646,11 +4647,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             */}
             {approvingSolicitudId && (
               <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
-                <label htmlFor="comentario-revision" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                  <FontAwesomeIcon icon={faCommentDots} className="h-3.5 w-3.5" />
-                  Comentario para quien pidió el alta
-                </label>
-                <p className="mt-1 text-[11px] text-blue-700/80 dark:text-blue-300/80">Lo va a leer en la app, junto con los campos que le hayas cambiado. Contale qué corregiste y cómo cargarlo la próxima. Opcional.</p>
+                {/* La explicación va detrás de la «i»: el recuadro queda en rótulo y campo. */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="comentario-revision" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                    <FontAwesomeIcon icon={faCommentDots} className="h-3.5 w-3.5" />
+                    Comentario para quien pidió el alta
+                  </label>
+                  <button type="button" onClick={() => setShowComentarioInfo(true)} aria-label="Para qué sirve el comentario" className="shrink-0 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200">
+                    <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <textarea id="comentario-revision" value={comentarioRevision} onChange={(e) => setComentarioRevision(e.target.value)} rows={3} maxLength={2000} placeholder="Ej: la fecha de baja tenía que ser el último día del rodaje, no el primero." className="mt-2 w-full resize-y rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-blue-900 dark:bg-gray-900 dark:text-white" />
               </div>
             )}
@@ -4787,6 +4793,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       </InfoModal>
 
       {/* Info: de dónde sale el Estado del contrato (Agregar/Configurar miembro) */}
+      <InfoModal isOpen={showComentarioInfo} onClose={() => setShowComentarioInfo(false)} title="Comentario para quien pidió el alta" size="sm" zIndex={120} actions={[{ label: 'Entendido', onClick: () => setShowComentarioInfo(false), variant: 'primary' }]}>
+        <div className="space-y-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+          <p>Lo va a leer en la app quien pidió el alta, junto con los campos que le hayas cambiado.</p>
+          <p>Contale qué corregiste y cómo cargarlo la próxima vez.</p>
+          <p>Es opcional.</p>
+        </div>
+      </InfoModal>
       <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: 'Entendido', onClick: () => setShowEstadoInfo(false), variant: 'primary' }]}>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">

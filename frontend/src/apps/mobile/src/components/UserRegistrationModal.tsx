@@ -16,7 +16,7 @@ import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSu
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
-import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
 import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
@@ -1320,6 +1320,21 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     `utils/seleccionConvenioCategoria.ts`. Con varios oficios elegidos se SUMAN sus categorías: un
     Animador 2D que además es Asistente de Cámara puede entrar por cualquiera de los dos.
   */
+  /*
+    La valoración del proyecto elegido.
+
+    Una solicitud puede pedir varios proyectos, y en ese caso `proyectoElegido` es el primero: no hay
+    una valoración única que aplicar. Se deja pasar sin filtrar —el alta real la hace después el
+    wizard, que sí trabaja contra UN proyecto y revalida contra el server— en vez de recortar con el
+    criterio del primero de la lista, que sería adivinar.
+  */
+  const valoracionDelProyecto =
+    formData.projectIds.length === 1 && proyectoElegido?.valoracionId
+      ? typeof proyectoElegido.valoracionId === "object"
+        ? String((proyectoElegido.valoracionId as any)._id)
+        : String(proyectoElegido.valoracionId)
+      : "";
+
   const { categorias: categoriasOfrecidasLista, rolNoTieneCategoriasDelConvenio, ocultasPorValoracion, rolNoTieneCategoriasDeLaValoracion } = useMemo(
     () =>
       categoriasOfrecidas({
@@ -1329,22 +1344,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         categorias: categoriasSat,
         verTodasDelConvenio,
         categoriaElegidaId: categoriasSat.find((c) => c._id === formData.categoriaSatId)?.data?.id,
-        /*
-          La valoración del proyecto elegido.
-
-          Una solicitud puede pedir varios proyectos, y en ese caso `proyectoElegido` es el primero:
-          no hay una valoración única que aplicar. Se deja pasar sin filtrar —el alta real la hace
-          después el wizard, que sí trabaja contra UN proyecto y revalida contra el server— en vez de
-          recortar con el criterio del primero de la lista, que sería adivinar.
-        */
-        valoracionProyecto:
-          formData.projectIds.length === 1 && proyectoElegido?.valoracionId
-            ? typeof proyectoElegido.valoracionId === "object"
-              ? String((proyectoElegido.valoracionId as any)._id)
-              : String(proyectoElegido.valoracionId)
-            : "",
+        valoracionProyecto: valoracionDelProyecto,
       }),
-    [roleFrames, formData.roleFrameIds, convenioCct, codigosEmpleadora, categoriasSat, verTodasDelConvenio, formData.categoriaSatId, formData.projectIds, proyectoElegido],
+    [roleFrames, formData.roleFrameIds, convenioCct, codigosEmpleadora, categoriasSat, verTodasDelConvenio, formData.categoriaSatId, valoracionDelProyecto],
   );
 
   /*
@@ -1445,6 +1447,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     setFormData((prev) => ({ ...prev, categoriaSatId: "", dailyRate: "" }));
     setAvisoCascada("Se limpió la categoría: ya no la habilita el rol empresa elegido.");
   }, [categoriasDisponibles, formData.categoriaSatId]);
+
+  /*
+    LA CATEGORÍA VIENE ELEGIDA SEGÚN LA VALORACIÓN DEL PROYECTO, como en el escritorio y en las
+    plantillas: un proyecto Plata trae elegida la Plata de la función (o la más cercana, o la única que
+    haya). Quien carga la cambia sólo si hace falta, en vez de buscar entre todas algo que el dato ya
+    decide. La regla es `categoriaPorDefecto` (con tests); acá sólo se decide CUÁNDO: nunca pisa una
+    elegida, ni corre con «Ver todas las de este convenio» abierto —ahí está eligiendo una persona—.
+  */
+  useEffect(() => {
+    if (formData.categoriaSatId || verTodasDelConvenio || !convenioCct) return;
+    const niveles = valoraciones.map((v) => ({ _id: String(v._id), orden: Number((v as any).orden) }));
+    const elegida = categoriaPorDefecto({ categorias: categoriasOfrecidasLista, valoracionProyecto: valoracionDelProyecto, niveles });
+    const doc = elegida ? categoriasSat.find((c) => String(c.data?.id) === elegida.id) : undefined;
+    if (!doc) return;
+    setFormData((prev) => ({ ...prev, categoriaSatId: doc._id }));
+    setAvisoCascada("");
+  }, [formData.categoriaSatId, verTodasDelConvenio, convenioCct, categoriasOfrecidasLista, valoracionDelProyecto, valoraciones, categoriasSat]);
 
   /*
     EL IMPORTE POR JORNADA LO PROPONE LA CATEGORÍA.

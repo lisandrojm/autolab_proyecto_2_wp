@@ -249,6 +249,7 @@ export interface IUserProject extends Document {
     contracts: IContract[];
     areaId?: Types.ObjectId;
 }
+export declare const INDICE_PAR_FRAME = "frame_proyecto_empleado_unico";
 declare const UserProject: import("mongoose").Model<IUserProject, {}, {}, {}, Document<unknown, {}, IUserProject, {}, {}> & IUserProject & Required<{
     _id: Types.ObjectId;
 }> & {
