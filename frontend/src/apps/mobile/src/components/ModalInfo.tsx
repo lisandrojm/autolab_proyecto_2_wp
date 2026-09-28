@@ -27,8 +27,10 @@ export function ModalInfo({ icono, titulo, texto, extra, onCerrar }: Props) {
   return (
     // Centrado en la pantalla: pegado abajo se confundía con la barra de navegación.
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onCerrar}>
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+      {/* Alto máximo y el cuerpo con scroll propio: con una lista larga (los avisos de una contratación) el
+          modal se salía de la pantalla y no había forma de llegar al final ni al «Entendido». */}
+      <div className="flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
           <p className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
             <FontAwesomeIcon icon={icono} className="h-4 w-4" /> {titulo}
           </p>
@@ -36,7 +38,7 @@ export function ModalInfo({ icono, titulo, texto, extra, onCerrar }: Props) {
             <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
           </button>
         </div>
-        <div className="space-y-4 p-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
           {typeof texto === "string" ? (
             <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">{texto}</p>
           ) : (
@@ -54,6 +56,8 @@ export function ModalInfo({ icono, titulo, texto, extra, onCerrar }: Props) {
               {extra.label}
             </button>
           )}
+        </div>
+        <div className="shrink-0 border-t border-slate-200 p-4 dark:border-slate-700">
           <button onClick={onCerrar} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
             Entendido
           </button>

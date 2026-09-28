@@ -183,10 +183,19 @@ export const categoriasOfrecidas = ({
 
   let list: CategoriaOfrecida[] = ignorarFiltroPorRol ? [] : delRol;
 
+  /*
+    LA VALORACIÓN VIVE EN LA FUNCIÓN, NO EN EL CATÁLOGO. Cuando la lista sale del catálogo («Ver todas
+    las de este convenio», o una función sin categorías) cada fila se armaba sin `valoracionId`, y
+    TODAS se veían «Sin valorar», también las de la propia función que sí lo están. Se la devuelve
+    desde la función: las que no son de ella siguen sin valorar, que es lo que realmente son acá.
+  */
+  const valoracionDelRol = new Map(delRol.filter((c) => c.valoracionId).map((c) => [String(c.id), c.valoracionId as string]));
+  const desdeCatalogo = (c: CategoriaSatItem): CategoriaOfrecida => ({ id: c.data?.id, nombre: c.name, numeroCategoria: c.data?.numeroCategoria || c.data?.id, codigoArca: "", valoracionId: valoracionDelRol.get(String(c.data?.id)) ?? null });
+
   // Sin categorías por función, el catálogo entero. Se filtran las no elegibles (alias que existen
   // sólo para que resuelvan contratos históricos): acá se ELIGE una para un contrato nuevo.
   if (list.length === 0 && categorias.length > 0) {
-    list = categorias.filter(esElegible).map((c) => ({ id: c.data?.id, nombre: c.name, numeroCategoria: c.data?.numeroCategoria || c.data?.id, codigoArca: "" }));
+    list = categorias.filter(esElegible).map(desdeCatalogo);
   }
 
   // Sólo las categorías de los convenios de la empleadora. Este filtro es de ARCA, no una preferencia:
@@ -235,11 +244,12 @@ export const categoriasOfrecidas = ({
   */
   let ocultasPorValoracion = 0;
   const algunaValorada = list.some((c) => !!c.valoracionId);
-  const rolNoTieneCategoriasDeLaValoracion = !!valoracionProyecto && algunaValorada && !list.some((c) => c.valoracionId === valoracionProyecto);
+  // «Ver todas las de este convenio» es un escape explícito: ahí no se filtra ni se avisa por valoración.
+  const rolNoTieneCategoriasDeLaValoracion = !verTodasDelConvenio && !!valoracionProyecto && algunaValorada && !list.some((c) => c.valoracionId === valoracionProyecto);
   // Con una sola no hay nada que explicar: el alta la elige sola, igual que si estuviera valorada.
   const rolSinValorar = !!valoracionProyecto && rolesFrame.length > 0 && list.length > 1 && !algunaValorada;
 
-  if (valoracionProyecto && algunaValorada && !verTodasLasValoraciones && !rolNoTieneCategoriasDeLaValoracion) {
+  if (valoracionProyecto && algunaValorada && !verTodasLasValoraciones && !verTodasDelConvenio && !rolNoTieneCategoriasDeLaValoracion) {
     const antes = list.length;
     // Una categoría SIN valorar dentro de una función que sí valoró otras queda afuera: no se puede
     // afirmar que corresponda a este nivel, y ofrecerla sería decidir por quien no la cargó.
@@ -251,7 +261,7 @@ export const categoriasOfrecidas = ({
   // un contrato mal cargado en una lista vacía, sin decir qué tenía.
   if (categoriaElegidaId && !list.some((c) => String(c.id) === String(categoriaElegidaId))) {
     const global = categorias.find((c) => String(c.data?.id) === String(categoriaElegidaId));
-    if (global) list = [...list, { id: global.data?.id, nombre: global.name, numeroCategoria: global.data?.numeroCategoria || global.data?.id, codigoArca: "" }];
+    if (global) list = [...list, desdeCatalogo(global)];
   }
 
   // Lo que identifica a una categoría es su código de ARCA de 6 dígitos, no el "Nº Cat." —que era el

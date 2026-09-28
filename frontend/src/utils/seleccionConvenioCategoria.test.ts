@@ -117,6 +117,31 @@ describe('categoriasOfrecidas — el filtro por valoración', () => {
   });
 });
 
+describe('categoriasOfrecidas — «Ver todas las de este convenio»', () => {
+  // El caso de la contratación masiva: al abrir todas las del convenio, las filas salían del
+  // catálogo sin `valoracionId` y TODAS decían «Sin valorar», también las de la propia función.
+  const conValoracion = (r: { categorias: Array<{ id: number | string; valoracionId?: string | null }> }) => Object.fromEntries(r.categorias.map((c) => [Number(c.id), c.valoracionId ?? null]));
+
+  it('las categorías de la función conservan su valoración; las demás quedan sin valorar', () => {
+    const r = categoriasOfrecidas({ ...base, verTodasDelConvenio: true });
+    assert.deepEqual(conValoracion(r), { 1: ORO, 2: PLATA });
+  });
+
+  it('con el proyecto valorado muestra TODAS las del convenio, sin filtrar ni avisar', () => {
+    const conOtra = rol([{ id: 1, nombre: 'Director de Programas', valoracionId: ORO }]);
+    const r = categoriasOfrecidas({ ...base, rolesFrame: [conOtra], verTodasDelConvenio: true, valoracionProyecto: PLATA });
+    assert.deepEqual(ids(r), [1, 2]);
+    assert.equal(r.ocultasPorValoracion, 0);
+    assert.equal(r.rolNoTieneCategoriasDeLaValoracion, false);
+    assert.deepEqual(conValoracion(r), { 1: ORO, 2: null });
+  });
+
+  it('la categoría ya elegida que quedó afuera del filtro vuelve con su valoración', () => {
+    const r = categoriasOfrecidas({ ...base, valoracionProyecto: ORO, categoriaElegidaId: 2 });
+    assert.equal(conValoracion(r)[2], PLATA);
+  });
+});
+
 describe('categoriasOfrecidas — el orden de los filtros', () => {
   it('LA VALORACIÓN NO SE COME EL FILTRO DE ARCA: una categoría de otro convenio no entra ni siendo de la valoración', () => {
     /*

@@ -194,12 +194,15 @@ export function useCatalogosContratacion(activo = true) {
       valoracionProyecto: idValoracionDe(proyecto?.valoracionId),
     });
     const porDataId = new Map(categoriasSat.map((c) => [String(c.data?.id), c]));
-    // El nivel (Oro, Plata…) de cada categoría EN ESA FUNCIÓN, por `_id` del documento.
+    // El nivel (Oro, Plata…) de cada categoría EN ESA FUNCIÓN, por `_id` del documento. Sale de las
+    // categorías de la función y no sólo de la lista ofrecida: la categoría ya elegida puede haber
+    // quedado afuera del filtro (la trae la plantilla), y su campo decía «Sin valorar» sin serlo.
     const nivelPorId = new Map<string, { nombre: string; color: string }>();
-    for (const c of r.categorias) {
+    const delRol = roleFrames.filter((rf) => rolesFrameIds.includes(rf._id)).flatMap((rf) => (Array.isArray(rf.data?.categoriasSat) ? (rf.data.categoriasSat as any[]) : []));
+    for (const c of [...delRol, ...r.categorias]) {
       const doc = porDataId.get(String(c.id));
       const v = c.valoracionId ? valoraciones.find((x) => String(x._id) === String(c.valoracionId)) : undefined;
-      if (doc && v) nivelPorId.set(doc._id, { nombre: String(v.name), color: String(v.color || "") });
+      if (doc && v && !nivelPorId.has(doc._id)) nivelPorId.set(doc._id, { nombre: String(v.name), color: String(v.color || "") });
     }
     return { ...r, documentos: r.categorias.map((c) => porDataId.get(String(c.id))).filter(Boolean) as CategoriaSatItem[], nivelPorId };
   };

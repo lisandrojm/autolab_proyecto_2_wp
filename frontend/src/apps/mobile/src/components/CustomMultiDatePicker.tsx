@@ -135,8 +135,9 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
 
             <div className="p-4 overflow-y-auto">
               <div className="grid grid-cols-7 mb-2 text-center">
-                {weekDays.map((d) => (
-                  <div key={d} className="text-xs font-bold text-slate-400">
+                {/* Por posición y no por letra: martes y miércoles son las dos «M». */}
+                {weekDays.map((d, i) => (
+                  <div key={i} className="text-xs font-bold text-slate-400">
                     {d}
                   </div>
                 ))}

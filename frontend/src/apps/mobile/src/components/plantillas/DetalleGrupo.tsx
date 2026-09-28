@@ -12,6 +12,7 @@ import { ChipTurno, CLASE_CAMPO, fechaCorta, Pill, textoHorario } from "./comun"
 import { AIRE, AIRE_DOS_LINEAS_SIN_CRUZ, BadgeRolFijo, MARGEN, Rotulo, pastillaDe } from "./piezas";
 import { textoDeDias } from "../../../../../utils/jerarquiaTurnos";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
+import { BotonInfo } from "../ModalInfo";
 
 /*
   PANTALLA 2 · UN GRUPO DE PUESTOS: sus equipos (cada uno con su turno y cómo está), «Nuevo equipo»
@@ -19,6 +20,38 @@ import { fuzzyMatch } from "../../../../../utils/searchHelpers";
   empresa y el convenio, que definen qué categorías se ofrecen. Botón principal: «Contratar equipos».
 */
 type Hoja = null | "puestos" | "nombre";
+
+/*
+  QUÉ ES CADA PESTAÑA. La diferencia entre un equipo y un puesto no se deduce mirando: los dos son
+  listas de gente y roles. La «i» lo explica, y la acción de la sección (el «+», el lápiz) va pegada a
+  ella y no contra el borde: son de la misma sección y se leen juntas.
+*/
+const INFO_EQUIPOS = `Un equipo es este grupo de puestos puesto a trabajar en un lugar y un horario concretos: un proyecto, un área y turno, y los días y horas de trabajo. En cada puesto va la persona que lo cubre.
+
+Un mismo grupo puede tener varios equipos. Por ejemplo, el mismo equipo técnico en la mañana y en la noche, o en dos proyectos distintos.
+
+La pastilla de cada equipo (por ejemplo, «14/14 listos») dice cuántos puestos ya tienen persona asignada. Al tocar «Contratar equipo» se manda una solicitud de alta por cada persona, igual que en el alta individual.
+
+Con el «+» creás un equipo nuevo. Tocá un equipo para ver o cambiar su gente, su turno y sus condiciones.`;
+
+const INFO_PUESTOS = `Los puestos son el molde del grupo: qué roles empresa hacen falta y cuántos de cada uno. Por ejemplo, 1 Director de Programas y 2 Camarógrafos.
+
+No tienen personas ni proyecto: el mismo molde sirve para cualquier proyecto. Las personas se asignan en cada equipo.
+
+Todos los equipos de este grupo se arman con estos puestos. Si agregás o quitás uno, cambian los puestos a cubrir en todos los equipos.
+
+Con el lápiz agregás o quitás roles y ajustás las cantidades.`;
+
+/** Rótulo, «i» y la acción de la sección, en ese orden y juntos. */
+function TituloConInfo({ rotulo, info, accion }: { rotulo: React.ReactNode; info: { titulo: string; texto: string }; accion: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {rotulo}
+      <BotonInfo titulo={info.titulo} texto={info.texto} />
+      <span className="ml-2 normal-case tracking-normal">{accion}</span>
+    </span>
+  );
+}
 
 export default function DetalleGrupo() {
   const { id = "" } = useParams();
@@ -118,13 +151,20 @@ export default function DetalleGrupo() {
 
       {pestana === "equipos" && (
       <Seccion
-        titulo={<Rotulo icono={faUsers}>Equipos</Rotulo>}
-        accion={
-          <button type="button" onClick={() => navigate(rutas.nuevo({ grupo: p._id }))} disabled={p.integrantes.length === 0} aria-label="Nuevo equipo" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white disabled:opacity-40">
-            <FontAwesomeIcon icon={faPlus} />
-          </button>
+        titulo={
+          <TituloConInfo
+            rotulo={<Rotulo icono={faUsers}>Equipos</Rotulo>}
+            info={{ titulo: "Equipos", texto: INFO_EQUIPOS }}
+            accion={
+              <button type="button" onClick={() => navigate(rutas.nuevo({ grupo: p._id }))} disabled={p.integrantes.length === 0} aria-label="Nuevo equipo" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white disabled:opacity-40">
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
+            }
+          />
         }
       >
+        {/* Aire entre el título (con su «i» y su acción) y lo que lista: pegados se leían como una sola cosa. */}
+        <div className="mt-4">
         {p.equipos.length === 0 ? (
           p.integrantes.length === 0 ? <Vacio texto="Todavía no hay puestos." accion="Elegir puestos" onAccion={() => setHoja("puestos")} /> : <Vacio texto="Todavía no hay equipos." accion="Crear equipo" onAccion={() => navigate(rutas.nuevo({ grupo: p._id }))} />
         ) : (
@@ -165,16 +205,22 @@ export default function DetalleGrupo() {
             })}
           </div>
         )}
+        </div>
       </Seccion>
       )}
 
       {pestana === "puestos" && (
       <Seccion
-        titulo={<Rotulo icono={faBriefcase}>Puestos</Rotulo>}
-        accion={
-          <button type="button" onClick={() => setHoja("puestos")} aria-label="Editar los puestos" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
-            <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
-          </button>
+        titulo={
+          <TituloConInfo
+            rotulo={<Rotulo icono={faBriefcase}>Puestos</Rotulo>}
+            info={{ titulo: "Puestos", texto: INFO_PUESTOS }}
+            accion={
+              <button type="button" onClick={() => setHoja("puestos")} aria-label="Editar los puestos" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+                <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
+              </button>
+            }
+          />
         }
       >
         {/*
@@ -185,9 +231,9 @@ export default function DetalleGrupo() {
           arriba abajo, como una lista. Que sea larga no importa: es lo que hay.
         */}
         {p.integrantes.length === 0 ? (
-          <p className="text-sm text-slate-700 dark:text-slate-200">Sin puestos</p>
+          <p className="mt-4 text-sm text-slate-700 dark:text-slate-200">Sin puestos</p>
         ) : (
-          <div className="flex flex-col items-start gap-2.5">
+          <div className="mt-4 flex flex-col items-start gap-2.5">
             {cuentaDeRoles(p, catalogos.roleFrames).map(([nombre, cantidad]) => (
               <BadgeRolFijo key={nombre} nombre={nombre} cantidad={cantidad} />
             ))}

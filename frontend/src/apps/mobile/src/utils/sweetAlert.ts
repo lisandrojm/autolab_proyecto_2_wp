@@ -111,6 +111,30 @@ export const sweetAlert = {
     });
   },
 
+  /**
+   * Confirmar ANTES DE MANDAR algo que no se deshace: qué va a pasar, punto por punto. A diferencia de
+   * `confirmLista` no es una advertencia (botón verde, no rojo): es el último vistazo antes de enviar.
+   * El contenido se escapa: son mensajes armados con datos de la base.
+   */
+  confirmEnvio: (title: string, items: string[], confirmText = "Enviar", cancelText = "Volver") => {
+    const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return Swal.fire({
+      title,
+      html: `<ul style="text-align:left;margin:0;padding-left:1.1em;font-size:.88em;line-height:1.45">${items.map((i) => `<li style="margin-bottom:.5em">${esc(i)}</li>`).join("")}</ul>`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: confirmText,
+      cancelButtonText: cancelText,
+      reverseButtons: true,
+      customClass: {
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
+      },
+    });
+  },
+
   confirm: (title: string, text: string, confirmText = "Confirmar", cancelText = "Cancelar") => {
     return Swal.fire({
       title,

@@ -259,7 +259,8 @@ interface HojaProps {
  * recálculo en el server, y recalcular mientras alguien escribe un importe es ver saltar los números
  * bajo el dedo. Al guardar, sólo viaja lo distinto de lo que rige (ver `soloLoDistinto`).
  */
-function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps) {
+/** Exportada: la Revisión abre la misma hoja con el lápiz de cada persona. */
+export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps) {
   const { catalogos } = usePlantillas();
   const k = clavePuntual(equipo._id, x.puesto._id);
   const f = estado.equipos[equipo._id];
