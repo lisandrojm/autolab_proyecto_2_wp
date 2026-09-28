@@ -47,11 +47,19 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const nombre = sinPersona ? "Puesto sin asignar" : persona?.nombre || "Persona no encontrada";
         const errores = [];
         const advertencias = [];
-        // ── El tipo de contrato de este puesto (o el de la plantilla, si es vieja) ──
-        const propio = !!integ.contratoId;
-        const contratoId = String((propio ? integ.contratoId : plantilla.contratoId) || "");
-        const nombreContrato = (propio ? integ.nombreContrato : plantilla.nombreContrato) || "";
-        const tipoImpositivo = (propio ? integ.tipoImpositivo : plantilla.tipoImpositivo) || "";
+        /*
+          ── El tipo de contrato de esta persona ──
+    
+          Puntual → general del pedido → puesto → plantilla vieja. El general le gana al puesto a propósito:
+          lo que se elige al contratar es lo que vale para todos, y el que necesite otro lo dice en su fila.
+          Si el puesto tuviera un contrato propio guardado y pesara más que el general, «elegí Jornada para
+          todos» dejaría a uno en Plazo fijo sin que nada lo avise. El nombre y el trámite vienen de la
+          misma fuente que el id: nunca se mezclan los de una capa con el id de otra.
+        */
+        const fuente = p.contratoId ? p : contratacion.contratoId ? contratacion : integ.contratoId ? integ : plantilla;
+        const contratoId = String(fuente.contratoId || "");
+        const nombreContrato = fuente.nombreContrato || "";
+        const tipoImpositivo = fuente.tipoImpositivo || "";
         const contrato = contratoId ? ctx.contratos.get(contratoId) : undefined;
         const porDiasSueltos = contrato?.modoFechas === "dias";
         const indeterminado = !!contrato?.esTiempoIndeterminado;
@@ -65,8 +73,10 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const categoria = categoriaSatId ? ctx.categorias.get(categoriaSatId) : undefined;
         // ── Las fechas de esta persona ──
         const fechasSueltas = porDiasSueltos ? [...new Set((p.fechas?.length ? p.fechas : contratacion.fechas) || [])].sort() : [];
-        const desde = porDiasSueltos ? fechasSueltas[0] || "" : contratacion.desde || "";
-        const hasta = porDiasSueltos ? fechasSueltas[fechasSueltas.length - 1] || "" : indeterminado ? "" : contratacion.hasta || "";
+        // Las fechas: las suyas si las trae, si no las del equipo. Un puntual con período pisa las dos juntas o ninguna.
+        const periodoPropio = !porDiasSueltos && !!p.desde;
+        const desde = porDiasSueltos ? fechasSueltas[0] || "" : (periodoPropio ? p.desde : contratacion.desde) || "";
+        const hasta = porDiasSueltos ? fechasSueltas[fechasSueltas.length - 1] || "" : indeterminado ? "" : (periodoPropio ? p.hasta : contratacion.hasta) || "";
         const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : integ.diasSemana || [];
         const diasPorSemana = porDiasSueltos ? diasSemana.length : Number(integ.diasPorSemana) || diasSemana.length;
         const rotativos = porDiasSueltos ? false : !!integ.diasRotativos;
@@ -149,9 +159,9 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         }
         else {
             const e = erroresDeJornadas({ desde: periodo.desde, hasta: periodo.hasta, diasPorSemana: String(diasPorSemana || ""), dias: diasSemana, rotativos, jornadas: jornadas ? String(jornadas) : "", calculadas, ajustado: false, motivo: "", nota: "" });
-            if (!contratacion.desde)
+            if (!desde)
                 errores.push("Falta la fecha de inicio.");
-            else if (!indeterminado && !contratacion.hasta)
+            else if (!indeterminado && !hasta)
                 errores.push("Falta la fecha de fin.");
             for (const m of Object.values(e))
                 if (m)

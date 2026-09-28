@@ -58,10 +58,25 @@ export interface IntegranteParaPlan {
     reemplazadoDePersonaId?: string | null;
 }
 /**
- * Las fechas de ESTA contratación, iguales para todo el equipo. Como el tipo de contrato es por puesto,
- * puede haber de los dos: los puestos por días sueltos usan `fechas`, los demás `desde`/`hasta`.
+ * Lo de ESTA contratación, igual para todo el equipo: el tipo de contrato y las fechas.
+ *
+ * EL TIPO DE CONTRATO SE ELIGE AL CONTRATAR, no al armar el equipo. Medido en producción: de 867
+ * vínculos persona-proyecto, 227 tuvieron más de un tipo a lo largo de su historia; era el campo que
+ * más cambia entre una contratación y la siguiente, y el único que la plantilla congelaba. Acá viene
+ * uno general para todos los puestos —lo normal: un fin de semana de jornaleros va entero por
+ * «Jornada»— y quien necesite otro lo trae en su `Puntual`.
+ *
+ * Como puede haber de los dos modos en el mismo lote, viajan las dos formas de fecha: los puestos por
+ * días sueltos usan `fechas`, los demás `desde`/`hasta`.
  */
 export interface FechasDeContratacion {
+    /**
+     * El tipo de contrato general de esta contratación, con su nombre y su trámite: los tres viajan
+     * juntos siempre, como en el puesto y en el equipo. Sin él, vale el del puesto o el de la plantilla.
+     */
+    contratoId?: string;
+    nombreContrato?: string;
+    tipoImpositivo?: string;
     /** Tipo de contrato por días sueltos («Jornada»): los días. */
     fechas?: string[];
     desde?: string;
@@ -82,12 +97,22 @@ export interface Puntual {
     dailyRate?: number;
     /** Jornada: otros días para esta persona. */
     fechas?: string[];
+    /**
+     * Período: otro desde/hasta para esta persona. Como en el alta individual, cada persona puede tener
+     * sus fechas; lo normal es que valgan las del equipo, y esto es la excepción de una.
+     */
+    desde?: string;
+    hasta?: string;
     isReplacement?: boolean;
     motivoReemplazoId?: string;
     replacedUserId?: string;
     empleado_id_reemplezado?: string | number;
     /** El comentario de ESTA solicitud (en la revisión). Sin él, el del puesto o el de la plantilla. */
     comentarios?: string;
+    /** Otro tipo de contrato para esta persona, sólo esta vez (un Servicios entre Jornadas). Con nombre y trámite. */
+    contratoId?: string;
+    nombreContrato?: string;
+    tipoImpositivo?: string;
 }
 export interface AvisoDeSuperposicionPlan {
     tipo: "horario" | "fechas";

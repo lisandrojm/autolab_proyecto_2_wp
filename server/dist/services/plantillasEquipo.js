@@ -861,7 +861,10 @@ export async function usoDelPuestoEnEquipo(acc, id, equipoId, puestoId, excluido
 // ── Plan: preview y contratar ───────────────────────────────────────────
 function leerContratacion(body) {
     const fechasIso = (xs) => (Array.isArray(xs) ? xs.map(String).filter((f) => /^\d{4}-\d{2}-\d{2}$/.test(f)) : undefined);
+    // El tipo de contrato, con su nombre y su trámite (los tres o ninguno, como en el puesto).
+    const contrato = (x) => (idOk(x?.contratoId) ? { contratoId: String(x.contratoId), nombreContrato: str(x.nombreContrato).slice(0, 120) || undefined, tipoImpositivo: str(x.tipoImpositivo).slice(0, 60) || undefined } : {});
     const fechas = {
+        ...contrato(body),
         fechas: fechasIso(body?.fechas),
         desde: /^\d{4}-\d{2}-\d{2}$/.test(str(body?.desde)) ? str(body.desde) : undefined,
         hasta: /^\d{4}-\d{2}-\d{2}$/.test(str(body?.hasta)) ? str(body.hasta) : undefined,
@@ -879,11 +882,14 @@ function leerContratacion(body) {
             outTime: esHora(x.outTime) ? x.outTime : undefined,
             dailyRate: Number(x.dailyRate) > 0 ? Number(x.dailyRate) : undefined,
             fechas: fechasIso(x.fechas),
+            desde: /^\d{4}-\d{2}-\d{2}$/.test(str(x.desde)) ? str(x.desde) : undefined,
+            hasta: /^\d{4}-\d{2}-\d{2}$/.test(str(x.hasta)) ? str(x.hasta) : undefined,
             isReplacement: !!x.isReplacement,
             motivoReemplazoId: x.motivoReemplazoId ? String(x.motivoReemplazoId) : undefined,
             replacedUserId: idOk(x.replacedUserId) ? String(x.replacedUserId) : undefined,
             empleado_id_reemplezado: x.empleado_id_reemplezado || undefined,
             comentarios: typeof x.comentarios === "string" ? x.comentarios.trim().slice(0, 1000) : undefined,
+            ...contrato(x),
         };
     }
     return { fechas, puntuales };
@@ -932,9 +938,10 @@ function paraPlan(p, equipoId) {
     };
 }
 /** Todo lo que el plan necesita de la base, en paralelo. */
-async function contextoDe(tenantId, p, integrantes, puntuales) {
+async function contextoDe(tenantId, p, integrantes, fechas, puntuales) {
     const categoriaIds = [...integrantes.map((i) => i.categoriaSatId), ...Object.values(puntuales).map((x) => x.categoriaSatId)].filter(idOk).map(oid);
-    const contratoIds = [...new Set([p.contratoId, ...integrantes.map((i) => i.contratoId)].filter(idOk).map(String))].map(oid);
+    // Los de los puestos, el general del pedido y los puntuales: cualquiera de ellos puede terminar rigiendo una fila.
+    const contratoIds = [...new Set([p.contratoId, fechas.contratoId, ...integrantes.map((i) => i.contratoId), ...Object.values(puntuales).map((x) => x.contratoId)].filter(idOk).map(String))].map(oid);
     const [contratos, hayContratos, convenio, hayConvenios, categorias, personas, equipo, motivos] = await Promise.all([
         contratoIds.length ? Contrato.find({ _id: { $in: contratoIds } }).select("name data").lean() : [],
         Contrato.exists({ isActive: { $ne: false } }),
@@ -982,6 +989,9 @@ export async function planificarVarios(tenantId, p, bodies) {
             if (!r || a.excluido)
                 continue;
             const k = String(a.puestoId);
+            // El puntual manda: si dice algo del reemplazo —otro reemplazado, o `false` para apagarlo esta vez—, el de la plantilla no se mete.
+            if (puntuales[k]?.isReplacement !== undefined)
+                continue;
             puntuales[k] = { ...(puntuales[k] || {}), isReplacement: true, replacedUserId: r.replacedUserId, motivoReemplazoId: r.motivoReemplazoId || undefined, empleado_id_reemplezado: legajo.get(r.replacedUserId) ?? undefined };
         }
         return { ...body, puntuales };
@@ -992,7 +1002,7 @@ export async function planificarVarios(tenantId, p, bodies) {
         const { plantilla, integrantes } = paraPlan(p, equipoId);
         const { fechas, puntuales } = leerContratacion(body);
         // El convenio y el equipo del proyecto (a quién se puede reemplazar) son los del proyecto del EQUIPO.
-        const ctx = await contextoDe(tenantId, { ...p, projectId: plantilla.projectId, convenioId: plantilla.convenioId }, integrantes, puntuales);
+        const ctx = await contextoDe(tenantId, { ...p, projectId: plantilla.projectId, convenioId: plantilla.convenioId }, integrantes, fechas, puntuales);
         const borrador = planDeLote(plantilla, integrantes, fechas, puntuales, ctx);
         const numero = new Map(integrantes.map((i, n) => [i._id, n + 1]));
         const conFechas = borrador.filas
