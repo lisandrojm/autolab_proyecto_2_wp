@@ -147,11 +147,17 @@ export default function DetalleGrupo() {
           </button>
         }
       >
-        {/* Cada oficio con su cantidad, como en el alta. El párrafo de antes eran cinco renglones donde nada se distinguía de nada. */}
+        {/*
+          Cada oficio con su cantidad, como en el alta, y UNO DEBAJO DEL OTRO. El párrafo de antes eran
+          cinco renglones donde nada se distinguía de nada; los badges en fila corrida arreglaban eso
+          pero armaban un mosaico —dos por renglón acá, uno allá— donde el ojo no encuentra el segundo
+          «1» debajo del primero. En columna, las cantidades quedan alineadas y la lista se recorre de
+          arriba abajo, como una lista. Que sea larga no importa: es lo que hay.
+        */}
         {p.integrantes.length === 0 ? (
           <p className="text-sm text-slate-700 dark:text-slate-200">Sin puestos</p>
         ) : (
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-col items-start gap-2.5">
             {cuentaDeRoles(p, catalogos.roleFrames).map(([nombre, cantidad]) => (
               <BadgeRolFijo key={nombre} nombre={nombre} cantidad={cantidad} />
             ))}
