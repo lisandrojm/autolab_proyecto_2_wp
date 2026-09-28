@@ -110,6 +110,9 @@ export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-cente
       con sus turnos, uno por línea). Con el aire de las de un renglón, el nombre queda pegado al
       borde de arriba y el último subtítulo al de abajo: varias líneas necesitan margen arriba Y
       abajo, no el mismo que una.
+    · AIRE_DOS_LINEAS_SIN_CRUZ las de dos renglones que no terminan en botón (el área y turno de un
+      equipo en su tarjeta). Con la medida «con cruz» quedaban con 16 px a la izquierda y 4 a la
+      derecha, y sin nada que ocupe ese hueco el texto se veía pegado al borde de un solo lado.
     · AIRE_CONTROL  las que son SÓLO botones (el «− 1 +», el lápiz): el aire es el marco alrededor.
 
   EL AIRE DE ARRIBA Y ABAJO ES EL MÍNIMO. Se probó con más y las pastillas salían gordas: quien manda
@@ -124,6 +127,7 @@ export const redondoDe = (tono: keyof typeof TONOS) => `flex h-8 w-8 items-cente
 export const AIRE = "px-3 py-0.5";
 export const AIRE_CON_CRUZ = "py-0.5 pl-4 pr-1";
 export const AIRE_DOS_LINEAS = "py-1.5 pl-4 pr-1";
+export const AIRE_DOS_LINEAS_SIN_CRUZ = "px-4 py-1.5";
 export const AIRE_CONTROL = "px-1 py-0.5";
 export const SEPARACION = "gap-2";
 export const ENTRE = "gap-2.5";

@@ -9,7 +9,7 @@ import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
 import { HojaModal } from "./HojaModal";
 import { aContratacion, categoriasDelNivel, estadoDe, nombreRoles, nombreTurno, proyectoDelEquipo, rutas } from "./equipoUtil";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, Pill, textoHorario } from "./comun";
-import { AIRE, AIRE_DOS_LINEAS, BadgeRolFijo, MARGEN, Rotulo, pastillaDe } from "./piezas";
+import { AIRE, AIRE_DOS_LINEAS_SIN_CRUZ, BadgeRolFijo, MARGEN, Rotulo, pastillaDe } from "./piezas";
 import { textoDeDias } from "../../../../../utils/jerarquiaTurnos";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 
@@ -27,10 +27,12 @@ export default function DetalleGrupo() {
   const { catalogos, guardar, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
   const [hoja, setHoja] = useState<Hoja>(null);
+  const [pestana, setPestana] = useState<"equipos" | "puestos">("equipos");
 
   // Recién creado: se abre «Editar puestos» (lo pidió el usuario con «Crear y elegir puestos»).
   useEffect(() => {
     if ((location.state as any)?.editarPuestos && p) {
+      setPestana("puestos");
       setHoja("puestos");
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -73,7 +75,12 @@ export default function DetalleGrupo() {
         onClick: () => navigate(rutas.contratar(p._id)),
         deshabilitado: p.equipos.length === 0 || p.integrantes.length === 0,
         motivo: p.integrantes.length === 0 ? "Primero elegí los puestos" : "Primero creá un equipo",
-        onMotivo: () => (p.integrantes.length === 0 ? setHoja("puestos") : navigate(rutas.nuevo({ grupo: p._id }))),
+        onMotivo: () => {
+          if (p.integrantes.length === 0) {
+            setPestana("puestos");
+            setHoja("puestos");
+          } else navigate(rutas.nuevo({ grupo: p._id }));
+        },
         tono: "verde",
       }}
     >
@@ -88,7 +95,26 @@ export default function DetalleGrupo() {
         Ahora el rótulo, la pastilla y el «+» son los mismos de los cuatro pasos. Lo único propio de
         esta pantalla es que acá NO se edita en el lugar: cada bloque tiene su acción —«Nuevo
         equipo», «Editar puestos»— y lo que se ve es de sólo lectura.
+
+        EN DOS PESTAÑAS. Los equipos y los puestos son dos listas largas, y casi nunca hacen falta las
+        dos a la vez: se entra a contratar (equipos) o a ajustar el molde (puestos). Una debajo de la
+        otra, la de puestos —catorce renglones— empujaba todo lo demás fuera de la pantalla. El mismo
+        selector de pestañas que Contratación (Historial | Plantillas | Vtos.), así se aprende una vez.
       */}
+      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
+        {(
+          [
+            ["equipos", `Equipos (${p.equipos.length})`],
+            ["puestos", `Puestos (${p.integrantes.length})`],
+          ] as const
+        ).map(([id, etiqueta]) => (
+          <button key={id} type="button" onClick={() => setPestana(id)} aria-pressed={pestana === id} className={`flex items-center justify-center rounded-lg py-2 text-xs font-bold transition-colors ${pestana === id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
+            {etiqueta}
+          </button>
+        ))}
+      </div>
+
+      {pestana === "equipos" && (
       <Seccion
         titulo={<Rotulo icono={faUsers}>Equipos</Rotulo>}
         accion={
@@ -116,7 +142,7 @@ export default function DetalleGrupo() {
                     */}
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{nombreProyecto(e.projectId)}</span>
-                      <span className={`${pastillaDe("azul")} ${AIRE_DOS_LINEAS} ${MARGEN} min-w-0`}>
+                      <span className={`${pastillaDe("azul")} ${AIRE_DOS_LINEAS_SIN_CRUZ} ${MARGEN} min-w-0`}>
                         <span className="min-w-0">
                           <span className="block truncate uppercase tracking-wide">{nombreTurno(areasDe(e.projectId), c.areaId, c.shiftId) || "Sin turno"}</span>
                           <span className="block truncate text-[10px] font-normal opacity-80">{[textoHorario(c.inTime, c.outTime), textoDeDias(c.diasSemana)].filter(Boolean).join(" · ")}</span>
@@ -138,9 +164,11 @@ export default function DetalleGrupo() {
           </div>
         )}
       </Seccion>
+      )}
 
+      {pestana === "puestos" && (
       <Seccion
-        titulo={<Rotulo icono={faBriefcase}>Puestos · {p.integrantes.length}</Rotulo>}
+        titulo={<Rotulo icono={faBriefcase}>Puestos</Rotulo>}
         accion={
           <button type="button" onClick={() => setHoja("puestos")} aria-label="Editar los puestos" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
             <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
@@ -164,6 +192,7 @@ export default function DetalleGrupo() {
           </div>
         )}
       </Seccion>
+      )}
 
       <Seccion titulo={<Rotulo icono={faEllipsis}>Más</Rotulo>}>
         {/*
