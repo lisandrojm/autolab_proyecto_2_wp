@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight, faClone, faEdit, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { usePlantilla, usePlantillas } from "./contexto";
-import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
+import { Pantalla, PieAcciones, Seccion, Vacio } from "./Pantalla";
 import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { HojaNombre } from "./DetalleGrupo";
@@ -73,6 +73,8 @@ export default function PantallaEquipo() {
     const usados = new Set(p.equipos.map((x) => x.nombre.toLowerCase()));
     let nombre = `${equipo.nombre} (copia)`;
     for (let n = 2; usados.has(nombre.toLowerCase()); n++) nombre = `${equipo.nombre} (copia ${n})`;
+    const ok: any = await sweetAlert.confirm(`¿Duplicar «${equipo.nombre}»?`, `Se crea «${nombre}» en este grupo, con las mismas personas y las mismas condiciones. Éste no cambia.`, "Duplicar", "Cancelar");
+    if (!(ok === true || ok?.isConfirmed)) return;
     const r = await guardar(() => plantillasEquipoAPI.crearEquipo(p._id, nombre, equipo._id));
     const nuevo = r?.equipos[r.equipos.length - 1];
     if (nuevo) navigate(rutas.equipo(p._id, nuevo._id), { replace: true });
@@ -188,13 +190,15 @@ export default function PantallaEquipo() {
         </Seccion>
       )}
 
-      <Seccion titulo="Más">
-        <div className="rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800/70">
-          <AccionTexto onClick={() => setHoja("nombre")}>Cambiar el nombre</AccionTexto>
-          <AccionTexto onClick={() => void duplicar()}>Duplicar el equipo</AccionTexto>
-          <AccionTexto peligro onClick={() => void eliminar()}>Eliminar el equipo</AccionTexto>
-        </div>
-      </Seccion>
+      {/* Las acciones del equipo, como el pie de una tarjeta de escritorio: cada una avisa qué va a hacer antes de hacerlo. */}
+      <PieAcciones
+        izquierda="Este equipo"
+        acciones={[
+          { icono: faEdit, titulo: "Cambiar el nombre", onClick: () => setHoja("nombre") },
+          { icono: faClone, titulo: "Duplicar el equipo", onClick: () => void duplicar() },
+          { icono: faTrash, titulo: "Eliminar el equipo", onClick: () => void eliminar() },
+        ]}
+      />
 
       <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo="Condiciones del equipo" areas={areas} catalogos={catalogos} valores={c} onCambio={cambiar} />
       <HojaModal abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto" subtitulo="El área y turno se eligen de nuevo; las categorías se recalculan">

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcase, faChevronRight, faCopy, faEllipsis, faMinus, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faChevronRight, faClone, faEdit, faMinus, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Plantilla } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
-import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
+import { Pantalla, PieAcciones, Seccion, Vacio } from "./Pantalla";
 import { HojaModal } from "./HojaModal";
 import { aContratacion, categoriasDelNivel, estadoDe, nombreRoles, nombreTurno, proyectoDelEquipo, rutas } from "./equipoUtil";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, Pill, textoHorario } from "./comun";
@@ -47,6 +47,8 @@ export default function DetalleGrupo() {
   const cambiarDatos = (datos: Partial<Plantilla>) => guardar(() => plantillasEquipoAPI.actualizar(p._id, datos as any));
 
   const duplicar = async () => {
+    const r: any = await sweetAlert.confirm(`¿Duplicar «${p.nombre}»?`, `Se crea «${p.nombre} (copia)»: un grupo nuevo con los mismos puestos y los mismos equipos. Éste no cambia.`, "Duplicar", "Cancelar");
+    if (!(r === true || r?.isConfirmed)) return;
     try {
       const copia = await plantillasEquipoAPI.duplicar(p._id);
       navigate(rutas.grupo(copia._id));
@@ -194,23 +196,15 @@ export default function DetalleGrupo() {
       </Seccion>
       )}
 
-      <Seccion titulo={<Rotulo icono={faEllipsis}>Más</Rotulo>}>
-        {/*
-          CADA ACCIÓN CON SU ÍCONO. Eran tres renglones de texto azul, dos iguales y el tercero rojo:
-          el color era lo único que decía cuál no tiene vuelta atrás. El ícono lo dice antes de leer.
-        */}
-        <div className="rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800/70">
-          <AccionTexto icono={faPen} onClick={() => setHoja("nombre")}>
-            Cambiar el nombre
-          </AccionTexto>
-          <AccionTexto icono={faCopy} onClick={() => void duplicar()}>
-            Duplicar el grupo
-          </AccionTexto>
-          <AccionTexto icono={faTrash} peligro onClick={() => void eliminar()}>
-            Eliminar el grupo
-          </AccionTexto>
-        </div>
-      </Seccion>
+      {/* Las acciones del grupo, como el pie de una tarjeta de escritorio: cada una avisa qué va a hacer antes de hacerlo. */}
+      <PieAcciones
+        izquierda="Este grupo"
+        acciones={[
+          { icono: faEdit, titulo: "Cambiar el nombre", onClick: () => setHoja("nombre") },
+          { icono: faClone, titulo: "Duplicar el grupo", onClick: () => void duplicar() },
+          { icono: faTrash, titulo: "Eliminar el grupo", onClick: () => void eliminar() },
+        ]}
+      />
 
       <HojaPuestos abierta={hoja === "puestos"} onCerrar={() => setHoja(null)} plantilla={p} />
       <HojaNombre abierta={hoja === "nombre"} onCerrar={() => setHoja(null)} actual={p.nombre} onGuardar={(nombre) => void cambiarDatos({ nombre })} />

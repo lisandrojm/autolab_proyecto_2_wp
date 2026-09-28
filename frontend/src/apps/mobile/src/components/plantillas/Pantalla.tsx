@@ -266,6 +266,33 @@ export function Vacio({ texto, accion, onAccion }: { texto: string; accion?: str
 }
 
 /** Una acción secundaria con texto (nada de íconos sueltos). */
+/**
+ * EL PIE DE ACCIONES DE UNA TARJETA, como la Card de escritorio (`components/ui/Card.tsx`): a la
+ * izquierda un dato chico y gris, a la derecha los íconos —editar, clonar, eliminar—, grises, sin
+ * texto y con su `title`.
+ *
+ * Reemplaza a la sección «Más» que cerraba el grupo y el equipo: tres renglones de texto azul que
+ * ocupaban una tarjeta entera para decir lo que en escritorio dicen tres íconos en una línea. Es la
+ * misma plataforma; quien ya usó la de escritorio no tiene que aprender otra cosa acá.
+ *
+ * Lo único distinto es el blanco del dedo: 44 px por ícono en vez de los 4 px de padding del mouse.
+ * El ícono se ve igual de chico; lo que crece es dónde se puede tocar.
+ */
+export function PieAcciones({ izquierda, acciones }: { izquierda?: React.ReactNode; acciones: { icono: IconDefinition; titulo: string; onClick: () => void }[] }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white py-1 pl-4 pr-1 dark:border-slate-700 dark:bg-slate-800/70">
+      <div className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-slate-400">{izquierda}</div>
+      <div className="flex items-center">
+        {acciones.map((a) => (
+          <button key={a.titulo} type="button" onClick={a.onClick} title={a.titulo} aria-label={a.titulo} className="flex h-11 w-11 items-center justify-center rounded text-slate-400 transition-colors hover:text-slate-800 dark:hover:text-slate-200">
+            <FontAwesomeIcon icon={a.icono} className="h-4 w-4" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AccionTexto({ children, onClick, peligro, icono }: { children: React.ReactNode; onClick: () => void; peligro?: boolean; icono?: IconDefinition }) {
   return (
     <button type="button" onClick={onClick} className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 ${peligro ? "text-red-600 dark:text-red-400" : "text-blue-700 dark:text-blue-300"}`}>
