@@ -28,6 +28,7 @@ import ListaGrupos from "../components/plantillas/ListaGrupos";
 import { ProveedorPlantillas } from "../components/plantillas/contexto";
 import { CalificarModal } from "../../../../components/calificaciones/CalificarModal";
 import { NuevaCalificacion } from "../../../../api/calificaciones";
+import { invalidateRefCache } from "../../../../utils/refCache";
 
 /*
   CÓMO SE MUESTRA EL ESTADO DE UNA SOLICITUD.
@@ -83,6 +84,13 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const { user: yo } = useAuthStore();
   const permisoInactivo = usePermisoInactivo();
   const puedePlantillas = (yo?.permissions || []).includes(MOBILE_HIRING_TEMPLATES) && !permisoInactivo(MOBILE_HIRING_TEMPLATES);
+  /**
+   * Borrar una APROBADA es del panel: deshace la contratación. El server exige `admin_users:view` (ver
+   * `permisoSobreSolicitudPropia`), así que el botón sólo aparece para quien lo tiene.
+   */
+  const puedeBorrarAprobadas = useAuthStore((s) => s.hasPermission)("admin_users:view");
+  /** Avance de «Eliminar aprobadas»: se borran de a una, y la tanda puede tardar. */
+  const [borrandoAprobadas, setBorrandoAprobadas] = useState<{ hechas: number; total: number } | null>(null);
 
   /*
     POR VENCER: los contratos de la gente a cargo que terminan en la próxima semana, para renovarlos o
@@ -506,6 +514,67 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     }
   };
 
+  /*
+    ELIMINAR TODAS LAS APROBADAS: deshace esas contrataciones.
+
+    Es el mismo borrado que el tacho del panel, una por una (`DELETE /users/:id/solicitud`): se lleva el
+    contrato que creó cada una y limpia lo que dejó alrededor —la renovación, los avisos—. La persona no
+    se borra: sigue siendo el usuario que es, con sus otros contratos. Lo que NO deshace es lo que ya se
+    subió a ARCA, y eso se dice antes de confirmar.
+
+    De a una y no con un endpoint masivo: así cada una pasa por las mismas reglas, y si una falla las
+    demás siguen y al final se dice cuáles quedaron.
+  */
+  const aprobadas = useMemo(() => users.filter((u) => String((u.metadata as any)?.solicitudStatus || ((u.metadata as any)?.isSolicitud ? "pendiente" : "aprobada")) === "aprobada"), [users]);
+  const eliminarAprobadas = async () => {
+    const n = aprobadas.length;
+    if (n === 0) return;
+    const r: any = await sweetAlert.confirmLista(
+      n === 1 ? "¿Eliminar la solicitud aprobada?" : `¿Eliminar las ${n} solicitudes aprobadas?`,
+      [
+        n === 1 ? "Se borra la solicitud y el contrato que creó al aprobarse." : `Se borran las ${n} solicitudes y los contratos que crearon al aprobarse.`,
+        "Las altas que ya subiste a ARCA siguen dadas de alta allá: hay que darlas de baja a mano.",
+        "Las personas no se borran: siguen como usuarios, con sus otros contratos.",
+        "No se puede deshacer.",
+      ],
+      "Pendientes, rechazadas y canceladas no se tocan.",
+      n === 1 ? "Eliminar" : `Eliminar ${n}`,
+      "Cancelar",
+    );
+    if (!r?.isConfirmed) return;
+
+    setBorrandoAprobadas({ hechas: 0, total: n });
+    const fallidas: string[] = [];
+    let sinContrato = 0;
+    for (const [i, u] of aprobadas.entries()) {
+      const nombre = (u.metadata as any)?.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim();
+      try {
+        const res: any = await usersAPI.eliminarSolicitud(u._id);
+        if (res?.contrato && !res.contrato.borrado) sinContrato += 1;
+      } catch (e: any) {
+        fallidas.push(`${nombre}: ${e?.response?.data?.error || "no se pudo borrar"}`);
+      }
+      setBorrandoAprobadas({ hechas: i + 1, total: n });
+    }
+    setBorrandoAprobadas(null);
+    // Las bandejas de Contratos se cachean: sin esto seguirían mostrando los contratos recién borrados.
+    invalidateRefCache("contracts-overview:");
+    refetch();
+
+    const borradas = n - fallidas.length;
+    if (fallidas.length === 0 && sinContrato === 0) {
+      sweetAlert.success(borradas === 1 ? "Solicitud eliminada" : `${borradas} solicitudes eliminadas`, "Y sus contratos.");
+      return;
+    }
+    const partes = [
+      `Se eliminaron ${borradas} de ${n}.`,
+      ...(sinContrato ? [`${sinContrato === 1 ? "1 no tenía" : `${sinContrato} no tenían`} el contrato donde se esperaba: la solicitud se borró igual; buscalo en el equipo del proyecto.`] : []),
+      ...(fallidas.length ? [`No se pudieron eliminar: ${fallidas.join(" · ")}.`] : []),
+    ];
+    // `alert` usa `text`: los saltos de línea no se ven, así que van como oraciones seguidas.
+    sweetAlert.alert("Eliminar aprobadas", partes.join(" "), "warning");
+  };
+
   const handleEdit = (user: User) => {
     setEditingUser(user);
     setShowDetailModal(false);
@@ -571,6 +640,19 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-3">
+            {puedeBorrarAprobadas && aprobadas.length > 0 && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void eliminarAprobadas()}
+                  disabled={!!borrandoAprobadas}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-bold text-red-600 active:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:text-red-400 dark:active:bg-red-950/30"
+                >
+                  <FontAwesomeIcon icon={borrandoAprobadas ? faSpinner : faTrash} spin={!!borrandoAprobadas} className="h-3 w-3" />
+                  {borrandoAprobadas ? `Eliminando ${borrandoAprobadas.hechas} de ${borrandoAprobadas.total}…` : `Eliminar aprobadas (${aprobadas.length})`}
+                </button>
+              </div>
+            )}
             {entradasHistorial.map((e) =>
               e.tipo === "sola" ? (
                 <div key={e.user._id}>{tarjeta(e.user)}</div>
