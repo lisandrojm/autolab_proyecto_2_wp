@@ -83,6 +83,7 @@ export default function ContratarFechas() {
       tipoImpositivo: previo?.tipoImpositivo || delEquipo?.tipoImpositivo || "",
       equipos,
       puntuales: previo?.puntuales || {},
+      nombres: previo?.nombres || {},
       clave: previo?.clave || nuevaClave(),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

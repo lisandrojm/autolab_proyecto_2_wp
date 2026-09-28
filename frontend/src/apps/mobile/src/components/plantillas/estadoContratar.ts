@@ -34,6 +34,12 @@ export interface EstadoContratar {
   equipos: Record<string, FechasEquipo>;
   /** Lo que se pisa sólo esta vez, por solicitud: la clave es `${equipoId}:${puestoId}` (ver `clavePuntual`). */
   puntuales: Record<string, Puntual>;
+  /**
+   * Cómo se llama cada persona elegida en un puntual (`userId` → nombre). El puntual guarda sólo el id
+   * —es lo que el server entiende— pero la fila tiene que decir un nombre antes de que el server
+   * conteste, y el reemplazado no viene en ninguna respuesta. Es caché de pantalla, no dato.
+   */
+  nombres: Record<string, string>;
   clave: string;
 }
 
@@ -50,7 +56,7 @@ export function leerEstado(id: string): EstadoContratar | null {
     // Una sesión guardada antes de los puntuales traía los comentarios sueltos: se leen como puntuales.
     const puntuales: Record<string, Puntual> = e.puntuales || {};
     for (const [k, v] of Object.entries((e.comentarios || {}) as Record<string, string>)) if (v && !puntuales[k]?.comentarios) puntuales[k] = { ...(puntuales[k] || {}), comentarios: v };
-    return { contratoId: e.contratoId || "", nombreContrato: e.nombreContrato || "", tipoImpositivo: e.tipoImpositivo || "", equipos: e.equipos || {}, puntuales, clave: e.clave || nuevaClave() };
+    return { contratoId: e.contratoId || "", nombreContrato: e.nombreContrato || "", tipoImpositivo: e.tipoImpositivo || "", equipos: e.equipos || {}, puntuales, nombres: e.nombres || {}, clave: e.clave || nuevaClave() };
   } catch {
     return null;
   }
@@ -99,11 +105,16 @@ export function faltaDe(plantilla: Plantilla, equipo: Equipo, f: FechasEquipo | 
   return "";
 }
 
-/** Un puntual sin lo vacío: lo que no se tocó no viaja, y un puntual que quedó vacío no existe. */
+/**
+ * Un puntual sin lo vacío: lo que no se tocó no viaja, y un puntual que quedó vacío no existe.
+ *
+ * `false` SÍ viaja: «isReplacement: false» es una decisión —apagar esta vez el reemplazo que la
+ * plantilla trae guardado—, y borrarla por vacía sería dejar el reemplazo puesto.
+ */
 export function puntualLimpio(p: Puntual | undefined): Puntual {
   const r: Record<string, any> = {};
   for (const [k, v] of Object.entries(p || {})) {
-    if (v === undefined || v === null || v === "" || v === false) continue;
+    if (v === undefined || v === null || v === "") continue;
     if (Array.isArray(v) && v.length === 0) continue;
     r[k] = typeof v === "string" ? v.trim() : v;
   }

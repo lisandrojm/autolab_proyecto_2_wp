@@ -40,8 +40,8 @@ export default function ContratarRevision() {
   const [comentando, setComentando] = useState<string | null>(null);
 
   const pedidos = useMemo(() => (p && estado ? pedidosDe(p, estado, catalogos) : []), [p, estado, catalogos]);
-  // Se recalcula al entrar (también al volver de corregir un puesto). Los comentarios no cambian el cálculo.
-  const firma = JSON.stringify(pedidos.map(({ puntuales, ...x }) => x));
+  // Se recalcula cuando cambia algo que cambia el cálculo: los puntuales sí, los comentarios no.
+  const firma = JSON.stringify(pedidos.map((x) => ({ ...x, puntuales: Object.fromEntries(Object.entries(x.puntuales).map(([k, v]) => [k, { ...v, comentarios: undefined }])) })));
   useEffect(() => {
     if (!p || pedidos.length === 0) return;
     let vigente = true;
@@ -88,7 +88,8 @@ export default function ContratarRevision() {
     const numero = new Map(p.integrantes.map((i, k) => [i._id, k + 1]));
     for (const f of pv.filas.filter((x) => !x.excluido)) {
       const n = numero.get(f.integranteId);
-      const ir = n ? () => navigate(rutas.puesto(p._id, e._id, n)) : undefined;
+      // A corregir se va al paso 2 —lo de esa persona, sólo esta vez—, no a editar la plantilla.
+      const ir = n ? () => navigate(rutas.personas(p._id)) : undefined;
       for (const t of f.errores) problemas.push({ tipo: "error", equipo: e.nombre, texto: `${n ? `Puesto ${n} · ` : ""}${f.nombre}: ${t}`, corregir: /fecha|día/i.test(t) ? () => navigate(rutas.contratar(p._id)) : ir });
       for (const t of f.advertencias) problemas.push({ tipo: "aviso", equipo: e.nombre, texto: `${f.nombre}: ${t}`, corregir: ir });
     }
@@ -119,7 +120,7 @@ export default function ContratarRevision() {
   };
 
   const ponerComentario = (k: string, v: string) => {
-    const nuevo = { ...estado, puntuales: { ...estado.puntuales, [k]: { ...(estado.puntuales[k] || {}), comentarios: v } } };
+    const nuevo: EstadoContratar = { ...estado, puntuales: { ...estado.puntuales, [k]: { ...(estado.puntuales[k] || {}), comentarios: v } } };
     setEstado(nuevo);
     guardarEstado(p._id, nuevo);
   };
@@ -209,9 +210,11 @@ export default function ContratarRevision() {
                 <ul className="divide-y divide-slate-200 dark:divide-slate-700">
                   {filas.map((x) => {
                     const pe = porPuesto.get(x.integranteId);
-                    const r = pe?.asignacion?.reemplazo;
-                    const motivo = r?.motivoReemplazoId ? catalogos.motivos.find((m) => m._id === r.motivoReemplazoId)?.name : "";
                     const k = `${e._id}:${x.integranteId}`;
+                    const pt = estado.puntuales[k];
+                    // El reemplazo que rige: el puntual manda —incluso para apagar el de la plantilla—; si no dice nada, el de la plantilla.
+                    const r = pt?.isReplacement !== undefined ? (pt.isReplacement ? { nombre: (pt.replacedUserId && estado.nombres[pt.replacedUserId]) || "alguien", motivoReemplazoId: pt.motivoReemplazoId } : null) : pe?.asignacion?.reemplazo;
+                    const motivo = r?.motivoReemplazoId ? catalogos.motivos.find((m) => m._id === r.motivoReemplazoId)?.name : "";
                     const horarioDistinto = (x.inTime || null) !== (c.inTime || null) || (x.outTime || null) !== (c.outTime || null);
                     return (
                       <li key={x.integranteId} className="py-2.5">

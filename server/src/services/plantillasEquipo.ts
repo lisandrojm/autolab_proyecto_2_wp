@@ -937,6 +937,8 @@ export async function planificarVarios(tenantId: Types.ObjectId, p: any, bodies:
       const r = reemplazoDe(a);
       if (!r || a.excluido) continue;
       const k = String(a.puestoId);
+      // El puntual manda: si dice algo del reemplazo —otro reemplazado, o `false` para apagarlo esta vez—, el de la plantilla no se mete.
+      if (puntuales[k]?.isReplacement !== undefined) continue;
       puntuales[k] = { ...(puntuales[k] || {}), isReplacement: true, replacedUserId: r.replacedUserId, motivoReemplazoId: r.motivoReemplazoId || undefined, empleado_id_reemplezado: legajo.get(r.replacedUserId) ?? undefined };
     }
     return { ...body, puntuales };
