@@ -547,7 +547,13 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
             <ListaGrupos embebida />
           </ProveedorPlantillas>
         ) : pestana === "por_vencer" ? (
-          renderPorVencer()
+          /*
+            Un poco más adentro que las pestañas. Las tarjetas de Vencimientos son las más cargadas de
+            la pantalla —nombre, proyecto, cuatro datos y dos botones— y a ras del selector de pestañas
+            se leían como si siguieran la barra en vez de colgar de ella. Ocho píxeles de aire a cada
+            lado alcanzan para que se vean como una lista debajo de un título.
+          */
+          <div className="px-2">{renderPorVencer()}</div>
         ) : loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
