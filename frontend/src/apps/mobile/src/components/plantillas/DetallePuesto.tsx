@@ -6,7 +6,7 @@ import { plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
-import { FilasCondiciones, HojaContratoYTurno } from "./Condiciones";
+import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { marcasParaSelector } from "./PantallaEquipo";
 import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
@@ -23,7 +23,7 @@ import { CLASE_CAMPO, pesos, textoHorario } from "./comun";
   - Abajo, con texto: «Quitar persona» y «Sacar este puesto del equipo»; y ‹ anterior / siguiente ›
     para recorrer los puestos sin volver a la lista.
 */
-type Hoja = null | "persona" | "reemplazado" | "condiciones";
+type Hoja = HojaCondicion | "persona" | "reemplazado";
 
 export default function DetallePuesto() {
   const { id = "", equipoId = "", n = "1" } = useParams();
@@ -75,7 +75,7 @@ export default function DetallePuesto() {
   const r = a?.reemplazo || null;
   const efectivo = x.efectivo;
   const base = x.base;
-  const distintas = new Set<string>([...(x.diferencias.includes("Otra área o turno") || x.diferencias.includes("Otro contrato") ? ["turno"] : []), ...(x.diferencias.includes("Horario distinto") ? ["horario"] : []), ...(x.diferencias.includes("Otros días") ? ["dias"] : [])]);
+  const distintas = new Set<string>([...(x.diferencias.includes("Otro contrato") ? ["contrato"] : []), ...(x.diferencias.includes("Otra área o turno") ? ["turno"] : []), ...(x.diferencias.includes("Horario distinto") ? ["horario"] : []), ...(x.diferencias.includes("Otros días") ? ["dias"] : [])]);
   const idx = lista.findIndex((y) => y.n === numero);
   const anterior = lista[idx - 1];
   const siguiente = lista[idx + 1];
@@ -194,7 +194,7 @@ export default function DetallePuesto() {
           </div>
         ) : (
           <div className="space-y-2">
-            <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContratoYTurno={() => setHoja("condiciones")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
+            <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
             <button type="button" onClick={volverAlEquipo} className="min-h-[44px] text-sm font-bold text-blue-700 dark:text-blue-300">
               Volver a las del equipo
             </button>
@@ -260,7 +260,7 @@ export default function DetallePuesto() {
         soloProyecto
         onElegir={(pe) => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: pe._id, motivoReemplazoId: r?.motivoReemplazoId ?? null }))}
       />
-      <HojaContratoYTurno abierta={hoja === "condiciones"} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}: contrato y turno`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} />
+      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} />
     </Pantalla>
   );
 }

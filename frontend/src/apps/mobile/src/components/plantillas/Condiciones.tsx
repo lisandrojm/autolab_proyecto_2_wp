@@ -11,8 +11,11 @@ import { nombreTurno } from "./equipoUtil";
   LAS CONDICIONES (tipo de contrato, área y turno, horario, días), como las editan el EQUIPO (para
   todos sus puestos) y un PUESTO (sólo lo distinto). Mismas filas en los dos lugares.
 
-  «Contrato y turno» es UN panel: se toca el contrato y después el turno, y el turno cierra el panel
-  y completa horario y días. Así, poner un equipo entero en «Técnica · Noche · Jornada» son 3 toques.
+  EN EL ORDEN DEL ALTA INDIVIDUAL Y CADA UNA EN SU CAMPO: tipo de contrato, área y turno, horario,
+  días. Eran un solo panel («Contrato y turno») que ahorraba un toque, pero mezclaba dos preguntas de
+  distinta naturaleza —bajo qué contrato, y dónde y cuándo— en un renglón que no se parecía a ningún
+  otro de la app. Quien viene del formulario de a una persona encuentra acá los mismos campos, en el
+  mismo orden. El turno sigue completando horario y días al elegirlo.
 */
 
 export interface ValoresCondiciones {
@@ -48,38 +51,52 @@ interface HojaProps {
   onCambio: (cambios: Record<string, any>) => void;
 }
 
-export function HojaContratoYTurno({ abierta, onCerrar, titulo, areas, catalogos, valores, onCambio }: HojaProps) {
+/** Cuál de las dos hojas está abierta. */
+export type HojaCondicion = null | "contrato" | "turno";
+
+/**
+ * LAS DOS HOJAS, cada una la suya: el tipo de contrato y el área y turno.
+ *
+ * Elegir cierra la hoja: son elecciones de UNA cosa, y dejarla abierta después de tocar es obligar a
+ * buscar la cruz. El turno, además, completa horario y días.
+ */
+export function HojasCondiciones({ cual, onCerrar, titulo, areas, catalogos, valores, onCambio }: Omit<HojaProps, "abierta"> & { cual: HojaCondicion }) {
   return (
-    <HojaModal abierta={abierta} onCerrar={onCerrar} titulo={titulo} subtitulo="Elegí el contrato y después el turno">
-      <div className="space-y-4">
-        <div>
-          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Tipo de contrato</p>
-          <div className="flex flex-wrap gap-2">
-            {catalogos.contratos.map((c) => {
-              const on = c._id === valores.contratoId;
-              return (
-                <button key={c._id} type="button" aria-pressed={on} onClick={() => onCambio(cambiosDeContrato(catalogos, c._id))} className={`min-h-[44px] rounded-full px-4 text-sm font-semibold ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`}>
-                  {c.name}
-                </button>
-              );
-            })}
-          </div>
+    <>
+      <HojaModal abierta={cual === "contrato"} onCerrar={onCerrar} titulo={titulo} subtitulo="Tipo de contrato">
+        <div className="flex flex-wrap gap-2">
+          {catalogos.contratos.map((c) => {
+            const on = c._id === valores.contratoId;
+            return (
+              <button
+                key={c._id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  onCambio(cambiosDeContrato(catalogos, c._id));
+                  onCerrar();
+                }}
+                className={`min-h-[44px] rounded-full px-4 text-sm font-semibold ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`}
+              >
+                {c.name}
+              </button>
+            );
+          })}
         </div>
-        <div>
-          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Área y turno</p>
-          <ListaTurnos
-            areas={areas}
-            valor={valores.areaId && valores.shiftId ? `${valores.areaId}::${valores.shiftId}` : ""}
-            onElegir={(v) => {
-              const o = (areas || []).find((x) => `${x.areaId}::${x.shiftId}` === v);
-              if (!o) return;
-              onCambio(cambiosDeTurno(o));
-              onCerrar();
-            }}
-          />
-        </div>
-      </div>
-    </HojaModal>
+      </HojaModal>
+      <HojaModal abierta={cual === "turno"} onCerrar={onCerrar} titulo={titulo} subtitulo="Área y turno · completa el horario y los días">
+        <ListaTurnos
+          areas={areas}
+          valor={valores.areaId && valores.shiftId ? `${valores.areaId}::${valores.shiftId}` : ""}
+          onElegir={(v) => {
+            const o = (areas || []).find((x) => `${x.areaId}::${x.shiftId}` === v);
+            if (!o) return;
+            onCambio(cambiosDeTurno(o));
+            onCerrar();
+          }}
+        />
+      </HojaModal>
+    </>
   );
 }
 
@@ -87,14 +104,15 @@ interface FilasProps {
   valores: ValoresCondiciones;
   areas: OpcionAreaTurno[] | null;
   catalogos: CatalogosContratacion;
-  onAbrirContratoYTurno: () => void;
+  onAbrirContrato: () => void;
+  onAbrirTurno: () => void;
   onCambio: (cambios: Record<string, any>) => void;
   /** Marca las filas que difieren (en un puesto). */
   distintas?: Set<string>;
 }
 
-/** Las filas: «Contrato y turno» (abre el panel), horario y días (se editan acá mismo). */
-export function FilasCondiciones({ valores, areas, catalogos, onAbrirContratoYTurno, onCambio, distintas }: FilasProps) {
+/** Las filas, en el orden del alta individual: tipo de contrato, área y turno (cada uno abre su hoja), horario y días (se editan acá mismo). */
+export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas }: FilasProps) {
   const turno = nombreTurno(areas, valores.areaId, valores.shiftId);
   const contrato = valores.contratoId ? catalogos.contratos.find((c) => c._id === valores.contratoId)?.name || valores.nombreContrato || "Contrato" : "";
   const sueltos = porDiasSueltos(catalogos, valores.contratoId);
@@ -102,9 +120,17 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContratoYTu
   const marca = (k: string) => (distintas?.has(k) ? <span className="ml-1.5 rounded bg-amber-100 px-1 text-[11px] font-bold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">distinto</span> : null);
   return (
     <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70">
-      <button type="button" onClick={onAbrirContratoYTurno} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">
+      <button type="button" onClick={onAbrirContrato} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Contrato y turno{marca("turno")}</span>
+          <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Tipo de contrato{marca("contrato")}</span>
+          <span className="mt-0.5 block">{contrato ? <span className="text-sm font-semibold text-slate-900 dark:text-white">{contrato}</span> : <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Elegí el contrato</span>}</span>
+        </span>
+        <FontAwesomeIcon icon={faChevronRight} className="shrink-0 text-slate-500" />
+      </button>
+
+      <button type="button" onClick={onAbrirTurno} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Área y turno{marca("turno")}</span>
           <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
             {turno ? (
               <ChipTurno inicio={valores.inTime} texto={turno} />
@@ -113,7 +139,6 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContratoYTu
             ) : (
               <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Elegí el turno</span>
             )}
-            {contrato ? <span className="text-sm font-semibold text-slate-900 dark:text-white">{contrato}</span> : <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Elegí el contrato</span>}
           </span>
         </span>
         <FontAwesomeIcon icon={faChevronRight} className="shrink-0 text-slate-500" />

@@ -7,7 +7,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
-import { FilasCondiciones, HojaContratoYTurno } from "./Condiciones";
+import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { HojaNombre } from "./DetalleGrupo";
 import { categoriasDelNivel, estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, rutas, sacadosDe } from "./equipoUtil";
@@ -42,7 +42,7 @@ export default function PantallaEquipo() {
   const navigate = useNavigate();
   const { catalogos, guardar, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
-  const [hoja, setHoja] = useState<null | "condiciones" | "nombre" | "proyecto" | { asignar: PuestoDelEquipo }>(null);
+  const [hoja, setHoja] = useState<HojaCondicion | "nombre" | "proyecto" | { asignar: PuestoDelEquipo }>(null);
   const equipo = p?.equipos.find((e) => e._id === equipoId);
   // El proyecto es del EQUIPO (el grupo sirve en cualquiera): de él salen áreas, empresa, convenio y categorías.
   const { proyecto, empresaId } = proyectoDelEquipo(catalogos, equipo);
@@ -125,7 +125,7 @@ export default function PantallaEquipo() {
       </Seccion>
 
       <Seccion titulo="Condiciones del equipo">
-        <FilasCondiciones valores={c} areas={areas} catalogos={catalogos} onAbrirContratoYTurno={() => setHoja("condiciones")} onCambio={cambiar} />
+        <FilasCondiciones valores={c} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={cambiar} />
       </Seccion>
 
       <Seccion titulo={`Puestos · ${est.asignados}/${est.total}`} id="puestos">
@@ -196,7 +196,7 @@ export default function PantallaEquipo() {
         </div>
       </Seccion>
 
-      <HojaContratoYTurno abierta={hoja === "condiciones"} onCerrar={() => setHoja(null)} titulo="Condiciones del equipo" areas={areas} catalogos={catalogos} valores={c} onCambio={cambiar} />
+      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo="Condiciones del equipo" areas={areas} catalogos={catalogos} valores={c} onCambio={cambiar} />
       <HojaModal abierta={hoja === "proyecto"} onCerrar={() => setHoja(null)} titulo="Cliente | Proyecto" subtitulo="El área y turno se eligen de nuevo; las categorías se recalculan">
         <div className="space-y-2">
           {(catalogos.proyectos || []).map((x) => (
