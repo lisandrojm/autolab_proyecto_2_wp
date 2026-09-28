@@ -16,7 +16,14 @@ import { categoriasDelNivel, rutas } from "./equipoUtil";
 import CampoConvenio from "./CampoConvenio";
 import { CLASE_CAMPO } from "./comun";
 import { BotonInfo } from "../ModalInfo";
-import { AIRE, BAJO_ROTULO, ENTRE, MARGEN, BadgeRol, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe, resumenRoles } from "./piezas";
+import { AIRE, BAJO_ROTULO, ENTRE, MARGEN, BadgeRol, BadgeRolFijo, CHICO, HojaRoles, ResumenTurnos, Rotulo, pastillaDe } from "./piezas";
+
+/** Cada rol y cuántos puestos lo piden, en orden de aparición: [[rolId, 2], …]. */
+const cuentaPorRol = (ids: string[]): [string, number][] => {
+  const cuenta = new Map<string, number>();
+  for (const id of ids) cuenta.set(id, (cuenta.get(id) || 0) + 1);
+  return [...cuenta.entries()];
+};
 
 /*
   NUEVO EQUIPO, EN CUATRO PASOS: UNA DECISIÓN POR PANTALLA.
@@ -611,7 +618,21 @@ export default function NuevoEquipo() {
                 )
               ) : null
             ) : grupo ? (
-              <p className="text-sm text-slate-800 dark:text-slate-100">{resumenRoles(puestos.map((x) => x.rolId), nombreRol) || "Sin puestos"}</p>
+              /*
+                LOS PUESTOS DEL GRUPO, COMO EN LA PANTALLA DEL GRUPO: cada oficio con su cantidad, uno
+                debajo del otro (`BadgeRolFijo`). Era un párrafo corrido —«1 Director · 1 Playout · …»—
+                donde nada se distinguía de nada, y el mismo grupo se veía de otra forma en su pestaña
+                Puestos. Sólo lectura: los puestos se cambian desde el grupo.
+              */
+              puestos.length ? (
+                <div className={`flex flex-col items-start gap-2.5 ${BAJO_ROTULO}`}>
+                  {cuentaPorRol(puestos.map((x) => x.rolId)).map(([rolId, cantidad]) => (
+                    <BadgeRolFijo key={rolId} nombre={nombreRol(rolId)} cantidad={cantidad} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-800 dark:text-slate-100">Sin puestos</p>
+              )
             ) : (
               <p className="text-xs text-slate-600 dark:text-slate-300">{b.grupoId ? "Cargando los puestos…" : "Elegí primero el grupo."}</p>
             )}

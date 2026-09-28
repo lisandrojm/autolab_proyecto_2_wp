@@ -7,6 +7,7 @@ import { infoAPI, InfoItem } from "../../api/info";
 import type { ResultadoEliminarSolicitud } from "../../api/users";
 import { EstadoBadge } from "../EstadoSelect";
 import { estadoImpositivoPorTipo, esTipoImpositivo } from "../../utils/tramiteImpositivo";
+import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
 
 /*
  * LA TABLA DE SOLICITUDES, UNA SOLA, PARA LOS DOS LUGARES DONDE SE MIRAN.
@@ -79,6 +80,11 @@ export interface SolicitudVista {
    * saber que es la suya ni si lo que objetó está corregido.
    */
   reenviada?: { veces?: number; el?: string; motivoAnterior?: string } | null;
+  /** Para «Validar en ARCA»: el nombre se valida por CUIT; la obra social, contra la empleadora. */
+  cuit?: string | null;
+  sinCuit?: boolean;
+  nombreValidadoArcaAt?: string | null;
+  empresaContratoId?: string | null;
 }
 
 /** Adapta un `User` con `metadata.isSolicitud` a la forma de la tabla. */
@@ -309,7 +315,11 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                           </span>
                         )}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">{formatFechaSolicitud(s.creadaEl)}</p>
+                      <p className="flex items-center gap-2 text-xs text-gray-500 truncate">
+                        {formatFechaSolicitud(s.creadaEl)}
+                        {/* El mismo indicador que Usuarios y Contratos: si el nombre ya se confirmó contra el padrón. */}
+                        <NombreArca estado={estadoNombreArca({ cuit: s.cuit || undefined, sinCuit: s.sinCuit, validadoAt: s.nombreValidadoArcaAt })} fecha={s.nombreValidadoArcaAt} conTexto />
+                      </p>
                       {/*
                         EL COMENTARIO DE QUIEN PIDIÓ EL ALTA.
 

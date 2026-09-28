@@ -243,6 +243,12 @@ export interface SolicitudOverviewRow {
   motivoRechazo?: string | null;
   /** Renueva un contrato por vencer (etiqueta «Renovación»). */
   esRenovacion?: boolean;
+  cuit?: string | null;
+  sinCuit?: boolean;
+  /** Sello de «Validar nombres en ARCA»: el nombre ya se confirmó contra el padrón. */
+  nombreValidadoArcaAt?: string | null;
+  /** La empleadora pedida: contra ella se valida la obra social una vez aprobada. */
+  empresaContratoId?: string | null;
 }
 
 export interface UserProjectMetadata {

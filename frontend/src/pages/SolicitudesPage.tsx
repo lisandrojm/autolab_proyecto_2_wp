@@ -1,12 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faChevronLeft, faChevronRight, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { usersAPI, SolicitudOverviewRow } from "../api/users";
 import { clientsAPI } from "../api/clients";
 import { projectsAPI } from "../api/projects";
+import { cachedFetch } from "../utils/refCache";
+import { infoAPI } from "../api/info";
+import { categoriaSatAPI } from "../api/categoriasSat";
+import { roleFrameAPI } from "../api/roleFrames";
+import { contratoFrameAPI } from "../api/contratosFrame";
+import { contratosAPI } from "../api/contratos";
+import { CatalogosAprobacion, contratoDesdeSolicitud } from "../utils/aprobacionMasiva";
+import { afipAPI } from "../api/afip";
+import { FilaObraSocial, ValidarObrasSocialesSolicitudes } from "../components/solicitudes/ValidarObrasSocialesSolicitudes";
+import { cuitEsValido } from "../utils/cuit";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
@@ -56,8 +66,16 @@ export const SolicitudesPage: React.FC = () => {
     SELECCIÓN PARA ELIMINAR DE A MUCHAS. Se guarda por id con su nombre y estado (para el aviso de las
     aprobadas, que se llevan su contrato) y sobrevive al cambio de página; cambiar un filtro la limpia.
   */
-  const [seleccion, setSeleccion] = useState<Map<string, { nombre: string; estado: string }>>(new Map());
+  /** Lo que hace falta de cada seleccionada para las acciones masivas, sin volver a pedirla. */
+  type Elegida = { nombre: string; estado: string; cuit?: string | null; sinCuit?: boolean; empresaContratoId?: string | null; solicitudUserId?: string | null };
+  const [seleccion, setSeleccion] = useState<Map<string, Elegida>>(new Map());
+  const elegidaDe = (r: { nombre: string; estado: string; cuit?: string | null; sinCuit?: boolean; empresaContratoId?: string | null; solicitudUserId?: string | null }): Elegida => ({ nombre: r.nombre, estado: r.estado, cuit: r.cuit, sinCuit: r.sinCuit, empresaContratoId: r.empresaContratoId, solicitudUserId: r.solicitudUserId });
+  /** Validar obras sociales: la lista de la corrida abierta (null = modal cerrado). */
+  const [validandoOS, setValidandoOS] = useState<FilaObraSocial[] | null>(null);
+  const [validandoNombres, setValidandoNombres] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  /** Avance de «Aprobar N» / «Rechazar N»: van de a una y la tanda puede tardar. */
+  const [procesando, setProcesando] = useState<{ accion: "aprobar" | "rechazar"; hechas: number; total: number } | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
 
@@ -221,10 +239,10 @@ export const SolicitudesPage: React.FC = () => {
 
   const cambiarSeleccion = (ids: Set<string>) =>
     setSeleccion((antes) => {
-      const nueva = new Map<string, { nombre: string; estado: string }>();
+      const nueva = new Map<string, Elegida>();
       for (const id of ids) {
         const s = solicitudes.find((x) => x._id === id);
-        nueva.set(id, s ? { nombre: s.nombre, estado: s.estado } : antes.get(id)!);
+        nueva.set(id, s ? elegidaDe(s) : antes.get(id)!);
       }
       return nueva;
     });
@@ -236,12 +254,180 @@ export const SolicitudesPage: React.FC = () => {
       for (let pagina = 1, paginas = 1; pagina <= paginas; pagina++) {
         const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: filtroEstado || undefined, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, page: pagina, limit: 100 });
         paginas = resp.totalPages;
-        for (const r of resp.rows) nueva.set(r._id, { nombre: r.nombre, estado: r.estado });
+        for (const r of resp.rows) nueva.set(r._id, elegidaDe(r));
       }
       setSeleccion(nueva);
     } catch {
       sweetAlert.error("Error", "No se pudieron seleccionar todas.");
     }
+  };
+
+  /** Las pendientes de la selección: son las únicas que se aprueban o rechazan. */
+  const pendientesSeleccionadas = [...seleccion.entries()].filter(([, x]) => x.estado === "pendiente");
+
+  /*
+    RECHAZAR VARIAS: un motivo para todas. Es el mismo rechazo de a una (`setSolicitudStatus`), así que
+    cada solicitud vuelve a quien la pidió con ese motivo, igual que desde el botón de su fila.
+  */
+  const rechazarSeleccionadas = async () => {
+    const lista = pendientesSeleccionadas;
+    if (!lista.length) return;
+    const r = await sweetAlert.prompt(`¿Rechazar ${lista.length} ${lista.length === 1 ? "solicitud" : "solicitudes"}?`, {
+      text: "Contale a quien las pidió por qué no se aprueban. El mismo motivo va a cada una.",
+      placeholder: "Ej.: el equipo se contrata la semana que viene",
+      multilinea: true,
+      confirmText: `Rechazar ${lista.length}`,
+      mensajeVacio: "Escribí el motivo del rechazo.",
+    });
+    if (!r.isConfirmed) return;
+    const motivo = String(r.value || "").trim();
+    const fallidas: string[] = [];
+    setProcesando({ accion: "rechazar", hechas: 0, total: lista.length });
+    for (const [i, [id, x]] of lista.entries()) {
+      try {
+        await usersAPI.setSolicitudStatus(id, "rechazada", motivo);
+      } catch (e: any) {
+        fallidas.push(`${x.nombre}: ${e?.response?.data?.error || "no se pudo rechazar"}`);
+      }
+      setProcesando({ accion: "rechazar", hechas: i + 1, total: lista.length });
+    }
+    setProcesando(null);
+    setSeleccion(new Map());
+    const hechas = lista.length - fallidas.length;
+    if (fallidas.length) sweetAlert.warningAlert(`Se rechazaron ${hechas} de ${lista.length}`, fallidas.join("\n"));
+    else sweetAlert.success("Solicitudes rechazadas", `Se rechazaron ${hechas}.`);
+    cargar(page);
+  };
+
+  /*
+    APROBAR VARIAS, SIN ABRIR EL FORMULARIO: tal cual se pidieron.
+
+    El contrato lo arma `contratoDesdeSolicitud`, que repite lo que hace el formulario de Agregar
+    Miembro al aprobar, y se guarda por el mismo `assign-member` —con sus validaciones del server—.
+    Lo que el formulario resolvería preguntando (una categoría que falta, el motivo de una categoría de
+    otra valoración) no se inventa: esa solicitud queda pendiente y se dice por qué, para aprobarla a
+    mano con «Editar para Aprobar». De a una: si una falla, las demás siguen.
+  */
+  const aprobarSeleccionadas = async () => {
+    const lista = pendientesSeleccionadas;
+    if (!lista.length) return;
+    const r = await sweetAlert.confirm(
+      `¿Aprobar ${lista.length} ${lista.length === 1 ? "solicitud" : "solicitudes"}?`,
+      "Se aprueban tal cual se pidieron: cada una crea su contrato en el equipo del proyecto, igual que «Editar para Aprobar» sin cambiar nada. Las que tengan datos incompletos quedan pendientes y te digo por qué.",
+      `Aprobar ${lista.length}`,
+    );
+    if (!r.isConfirmed) return;
+
+    setProcesando({ accion: "aprobar", hechas: 0, total: lista.length });
+    let cat: CatalogosAprobacion;
+    try {
+      // Las mismas listas y las mismas claves de caché que el formulario (`ProjectTeamPage`).
+      const [sedes, categoriasSat, estados, roleFrames, contratoFrames, contratos] = await Promise.all([
+        cachedFetch("info:sede", () => infoAPI.listByType("sede")),
+        cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()),
+        cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")),
+        cachedFetch("roleFrames:all", () => roleFrameAPI.list()),
+        cachedFetch("contratoFrames:all", () => contratoFrameAPI.list()),
+        cachedFetch("contratos:all", () => contratosAPI.list()),
+      ]);
+      cat = { sedes, categoriasSat, estados, roleFrames, contratoFrames, contratos };
+    } catch {
+      setProcesando(null);
+      sweetAlert.error("No se pudo aprobar", "No se pudieron cargar los catálogos. Probá de nuevo.");
+      return;
+    }
+
+    const proyectos = new Map<string, Awaited<ReturnType<typeof projectsAPI.getProject>>>();
+    const pendientes: string[] = [];
+    for (const [i, [id, x]] of lista.entries()) {
+      try {
+        const solicitud = await usersAPI.get(id);
+        const projectId = String((solicitud.metadata as any)?.projectIds?.[0] || "");
+        if (!projectId) throw new Error("no tiene proyecto");
+        const idReal = String((solicitud.metadata as any)?.solicitudUserId || "");
+        const persona = idReal && idReal !== id ? await usersAPI.get(idReal) : solicitud;
+        if (!proyectos.has(projectId)) proyectos.set(projectId, await projectsAPI.getProject(projectId, { team: "ids" }));
+        const proyecto: any = proyectos.get(projectId)!;
+        const armado = contratoDesdeSolicitud({ solicitud, persona, proyecto, cat });
+        if (!armado.ok) throw new Error(`falta ${armado.faltan.join(", ")}`);
+        await projectsAPI.assignMember(projectId, { userId: persona._id, isUpdate: false, approveSolicitud: id, contract: armado.armado.contract });
+        if (armado.armado.rolParaLaFicha) {
+          // Como el formulario: el rol pedido se suma a la ficha. El contrato ya quedó; esto no lo frena.
+          await usersAPI.agregarRolesFrame(persona._id, [armado.armado.rolParaLaFicha._id]).catch(() => {});
+        }
+      } catch (e: any) {
+        pendientes.push(`${x.nombre}: ${e?.response?.data?.error || e?.message || "no se pudo aprobar"}`);
+      }
+      setProcesando({ accion: "aprobar", hechas: i + 1, total: lista.length });
+    }
+    setProcesando(null);
+    setSeleccion(new Map(lista.filter(([, x]) => pendientes.some((p) => p.startsWith(`${x.nombre}:`)))));
+    const aprobadas = lista.length - pendientes.length;
+    if (pendientes.length) {
+      sweetAlert.warningAlert(
+        `Se aprobaron ${aprobadas} de ${lista.length}`,
+        `Quedaron pendientes (y seleccionadas); aprobalas con «Editar para Aprobar»:\n\n${pendientes.join("\n")}`,
+      );
+    } else sweetAlert.success("Solicitudes aprobadas", `Se aprobaron ${aprobadas}: cada una ya tiene su contrato.`);
+    cargar(page);
+  };
+
+  /*
+    VALIDAR NOMBRES EN ARCA: el mismo `validarNombres` de Usuarios, sobre la selección.
+
+    Una solicitud es un usuario, así que se valida ella; si apunta a una persona que ya existía, esa
+    persona también (el contrato va a su nombre). Quien ya tiene el sello no se vuelve a consultar.
+  */
+  const conCuit = [...seleccion.entries()].filter(([, x]) => !x.sinCuit && cuitEsValido(String(x.cuit || "")));
+  const validarNombresSeleccion = async () => {
+    if (!conCuit.length) return;
+    const ids = [...new Set(conCuit.flatMap(([id, x]) => [id, ...(x.solicitudUserId && x.solicitudUserId !== id ? [x.solicitudUserId] : [])]))];
+    const ok = await sweetAlert.confirm(
+      `¿Validar ${conCuit.length} ${conCuit.length === 1 ? "nombre" : "nombres"} con ARCA?`,
+      "Se consulta el Padrón por cada CUIT y, si ARCA tiene otro nombre, se reemplaza por el del organismo. Es lo mismo que «Validar nombres en ARCA» de Usuarios.",
+      "Sí, validar",
+    );
+    if (!ok.isConfirmed) return;
+    setValidandoNombres(true);
+    try {
+      const r = await afipAPI.validarNombres({ userIds: ids, limite: 300 });
+      if (r.motivoSinConsultar) {
+        sweetAlert.warningAlert("No se pudo consultar", r.motivoSinConsultar);
+        return;
+      }
+      const lineas = [
+        r.consultados > 0 ? `${r.consultados} consultado(s) en ARCA.` : "No hizo falta consultar a nadie: ya estaban validados.",
+        r.renombrados.length > 0 ? `${r.renombrados.length} nombre(s) corregido(s): ${r.renombrados.map((x) => `${x.antes} → ${x.ahora}`).join(" · ")}.` : r.consultados > 0 ? "Todos los nombres ya coincidían." : "",
+        r.noEncontrados.length > 0 ? `ARCA no reconoció ${r.noEncontrados.length}: ${r.noEncontrados.map((x) => `${x.cuit} (${x.motivo})`).join(" · ")}.` : "",
+        r.inactivos.length > 0 ? `${r.inactivos.length} CUIT existen pero están INACTIVOS: el nombre no se pudo confirmar.` : "",
+        r.cuitInvalido > 0 ? `${r.cuitInvalido} con CUIT inválido: revisá el dato.` : "",
+      ].filter(Boolean);
+      if (r.noEncontrados.length || r.inactivos.length || r.cuitInvalido) sweetAlert.warningAlert("Validación de nombres", lineas.join("\n"));
+      else sweetAlert.success("Nombres validados", lineas.join(" "));
+      cargar(page);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo validar", e?.response?.data?.error || "Probá de nuevo en un momento.");
+    } finally {
+      setValidandoNombres(false);
+    }
+  };
+
+  /*
+    VALIDAR OBRAS SOCIALES: sólo las APROBADAS, que ya tienen contrato donde guardarla. Las demás de la
+    selección se dicen y se saltean: una pendiente se valida después de aprobarla.
+  */
+  const aprobadasConEmpresa = [...seleccion.entries()].filter(([, x]) => x.estado === "aprobada" && !!x.empresaContratoId && cuitEsValido(String(x.cuit || "")));
+  const validarObrasSocialesSeleccion = async () => {
+    const salteadas = seleccion.size - aprobadasConEmpresa.length;
+    if (salteadas > 0) {
+      const r = await sweetAlert.confirm(
+        `¿Validar ${aprobadasConEmpresa.length} ${aprobadasConEmpresa.length === 1 ? "obra social" : "obras sociales"}?`,
+        `${salteadas === 1 ? "1 seleccionada se saltea" : `${salteadas} seleccionadas se saltean`}: la obra social se guarda en el contrato, así que sólo se validan las APROBADAS que tienen empleadora y CUIT. Las pendientes, aprobalas primero.`,
+        "Validar",
+      );
+      if (!r.isConfirmed) return;
+    }
+    setValidandoOS(aprobadasConEmpresa.map(([id, x]) => ({ id, nombre: x.nombre, cuit: String(x.cuit || ""), empresaId: String(x.empresaContratoId) })));
   };
 
   const eliminarSeleccionadas = async () => {
@@ -353,12 +539,37 @@ export const SolicitudesPage: React.FC = () => {
               <button type="button" onClick={() => setSeleccion(new Map())} className="font-semibold text-gray-600 hover:underline dark:text-gray-300">
                 Quitar selección
               </button>
-              <button type="button" onClick={() => void eliminarSeleccionadas()} disabled={eliminando} className="ml-auto inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+              {/* Aprobar y rechazar valen para las PENDIENTES de la selección; las demás se ignoran. */}
+              {pendientesSeleccionadas.length > 0 && (
+                <>
+                  <button type="button" onClick={() => void aprobarSeleccionadas()} disabled={!!procesando || eliminando} className="ml-auto inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-1.5 font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+                    <FontAwesomeIcon icon={faCheck} />
+                    {procesando?.accion === "aprobar" ? `Aprobando ${procesando.hechas} de ${procesando.total}…` : `Aprobar ${pendientesSeleccionadas.length}`}
+                  </button>
+                  <button type="button" onClick={() => void rechazarSeleccionadas()} disabled={!!procesando || eliminando} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-3 py-1.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30">
+                    <FontAwesomeIcon icon={faXmark} />
+                    {procesando?.accion === "rechazar" ? `Rechazando ${procesando.hechas} de ${procesando.total}…` : `Rechazar ${pendientesSeleccionadas.length}`}
+                  </button>
+                </>
+              )}
+              {/* Validar en ARCA: el nombre (cualquiera con CUIT) y la obra social (sólo aprobadas). */}
+              {conCuit.length > 0 && (
+                <button type="button" onClick={() => void validarNombresSeleccion()} disabled={validandoNombres || !!procesando} className={`${pendientesSeleccionadas.length > 0 ? "" : "ml-auto "}inline-flex items-center gap-2 rounded-lg border border-blue-300 px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/40`}>
+                  {validandoNombres ? "Validando…" : `Validar ${conCuit.length === 1 ? "nombre" : "nombres"} en ARCA`}
+                </button>
+              )}
+              {aprobadasConEmpresa.length > 0 && (
+                <button type="button" onClick={() => void validarObrasSocialesSeleccion()} disabled={!!validandoOS || !!procesando} className="inline-flex items-center gap-2 rounded-lg border border-blue-300 px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/40">
+                  Validar obra social ({aprobadasConEmpresa.length})
+                </button>
+              )}
+              <button type="button" onClick={() => void eliminarSeleccionadas()} disabled={eliminando || !!procesando} className={`${pendientesSeleccionadas.length > 0 || conCuit.length > 0 || aprobadasConEmpresa.length > 0 ? "" : "ml-auto "}inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50`}>
                 <FontAwesomeIcon icon={faTrash} />
                 {eliminando ? "Eliminando…" : `Eliminar ${seleccion.size}`}
               </button>
             </div>
           )}
+          {validandoOS && <ValidarObrasSocialesSolicitudes filas={validandoOS} onCerrar={() => setValidandoOS(null)} onTerminado={() => cargar(page)} />}
           <SolicitudesTable
             seleccionadas={new Set(seleccion.keys())}
             onCambiarSeleccion={cambiarSeleccion}

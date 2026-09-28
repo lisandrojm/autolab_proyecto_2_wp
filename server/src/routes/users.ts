@@ -1422,6 +1422,12 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         motivoRechazo: m.solicitudMotivoRechazo || null,
         // Renueva un contrato por vencer: la tabla la muestra con la etiqueta «Renovación».
         esRenovacion: !!m.esRenovacion,
+        // Lo que usa «Validar en ARCA» desde Solicitudes: el nombre contra el padrón (por CUIT) y la
+        // obra social de las aprobadas (por empleadora, que es contra quien se valida el RNOS).
+        cuit: m.cuit || null,
+        sinCuit: !!m.sinCuit,
+        nombreValidadoArcaAt: m.nombreValidadoArcaAt || null,
+        empresaContratoId: m.empresaContratoId ? String(m.empresaContratoId) : null,
       };
     });
 

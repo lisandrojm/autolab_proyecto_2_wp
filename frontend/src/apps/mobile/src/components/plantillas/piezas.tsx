@@ -49,13 +49,6 @@ export function BadgeTramite({ estados, tramite }: { estados: InfoItem[]; tramit
   return <EstadoBadge name={estado.name} etiqueta={tramite === "constancia_cuit" ? "Servicios" : "ARCA"} className="shrink-0" />;
 }
 
-/** «2 Camarógrafo · 1 Director», en orden de aparición. */
-export function resumenRoles(ids: string[], nombre: (id: string) => string) {
-  const cuenta = new Map<string, number>();
-  for (const id of ids) cuenta.set(id, (cuenta.get(id) || 0) + 1);
-  return [...cuenta.entries()].map(([id, c]) => `${c} ${nombre(id)}`).join(" · ");
-}
-
 /** Un rol elegido: su nombre, cuántos (− y +) y ✕ para sacarlo. */
 /**
  * LA FORMA DE UNA COSA ELEGIDA, para los dos campos que eligen de a varias.
