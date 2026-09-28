@@ -137,7 +137,7 @@ export default function ContratarRevision() {
         motivo: errores.length ? `Corregí ${errores.length === 1 ? "1 error" : `${errores.length} errores`} para enviar` : "No hay nada para enviar",
         onMotivo: () => document.getElementById("problemas")?.scrollIntoView({ behavior: "smooth", block: "start" }),
         cargando: enviando,
-        tono: "verde",
+
       }}
       notaBoton="Se envían todas juntas: si una falla, no sale ninguna."
       pasos={{ actual: 3, etiquetas: PASOS_CONTRATAR }}

@@ -83,7 +83,7 @@ export default function DetalleGrupo() {
             setHoja("puestos");
           } else navigate(rutas.nuevo({ grupo: p._id }));
         },
-        tono: "verde",
+
       }}
     >
       {/*

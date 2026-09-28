@@ -25,7 +25,6 @@ export interface BotonPrincipal {
   /** Llevar a lo que falta. */
   onMotivo?: () => void;
   cargando?: boolean;
-  tono?: "azul" | "verde";
 }
 
 interface Props {
@@ -206,7 +205,7 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
               type="button"
               onClick={boton.onClick}
               disabled={boton.deshabilitado || boton.cargando}
-              className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white disabled:opacity-40 ${boton.tono === "verde" ? "bg-emerald-600" : "bg-blue-600"}`}
+              className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white disabled:opacity-40 bg-blue-600`}
             >
               {boton.cargando && <FontAwesomeIcon icon={faSpinner} spin />}
               {boton.texto}

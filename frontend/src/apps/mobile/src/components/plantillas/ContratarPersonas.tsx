@@ -130,7 +130,7 @@ export default function ContratarPersonas() {
         onClick: () => navigate(rutas.revision(id)),
         deshabilitado: solicitudes === 0 || calculando,
         motivo: solicitudes === 0 ? "No hay nadie para contratar" : undefined,
-        tono: "verde",
+
       }}
       /* Los errores no frenan acá: se ven en la fila y se corrigen con el lápiz; la Revisión es la que no deja enviar. */
       notaBoton={errores > 0 ? `${errores === 1 ? "1 fila tiene" : `${errores} filas tienen`} algo para corregir` : undefined}

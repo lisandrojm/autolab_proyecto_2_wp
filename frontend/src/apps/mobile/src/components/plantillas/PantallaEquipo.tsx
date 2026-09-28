@@ -91,7 +91,7 @@ export default function PantallaEquipo() {
       titulo={equipo.nombre}
       contexto={`${p.nombre}${proyecto ? ` · ${etiquetaProyecto(proyecto)}` : " · sin proyecto"}`}
       atras={rutas.grupo(p._id)}
-      boton={{ texto: "Contratar este equipo", onClick: () => navigate(rutas.contratar(p._id, [equipo._id])), deshabilitado: puestos.length === 0, motivo: "El equipo no usa ningún puesto", tono: "verde" }}
+      boton={{ texto: "Contratar este equipo", onClick: () => navigate(rutas.contratar(p._id, [equipo._id])), deshabilitado: puestos.length === 0, motivo: "El equipo no usa ningún puesto" }}
     >
       <Seccion titulo="Proyecto">
         <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
@@ -127,7 +127,8 @@ export default function PantallaEquipo() {
       </Seccion>
 
       <Seccion titulo="Condiciones del equipo">
-        <FilasCondiciones valores={c} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={cambiar} />
+        {/* Sin horario: es por persona, con el del turno por defecto (ver `sinHorario`). */}
+        <FilasCondiciones valores={c} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={cambiar} sinHorario />
       </Seccion>
 
       <Seccion titulo={`Puestos · ${est.asignados}/${est.total}`} id="puestos">

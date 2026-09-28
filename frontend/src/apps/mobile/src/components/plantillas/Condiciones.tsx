@@ -91,6 +91,13 @@ interface FilasProps {
   onCambio: (cambios: Record<string, any>) => void;
   /** Marca las filas que difieren (en un puesto). */
   distintas?: Set<string>;
+  /**
+   * SIN LA FILA DEL HORARIO: en el EQUIPO. El horario es de cada persona —el que trae el turno es el
+   * valor por defecto, y se cambia en la hoja de la persona o en el puesto—, así que un horario
+   * «general del equipo» era un dato que parecía mandar y no mandaba. En el puesto la fila sigue: ahí
+   * sí es de esa persona.
+   */
+  sinHorario?: boolean;
 }
 
 /**
@@ -98,7 +105,7 @@ interface FilasProps {
  * badge de trámite), y debajo, en su tarjeta, área y turno (abre su hoja), horario y días (se editan
  * acá mismo).
  */
-export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas }: FilasProps) {
+export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas, sinHorario }: FilasProps) {
   const turno = nombreTurno(areas, valores.areaId, valores.shiftId);
   const sueltos = porDiasSueltos(catalogos, valores.contratoId);
   const dias = valores.diasSemana || [];
@@ -124,6 +131,7 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
         <FontAwesomeIcon icon={faChevronRight} className="shrink-0 text-slate-500" />
       </button>
 
+      {!sinHorario && (
       <div className="px-3 py-2">
         <span className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Horario{marca("horario")}</span>
         <div className="flex items-center gap-2">
@@ -137,6 +145,7 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
         </div>
         <span className="sr-only">{textoHorario(valores.inTime, valores.outTime)}</span>
       </div>
+      )}
 
       <div className="px-3 py-2">
         <span className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Días{marca("dias")}</span>
