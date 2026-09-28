@@ -27,30 +27,6 @@ import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTi
   todos) y cada uno lleva sus fechas, con atajos. Botón: «Siguiente».
 */
 
-const NOMBRES_DIA = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-/** El próximo `dia` (0 = domingo) desde hoy (hoy incluido). */
-const proximo = (dia: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + ((dia - d.getDay() + 7) % 7));
-  return iso(d);
-};
-
-/** Todos los `dia` que quedan en este mes; si no queda ninguno, los del mes que viene. */
-const todosDelMes = (dia: number): { fechas: string[]; mes: string } => {
-  const hoy = new Date();
-  for (const salto of [0, 1]) {
-    const d = new Date(hoy.getFullYear(), hoy.getMonth() + salto, 1);
-    const mes = d.getMonth();
-    const fechas: string[] = [];
-    for (; d.getMonth() === mes; d.setDate(d.getDate() + 1)) if (d.getDay() === dia && iso(d) >= fechaDeHoy()) fechas.push(iso(d));
-    if (fechas.length) return { fechas, mes: MESES[mes] };
-  }
-  return { fechas: [], mes: "" };
-};
-
 export default function ContratarFechas() {
   const { id = "" } = useParams();
   const [query] = useSearchParams();
@@ -142,8 +118,6 @@ function TarjetaEquipo({ equipo, p, estado, f, areas, catalogos, onCambio }: { e
   const { conDias, conPeriodo, indeterminado } = formaDe(p, equipo, catalogos, estado);
   const est = estadoDe(p, equipo);
   const c = equipo.condiciones || {};
-  const diasAtajo = [...new Set([...(c.diasSemana?.length ? c.diasSemana : [6, 0])])].slice(0, 2);
-  const sumar = (fechas: string[]) => onCambio({ fechas: [...new Set([...f.fechas, ...fechas])].sort() });
   return (
     <div id={`equipo-${equipo._id}`} className={`scroll-mt-20 rounded-xl border bg-white dark:bg-slate-800/70 ${f.incluido ? "border-slate-300 dark:border-slate-600" : "border-slate-200 opacity-70 dark:border-slate-700"}`}>
       <label className="flex min-h-[60px] cursor-pointer items-center gap-3 px-3 py-2">
@@ -161,18 +135,7 @@ function TarjetaEquipo({ equipo, p, estado, f, areas, catalogos, onCambio }: { e
         <div className="space-y-3 border-t border-slate-200 px-3 py-3 dark:border-slate-700">
           {conDias && (
             <>
-              <div className="flex flex-wrap gap-2">
-                <Atajo onClick={() => sumar([proximo(6)])}>Próximo sábado</Atajo>
-                <Atajo onClick={() => sumar([proximo(0)])}>Próximo domingo</Atajo>
-                {diasAtajo.map((d) => {
-                  const t = todosDelMes(d);
-                  return t.fechas.length ? (
-                    <Atajo key={d} onClick={() => sumar(t.fechas)}>{`Todos los ${NOMBRES_DIA[d]} de ${t.mes}`}</Atajo>
-                  ) : null;
-                })}
-                {f.fechas.length > 0 && <Atajo onClick={() => onCambio({ fechas: [] })}>Borrar días</Atajo>}
-              </div>
-              <CustomMultiDatePicker label="Días (cada día es una jornada)" value={f.fechas} onChange={(d: string | string[]) => onCambio({ fechas: [...new Set(Array.isArray(d) ? d : d ? [d] : [])].sort() })} minDate={fechaDeHoy()} />
+              <CustomMultiDatePicker label="Días que trabajan" value={f.fechas} onChange={(d: string | string[]) => onCambio({ fechas: [...new Set(Array.isArray(d) ? d : d ? [d] : [])].sort() })} minDate={fechaDeHoy()} />
               {f.fechas.length > 0 && <p className="text-sm text-slate-800 dark:text-slate-100">{`${f.fechas.length} ${f.fechas.length === 1 ? "jornada" : "jornadas"}: ${f.fechas.map(fechaCorta).join(" · ")}`}</p>}
             </>
           )}
@@ -188,10 +151,3 @@ function TarjetaEquipo({ equipo, p, estado, f, areas, catalogos, onCambio }: { e
   );
 }
 
-function Atajo({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="min-h-[40px] rounded-full border border-blue-500 px-3 text-sm font-semibold text-blue-700 dark:text-blue-300">
-      {children}
-    </button>
-  );
-}

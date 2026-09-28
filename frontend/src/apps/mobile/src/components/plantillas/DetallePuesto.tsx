@@ -281,11 +281,11 @@ export default function DetallePuesto() {
         />
       </Seccion>
 
-      <Seccion titulo="Más">
+      <Seccion>
         {/* Cerrado por defecto: quitar a la persona o sacar el puesto no es algo habitual, y abierto ocupaba el lugar de lo que sí se mira. */}
         <details className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/70">
           <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between px-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
-            Quitar persona o sacar del equipo
+            Más
             <FontAwesomeIcon icon={faChevronDown} className="text-slate-500" />
           </summary>
         {/* Dos botones, uno al lado del otro: son dos acciones distintas, cada una con su blanco entero. */}
