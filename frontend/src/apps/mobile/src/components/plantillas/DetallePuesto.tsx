@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRightArrowLeft, faChevronLeft, faChevronRight, faTriangleExclamation, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
@@ -14,6 +14,7 @@ import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
 import { AyudaImportes, diferenciaContraEscala, PROPS_IMPORTES_MOVIL } from "../contratacion/AyudaImportes";
 import { ImportesDelContrato } from "../../../../../components/contratacion/ImportesDelContrato";
 import { importePorJornadaDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
+import { jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { marcasParaSelector } from "./PantallaEquipo";
 import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { textoHorario } from "./comun";
@@ -142,8 +143,21 @@ export default function DetallePuesto() {
   // La oferta de categorías con la misma regla del alta individual: las del nivel del proyecto, y «ver todas» si no está la que se busca.
   const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, verTodasDelConvenio, false);
   const categoriaActual = categoriaDelPuesto || null;
-  const indeterminadoDelPuesto = !!contratoDelPuesto?.data?.esTiempoIndeterminado;
   const diferencia = diferenciaContraEscala(escala, importe);
+  /*
+    UN MES DE REFERENCIA, para que los cuatro importes se editen y se muevan juntos también acá.
+
+    El puesto no tiene fechas —son de cada contratación— y sin jornadas el componente apaga los
+    cuatro campos: escribir uno recalcula los otros tres, y sin jornadas la cuenta no cierra. Se
+    calcula sobre ESTE mes con los días del turno, que es el número que va a dar el primer mes
+    completo de un contrato con esos días. Sin días cargados, de lunes a viernes, y se dice. Lo que
+    se guarda sigue siendo la jornada; el resto es cómo se lee.
+  */
+  const hoy = new Date();
+  const periodoRef = periodoDeCalculo(`${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-01`, "", true);
+  const diasRef = efectivo.diasSemana?.length ? efectivo.diasSemana : [1, 2, 3, 4, 5];
+  const jornadasRef = jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: periodoRef.desde, hasta: periodoRef.hasta, dias: diasRef }) || 0;
+  const mesesEqRef = mesesEquivalentes(periodoRef.desde, periodoRef.hasta, diasRef);
   const cct = catalogos.cctDeConvenio(convenio);
 
   return (
@@ -166,11 +180,19 @@ export default function DetallePuesto() {
     >
       <Seccion titulo="Persona">
         <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-          <p className={`text-lg font-bold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</p>
+          {/*
+            EL NOMBRE Y, A SU DERECHA, UN BOTÓN CHICO PARA CAMBIARLA. Era un botón azul de ancho
+            completo debajo del nombre: el más grande de la pantalla para algo que pasa cada tanto. Un
+            ícono de intercambio al lado del nombre dice lo mismo sin robarle el lugar a lo que sí se
+            mira. Sin persona, el botón es azul y lleva el «+»: ahí sí es lo que hay que hacer.
+          */}
+          <div className="flex items-center gap-2">
+            <p className={`min-w-0 flex-1 truncate text-lg font-bold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</p>
+            <button type="button" onClick={() => setHoja("persona")} aria-label={persona ? "Cambiar persona" : "Asignar persona"} title={persona ? "Cambiar persona" : "Asignar persona"} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${persona ? "border border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200" : "bg-blue-600 text-white"}`}>
+              <FontAwesomeIcon icon={persona ? faArrowRightArrowLeft : faUserPlus} />
+            </button>
+          </div>
           {persona && !persona.activo && <p className="text-sm font-semibold text-red-700 dark:text-red-300">Está inactiva: no se puede contratar.</p>}
-          <button type="button" onClick={() => setHoja("persona")} className="mt-2 min-h-[44px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white">
-            {persona ? "Cambiar persona" : "Asignar persona"}
-          </button>
           {avisos.length > 0 && (
             <div className="mt-3 rounded-xl bg-red-50 p-2 dark:bg-red-500/10">
               <button type="button" onClick={() => setVerAvisos((v) => !v)} aria-expanded={verAvisos} className="flex min-h-[40px] w-full items-center gap-2 text-left text-sm font-semibold text-red-800 dark:text-red-200">
@@ -229,13 +251,19 @@ export default function DetallePuesto() {
                 className="space-y-4"
                 valorJornada={importe}
                 onValorJornada={setImporte}
-                mesesEq={0}
-                indeterminado={indeterminadoDelPuesto}
-                jornadas={0}
-                diasSemana={(efectivo.diasSemana || []).length}
+                mesesEq={mesesEqRef}
+                jornadas={jornadasRef}
+                diasSemana={diasRef.length}
                 bloqueado={!categoriaActual}
                 textoBloqueado="Se habilita al elegir la categoría."
-                ayudaJornada={<AyudaImportes bloqueado={!categoriaActual} esServicios={false} categoria={categoriaActual?.name} cct={cct} multiplicador={multDelPuesto} contrato={contratoDelPuesto?.name} escalaBase={escalaBase} diferencia={diferencia} />}
+                ayudaJornada={
+                  <>
+                    <AyudaImportes bloqueado={!categoriaActual} esServicios={false} categoria={categoriaActual?.name} cct={cct} multiplicador={multDelPuesto} contrato={contratoDelPuesto?.name} escalaBase={escalaBase} diferencia={diferencia} />
+                    <p className="text-[11px] text-slate-400">
+                      Sobre un mes de referencia: este mes, {jornadasRef} jornadas{efectivo.diasSemana?.length ? " con los días del turno" : " de lunes a viernes"}. Las fechas reales van al contratar.
+                    </p>
+                  </>
+                }
                 {...PROPS_IMPORTES_MOVIL}
               />
             </div>
