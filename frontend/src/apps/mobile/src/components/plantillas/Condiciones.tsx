@@ -5,7 +5,9 @@ import { HojaModal } from "./HojaModal";
 import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTipoContrato";
 import { ListaTurnos } from "./DetalleGrupo";
 import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContratacion";
-import { ChipTurno, CLASE_HORA, DIAS, textoHorario } from "./comun";
+import { CLASE_HORA, DIAS, textoHorario } from "./comun";
+import { AIRE_DOS_LINEAS_SIN_CRUZ, MARGEN, pastillaDe } from "./piezas";
+import { textoDeDias } from "../../../../../utils/jerarquiaTurnos";
 import { nombreTurno } from "./equipoUtil";
 
 /*
@@ -118,9 +120,20 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
       <button type="button" onClick={onAbrirTurno} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">
         <span className="min-w-0 flex-1">
           <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Área y turno{marca("turno")}</span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+          {/*
+            EL MISMO BADGE QUE EN LA TARJETA DEL GRUPO: el área y el turno arriba, y debajo el horario y los
+            días que trae ese turno. Antes decía sólo «Libertador · Mañana», y con el horario fuera del equipo
+            (es por persona) no quedaba en ningún lado a qué hora entra y qué días trabaja el turno elegido:
+            es el valor por defecto de cada persona, y tiene que verse donde se elige.
+          */}
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {turno ? (
-              <ChipTurno inicio={valores.inTime} texto={turno} />
+              <span className={`${pastillaDe("azul")} ${AIRE_DOS_LINEAS_SIN_CRUZ} ${MARGEN} min-w-0`}>
+                <span className="min-w-0">
+                  <span className="block truncate uppercase tracking-wide">{turno}</span>
+                  <span className="block truncate text-[10px] font-normal opacity-80">{[textoHorario(valores.inTime, valores.outTime), textoDeDias(valores.diasSemana)].filter(Boolean).join(" · ")}</span>
+                </span>
+              </span>
             ) : areas === null && valores.shiftId ? (
               <span className="h-5 w-24 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" aria-label="Cargando el turno" />
             ) : (
