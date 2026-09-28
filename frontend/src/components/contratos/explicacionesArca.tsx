@@ -1,4 +1,5 @@
 import React from "react";
+import { LinkSiPuede } from '../LinkSiPuede';
 
 /**
  * Qué es cada dato del alta de ARCA, de dónde sale y por qué frena el TXT.
@@ -123,9 +124,9 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
           opera tu propia sesión de ARCA con un botón.
         </p>
         <p>
-          <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+          <LinkSiPuede to="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
             Guía completa de la validación de obras sociales →
-          </a>
+          </LinkSiPuede>
         </p>
       </>
     ),

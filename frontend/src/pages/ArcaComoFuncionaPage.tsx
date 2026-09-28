@@ -6,6 +6,8 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { createSimpleCatalogApi } from '../api/simpleCatalog';
 import { arcaSucursalesAPI } from '../api/arcaSucursales';
 import { LAYOUT_ALTA, TipoCampoAlta } from '../components/contratos/afipTxt';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { LinkSiPuede } from '../components/LinkSiPuede';
 
 /**
  * "Cómo funciona" el alta masiva de ARCA: la cadena de dependencias y el registro de 130.
@@ -27,13 +29,23 @@ const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
 const modContratacionApi = createSimpleCatalogApi('/arca/modalidades-contratacion');
 const modLiquidacionApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
 
-/** Un nomenclador universal, con su conteo real y el link a su pantalla. */
-const Chip: React.FC<{ nombre: string; total?: number; to: string }> = ({ nombre, total, to }) => (
-  <Link to={to} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-white/5 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:border-blue-400 dark:hover:border-blue-500/60 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
-    <span className="font-medium">{nombre}</span>
-    <span className="text-xs tabular-nums text-gray-400 dark:text-gray-500">{total == null ? '…' : total.toLocaleString('es-AR')}</span>
-  </Link>
-);
+/** Un nomenclador universal, con su conteo real y el link a su pantalla (si quien mira la puede abrir). */
+const Chip: React.FC<{ nombre: string; total?: number; to: string }> = ({ nombre, total, to }) => {
+  const puedeAbrir = usePuedeAbrir();
+  const contenido = (
+    <>
+      <span className="font-medium">{nombre}</span>
+      <span className="text-xs tabular-nums text-gray-400 dark:text-gray-500">{total == null ? '…' : total.toLocaleString('es-AR')}</span>
+    </>
+  );
+  const base = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-white/5 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200';
+  if (!puedeAbrir(to)) return <span className={base}>{contenido}</span>;
+  return (
+    <Link to={to} className={`${base} hover:border-blue-400 dark:hover:border-blue-500/60 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors`}>
+      {contenido}
+    </Link>
+  );
+};
 
 const Capa: React.FC<{ numero: number; titulo: string; descripcion: string; color: 'violeta' | 'azul' | 'verde' | 'ambar'; children?: React.ReactNode }> = ({ numero, titulo, descripcion, color, children }) => {
   const estilos = {
@@ -70,21 +82,24 @@ const Flecha: React.FC<{ texto: string }> = ({ texto }) => (
 );
 
 /** Una fila de "qué aporta" dentro de una capa. */
-const Aporte: React.FC<{ que: string; para: React.ReactNode; to?: string }> = ({ que, para, to }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-[13rem_1fr] gap-x-4 gap-y-1 rounded-lg bg-white/60 dark:bg-white/[0.03] px-3 py-2.5">
-    <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-      {to ? (
-        <Link to={to} className="hover:underline inline-flex items-center gap-1.5">
-          {que}
-          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5 opacity-60" />
-        </Link>
-      ) : (
-        que
-      )}
+const Aporte: React.FC<{ que: string; para: React.ReactNode; to?: string }> = ({ que, para, to }) => {
+  const puedeAbrir = usePuedeAbrir();
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-[13rem_1fr] gap-x-4 gap-y-1 rounded-lg bg-white/60 dark:bg-white/[0.03] px-3 py-2.5">
+      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+        {to && puedeAbrir(to) ? (
+          <Link to={to} className="hover:underline inline-flex items-center gap-1.5">
+            {que}
+            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5 opacity-60" />
+          </Link>
+        ) : (
+          que
+        )}
+      </div>
+      <div className="text-sm text-gray-600 dark:text-gray-400">{para}</div>
     </div>
-    <div className="text-sm text-gray-600 dark:text-gray-400">{para}</div>
-  </div>
-);
+  );
+};
 
 const TAG: Record<TipoCampoAlta, { texto: string; clase: string }> = {
   obligatorio: { texto: 'obligatorio', clase: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900' },
@@ -136,9 +151,9 @@ export const ArcaComoFuncionaPage: React.FC = () => {
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
               Las <strong>categorías</strong> cuelgan de su convenio y su escala salarial del grupo, así que no tienen un total suelto: se cuentan por CCT. Hay además un{' '}
-              <Link to="/arca/actividades" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              <LinkSiPuede sinPermiso="texto" to="/arca/actividades" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                 diccionario de Actividades
-              </Link>{' '}
+              </LinkSiPuede>{' '}
               que sirve para autocompletar el código y normalizar la descripción, pero <strong>no</strong> es de donde un contrato elige: ARCA solo acepta las actividades declaradas para ese domicilio, así que la lista que vale está en el nivel de abajo.
             </p>
           </Capa>
@@ -224,9 +239,9 @@ export const ArcaComoFuncionaPage: React.FC = () => {
           <Capa numero={4} titulo="Archivo TXT" color="ambar" descripcion="Registro de ancho fijo: 130 caracteres por línea, una línea por alta.">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Se genera desde{' '}
-              <Link to="/admin/contracts" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              <LinkSiPuede sinPermiso="texto" to="/admin/contracts" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                 Admin GENERAL → Contratos
-              </Link>
+              </LinkSiPuede>
               , pestaña <em className="not-italic font-medium">Alta temprana de ARCA</em>, y se sube en <strong>ARCA → Relaciones Laborales → Carga Masiva</strong> con la clave fiscal de la empleadora.
             </p>
           </Capa>

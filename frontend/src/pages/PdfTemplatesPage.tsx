@@ -22,6 +22,7 @@ import { Modal } from '../components/ui/Modal';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { PdfAssignmentStatus } from './PdfAssignmentStatus';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'pdfTemplates' as const;
 
@@ -96,6 +97,7 @@ const toEditorHtml = (content: string): string => {
 
 export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const config = SCOPE_CONFIG[scope];
 
   // data
@@ -364,10 +366,12 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
           <button onClick={isAddDisabled ? undefined : openCreate} disabled={isAddDisabled} aria-label="Nueva plantilla" className={`inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors ${isAddDisabled ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`} title={isAddDisabled ? 'Todos los códigos ya tienen asignada una plantilla' : 'Nueva plantilla'}>
             <FontAwesomeIcon icon={faPlus} />
           </button>
-          <button onClick={() => navigate(config.backRoute)} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={config.backIcon} />
-            <span className="hidden lg:block">{config.backLabel}</span>
-          </button>
+          {puedeAbrir(config.backRoute) && (
+            <button onClick={() => navigate(config.backRoute)} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={config.backIcon} />
+              <span className="hidden lg:block">{config.backLabel}</span>
+            </button>
+          )}
           <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
             <FontAwesomeIcon icon={faList} className="h-4 w-4" />
             <span>Estado</span>

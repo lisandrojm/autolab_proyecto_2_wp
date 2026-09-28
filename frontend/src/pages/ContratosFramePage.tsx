@@ -16,6 +16,7 @@ import { fuzzyMatch } from '../utils/searchHelpers';
 import { contratoFrameAPI, ContratoFrameItem, contratoVariables } from '../api/contratosFrame';
 import { contratosAPI, ContratoItem } from '../api/contratos';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const emptyForm = { nombre: '', externalId: '', content: '', contratoId: '' };
 
@@ -39,6 +40,7 @@ const contentPreview = (html: string, max = 60): string => {
 
 export const ContratosFramePage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const HELP_KEY = 'contratosFrame' as const;
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
@@ -263,10 +265,12 @@ export const ContratosFramePage: React.FC = () => {
       <button onClick={openCreate} title="Nuevo contrato" aria-label="Nuevo contrato" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
         <FontAwesomeIcon icon={faPlus} />
       </button>
-      <button onClick={() => navigate('/contratos')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-        <FontAwesomeIcon icon={faFileContract} />
-        <span className="hidden lg:block">Contratos</span>
-      </button>
+      {puedeAbrir('/contratos') && (
+        <button onClick={() => navigate('/contratos')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+          <FontAwesomeIcon icon={faFileContract} />
+          <span className="hidden lg:block">Contratos</span>
+        </button>
+      )}
     </div>
   );
 

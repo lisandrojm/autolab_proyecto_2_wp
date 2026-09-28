@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPeopleGroup, faEye } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
+import { LinkSiPuede } from "../components/LinkSiPuede";
 
 const sindicatosApi = createSimpleCatalogApi("/sindicatos");
 const conveniosApi = createSimpleCatalogApi("/convenios");
@@ -129,14 +130,14 @@ export const SindicatosPage: React.FC = () => {
                   </span>
                 ))}
                 {resto > 0 && <span className="text-[11px] text-gray-500 dark:text-gray-400">+{resto}</span>}
-                <Link
+                <LinkSiPuede
                   to={`/convenios?buscar=${encodeURIComponent(item.name)}`}
                   title={`Ver los ${suyos.length} convenio(s) de ${item.name}`}
                   aria-label={`Ver los convenios de ${item.name}`}
                   className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 ml-0.5"
                 >
                   <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
-                </Link>
+                </LinkSiPuede>
               </div>
             );
           },

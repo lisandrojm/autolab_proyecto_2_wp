@@ -5,10 +5,12 @@ import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { DropboxTab } from "../components/documents/DropboxTab";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 type TabKey = "dropbox" | "afip" | "paritarias";
 
 export function DocumentsPage() {
+  const puedeAbrir = usePuedeAbrir();
   const [activeTab, setActiveTab] = useState<TabKey>("dropbox");
   const [itemCount, setItemCount] = useState<number | undefined>(undefined);
   const [showInfo, setShowInfo] = useState(false);
@@ -42,13 +44,15 @@ export function DocumentsPage() {
                 Paritarias
               </button>
             </div>
-              <a
-                href="/escaneo-dropbox"
-                title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
-                className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Configurar transición automática
-              </a>
+              {puedeAbrir("/escaneo-dropbox") && (
+                <a
+                  href="/escaneo-dropbox"
+                  title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
+                  className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Configurar transición automática
+                </a>
+              )}
           </div>
 
           {/* Tab Content */}

@@ -23,6 +23,7 @@ import { useArcaDefaults } from '../../components/arca/DefaultArcaStar';
 import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
 import { ConveniosTable } from '../../components/convenios/ConveniosTable';
 import { BannerParitarias } from '../../components/paritarias/BannerParitarias';
+import { LinkSiPuede } from '../../components/LinkSiPuede';
 
 /**
  * "Datos del Empleador" de ARCA, por CUIT.
@@ -202,11 +203,11 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
             Lo que sí se decide acá sigue arriba: cuál rige para los excluidos de convenio.
           */}
           <div className="flex justify-end">
-            <Link to="/obras-sociales" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <LinkSiPuede to="/obras-sociales" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
               Registrar o quitar obras sociales
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-            </Link>
+            </LinkSiPuede>
           </div>
 
           {/*
@@ -457,11 +458,11 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
         Acá queda lo que sí es de esta empleadora: cuál de los registrados es su convenio habitual.
       */}
       <div className="flex justify-end">
-        <Link to="/convenios" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <LinkSiPuede to="/convenios" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
           Registrar o quitar convenios
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-        </Link>
+        </LinkSiPuede>
       </div>
 
       {/* El convenio por defecto tiene un escalón debajo, y hasta acá no se veía: ver `HerenciaGlobal`. */}
@@ -607,11 +608,11 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
         alta con una que ESE CUIT no declaró ahí. Son de la empleadora, no del domicilio.
       */}
       <div className="flex justify-end gap-2">
-        <Link to="/arca/sucursales" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <LinkSiPuede to="/arca/sucursales" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
           Asignar o quitar domicilios
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-        </Link>
+        </LinkSiPuede>
         <BotonGuardar
           guardando={guardando}
           sucio={sucio}
@@ -977,9 +978,9 @@ const CategoriasBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                   <button type="button" onClick={() => setViendoConvenio(d)} title={`Ver las ${categorias} categorías de ${d.convenio}`} className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
                     <FontAwesomeIcon icon={faEye} />
                   </button>
-                  <Link to="/arca/categorias" title="Editar las escalas de este convenio" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
+                  <LinkSiPuede to="/arca/categorias" title="Editar las escalas de este convenio" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
                     <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                  </Link>
+                  </LinkSiPuede>
                 </div>
               );
             })}

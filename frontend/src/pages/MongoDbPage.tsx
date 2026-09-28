@@ -10,6 +10,7 @@ import { BaseActualVsCopia } from "../components/documents/BaseActualVsCopia";
 import { backupsAPI, ConfigBackup, CopiaBackup } from "../api/backups";
 import { sweetAlert } from "../utils/sweetAlert";
 import { mensajeErrorApi } from "../utils/errorApi";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 /**
  * Configuración → DDBB → MongoDB.
@@ -30,6 +31,7 @@ const Comando: React.FC<{ children: string }> = ({ children }) => (
 
 export const MongoDbPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const [tab, setTab] = useState<Tab>("config");
   const [showInfo, setShowInfo] = useState(false);
   /** La configuración se lee acá también, para poder mostrar la frecuencia junto a las copias. */
@@ -108,7 +110,7 @@ export const MongoDbPage: React.FC = () => {
       title="MongoDB"
       subtitle="Copia automática de la base de datos y cómo restaurarla"
       faIcon={{ icon: faDatabase }}
-      onBack={() => navigate("/documents")}
+      onBack={puedeAbrir("/documents") ? () => navigate("/documents") : undefined}
       shouldShowInfo
       infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: "MongoDB", content: null }}
       headerActions={

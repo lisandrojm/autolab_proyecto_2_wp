@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleInfo, faUpRightFromSquare, faBuilding, faCheck } from '@fortawesome/free-solid-svg-icons';
 
@@ -7,6 +6,7 @@ import { AcuerdoParitario, escalasConvenioAPI } from '../../../api/escalasConven
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../../api/simpleCatalog';
 import { companiesAPI, Company } from '../../../api/companies';
 import { sweetAlert } from '../../../utils/sweetAlert';
+import { LinkSiPuede } from '../../LinkSiPuede';
 
 /**
  * FICHA DEL CONVENIO: quién es este CCT y qué empresas están en el régimen alternativo.
@@ -109,10 +109,10 @@ export const FichaConvenioTab: React.FC<Props> = ({ convenio, acuerdos, canManag
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-start justify-between gap-3 mb-3">
           <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Datos del convenio</h3>
-          <Link to={`/convenios?buscar=${encodeURIComponent(convenio)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1.5">
+          <LinkSiPuede to={`/convenios?buscar=${encodeURIComponent(convenio)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1.5">
             Editar en Convenios
             <FontAwesomeIcon icon={faUpRightFromSquare} className="h-3 w-3" />
-          </Link>
+          </LinkSiPuede>
         </div>
 
         {cargando ? (
@@ -129,10 +129,10 @@ export const FichaConvenioTab: React.FC<Props> = ({ convenio, acuerdos, canManag
             {dato(
               'Sindicato',
               sindicato ? (
-                <Link to={`/sindicatos?buscar=${encodeURIComponent(sindicato.name)}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                <LinkSiPuede sinPermiso="texto" to={`/sindicatos?buscar=${encodeURIComponent(sindicato.name)}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                   {sindicato.name}
                   {sindicato.sigla ? ` (${sindicato.sigla as string})` : ''}
-                </Link>
+                </LinkSiPuede>
               ) : (
                 ''
               )

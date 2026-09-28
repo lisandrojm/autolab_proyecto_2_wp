@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye } from '@fortawesome/free-solid-svg-icons';
 import { ConvenioFila } from './ConveniosTable';
+import { LinkSiPuede } from '../LinkSiPuede';
 
 /** El sindicato tal como lo pobla el server en el listado de convenios. */
 interface SindicatoPoblado {
@@ -48,9 +48,9 @@ export const CeldaSindicato: React.FC<{ convenio: ConvenioFila }> = ({ convenio 
         Lleva al ABM con el buscador ya cargado y no a una ficha, porque ese catálogo no tiene una:
         `?buscar=` deja la fila a la vista, con su sigla y sus otros convenios al lado.
       */}
-      <Link to={`/sindicatos?buscar=${encodeURIComponent(s.name)}`} title={`Ver ${s.name} en Sindicatos`} aria-label={`Ver ${s.name} en Sindicatos`} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+      <LinkSiPuede to={`/sindicatos?buscar=${encodeURIComponent(s.name)}`} title={`Ver ${s.name} en Sindicatos`} aria-label={`Ver ${s.name} en Sindicatos`} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
         <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
-      </Link>
+      </LinkSiPuede>
     </span>
   );
 };

@@ -6,6 +6,7 @@ import { faFileContract, faFilePdf, faPlus } from '@fortawesome/free-solid-svg-i
 import { ContractTypesTab, type ContractTypesTabHandle } from '../components/contratos/ContractTypesTab';
 import { ContractStatesTab } from '../components/contratos/ContractStatesTab';
 import { DependencyFlowEditor } from '../components/contratos/DependencyFlowEditor';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 type TabKey = 'types' | 'states' | 'dependencies';
 
@@ -78,6 +79,7 @@ const GUIA_DEPENDENCIAS = (
 
 export const ContratosPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const [searchParams] = useSearchParams();
   // Permite llegar directo a una pestaña con /contratos?tab=states|dependencies (p. ej. desde el link de
   // ayuda del campo Estado en Agregar/Configurar miembro, o desde "Configurar transición automática" en
@@ -107,10 +109,12 @@ export const ContratosPage: React.FC = () => {
       faIcon={{ icon: faFileContract }}
       headerActions={
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/contratos-frame')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faFilePdf} />
-            <span className="hidden lg:block">Plantillas | Contratos</span>
-          </button>
+          {puedeAbrir('/contratos-frame') && (
+            <button onClick={() => navigate('/contratos-frame')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faFilePdf} />
+              <span className="hidden lg:block">Plantillas | Contratos</span>
+            </button>
+          )}
           {/* Solo en «Tipos»: es la única pestaña que da de alta desde acá. */}
           {activeTab === 'types' && (
             <button onClick={() => tiposRef.current?.abrirCrear()} title="Nuevo contrato" aria-label="Nuevo contrato" className="px-2 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-semibold">

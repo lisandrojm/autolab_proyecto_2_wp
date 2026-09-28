@@ -26,6 +26,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faUsers, faBriefcase, faFileLines, faUmbrellaBeach, faPlus, faLayerGroup, faTrash, faTable, faUserTie, faCalendarAlt, faBuilding, faInfoCircle, faBell } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { areasAPI, Area } from "../api/areas";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 const HELP_KEY = "clientProjects" as const;
 
@@ -47,6 +48,7 @@ type ModalMode = "editProject" | "assignUser" | "manageTeam" | "viewProjectInfo"
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const location = useLocation();
   const { token } = useAuthStore();
 
@@ -1337,15 +1339,17 @@ export const ProjectDetailPage: React.FC = () => {
         <ValoracionProyecto project={project} onGuardado={fetchProject} />
 
         {/* Card 3: Novedades del Proyecto (mismo atajo que el botón Novedades de la card principal) */}
-        <Card
-          onClick={() => navigate(`/requests?reportsProject=${project._id}`)}
-          className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all duration-300"
-          header={{
-            title: "Novedades del Proyecto",
-            subtitle: "Ver el reporte de novedades del proyecto",
-            icon: faBell,
-          }}
-        />
+        {puedeAbrir("/requests") && (
+          <Card
+            onClick={() => navigate(`/requests?reportsProject=${project._id}`)}
+            className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all duration-300"
+            header={{
+              title: "Novedades del Proyecto",
+              subtitle: "Ver el reporte de novedades del proyecto",
+              icon: faBell,
+            }}
+          />
+        )}
 
         {/* Card 4: Reportes del Proyecto (sin destino por ahora, igual que el botón Reportes de la card principal) */}
         <Card

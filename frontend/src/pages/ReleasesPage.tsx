@@ -19,6 +19,7 @@ import { Modal } from "../components/ui/Modal";
 import { MembreteToggle } from "../components/MembreteToggle";
 import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 interface ReleaseFormData {
   name: string;
@@ -50,6 +51,7 @@ const hasContent = (html: string): boolean =>
 
 export function ReleasesPage() {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   // data
   const HELP_KEY = "releases" as const;
   const helpEntry = getHelp(HELP_KEY);
@@ -294,10 +296,12 @@ export function ReleasesPage() {
           <button onClick={openCreate} aria-label="Nuevo release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700" title="Nuevo release">
             <FontAwesomeIcon icon={faPlus} />
           </button>
-          <button onClick={() => navigate("/releases-tipos")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faRocket} />
-            <span className="hidden lg:block">Releases</span>
-          </button>
+          {puedeAbrir("/releases-tipos") && (
+            <button onClick={() => navigate("/releases-tipos")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faRocket} />
+              <span className="hidden lg:block">Releases</span>
+            </button>
+          )}
         </div>
       }
       searchAndFilters={

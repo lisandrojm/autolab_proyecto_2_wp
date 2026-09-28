@@ -24,6 +24,7 @@ import { EstadoBadge, TramiteImpositivoBadge, estadoLabel } from "../EstadoSelec
 import { Modal } from "../ui/Modal";
 import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { usePuedeAbrir } from "../../hooks/usePuedeAbrir";
 
 const UNASSIGNED = "unassigned";
 
@@ -154,6 +155,7 @@ const Droppable: React.FC<{ id: string; className?: string; children: React.Reac
  * los pasos. Es independiente del orden visual (`data.orden`).
  */
 export const DependencyFlowEditor: React.FC = () => {
+  const puedeAbrir = usePuedeAbrir();
   const [estados, setEstados] = useState<InfoItem[]>([]);
   const [loadingEstados, setLoadingEstados] = useState(true);
   const estadoById = useMemo(() => new Map(estados.map((e) => [e._id, e])), [estados]);
@@ -537,22 +539,26 @@ export const DependencyFlowEditor: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2">
-        <a
-          href="/documents"
-          title="Ver las carpetas de Dropbox (HelloSign y ARCA)"
-          className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
-        >
-          <FontAwesomeIcon icon={faFileText} />
-          <span>Dropbox | Documentos</span>
-        </a>
-        <a
-          href="/escaneo-dropbox"
-          title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
-          className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
-        >
-          <FontAwesomeIcon icon={faCog} />
-          <span>Configuración | Dropbox</span>
-        </a>
+        {puedeAbrir("/documents") && (
+          <a
+            href="/documents"
+            title="Ver las carpetas de Dropbox (HelloSign y ARCA)"
+            className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+          >
+            <FontAwesomeIcon icon={faFileText} />
+            <span>Dropbox | Documentos</span>
+          </a>
+        )}
+        {puedeAbrir("/escaneo-dropbox") && (
+          <a
+            href="/escaneo-dropbox"
+            title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
+            className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+          >
+            <FontAwesomeIcon icon={faCog} />
+            <span>Configuración | Dropbox</span>
+          </a>
+        )}
       </div>
 
       {loadingEstados ? (

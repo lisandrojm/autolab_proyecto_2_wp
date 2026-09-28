@@ -11,11 +11,13 @@ import { ProjectVacationConfigTab } from '../components/vacations/ProjectVacatio
 import { ConsecutiveDaysConfigTab } from '../components/vacations/ConsecutiveDaysConfigTab';
 
 import { ContractConfigTab } from '../components/vacations/ContractConfigTab';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'vacationsRules' as const;
 
 export function VacationsRulesPage() {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const helpEntry = getHelp(HELP_KEY);
   const [openInfo, setOpenInfo] = useState(false);
   const [activeTab, setActiveTab] = useState<'global' | 'overlap' | 'projects' | 'consecutive_days' | 'contracts'>('global');
@@ -24,7 +26,7 @@ export function VacationsRulesPage() {
     <PageLayout
       title="Vacaciones"
       faIcon={{ icon: faGear }}
-      onBack={() => navigate('/vacations')}
+      onBack={puedeAbrir('/vacations') ? () => navigate('/vacations') : undefined}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -70,10 +72,12 @@ export function VacationsRulesPage() {
       //headerActions={}
       headerActions={
         <div>
-          <button onClick={() => navigate('/pdfs-vacaciones')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faFilePdf} />
-            <span className="hidden lg:block">Plantillas | Vacaciones</span>
-          </button>
+          {puedeAbrir('/pdfs-vacaciones') && (
+            <button onClick={() => navigate('/pdfs-vacaciones')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faFilePdf} />
+              <span className="hidden lg:block">Plantillas | Vacaciones</span>
+            </button>
+          )}
         </div>
       }
       children={undefined}

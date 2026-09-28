@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { encabezadoDeAmbito } from "../config/nomencladoresArca";
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogManager } from '../components/catalog/SimpleCatalogManager';
@@ -19,6 +19,7 @@ import { FuenteDelConvenio } from '../components/convenios/FuenteDelConvenio';
 import { PanelCoberturaFuentes } from '../components/convenios/PanelCoberturaFuentes';
 import { CeldaFuenteParitarias } from '../components/convenios/CeldaFuenteParitarias';
 import { CeldaSindicato } from '../components/convenios/CeldaSindicato';
+import { LinkSiPuede } from '../components/LinkSiPuede';
 
 const conveniosApi = createSimpleCatalogApi('/convenios');
 const sindicatosApi = createSimpleCatalogApi('/sindicatos');
@@ -74,10 +75,10 @@ const EmpresasDelConvenioModal: React.FC<{
                   <span className="block text-sm text-gray-900 dark:text-gray-100">{e.razonSocial}</span>
                   {e.cuit && <span className="block font-mono text-[11px] text-gray-500 dark:text-gray-400">{e.cuit}</span>}
                 </div>
-                <Link to={`/empresas/${e._id}/arca/convenios`} onClick={onClose} title={`Abrir los convenios de ${e.razonSocial}`} className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30">
+                <LinkSiPuede to={`/empresas/${e._id}/arca/convenios`} onClick={onClose} title={`Abrir los convenios de ${e.razonSocial}`} className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30">
                   Ver en la ficha
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-                </Link>
+                </LinkSiPuede>
               </div>
             );
           })}

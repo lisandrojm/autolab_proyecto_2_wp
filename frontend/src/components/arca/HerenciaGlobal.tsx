@@ -1,9 +1,9 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar } from "@fortawesome/free-solid-svg-icons";
 import { useArcaDefaults } from "./DefaultArcaStar";
 import { CampoDefaultArca } from "../../api/arcaDefaults";
+import { LinkSiPuede } from "../LinkSiPuede";
 
 /**
  * QUÉ DICE LA INSTALACIÓN PARA ESTE CAMPO, Y SI ESTA EMPLEADORA LO ESTÁ PISANDO.
@@ -62,9 +62,9 @@ export const HerenciaGlobal: React.FC<Props> = ({ campo, valorEmpresa, nombreDe,
   const empresa = String(valorEmpresa ?? "").trim();
 
   const link = (
-    <Link to={RUTA_GLOBAL[campo]} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+    <LinkSiPuede sinPermiso="texto" to={RUTA_GLOBAL[campo]} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
       la instalación
-    </Link>
+    </LinkSiPuede>
   );
   const nombreGlobal = <strong className="font-semibold">{nombreDe(global) || global}</strong>;
 

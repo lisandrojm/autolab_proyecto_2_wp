@@ -8,6 +8,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark } from '@fortawesome/free-solid-svg-icons';
 import { usePermisoInactivo } from '../stores/permisosInactivosStore';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -377,6 +378,13 @@ export const MobileNavbar: React.FC = () => {
   */
   const inactivo = usePermisoInactivo();
 
+  /*
+    UN ÍTEM SE MUESTRA SI SU RUTA SE PUEDE ABRIR, con la misma tabla que usa la guarda de rutas
+    (`config/accesoRutas.ts`). Así el menú y la URL no pueden contradecirse: lo que no aparece acá
+    tampoco se abre escribiendo la dirección. Un ítem nuevo necesita su regla en esa tabla.
+  */
+  const puedeAbrir = usePuedeAbrir();
+
   const menuItems = useMemo(() => {
     const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
 
@@ -400,24 +408,24 @@ export const MobileNavbar: React.FC = () => {
     if (isSuperAdminTenant) {
       base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/permisos', icon: faToggleOn, label: 'Permisos', scope: 'global' }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
     } else {
-      if (hasPermission('admin_roles:view')) base.push({ permiso: 'admin_roles:view', path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles });
+      if (puedeAbrir('/roles')) base.push({ permiso: 'admin_roles:view', path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles });
       // «Permisos» es del SuperAdmin aunque esté parado en un tenant común: se decide por su rol, no por
       // el tenant. Sin distinguir mayúsculas, como el resto de la app (el rol llega como «SuperAdmin»).
-      if (user?.primaryRole?.toLowerCase() === 'superadmin' || (user?.roles || []).some((r: any) => String(typeof r === 'string' ? r : r?.name || '').toLowerCase() === 'superadmin')) base.push({ path: '/permisos', icon: faToggleOn, label: 'Permisos', scope: 'global' });
+      if (puedeAbrir('/permisos')) base.push({ path: '/permisos', icon: faToggleOn, label: 'Permisos', scope: 'global' });
       // `config_terminos:view` es nuevo: hasta que se tilde en los roles, entra quien administra usuarios,
       // que es quien maneja los registros y sus links.
-      if (hasPermission('config_terminos:view') || hasPermission('admin_users:view')) base.push({ path: '/terminos-condiciones', icon: faFileSignature, label: 'Términos y condiciones', scope: 'global' });
-      if (hasPermission('admin_roles_empresa:view')) base.push({ permiso: 'admin_roles_empresa:view', path: '/roles-empresa', icon: faUserTag, label: 'Roles Empresa', scope: 'global' });
-      if (hasPermission('admin_areas:view')) base.push({ permiso: 'admin_areas:view', path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
-      if (hasPermission('admin_users:view')) base.push({ permiso: 'admin_users:view', path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users });
-      if (hasPermission('admin_users_import:view')) base.push({ permiso: 'admin_users_import:view', path: '/users/import-wp', icon: faArrowUpRightFromSquare, label: 'Import WP', scope: 'global' });
+      if (puedeAbrir('/terminos-condiciones')) base.push({ path: '/terminos-condiciones', icon: faFileSignature, label: 'Términos y condiciones', scope: 'global' });
+      if (puedeAbrir('/roles-empresa')) base.push({ permiso: 'admin_roles_empresa:view', path: '/roles-empresa', icon: faUserTag, label: 'Roles Empresa', scope: 'global' });
+      if (puedeAbrir('/areas')) base.push({ permiso: 'admin_areas:view', path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
+      if (puedeAbrir('/users')) base.push({ permiso: 'admin_users:view', path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users });
+      if (puedeAbrir('/users/import-wp')) base.push({ permiso: 'admin_users_import:view', path: '/users/import-wp', icon: faArrowUpRightFromSquare, label: 'Import WP', scope: 'global' });
 
       // Admin GENERAL Items
-      if (hasPermission('admin_clients:view')) base.push({ permiso: 'admin_clients:view', path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients });
+      if (puedeAbrir('/clients')) base.push({ permiso: 'admin_clients:view', path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients });
       // Sin sufijo "| Global": el grupo ya se llama Admin GENERAL, así que dentro de él el calificador
       // repetía lo que dice el título. Las versiones acotadas se distinguen por dónde están —cuelgan
       // de la ficha de un cliente o de una empresa, con el nombre a la vista— y no por su etiqueta.
-      if (hasPermission('admin_projects:view')) base.push({ permiso: 'admin_projects:view', path: '/admin/projects', icon: faBriefcase, label: 'Proyectos', scope: 'global', count: adminCounts.projects });
+      if (puedeAbrir('/admin/projects')) base.push({ permiso: 'admin_projects:view', path: '/admin/projects', icon: faBriefcase, label: 'Proyectos', scope: 'global', count: adminCounts.projects });
       /*
         VALORACIONES EN ADMIN GENERAL, no en Configuración.
 
@@ -427,107 +435,105 @@ export const MobileNavbar: React.FC = () => {
         `config_valoraciones:view` es nuevo y los roles están congelados en la base: hasta que se
         tilde, se muestra a quien ya administra Roles Empresa, que es donde se valora cada categoría.
       */
-      if (hasPermission('config_valoraciones:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/valoraciones', icon: faRankingStar, label: 'Valoraciones', scope: 'global' });
-      if (hasPermission('admin_sedes:view')) base.push({ permiso: 'admin_sedes:view', path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
-      if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global', pendientes: pendientes.contratos });
+      if (puedeAbrir('/valoraciones')) base.push({ path: '/valoraciones', icon: faRankingStar, label: 'Valoraciones', scope: 'global' });
+      if (puedeAbrir('/admin/sedes')) base.push({ permiso: 'admin_sedes:view', path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
+      if (puedeAbrir('/admin/contracts')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global', pendientes: pendientes.contratos });
       // Las plantillas GENERALES de equipo (puestos por rol): cada supervisor las copia en el móvil.
-      if (hasPermission('admin_hiring_templates:view')) base.push({ permiso: 'admin_hiring_templates:view', path: '/admin/plantillas-equipo', icon: faPeopleGroup, label: 'Plantillas', scope: 'global' });
+      if (puedeAbrir('/admin/plantillas-equipo')) base.push({ permiso: 'admin_hiring_templates:view', path: '/admin/plantillas-equipo', icon: faPeopleGroup, label: 'Plantillas', scope: 'global' });
       // Los vigentes que no dicen qué días se trabaja (casi todos vienen de FRAME): se completan ahí.
-      if (hasPermission('admin_contracts:view')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contratos-sin-dias', icon: faCalendarXmark, label: 'Sin días', scope: 'global' });
+      if (puedeAbrir('/admin/contratos-sin-dias')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contratos-sin-dias', icon: faCalendarXmark, label: 'Sin días', scope: 'global' });
       // Solicitudes va pegada a Contratos porque son los dos extremos del mismo ciclo: lo que se
       // pidió y lo que ya se contrató. Comparte permiso con Usuarios —una solicitud es un alta de
       // usuario, no un contrato— igual que el endpoint que la alimenta.
-      if (hasPermission('admin_users:view')) base.push({ permiso: 'admin_users:view', path: '/admin/solicitudes', icon: faUserPlus, label: 'Solicitudes', scope: 'global', pendientes: pendientes.solicitudes });
-      if (hasPermission('admin_activity_logs:view')) base.push({ permiso: 'admin_activity_logs:view', path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
-      if (hasPermission('admin_orders:view')) base.push({ permiso: 'admin_orders:view', path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
-      if (hasPermission('admin_vacations:view')) base.push({ permiso: 'admin_vacations:view', path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
+      if (puedeAbrir('/admin/solicitudes')) base.push({ permiso: 'admin_users:view', path: '/admin/solicitudes', icon: faUserPlus, label: 'Solicitudes', scope: 'global', pendientes: pendientes.solicitudes });
+      if (puedeAbrir('/requests')) base.push({ permiso: 'admin_activity_logs:view', path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
+      if (puedeAbrir('/orders')) base.push({ permiso: 'admin_orders:view', path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
+      if (puedeAbrir('/vacations')) base.push({ permiso: 'admin_vacations:view', path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
       // El ícono de Dropbox dice de dónde salen los documentos, así que el nombre no tiene que
       // repetirlo: la marca queda en la imagen y la etiqueta nombra la pantalla.
-      if (hasPermission('admin_hr_documents:view')) base.push({ permiso: 'admin_hr_documents:view', path: '/documents', icon: faDropbox, label: 'Documentos', scope: 'global' });
+      if (puedeAbrir('/documents')) base.push({ permiso: 'admin_hr_documents:view', path: '/documents', icon: faDropbox, label: 'Documentos', scope: 'global' });
 
       // CONFIGURACION Items
-      if (hasPermission('config_activity_logs:view')) base.push({ permiso: 'config_activity_logs:view', path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });
+      if (puedeAbrir('/requests/config')) base.push({ permiso: 'config_activity_logs:view', path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });
 
-      if (hasPermission('config_orders:view')) base.push({ permiso: 'config_orders:view', path: '/order-types', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
-      if (hasPermission('config_shifts:view')) base.push({ permiso: 'config_shifts:view', path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' });
-      if (hasPermission('config_vacations:view')) base.push({ permiso: 'config_vacations:view', path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
-      if (hasPermission('config_holidays:view')) base.push({ permiso: 'config_holidays:view', path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
-      if (hasPermission('config_pdf_templates:view')) base.push({ permiso: 'config_pdf_templates:view', path: '/pdfs', icon: faFilePdf, label: 'Pedidos', scope: 'global' });
-      if (hasPermission('config_pdf_templates:view')) base.push({ permiso: 'config_pdf_templates:view', path: '/pdfs-vacaciones', icon: faFilePdf, label: 'Vacaciones', scope: 'global' });
-      if (hasPermission('config_releases:view')) base.push({ permiso: 'config_releases:view', path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
+      if (puedeAbrir('/order-types')) base.push({ permiso: 'config_orders:view', path: '/order-types', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
+      if (puedeAbrir('/shifts')) base.push({ permiso: 'config_shifts:view', path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' });
+      if (puedeAbrir('/vacations-rules')) base.push({ permiso: 'config_vacations:view', path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
+      if (puedeAbrir('/holidays')) base.push({ permiso: 'config_holidays:view', path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
+      if (puedeAbrir('/pdfs')) base.push({ permiso: 'config_pdf_templates:view', path: '/pdfs', icon: faFilePdf, label: 'Pedidos', scope: 'global' });
+      if (puedeAbrir('/pdfs-vacaciones')) base.push({ permiso: 'config_pdf_templates:view', path: '/pdfs-vacaciones', icon: faFilePdf, label: 'Vacaciones', scope: 'global' });
+      if (puedeAbrir('/releases')) base.push({ permiso: 'config_releases:view', path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
       // Cómo se llaman los archivos que salen de todas esas plantillas. Comparte permiso con ellas:
       // quien puede definir el contenido de un documento puede definir su nombre.
-      if (hasPermission('config_releases:view') || hasPermission('config_contratos_frame:view')) base.push({ path: NOMENCLATURA_PATH, icon: faTag, label: 'Nomenclatura de archivos', scope: 'global' });
-      if (hasPermission('config_releases:view')) base.push({ permiso: 'config_releases:view', path: '/releases-tipos', icon: faRocket, label: 'Releases', scope: 'global' });
-      if (hasPermission('config_categorias_sat:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
-      if (hasPermission('config_bancos:view')) base.push({ permiso: 'config_bancos:view', path: '/bancos', icon: faBuildingColumns, label: 'Entidades Financieras', scope: 'global' });
-      if (hasPermission('config_obras_sociales:view')) base.push({ permiso: 'config_obras_sociales:view', path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
-      if (hasPermission('config_convenios:view')) base.push({ permiso: 'config_convenios:view', path: '/convenios', icon: faFileContract, label: 'Convenios', scope: 'global' });
+      if (puedeAbrir(NOMENCLATURA_PATH)) base.push({ path: NOMENCLATURA_PATH, icon: faTag, label: 'Nomenclatura de archivos', scope: 'global' });
+      if (puedeAbrir('/releases-tipos')) base.push({ permiso: 'config_releases:view', path: '/releases-tipos', icon: faRocket, label: 'Releases', scope: 'global' });
+      if (puedeAbrir('/arca/categorias')) base.push({ path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
+      if (puedeAbrir('/bancos')) base.push({ permiso: 'config_bancos:view', path: '/bancos', icon: faBuildingColumns, label: 'Entidades Financieras', scope: 'global' });
+      if (puedeAbrir('/obras-sociales')) base.push({ permiso: 'config_obras_sociales:view', path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
+      if (puedeAbrir('/convenios')) base.push({ permiso: 'config_convenios:view', path: '/convenios', icon: faFileContract, label: 'Convenios', scope: 'global' });
       // `config_sindicatos:view` es nuevo: hasta que se tilde en los roles se muestra a quien ya
       // administra Convenios, que es la configuración más cercana (misma familia de relación laboral).
       // Queda SUELTO en Configuración, no adentro del subgrupo ARCA: Convenios está ahí por ser un
       // nomenclador del organismo, y este catálogo es propio de la plataforma. Ver `configPaths`.
-      if (hasPermission('config_sindicatos:view') || hasPermission('config_convenios:view')) base.push({ path: '/sindicatos', icon: faPeopleGroup, label: 'Sindicatos', scope: 'global' });
+      if (puedeAbrir('/sindicatos')) base.push({ path: '/sindicatos', icon: faPeopleGroup, label: 'Sindicatos', scope: 'global' });
       // `config_paises_residencia:view` es nuevo y los roles están congelados en la base: hasta que se
       // tilde, se muestra a quien ya administra Entidades Financieras, el otro catálogo propio que
       // alimenta los datos de la persona (registro y ficha). Suelto en Configuración, como Sindicatos.
-      if (hasPermission('config_paises_residencia:view') || hasPermission('config_bancos:view')) base.push({ path: '/paises-residencia', icon: faEarthAmericas, label: 'Países de residencia', scope: 'global' });
-      if (hasPermission('config_centros_costo:view')) base.push({ permiso: 'config_centros_costo:view', path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
-      if (hasPermission('config_contratos_frame:view')) base.push({ permiso: 'config_contratos_frame:view', path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
+      if (puedeAbrir('/paises-residencia')) base.push({ path: '/paises-residencia', icon: faEarthAmericas, label: 'Países de residencia', scope: 'global' });
+      if (puedeAbrir('/centros-costo')) base.push({ permiso: 'config_centros_costo:view', path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
+      if (puedeAbrir('/contratos-frame')) base.push({ permiso: 'config_contratos_frame:view', path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
       // `config_contratos:view` y `config_estados:view` son nuevos: hasta que se tilden en los roles,
       // se muestran a quien ya administra los tipos de contrato (Contratos FRAME).
       // Contratos y Estados viven en un solo ítem con dos tabs: alcanza con cualquiera de los tres permisos.
-      if (hasPermission('config_contratos:view') || hasPermission('config_estados:view') || hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos', icon: faFileContract, label: 'Contratos', scope: 'global' });
-      if (hasPermission('config_empresas:view')) base.push({ permiso: 'config_empresas:view', path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
-      if (hasPermission('config_membretes:view')) base.push({ permiso: 'config_membretes:view', path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
+      if (puedeAbrir('/contratos')) base.push({ path: '/contratos', icon: faFileContract, label: 'Contratos', scope: 'global' });
+      if (puedeAbrir('/empresas')) base.push({ permiso: 'config_empresas:view', path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
+      if (puedeAbrir('/empresas-membretes')) base.push({ permiso: 'config_membretes:view', path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
       // Las dos viven adentro del subgrupo "Documentos" (ver DOCUMENTOS_PATHS) y ahí es el grupo el
       // que dice de qué se trata. Cada una se sigue nombrando por el SERVICIO, a secas: qué configura
       // —la cuenta y el escaneo de carpetas acá, la casilla de avisos de firma en la de abajo— lo
       // dice el subtítulo de su pantalla, que es donde hay lugar para explicarlo.
       // «MongoDB», dentro del subgrupo DDBB. Comparte permiso con la configuración de Dropbox porque el
       // backup se guarda justamente ahí; además, la API de backups exige rol admin por su cuenta.
-      if (hasPermission('config_escaneo_dropbox:view')) base.push({ permiso: 'config_escaneo_dropbox:view', path: '/ddbb/mongodb', icon: faDatabase, label: 'MongoDB', scope: 'global' });
-      if (hasPermission('config_escaneo_dropbox:view')) base.push({ permiso: 'config_escaneo_dropbox:view', path: '/escaneo-dropbox', icon: faDropbox, label: 'Dropbox', scope: 'global' });
+      if (puedeAbrir('/ddbb/mongodb')) base.push({ permiso: 'config_escaneo_dropbox:view', path: '/ddbb/mongodb', icon: faDatabase, label: 'MongoDB', scope: 'global' });
+      if (puedeAbrir('/escaneo-dropbox')) base.push({ permiso: 'config_escaneo_dropbox:view', path: '/escaneo-dropbox', icon: faDropbox, label: 'Dropbox', scope: 'global' });
       // Comparte permiso con el escaneo de Dropbox: las dos configuran la misma integración.
-      if (hasPermission('config_escaneo_dropbox:view')) base.push({ permiso: 'config_escaneo_dropbox:view', path: '/dropbox-sign', icon: faDropbox, label: 'DropboxSign', scope: 'global' });
+      if (puedeAbrir('/dropbox-sign')) base.push({ permiso: 'config_escaneo_dropbox:view', path: '/dropbox-sign', icon: faDropbox, label: 'DropboxSign', scope: 'global' });
       // Dentro del subgrupo "ARCA" se muestra como "Conexión" (el organismo ya lo nombra el grupo).
       // El ícono es el de conexión y NO el del organismo: `faLandmark` ya lo lleva el encabezado del
       // grupo, así que repetirlo dejaba dos íconos idénticos uno debajo del otro y no distinguía la
       // pantalla. Es el mismo `faPlug` que la conexión de Dropbox: misma clase de cosa, mismo ícono.
-      if (hasPermission('config_afip:view')) base.push({ permiso: 'config_afip:view', path: '/afip', icon: faPlug, label: 'Constancia de CUIT', scope: 'global' });
+      if (puedeAbrir('/afip')) base.push({ permiso: 'config_afip:view', path: '/afip', icon: faPlug, label: 'Constancia de CUIT', scope: 'global' });
       // Misma familia, mismo ícono de conexión: lo que cambia es para qué sirve, y eso lo dice el
       // rótulo. Comparte permiso porque es la misma decisión de quién configura la integración.
       // El rótulo nombra las TRES cosas que salen de esta conexión, no solo la primera que resolvió:
       // la obra social y el nombre real vienen del mismo renglón de la pantalla de altas, y el
       // documento se calcula del CUIT. Decía «Obras sociales» y por eso los nombres se buscaban en la
       // conexión de al lado, que es la del certificado y no los tiene.
-      if (hasPermission('config_afip:view')) base.push({ permiso: 'config_afip:view', path: ARCA_CONEXION_OS_PATH, icon: faPlug, label: 'Obras sociales y nombres', scope: 'global' });
+      if (puedeAbrir(ARCA_CONEXION_OS_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_CONEXION_OS_PATH, icon: faPlug, label: 'Obras sociales y nombres', scope: 'global' });
       // Comparte permiso con la Conexión: quien puede ver cómo se conecta el módulo puede leer cómo
       // funciona. No expone ningún dato — es la explicación del circuito.
-      if (hasPermission('config_afip:view')) base.push({ permiso: 'config_afip:view', path: ARCA_COMO_FUNCIONA_PATH, icon: faSitemap, label: 'Cómo funciona', scope: 'global' });
-      if (hasPermission('config_afip:view')) base.push({ permiso: 'config_afip:view', path: ARCA_GUIA_OS_PATH, icon: faShieldHeart, label: 'Validar obras sociales', scope: 'global' });
+      if (puedeAbrir(ARCA_COMO_FUNCIONA_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_COMO_FUNCIONA_PATH, icon: faSitemap, label: 'Cómo funciona', scope: 'global' });
+      if (puedeAbrir(ARCA_GUIA_OS_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_GUIA_OS_PATH, icon: faShieldHeart, label: 'Validar obras sociales', scope: 'global' });
       // Tablas oficiales del organismo: comparten un solo permiso porque son el mismo tipo de
       // nomenclador (se siembran desde ARCA y casi no se editan), no tres módulos distintos.
-      if (hasPermission('config_arca_sucursales:view')) base.push({ permiso: 'config_arca_sucursales:view', path: '/arca/sucursales', icon: faLocationDot, label: 'Domicilios de Explotación', scope: 'global' });
+      if (puedeAbrir('/arca/sucursales')) base.push({ permiso: 'config_arca_sucursales:view', path: '/arca/sucursales', icon: faLocationDot, label: 'Domicilios de Explotación', scope: 'global' });
       // Va PEGADO a Domicilios y comparte su permiso: es su diccionario, no un catálogo autónomo. Lo
       // que un contrato puede declarar sigue saliendo del domicilio; acá solo viven código y texto.
-      if (hasPermission('config_arca_sucursales:view')) base.push({ permiso: 'config_arca_sucursales:view', path: '/arca/actividades', icon: faIndustry, label: 'Actividades', scope: 'global' });
-      if (hasPermission('config_arca_tablas:view')) {
-        // "Modalidad de Contrato" es como lo llama ARCA. Era "Modalidades de Contratación" acá y
-        // "Modalidad de contrato" en el formulario del tipo de contrato: dos nombres para el MISMO
-        // catálogo (153 registros, mismos códigos) hacían dudar de si eran dos cosas.
-        base.push({ permiso: 'config_arca_tablas:view', path: '/arca/modalidades-contratacion', icon: faFileContract, label: 'Modalidades de Contrato', scope: 'global' });
-        base.push({ permiso: 'config_arca_tablas:view', path: '/arca/tipos-servicio', icon: faListCheck, label: 'Tipos de Servicio', scope: 'global' });
-        // Va PEGADO a Tipos de Servicio y comparte su permiso, igual que Actividades con Domicilios:
-        // son 2 registros que nadie navega, existen para filtrar el de arriba.
-        base.push({ permiso: 'config_arca_tablas:view', path: '/arca/grupos-tipo-servicio', icon: faLayerGroup, label: 'Grupos de Tipo de Servicio', scope: 'global' });
-        base.push({ permiso: 'config_arca_tablas:view', path: '/arca/fuentes-paritaria', icon: faListCheck, label: 'Fuentes de Paritarias', scope: 'global' });
-        base.push({ permiso: 'config_arca_tablas:view', path: '/arca/modalidades-liquidacion', icon: faClock, label: 'Modalidades de Liquidación', scope: 'global' });
-      }
+      if (puedeAbrir('/arca/actividades')) base.push({ permiso: 'config_arca_sucursales:view', path: '/arca/actividades', icon: faIndustry, label: 'Actividades', scope: 'global' });
+      // "Modalidad de Contrato" es como lo llama ARCA. Era "Modalidades de Contratación" acá y
+      // "Modalidad de contrato" en el formulario del tipo de contrato: dos nombres para el MISMO
+      // catálogo (153 registros, mismos códigos) hacían dudar de si eran dos cosas.
+      if (puedeAbrir('/arca/modalidades-contratacion')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/modalidades-contratacion', icon: faFileContract, label: 'Modalidades de Contrato', scope: 'global' });
+      if (puedeAbrir('/arca/tipos-servicio')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/tipos-servicio', icon: faListCheck, label: 'Tipos de Servicio', scope: 'global' });
+      // Va PEGADO a Tipos de Servicio y comparte su permiso, igual que Actividades con Domicilios:
+      // son 2 registros que nadie navega, existen para filtrar el de arriba.
+      if (puedeAbrir('/arca/grupos-tipo-servicio')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/grupos-tipo-servicio', icon: faLayerGroup, label: 'Grupos de Tipo de Servicio', scope: 'global' });
+      if (puedeAbrir('/arca/fuentes-paritaria')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/fuentes-paritaria', icon: faListCheck, label: 'Fuentes de Paritarias', scope: 'global' });
+      if (puedeAbrir('/arca/modalidades-liquidacion')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/modalidades-liquidacion', icon: faClock, label: 'Modalidades de Liquidación', scope: 'global' });
     }
 
     return base;
-  }, [hasPermission, adminCounts, user?.tenantSlug]);
+  }, [puedeAbrir, adminCounts, user?.tenantSlug]);
 
   const handleMenuClick = () => {};
 
@@ -733,7 +739,7 @@ export const MobileNavbar: React.FC = () => {
 
     const configItems = [
       ...adminItems.filter((item) => configPaths.includes(item.path)),
-      ...(hasPermission('config_profile:view') ? [profileItem] : []),
+      ...(puedeAbrir('/mi-perfil') ? [profileItem] : []),
       ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
       ...(arcaChildren.length > 0 ? [arcaGroup] : []),
       ...(ddbbChildren.length > 0 ? [ddbbGroup] : []),
@@ -1051,7 +1057,7 @@ export const MobileNavbar: React.FC = () => {
               {/* Acceso rápido a "Mi Perfil". Lleva el texto al lado porque la credencial sola no se
                   entendía: en una fila de íconos sueltos no hay nada que diga qué abre. También está
                   en Configuración, para quien lo busca por el menú. */}
-              {hasPermission('config_profile:view') && (
+              {puedeAbrir('/mi-perfil') && (
                 <Link to="/mi-perfil" title="Mi Perfil" className={`inline-flex items-center gap-2 px-2.5 py-2 rounded text-sm font-medium transition-colors ${isActive('/mi-perfil') ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                   <FontAwesomeIcon icon={faIdCard} className="h-5 w-5" />
                   <span className="hidden sm:inline">Mi Perfil</span>

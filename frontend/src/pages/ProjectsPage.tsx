@@ -31,9 +31,11 @@ import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit,
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { getHelp, hasHelp } from '../data/help/helpContent';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 export const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const { setSelectedClient, selectedClient } = useClientContextStore();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -471,16 +473,20 @@ export const ProjectsPage: React.FC = () => {
                       tooltip: 'Reportes',
                       variant: 'default',
                     },
-                    {
-                      icon: faBell,
-                      onClick: (e: any) => {
-                        e.stopPropagation();
-                        navigate(`/requests?reportsProject=${project._id}`);
-                      },
-                      title: 'Novedades',
-                      tooltip: 'Novedades',
-                      variant: 'default',
-                    },
+                    ...(puedeAbrir('/requests')
+                      ? [
+                          {
+                            icon: faBell,
+                            onClick: (e: any) => {
+                              e.stopPropagation();
+                              navigate(`/requests?reportsProject=${project._id}`);
+                            },
+                            title: 'Novedades',
+                            tooltip: 'Novedades',
+                            variant: 'default' as const,
+                          },
+                        ]
+                      : []),
                     {
                       icon: faUsers,
                       onClick: (e: any) => {

@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf, faFileSignature, faUpload, faSpinner, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { InfoModal } from "../ui/InfoModal";
@@ -12,6 +11,7 @@ import { useEstadoCatalogStore } from "../../stores/estadoCatalogStore";
 import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { esContratoVigente } from "../../utils/contratoVigencia";
+import { LinkSiPuede } from "../LinkSiPuede";
 
 /** Empresa vinculada al proyecto (id + razón social) para elegir con cuál descargar. */
 export interface EmpresaOption {
@@ -487,14 +487,15 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                 ) : existeTemplate ? (
                   // La plantilla existe pero está vacía → redactarla en /contratos-frame.
                   <div className="flex items-center gap-2 shrink-0">
-                    <Link
+                    <LinkSiPuede
+                      sinPermiso="texto"
                       to={`/contratos-frame?edit=${template!._id}`}
                       className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
                       title="Redactar el contenido de esta plantilla de contrato"
                     >
                       Sin contenido
                       <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
-                    </Link>
+                    </LinkSiPuede>
                     <span className="p-1.5 text-gray-400 dark:text-gray-500 opacity-40 cursor-not-allowed" title="La plantilla de este tipo de contrato no tiene contenido redactado">
                       <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                     </span>

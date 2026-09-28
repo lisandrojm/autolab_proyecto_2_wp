@@ -16,6 +16,7 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 // Un permiso por tarjeta de la app. Ver el porqué y la contraparte del server en ese módulo.
 import { avisosDeRol, CAPACIDAD_ITEMS, CAPACIDAD_PERMISSIONS, esPermisoMobile, esPermisoPlataforma, MOBILE_GRUPOS, MOBILE_ITEMS, MOBILE_PERMISSIONS, PLANTILLAS_ROL } from "../utils/permisosMobile";
 import { useNavigate } from "react-router-dom";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 const HELP_KEY = "roles" as const;
 
@@ -394,6 +395,7 @@ interface RoleFormData {
 
 export const RolesPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const { hasPermission, user } = useAuthStore();
 
   const [roles, setRoles] = useState<Role[]>([]);
@@ -810,26 +812,36 @@ export const RolesPage: React.FC = () => {
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
-          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Usuarios</span>
-          </button>
-          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Cargos</span>
-          </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Niveles</span>
-          </button>
-          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Áreas</span>
-          </button>
-          <button onClick={() => navigate("/shifts")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Turnos</span>
-          </button>
+          {puedeAbrir("/users") && (
+            <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Usuarios</span>
+            </button>
+          )}
+          {puedeAbrir("/areas") && (
+            <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Cargos</span>
+            </button>
+          )}
+          {puedeAbrir("/areas") && (
+            <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Niveles</span>
+            </button>
+          )}
+          {puedeAbrir("/areas") && (
+            <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Áreas</span>
+            </button>
+          )}
+          {puedeAbrir("/shifts") && (
+            <button onClick={() => navigate("/shifts")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Turnos</span>
+            </button>
+          )}
         </div>
       }
       searchAndFilters={

@@ -16,6 +16,7 @@ import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const DAYS_OF_WEEK = [
   { id: 0, label: 'Domingo', short: 'D' },
@@ -62,6 +63,7 @@ const sanitizeActivityLogConfig = (config: any) => {
 
 export const RequestsConfigPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const location = useLocation();
   const HELP_KEY = 'requestsConfig' as const;
   const helpEntry = getHelp(HELP_KEY);
@@ -484,7 +486,7 @@ export const RequestsConfigPage: React.FC = () => {
     <PageLayout
       title="Novedades"
       faIcon={{ icon: faCog }}
-      onBack={handleBack}
+      onBack={puedeAbrir('/requests') ? handleBack : undefined}
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       searchAndFilters={

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faInfoCircle, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout } from '../../components/empresa/EmpresaContextLayout';
@@ -7,6 +6,7 @@ import { Company } from '../../api/companies';
 import { empresaAssetUrl } from '../../utils/empresaAssets';
 import { EstadoArcaBadge, ArcaRequisitosModal } from '../../components/empresas/ArcaEstado';
 import { EmpresaFormModal } from '../../components/empresas/EmpresaFormModal';
+import { LinkSiPuede } from '../../components/LinkSiPuede';
 
 /**
  * "Información" del contexto Empresa: los datos propios de la empleadora (razón social, CUIT,
@@ -147,10 +147,10 @@ const InfoBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
                 se editan con subida de archivos, que es un formulario distinto del de los datos. Se
                 ve igual que el botón «Editar» del encabezado porque las dos son la misma acción
                 —modificar algo de esta empresa—, aunque una abra un modal y la otra navegue. */}
-            <Link to="/empresas-membretes" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <LinkSiPuede to="/empresas-membretes" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
               Editar membrete y firma
-            </Link>
+            </LinkSiPuede>
           </div>
         </div>
       </div>

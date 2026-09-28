@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faToggleOn, faToggleOff, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
@@ -10,6 +9,7 @@ import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode, Repaym
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/orderFutureAction";
 import { PERSONAL_DATA_FIELDS, PERSONAL_DATA_SECTION_LABELS, PersonalDataSection } from "../../config/personalDataFields";
+import { LinkSiPuede } from "../LinkSiPuede";
 
 interface OrderCategoryFormProps {
   formData: {
@@ -637,9 +637,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                         <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                           No existe una plantilla activa para este tipo de pedido (Código esperado: <strong>{expectedCode}</strong>). El PDF no se generará.
                         </p>
-                        <Link to="/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
+                        <LinkSiPuede to="/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
                           Crear plantilla en Configuración &rarr;
-                        </Link>
+                        </LinkSiPuede>
                       </div>
                     </div>
                   </div>

@@ -17,6 +17,7 @@ import { companiesAPI, Company } from '../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../api/arcaSucursales';
 import { getHelp, hasHelp } from '../data/help/helpContent';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'empresas' as const;
 
@@ -143,6 +144,7 @@ const DetalleListaModal: React.FC<{
 
 export const EmpresasPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   const [cargandoConvenios, setCargandoConvenios] = useState(true);
@@ -353,10 +355,12 @@ export const EmpresasPage: React.FC = () => {
       }}
       headerActions={
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/empresas-membretes')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faFilePdf} />
-            <span className="hidden lg:block">Plantillas | Empresa/s | Membrete/s y firma</span>
-          </button>
+          {puedeAbrir('/empresas-membretes') && (
+            <button onClick={() => navigate('/empresas-membretes')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faFilePdf} />
+              <span className="hidden lg:block">Plantillas | Empresa/s | Membrete/s y firma</span>
+            </button>
+          )}
           <button onClick={openCreate} title="Nueva empresa" aria-label="Nueva empresa" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             <FontAwesomeIcon icon={faPlus} />
           </button>

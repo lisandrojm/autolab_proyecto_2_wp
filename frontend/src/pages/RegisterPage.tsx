@@ -118,7 +118,9 @@ export const RegisterPage: React.FC = () => {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    navigate("/users");
+    // A `/` y no a `/users`: la entrada lleva a la primera pantalla que la cuenta nueva puede abrir, y
+    // Usuarios sin su permiso cerraría la sesión recién abierta (ver `config/accesoRutas.ts`).
+    navigate("/");
   };
 
   return (

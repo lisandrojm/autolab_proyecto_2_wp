@@ -16,6 +16,7 @@ import { isContractVigente } from "../../team/ContractCard";
 import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
 import * as XLSX from "xlsx";
+import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
 
 
 interface NewsReportsModalProps {
@@ -632,6 +633,7 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
 
 export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, allUsers, allProjects, initialProjectFilter, cargando = false }) => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   /**
@@ -2377,16 +2379,18 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               </div>
 
               <div className="flex justify-end pt-2">
-                <button
-                  onClick={() => {
-                    setShowGlossary(false);
-                    onClose(); // Close the reports modal
-                    navigate("/requests/config", { state: { activeTab: "glossary" } });
-                  }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg"
-                >
-                  Ir a Configuración
-                </button>
+                {puedeAbrir("/requests/config") && (
+                  <button
+                    onClick={() => {
+                      setShowGlossary(false);
+                      onClose(); // Close the reports modal
+                      navigate("/requests/config", { state: { activeTab: "glossary" } });
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg"
+                  >
+                    Ir a Configuración
+                  </button>
+                )}
               </div>
             </div>
           </Modal>

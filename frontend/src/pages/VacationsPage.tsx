@@ -17,6 +17,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { sweetAlert } from '../utils/sweetAlert';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, isVacationInFinalState } from '../utils/statusHelpers';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'vacations' as const;
 
@@ -53,6 +54,7 @@ interface VacationRequestMock {
 
 export const VacationsPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const helpEntry = getHelp(HELP_KEY);
 
   const [openInfo, setOpenInfo] = useState(false);
@@ -839,9 +841,11 @@ export const VacationsPage: React.FC = () => {
             <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de vacaciones" title="Ver resumen de vacaciones">
               <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
             </button>
-            <button onClick={() => navigate('/vacations/calendar')} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Ver calendario de vacaciones" aria-label="Ver calendario de vacaciones">
-              <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
-            </button>
+            {puedeAbrir('/vacations/calendar') && (
+              <button onClick={() => navigate('/vacations/calendar')} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Ver calendario de vacaciones" aria-label="Ver calendario de vacaciones">
+                <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ) : undefined
       }

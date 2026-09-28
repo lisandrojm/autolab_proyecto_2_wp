@@ -7,11 +7,13 @@ import { getHelp, hasHelp } from '../data/help/helpContent';
 import { OrderTypesTab } from '../components/orders/OrderTypesTab';
 import { OrderContractDaysTab } from '../components/orders/OrderContractDaysTab';
 import { UserOrderManagementTab } from '../components/orders/UserOrderManagementTab';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'orderTypes' as const;
 
 export const OrderTypesPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const helpEntry = getHelp(HELP_KEY) || getHelp('orderCategories');
   const [showMainInfo, setShowMainInfo] = useState(false);
   const [activeTab, setActiveTab] = useState<'types' | 'contract_days' | 'users_management'>('types');
@@ -21,7 +23,7 @@ export const OrderTypesPage: React.FC = () => {
       title="Pedidos"
       subtitle="Administra los tipos de pedidos y sus configuraciones"
       faIcon={{ icon: faGear }}
-      onBack={() => navigate('/orders')}
+      onBack={puedeAbrir('/orders') ? () => navigate('/orders') : undefined}
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{
         isOpen: showMainInfo,
@@ -33,10 +35,12 @@ export const OrderTypesPage: React.FC = () => {
       }}
       headerActions={
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/pdfs')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faFilePdf} />
-            <span className="hidden lg:block">Plantillas | Pedidos</span>
-          </button>
+          {puedeAbrir('/pdfs') && (
+            <button onClick={() => navigate('/pdfs')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faFilePdf} />
+              <span className="hidden lg:block">Plantillas | Pedidos</span>
+            </button>
+          )}
         </div>
       }
       searchAndFilters={

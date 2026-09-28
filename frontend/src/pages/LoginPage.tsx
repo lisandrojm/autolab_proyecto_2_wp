@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { Logo } from "../components/ui/Logo";
 import { useAuthStore } from "../stores/authStore";
 // A qué portal entra cada uno: lo deciden los permisos, no el nombre del rol. Ver ese módulo.
 import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile";
+import { MOTIVO_SIN_ACCESO } from "../components/ProtectedRoute";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagicWandSparkles, faEye, faEyeSlash, faBuilding, faMobileScreen, faLaptop, faEnvelope, faLock, faSpinner } from "@fortawesome/free-solid-svg-icons";
 
@@ -36,9 +37,12 @@ interface TenantOption {
 export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  // La guarda de rutas (`ProtectedRoute`) cierra la sesión de quien entra a una pantalla sin permiso y
+  // manda acá: se dice por qué, así no parece que se cayó la sesión sola.
+  const [error, setError] = useState(() => ((location.state as any)?.motivo === MOTIVO_SIN_ACCESO ? "No tenés acceso a esa pantalla. Se cerró la sesión: ingresá de nuevo." : ""));
   const [lastErrorObj, setLastErrorObj] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [availableClients, setAvailableClients] = useState<ClientOption[]>([]);
@@ -224,8 +228,9 @@ export const LoginPage: React.FC = () => {
         return;
       }
 
-      // 4. Default a plataforma
-      navigate(isSuperadmin ? "/tenants" : "/clients");
+      // 4. Default a plataforma: `/` lleva a la primera pantalla que puede abrir (ver `rutaInicial`).
+      // Era `/clients` fijo, y ahora que las rutas se cierran por permiso sacaba a quien no la tenía.
+      navigate(isSuperadmin ? "/tenants" : "/");
     } catch (err: any) {
       console.error("[login:error]", err);
       setLastErrorObj(err);
@@ -243,7 +248,7 @@ export const LoginPage: React.FC = () => {
       // Re-calculate superadmin for link
       const roles = (useAuthStore.getState().user?.roles as any[]) || [];
       const isSuperadmin = roles.some((r) => (typeof r === "string" ? r : r?.name)?.toLowerCase() === "superadmin");
-      navigate(isSuperadmin ? "/tenants" : "/clients");
+      navigate(isSuperadmin ? "/tenants" : "/");
     }
   };
 

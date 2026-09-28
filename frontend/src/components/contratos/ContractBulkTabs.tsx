@@ -34,6 +34,7 @@ import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 import { arcaDefaultsAPI, ArcaDefaults } from "../../api/arcaDefaults";
+import { LinkSiPuede } from '../LinkSiPuede';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
@@ -3090,9 +3091,9 @@ export const ContractBulkAfipTab: React.FC<{
               <li>
                 Se abre el panel de validación: copiás los CUIL y los corrés contra ARCA. Podés hacerlo a mano —cargando uno por uno en <strong>Registrar Nuevas Altas</strong>— o con el script{" "}
                 <code className="font-mono text-[12.5px]">npm run validar-obras-sociales</code>, que se conecta a tu propio Chrome ya logueado y los procesa de a 10. Los pasos están en{" "}
-                <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                <LinkSiPuede sinPermiso="texto" to="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                   ARCA → Validar obras sociales
-                </a>
+                </LinkSiPuede>
                 .
               </li>
             </ol>

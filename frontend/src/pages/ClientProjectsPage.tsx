@@ -26,6 +26,7 @@ import { getImageUrl } from '../utils/imageHelpers';
 import { badgesDeValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { useThemeStore } from '../stores/themeStore';
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'clientProjects' as const;
 
@@ -34,6 +35,7 @@ type ModalMode = 'create' | 'edit' | null;
 export const ClientProjectsPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   // const { t } = useTranslation(); // si lo necesitás, descomentá y usalo
   const [projects, setProjects] = useState<Project[]>([]);
   const [client, setClient] = useState<any>(null);
@@ -991,16 +993,20 @@ export const ClientProjectsPage: React.FC = () => {
                       tooltip: 'Reportes',
                       variant: 'default',
                     },
-                    {
-                      icon: faBell,
-                      onClick: (e: any) => {
-                        e.stopPropagation();
-                        navigate(`/requests?reportsProject=${project._id}`);
-                      },
-                      title: 'Novedades',
-                      tooltip: 'Novedades',
-                      variant: 'default',
-                    },
+                    ...(puedeAbrir('/requests')
+                      ? [
+                          {
+                            icon: faBell,
+                            onClick: (e: any) => {
+                              e.stopPropagation();
+                              navigate(`/requests?reportsProject=${project._id}`);
+                            },
+                            title: 'Novedades',
+                            tooltip: 'Novedades',
+                            variant: 'default' as const,
+                          },
+                        ]
+                      : []),
                     {
                       icon: faUsers,
                       onClick: (e: any) => {

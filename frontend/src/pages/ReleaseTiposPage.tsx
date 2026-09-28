@@ -12,6 +12,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrash, faRocket, faFilePdf, faFileSignature, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { releaseTiposAPI, ReleaseTipoItem } from "../api/releaseTipos";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 const normalizar = (s: string): string =>
   (s || "")
@@ -37,6 +38,7 @@ const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
 
 export const ReleaseTiposPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const [tipos, setTipos] = useState<ReleaseTipoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -167,10 +169,12 @@ export const ReleaseTiposPage: React.FC = () => {
       }}
       headerActions={
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/releases")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faFilePdf} />
-            <span className="hidden lg:block">Plantillas | Releases</span>
-          </button>
+          {puedeAbrir("/releases") && (
+            <button onClick={() => navigate("/releases")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faFilePdf} />
+              <span className="hidden lg:block">Plantillas | Releases</span>
+            </button>
+          )}
           <button onClick={abrirCrear} title="Nuevo tipo de release" aria-label="Nuevo tipo de release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             <FontAwesomeIcon icon={faPlus} />
           </button>

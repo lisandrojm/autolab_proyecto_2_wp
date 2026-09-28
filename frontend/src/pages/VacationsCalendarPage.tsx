@@ -8,6 +8,7 @@ import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import "vis-timeline/styles/vis-timeline-graph2d.min.css";
 import "../styles/vacationsCalendar.css";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 interface TimelineItem {
   id: string;
@@ -46,6 +47,7 @@ const parseDateLocal = (dateStr: string) => {
 
 export const VacationsCalendarPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const timelineRef = useRef<HTMLDivElement>(null);
   const timelineInstanceRef = useRef<Timeline | null>(null);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -219,7 +221,7 @@ export const VacationsCalendarPage: React.FC = () => {
       title="Calendario de Vacaciones"
       subtitle="Vista temporal de todas las solicitudes de vacaciones"
       faIcon={{ icon: faCalendar }}
-      onBack={() => navigate("/vacations")}
+      onBack={puedeAbrir("/vacations") ? () => navigate("/vacations") : undefined}
       infoModal={{
         isOpen: showHelpInfo,
         onOpen: () => setShowHelpInfo(true),

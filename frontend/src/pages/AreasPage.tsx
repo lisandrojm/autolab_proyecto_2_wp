@@ -12,6 +12,7 @@ import { getHelp, hasHelp } from '../data/help/helpContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 // const HELP_KEY = "areas" as const; // TODO: Add help content if needed
 
@@ -22,6 +23,7 @@ interface AreaFormData {
 
 export const AreasPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const { hasPermission } = useAuthStore();
 
   const helpEntry = getHelp('areas');
@@ -195,18 +197,24 @@ export const AreasPage: React.FC = () => {
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
-          <button onClick={() => navigate('/users')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Usuarios</span>
-          </button>
-          <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Turnos</span>
-          </button>
-          <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Roles</span>
-          </button>
+          {puedeAbrir('/users') && (
+            <button onClick={() => navigate('/users')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Usuarios</span>
+            </button>
+          )}
+          {puedeAbrir('/shifts') && (
+            <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Turnos</span>
+            </button>
+          )}
+          {puedeAbrir('/roles') && (
+            <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Roles</span>
+            </button>
+          )}
         </div>
       }
       searchAndFilters={

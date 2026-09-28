@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faGlobe, faUsers, faLandmark } from '@fortawesome/free-solid-svg-icons';
 import { useClientContextStore } from '../../stores/clientContextStore';
 import { useEmpresaContextStore } from '../../stores/empresaContextStore';
+import { usePuedeAbrir } from '../../hooks/usePuedeAbrir';
 
 /**
  * Dice si la pantalla respeta o no el contexto activo.
@@ -38,6 +39,7 @@ interface Props {
 
 export const AlcanceBanner: React.FC<Props> = ({ eje, modo, irAlFiltrado, nombre }) => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const { selectedClient, clearSelectedClient } = useClientContextStore();
   const { selectedEmpresa, clearSelectedEmpresa } = useEmpresaContextStore();
 
@@ -78,7 +80,7 @@ export const AlcanceBanner: React.FC<Props> = ({ eje, modo, irAlFiltrado, nombre
       <span>
         Mostrando <strong>todo</strong>, sin filtrar por {eje} <FontAwesomeIcon icon={ICONOS[eje]} className="h-2.5 w-2.5 mx-0.5 opacity-70" /> <strong>{activo}</strong>
       </span>
-      {irAlFiltrado && (
+      {irAlFiltrado && puedeAbrir(irAlFiltrado) && (
         <button type="button" onClick={() => navigate(irAlFiltrado)} className="font-semibold text-primary-600 dark:text-primary-400 hover:underline">
           Ver solo lo de {activo}
         </button>

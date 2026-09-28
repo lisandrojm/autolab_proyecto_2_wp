@@ -56,6 +56,8 @@ import { fuzzyMatch } from '../utils/searchHelpers';
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
 import { cachedFetch } from '../utils/refCache';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { LinkSiPuede } from '../components/LinkSiPuede';
 
 const HELP_KEY = 'projectTeam' as const;
 
@@ -296,6 +298,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // En modo «sólo aprobación» no hay URL de proyecto: lo dice quien abre el modal.
   const projectId = soloAprobacion?.projectId || projectIdDeLaUrl;
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const location = useLocation();
   const { token } = useAuthStore();
 
@@ -4457,9 +4460,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       {rolSinValorar && valoracionDelProyecto && (
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
                           La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» todavía no tiene categorías valoradas: se ofrecen todas, sin filtrar por la valoración del proyecto ({valoracionDelProyecto.nombre}). Para que se ofrezca y se elija sola la de {valoracionDelProyecto.nombre},{' '}
-                          <a href="/roles-empresa" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
-                            valorala en Roles Empresa
-                          </a>
+                          {puedeAbrir('/roles-empresa') ? (
+                            <a href="/roles-empresa" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
+                              valorala en Roles Empresa
+                            </a>
+                          ) : (
+                            'valorala en Roles Empresa'
+                          )}
                           .
                         </p>
                       )}
@@ -4787,9 +4794,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
             Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{' '}
-            <Link to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+            <LinkSiPuede sinPermiso="texto" to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
               Contratos → Estados de Contratos
-            </Link>
+            </LinkSiPuede>
             .
           </p>
         </div>
@@ -4918,10 +4925,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             <FontAwesomeIcon icon={faPlus} />
           </button>
           {/* Atajo a Contratos → Gestión de Contratos, ya filtrado por este proyecto. */}
-          <button onClick={() => navigate(`/admin/contracts?tab=management&projectId=${projectId}`)} title="Gestión masiva de Contratos de este proyecto" className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faFileContract} />
-            <span className="hidden lg:block whitespace-nowrap">Gestión masiva de Contratos</span>
-          </button>
+          {puedeAbrir("/admin/contracts") && (
+            <button onClick={() => navigate(`/admin/contracts?tab=management&projectId=${projectId}`)} title="Gestión masiva de Contratos de este proyecto" className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faFileContract} />
+              <span className="hidden lg:block whitespace-nowrap">Gestión masiva de Contratos</span>
+            </button>
+          )}
         </div>
       }
     >

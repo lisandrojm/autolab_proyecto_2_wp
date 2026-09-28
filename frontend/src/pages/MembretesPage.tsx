@@ -13,6 +13,7 @@ import { InfoModal } from '../components/ui/InfoModal';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { getHelp } from '../data/help/helpContent';
 import { empresaAssetUrl } from '../utils/empresaAssets';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 /**
  * ABM "Empresa/s | Membrete/s": se crea un membrete (logo + firma + aclaración/cargo) y se le asigna
@@ -31,6 +32,7 @@ const hasMembrete = (c: Company) => Boolean(c.logoUrl || c.signatureUrl);
 
 export function MembretesPage() {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -222,10 +224,12 @@ export function MembretesPage() {
           <button type="button" onClick={allCovered ? undefined : openCreate} disabled={allCovered} aria-label="Nuevo membrete" title={allCovered ? 'Todas las empresas ya tienen membrete' : 'Nuevo membrete'} className={`inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors ${allCovered ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
             <FontAwesomeIcon icon={faPlus} />
           </button>
-          <button onClick={() => navigate('/empresas')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faBuilding} />
-            <span className="hidden lg:block">Ir a Empresas</span>
-          </button>
+          {puedeAbrir('/empresas') && (
+            <button onClick={() => navigate('/empresas')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faBuilding} />
+              <span className="hidden lg:block">Ir a Empresas</span>
+            </button>
+          )}
         </div>
       }
     >

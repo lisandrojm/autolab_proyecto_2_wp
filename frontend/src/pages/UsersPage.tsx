@@ -39,6 +39,7 @@ import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
 import { calificacionesAPI, ResumenCalificacion } from '../api/calificaciones';
 import { CalificacionesModal, CalificacionesPanel } from '../components/calificaciones/CalificacionesModal';
 import { CalificacionPromedio } from '../components/calificaciones/Estrellas';
+import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'users' as const;
 
@@ -85,6 +86,7 @@ const invalidateUsersPageCache = () => {
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
+  const puedeAbrir = usePuedeAbrir();
   const { clientId } = useParams<{ clientId: string }>();
   const { hasPermission } = useAuthStore();
 
@@ -902,18 +904,24 @@ export const UsersPage: React.FC = () => {
               <span className="hidden lg:block">Link</span>
             </button>
           )}
-          <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Roles</span>
-          </button>
-          <button onClick={() => navigate('/areas')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Areas</span>
-          </button>
-          <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Turnos</span>
-          </button>
+          {puedeAbrir('/roles') && (
+            <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Roles</span>
+            </button>
+          )}
+          {puedeAbrir('/areas') && (
+            <button onClick={() => navigate('/areas')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Areas</span>
+            </button>
+          )}
+          {puedeAbrir('/shifts') && (
+            <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Turnos</span>
+            </button>
+          )}
         </div>
       }
       searchAndFilters={

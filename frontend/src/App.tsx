@@ -29,7 +29,8 @@ import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
 import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { ProjectTeamPage } from "./pages/ProjectTeamPage";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ProtectedRoute, MOTIVO_SIN_ACCESO } from "./components/ProtectedRoute";
+import { rutaInicial, tieneAccesoMobile } from "./config/accesoRutas";
 import { MobileNavbar } from "./components/Navbar";
 import { MiPerfilPage } from "./pages/MiPerfilPage";
 import { ServerStatusCard } from "./components/ServerStatusCard";
@@ -84,13 +85,19 @@ import { ContratosFramePage } from "./pages/ContratosFramePage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
-// --- DashboardRouter para centralizar la lógica de roles ---
+// --- `/` y `/dashboard`: a la primera pantalla que la persona puede abrir ---
+// Antes mostraba Usuarios a cualquiera, tuviera o no el permiso. Ahora lo decide la tabla de rutas
+// (`config/accesoRutas.ts`); quien no puede abrir nada de la plataforma pero sí la app, va a la app.
 const DashboardRouter: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const destino = user ? rutaInicial(user) ?? (tieneAccesoMobile(user) ? "/mobile" : null) : null;
+  // Sin ninguna pantalla que pueda abrir: afuera, igual que la guarda.
+  useEffect(() => {
+    if (user && !destino) logout();
+  }, [user, destino, logout]);
   if (!user) return null;
-  if (user.tenantSlug === "superadmin") return <TenantsPage />;
-  // Para cualquier otro rol, ir a Users
-  return <UsersPage />;
+  if (destino) return <Navigate to={destino} replace />;
+  return <Navigate to="/login" replace state={{ motivo: MOTIVO_SIN_ACCESO }} />;
 };
 
 // --- Layout público (sin Navbar) ---

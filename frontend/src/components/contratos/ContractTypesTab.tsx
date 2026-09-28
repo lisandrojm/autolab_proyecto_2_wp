@@ -17,6 +17,8 @@ import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 import { estadoImpositivoElegido, estadoGeneraAltaTemprana, conImpositivoGarantizado } from './altaTemprana';
+import { usePuedeAbrir } from '../../hooks/usePuedeAbrir';
+import { LinkSiPuede } from '../LinkSiPuede';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
 // chicos y se cargan una vez al abrir la pestaña.
@@ -94,7 +96,7 @@ const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
  * párrafo de 11px no se lee como algo que se puede tocar.
  */
 const BotonIrAPlantillas: React.FC = () => (
-  <Link
+  <LinkSiPuede
     to="/contratos-frame"
     target="_blank"
     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800/60 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
@@ -102,21 +104,31 @@ const BotonIrAPlantillas: React.FC = () => (
     <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
     Plantillas | Contratos
     <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-  </Link>
+  </LinkSiPuede>
 );
 
-/** Chip con link a una Plantilla ("Plantillas | Contratos"): abre su editor en una pestaña nueva. */
-const PlantillaChip: React.FC<{ plantilla: ContratoFrameItem; className?: string }> = ({ plantilla, className = '' }) => (
-  <Link
-    to={`/contratos-frame?edit=${plantilla._id}`}
-    target="_blank"
-    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors ${className}`}
-    title="Abrir la plantilla en Plantillas | Contratos"
-  >
-    <FontAwesomeIcon icon={faFilePdf} className="h-2.5 w-2.5" />
-    {plantilla.name}
-  </Link>
-);
+/**
+ * Chip con link a una Plantilla ("Plantillas | Contratos"): abre su editor en una pestaña nueva. Sin
+ * permiso para esa pantalla queda el chip con el nombre, sin link.
+ */
+const PlantillaChip: React.FC<{ plantilla: ContratoFrameItem; className?: string }> = ({ plantilla, className = '' }) => {
+  const puedeAbrir = usePuedeAbrir();
+  const base = `inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50 ${className}`;
+  if (!puedeAbrir('/contratos-frame')) {
+    return (
+      <span className={base}>
+        <FontAwesomeIcon icon={faFilePdf} className="h-2.5 w-2.5" />
+        {plantilla.name}
+      </span>
+    );
+  }
+  return (
+    <Link to={`/contratos-frame?edit=${plantilla._id}`} target="_blank" className={`${base} hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors`} title="Abrir la plantilla en Plantillas | Contratos">
+      <FontAwesomeIcon icon={faFilePdf} className="h-2.5 w-2.5" />
+      {plantilla.name}
+    </Link>
+  );
+};
 
 /** Botón de acción del footer de una tarjeta: mismo color/hover/tooltip que usa Clientes (Card.tsx, variant "default"). */
 const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: () => void }> = ({ icon, title, onClick }) => (
@@ -137,6 +149,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   /** El tipo que la URL pide abrir. Lo manda el modal de Datos ARCA. Ver el efecto de mas abajo. */
   const [searchParamsTipos] = useSearchParams();
   const tipoPedido = searchParamsTipos.get('tipo');
+  const puedeAbrir = usePuedeAbrir();
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [plantillas, setPlantillas] = useState<ContratoFrameItem[]>([]);
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -1028,19 +1041,26 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {misPlantillas.map((p) => (
-                        <Link
-                          key={p._id}
-                          to={`/contratos-frame?edit=${p._id}`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
-                          title="Abrir la plantilla en Plantillas | Contratos"
-                        >
-                          <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
-                          {p.name}
-                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-                        </Link>
-                      ))}
+                      {misPlantillas.map((p) =>
+                        puedeAbrir('/contratos-frame') ? (
+                          <Link
+                            key={p._id}
+                            to={`/contratos-frame?edit=${p._id}`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                            title="Abrir la plantilla en Plantillas | Contratos"
+                          >
+                            <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+                            {p.name}
+                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+                          </Link>
+                        ) : (
+                          <span key={p._id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50">
+                            <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+                            {p.name}
+                          </span>
+                        ),
+                      )}
                     </div>
                   )}
                 </div>

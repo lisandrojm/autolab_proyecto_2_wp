@@ -8,6 +8,7 @@ import { dropboxAPI, DiagnosticoCarpeta, DropboxStatus, EscaneoConfig } from "..
 import { DropboxConexionCard } from "../components/documents/DropboxConexionCard";
 import { sweetAlert } from "../utils/sweetAlert";
 import { urlWebhookDropbox } from "../utils/urlWebhook";
+import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 /**
  * El ancla de la sección del webhook adentro del modal de ayuda.
@@ -29,6 +30,7 @@ const formatCuentaRegresiva = (ms: number): string => {
 };
 
 export function EscaneoDropboxConfigPage() {
+  const puedeAbrir = usePuedeAbrir();
   /**
    * Cómo se está resolviendo cada carpeta. EL SÍNTOMA QUE ANTES NO EXISTÍA.
    *
@@ -431,13 +433,15 @@ export function EscaneoDropboxConfigPage() {
             )}
             {/* Las carpetas vigiladas salen de las dependencias entre estados: el acceso a editarlas
                 va acá, junto a lo que configura. */}
-            <a
-              href="/contratos?tab=dependencies"
-              className="mt-4 px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm w-fit"
-            >
-              <FontAwesomeIcon icon={faSitemap} />
-              <span>Dependencias</span>
-            </a>
+            {puedeAbrir("/contratos") && (
+              <a
+                href="/contratos?tab=dependencies"
+                className="mt-4 px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm w-fit"
+              >
+                <FontAwesomeIcon icon={faSitemap} />
+                <span>Dependencias</span>
+              </a>
+            )}
           </div>
         </div>
       )}
