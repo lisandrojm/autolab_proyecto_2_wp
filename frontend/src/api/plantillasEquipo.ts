@@ -178,6 +178,9 @@ export interface Puntual {
   outTime?: string;
   dailyRate?: number;
   fechas?: string[];
+  /** Período: otro desde/hasta para esta persona (van juntos). */
+  desde?: string;
+  hasta?: string;
   isReplacement?: boolean;
   motivoReemplazoId?: string;
   replacedUserId?: string;

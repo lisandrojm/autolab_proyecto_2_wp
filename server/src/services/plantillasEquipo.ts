@@ -830,6 +830,8 @@ function leerContratacion(body: any): { fechas: FechasDeContratacion; puntuales:
       outTime: esHora(x.outTime) ? x.outTime : undefined,
       dailyRate: Number(x.dailyRate) > 0 ? Number(x.dailyRate) : undefined,
       fechas: fechasIso(x.fechas),
+      desde: /^\d{4}-\d{2}-\d{2}$/.test(str(x.desde)) ? str(x.desde) : undefined,
+      hasta: /^\d{4}-\d{2}-\d{2}$/.test(str(x.hasta)) ? str(x.hasta) : undefined,
       isReplacement: !!x.isReplacement,
       motivoReemplazoId: x.motivoReemplazoId ? String(x.motivoReemplazoId) : undefined,
       replacedUserId: idOk(x.replacedUserId) ? String(x.replacedUserId) : undefined,

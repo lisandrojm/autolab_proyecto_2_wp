@@ -319,6 +319,20 @@ test("tipo de contrato elegido al contratar: vale para todos y le gana al del pu
   assert.deepEqual(conPuntual.filas[1].errores, []);
 });
 
+test("fechas propias de una persona: su desde/hasta pisa el del equipo sólo para ella", () => {
+  // El equipo va todo septiembre; Beto entra recién el 15.
+  const { filas } = planDeLote(plantilla, [integ("1"), integ("2")], SEPT, { i2: { desde: "2026-09-15", hasta: "2026-09-30" } }, ctx());
+  assert.equal(filas[0].datos!.startDate, "2026-09-01");
+  assert.equal(filas[0].jornadas, 22);
+  assert.equal(filas[1].datos!.startDate, "2026-09-15");
+  assert.equal(filas[1].datos!.dueDate, "2026-09-30");
+  assert.equal(filas[1].jornadas, 12);
+  assert.deepEqual(filas[1].errores, []);
+  // Sin fechas del equipo, las propias alcanzan.
+  const sola = planDeLote(plantilla, [integ("2")], {}, { i2: { desde: "2026-09-15", hasta: "2026-09-30" } }, ctx()).filas[0];
+  assert.deepEqual(sola.errores, []);
+});
+
 test("puesto sin tipo de contrato (y plantilla sin uno viejo): error", () => {
   const sinContrato = { ...plantilla, contratoId: undefined, nombreContrato: undefined, tipoImpositivo: undefined };
   const { filas } = planDeLote(sinContrato, [integ("1")], SEPT, {}, ctx());

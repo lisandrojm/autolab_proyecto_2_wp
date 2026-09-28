@@ -101,6 +101,12 @@ export interface Puntual {
   dailyRate?: number;
   /** Jornada: otros días para esta persona. */
   fechas?: string[];
+  /**
+   * Período: otro desde/hasta para esta persona. Como en el alta individual, cada persona puede tener
+   * sus fechas; lo normal es que valgan las del equipo, y esto es la excepción de una.
+   */
+  desde?: string;
+  hasta?: string;
   isReplacement?: boolean;
   motivoReemplazoId?: string;
   replacedUserId?: string;
@@ -231,8 +237,10 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
 
     // ── Las fechas de esta persona ──
     const fechasSueltas = porDiasSueltos ? [...new Set((p.fechas?.length ? p.fechas : contratacion.fechas) || [])].sort() : [];
-    const desde = porDiasSueltos ? fechasSueltas[0] || "" : contratacion.desde || "";
-    const hasta = porDiasSueltos ? fechasSueltas[fechasSueltas.length - 1] || "" : indeterminado ? "" : contratacion.hasta || "";
+    // Las fechas: las suyas si las trae, si no las del equipo. Un puntual con período pisa las dos juntas o ninguna.
+    const periodoPropio = !porDiasSueltos && !!p.desde;
+    const desde = porDiasSueltos ? fechasSueltas[0] || "" : (periodoPropio ? p.desde : contratacion.desde) || "";
+    const hasta = porDiasSueltos ? fechasSueltas[fechasSueltas.length - 1] || "" : indeterminado ? "" : (periodoPropio ? p.hasta : contratacion.hasta) || "";
     const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : integ.diasSemana || [];
     const diasPorSemana = porDiasSueltos ? diasSemana.length : Number(integ.diasPorSemana) || diasSemana.length;
     const rotativos = porDiasSueltos ? false : !!integ.diasRotativos;
@@ -293,8 +301,8 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
       if (fechasSueltas.length === 0) errores.push("Elegí al menos un día.");
     } else {
       const e = erroresDeJornadas({ desde: periodo.desde, hasta: periodo.hasta, diasPorSemana: String(diasPorSemana || ""), dias: diasSemana, rotativos, jornadas: jornadas ? String(jornadas) : "", calculadas, ajustado: false, motivo: "", nota: "" });
-      if (!contratacion.desde) errores.push("Falta la fecha de inicio.");
-      else if (!indeterminado && !contratacion.hasta) errores.push("Falta la fecha de fin.");
+      if (!desde) errores.push("Falta la fecha de inicio.");
+      else if (!indeterminado && !hasta) errores.push("Falta la fecha de fin.");
       for (const m of Object.values(e)) if (m) errores.push(m);
     }
 
