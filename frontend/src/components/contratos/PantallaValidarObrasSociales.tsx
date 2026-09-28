@@ -218,6 +218,15 @@ export const PantallaValidarObrasSociales: React.FC<{
   /** Corriendo: el Asistente está recorriendo ARCA y los resultados llegan por su stream. */
   const [mirando, setMirando] = useState(false);
   /**
+   * Entre el click y que la corrida arranque de verdad.
+   *
+   * Pedirle al servidor (o al Asistente) que empiece tarda unos segundos, y `mirando` recién se prende
+   * cuando contesta. En ese hueco la pantalla no cambiaba nada —mismo botón, mismas filas «en cola»—
+   * y se leía como que el click no había entrado: se apretaba otra vez. Esto se prende al instante,
+   * muestra «Validando…» y deja el botón quieto hasta que haya respuesta.
+   */
+  const [arrancando, setArrancando] = useState(false);
+  /**
    * ¿El servidor puede validar solo?
    *
    * Cuando hay un usuario de clave fiscal cargado (ARCA → Conexión → Obras sociales), la validación
@@ -418,7 +427,8 @@ export const PantallaValidarObrasSociales: React.FC<{
    * viva por pestaña para ahorrar un request cada dos segundos no se paga sola.
    */
   const empezarCorridaEnServidor = async () => {
-    if (!empresaId) return;
+    if (!empresaId || arrancando) return;
+    setArrancando(true);
     setPausadoEn([]);
     setFracaso(null);
     setEnVivo({});
@@ -433,10 +443,12 @@ export const PantallaValidarObrasSociales: React.FC<{
       );
     } catch (e: any) {
       setFaseCorrida('');
+      setArrancando(false);
       sweetAlert.error('No pude arrancar', e?.response?.data?.error || 'El servidor no aceptó la corrida.');
       return;
     }
     setMirando(true);
+    setArrancando(false);
     seguirCorridaDelServidor();
   };
 
@@ -525,9 +537,10 @@ export const PantallaValidarObrasSociales: React.FC<{
    * lista, y tenerlas como tres funciones distintas era cómo se terminaban comportando distinto.
    */
   const empezarCorrida = async (cuils?: string[]) => {
-    if (!empresaId) return;
+    if (!empresaId || arrancando) return;
     const lista = cuils && cuils.length > 0 ? cuils : pendientes.map((f) => soloDigitos(f.row.cuit || ''));
     if (lista.length === 0) return;
+    setArrancando(true);
     setPausadoEn([]);
     setFracaso(null);
     setFaseCorrida('Arrancando…');
@@ -542,10 +555,13 @@ export const PantallaValidarObrasSociales: React.FC<{
     try {
       await asistenteAPI.validar(lista.map((cuil) => ({ cuil })), empleadoraCuit || '');
     } catch (e: any) {
+      setFaseCorrida('');
+      setArrancando(false);
       sweetAlert.error('No pude arrancar', e?.message || 'El Asistente no aceptó la corrida.');
       return;
     }
     setMirando(true);
+    setArrancando(false);
 
     const porCuil = new Map(visibles.map((f) => [soloDigitos(f.row.cuit || ''), f]));
     cortarStream.current = asistenteAPI.progreso(async (ev: EventoProgreso) => {
@@ -703,7 +719,7 @@ export const PantallaValidarObrasSociales: React.FC<{
 
   // Con la empleadora en el título: durante la corrida es el dato que dice contra qué CUIT se está
   // consultando, y es el que hay que reelegir en ARCA si el lote cambia de empresa.
-  const cabecera = terminado ? `${total} validada${total === 1 ? '' : 's'}` : mirando ? `Validando obras sociales${empleadora ? ` — ${empleadora}` : ''}` : 'Validar obras sociales';
+  const cabecera = terminado ? `${total} validada${total === 1 ? '' : 's'}` : mirando || arrancando ? `Validando obras sociales${empleadora ? ` — ${empleadora}` : ''}` : 'Validar obras sociales';
   const subcabecera = terminado
     ? `${conAfiliacion} con afiliación propia · ${sinAfiliacion} quedan con la del convenio`
     : mirando
@@ -748,7 +764,8 @@ export const PantallaValidarObrasSociales: React.FC<{
                    estaba hecho. */
                 /* Con el servidor configurado el botón no depende del Asistente: no hay ninguna
                    sesión local que mirar, la abre el VPS. */
-                disabled={!empresaId || pendientes.length === 0 || (!servidorListo && (asistente.estado?.sesionArca !== 'viva' || !!asistente.estado?.corriendo))}
+                disabled={arrancando || !empresaId || pendientes.length === 0 || (!servidorListo && (asistente.estado?.sesionArca !== 'viva' || !!asistente.estado?.corriendo))}
+                aria-busy={arrancando}
                 title={
                   servidorListo
                     ? 'Lo hace el servidor: no hace falta instalar nada ni dejar ninguna ventana abierta.'
@@ -760,9 +777,10 @@ export const PantallaValidarObrasSociales: React.FC<{
                 }
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <FontAwesomeIcon icon={faPlay} className="h-3 w-3" />
+                {/* Al click cambia en el acto: si no, la espera del arranque se leía como un click perdido. */}
+                <FontAwesomeIcon icon={arrancando ? faSpinner : faPlay} spin={arrancando} className="h-3 w-3" />
                 {/* El botón dice CUÁNTAS. «Validar» a secas no deja saber si son estas 20 o la de al lado. */}
-                Validar {pendientes.length === 1 ? '1 obra social' : `${pendientes.length} obras sociales`}
+                {arrancando ? 'Validando…' : `Validar ${pendientes.length === 1 ? '1 obra social' : `${pendientes.length} obras sociales`}`}
               </button>
             ))}
         </div>
@@ -875,9 +893,9 @@ export const PantallaValidarObrasSociales: React.FC<{
         así que durante toda la parte lenta —conectarse, esperar la pantalla de altas— no había NADA
         moviéndose en pantalla. Una barra que no se mueve y una app colgada se ven igual.
       */}
-      {mirando && total > 0 && (
+      {(mirando || arrancando) && total > 0 && (
         <div className="h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
-          {hechas === 0 ? (
+          {arrancando || hechas === 0 ? (
             <div className="h-full w-1/3 bg-gradient-to-r from-blue-600 to-green-500 animate-[barrita_1.4s_ease-in-out_infinite]" />
           ) : (
             <div className="h-full bg-gradient-to-r from-blue-600 to-green-500 transition-[width] duration-500" style={{ width: `${Math.round((hechas / total) * 100)}%` }} />
@@ -886,7 +904,7 @@ export const PantallaValidarObrasSociales: React.FC<{
       )}
 
       {/* Qué está haciendo ahora. Es lo que convierte una espera de minutos en algo que se entiende. */}
-      {mirando && faseCorrida && (
+      {(mirando || arrancando) && faseCorrida && (
         <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-950/20 text-[11.5px] text-gray-700 dark:text-gray-300 flex items-center gap-2">
           <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3 shrink-0 text-blue-600 dark:text-blue-400" />
           <span>{faseCorrida}</span>

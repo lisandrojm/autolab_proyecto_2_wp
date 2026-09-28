@@ -1,6 +1,7 @@
 import axios from "./axiosConfig";
 import { useAuthStore } from "../stores/authStore";
 import { emitProjectsChanged } from "../utils/navbarEvents";
+import { invalidateRefCache } from "../utils/refCache";
 import { CentroCosto } from "./centrosCosto";
 
 /* ------------------------------ Tipos base ------------------------------ */
@@ -654,6 +655,13 @@ class ProjectsAPI {
     await axios.post(`/projects/${projectId}/assign-member`, data, {
       headers: this.getHeaders(),
     });
+    /*
+      Las bandejas de Gestión de Contratos (Trámite impositivo, Para firmar…) se cachean 5 minutos
+      (`contracts-overview:` en ContractBulkTabs). Sin esto, aprobar una solicitud y abrir Contratos
+      mostraba la lista de antes: el alta recién guardada no aparecía en «Alta temprana de ARCA»
+      hasta que vencía el caché o se recargaba la página.
+    */
+    invalidateRefCache("contracts-overview:");
     const project = await this.getProject(projectId, { team: "ids" });
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", projectId, clientId);
@@ -663,6 +671,7 @@ class ProjectsAPI {
     await axios.delete(`/projects/${projectId}/members/${userId}`, {
       headers: this.getHeaders(),
     });
+    invalidateRefCache("contracts-overview:");
     const project = await this.getProject(projectId, { team: "ids" });
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", projectId, clientId);

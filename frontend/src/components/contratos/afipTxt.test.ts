@@ -887,14 +887,13 @@ describe("caso real rechazado por ARCA (CUIL 20363972609, modalidad 022)", () =>
   });
 
   /*
-    El OTRO problema del alta original, que el validador de ARCA no señala.
-
-    Venía con fin = inicio = 2026/07/04 en una modalidad a plazo determinado: son dos fechas bien
-    escritas, así que el formato pasa, y lo que queda registrado es una relación laboral de cero
-    días. Mejor no generar el archivo que dar de alta algo que después hay que rectificar.
+    UNA JORNADA: fin = inicio. Es una relación de un día, no de cero, y es el caso más común de un
+    contrato «Jornada». Antes no generaba registro; ver `finAnteriorAlInicio` (confirmado contra ARCA).
   */
-  it("fin igual al inicio en un plazo determinado no genera registro", () => {
-    assert.equal(buildAltaRecord(filaCasoReal(CASO_REAL.inicio), catalogosCasoReal()), null);
+  it("fin igual al inicio (una jornada) genera registro con las dos fechas", () => {
+    const r = buildAltaRecord(filaCasoReal(CASO_REAL.inicio), catalogosCasoReal());
+    assert.ok(r, "una jornada tiene que poder darse de alta");
+    assert.equal(r!.slice(19, 29), r!.slice(29, 39), "inicio y fin, el mismo día");
   });
 
   it("fin anterior al inicio tampoco", () => {
@@ -916,7 +915,6 @@ describe("caso real rechazado por ARCA (CUIL 20363972609, modalidad 022)", () =>
 */
 describe("coherencia entre el resumen de la pantalla y el registro", () => {
   const casos: Array<{ nombre: string; fin: string }> = [
-    { nombre: "fin igual al inicio", fin: CASO_REAL.inicio },
     { nombre: "fin anterior al inicio", fin: "2026-07-03" },
   ];
 
@@ -933,7 +931,7 @@ describe("coherencia entre el resumen de la pantalla y el registro", () => {
 
       const check = r.checks.find((c) => c.key === "fechaFin")!;
       assert.equal(check.estado, "error");
-      assert.match(check.detalle || "", /posterior a la de inicio/);
+      assert.match(check.detalle || "", /anterior a la de inicio/);
     });
   }
 
