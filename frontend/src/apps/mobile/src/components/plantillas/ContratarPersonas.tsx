@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faMoneyBillWave, faPen, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faPen, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { FilaPreview, plantillasEquipoAPI, Preview, Puntual } from "../../../../../api/plantillasEquipo";
 import { ImportesDelContrato } from "../../../../../components/contratacion/ImportesDelContrato";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
@@ -9,6 +9,9 @@ import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTi
 import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
 import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
 import { CampoComentarios } from "../contratacion/CampoComentarios";
+import { AyudaImportes, diferenciaContraEscala, PROPS_IMPORTES_MOVIL } from "../contratacion/AyudaImportes";
+import { importePorJornadaDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
+import { CustomDatePicker } from "../CustomDatePicker";
 import { mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { CustomMultiDatePicker } from "../CustomMultiDatePicker";
 import { usePlantilla, usePlantillas } from "./contexto";
@@ -20,7 +23,7 @@ import { estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, r
 import { porDiasSueltos } from "./Condiciones";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { AIRE, MARGEN, Rotulo, pastillaDe } from "./piezas";
-import { CLASE_CAMPO, CLASE_HORA, fechaCorta, fechaDeHoy, pesos, Pill, textoHorario } from "./comun";
+import { CLASE_HORA, fechaDeHoy, pesos, Pill, textoHorario } from "./comun";
 import { cambiosDeContrato } from "./Condiciones";
 
 /*
@@ -44,6 +47,8 @@ import { cambiosDeContrato } from "./Condiciones";
   (jornada, semana, mensual, total) y los otros se derivan. Lo que se guarda es la jornada.
 */
 const esHora = (h?: string | null) => /^\d{2}:\d{2}$/.test(h || "");
+/** «27/9/2026», como lo escribe el alta individual en su resumen de fechas. */
+const fechaLarga = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("es-AR");
 
 export default function ContratarPersonas() {
   const { id = "" } = useParams();
@@ -245,11 +250,14 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
     Es contra lo que se compara al guardar. Los importes no tienen base conocida acá (la escala la
     calcula el server), así que ahí manda si la persona TOCÓ el campo o no.
   */
+  const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, equipo);
+  // Sin categoría en el puesto, rige la del nivel del proyecto (la misma que manda `pedidosDe`): ya viene elegida.
+  const categoriaPorDefecto = x.efectivo.categoriaSatId ? "" : catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame);
   const base = {
     contratoId: estado.contratoId || x.efectivo.contratoId || "",
     inTime: x.efectivo.inTime || "",
     outTime: x.efectivo.outTime || "",
-    categoriaSatId: x.efectivo.categoriaSatId || "",
+    categoriaSatId: x.efectivo.categoriaSatId || categoriaPorDefecto || "",
     fechas: f?.fechas || [],
   };
   const contratoRige = d.contratoId || base.contratoId;
@@ -257,7 +265,6 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
   const contratoDoc = catalogos.contratos.find((c) => c._id === contratoRige) as any;
   const indeterminado = !!contratoDoc?.data?.esTiempoIndeterminado;
   const esServicios = (catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit";
-  const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, equipo);
   const oferta = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, verTodasDelConvenio, false);
   const categoriaIdActual = d.categoriaSatId ?? base.categoriaSatId;
   const categoriaActual = catalogos.categoriasSat.find((c) => c._id === categoriaIdActual) || null;
@@ -268,16 +275,31 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
   const inTime = d.inTime ?? base.inTime;
   const outTime = d.outTime ?? base.outTime;
   const fechas = d.fechas ?? base.fechas;
+  /*
+    LAS FECHAS DE ESTA PERSONA. Como en el alta individual, cada una puede tener las suyas; lo normal
+    es que valgan las del equipo (paso 1) y esto sea la excepción de una: «el equipo va todo el mes y
+    Beto entra el 15». Por jornada son sus días; por período, su desde/hasta.
+  */
+  const desdeDelEquipo = f?.desde || "";
+  const hastaDelEquipo = f?.hasta || "";
+  const desdePropio = d.desde ?? desdeDelEquipo;
+  const hastaPropio = d.hasta ?? hastaDelEquipo;
+  const fechasDistintas = sueltos ? JSON.stringify([...fechas].sort()) !== JSON.stringify([...base.fechas].sort()) : desdePropio !== desdeDelEquipo || hastaPropio !== hastaDelEquipo;
 
-  // ── Los importes: los datos del cálculo salen de la fila que ya calculó el server ──
-  const desde = fila?.desde || (sueltos ? fechas[0] : f?.desde) || "";
-  const hasta = fila?.hasta || (sueltos ? fechas[fechas.length - 1] : f?.hasta) || "";
+  // ── Los importes: jornadas del server, y la escala de la categoría calculada acá (la misma cuenta del individual) ──
+  const desde = sueltos ? fechas[0] || "" : desdePropio;
+  const hasta = sueltos ? fechas[fechas.length - 1] || "" : hastaPropio;
   const periodo = periodoDeCalculo(desde, hasta, indeterminado);
+  const mult = Number(contratoDoc?.data?.multiplicadorDiario) > 0 ? Number(contratoDoc.data.multiplicadorDiario) : 1;
+  const escalaBase = importePorJornadaDeCategoria(categoriaActual || undefined);
+  const escala = importePorJornadaDeCategoria(categoriaActual || undefined, mult);
+  const importesBloqueados = !esServicios && !categoriaIdActual;
   const diasDeSemana = sueltos ? [...new Set(fechas.map((s) => new Date(`${s}T12:00:00Z`).getUTCDay()))] : x.efectivo.diasSemana || [];
   const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasDeSemana);
   const jornadas = fila?.jornadas || (sueltos ? fechas.length : 0);
   const tocoImporte = useRef(false);
   const [valorJornada, setValorJornada] = useState(() => (d.dailyRate ? String(d.dailyRate) : fila?.importes.jornada != null ? String(fila.importes.jornada) : ""));
+  const diferencia = diferenciaContraEscala(escala, valorJornada);
 
   /** Sólo lo distinto de lo que rige. Lo igual se borra: no es un puntual, es lo de siempre. */
   const soloLoDistinto = (): Puntual | null => {
@@ -290,8 +312,21 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
     if (r.inTime === base.inTime) delete r.inTime;
     if (r.outTime === base.outTime) delete r.outTime;
     if (r.categoriaSatId === base.categoriaSatId) delete r.categoriaSatId;
-    if (r.fechas && JSON.stringify([...r.fechas].sort()) === JSON.stringify([...base.fechas].sort())) delete r.fechas;
-    if (!sueltos) delete r.fechas;
+    if (sueltos) {
+      if (r.fechas && JSON.stringify([...r.fechas].sort()) === JSON.stringify([...base.fechas].sort())) delete r.fechas;
+      delete r.desde;
+      delete r.hasta;
+    } else {
+      delete r.fechas;
+      // El período viaja entero o no viaja: el server toma «desde» como la señal de que hay uno propio.
+      if (desdePropio === desdeDelEquipo && hastaPropio === hastaDelEquipo) {
+        delete r.desde;
+        delete r.hasta;
+      } else {
+        r.desde = desdePropio || undefined;
+        r.hasta = indeterminado ? undefined : hastaPropio || undefined;
+      }
+    }
     if (r.userId && r.userId === x.asignacion?.userId) delete r.userId;
     if (!r.isReplacement) {
       delete r.replacedUserId;
@@ -351,20 +386,53 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
 
           {!d.excluido && (
             <>
-              {/* ── Reemplazo: el bloque del alta individual (motivo primero, después a quién) ── */}
-              <BloqueReemplazo
-                activo={!!d.isReplacement}
-                onActivo={(v) => cambiar({ isReplacement: v, ...(v ? {} : { replacedUserId: undefined, motivoReemplazoId: undefined }) })}
-                motivos={catalogos.motivos}
-                motivoId={d.motivoReemplazoId || ""}
-                onMotivo={(id) => cambiar({ motivoReemplazoId: id || undefined })}
-                nombreReemplazado={reemplazado}
-                onElegirPersona={() => setHoja("reemplazado")}
-                onQuitarPersona={() => cambiar({ replacedUserId: undefined })}
-              />
+              {/*
+                EN EL ORDEN DEL ALTA INDIVIDUAL: contrato, fechas, horario, categoría, importes, reemplazo,
+                comentario. Es el orden en que se decide —primero bajo qué contrato, después cuándo, después
+                cuánto— y es el que quien pide altas ya tiene en los dedos.
+              */}
 
               {/* ── Contrato: el campo del alta individual, con el badge de trámite ── */}
               {catalogos.contratos.length > 0 && <CampoTipoContrato contratos={catalogos.contratos} contratoId={contratoRige} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={() => setHoja("contrato")} marca={marca(contratoRige !== base.contratoId)} />}
+
+              {/* ── Fechas: las suyas si son distintas de las del equipo; los mismos campos del individual ── */}
+              <section className="space-y-2">
+                <Rotulo icono={faUsers}>Fechas{marca(fechasDistintas)}</Rotulo>
+                {sueltos ? (
+                  <div className="space-y-1">
+                    <CustomMultiDatePicker label="Días que trabaja" value={fechas} onChange={(v: string | string[]) => cambiar({ fechas: [...new Set(Array.isArray(v) ? v : v ? [v] : [])].sort() })} minDate={fechaDeHoy()} />
+                    <p className="text-[11px] text-slate-400">
+                      {fechas.length > 0 ? (
+                        <>
+                          <span className="font-semibold text-slate-600 dark:text-slate-300">
+                            {fechas.length} {fechas.length === 1 ? "jornada" : "jornadas"}
+                          </span>
+                          , entre el {fechaLarga(fechas[0])} y el {fechaLarga(fechas[fechas.length - 1])}.
+                        </>
+                      ) : (
+                        <>«{contratoDoc?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <CustomDatePicker label="Desde" value={desdePropio} onChange={(v: string) => cambiar({ desde: v, hasta: hastaPropio })} />
+                    </div>
+                    {/* Tiempo indeterminado: no hay «hasta». No es opcional, es que no existe. */}
+                    {indeterminado ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Hasta</p>
+                        <p className="flex h-12 items-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">Sin fecha de baja</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <CustomDatePicker label="Hasta" value={hastaPropio} onChange={(v: string) => cambiar({ hasta: v, desde: desdePropio })} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
 
               {/* ── Horario ── */}
               <section className="space-y-2">
@@ -381,15 +449,6 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
                 <span className="sr-only">{textoHorario(inTime, outTime)}</span>
               </section>
 
-              {/* ── Días (sólo por jornada) ── */}
-              {sueltos && (
-                <section className="space-y-2">
-                  <Rotulo icono={faUsers}>Días{marca(JSON.stringify([...fechas].sort()) !== JSON.stringify([...base.fechas].sort()))}</Rotulo>
-                  <CustomMultiDatePicker label="Sus días (cada día es una jornada)" value={fechas} onChange={(v: string | string[]) => cambiar({ fechas: [...new Set(Array.isArray(v) ? v : v ? [v] : [])].sort() })} minDate={fechaDeHoy()} />
-                  {fechas.length > 0 && <p className="text-xs text-slate-700 dark:text-slate-200">{`${fechas.length} ${fechas.length === 1 ? "jornada" : "jornadas"}: ${fechas.map(fechaCorta).join(" · ")}`}</p>}
-                </section>
-              )}
-
               {/* ── Categoría: el campo y la ventana del alta individual (buscador, nivel, escala) ── */}
               {!esServicios && (
                 <CampoCategoria
@@ -402,33 +461,41 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
                 />
               )}
 
-              {/* ── Importes: los del alta individual ── */}
+              {/* ── Importes: el mismo componente, las mismas clases y la misma ayuda que el alta individual ── */}
               <section className="space-y-2" onInputCapture={() => (tocoImporte.current = true)}>
-                <Rotulo icono={faMoneyBillWave}>Importes{marca(tocoImporte.current || !!d.dailyRate)}</Rotulo>
                 {fila ? (
                   <ImportesDelContrato
-                    className="grid grid-cols-2 gap-3"
+                    className="space-y-4"
                     valorJornada={valorJornada}
                     onValorJornada={setValorJornada}
                     mesesEq={mesesEq}
                     indeterminado={indeterminado}
                     jornadas={jornadas}
                     diasSemana={diasDeSemana.length}
-                    bloqueado={!esServicios && !(d.categoriaSatId ?? base.categoriaSatId)}
+                    bloqueado={importesBloqueados}
                     textoBloqueado="Se habilita al elegir la categoría."
-                    ayudaJornada={<p className="text-[11px] text-slate-500 dark:text-slate-400">{esServicios ? "Es un servicio: el importe se carga a mano." : fila.origenImporte === "escala" && !tocoImporte.current ? `De la escala de ${fila.categoriaNombre || "su categoría"}. Se puede cambiar.` : "Total ÷ jornadas. Varía según los días hábiles de cada mes."}</p>}
-                    claseEtiqueta="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300"
-                    claseCampo={CLASE_CAMPO}
-                    claseCampoTotal={`${CLASE_CAMPO} border-emerald-300 bg-emerald-50 font-bold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300`}
-                    claseAyuda="text-[11px] text-slate-500 dark:text-slate-400"
+                    ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaActual?.name} cct={cct} multiplicador={mult} contrato={contratoDoc?.name} escalaBase={escalaBase} diferencia={diferencia} />}
+                    {...PROPS_IMPORTES_MOVIL}
                   />
                 ) : (
                   <p className="text-xs text-slate-600 dark:text-slate-300">Los importes aparecen cuando el server termina de calcular la fila.</p>
                 )}
               </section>
 
+              {/* ── Reemplazo: el bloque del alta individual (motivo primero, después a quién) ── */}
+              <BloqueReemplazo
+                activo={!!d.isReplacement}
+                onActivo={(v) => cambiar({ isReplacement: v, ...(v ? {} : { replacedUserId: undefined, motivoReemplazoId: undefined }) })}
+                motivos={catalogos.motivos}
+                motivoId={d.motivoReemplazoId || ""}
+                onMotivo={(id) => cambiar({ motivoReemplazoId: id || undefined })}
+                nombreReemplazado={reemplazado}
+                onElegirPersona={() => setHoja("reemplazado")}
+                onQuitarPersona={() => cambiar({ replacedUserId: undefined })}
+              />
+
               {/* ── Comentario: el campo del alta individual ── */}
-              <CampoComentarios valor={d.comentarios || ""} onCambio={(v) => cambiar({ comentarios: v })} rows={2} />
+              <CampoComentarios valor={d.comentarios || ""} onCambio={(v) => cambiar({ comentarios: v })} />
             </>
           )}
         </div>

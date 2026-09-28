@@ -4,8 +4,9 @@ import { CampoTipoContrato, ModalTipoContrato } from "./contratacion/SelectorTip
 import { CampoCategoria, ModalCategoria } from "./contratacion/SelectorCategoria";
 import { BloqueReemplazo } from "./contratacion/BloqueReemplazo";
 import { CampoComentarios } from "./contratacion/CampoComentarios";
+import { AyudaImportes, PROPS_IMPORTES_MOVIL } from "./contratacion/AyudaImportes";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
@@ -2470,47 +2471,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             diasSemana={diasSemanaNum}
             bloqueado={importesBloqueados}
             textoBloqueado="Se habilita al elegir la categoría."
-            ayudaJornada={
-              <>
-                {importesBloqueados && <p className="text-[11px] text-slate-400">Se habilita al elegir la categoría: el importe sale de su escala.</p>}
-                {esServicios && <p className="text-[11px] text-slate-400">Es un servicio: no hay convenio ni categoría, así que el importe se carga a mano.</p>}
-                {!importesBloqueados && <p className="text-[11px] text-slate-400">Total ÷ jornadas del contrato. Varía según los días hábiles de cada mes.</p>}
-                {categoriaElegida && !diferenciaContraEscala && (
-                  <p className="text-[11px] text-slate-400">
-                    De la escala de {categoriaElegida.name}
-                    {convenioElegido ? ` · ${convenioElegido.externalId}` : ""}. Se puede cambiar.
-                  </p>
-                )}
-                {/*
-                  EL MULTIPLICADOR, DICHO CON LOS DOS NÚMEROS.
-
-                  Un importe que sale 1,5 veces más alto que la escala del convenio parece un error de
-                  carga si no se explica de dónde salió: acá se lee la cuenta entera —la escala, el
-                  multiplicador y de qué contrato viene—.
-                */}
-                {categoriaElegida && multiplicadorDiario !== 1 && (
-                  <p className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                    Escala {importePorJornadaDeCategoria(categoriaElegida).toLocaleString("es-AR", { minimumFractionDigits: 2 })} × {multiplicadorDiario} del contrato {contratoElegido?.name}.
-                  </p>
-                )}
-                {diferenciaContraEscala && (
-                  <p className={`text-[11px] font-medium ${diferenciaContraEscala.delta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                    {diferenciaContraEscala.delta > 0 ? "+" : "−"}
-                    {Math.abs(diferenciaContraEscala.delta).toLocaleString("es-AR", { minimumFractionDigits: 2 })} contra la escala ({diferenciaContraEscala.escala.toLocaleString("es-AR", { minimumFractionDigits: 2 })})
-                  </p>
-                )}
-              </>
-            }
-            claseEtiqueta="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2"
-            claseCampo="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60"
-            claseCampoTotal="w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
-            claseAyuda="text-[11px] text-slate-400"
-            icono={<FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-500 text-[10px]" />}
-            adornoCampo={
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-              </span>
-            }
+            ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaElegida?.name} cct={convenioElegido?.externalId} multiplicador={multiplicadorDiario} contrato={contratoElegido?.name} escalaBase={importePorJornadaDeCategoria(categoriaElegida || undefined)} diferencia={diferenciaContraEscala} />}
+            {...PROPS_IMPORTES_MOVIL}
           />
         </div>
 

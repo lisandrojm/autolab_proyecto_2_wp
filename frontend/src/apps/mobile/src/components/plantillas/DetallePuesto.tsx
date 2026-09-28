@@ -1,18 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
-import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
+import { Pantalla, Seccion, Vacio } from "./Pantalla";
+import { AIRE, MARGEN, pastillaDe } from "./piezas";
 import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
 import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
+import { AyudaImportes, diferenciaContraEscala, PROPS_IMPORTES_MOVIL } from "../contratacion/AyudaImportes";
+import { ImportesDelContrato } from "../../../../../components/contratacion/ImportesDelContrato";
+import { importePorJornadaDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
 import { marcasParaSelector } from "./PantallaEquipo";
 import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
-import { CLASE_CAMPO, pesos, textoHorario } from "./comun";
+import { textoHorario } from "./comun";
 
 /*
   PANTALLA 4 · UN PUESTO DE UN EQUIPO.
@@ -49,15 +53,53 @@ export default function DetallePuesto() {
   const x = lista.find((y) => y.n === numero);
   const marcas = useMemo(() => (p && puesto ? marcasParaSelector(p, equipoId, puesto._id) : undefined), [p, equipoId, puesto]);
   const [importe, setImporte] = useState("");
+  /*
+    LA ESCALA DEL PUESTO: la de su categoría, con el multiplicador de su contrato. Es la misma cuenta
+    del alta individual, y es lo que muestra el campo cuando nadie fijó un importe a mano.
+  */
+  const contratoDelPuesto = catalogos.contratos.find((c) => c._id === x?.efectivo.contratoId) as any;
+  const multDelPuesto = Number(contratoDelPuesto?.data?.multiplicadorDiario) > 0 ? Number(contratoDelPuesto.data.multiplicadorDiario) : 1;
+  const categoriaDelPuesto = catalogos.categoriasSat.find((c) => c._id === x?.efectivo.categoriaSatId);
+  const escalaBase = importePorJornadaDeCategoria(categoriaDelPuesto);
+  const escala = importePorJornadaDeCategoria(categoriaDelPuesto, multDelPuesto);
+  /** Si la persona escribió en los importes: lo que emite el componente al montarse no cuenta. */
+  const tocoImporte = useRef(false);
+  /*
+    LA CATEGORÍA POR DEFECTO, GUARDADA SOLA. Un puesto sin categoría —agregado después, o creado antes
+    de que cargaran las categorías— toma la del nivel del proyecto (o la más cercana), con la misma
+    regla del alta individual, sin que nadie la elija. Se guarda porque acá se edita la base del
+    puesto; al contratar, la misma regla se aplica al vuelo (ver `pedidosDe`).
+  */
+  const categoriaPorDefecto = x && !x.efectivo.categoriaSatId && catalogos.categoriasCargadas ? catalogos.categoriaPorDefectoPara(proyecto, empresaDelEquipo, convenioDelEquipo, puesto?.rolesFrame || []) : "";
+  useEffect(() => {
+    if (categoriaPorDefecto) void cambiar({ categoriaSatId: categoriaPorDefecto });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriaPorDefecto, numero, equipoId]);
 
   const a = x?.asignacion;
   useEffect(() => {
     setEditando(false);
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
-    setImporte(x?.efectivo.dailyRateManual ? String(x.efectivo.dailyRateManual) : "");
+    tocoImporte.current = false;
+    setImporte(x?.efectivo.dailyRateManual ? String(x.efectivo.dailyRateManual) : escala ? String(escala) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numero, equipoId, !!a?.reemplazo, x?.efectivo.dailyRateManual]);
+  }, [numero, equipoId, !!a?.reemplazo, x?.efectivo.dailyRateManual, escala]);
+  /*
+    Se guarda un rato después de dejar de escribir, no por tecla: cada guardado va al server y vuelve
+    la plantilla entera, y ver saltar la pantalla mientras se tipea un importe es insoportable. Igual a
+    la escala = sin fijar: el importe fijado a mano es sólo el que se aparta de ella.
+  */
+  useEffect(() => {
+    if (!tocoImporte.current || !x) return;
+    const t = setTimeout(() => {
+      const n = Number(importe) > 0 ? Number(importe) : null;
+      const nuevo = n !== null && Math.abs(n - escala) < 0.005 ? null : n;
+      if (nuevo !== (x.efectivo.dailyRateManual ?? null)) void cambiar({ dailyRateManual: nuevo });
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importe]);
 
   const atras = rutas.equipo(id, equipoId);
   if (noEsta || (p && (!equipo || !puesto))) return <Pantalla titulo="Puesto" atras={atras}><Vacio texto="Este puesto ya no está." accion="Volver al equipo" onAccion={() => navigate(atras)} /></Pantalla>;
@@ -99,9 +141,10 @@ export default function DetallePuesto() {
   const convenio = convenioDelEquipo;
   // La oferta de categorías con la misma regla del alta individual: las del nivel del proyecto, y «ver todas» si no está la que se busca.
   const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, verTodasDelConvenio, false);
-  const categoriaActual = catalogos.categoriasSat.find((c) => c._id === efectivo.categoriaSatId) || null;
+  const categoriaActual = categoriaDelPuesto || null;
+  const indeterminadoDelPuesto = !!contratoDelPuesto?.data?.esTiempoIndeterminado;
+  const diferencia = diferenciaContraEscala(escala, importe);
   const cct = catalogos.cctDeConvenio(convenio);
-  const resumenEquipo = [nombreTurno(areas, base.areaId, base.shiftId), textoHorario(base.inTime, base.outTime), base.nombreContrato].filter(Boolean).join(" · ");
 
   return (
     <Pantalla
@@ -147,6 +190,59 @@ export default function DetallePuesto() {
         </div>
       </Seccion>
 
+      <Seccion titulo="Condiciones">
+        {x.diferencias.length === 0 && !editando ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Igual que el equipo</p>
+            {/* Lo del equipo, como pastillas: el área y turno en azul (es lo elegido), el horario y el contrato en neutro. */}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {nombreTurno(areas, base.areaId, base.shiftId) && <span className={`${pastillaDe("azul")} ${AIRE} ${MARGEN}`}>{nombreTurno(areas, base.areaId, base.shiftId)}</span>}
+              <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{textoHorario(base.inTime, base.outTime)}</span>
+              {base.nombreContrato && <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{base.nombreContrato}</span>}
+            </div>
+            <button type="button" onClick={() => setEditando(true)} className="mt-1 min-h-[44px] text-sm font-bold text-blue-700 dark:text-blue-300">
+              Cambiar solo para este puesto
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
+            <button type="button" onClick={volverAlEquipo} className="min-h-[44px] text-sm font-bold text-blue-700 dark:text-blue-300">
+              Volver a las del equipo
+            </button>
+          </div>
+        )}
+      </Seccion>
+
+      {!esServicios && (
+        <Seccion titulo="Categoría e importe">
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
+            {/* El campo del alta individual: la categoría con su nivel, y la ventana con buscador y escala. */}
+            <CampoCategoria categoria={categoriaActual} nivel={categoriaActual ? oferta.nivelPorId.get(categoriaActual._id) || null : null} onAbrir={() => setHoja("categoria")} deshabilitado={!empresa} motivoDeshabilitado="Elegí el proyecto y la empresa del equipo" />
+            {/*
+              LOS IMPORTES, LOS DEL ALTA INDIVIDUAL. Acá no hay fechas todavía —son de cada contratación—,
+              así que mensual y total quedan sin calcular; la jornada y la semana sí, y es lo que se fija
+              para el puesto. Lo que se escribe distinto de la escala queda como importe fijado a mano.
+            */}
+            <div onInputCapture={() => (tocoImporte.current = true)}>
+              <ImportesDelContrato
+                className="space-y-4"
+                valorJornada={importe}
+                onValorJornada={setImporte}
+                mesesEq={0}
+                indeterminado={indeterminadoDelPuesto}
+                jornadas={0}
+                diasSemana={(efectivo.diasSemana || []).length}
+                bloqueado={!categoriaActual}
+                textoBloqueado="Se habilita al elegir la categoría."
+                ayudaJornada={<AyudaImportes bloqueado={!categoriaActual} esServicios={false} categoria={categoriaActual?.name} cct={cct} multiplicador={multDelPuesto} contrato={contratoDelPuesto?.name} escalaBase={escalaBase} diferencia={diferencia} />}
+                {...PROPS_IMPORTES_MOVIL}
+              />
+            </div>
+          </div>
+        </Seccion>
+      )}
+
       <Seccion titulo="Reemplazo">
         {/* El bloque del alta individual. Acá se guarda en la plantilla (es la base del puesto); al contratar se puede cambiar sólo esa vez. */}
         {r?.revisarMotivo && <p className="mb-2 text-xs font-semibold text-amber-800 dark:text-amber-300">Venía sin motivo: elegilo.</p>}
@@ -168,55 +264,26 @@ export default function DetallePuesto() {
         />
       </Seccion>
 
-      <Seccion titulo="Condiciones">
-        {x.diferencias.length === 0 && !editando ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-            <p className="text-sm text-slate-800 dark:text-slate-100">
-              <span className="font-semibold">Igual que el equipo</span>
-              {resumenEquipo ? ` (${resumenEquipo})` : ""}
-            </p>
-            <button type="button" onClick={() => setEditando(true)} className="mt-1 min-h-[44px] text-sm font-bold text-blue-700 dark:text-blue-300">
-              Cambiar solo para este puesto
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
-            <button type="button" onClick={volverAlEquipo} className="min-h-[44px] text-sm font-bold text-blue-700 dark:text-blue-300">
-              Volver a las del equipo
-            </button>
-          </div>
-        )}
-      </Seccion>
-
-      {!esServicios && (
-        <Seccion titulo="Categoría e importe">
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-            {/* El campo del alta individual: la categoría con su nivel, y la ventana con buscador y escala. */}
-            <CampoCategoria categoria={categoriaActual} nivel={categoriaActual ? oferta.nivelPorId.get(categoriaActual._id) || null : null} onAbrir={() => setHoja("categoria")} deshabilitado={!empresa} motivoDeshabilitado="Elegí el proyecto y la empresa del equipo" />
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Importe por jornada (opcional)</span>
-              <input type="text" inputMode="decimal" value={importe} onChange={(e) => setImporte(e.target.value.replace(",", ".").replace(/[^\d.]/g, ""))} onBlur={() => { const v = Number(importe) > 0 ? Number(importe) : null; if (v !== (efectivo.dailyRateManual ?? null)) void cambiar({ dailyRateManual: v }); }} placeholder="Vacío = el de la escala" className={CLASE_CAMPO} />
-              {efectivo.dailyRateManual ? <span className="mt-1 block text-xs text-slate-600 dark:text-slate-300">Fijado: {pesos(efectivo.dailyRateManual)}</span> : null}
-            </label>
-          </div>
-        </Seccion>
-      )}
-
       <Seccion titulo="Más">
-        <div className="rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800/70">
-          {persona && <AccionTexto onClick={() => void guardar(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, null))}>Quitar persona</AccionTexto>}
-          <AccionTexto
-            peligro
+        {/* Dos botones, uno al lado del otro: son dos acciones distintas, cada una con su blanco entero, y no dos renglones de una lista. */}
+        <div className="flex gap-2">
+          {persona && (
+            <button type="button" onClick={() => void guardar(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, null))} className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
+              Quitar persona
+            </button>
+          )}
+          <button
+            type="button"
             onClick={async () => {
               const ok: any = await sweetAlert.confirm("¿Sacar este puesto del equipo?", "Sigue en el grupo y se puede volver a usar.", "Sacar", "Cancelar");
               if (!(ok === true || ok?.isConfirmed)) return;
               const r2 = await guardar(() => plantillasEquipoAPI.usoDelPuesto(p._id, equipo._id, puesto._id, true));
               if (r2) navigate(atras, { replace: true });
             }}
+            className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-red-300 px-3 text-sm font-bold text-red-700 dark:border-red-800 dark:text-red-300"
           >
-            Sacar este puesto del equipo
-          </AccionTexto>
+            Sacar del equipo
+          </button>
         </div>
       </Seccion>
 

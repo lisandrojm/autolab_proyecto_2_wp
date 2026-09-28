@@ -1,6 +1,6 @@
 import { Equipo, PedidoDeContratacion, Plantilla, Puntual } from "../../../../../api/plantillasEquipo";
 import { CatalogosContratacion } from "./useCatalogosContratacion";
-import { puestosDe } from "./equipoUtil";
+import { proyectoDelEquipo, puestosDe } from "./equipoUtil";
 import { porDiasSueltos } from "./Condiciones";
 
 /*
@@ -135,6 +135,19 @@ export function pedidosDe(plantilla: Plantilla, estado: EstadoContratar, catalog
         if (equipoId !== e._id) continue;
         const limpio = puntualLimpio(v);
         if (Object.keys(limpio).length) puntuales[puestoId] = limpio;
+      }
+      /*
+        LA CATEGORÍA POR DEFECTO, PARA EL PUESTO QUE NO TIENE. La del nivel del proyecto —un proyecto
+        Plata, la Plata de la función— o la más cercana, con la MISMA regla del alta individual
+        (`categoriaPorDefecto`). Sin esto, un puesto que quedó sin categoría llegaba al server como
+        «Falta la categoría» y había que abrirlo para elegir lo que la regla ya sabía.
+      */
+      const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, e);
+      for (const x of puestosDe(plantilla, e)) {
+        const id = x.puesto._id;
+        if (x.efectivo.categoriaSatId || puntuales[id]?.categoriaSatId) continue;
+        const porDefecto = catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame);
+        if (porDefecto) puntuales[id] = { ...(puntuales[id] || {}), categoriaSatId: porDefecto };
       }
       return {
         equipoId: e._id,
