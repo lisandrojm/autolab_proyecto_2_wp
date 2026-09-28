@@ -70,21 +70,20 @@ export const franjaDe = (inicio?: string | null): Franja | null => {
   return h >= 5 && h < 12 ? "Mañana" : h >= 12 && h < 19 ? "Tarde" : "Noche";
 };
 
-const COLOR_FRANJA: Record<Franja, string> = {
-  Mañana: "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200",
-  Tarde: "bg-sky-100 text-sky-900 dark:bg-sky-500/20 dark:text-sky-200",
-  Noche: "bg-indigo-100 text-indigo-900 dark:bg-indigo-500/25 dark:text-indigo-200",
-};
-
 /**
  * «Noche · Técnica», o «Sin turno». Si el nombre del turno ya dice la franja («Técnica · Noche»), manda
  * el nombre (un turno «Noche» que entra a las 18 no es «Tarde») y no se repite.
+ *
+ * AZUL, COMO TODO LO ELEGIDO. Tenía un color por franja —ámbar la mañana, celeste la tarde, índigo
+ * la noche— que en el resto de la app no significa nada: ninguna otra pastilla cambia de color según
+ * el dato, y la de la mañana se leía como un aviso. Un área y turno elegido se ve igual que un rol
+ * elegido o una persona elegida: el color dice «esto está elegido», no «esto es de mañana».
  */
 export const ChipTurno: React.FC<{ inicio?: string | null; texto?: string }> = ({ inicio, texto }) => {
   const delNombre = /mañana/i.test(texto || "") ? "Mañana" : /tarde/i.test(texto || "") ? "Tarde" : /noche/i.test(texto || "") ? "Noche" : null;
   const f: Franja | null = delNombre || franjaDe(inicio);
   const etiqueta = delNombre ? texto : f ? `${f}${texto ? ` · ${texto}` : ""}` : texto || "Sin turno";
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${f ? COLOR_FRANJA[f] : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200"}`}>{etiqueta}</span>;
+  return <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-semibold ${etiqueta === "Sin turno" ? "border-slate-400 bg-slate-200 text-slate-700 dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100" : "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200"}`}>{etiqueta}</span>;
 };
 
 /** «18:00–00:00». */

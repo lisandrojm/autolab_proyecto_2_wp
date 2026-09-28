@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { HojaModal } from "./HojaModal";
+import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTipoContrato";
 import { ListaTurnos } from "./DetalleGrupo";
 import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { ChipTurno, CLASE_HORA, DIAS, textoHorario } from "./comun";
@@ -63,27 +64,8 @@ export type HojaCondicion = null | "contrato" | "turno";
 export function HojasCondiciones({ cual, onCerrar, titulo, areas, catalogos, valores, onCambio }: Omit<HojaProps, "abierta"> & { cual: HojaCondicion }) {
   return (
     <>
-      <HojaModal abierta={cual === "contrato"} onCerrar={onCerrar} titulo={titulo} subtitulo="Tipo de contrato">
-        <div className="flex flex-wrap gap-2">
-          {catalogos.contratos.map((c) => {
-            const on = c._id === valores.contratoId;
-            return (
-              <button
-                key={c._id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => {
-                  onCambio(cambiosDeContrato(catalogos, c._id));
-                  onCerrar();
-                }}
-                className={`min-h-[44px] rounded-full px-4 text-sm font-semibold ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`}
-              >
-                {c.name}
-              </button>
-            );
-          })}
-        </div>
-      </HojaModal>
+      {/* El tipo de contrato: la misma ventana del alta individual, con el badge del trámite al lado de cada uno. */}
+      <ModalTipoContrato abierto={cual === "contrato"} onCerrar={onCerrar} contratos={catalogos.contratos} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={(id) => onCambio(cambiosDeContrato(catalogos, id))} />
       <HojaModal abierta={cual === "turno"} onCerrar={onCerrar} titulo={titulo} subtitulo="Área y turno · completa el horario y los días">
         <ListaTurnos
           areas={areas}
@@ -111,23 +93,21 @@ interface FilasProps {
   distintas?: Set<string>;
 }
 
-/** Las filas, en el orden del alta individual: tipo de contrato, área y turno (cada uno abre su hoja), horario y días (se editan acá mismo). */
+/**
+ * Las filas, en el orden del alta individual: tipo de contrato (el campo del individual, con su
+ * badge de trámite), y debajo, en su tarjeta, área y turno (abre su hoja), horario y días (se editan
+ * acá mismo).
+ */
 export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas }: FilasProps) {
   const turno = nombreTurno(areas, valores.areaId, valores.shiftId);
-  const contrato = valores.contratoId ? catalogos.contratos.find((c) => c._id === valores.contratoId)?.name || valores.nombreContrato || "Contrato" : "";
   const sueltos = porDiasSueltos(catalogos, valores.contratoId);
   const dias = valores.diasSemana || [];
   const marca = (k: string) => (distintas?.has(k) ? <span className="ml-1.5 rounded bg-amber-100 px-1 text-[11px] font-bold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">distinto</span> : null);
   return (
-    <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70">
-      <button type="button" onClick={onAbrirContrato} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">
-        <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Tipo de contrato{marca("contrato")}</span>
-          <span className="mt-0.5 block">{contrato ? <span className="text-sm font-semibold text-slate-900 dark:text-white">{contrato}</span> : <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Elegí el contrato</span>}</span>
-        </span>
-        <FontAwesomeIcon icon={faChevronRight} className="shrink-0 text-slate-500" />
-      </button>
+    <div className="space-y-3">
+    <CampoTipoContrato contratos={catalogos.contratos} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={onAbrirContrato} marca={marca("contrato")} />
 
+    <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70">
       <button type="button" onClick={onAbrirTurno} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">
         <span className="min-w-0 flex-1">
           <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Área y turno{marca("turno")}</span>
@@ -181,6 +161,7 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { usePlantilla, usePlantillas } from "./contexto";
 import { AccionTexto, Pantalla, Seccion, Vacio } from "./Pantalla";
 import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
+import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
+import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
 import { marcasParaSelector } from "./PantallaEquipo";
 import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { CLASE_CAMPO, pesos, textoHorario } from "./comun";
@@ -23,7 +25,7 @@ import { CLASE_CAMPO, pesos, textoHorario } from "./comun";
   - Abajo, con texto: «Quitar persona» y «Sacar este puesto del equipo»; y ‹ anterior / siguiente ›
     para recorrer los puestos sin volver a la lista.
 */
-type Hoja = HojaCondicion | "persona" | "reemplazado";
+type Hoja = HojaCondicion | "persona" | "reemplazado" | "categoria";
 
 export default function DetallePuesto() {
   const { id = "", equipoId = "", n = "1" } = useParams();
@@ -33,6 +35,9 @@ export default function DetallePuesto() {
   const [hoja, setHoja] = useState<Hoja>(null);
   const [editando, setEditando] = useState(false);
   const [reemplazoAbierto, setReemplazoAbierto] = useState(false);
+  // El motivo elegido antes que la persona: el server lo guarda junto con ella (ver BloqueReemplazo: el motivo va primero).
+  const [motivoPendiente, setMotivoPendiente] = useState("");
+  const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   const [verAvisos, setVerAvisos] = useState(false);
   const equipo = p?.equipos.find((e) => e._id === equipoId);
   const numero = Number(n);
@@ -92,7 +97,10 @@ export default function DetallePuesto() {
   const esServicios = efectivo.tipoImpositivo === "constancia_cuit";
   const empresa = empresaDelEquipo;
   const convenio = convenioDelEquipo;
-  const categorias = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, false, true);
+  // La oferta de categorías con la misma regla del alta individual: las del nivel del proyecto, y «ver todas» si no está la que se busca.
+  const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, verTodasDelConvenio, false);
+  const categoriaActual = catalogos.categoriasSat.find((c) => c._id === efectivo.categoriaSatId) || null;
+  const cct = catalogos.cctDeConvenio(convenio);
   const resumenEquipo = [nombreTurno(areas, base.areaId, base.shiftId), textoHorario(base.inTime, base.outTime), base.nombreContrato].filter(Boolean).join(" · ");
 
   return (
@@ -140,45 +148,24 @@ export default function DetallePuesto() {
       </Seccion>
 
       <Seccion titulo="Reemplazo">
-        <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-          <label className="flex min-h-[44px] items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">¿Reemplaza a alguien?</span>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={reemplazoAbierto}
-              onChange={(e) => {
-                setReemplazoAbierto(e.target.checked);
-                if (!e.target.checked && r) quitarReemplazo();
-              }}
-              className="h-6 w-11 cursor-pointer appearance-none rounded-full bg-slate-300 transition before:ml-0.5 before:mt-0.5 before:block before:h-5 before:w-5 before:rounded-full before:bg-white before:transition checked:bg-blue-600 checked:before:translate-x-5 dark:bg-slate-600"
-            />
-          </label>
-          {reemplazoAbierto && (
-            <div className="mt-2 space-y-3">
-              <button type="button" onClick={() => setHoja("reemplazado")} className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-slate-300 px-3 text-left dark:border-slate-600">
-                <span>
-                  <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300">Reemplaza a</span>
-                  <span className={`block text-sm font-semibold ${r ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{r ? r.nombre : "Elegí a quién"}</span>
-                </span>
-                <FontAwesomeIcon icon={faChevronRight} className="text-slate-500" />
-              </button>
-              <div>
-                <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">Motivo{r?.revisarMotivo ? " · venía sin motivo, elegilo" : ""}</p>
-                <div className="flex flex-wrap gap-2">
-                  {catalogos.motivos.map((m) => {
-                    const on = r?.motivoReemplazoId === m._id;
-                    return (
-                      <button key={m._id} type="button" aria-pressed={on} disabled={!r} onClick={() => r && void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: r.replacedUserId, motivoReemplazoId: m._id }))} className={`min-h-[44px] rounded-full px-4 text-sm font-semibold disabled:opacity-40 ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`}>
-                        {m.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* El bloque del alta individual. Acá se guarda en la plantilla (es la base del puesto); al contratar se puede cambiar sólo esa vez. */}
+        {r?.revisarMotivo && <p className="mb-2 text-xs font-semibold text-amber-800 dark:text-amber-300">Venía sin motivo: elegilo.</p>}
+        <BloqueReemplazo
+          activo={reemplazoAbierto}
+          onActivo={(v) => {
+            setReemplazoAbierto(v);
+            if (!v) {
+              setMotivoPendiente("");
+              if (r) quitarReemplazo();
+            }
+          }}
+          motivos={catalogos.motivos}
+          motivoId={r?.motivoReemplazoId || motivoPendiente}
+          onMotivo={(id) => (r ? void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: r.replacedUserId, motivoReemplazoId: id || null })) : setMotivoPendiente(id))}
+          nombreReemplazado={r?.nombre || ""}
+          onElegirPersona={() => setHoja("reemplazado")}
+          onQuitarPersona={quitarReemplazo}
+        />
       </Seccion>
 
       <Seccion titulo="Condiciones">
@@ -205,16 +192,8 @@ export default function DetallePuesto() {
       {!esServicios && (
         <Seccion titulo="Categoría e importe">
           <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-            <select value={efectivo.categoriaSatId || ""} onChange={(e) => void cambiar({ categoriaSatId: e.target.value || null })} className={CLASE_CAMPO} aria-label="Categoría">
-              <option value="">{empresa ? "Elegí la categoría" : "Elegí el proyecto y la empresa del equipo"}</option>
-              {efectivo.categoriaSatId && !categorias.documentos.some((c) => c._id === efectivo.categoriaSatId) && <option value={efectivo.categoriaSatId}>{catalogos.categoriasSat.find((c) => c._id === efectivo.categoriaSatId)?.name || "Categoría anterior"}</option>}
-              {categorias.documentos.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                  {categorias.nivelPorId.get(c._id) ? ` · ${categorias.nivelPorId.get(c._id)!.nombre}` : ""}
-                </option>
-              ))}
-            </select>
+            {/* El campo del alta individual: la categoría con su nivel, y la ventana con buscador y escala. */}
+            <CampoCategoria categoria={categoriaActual} nivel={categoriaActual ? oferta.nivelPorId.get(categoriaActual._id) || null : null} onAbrir={() => setHoja("categoria")} deshabilitado={!empresa} motivoDeshabilitado="Elegí el proyecto y la empresa del equipo" />
             <label className="block">
               <span className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Importe por jornada (opcional)</span>
               <input type="text" inputMode="decimal" value={importe} onChange={(e) => setImporte(e.target.value.replace(",", ".").replace(/[^\d.]/g, ""))} onBlur={() => { const v = Number(importe) > 0 ? Number(importe) : null; if (v !== (efectivo.dailyRateManual ?? null)) void cambiar({ dailyRateManual: v }); }} placeholder="Vacío = el de la escala" className={CLASE_CAMPO} />
@@ -258,7 +237,17 @@ export default function DetallePuesto() {
         subtitulo="Del equipo del proyecto"
         projectId={equipo.projectId}
         soloProyecto
-        onElegir={(pe) => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: pe._id, motivoReemplazoId: r?.motivoReemplazoId ?? null }))}
+        onElegir={(pe) => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: pe._id, motivoReemplazoId: r?.motivoReemplazoId ?? (motivoPendiente || null) }))}
+      />
+      <ModalCategoria
+        abierto={hoja === "categoria"}
+        onCerrar={() => setHoja(null)}
+        subtitulo={cct ? `Del convenio ${cct}` : undefined}
+        oferta={{ documentos: oferta.documentos, nivelDe: (c) => oferta.nivelPorId.get(c._id) || null, rolNoTieneCategoriasDelConvenio: oferta.rolNoTieneCategoriasDelConvenio, rolNoTieneCategoriasDeLaValoracion: oferta.rolNoTieneCategoriasDeLaValoracion, ocultasPorValoracion: oferta.ocultasPorValoracion }}
+        verTodasDelConvenio={verTodasDelConvenio}
+        onVerTodasDelConvenio={() => setVerTodasDelConvenio(true)}
+        categoriaId={efectivo.categoriaSatId || ""}
+        onElegir={(id) => void cambiar({ categoriaSatId: id || null })}
       />
       <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} />
     </Pantalla>

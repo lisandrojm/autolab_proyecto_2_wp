@@ -5,6 +5,10 @@ import { faArrowRight, faMoneyBillWave, faPen, faUsers } from "@fortawesome/free
 import { FilaPreview, plantillasEquipoAPI, Preview, Puntual } from "../../../../../api/plantillasEquipo";
 import { ImportesDelContrato } from "../../../../../components/contratacion/ImportesDelContrato";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
+import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTipoContrato";
+import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
+import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
+import { CampoComentarios } from "../contratacion/CampoComentarios";
 import { mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { CustomMultiDatePicker } from "../CustomMultiDatePicker";
 import { usePlantilla, usePlantillas } from "./contexto";
@@ -17,6 +21,7 @@ import { porDiasSueltos } from "./Condiciones";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { AIRE, MARGEN, Rotulo, pastillaDe } from "./piezas";
 import { CLASE_CAMPO, CLASE_HORA, fechaCorta, fechaDeHoy, pesos, Pill, textoHorario } from "./comun";
+import { cambiosDeContrato } from "./Condiciones";
 
 /*
   CONTRATAR · PASO 2 DE 3 · LAS PERSONAS, CADA UNA SÓLO PARA ESTA VEZ.
@@ -231,7 +236,8 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
   const f = estado.equipos[equipo._id];
   const [d, setD] = useState<Puntual>(() => ({ ...(estado.puntuales[k] || {}) }));
   const [nombres, setNombres] = useState<Record<string, string>>({});
-  const [hoja, setHoja] = useState<null | "persona" | "reemplazado">(null);
+  const [hoja, setHoja] = useState<null | "persona" | "reemplazado" | "contrato" | "categoria">(null);
+  const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   const cambiar = (c: Partial<Puntual>) => setD((v) => ({ ...v, ...c }));
 
   /*
@@ -252,7 +258,10 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
   const indeterminado = !!contratoDoc?.data?.esTiempoIndeterminado;
   const esServicios = (catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit";
   const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, equipo);
-  const categorias = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, false, true);
+  const oferta = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, verTodasDelConvenio, false);
+  const categoriaIdActual = d.categoriaSatId ?? base.categoriaSatId;
+  const categoriaActual = catalogos.categoriasSat.find((c) => c._id === categoriaIdActual) || null;
+  const cct = catalogos.cctDeConvenio(convenioId);
 
   const persona = d.userId ? { _id: d.userId, nombre: nombres[d.userId] || estado.nombres[d.userId] || fila?.nombre || "" } : x.asignacion?.userId ? { _id: x.asignacion.userId, nombre: x.asignacion.nombre } : null;
   const reemplazado = d.replacedUserId ? nombres[d.replacedUserId] || estado.nombres[d.replacedUserId] || "" : "";
@@ -342,42 +351,20 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
 
           {!d.excluido && (
             <>
-              {/* ── Reemplazo ── */}
-              <section className="space-y-2">
-                <label className="flex min-h-[44px] items-center justify-between gap-3">
-                  <Rotulo icono={faUsers}>Reemplaza a alguien</Rotulo>
-                  <input type="checkbox" role="switch" checked={!!d.isReplacement} onChange={(ev) => cambiar({ isReplacement: ev.target.checked, ...(ev.target.checked ? {} : { replacedUserId: undefined, motivoReemplazoId: undefined }) })} className="h-6 w-11 cursor-pointer appearance-none rounded-full bg-slate-300 transition before:ml-0.5 before:mt-0.5 before:block before:h-5 before:w-5 before:rounded-full before:bg-white before:transition checked:bg-blue-600 checked:before:translate-x-5 dark:bg-slate-600" />
-                </label>
-                {d.isReplacement && (
-                  <div className="space-y-2">
-                    <button type="button" onClick={() => setHoja("reemplazado")} className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-slate-300 px-3 text-left dark:border-slate-600">
-                      <span className={`text-sm font-semibold ${reemplazado ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{reemplazado || "Elegí a quién"}</span>
-                      <FontAwesomeIcon icon={faArrowRight} className="text-slate-500" />
-                    </button>
-                    <div className="flex flex-wrap gap-2">
-                      {catalogos.motivos.map((m) => (
-                        <button key={m._id} type="button" aria-pressed={d.motivoReemplazoId === m._id} onClick={() => cambiar({ motivoReemplazoId: m._id })} className={claseBoton(d.motivoReemplazoId === m._id)}>
-                          {m.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
+              {/* ── Reemplazo: el bloque del alta individual (motivo primero, después a quién) ── */}
+              <BloqueReemplazo
+                activo={!!d.isReplacement}
+                onActivo={(v) => cambiar({ isReplacement: v, ...(v ? {} : { replacedUserId: undefined, motivoReemplazoId: undefined }) })}
+                motivos={catalogos.motivos}
+                motivoId={d.motivoReemplazoId || ""}
+                onMotivo={(id) => cambiar({ motivoReemplazoId: id || undefined })}
+                nombreReemplazado={reemplazado}
+                onElegirPersona={() => setHoja("reemplazado")}
+                onQuitarPersona={() => cambiar({ replacedUserId: undefined })}
+              />
 
-              {/* ── Contrato ── */}
-              {catalogos.contratos.length > 0 && (
-                <section className="space-y-2">
-                  <Rotulo icono={faUsers}>Tipo de contrato{marca(contratoRige !== base.contratoId)}</Rotulo>
-                  <div className="flex flex-wrap gap-2">
-                    {catalogos.contratos.map((c) => (
-                      <button key={c._id} type="button" aria-pressed={c._id === contratoRige} onClick={() => cambiar({ contratoId: c._id, nombreContrato: c.name, tipoImpositivo: catalogos.tramitePorContrato.get(c._id) || undefined })} className={claseBoton(c._id === contratoRige)}>
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
+              {/* ── Contrato: el campo del alta individual, con el badge de trámite ── */}
+              {catalogos.contratos.length > 0 && <CampoTipoContrato contratos={catalogos.contratos} contratoId={contratoRige} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={() => setHoja("contrato")} marca={marca(contratoRige !== base.contratoId)} />}
 
               {/* ── Horario ── */}
               <section className="space-y-2">
@@ -403,21 +390,16 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
                 </section>
               )}
 
-              {/* ── Categoría ── */}
+              {/* ── Categoría: el campo y la ventana del alta individual (buscador, nivel, escala) ── */}
               {!esServicios && (
-                <section className="space-y-2">
-                  <Rotulo icono={faUsers}>Categoría{marca((d.categoriaSatId ?? base.categoriaSatId) !== base.categoriaSatId)}</Rotulo>
-                  <select value={d.categoriaSatId ?? base.categoriaSatId} onChange={(ev) => cambiar({ categoriaSatId: ev.target.value })} className={CLASE_CAMPO} aria-label="Categoría">
-                    <option value="">{empresaId ? "Elegí la categoría" : "El equipo no tiene empresa"}</option>
-                    {base.categoriaSatId && !categorias.documentos.some((c) => c._id === base.categoriaSatId) && <option value={base.categoriaSatId}>{catalogos.categoriasSat.find((c) => c._id === base.categoriaSatId)?.name || "Categoría anterior"}</option>}
-                    {categorias.documentos.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                        {categorias.nivelPorId.get(c._id) ? ` · ${categorias.nivelPorId.get(c._id)!.nombre}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </section>
+                <CampoCategoria
+                  categoria={categoriaActual}
+                  nivel={categoriaActual ? oferta.nivelPorId.get(categoriaActual._id) || null : null}
+                  onAbrir={() => setHoja("categoria")}
+                  deshabilitado={!empresaId}
+                  motivoDeshabilitado="El equipo no tiene empresa"
+                  marca={marca(categoriaIdActual !== base.categoriaSatId)}
+                />
               )}
 
               {/* ── Importes: los del alta individual ── */}
@@ -445,11 +427,8 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
                 )}
               </section>
 
-              {/* ── Comentario ── */}
-              <section className="space-y-2">
-                <Rotulo icono={faUsers}>Comentario</Rotulo>
-                <textarea rows={2} value={d.comentarios || ""} onChange={(ev) => cambiar({ comentarios: ev.target.value })} placeholder="Para esta solicitud" aria-label="Comentario" className={`${CLASE_CAMPO} h-auto py-2`} />
-              </section>
+              {/* ── Comentario: el campo del alta individual ── */}
+              <CampoComentarios valor={d.comentarios || ""} onCambio={(v) => cambiar({ comentarios: v })} rows={2} />
             </>
           )}
         </div>
@@ -466,6 +445,17 @@ function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: HojaProps
           setNombres((n) => ({ ...n, [pe._id]: pe.nombre }));
           cambiar({ userId: pe._id });
         }}
+      />
+      <ModalTipoContrato abierto={hoja === "contrato"} onCerrar={() => setHoja(null)} contratos={catalogos.contratos} contratoId={contratoRige} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={(id) => cambiar({ contratoId: id, nombreContrato: cambiosDeContrato(catalogos, id).nombreContrato || undefined, tipoImpositivo: cambiosDeContrato(catalogos, id).tipoImpositivo || undefined })} />
+      <ModalCategoria
+        abierto={hoja === "categoria"}
+        onCerrar={() => setHoja(null)}
+        subtitulo={cct ? `Del convenio ${cct}` : undefined}
+        oferta={{ documentos: oferta.documentos, nivelDe: (c) => oferta.nivelPorId.get(c._id) || null, rolNoTieneCategoriasDelConvenio: oferta.rolNoTieneCategoriasDelConvenio, rolNoTieneCategoriasDeLaValoracion: oferta.rolNoTieneCategoriasDeLaValoracion, ocultasPorValoracion: oferta.ocultasPorValoracion }}
+        verTodasDelConvenio={verTodasDelConvenio}
+        onVerTodasDelConvenio={() => setVerTodasDelConvenio(true)}
+        categoriaId={categoriaIdActual}
+        onElegir={(id) => cambiar({ categoriaSatId: id })}
       />
       <SelectorPersona
         abierta={hoja === "reemplazado"}

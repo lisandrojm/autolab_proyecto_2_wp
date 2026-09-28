@@ -6,14 +6,12 @@ import { Equipo, Plantilla } from "../../../../../api/plantillasEquipo";
 import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Vacio } from "./Pantalla";
-import { faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { EstadoContratar, faltaDe, formaDe, guardarEstado, leerEstado, nuevaClave } from "./estadoContratar";
 import { estadoDe, nombreTurno, rutas } from "./equipoUtil";
 import { ChipTurno, fechaCorta, fechaDeHoy, Pill, textoHorario } from "./comun";
 import { PASOS_CONTRATAR } from "./Pasos";
-import { Rotulo } from "./piezas";
 import { cambiosDeContrato } from "./Condiciones";
-import { BotonInfo } from "../ModalInfo";
+import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTipoContrato";
 
 /*
   CONTRATAR · PASO 1 DE 3 · CONTRATO Y FECHAS.
@@ -60,6 +58,7 @@ export default function ContratarFechas() {
   const { catalogos, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
   const [estado, setEstado] = useState<EstadoContratar | null>(null);
+  const [eligiendoContrato, setEligiendoContrato] = useState(false);
 
   // Lo guardado en la sesión; si se llegó desde un equipo (?equipos=), sólo ésos tildados.
   useEffect(() => {
@@ -121,26 +120,11 @@ export default function ContratarFechas() {
       }}
       pasos={{ actual: 1, etiquetas: PASOS_CONTRATAR }}
     >
-      {catalogos.contratos.length > 0 && (
-        <div id="campo-contrato" className="mb-5 scroll-mt-24 space-y-2">
-          <div className="flex items-center gap-1">
-            <Rotulo icono={faFileContract} obligatorio>
-              Tipo de contrato
-            </Rotulo>
-            <BotonInfo icono={faFileContract} titulo="Tipo de contrato" texto={"Uno para todas las personas de esta contratación. De él depende qué fechas se piden: un contrato por jornada se carga eligiendo los días en el calendario; un plazo fijo, con desde y hasta.\n\nSi alguien va con otro tipo de contrato, se cambia en el paso siguiente, en su fila, sólo para esta vez. La plantilla no cambia."} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {catalogos.contratos.map((c) => {
-              const on = c._id === estado.contratoId;
-              return (
-                <button key={c._id} type="button" aria-pressed={on} onClick={() => elegirContrato(c._id)} className={`min-h-[44px] rounded-full px-4 text-sm font-semibold ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`}>
-                  {c.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* El mismo campo y la misma ventana que el alta individual: el nombre con su badge de trámite, y la lista con radio. */}
+      <div id="campo-contrato" className="mb-5 scroll-mt-24">
+        <CampoTipoContrato contratos={catalogos.contratos} contratoId={estado.contratoId} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={() => setEligiendoContrato(true)} />
+      </div>
+      <ModalTipoContrato abierto={eligiendoContrato} onCerrar={() => setEligiendoContrato(false)} contratos={catalogos.contratos} contratoId={estado.contratoId} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={elegirContrato} />
       {p.equipos.length === 0 ? (
         <Vacio texto="Este grupo no tiene equipos." accion="Volver al grupo" onAccion={() => navigate(atras)} />
       ) : (
