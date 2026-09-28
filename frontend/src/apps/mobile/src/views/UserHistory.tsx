@@ -519,7 +519,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
         icon={faUsers}
         titulo="Solicitud de Contratación"
         onBack={() => onNavigate("home")}
-        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vencimientos» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vtos.» (vencimientos) aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
@@ -531,7 +531,8 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
               { id: "historial", label: "Historial" },
               // Pestaña propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
               ...(puedePlantillas ? [{ id: "plantillas", label: "Plantillas" }] : []),
-              { id: "por_vencer", label: "Vencimientos" },
+              // «Vtos.»: con el contador al lado, «Vencimientos (20)» no entraba en su tercio de la barra.
+              { id: "por_vencer", label: "Vtos." },
             ] as { id: "historial" | "por_vencer" | "plantillas"; label: string }[]
           ).map((t) => (
             <button key={t.id} type="button" onClick={() => setPestana(t.id)} className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors ${pestana === t.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
