@@ -23,7 +23,7 @@ import { estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, r
 import { porDiasSueltos } from "./Condiciones";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { AIRE, MARGEN, Rotulo, pastillaDe } from "./piezas";
-import { CLASE_HORA, fechaDeHoy, pesos, Pill, textoHorario } from "./comun";
+import { CLASE_HORA, fechaCorta, fechaDeHoy, pesos, Pill, textoHorario } from "./comun";
 import { cambiosDeContrato } from "./Condiciones";
 
 /*
@@ -141,6 +141,7 @@ export default function ContratarPersonas() {
       ) : (
         equipos.map((e) => {
           const pv = previews?.[e._id];
+          const f = estado.equipos[e._id];
           return (
             <Seccion key={e._id} titulo={<Rotulo icono={faUsers}>{e.nombre}</Rotulo>}>
               <div className={`divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70 ${calculando ? "opacity-70" : ""}`} aria-busy={calculando}>
@@ -154,31 +155,54 @@ export default function ContratarPersonas() {
                   const reemplazo = pt?.isReplacement ? { nombre: pt.replacedUserId ? estado.nombres[pt.replacedUserId] || "alguien" : "", motivo: pt.motivoReemplazoId } : x.asignacion?.reemplazo ? { nombre: x.asignacion.reemplazo.nombre, motivo: x.asignacion.reemplazo.motivoReemplazoId } : null;
                   const motivo = reemplazo?.motivo ? catalogos.motivos.find((m) => m._id === reemplazo.motivo)?.name : "";
                   const distinto = !!pt && Object.keys(puntualLimpio({ ...pt, comentarios: undefined, isReplacement: undefined })).length > 0;
+                  // Lo que rige en cada posición: el puntual, si lo hay; si no, lo del server o lo del puesto.
+                  const horaIn = pt?.inTime ?? fila?.inTime ?? x.efectivo.inTime ?? "";
+                  const horaOut = pt?.outTime ?? fila?.outTime ?? x.efectivo.outTime ?? "";
+                  const sueltos = porDiasSueltos(catalogos, contratoRige);
+                  const fechasFila = pt?.fechas ?? f?.fechas ?? [];
+                  const desdeFila = pt?.desde ?? f?.desde ?? "";
+                  const hastaFila = pt?.hasta ?? f?.hasta ?? "";
+                  const diasTexto = sueltos ? (fechasFila.length ? `${fechasFila.length} ${fechasFila.length === 1 ? "jornada" : "jornadas"}` : "—") : desdeFila ? `${fechaCorta(desdeFila)} → ${hastaFila ? fechaCorta(hastaFila) : "sin baja"}` : "—";
+                  const porDia = fila && !excluido && fila.importes.jornada != null ? `${pesos(fila.importes.jornada)} / día` : "— / día";
+                  const categoriaTexto = fila?.categoriaNombre || (fila?.origenImporte === "servicios" ? "Servicio" : catalogos.categoriasSat.find((c) => c._id === (pt?.categoriaSatId ?? x.efectivo.categoriaSatId))?.name) || "—";
                   return (
                     <div key={x.puesto._id} className={`flex items-start gap-2 px-3 py-2.5 ${excluido ? "opacity-50" : ""}`}>
                       <span className="mt-1 w-6 shrink-0 text-center text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">{x.n}</span>
-                      <button type="button" onClick={() => setEditando({ equipoId: e._id, puestoId: x.puesto._id })} className="min-w-0 flex-1 space-y-1 text-left">
+                      <button type="button" onClick={() => setEditando({ equipoId: e._id, puestoId: x.puesto._id })} className="min-w-0 flex-1 space-y-1.5 text-left">
+                        {/*
+                          UN RESUMEN DE POSICIONES FIJAS: rol · persona · contrato, horario, días · categoría,
+                          importe por día (y el reemplazo, sólo si lo es: «sin reemplazo» era decir que no pasa
+                          nada, en catorce renglones). Siempre en el mismo orden y siempre presentes —con «—» donde falta—,
+                          para que el ojo baje por la lista comparando lo mismo con lo mismo y decida en un
+                          vistazo si vale la pena abrir la fila. Antes cada renglón mostraba lo que tenía, y
+                          catorce renglones distintos no se comparan.
+                        */}
                         <span className="block truncate text-xs font-semibold text-slate-600 dark:text-slate-300">{nombreRoles(catalogos.roleFrames, x.puesto.rolesFrame)}</span>
+                        {/* La persona en verde: es un puesto cubierto. Sin persona, en ámbar: el server no la deja pasar. */}
                         <span className="flex flex-wrap items-center gap-1.5">
-                          {/* La persona en verde, como en el alta: es un puesto cubierto. Sin persona, en ámbar: el server no la deja pasar. */}
                           {nombre ? (
                             <span className={`max-w-full ${pastillaDe("verde")} ${AIRE} ${MARGEN}`}>
                               <span className="truncate">{nombre}</span>
                             </span>
                           ) : (
-                            <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Sin asignar</span>
+                            <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN} text-amber-800 dark:text-amber-300`}>Sin asignar</span>
                           )}
-                          {nombreContrato(contratoRige) && <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{nombreContrato(contratoRige)}</span>}
                         </span>
-                        {fila && !excluido && (
-                          <span className="block truncate text-xs text-slate-600 dark:text-slate-300">
-                            {fila.categoriaNombre || (fila.origenImporte === "servicios" ? "Servicio" : "Sin categoría")} · {fila.jornadas} × {pesos(fila.importes.jornada)} = <span className="font-bold text-slate-900 dark:text-white">{pesos(fila.importes.total)}</span>
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{nombreContrato(contratoRige) || "—"}</span>
+                          <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN} tabular-nums`}>{textoHorario(horaIn, horaOut)}</span>
+                          <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN} tabular-nums`}>{diasTexto}</span>
+                        </span>
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className={`max-w-full ${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>
+                            <span className="truncate">{categoriaTexto}</span>
                           </span>
-                        )}
-                        {(excluido || reemplazo || distinto || (fila && fila.errores.length > 0) || (fila && fila.advertencias.length > 0)) && (
+                          <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN} font-bold tabular-nums`}>{porDia}</span>
+                          {reemplazo && <Pill tono={motivo ? "azul" : "ambar"}>{`Reemplaza a ${reemplazo.nombre}${motivo ? ` · ${motivo}` : " · falta el motivo"}`}</Pill>}
+                        </span>
+                        {(excluido || distinto || (fila && fila.errores.length > 0) || (fila && fila.advertencias.length > 0)) && (
                           <span className="flex flex-wrap gap-1.5">
                             {excluido && <Pill>Sacado esta vez</Pill>}
-                            {reemplazo && <Pill tono={motivo ? "azul" : "ambar"}>{`Reemplaza a ${reemplazo.nombre}${motivo ? ` · ${motivo}` : " · falta el motivo"}`}</Pill>}
                             {distinto && !excluido && <Pill>Sólo esta vez</Pill>}
                             {fila && fila.errores.length > 0 && <Pill tono="rojo">{fila.errores.length === 1 ? fila.errores[0] : `${fila.errores.length} errores`}</Pill>}
                             {fila && fila.advertencias.length > 0 && <Pill tono={fila.superposicionHorario ? "rojo" : "ambar"}>Se superpone</Pill>}

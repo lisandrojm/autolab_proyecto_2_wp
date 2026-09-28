@@ -141,6 +141,7 @@ export default function ContratarRevision() {
       }}
       notaBoton="Se envían todas juntas: si una falla, no sale ninguna."
       pasos={{ actual: 3, etiquetas: PASOS_CONTRATAR }}
+      atrasPaso={() => navigate(atras)}
     >
       <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800/70">
         <Dato titulo="Solicitudes" valor={String(solicitudes)} />
