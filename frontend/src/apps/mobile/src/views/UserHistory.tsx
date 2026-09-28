@@ -85,10 +85,14 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const permisoInactivo = usePermisoInactivo();
   const puedePlantillas = (yo?.permissions || []).includes(MOBILE_HIRING_TEMPLATES) && !permisoInactivo(MOBILE_HIRING_TEMPLATES);
   /**
-   * Borrar una APROBADA es del panel: deshace la contratación. El server exige `admin_users:view` (ver
-   * `permisoSobreSolicitudPropia`), así que el botón sólo aparece para quien lo tiene.
+   * Borrar una APROBADA deshace la contratación. Se puede la PROPIA (la que pidió quien mira) o
+   * cualquiera con `admin_users:view` — la misma regla que `permisoSobreSolicitudPropia` en el server.
    */
-  const puedeBorrarAprobadas = useAuthStore((s) => s.hasPermission)("admin_users:view");
+  const esAdminUsuarios = useAuthStore((s) => s.hasPermission)("admin_users:view");
+  const puedeBorrar = (u: User) => {
+    const creadaPor = (u.metadata as any)?.solicitudCreadaPor;
+    return esAdminUsuarios || !creadaPor || String(creadaPor) === String(yo?.id || "");
+  };
   /** Avance de «Eliminar aprobadas»: se borran de a una, y la tanda puede tardar. */
   const [borrandoAprobadas, setBorrandoAprobadas] = useState<{ hechas: number; total: number } | null>(null);
 
@@ -443,11 +447,11 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           BORRAR LA SOLICITUD.
 
           Para lo que no aporta historial —una prueba, una cargada dos veces—: lo que sí se
-          pidió y se dio de baja se cancela, y queda registrado como cancelado. El server no
-          deja borrar una aprobada, que ya es una contratación.
+          pidió y se dio de baja se cancela, y queda registrado como cancelado. Una aprobada se
+          borra con su contrato: la propia, o cualquiera con permiso de admin.
         */}
-        {/* Una aprobada no se borra: ya es una contratación, y el server la rechaza igual. */}
-        {estadoClave !== "aprobada" && (
+        {/* Una aprobada también se borra (deshace su contrato), pero sólo la propia o con permiso de admin. */}
+        {(estadoClave !== "aprobada" || puedeBorrar(user)) && (
         <button
           type="button"
           onClick={(e) => {
@@ -500,11 +504,21 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   */
   const borrarSolicitud = async (user: User) => {
     const nombre = user.metadata?.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim();
-    const r: any = await sweetAlert.confirm("¿Borrar la solicitud?", `Se borra la solicitud de ${nombre} y desaparece del historial. Esto no se puede deshacer; si querés que quede registrada, canceliá en vez de borrarla.`, "Borrar", "Cancelar");
+    const aprobada = String((user.metadata as any)?.solicitudStatus || ((user.metadata as any)?.isSolicitud ? "pendiente" : "aprobada")) === "aprobada";
+    const r: any = aprobada
+      ? await sweetAlert.confirm(
+          "¿Borrar la solicitud aprobada?",
+          `Se borra la solicitud de ${nombre} y el contrato que creó al aprobarse. Si ya la diste de alta en ARCA, hay que darla de baja allá a mano. ${nombre} sigue como usuario. No se puede deshacer.`,
+          "Borrar",
+          "Cancelar",
+        )
+      : await sweetAlert.confirm("¿Borrar la solicitud?", `Se borra la solicitud de ${nombre} y desaparece del historial. Esto no se puede deshacer; si querés que quede registrada, canceliá en vez de borrarla.`, "Borrar", "Cancelar");
     if (!(r === true || r?.isConfirmed)) return;
     setBorrando(user._id);
     try {
       await usersAPI.eliminarSolicitud(user._id);
+      // Si era una aprobada se llevó su contrato: las bandejas de Contratos no lo pueden seguir mostrando.
+      invalidateRefCache("contracts-overview:");
       sweetAlert.success("Solicitud borrada", `${nombre} salió del historial.`);
       refetch();
     } catch (e: any) {
@@ -525,7 +539,11 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     De a una y no con un endpoint masivo: así cada una pasa por las mismas reglas, y si una falla las
     demás siguen y al final se dice cuáles quedaron.
   */
-  const aprobadas = useMemo(() => users.filter((u) => String((u.metadata as any)?.solicitudStatus || ((u.metadata as any)?.isSolicitud ? "pendiente" : "aprobada")) === "aprobada"), [users]);
+  const aprobadas = useMemo(
+    () => users.filter((u) => String((u.metadata as any)?.solicitudStatus || ((u.metadata as any)?.isSolicitud ? "pendiente" : "aprobada")) === "aprobada" && puedeBorrar(u)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [users, esAdminUsuarios, yo?.id],
+  );
   const eliminarAprobadas = async () => {
     const n = aprobadas.length;
     if (n === 0) return;
@@ -640,7 +658,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-3">
-            {puedeBorrarAprobadas && aprobadas.length > 0 && (
+            {aprobadas.length > 0 && (
               <div className="flex justify-end">
                 <button
                   type="button"

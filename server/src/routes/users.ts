@@ -1514,10 +1514,11 @@ const permisoSobreSolicitudPropia = (opciones: { soloCancelar?: boolean; incluir
     const m = objetivo?.metadata || {};
     const estado = String(m.solicitudStatus || (m.isSolicitud ? "pendiente" : ""));
     /*
-      Cancelar es sobre una PENDIENTE. Borrar (`incluirCerradas`) va también sobre una rechazada o
-      cancelada —es justo lo que hay que poder limpiar del historial—, pero nunca sobre una APROBADA:
-      eso ya es una contratación con contrato, y borrarla queda para el panel (cae en el `admin` de
-      abajo).
+      Cancelar es sobre una PENDIENTE. Borrar (`incluirCerradas`) va sobre CUALQUIERA propia: rechazada,
+      cancelada y también APROBADA. Una aprobada ya es una contratación y borrarla deshace su contrato
+      (lo hace el handler), pero quien la pidió tiene que poder deshacerla desde la app: antes eso
+      quedaba sólo para el panel y la lista de Contratación no se podía limpiar desde el teléfono.
+      Sigue siendo sólo la PROPIA: las de otro coordinador caen en el `admin` de abajo.
 
       EDITAR (`incluirRechazadas`) alcanza además a una RECHAZADA. Un rechazo dice qué faltaba
       justamente para que se pueda arreglar: si corregirla exigiera el permiso del panel, la única
@@ -1525,7 +1526,7 @@ const permisoSobreSolicitudPropia = (opciones: { soloCancelar?: boolean; incluir
       lo que ya estaba bien. Al guardarla, el handler la devuelve a pendiente (ver `solicitudReenviada`).
     */
     const editables = opciones.incluirRechazadas ? ["pendiente", "rechazada"] : ["pendiente"];
-    const alcanzada = opciones.incluirCerradas ? !!estado && estado !== "aprobada" : m.isSolicitud === true && editables.includes(estado);
+    const alcanzada = opciones.incluirCerradas ? !!estado : m.isSolicitud === true && editables.includes(estado);
     const propia = !m.solicitudCreadaPor || String(m.solicitudCreadaPor) === String(req.user!.userId);
     const accionPermitida = !opciones.soloCancelar || String((req.body || {}).status || "") === "cancelada";
     if (alcanzada && propia && accionPermitida) {
@@ -2533,8 +2534,8 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, permisoS
   Contratación para siempre y no había forma de sacarla desde la app —`DELETE /users/:id` pide permiso
   de administración, porque borra personas—.
 
-  UNA APROBADA SE BORRA SÓLO DESDE EL PANEL, Y DESHACE LA CONTRATACIÓN. Quien la pidió desde la app no
-  llega hasta acá: `permisoSobreSolicitudPropia` le pide permiso de administración a una aprobada.
+  UNA APROBADA SE BORRA DESDE EL PANEL O POR QUIEN LA PIDIÓ, Y DESHACE LA CONTRATACIÓN. Desde la app
+  sólo la propia (`permisoSobreSolicitudPropia`); las de otro piden permiso de administración.
   Se borra también el contrato que creó al aprobarse (`borrarContratoDeSolicitud`: por `solicitudId`,
   o por las fechas pedidas en las aprobadas antes de ese campo); los demás contratos de la persona no
   se tocan. Si ese contrato no aparece, la solicitud se borra igual y la respuesta lo dice, para que se
