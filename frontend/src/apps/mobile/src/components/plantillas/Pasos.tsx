@@ -1,5 +1,11 @@
-/** Los dos de Contratar, en un solo lugar para que las tres pantallas que los dibujan no se despeguen. */
-export const PASOS_CONTRATAR = ["Fechas", "Revisión"];
+/**
+ * Los tres de Contratar, en un solo lugar para que las pantallas que los dibujan no se despeguen.
+ *
+ * Eran dos (Fechas, Revisión). El del medio es el que faltaba: dónde se ajusta lo de CADA persona sólo
+ * para esta vez. Sin él, cualquier ajuste —un horario, un reemplazo— mandaba a editar la plantilla, y
+ * contratar un fin de semana dejaba el equipo distinto de como estaba.
+ */
+export const PASOS_CONTRATAR = ["Contrato y fechas", "Personas", "Revisión"];
 
 /**
  * Los cuatro del alta de un equipo: una decisión por pantalla.

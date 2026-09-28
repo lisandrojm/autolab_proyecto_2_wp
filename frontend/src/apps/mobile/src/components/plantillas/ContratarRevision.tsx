@@ -58,10 +58,10 @@ export default function ContratarRevision() {
   }, [p, firma]);
 
   if (!estado) return <Navigate to={rutas.contratar(id)} replace />;
-  const atras = rutas.contratar(id);
+  const atras = rutas.personas(id);
   if (!p || (!previews && !fallo)) {
     return (
-      <Pantalla titulo="Revisión" contexto={p?.nombre} atras={atras} listo={false} pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}>
+      <Pantalla titulo="Revisión" contexto={p?.nombre} atras={atras} listo={false} pasos={{ actual: 3, etiquetas: PASOS_CONTRATAR }}>
         <div className="space-y-3" aria-busy="true">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
@@ -119,7 +119,7 @@ export default function ContratarRevision() {
   };
 
   const ponerComentario = (k: string, v: string) => {
-    const nuevo = { ...estado, comentarios: { ...estado.comentarios, [k]: v } };
+    const nuevo = { ...estado, puntuales: { ...estado.puntuales, [k]: { ...(estado.puntuales[k] || {}), comentarios: v } } };
     setEstado(nuevo);
     guardarEstado(p._id, nuevo);
   };
@@ -139,7 +139,7 @@ export default function ContratarRevision() {
         tono: "verde",
       }}
       notaBoton="Se envían todas juntas: si una falla, no sale ninguna."
-      pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}
+      pasos={{ actual: 3, etiquetas: PASOS_CONTRATAR }}
     >
       <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800/70">
         <Dato titulo="Solicitudes" valor={String(solicitudes)} />
@@ -230,11 +230,11 @@ export default function ContratarRevision() {
                           {x.advertencias.length > 0 && <Pill tono={x.superposicionHorario ? "rojo" : "ambar"}>Se superpone</Pill>}
                           {x.errores.length > 0 && <Pill tono="rojo">{x.errores.length === 1 ? "1 error" : `${x.errores.length} errores`}</Pill>}
                         </div>
-                        {comentando === k || estado.comentarios[k] ? (
+                        {comentando === k || estado.puntuales[k]?.comentarios ? (
                           <textarea
                             rows={2}
                             autoFocus={comentando === k}
-                            value={estado.comentarios[k] || ""}
+                            value={estado.puntuales[k]?.comentarios || ""}
                             onChange={(ev) => ponerComentario(k, ev.target.value)}
                             onBlur={() => setComentando(null)}
                             placeholder="Comentario para esta solicitud"

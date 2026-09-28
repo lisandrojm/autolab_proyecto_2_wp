@@ -72,6 +72,7 @@ export const rutas = {
   equipo: (id: string, equipoId: string) => `/mobile/plantillas/${id}/equipos/${equipoId}`,
   puesto: (id: string, equipoId: string, n: number) => `/mobile/plantillas/${id}/equipos/${equipoId}/puesto/${n}`,
   contratar: (id: string, equipos?: string[]) => `/mobile/plantillas/${id}/contratar${equipos?.length ? `?equipos=${equipos.join(",")}` : ""}`,
+  personas: (id: string) => `/mobile/plantillas/${id}/contratar/personas`,
   revision: (id: string) => `/mobile/plantillas/${id}/contratar/revision`,
   enviado: (id: string) => `/mobile/plantillas/${id}/contratar/enviado`,
 };

@@ -6,15 +6,27 @@ import { Equipo, Plantilla } from "../../../../../api/plantillasEquipo";
 import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContratacion";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Vacio } from "./Pantalla";
+import { faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { EstadoContratar, faltaDe, formaDe, guardarEstado, leerEstado, nuevaClave } from "./estadoContratar";
 import { estadoDe, nombreTurno, rutas } from "./equipoUtil";
 import { ChipTurno, fechaCorta, fechaDeHoy, Pill, textoHorario } from "./comun";
 import { PASOS_CONTRATAR } from "./Pasos";
+import { Rotulo } from "./piezas";
+import { cambiosDeContrato } from "./Condiciones";
+import { BotonInfo } from "../ModalInfo";
 
 /*
-  CONTRATAR · PASO 1 DE 2 · EQUIPOS Y FECHAS. El mismo paso para uno o para varios equipos: los
-  elegidos vienen tildados (desde un equipo, sólo ése; desde el grupo, todos). Cada equipo lleva sus
-  días, con atajos. Botón: «Revisar N solicitudes».
+  CONTRATAR · PASO 1 DE 3 · CONTRATO Y FECHAS.
+
+  Arriba, EL TIPO DE CONTRATO, uno para todos. Se elige acá y no al armar el equipo: medido en
+  producción, es el dato que más cambia entre una contratación y la siguiente (227 de 867 vínculos
+  tuvieron más de uno), así que fijarlo en la plantilla era fijar justo lo que más cambia. Y hay que
+  elegirlo PRIMERO porque de él depende qué fechas se piden: un «Jornada» se contrata por días sueltos
+  en el calendario, un plazo fijo por desde/hasta. Quien necesite otro para una persona lo cambia en
+  el paso 2, en su fila.
+
+  Debajo, los equipos: los elegidos vienen tildados (desde un equipo, sólo ése; desde el grupo,
+  todos) y cada uno lleva sus fechas, con atajos. Botón: «Siguiente».
 */
 
 const NOMBRES_DIA = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
@@ -59,7 +71,20 @@ export default function ContratarFechas() {
       const f = previo?.equipos[e._id] || { incluido: true, fechas: [], desde: "", hasta: "" };
       equipos[e._id] = { ...f, incluido: pedidos.length ? pedidos.includes(e._id) : previo ? f.incluido : true };
     }
-    setEstado({ equipos, comentarios: previo?.comentarios || {}, clave: previo?.clave || nuevaClave() });
+    /*
+      El contrato general: el que ya venía en la sesión o, si no, el del equipo —si todos los incluidos
+      tienen el mismo—. Es lo más probable, y así lo normal es un toque menos, no uno más.
+    */
+    const incluidos = p.equipos.filter((e) => equipos[e._id]?.incluido);
+    const delEquipo = incluidos.length && incluidos.every((e) => e.condiciones?.contratoId && e.condiciones.contratoId === incluidos[0].condiciones?.contratoId) ? incluidos[0].condiciones! : null;
+    setEstado({
+      contratoId: previo?.contratoId || delEquipo?.contratoId || "",
+      nombreContrato: previo?.nombreContrato || delEquipo?.nombreContrato || "",
+      tipoImpositivo: previo?.tipoImpositivo || delEquipo?.tipoImpositivo || "",
+      equipos,
+      puntuales: previo?.puntuales || {},
+      clave: previo?.clave || nuevaClave(),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p?._id]);
   useEffect(() => {
@@ -72,9 +97,14 @@ export default function ContratarFechas() {
 
   const cambiar = (equipoId: string, x: Partial<EstadoContratar["equipos"][string]>) => setEstado((s) => (s ? { ...s, equipos: { ...s.equipos, [equipoId]: { ...s.equipos[equipoId], ...x } } } : s));
   const incluidos = p.equipos.filter((e) => estado.equipos[e._id]?.incluido);
-  const solicitudes = incluidos.reduce((s, e) => s + estadoDe(p, e).total, 0);
-  const falta = incluidos.length === 0 ? "Elegí al menos un equipo" : incluidos.map((e) => faltaDe(p, e, estado.equipos[e._id], catalogos)).find(Boolean) || "";
-  const equipoQueFalta = incluidos.find((e) => faltaDe(p, e, estado.equipos[e._id], catalogos));
+  const sinContrato = !estado.contratoId && catalogos.contratos.length > 0;
+  const falta = sinContrato ? "Elegí el tipo de contrato" : incluidos.length === 0 ? "Elegí al menos un equipo" : incluidos.map((e) => faltaDe(p, e, estado.equipos[e._id], catalogos, estado)).find(Boolean) || "";
+  const equipoQueFalta = incluidos.find((e) => faltaDe(p, e, estado.equipos[e._id], catalogos, estado));
+  // Con su nombre y su trámite, como viajan siempre los tres (ver `cambiosDeContrato`).
+  const elegirContrato = (contratoId: string) => {
+    const c = cambiosDeContrato(catalogos, contratoId);
+    setEstado((s) => (s ? { ...s, contratoId, nombreContrato: c.nombreContrato || "", tipoImpositivo: c.tipoImpositivo || "" } : s));
+  };
 
   return (
     <Pantalla
@@ -82,21 +112,40 @@ export default function ContratarFechas() {
       contexto={p.nombre}
       atras={atras}
       boton={{
-        texto: `Revisar ${solicitudes} ${solicitudes === 1 ? "solicitud" : "solicitudes"}`,
-        onClick: () => navigate(rutas.revision(id)),
+        texto: "Siguiente",
+        onClick: () => navigate(rutas.personas(id)),
         deshabilitado: !!falta,
         motivo: falta,
-        onMotivo: equipoQueFalta ? () => document.getElementById(`equipo-${equipoQueFalta._id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }) : undefined,
-        tono: "verde",
+        onMotivo: sinContrato ? () => document.getElementById("campo-contrato")?.scrollIntoView({ behavior: "smooth", block: "start" }) : equipoQueFalta ? () => document.getElementById(`equipo-${equipoQueFalta._id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }) : undefined,
       }}
       pasos={{ actual: 1, etiquetas: PASOS_CONTRATAR }}
     >
+      {catalogos.contratos.length > 0 && (
+        <div id="campo-contrato" className="mb-5 scroll-mt-24 space-y-2">
+          <div className="flex items-center gap-1">
+            <Rotulo icono={faFileContract} obligatorio>
+              Tipo de contrato
+            </Rotulo>
+            <BotonInfo icono={faFileContract} titulo="Tipo de contrato" texto={"Uno para todas las personas de esta contratación. De él depende qué fechas se piden: un contrato por jornada se carga eligiendo los días en el calendario; un plazo fijo, con desde y hasta.\n\nSi alguien va con otro tipo de contrato, se cambia en el paso siguiente, en su fila, sólo para esta vez. La plantilla no cambia."} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {catalogos.contratos.map((c) => {
+              const on = c._id === estado.contratoId;
+              return (
+                <button key={c._id} type="button" aria-pressed={on} onClick={() => elegirContrato(c._id)} className={`min-h-[44px] rounded-full px-4 text-sm font-semibold ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`}>
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {p.equipos.length === 0 ? (
         <Vacio texto="Este grupo no tiene equipos." accion="Volver al grupo" onAccion={() => navigate(atras)} />
       ) : (
         <div className="space-y-3">
           {p.equipos.map((e) => (
-            <TarjetaEquipo key={e._id} equipo={e} p={p} f={estado.equipos[e._id] || { incluido: false, fechas: [], desde: "", hasta: "" }} areas={areasDe(e.projectId)} catalogos={catalogos} onCambio={(x) => cambiar(e._id, x)} />
+            <TarjetaEquipo key={e._id} equipo={e} p={p} estado={estado} f={estado.equipos[e._id] || { incluido: false, fechas: [], desde: "", hasta: "" }} areas={areasDe(e.projectId)} catalogos={catalogos} onCambio={(x) => cambiar(e._id, x)} />
           ))}
         </div>
       )}
@@ -104,8 +153,8 @@ export default function ContratarFechas() {
   );
 }
 
-function TarjetaEquipo({ equipo, p, f, areas, catalogos, onCambio }: { equipo: Equipo; p: Plantilla; f: EstadoContratar["equipos"][string]; areas: OpcionAreaTurno[] | null; catalogos: CatalogosContratacion; onCambio: (x: Partial<EstadoContratar["equipos"][string]>) => void }) {
-  const { conDias, conPeriodo, indeterminado } = formaDe(p, equipo, catalogos);
+function TarjetaEquipo({ equipo, p, estado, f, areas, catalogos, onCambio }: { equipo: Equipo; p: Plantilla; estado: EstadoContratar; f: EstadoContratar["equipos"][string]; areas: OpcionAreaTurno[] | null; catalogos: CatalogosContratacion; onCambio: (x: Partial<EstadoContratar["equipos"][string]>) => void }) {
+  const { conDias, conPeriodo, indeterminado } = formaDe(p, equipo, catalogos, estado);
   const est = estadoDe(p, equipo);
   const c = equipo.condiciones || {};
   const diasAtajo = [...new Set([...(c.diasSemana?.length ? c.diasSemana : [6, 0])])].slice(0, 2);
