@@ -138,6 +138,8 @@ export function BloqueReemplazo({ activo, onActivo, motivos, motivoId, onMotivo,
               ))}
             </select>
           </div>
+          {motivos.length === 0 && <p className="text-xs text-amber-600 dark:text-amber-400">No hay motivos configurados. Se cargan en Configuración → Novedades.</p>}
+          <p className="text-[11px] text-slate-400">Es el motivo por el que falta la persona que se reemplaza. Son los mismos motivos que se usan en Novedades.</p>
         </div>
       </Modal>
     </div>

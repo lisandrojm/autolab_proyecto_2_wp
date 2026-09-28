@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "./Modal";
+import { CampoTipoContrato, ModalTipoContrato } from "./contratacion/SelectorTipoContrato";
+import { CampoCategoria, ModalCategoria } from "./contratacion/SelectorCategoria";
+import { BloqueReemplazo } from "./contratacion/BloqueReemplazo";
+import { CampoComentarios } from "./contratacion/CampoComentarios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
@@ -12,7 +16,7 @@ import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
 import { categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
-import { ChipSinValorar, ChipValoracion, ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
+import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
 // El mismo calendario de Vacaciones: se pintan los días de a uno.
@@ -33,7 +37,6 @@ import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from "../../../.
 import { esContratoVigente, fechaISO } from "../../../../utils/contratoVigencia";
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../api/contratosFrame";
-import { EstadoBadge } from "../../../../components/EstadoSelect";
 import { useAuthStore } from "../../../../stores/authStore";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR } from "../../../../utils/permisosMobile";
@@ -41,8 +44,6 @@ import { plantillasEquipoAPI } from "../../../../api/plantillasEquipo";
 import Swal from "sweetalert2";
 import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
 
-/** Importes de la escala, como se leen en un recibo. Sin número cargado, un guion: 0 no es «no sabemos». */
-const pesos = (n?: number): string => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n).toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 }) : "—");
 
 /**
  * HOY, EN LA ZONA HORARIA DE QUIEN LO ESTÁ USANDO.
@@ -56,19 +57,7 @@ const fechaDeHoy = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-const fechaDeEscala = (v?: string | Date): string => {
-  if (!v) return "—";
-  const d = new Date(v as any);
-  return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("es-AR");
-};
 
-/** Una fila etiqueta/importe del detalle de la escala. */
-const FilaEscala: React.FC<{ label: string; valor: string; destacado?: boolean }> = ({ label, valor, destacado }) => (
-  <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 last:border-0 dark:border-slate-800">
-    <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
-    <span className={`text-right text-sm ${destacado ? "font-black text-emerald-600 dark:text-emerald-400" : "font-semibold text-slate-900 dark:text-slate-100"}`}>{valor}</span>
-  </div>
-);
 
 /** Un área y turno que se puede asignar en la solicitud, ya con los nombres para mostrarlo. */
 interface OpcionAreaTurno {
@@ -196,7 +185,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [contratoModalOpen, setContratoModalOpen] = useState(false);
   const [convenioModalOpen, setConvenioModalOpen] = useState(false);
   const [categoriaModalOpen, setCategoriaModalOpen] = useState(false);
-  const [categoriaBusqueda, setCategoriaBusqueda] = useState("");
   /** El escape del filtro por rol, por convenio: ver todas las categorías de ESTE convenio. */
   const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   /*
@@ -206,15 +194,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     categorías—, y de la lista no se podía saber ni a qué grupo pertenece cada una ni cuánto es. Tocar
     la fila abre esa escala; el círculo de la izquierda sigue eligiendo de una, sin pasar por acá.
   */
-  const [categoriaDetalle, setCategoriaDetalle] = useState<CategoriaSatItem | null>(null);
 
   /** Elegir la categoría, desde la lista o desde su detalle: un solo lugar que cierra lo que quedó abierto. */
   const elegirCategoria = (id: string) => {
     setFormData((prev) => ({ ...prev, categoriaSatId: id }));
     setAvisoCascada("");
-    setCategoriaDetalle(null);
     setCategoriaModalOpen(false);
-    setCategoriaBusqueda("");
   };
   /** Lo último que la cascada limpió sola. Se muestra para que no parezca un error de la pantalla. */
   const [avisoCascada, setAvisoCascada] = useState("");
@@ -230,7 +215,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     llame distinto según por qué pantalla se cargó, y después no se pueden cruzar.
   */
   const [motivos, setMotivos] = useState<RequestConfig[]>([]);
-  const [motivoModalOpen, setMotivoModalOpen] = useState(false);
   /** Ventana de rol empresa, con su propio buscador. Mismo patrón que la de Usuarios. */
   const [rolModalOpen, setRolModalOpen] = useState(false);
   const [proyectoModalOpen, setProyectoModalOpen] = useState(false);
@@ -881,11 +865,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     return m;
   }, [contratos, contratoFrames, todosLosEstados]);
 
-  /** El estado impositivo del tipo elegido: de ahí salen el nombre y el color del badge. */
-  const estadoDelTramite = useMemo(() => {
-    const tipo = formData.contratoId ? tramitePorContrato.get(formData.contratoId) : undefined;
-    return tipo ? impositivos.find((e) => e.data?.tipoImpositivo === tipo) || null : null;
-  }, [formData.contratoId, tramitePorContrato, impositivos]);
 
   /*
     LAS COORDINACIONES DE QUIEN PIDE EN EL PROYECTO ELEGIDO.
@@ -1397,8 +1376,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     };
   }, [categoriasOfrecidasLista, valoraciones]);
 
-  /** Lo que muestra la ventana de categorías: las ofrecidas, filtradas por el buscador. */
-  const categoriasParaElegir = useMemo(() => (categoriaBusqueda.trim() ? categoriasDisponibles.filter((c) => fuzzyMatch(c.name, categoriaBusqueda) || String(c.data?.codigoArca || "").includes(categoriaBusqueda.trim())) : categoriasDisponibles), [categoriasDisponibles, categoriaBusqueda]);
 
   /*
     LA CASCADA: cambiar el convenio limpia la categoría, pero SÓLO si no le pertenece.
@@ -1510,7 +1487,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   }, [esServicios, formData.categoriaSatId]);
 
   /** El motivo elegido, para mostrar su nombre sin repetir el `find` en cada lugar donde se usa. */
-  const motivoElegido = motivos.find((m) => String(m._id) === String(formData.motivoReemplazoId)) || null;
 
   /*
     CÓMO SE LLAMA LA PERSONA REEMPLAZADA.
@@ -2243,27 +2219,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           qué contrato va a firmar esa persona; el trámite es una consecuencia.
         */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
-            Tipo de contrato <span className="text-red-500">*</span>
-          </label>
-          {contratos.length === 0 ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">No hay tipos de contrato configurados. Avisale a administración: sin esto la solicitud no dice qué se va a firmar.</p>
-          ) : (
-            <button type="button" onClick={() => setContratoModalOpen(true)} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-700 dark:bg-slate-900">
-              {contratoElegido ? (
-                <>
-                  <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{contratoElegido.name}</span>
-                  {estadoDelTramite ? <EstadoBadge name={estadoDelTramite.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite configurado</span>}
-                </>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faSearch} className="text-[10px] text-slate-400" />
-                  <span className="flex-1 text-sm text-slate-400">Elegí el tipo de contrato…</span>
-                </>
-              )}
-            </button>
-          )}
+          <CampoTipoContrato contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onAbrir={() => setContratoModalOpen(true)} />
           {contratoElegido && (limiteHoras != null || limiteDias != null) && (
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
               {limiteHoras != null && (
@@ -2499,46 +2455,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             )}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-              Categoría*
-            </label>
-            {/*
-              CUELGA DEL CONVENIO, NO SÓLO DEL ROL.
-
-              Antes se filtraba sólo por el rol empresa y se podía elegir una categoría de otro
-              convenio: ARCA rechaza esa alta. Ahora el orden es empresa → convenio → categoría, que
-              es el que el organismo exige, y la ventana queda cerrada hasta tener los dos de arriba:
-              decir el orden en el que hay que completar es mejor que dejar elegir mal.
-            */}
-            <button
-              type="button"
-              onClick={() => convenioCct && setCategoriaModalOpen(true)}
-              disabled={!convenioCct}
-              title={!convenioCct ? "Elegí primero el convenio" : undefined}
-              className="flex h-12 w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-left font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900"
-            >
-              {categoriaElegida ? (
-                <>
-                  {/* Sin el código de ARCA, igual que en la lista de abajo: acá tapaba el nombre. */}
-                  <span className="truncate text-sm text-slate-900 dark:text-white">{categoriaElegida.name}</span>
-                  {(() => {
-                    // Siempre se dice el nivel, también cuando la categoría no lo tiene: es lo que se compara
-                    // contra el del proyecto, y un hueco no se puede comparar con nada.
-                    const n = nivelDeCategoria(categoriaElegida);
-                    return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : <ChipSinValorar className="shrink-0" title="Esta categoría no tiene valoración cargada en la función." />;
-                  })()}
-                </>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faSearch} className="shrink-0 text-sm text-slate-400" />
-                  <span className="text-slate-400">{!convenioCct ? "Elegí primero el convenio" : "Elegí la categoría…"}</span>
-                </>
-              )}
-            </button>
-            {avisoCascada && <p className="text-[11px] text-amber-600 dark:text-amber-400">{avisoCascada}</p>}
-          </div>
+          {/* La categoría: el campo compartido con las plantillas de equipo. Cuelga del convenio: la ventana queda cerrada hasta tenerlo. */}
+          <CampoCategoria categoria={categoriaElegida || null} nivel={categoriaElegida ? nivelDeCategoria(categoriaElegida) : null} onAbrir={() => setCategoriaModalOpen(true)} deshabilitado={!convenioCct} motivoDeshabilitado="Elegí primero el convenio" aviso={avisoCascada} />
           </>
           )}
 
@@ -2597,123 +2515,21 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         </div>
 
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
-                <FontAwesomeIcon icon={faExchangeAlt} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Reemplazo?</p>
-                <p className="text-xs text-slate-500">¿Esta persona reemplaza a alguien?</p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              {/*
-                Apagar el switch LIMPIA a quién reemplaza.
-
-                Si no, quedaba guardado el reemplazado de una decisión que se dio marcha atrás: una
-                solicitud que dice "no es reemplazo" con un nombre de reemplazado adentro.
-              */}
-              <input
-                type="checkbox"
-                name="isReplacement"
-                checked={formData.isReplacement}
-                onChange={(e) => {
-                  const v = e.target.checked;
-                  setFormData((prev) => ({ ...prev, isReplacement: v, empleado_id_reemplezado: v ? prev.empleado_id_reemplezado : "", replacedUserId: v ? prev.replacedUserId : "", motivoReemplazoId: v ? prev.motivoReemplazoId : "" }));
-                  if (!v) setReplacedSearchTerm("");
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none dark:bg-slate-700 rounded-full transition-colors duration-200 ease-in-out peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
-              <span className="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{formData.isReplacement ? "SÍ" : "NO"}</span>
-            </label>
-          </div>
-
-          {/*
-            LOS DOS DATOS DEL REEMPLAZO: por qué falta, y quién.
-
-            EL MOTIVO VA PRIMERO. Es el orden en que se piensa —«falta por vacaciones… ah, sí, falta
-            Fulano»— y además es el que puede cambiar la respuesta al segundo: quién cubre no se elige
-            igual para un franco de un día que para una licencia larga.
-
-            A QUIÉN REEMPLAZA usa el mismo buscador que el de arriba, pero sobre el equipo del
-            proyecto: reemplazar a alguien que no está en el proyecto no es un reemplazo, y sin la
-            persona del alta, que no puede reemplazarse a sí misma. Sin ese dato tampoco se puede
-            heredar el área y el turno de quien falta, que es lo que hace después el escritorio.
-          */}
-          {formData.isReplacement && (
-            <div className="space-y-1 relative">
-              {/*
-                Y POR QUÉ FALTA. Mismo motivo que se carga en Novedades, con el mismo catálogo.
-
-                Un reemplazo sin motivo no alcanza para liquidarlo: no es lo mismo cubrir vacaciones
-                que una enfermedad o un cambio de turno. Y quien pide el alta es el único que lo sabe
-                en ese momento; después hay que ir a preguntarlo.
-
-                Se abre en ventana igual que «Configurar Ausencia» de Novedades —de donde salen estos
-                motivos— para que se reconozca como lo mismo; solo cambia el título, porque acá no se
-                está cargando una ausencia sino el motivo de un reemplazo.
-              */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px]" />
-                  Motivo <span className="text-red-500">*</span>
-                </label>
-                {motivoElegido ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                      <button type="button" onClick={() => setMotivoModalOpen(true)} title="Cambiar el motivo" className="truncate max-w-[16rem] text-left">
-                        {motivoElegido.name}
-                      </button>
-                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, motivoReemplazoId: "" }))} title="Quitar" className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-1">
-                        <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                      </button>
-                    </span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setMotivoModalOpen(true)}
-                    className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
-                  >
-                    <FontAwesomeIcon icon={faClock} className="text-sm text-slate-400 shrink-0" />
-                    <span className="text-slate-400 truncate">Configurar Motivo…</span>
-                  </button>
-                )}
-              </div>
-              <div className="space-y-1 pt-3">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <FontAwesomeIcon icon={faSearch} className="text-blue-500 text-[10px]" />
-                  ¿A quién reemplaza? <span className="text-red-500">*</span>
-                </label>
-                {/* Mismo tratamiento que «Persona»: también se elige a alguien, así que se ve igual. */}
-                {nombreReemplazado ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                      <button type="button" onClick={() => setReemplazoModalOpen(true)} title="Cambiar a quién reemplaza" className="truncate max-w-[16rem] text-left">
-                        {nombreReemplazado}
-                      </button>
-                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, empleado_id_reemplezado: "", replacedUserId: "" }))} title="Quitar" className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-1">
-                        <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                      </button>
-                    </span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setReemplazoModalOpen(true)}
-                    className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
-                  >
-                    <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
-                    <span className="text-slate-400 truncate">Buscar en el equipo del proyecto…</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* El reemplazo: el bloque compartido con las plantillas de equipo (ver contratacion/BloqueReemplazo). */}
+        <BloqueReemplazo
+          activo={formData.isReplacement}
+          onActivo={(v) => {
+            // Apagar el switch LIMPIA a quién reemplaza y el motivo: una solicitud que dice «no es reemplazo» no lleva un reemplazado adentro.
+            setFormData((prev) => ({ ...prev, isReplacement: v, empleado_id_reemplezado: v ? prev.empleado_id_reemplezado : "", replacedUserId: v ? prev.replacedUserId : "", motivoReemplazoId: v ? prev.motivoReemplazoId : "" }));
+            if (!v) setReplacedSearchTerm("");
+          }}
+          motivos={motivos}
+          motivoId={formData.motivoReemplazoId}
+          onMotivo={(id) => setFormData((prev) => ({ ...prev, motivoReemplazoId: id }))}
+          nombreReemplazado={nombreReemplazado}
+          onElegirPersona={() => setReemplazoModalOpen(true)}
+          onQuitarPersona={() => setFormData((prev) => ({ ...prev, empleado_id_reemplezado: "", replacedUserId: "" }))}
+        />
 
         {/*
           UN COMENTARIO, POR SI HACE FALTA. Opcional, y el único campo de texto libre del formulario.
@@ -2727,20 +2543,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         */}
         <AvisosSuperposicion avisos={avisosSuperposicion} />
 
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-            Comentarios
-          </label>
-          <textarea
-            rows={3}
-            name="comentarios"
-            value={formData.comentarios}
-            onChange={handleChange}
-            className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white text-sm resize-none"
-            placeholder="Algo que haga falta aclarar sobre esta contratación (opcional)…"
-          />
-        </div>
+        <CampoComentarios valor={formData.comentarios} onCambio={(v) => setFormData((prev) => ({ ...prev, comentarios: v }))} />
         </fieldset>
 
         {/*
@@ -3191,218 +2994,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         </Modal>
 
         {/*
-          Elegir la categoría, con buscador.
-
-          Ofrece el cruce rol empresa ∩ convenio. Cuando la función FRAME de la persona no tiene
-          categorías de este convenio, el cruce da vacío: eso se detecta y se avisa, en vez de dejar
-          una lista vacía sin explicación. «Ver todas las de este convenio» es la salida, y es por
-          convenio: al cambiar de convenio vuelve a su filtro.
+          La categoría: la ventana compartida con las plantillas de equipo (ver contratacion/SelectorCategoria):
+          buscador por nombre y por código, el nivel de cada una, «ver todas las de este convenio» y la escala.
+          Ofrece el cruce rol empresa ∩ convenio, con la misma regla que el escritorio (`categoriasOfrecidas`).
         */}
-        <Modal
-          isOpen={categoriaModalOpen}
-          onClose={() => setCategoriaModalOpen(false)}
-          title="Categoría"
-          subtitle={convenioElegido ? `Del convenio ${convenioElegido.externalId}` : undefined}
-          size="md"
-          zIndex={80}
-          footer={
-            <div className="flex w-full justify-end items-center gap-3">
-              <button type="button" onClick={() => setCategoriaModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                Listo
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-3">
-            {rolNoTieneCategoriasDelConvenio && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">El rol empresa de esta persona no tiene categorías de este convenio, así que se muestran todas las del convenio.</p>}
+        <ModalCategoria
+          abierto={categoriaModalOpen}
+          onCerrar={() => setCategoriaModalOpen(false)}
+          subtitulo={convenioElegido ? `Del convenio ${convenioElegido.externalId}` : undefined}
+          oferta={{ documentos: categoriasDisponibles, nivelDe: nivelDeCategoria, rolNoTieneCategoriasDelConvenio, rolNoTieneCategoriasDeLaValoracion, ocultasPorValoracion }}
+          verTodasDelConvenio={verTodasDelConvenio}
+          onVerTodasDelConvenio={() => setVerTodasDelConvenio(true)}
+          categoriaId={formData.categoriaSatId}
+          onElegir={elegirCategoria}
+        />
 
-            {/* La valoración va DESPUÉS del convenio, que es el orden en que se aplican: primero lo
-                que ARCA no acepta, después lo que no corresponde a este proyecto. */}
-            {rolNoTieneCategoriasDeLaValoracion && (
-              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-                El rol empresa no tiene categorías de la valoración de este proyecto, así que se muestran todas.
-              </p>
-            )}
-            {ocultasPorValoracion > 0 && (
-              <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">Se ocultaron {ocultasPorValoracion} de otra valoración: no corresponden al nivel de este proyecto.</p>
-            )}
-
-            {!verTodasDelConvenio && !rolNoTieneCategoriasDelConvenio && (
-              <button type="button" onClick={() => setVerTodasDelConvenio(true)} className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400">
-                ¿No está la que buscás? Ver todas las de este convenio
-              </button>
-            )}
-
-            <input type="text" autoFocus value={categoriaBusqueda} onChange={(e) => setCategoriaBusqueda(e.target.value)} placeholder="Buscar categoría…" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-medium outline-none dark:border-slate-700 dark:bg-slate-900" />
-
-            <div className="grid max-h-[45vh] grid-cols-1 gap-2 overflow-y-auto pr-1">
-              {categoriasParaElegir.length === 0 ? (
-                <p className="py-8 text-center text-xs italic text-slate-400">{categoriaBusqueda ? `No hay categorías que coincidan con "${categoriaBusqueda}"` : "No hay categorías para este convenio."}</p>
-              ) : (
-                categoriasParaElegir.map((cat) => {
-                  const elegida = cat._id === formData.categoriaSatId;
-                  const grupo = cat.data?.numeroCategoria;
-                  return (
-                    <div key={cat._id} className={`flex items-center gap-2 rounded-lg border p-3 transition-all ${elegida ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}>
-                      {/* Tocar la fila ELIGE, que es a lo que se viene. Ver la escala es el otro botón. */}
-                      <button type="button" onClick={() => elegirCategoria(cat._id)} aria-pressed={elegida} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegida && <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</span>
-                        {/*
-                          SIN EL CÓDIGO DE ARCA. Acá iba «035292» delante de cada nombre.
-
-                          Es el código con el que la categoría viaja al TXT del organismo: lo necesita el
-                          alta, no quien la elige. Un coordinador no los conoce, así que leía seis dígitos
-                          que no le decían nada antes de llegar al nombre —lo único que sí distingue una
-                          categoría de otra— y en un teléfono se comía el ancho del renglón.
-
-                          El buscador SIGUE encontrándolas por código (ver `categoriasParaElegir`): quien
-                          lo tenga a mano lo puede pegar, sólo que ya no ocupa lugar en la lista.
-                        */}
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{cat.name}</span>
-                        {/* El nivel, pegado al nombre: es lo que decide si corresponde al proyecto. */}
-                        {(() => {
-                          const n = nivelDeCategoria(cat);
-                          return n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : <ChipSinValorar className="shrink-0" title="Sin valoración cargada en esta función: se ofrece en cualquier proyecto." />;
-                        })()}
-                      </button>
-                      {/* El grupo. Tocarlo abre la escala; NO elige la categoría, para eso es la fila. */}
-                      <button
-                        type="button"
-                        onClick={() => setCategoriaDetalle(cat)}
-                        aria-label={`Ver la escala de ${cat.name}`}
-                        className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-slate-500 transition-colors active:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:active:bg-slate-800"
-                      >
-                        {/*
-                          «G4», no «Grupo 4 · Ver detalle».
-
-                          La flecha ya dice que abre algo, así que escribirlo al lado era repetir con
-                          palabras lo que el ícono hace —y ese texto era más largo que el dato—. En dos
-                          columnas angostas, el chip entero le comía el ancho al nombre de la categoría.
-
-                          «Sin grupo» se escribe entero: es una excepción y abreviarla no se entendería.
-                        */}
-                        <span className="text-[10px] font-bold uppercase tracking-wide">{grupo ? `G${grupo}` : "Sin grupo"}</span>
-                        <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                      </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </Modal>
-
-        {/*
-          LA ESCALA DE LA CATEGORÍA: a qué grupo pertenece y cuánto se paga.
-
-          Los importes son del GRUPO y no de la categoría (salvo en los convenios que no tienen grupos,
-          donde la escala es propia): se dice cuál de los dos casos es, porque explica por qué dos
-          categorías distintas muestran los mismos números.
-        */}
-        <Modal
-          isOpen={!!categoriaDetalle}
-          onClose={() => setCategoriaDetalle(null)}
-          title={categoriaDetalle?.name || "Categoría"}
-          subtitle={categoriaDetalle?.data?.codigoArca ? `Código ARCA ${categoriaDetalle.data.codigoArca}` : undefined}
-          size="md"
-          zIndex={90}
-          footer={
-            <div className="flex w-full items-center justify-between gap-3">
-              <button type="button" onClick={() => setCategoriaDetalle(null)} className="px-4 py-2.5 text-sm font-bold text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300">
-                Volver
-              </button>
-              <button type="button" onClick={() => categoriaDetalle && elegirCategoria(categoriaDetalle._id)} className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                {categoriaDetalle && categoriaDetalle._id === formData.categoriaSatId ? "Seguir con esta" : "Elegir esta categoría"}
-              </button>
-            </div>
-          }
-        >
-          {categoriaDetalle &&
-            (() => {
-              const d: any = categoriaDetalle.data || {};
-              const vencida = d.vigenciaHasta ? new Date(d.vigenciaHasta).getTime() < Date.now() : false;
-              return (
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Grupo</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{d.numeroCategoria ? `Grupo ${d.numeroCategoria}${d.grupoNombre ? ` — ${d.grupoNombre}` : ""}` : "Sin grupo"}</p>
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                      {d.escalaOrigen === "grupo"
-                        ? "Los importes son los del grupo: los comparten todas sus categorías."
-                        : d.escalaOrigen === "categoria"
-                          ? "Este convenio no publica grupos, así que la escala es de esta categoría."
-                          : "No tiene escala cargada. El alta ante ARCA necesita la retribución, así que hay que cargarla desde Configuración → ARCA → Categorías."}
-                    </p>
-                  </div>
-
-                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                    <FilaEscala label="Sueldo básico" valor={pesos(d.sueldoBasico)} />
-                    <FilaEscala label="Adicional" valor={pesos(d.sueldoAdicional)} />
-                    <FilaEscala label="Sueldo bruto" valor={pesos(d.sueldoBruto)} destacado />
-                    <FilaEscala label="Presentismo" valor={pesos(d.presentismo)} />
-                    <FilaEscala label="Neto" valor={pesos(d.neto)} />
-                    <FilaEscala label="Actualización" valor={fechaDeEscala(d.fechaActualizacion)} />
-                    {d.vigenciaHasta && <FilaEscala label="Vigencia hasta" valor={fechaDeEscala(d.vigenciaHasta)} />}
-                  </div>
-
-                  {vencida && (
-                    <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-                      <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 h-3 w-3 shrink-0" />
-                      La escala venció el {fechaDeEscala(d.vigenciaHasta)}: la solicitud se manda igual, con el último importe pactado.
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
-        </Modal>
-
-        {/*
-          Elegir el tipo de contrato.
-
-          Va en ventana propia como Persona, Proyecto y Motivo: son catorce tipos con su badge de
-          trámite al lado, y esa lista adentro del formulario tapa el resto en un teléfono.
-        */}
-        <Modal
-          isOpen={contratoModalOpen}
-          onClose={() => setContratoModalOpen(false)}
-          title="Tipo de contrato"
-          subtitle="El trámite ante ARCA sale de lo que elijas"
-          size="md"
-          zIndex={80}
-          footer={
-            <div className="flex w-full justify-end items-center gap-3">
-              <button type="button" onClick={() => setContratoModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                Listo
-              </button>
-            </div>
-          }
-        >
-          <div className="grid grid-cols-1 gap-2 py-2">
-            {contratos.map((c) => {
-              const elegido = formData.contratoId === c._id;
-              const tipo = tramitePorContrato.get(c._id);
-              const estado = tipo ? impositivos.find((e) => e.data?.tipoImpositivo === tipo) : null;
-              return (
-                <button
-                  key={c._id}
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => ({ ...prev, contratoId: c._id }));
-                    setContratoModalOpen(false);
-                  }}
-                  aria-pressed={elegido}
-                  className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${elegido ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
-                >
-                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
-                  <span className="flex-1 text-sm font-medium">{c.name}</span>
-                  {/* El badge sale del ABM, así que respeta el nombre y el color que tenga configurado
-                      cada estado —incluido el renombre de AFIP a ARCA, que se aplica al dibujar—. */}
-                  {estado ? <EstadoBadge name={estado.name} /> : <span className="text-[10px] italic text-slate-400">sin trámite</span>}
-                </button>
-              );
-            })}
-          </div>
-        </Modal>
+        {/* El tipo de contrato: la ventana compartida con las plantillas de equipo (ver contratacion/SelectorTipoContrato). */}
+        <ModalTipoContrato abierto={contratoModalOpen} onCerrar={() => setContratoModalOpen(false)} contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onElegir={(id) => setFormData((prev) => ({ ...prev, contratoId: id }))} />
 
         {/*
           Elegir el proyecto, cuando hay más de uno.
@@ -3452,43 +3060,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           </div>
         </Modal>
 
-        <Modal
-          isOpen={motivoModalOpen}
-          onClose={() => setMotivoModalOpen(false)}
-          title="Configurar Motivo"
-          size="md"
-          zIndex={80}
-          footer={
-            <div className="flex w-full justify-end items-center gap-3">
-              <button type="button" onClick={() => setMotivoModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                Listo
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-4 pt-2 pb-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo</label>
-              <select
-                className="w-full p-3 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                value={formData.motivoReemplazoId}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, motivoReemplazoId: e.target.value }));
-                  if (e.target.value) setMotivoModalOpen(false);
-                }}
-              >
-                <option value="">Seleccionar motivo...</option>
-                {motivos.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {motivos.length === 0 && <p className="text-xs text-amber-600 dark:text-amber-400">No hay motivos configurados. Se cargan en Configuración → Novedades.</p>}
-            <p className="text-[11px] text-slate-400">Es el motivo por el que falta la persona que se reemplaza. Son los mismos motivos que se usan en Novedades.</p>
-          </div>
-        </Modal>
 
         {/* Filtro por rol de la lista de personas. Se abre desde la ventana de arriba, así que va por
             encima de ella. */}
