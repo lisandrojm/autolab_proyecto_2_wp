@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRightArrowLeft, faChevronLeft, faChevronRight, faTriangleExclamation, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRightArrowLeft, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Seccion, Vacio } from "./Pantalla";
-import { AIRE, MARGEN, pastillaDe } from "./piezas";
 import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
@@ -16,8 +15,7 @@ import { ImportesDelContrato } from "../../../../../components/contratacion/Impo
 import { importePorJornadaDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
 import { jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { marcasParaSelector } from "./PantallaEquipo";
-import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
-import { textoHorario } from "./comun";
+import { nombreRoles, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 
 /*
   PANTALLA 4 · UN PUESTO DE UN EQUIPO.
@@ -38,7 +36,6 @@ export default function DetallePuesto() {
   const { catalogos, guardar, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
   const [hoja, setHoja] = useState<Hoja>(null);
-  const [editando, setEditando] = useState(false);
   const [reemplazoAbierto, setReemplazoAbierto] = useState(false);
   // El motivo elegido antes que la persona: el server lo guarda junto con ella (ver BloqueReemplazo: el motivo va primero).
   const [motivoPendiente, setMotivoPendiente] = useState("");
@@ -79,7 +76,6 @@ export default function DetallePuesto() {
 
   const a = x?.asignacion;
   useEffect(() => {
-    setEditando(false);
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
     tocoImporte.current = false;
@@ -134,7 +130,7 @@ export default function DetallePuesto() {
     const cuerpo = { areaId: efectivo.areaId, shiftId: efectivo.shiftId, inTime: efectivo.inTime, outTime: efectivo.outTime, diasSemana: efectivo.diasSemana, diasPorSemana: efectivo.diasPorSemana, diasRotativos: efectivo.diasRotativos, contratoId: efectivo.contratoId, nombreContrato: efectivo.nombreContrato, tipoImpositivo: efectivo.tipoImpositivo, categoriaSatId: efectivo.categoriaSatId, dailyRateManual: efectivo.dailyRateManual, ...cambios };
     return guardar(() => plantillasEquipoAPI.condiciones(p._id, equipo._id, puesto._id, cuerpo as any));
   };
-  const volverAlEquipo = () => void cambiar({ areaId: base.areaId, shiftId: base.shiftId, inTime: base.inTime, outTime: base.outTime, diasSemana: base.diasSemana, diasPorSemana: base.diasPorSemana, diasRotativos: base.diasRotativos, contratoId: base.contratoId, nombreContrato: base.nombreContrato, tipoImpositivo: base.tipoImpositivo }).then(() => setEditando(false));
+  const volverAlEquipo = () => void cambiar({ areaId: base.areaId, shiftId: base.shiftId, inTime: base.inTime, outTime: base.outTime, diasSemana: base.diasSemana, diasPorSemana: base.diasPorSemana, diasRotativos: base.diasRotativos, contratoId: base.contratoId, nombreContrato: base.nombreContrato, tipoImpositivo: base.tipoImpositivo });
 
   const quitarReemplazo = () => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { quitar: true }));
   const esServicios = efectivo.tipoImpositivo === "constancia_cuit";
@@ -213,27 +209,20 @@ export default function DetallePuesto() {
       </Seccion>
 
       <Seccion titulo="Condiciones">
-        {x.diferencias.length === 0 && !editando ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Igual que el equipo</p>
-            {/* Lo del equipo, como pastillas: el área y turno en azul (es lo elegido), el horario y el contrato en neutro. */}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {nombreTurno(areas, base.areaId, base.shiftId) && <span className={`${pastillaDe("azul")} ${AIRE} ${MARGEN}`}>{nombreTurno(areas, base.areaId, base.shiftId)}</span>}
-              <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{textoHorario(base.inTime, base.outTime)}</span>
-              {base.nombreContrato && <span className={`${pastillaDe("neutro")} ${AIRE} ${MARGEN}`}>{base.nombreContrato}</span>}
-            </div>
-            <button type="button" onClick={() => setEditando(true)} className="mt-1 min-h-[44px] text-sm font-bold text-blue-700 dark:text-blue-300">
-              Cambiar solo para este puesto
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
-            <button type="button" onClick={volverAlEquipo} className="min-h-[44px] text-sm font-bold text-blue-700 dark:text-blue-300">
+        {/*
+          SIEMPRE A LA VISTA: contrato, área y turno, horario (y días si es por período). Había un paso
+          intermedio —«Igual que el equipo» y un enlace «Cambiar solo para este puesto»— que escondía
+          justo lo que se viene a mirar. Lo que difiere del equipo se marca en su fila.
+        */}
+        <div className="space-y-2">
+          <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
+          {/* Sólo cuando hay algo que volver: un botón gris, como los demás secundarios de la pantalla. */}
+          {x.diferencias.length > 0 && (
+            <button type="button" onClick={volverAlEquipo} className="flex min-h-[48px] w-full items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
               Volver a las del equipo
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </Seccion>
 
       {!esServicios && (
@@ -293,8 +282,14 @@ export default function DetallePuesto() {
       </Seccion>
 
       <Seccion titulo="Más">
-        {/* Dos botones, uno al lado del otro: son dos acciones distintas, cada una con su blanco entero, y no dos renglones de una lista. */}
-        <div className="flex gap-2">
+        {/* Cerrado por defecto: quitar a la persona o sacar el puesto no es algo habitual, y abierto ocupaba el lugar de lo que sí se mira. */}
+        <details className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/70">
+          <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between px-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+            Quitar persona o sacar del equipo
+            <FontAwesomeIcon icon={faChevronDown} className="text-slate-500" />
+          </summary>
+        {/* Dos botones, uno al lado del otro: son dos acciones distintas, cada una con su blanco entero. */}
+        <div className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-700">
           {persona && (
             <button type="button" onClick={() => void guardar(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, null))} className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
               Quitar persona
@@ -313,6 +308,7 @@ export default function DetallePuesto() {
             Sacar del equipo
           </button>
         </div>
+        </details>
       </Seccion>
 
       <SelectorPersona

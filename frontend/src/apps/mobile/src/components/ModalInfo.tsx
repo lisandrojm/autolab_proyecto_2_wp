@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconDefinition, faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
 
@@ -16,8 +16,8 @@ import { IconDefinition, faCircleInfo, faXmark } from "@fortawesome/free-solid-s
 interface Props {
   icono: IconDefinition;
   titulo: string;
-  /** Qué es esto, en dos o tres oraciones. Los saltos de línea se respetan. */
-  texto: string;
+  /** Qué es esto, en dos o tres oraciones. Los saltos de línea se respetan. O contenido ya armado (varios párrafos). */
+  texto: React.ReactNode;
   /** Un botón extra adentro del modal, para lo que esa pantalla ya ofrecía. */
   extra?: { label: string; onClick: () => void };
   onCerrar: () => void;
@@ -37,7 +37,12 @@ export function ModalInfo({ icono, titulo, texto, extra, onCerrar }: Props) {
           </button>
         </div>
         <div className="space-y-4 p-4">
-          <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">{texto}</p>
+          {typeof texto === "string" ? (
+            <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">{texto}</p>
+          ) : (
+            // Contenido armado afuera: los párrafos se leen al tamaño del modal, no al de la ayuda chica de un campo.
+            <div className="space-y-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300 [&_p]:text-sm [&_p]:leading-relaxed [&_p]:text-slate-700 dark:[&_p]:text-slate-300">{texto}</div>
+          )}
           {extra && (
             <button
               onClick={() => {
@@ -64,7 +69,7 @@ export function ModalInfo({ icono, titulo, texto, extra, onCerrar }: Props) {
  * Se pone al lado del rótulo. La explicación queda a un toque de distancia en vez de ocupar lugar
  * arriba del campo que hay que llenar.
  */
-export function BotonInfo({ icono = faCircleInfo, titulo, texto }: { icono?: IconDefinition; titulo: string; texto: string }) {
+export function BotonInfo({ icono = faCircleInfo, titulo, texto }: { icono?: IconDefinition; titulo: string; texto: React.ReactNode }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <>

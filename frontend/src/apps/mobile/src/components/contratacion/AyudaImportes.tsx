@@ -1,5 +1,7 @@
+import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMoneyBillWave } from "@fortawesome/free-solid-svg-icons";
+import { BotonInfo } from "../ModalInfo";
 
 /*
   LOS IMPORTES, COMO SE VEN EN EL ALTA INDIVIDUAL: las clases del móvil para `ImportesDelContrato` y
@@ -11,8 +13,15 @@ import { faMoneyBillWave } from "@fortawesome/free-solid-svg-icons";
   por persona y por puesto, así que van acá para que sean una sola cosa.
 */
 
-/** Las clases, el ícono del rótulo y el billete adentro del campo, tal como los usa el alta individual. */
+/**
+ * Las clases, el ícono del rótulo y el billete adentro del campo, tal como los usa el alta individual.
+ *
+ * Y LA AYUDA DETRÁS DE UNA «i» EN CADA RÓTULO —el mismo modal de ayuda de toda la app— en vez de un
+ * párrafo debajo de cada campo: cuatro campos con cuatro párrafos eran una pantalla de texto en un
+ * teléfono, y la explicación de cómo se prorratea un mensual se lee una vez en la vida.
+ */
 export const PROPS_IMPORTES_MOVIL = {
+  infoEnRotulo: (titulo: string, ayuda: React.ReactNode) => <BotonInfo icono={faMoneyBillWave} titulo={titulo} texto={ayuda} />,
   claseEtiqueta: "text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2",
   claseCampo: "w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium disabled:cursor-not-allowed disabled:opacity-60",
   claseCampoTotal: "w-full h-12 rounded-xl border border-emerald-300 bg-emerald-50 pl-10 pr-4 font-bold text-emerald-800 outline-none transition-all focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300",
