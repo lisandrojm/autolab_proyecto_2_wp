@@ -69,15 +69,20 @@ export function ModalInfo({ icono, titulo, texto, extra, onCerrar }: Props) {
  * Se pone al lado del rótulo. La explicación queda a un toque de distancia en vez de ocupar lugar
  * arriba del campo que hay que llenar.
  */
-export function BotonInfo({ icono = faCircleInfo, titulo, texto }: { icono?: IconDefinition; titulo: string; texto: React.ReactNode }) {
+/**
+ * `tono`: la «i» en gris es ayuda; en amarillo o rojo es un aviso —hay algo para mirar—. Misma pieza,
+ * mismo lugar al lado del rótulo, otro color: quien ya sabe qué hace la «i» entiende que ésta urge.
+ */
+export function BotonInfo({ icono = faCircleInfo, titulo, texto, tono }: { icono?: IconDefinition; titulo: string; texto: React.ReactNode; tono?: "ambar" | "rojo" }) {
   const [abierto, setAbierto] = useState(false);
+  const color = tono === "rojo" ? "text-red-500 hover:text-red-700 dark:hover:text-red-300" : tono === "ambar" ? "text-amber-500 hover:text-amber-700 dark:hover:text-amber-300" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
   return (
     <>
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        aria-label={`Qué va en ${titulo}`}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
+        aria-label={tono ? `Ver ${titulo}` : `Qué va en ${titulo}`}
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${color}`}
       >
         <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
       </button>

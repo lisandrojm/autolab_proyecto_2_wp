@@ -4,12 +4,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight, faCircleExclamation, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Preview } from "../../../../../api/plantillasEquipo";
 import { usePlantilla, usePlantillas } from "./contexto";
-import { Pantalla, Seccion } from "./Pantalla";
+import { Pantalla } from "./Pantalla";
 import { borrarEstado, EstadoContratar, guardarEstado, leerEstado, nuevaClave, pedidosDe } from "./estadoContratar";
 import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { ChipTurno, CLASE_CAMPO, fechaCorta, pesos, Pill, textoHorario } from "./comun";
 import { PASOS_CONTRATAR } from "./Pasos";
+import { Rotulo } from "./piezas";
+import { BotonInfo } from "../ModalInfo";
 
 /*
   CONTRATAR · PASO 2 DE 2 · REVISIÓN. Es LA SOLICITUD MÚLTIPLE: lo que se ve es exactamente lo que se
@@ -154,24 +156,38 @@ export default function ContratarRevision() {
 
       {fallo && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800 dark:bg-red-500/15 dark:text-red-200">{fallo}</p>}
 
+      {/*
+        LOS AVISOS Y ERRORES, DETRÁS DE UNA «i»: en amarillo si son avisos, en rojo si hay errores. La
+        lista completa —con su «Corregir»— vive en el modal. Antes ocupaba media pantalla arriba de las
+        solicitudes, y tres avisos de superposición son tres párrafos que se leen una vez y estorban las
+        catorce veces siguientes. El rótulo dice cuántos; el color dice si frenan.
+      */}
       {problemas.length > 0 && (
-        <Seccion titulo={errores.length ? "Para corregir" : "Avisos"} id="problemas">
-          <div className="space-y-2">
-            {[...errores, ...avisos].map((x, k) => (
-              <div key={k} className={`flex items-start gap-2 rounded-xl p-3 ${x.tipo === "error" ? "bg-red-50 dark:bg-red-500/15" : "bg-amber-50 dark:bg-amber-500/15"}`}>
-                <FontAwesomeIcon icon={x.tipo === "error" ? faCircleExclamation : faTriangleExclamation} className={`mt-0.5 ${x.tipo === "error" ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`} />
-                <p className={`min-w-0 flex-1 text-sm ${x.tipo === "error" ? "text-red-900 dark:text-red-100" : "text-amber-900 dark:text-amber-100"}`}>
-                  <span className="font-semibold">{x.equipo}</span> · {x.texto}
-                </p>
-                {x.corregir && (
-                  <button type="button" onClick={x.corregir} className="min-h-[36px] shrink-0 rounded-lg px-2 text-sm font-bold text-blue-700 underline dark:text-blue-300">
-                    Corregir
-                  </button>
-                )}
+        <div id="problemas" className="mb-5 flex scroll-mt-20 items-center gap-1">
+          <Rotulo icono={errores.length ? faCircleExclamation : faTriangleExclamation}>{errores.length ? `Para corregir · ${errores.length}` : `Avisos · ${avisos.length}`}</Rotulo>
+          <BotonInfo
+            tono={errores.length ? "rojo" : "ambar"}
+            icono={errores.length ? faCircleExclamation : faTriangleExclamation}
+            titulo={errores.length ? "Para corregir" : "Avisos"}
+            texto={
+              <div className="space-y-2">
+                {[...errores, ...avisos].map((x, k) => (
+                  <div key={k} className={`flex items-start gap-2 rounded-xl p-3 ${x.tipo === "error" ? "bg-red-50 dark:bg-red-500/15" : "bg-amber-50 dark:bg-amber-500/15"}`}>
+                    <FontAwesomeIcon icon={x.tipo === "error" ? faCircleExclamation : faTriangleExclamation} className={`mt-0.5 ${x.tipo === "error" ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`} />
+                    <span className={`min-w-0 flex-1 text-sm ${x.tipo === "error" ? "text-red-900 dark:text-red-100" : "text-amber-900 dark:text-amber-100"}`}>
+                      <span className="font-semibold">{x.equipo}</span> · {x.texto}
+                    </span>
+                    {x.corregir && (
+                      <button type="button" onClick={x.corregir} className="min-h-[36px] shrink-0 rounded-lg px-2 text-sm font-bold text-blue-700 underline dark:text-blue-300">
+                        Corregir
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </Seccion>
+            }
+          />
+        </div>
       )}
 
       {equipos.map((e) => {
