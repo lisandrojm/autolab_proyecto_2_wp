@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faSpinner, faXmark, faMinus } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faSpinner, faXmark, faMinus, faStethoscope, faLock, faCircleCheck, faTrash, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { projectsAPI } from "../../api/projects";
 import { companiesAPI } from "../../api/companies";
+import type { ObraSocialDeSolicitud } from "../../api/users";
+import { sweetAlert } from "../../utils/sweetAlert";
 
 /*
   VALIDAR LA OBRA SOCIAL DESDE SOLICITUDES, sobre las APROBADAS.
@@ -194,5 +196,102 @@ export const ValidarObrasSocialesSolicitudes: React.FC<{ filas: FilaObraSocial[]
         </div>
       </div>
     </Modal>
+  );
+};
+
+/**
+ * CELDA «OBRA SOCIAL» DE SOLICITUDES: la misma lectura que la columna de Contratos, sobre el contrato
+ * que dejó la aprobación.
+ *
+ *  - sin contrato (pendiente, rechazada): un guión — todavía no hay dónde guardarla;
+ *  - sin validar y con empleadora: el botón «Validar obra social», que abre la corrida con esa fila;
+ *  - sin validar y sin empleadora: apagado, con el motivo en el título;
+ *  - validada: el RNOS con candado (la devolvió ARCA) o «Convenio» con tilde (ARCA no tiene
+ *    afiliación propia, rige la del convenio), y el tacho para volver a dejarla sin validar.
+ *
+ * Sin el código del convenio en el caso «Convenio»: sale de la cascada categoría → convenio que arma
+ * la grilla de Contratos con todos sus catálogos, y repetirla acá para un dato de tooltip no vale.
+ */
+export const ObraSocialSolicitudCell: React.FC<{
+  os: ObraSocialDeSolicitud | null | undefined;
+  nombre: string;
+  ocupado: boolean;
+  onValidar: (fila: FilaObraSocial) => void;
+  onQuitada: () => void;
+}> = ({ os, nombre, ocupado, onValidar, onQuitada }) => {
+  const [quitando, setQuitando] = useState(false);
+  if (!os) return <span className="text-xs text-gray-400">—</span>;
+
+  const cuil = soloDigitos(os.cuil);
+  if (os.estado === "sin_constatar") {
+    const puede = !!os.empresaContratoId && cuil.length === 11;
+    if (puede) {
+      return (
+        <button
+          type="button"
+          onClick={() => onValidar({ id: os.contratoId, nombre, cuit: cuil, empresaId: String(os.empresaContratoId) })}
+          disabled={ocupado}
+          title={`Validar la obra social de este contrato contra ARCA${os.empresaNombre ? `, como empleada de ${os.empresaNombre}` : ""}.`}
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+        >
+          <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
+          Validar obra social
+        </button>
+      );
+    }
+    return (
+      <span
+        title={!os.empresaContratoId ? "Todavía no se puede validar: el contrato no tiene Empresa Contrato. Asignala en Contratos." : "Todavía no se puede validar: la persona no tiene un CUIL válido."}
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 opacity-70 whitespace-nowrap"
+      >
+        <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
+        Sin validar
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+      </span>
+    );
+  }
+
+  const fecha = os.constatadaEl ? new Date(os.constatadaEl).toLocaleDateString("es-AR") : "";
+  const deArca = os.estado === "afiliada";
+  const titulo = deArca
+    ? `${os.nombre || "Obra social"} — la devolvió ARCA${fecha ? ` el ${fecha}` : ""} · queda fija, no editable.`
+    : `Validada en ARCA${fecha ? ` el ${fecha}` : ""}: el organismo no tiene afiliación propia para esta persona, así que rige la del convenio.`;
+
+  // Mismo quitar que la grilla de Contratos: `forzar` porque lo sellado en ARCA el server no lo pisa.
+  const quitar = async () => {
+    const r = await sweetAlert.confirm(
+      "¿Quitar la obra social?",
+      `${nombre}: el contrato vuelve a quedar SIN VALIDAR y no entra en el TXT hasta validarlo de nuevo en ARCA.`,
+      "Sí, quitar",
+    );
+    if (!r.isConfirmed) return;
+    setQuitando(true);
+    try {
+      await projectsAPI.updateObraSocialContrato(os.projectId, os.userId, os.contratoId as never, { obraSocialId: null, origen: "manual", forzar: true });
+      onQuitada();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo", e?.response?.data?.error || "No se pudo quitar la obra social.");
+    } finally {
+      setQuitando(false);
+    }
+  };
+
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <span title={titulo} className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 dark:text-green-400">
+        <FontAwesomeIcon icon={deArca ? faLock : faCircleCheck} className="h-3 w-3 shrink-0" />
+        {deArca ? <span className="font-mono">{soloDigitos(os.rnos) || "—"}</span> : "Convenio"}
+      </span>
+      <button
+        type="button"
+        onClick={() => void quitar()}
+        disabled={quitando || ocupado}
+        title="Quitar la obra social: el contrato vuelve a quedar sin validar"
+        aria-label="Quitar la obra social"
+        className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
+      >
+        <FontAwesomeIcon icon={quitando ? faSpinner : faTrash} spin={quitando} className="h-3 w-3" />
+      </button>
+    </span>
   );
 };

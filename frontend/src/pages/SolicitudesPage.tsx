@@ -4,7 +4,7 @@ import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } 
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { usersAPI, SolicitudOverviewRow } from "../api/users";
+import { usersAPI, SolicitudOverviewRow, ObraSocialDeSolicitud } from "../api/users";
 import { clientsAPI } from "../api/clients";
 import { projectsAPI } from "../api/projects";
 import { cachedFetch } from "../utils/refCache";
@@ -15,7 +15,7 @@ import { contratoFrameAPI } from "../api/contratosFrame";
 import { contratosAPI } from "../api/contratos";
 import { CatalogosAprobacion, contratoDesdeSolicitud } from "../utils/aprobacionMasiva";
 import { afipAPI } from "../api/afip";
-import { FilaObraSocial, ValidarObrasSocialesSolicitudes } from "../components/solicitudes/ValidarObrasSocialesSolicitudes";
+import { FilaObraSocial, ObraSocialSolicitudCell, ValidarObrasSocialesSolicitudes } from "../components/solicitudes/ValidarObrasSocialesSolicitudes";
 import { cuitEsValido } from "../utils/cuit";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -67,9 +67,9 @@ export const SolicitudesPage: React.FC = () => {
     aprobadas, que se llevan su contrato) y sobrevive al cambio de página; cambiar un filtro la limpia.
   */
   /** Lo que hace falta de cada seleccionada para las acciones masivas, sin volver a pedirla. */
-  type Elegida = { nombre: string; estado: string; cuit?: string | null; sinCuit?: boolean; empresaContratoId?: string | null; solicitudUserId?: string | null };
+  type Elegida = { nombre: string; estado: string; cuit?: string | null; sinCuit?: boolean; empresaContratoId?: string | null; solicitudUserId?: string | null; obraSocial?: ObraSocialDeSolicitud | null };
   const [seleccion, setSeleccion] = useState<Map<string, Elegida>>(new Map());
-  const elegidaDe = (r: { nombre: string; estado: string; cuit?: string | null; sinCuit?: boolean; empresaContratoId?: string | null; solicitudUserId?: string | null }): Elegida => ({ nombre: r.nombre, estado: r.estado, cuit: r.cuit, sinCuit: r.sinCuit, empresaContratoId: r.empresaContratoId, solicitudUserId: r.solicitudUserId });
+  const elegidaDe = (r: Elegida): Elegida => ({ nombre: r.nombre, estado: r.estado, cuit: r.cuit, sinCuit: r.sinCuit, empresaContratoId: r.empresaContratoId, solicitudUserId: r.solicitudUserId, obraSocial: r.obraSocial });
   /** Validar obras sociales: la lista de la corrida abierta (null = modal cerrado). */
   const [validandoOS, setValidandoOS] = useState<FilaObraSocial[] | null>(null);
   const [validandoNombres, setValidandoNombres] = useState(false);
@@ -413,21 +413,28 @@ export const SolicitudesPage: React.FC = () => {
   };
 
   /*
-    VALIDAR OBRAS SOCIALES: sólo las APROBADAS, que ya tienen contrato donde guardarla. Las demás de la
-    selección se dicen y se saltean: una pendiente se valida después de aprobarla.
+    VALIDAR OBRAS SOCIALES: sólo las APROBADAS que todavía no la tienen validada, que son las que ya
+    tienen contrato donde guardarla. La empleadora y el CUIL salen del CONTRATO (`obraSocial`), no de
+    lo que pidió la solicitud: al aprobar se pudo cambiar la empleadora, y el contrato puede ser de otra
+    persona que la solicitud de paso. Las demás de la selección se dicen y se saltean.
   */
-  const aprobadasConEmpresa = [...seleccion.entries()].filter(([, x]) => x.estado === "aprobada" && !!x.empresaContratoId && cuitEsValido(String(x.cuit || "")));
+  const filaParaValidar = (x: Elegida): FilaObraSocial | null => {
+    const os = x.obraSocial;
+    if (x.estado !== "aprobada" || !os || os.estado !== "sin_constatar" || !os.empresaContratoId || !cuitEsValido(os.cuil)) return null;
+    return { id: os.contratoId, nombre: x.nombre, cuit: os.cuil, empresaId: os.empresaContratoId };
+  };
+  const aValidarOS = [...seleccion.values()].map(filaParaValidar).filter((f): f is FilaObraSocial => !!f);
   const validarObrasSocialesSeleccion = async () => {
-    const salteadas = seleccion.size - aprobadasConEmpresa.length;
+    const salteadas = seleccion.size - aValidarOS.length;
     if (salteadas > 0) {
       const r = await sweetAlert.confirm(
-        `¿Validar ${aprobadasConEmpresa.length} ${aprobadasConEmpresa.length === 1 ? "obra social" : "obras sociales"}?`,
-        `${salteadas === 1 ? "1 seleccionada se saltea" : `${salteadas} seleccionadas se saltean`}: la obra social se guarda en el contrato, así que sólo se validan las APROBADAS que tienen empleadora y CUIT. Las pendientes, aprobalas primero.`,
+        `¿Validar ${aValidarOS.length} ${aValidarOS.length === 1 ? "obra social" : "obras sociales"}?`,
+        `${salteadas === 1 ? "1 seleccionada se saltea" : `${salteadas} seleccionadas se saltean`}: la obra social se guarda en el contrato, así que sólo se validan las APROBADAS que tienen empleadora y CUIL y todavía no la tienen validada. Las pendientes, aprobalas primero.`,
         "Validar",
       );
       if (!r.isConfirmed) return;
     }
-    setValidandoOS(aprobadasConEmpresa.map(([id, x]) => ({ id, nombre: x.nombre, cuit: String(x.cuit || ""), empresaId: String(x.empresaContratoId) })));
+    setValidandoOS(aValidarOS);
   };
 
   const eliminarSeleccionadas = async () => {
@@ -558,12 +565,12 @@ export const SolicitudesPage: React.FC = () => {
                   {validandoNombres ? "Validando…" : `Validar ${conCuit.length === 1 ? "nombre" : "nombres"} en ARCA`}
                 </button>
               )}
-              {aprobadasConEmpresa.length > 0 && (
+              {aValidarOS.length > 0 && (
                 <button type="button" onClick={() => void validarObrasSocialesSeleccion()} disabled={!!validandoOS || !!procesando} className="inline-flex items-center gap-2 rounded-lg border border-blue-300 px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/40">
-                  Validar obra social ({aprobadasConEmpresa.length})
+                  Validar obra social ({aValidarOS.length})
                 </button>
               )}
-              <button type="button" onClick={() => void eliminarSeleccionadas()} disabled={eliminando || !!procesando} className={`${pendientesSeleccionadas.length > 0 || conCuit.length > 0 || aprobadasConEmpresa.length > 0 ? "" : "ml-auto "}inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50`}>
+              <button type="button" onClick={() => void eliminarSeleccionadas()} disabled={eliminando || !!procesando} className={`${pendientesSeleccionadas.length > 0 || conCuit.length > 0 || aValidarOS.length > 0 ? "" : "ml-auto "}inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50`}>
                 <FontAwesomeIcon icon={faTrash} />
                 {eliminando ? "Eliminando…" : `Eliminar ${seleccion.size}`}
               </button>
@@ -583,6 +590,7 @@ export const SolicitudesPage: React.FC = () => {
             onReabrir={(s) => cambiarEstado(s, "pendiente")}
             onEliminar={eliminar}
             onEditarAprobada={editarAprobada}
+            renderObraSocial={(s) => <ObraSocialSolicitudCell os={s.obraSocial} nombre={s.nombre} ocupado={!!validandoOS} onValidar={(f) => setValidandoOS([f])} onQuitada={() => cargar(page)} />}
           />
 
           {/* Revisar acá; aprobar sigue llevando al equipo del proyecto, que es donde se carga el contrato. */}

@@ -23,6 +23,7 @@ import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from
 import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
 import { Company } from "../models/Company.js";
+import { ObraSocial } from "../models/ObraSocial.js";
 import bcrypt from "bcryptjs";
 // Side-effect imports to be extra sure they are registered
 import "../models/User.js";
@@ -1313,6 +1314,57 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
                 .lean(),
             User.countDocuments(filter),
         ]);
+        /*
+          LA OBRA SOCIAL DE LAS APROBADAS, para la columna de Solicitudes.
+    
+          Vive en el CONTRATO, no en la solicitud: se busca el que la aprobación dejó atado con
+          `solicitudId` (ver `assign-member`). El filtro por proyecto va primero para que la consulta use
+          el índice de `projectId` y no recorra todos los UserProject; la proyección deja sólo lo de la
+          obra social, porque un UserProject entero pesa mucho.
+    
+          El CUIL sale de la PERSONA del contrato, que puede no ser la solicitud (una solicitud de la app
+          apunta a alguien que ya existía): es contra ese CUIL que ARCA contesta.
+        */
+        const idsAprobadas = docs.filter((u) => (u.metadata?.solicitudStatus || "pendiente") === "aprobada").map((u) => u._id);
+        const obraSocialPorSolicitud = new Map();
+        if (idsAprobadas.length > 0) {
+            const projectIds = [...new Set(docs.flatMap((u) => (u.metadata?.projectIds || []).map((p) => String(p?._id || p))).filter((id) => Types.ObjectId.isValid(id)))];
+            const ups = await UserProject.find({
+                ...(projectIds.length ? { projectId: { $in: projectIds.map((id) => new Types.ObjectId(id)) } } : {}),
+                "contracts.solicitudId": { $in: idsAprobadas },
+            })
+                .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl")
+                .lean();
+            const personas = await User.find({ _id: { $in: [...new Set(ups.map((up) => String(up.userId)))] } })
+                .select("metadata.cuit")
+                .lean();
+            const cuitDe = new Map(personas.map((p) => [String(p._id), String(p.metadata?.cuit || "")]));
+            const codigosOs = [...new Set(ups.flatMap((up) => (up.contracts || []).map((c) => c.obraSocialId)).filter((id) => id != null))];
+            const obras = codigosOs.length ? await ObraSocial.find({ "data.id": { $in: codigosOs } }).select("externalId name data.id data.nombre").lean() : [];
+            const obraDe = new Map(obras.map((o) => [Number(o.data?.id), o]));
+            const pedidas = new Set(idsAprobadas.map(String));
+            for (const up of ups) {
+                for (const c of up.contracts || []) {
+                    const sid = String(c.solicitudId || "");
+                    if (!pedidas.has(sid))
+                        continue;
+                    const os = c.obraSocialId != null ? obraDe.get(Number(c.obraSocialId)) : null;
+                    obraSocialPorSolicitud.set(sid, {
+                        projectId: String(up.projectId),
+                        userId: String(up.userId),
+                        contratoId: String(c._id || ""),
+                        cuil: cuitDe.get(String(up.userId)) || "",
+                        empresaContratoId: c.empresaContratoId ? String(c.empresaContratoId) : null,
+                        empresaNombre: c.nombre_empresa_contrato || "",
+                        // Mismo criterio que `constatacion` de la grilla de Contratos (afipCompleteness).
+                        estado: c.obraSocialNoFigura ? "no_figura" : c.obraSocialOrigen === "constatada" ? "afiliada" : "sin_constatar",
+                        rnos: os?.externalId ? String(os.externalId) : "",
+                        nombre: os?.data?.nombre || os?.name || "",
+                        constatadaEl: c.obraSocialConstatadaEl || null,
+                    });
+                }
+            }
+        }
         const rows = docs.map((u) => {
             const m = u.metadata || {};
             const proyectos = (m.projectIds || [])
@@ -1348,6 +1400,8 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
                 sinCuit: !!m.sinCuit,
                 nombreValidadoArcaAt: m.nombreValidadoArcaAt || null,
                 empresaContratoId: m.empresaContratoId ? String(m.empresaContratoId) : null,
+                // Sólo las aprobadas: la obra social del contrato que dejó su aprobación.
+                obraSocial: obraSocialPorSolicitud.get(String(u._id)) || null,
             };
         });
         res.json({ rows, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) });

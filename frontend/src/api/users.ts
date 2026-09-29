@@ -249,6 +249,28 @@ export interface SolicitudOverviewRow {
   nombreValidadoArcaAt?: string | null;
   /** La empleadora pedida: contra ella se valida la obra social una vez aprobada. */
   empresaContratoId?: string | null;
+  /** Sólo las aprobadas: la obra social del contrato que dejó la aprobación. */
+  obraSocial?: ObraSocialDeSolicitud | null;
+}
+
+/**
+ * La obra social del contrato de una solicitud aprobada, tal como la ve la columna de Solicitudes.
+ *
+ * `estado` es el mismo `constatacion` de la grilla de Contratos: `afiliada` = ARCA devolvió una
+ * (`rnos`), `no_figura` = ARCA no devolvió ninguna y rige la del convenio, `sin_constatar` = nadie
+ * consultó. El CUIL es el de la PERSONA del contrato, que es contra quien contesta ARCA.
+ */
+export interface ObraSocialDeSolicitud {
+  projectId: string;
+  userId: string;
+  contratoId: string;
+  cuil: string;
+  empresaContratoId: string | null;
+  empresaNombre: string;
+  estado: "afiliada" | "no_figura" | "sin_constatar";
+  rnos: string;
+  nombre: string;
+  constatadaEl: string | null;
 }
 
 export interface UserProjectMetadata {

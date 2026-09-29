@@ -4,7 +4,7 @@ import { faCheck, faTimes, faClock, faRotateLeft, faTrash, faCommentDots, faEdit
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { infoAPI, InfoItem } from "../../api/info";
-import type { ResultadoEliminarSolicitud } from "../../api/users";
+import type { ObraSocialDeSolicitud, ResultadoEliminarSolicitud } from "../../api/users";
 import { EstadoBadge } from "../EstadoSelect";
 import { estadoImpositivoPorTipo, esTipoImpositivo } from "../../utils/tramiteImpositivo";
 import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
@@ -85,6 +85,7 @@ export interface SolicitudVista {
   sinCuit?: boolean;
   nombreValidadoArcaAt?: string | null;
   empresaContratoId?: string | null;
+  obraSocial?: ObraSocialDeSolicitud | null;
 }
 
 /** Adapta un `User` con `metadata.isSolicitud` a la forma de la tabla. */
@@ -221,9 +222,11 @@ interface SolicitudesTableProps {
   /** SELECCIÓN para acciones masivas (eliminar): con esto aparece la columna de casillas. */
   seleccionadas?: Set<string>;
   onCambiarSeleccion?: (ids: Set<string>) => void;
+  /** Columna «Obra social» (validar contra ARCA): sólo la vista global, que trae el contrato de cada aprobada. */
+  renderObraSocial?: (s: SolicitudVista) => React.ReactNode;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle, seleccionadas, onCambiarSeleccion }) => {
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial }) => {
   const { resolverRolFrame, resolverTramite } = catalogos;
   const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
   // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
@@ -273,6 +276,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               <th className="px-4 py-3 font-semibold">Fechas</th>
               <th className="px-4 py-3 font-semibold">Horario</th>
               <th className="px-4 py-3 font-semibold text-center">Estado</th>
+              {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
@@ -417,6 +421,11 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {ESTADO_SOLICITUD[s.estado].texto}
                     </span>
                   </td>
+                  {renderObraSocial && (
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {renderObraSocial(s)}
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                         así queda explícito que se está deshaciendo la decisión. */}
