@@ -157,6 +157,26 @@ export interface CorridaObrasSocialesLog {
   createdAt: string;
 }
 
+export interface ResultadoValidarNombres {
+  renombrados: Array<{ userId: string; cuil?: string; antes: string; ahora: string }>;
+  confirmados: string[];
+  consultados: number;
+  pendientes: number;
+  cuitInvalido: number;
+  /** Los que ARCA rechazó, con el motivo textual del organismo. */
+  noEncontrados: Array<{ cuit: string; motivo: string }>;
+  /**
+   * CUIT que EXISTEN pero están de baja, y que la pantalla de altas TAMPOCO pudo resolver.
+   *
+   * Los que sí se resolvieron por ahí ya no llegan acá: salen en `renombrados`/`confirmados` como
+   * cualquier otro. `documentoCorregido` dice si además se le arregló el DNI a la ficha.
+   */
+  inactivos: Array<{ cuit: string; documento: string; documentoGuardado: string; coincide: boolean; documentoCorregido: boolean }>;
+  /** Qué pasó con el reintento por la conexión de obras sociales. Ausente si no hizo falta. */
+  porPantalla?: { resueltos: number; sinResolver: Array<{ cuit: string; motivo: string }>; motivoSinIntentar?: string };
+  motivoSinConsultar?: string;
+}
+
 export const afipAPI = {
   /** Ver `SimplificacionStatus`: dice si hay credenciales, no cuáles. */
   async simplificacionStatus(): Promise<SimplificacionStatus> {
@@ -205,26 +225,11 @@ export const afipAPI = {
     return data;
   },
 
-  async validarNombres(opts?: { userIds?: string[]; limite?: number; revalidar?: boolean }): Promise<{
-    renombrados: Array<{ userId: string; cuil?: string; antes: string; ahora: string }>;
-    confirmados: string[];
-    consultados: number;
-    pendientes: number;
-    cuitInvalido: number;
-    /** Los que ARCA rechazó, con el motivo textual del organismo. */
-    noEncontrados: Array<{ cuit: string; motivo: string }>;
-    /**
-     * CUIT que EXISTEN pero están de baja, y que la pantalla de altas TAMPOCO pudo resolver.
-     *
-     * Los que sí se resolvieron por ahí ya no llegan acá: salen en `renombrados`/`confirmados` como
-     * cualquier otro. `documentoCorregido` dice si además se le arregló el DNI a la ficha.
-     */
-    inactivos: Array<{ cuit: string; documento: string; documentoGuardado: string; coincide: boolean; documentoCorregido: boolean }>;
-    /** Qué pasó con el reintento por la conexión de obras sociales. Ausente si no hizo falta. */
-    porPantalla?: { resueltos: number; sinResolver: Array<{ cuit: string; motivo: string }>; motivoSinIntentar?: string };
-    motivoSinConsultar?: string;
-  }> {
-    const { data } = await axios.post("/afip/nombres/validar", opts || {});
+  async validarNombres(opts?: { userIds?: string[]; limite?: number; revalidar?: boolean }): Promise<ResultadoValidarNombres> {
+    // Tiempo propio: una tanda con CUIT inactivos abre la pantalla de ARCA en el server, que tarda
+    // segundos por persona. Con los 60 s generales se cortaba acá mientras el server seguía trabajando.
+    // Queda debajo de los 5 min en que Node corta un request (`server.requestTimeout`).
+    const { data } = await axios.post("/afip/nombres/validar", opts || {}, { timeout: 4 * 60 * 1000 });
     return data;
   },
 

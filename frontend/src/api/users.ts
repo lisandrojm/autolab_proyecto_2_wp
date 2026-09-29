@@ -623,7 +623,10 @@ class UsersAPI {
     const searchParams = paramsDelListado({ ...params, page: undefined, limit: undefined });
     searchParams.append("validablesArca", "true");
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
-    return Array.isArray(data?.ids) ? data.ids : [];
+    // Un server sin este modo ignora el parámetro y contesta la página de siempre: sin `ids` no es
+    // «nadie para validar», es que falta deployar el server. Se dice en vez de tildar cero.
+    if (!Array.isArray(data?.ids)) throw new Error("El servidor todavía no tiene «Seleccionar todas las páginas»: falta deployar el server.");
+    return data.ids;
   }
 
   async list(

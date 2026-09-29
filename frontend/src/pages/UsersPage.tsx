@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { usersAPI, User } from '../api/users';
-import { afipAPI } from '../api/afip';
+import { afipAPI, ResultadoValidarNombres } from '../api/afip';
 import { motivoCuitInvalido, cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
 import { esperaCuentaBancaria, esperaDatosDeCuenta, motivoSinBancoDe, resumenSinBanco } from '../utils/bancarios';
@@ -86,6 +86,8 @@ const invalidateUsersPageCache = () => {
 
 /** Cuántos nombres consulta el server por corrida (`POST /afip/nombres/validar`, `limite`). */
 const TOPE_VALIDAR_NOMBRES = 300;
+/** Cuántos van en cada pedido: chico para que ninguno pase el tiempo de espera (ver `validarNombresEnArca`). */
+const TANDA_NOMBRES = 20;
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -147,6 +149,8 @@ export const UsersPage: React.FC = () => {
   const [limit] = useState(25);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [validandoNombres, setValidandoNombres] = useState(false);
+  /** Por dónde va «Validar nombres»: se manda de a tandas y la corrida puede tardar minutos. */
+  const [avanceNombres, setAvanceNombres] = useState<{ hechos: number; total: number } | null>(null);
   /*
     QUÉ FILA se está validando, además de "se está validando algo".
 
@@ -491,14 +495,17 @@ export const UsersPage: React.FC = () => {
     regla que `puedeValidarse`.
   */
   const [trayendoTodos, setTrayendoTodos] = useState(false);
+  /** Cuántos trajo la última «todas las páginas»: el aviso lo muestra mientras la selección siga siendo ésa. */
+  const [todasLasPaginas, setTodasLasPaginas] = useState(0);
   const seleccionarTodasLasPaginas = async () => {
     setTrayendoTodos(true);
     try {
       const ids = await usersAPI.idsValidablesArca(filtrosDelListado());
       setSeleccionados(new Set(ids));
+      setTodasLasPaginas(ids.length);
       if (ids.length === 0) sweetAlert.info('Nada para validar', 'Con estos filtros no queda nadie con CUIT válido y el nombre sin validar.');
-    } catch {
-      sweetAlert.error('No se pudo', 'No se pudieron traer todas las páginas. Probá de nuevo.');
+    } catch (e: any) {
+      sweetAlert.error('No se pudo', e?.response?.data?.error || e?.message || 'No se pudieron traer todas las páginas. Probá de nuevo.');
     } finally {
       setTrayendoTodos(false);
     }
@@ -527,13 +534,66 @@ export const UsersPage: React.FC = () => {
     setValidandoNombres(true);
     setValidandoFila(idsPedidos?.length === 1 ? idsPedidos[0] : null);
     try {
-      // Sin `revalidar`: los que ya tienen el sello no se vuelven a consultar. Igual no pueden estar
-      // acá, porque su check está apagado — esto es el cinturón además de los tirantes.
-      const r = await afipAPI.validarNombres({ userIds: ids, limite: 300 });
+      /*
+        DE A POCOS POR PEDIDO, UNO DETRÁS DEL OTRO.
+
+        Un pedido con 113 personas no volvía nunca: los CUIT inactivos se resuelven abriendo la
+        pantalla de ARCA en el server, segundos por cada uno, y el navegador cortaba («Request
+        timeout») mientras el server seguía. Volver a apretar lanzaba otra corrida encima de la que
+        todavía estaba andando. De a `TANDA_NOMBRES` cada pedido termina, el botón dice por dónde va, lo
+        hecho queda guardado aunque una tanda falle, y el error dice cuál y por qué.
+
+        Sin `revalidar`: los que ya tienen el sello no se vuelven a consultar.
+      */
+      const r: ResultadoValidarNombres = { renombrados: [], confirmados: [], consultados: 0, pendientes: 0, cuitInvalido: 0, noEncontrados: [], inactivos: [] };
+      const hechos: string[] = [];
+      let fallo = '';
+      for (let i = 0; i < ids.length; i += TANDA_NOMBRES) {
+        const tanda = ids.slice(i, i + TANDA_NOMBRES);
+        setAvanceNombres({ hechos: i, total: ids.length });
+        try {
+          const t = await afipAPI.validarNombres({ userIds: tanda, limite: TANDA_NOMBRES });
+          if (t.motivoSinConsultar) {
+            fallo = t.motivoSinConsultar;
+            break;
+          }
+          r.renombrados.push(...t.renombrados);
+          r.confirmados.push(...t.confirmados);
+          r.noEncontrados.push(...t.noEncontrados);
+          r.inactivos.push(...(t.inactivos || []));
+          r.consultados += t.consultados;
+          r.pendientes += t.pendientes;
+          r.cuitInvalido += t.cuitInvalido;
+          if (t.porPantalla) {
+            r.porPantalla = {
+              resueltos: (r.porPantalla?.resueltos || 0) + t.porPantalla.resueltos,
+              sinResolver: [...(r.porPantalla?.sinResolver || []), ...t.porPantalla.sinResolver],
+              motivoSinIntentar: t.porPantalla.motivoSinIntentar || r.porPantalla?.motivoSinIntentar,
+            };
+          }
+          hechos.push(...tanda);
+        } catch (e: any) {
+          // Los CUIT que se conocen son los de la página a la vista; de las otras páginas sólo se tiene el id.
+          const conocidos = tanda.map((id) => users.find((u) => u._id === id)?.metadata?.cuit).filter(Boolean).map((c) => formatCuit(String(c)));
+          const quienes = conocidos.length ? `\n\nCUIT de esa tanda que están en esta página: ${conocidos.join(', ')}` : '';
+          fallo =
+            e?.code === 'ECONNABORTED'
+              ? `La tanda ${i / TANDA_NOMBRES + 1} (${tanda.length} personas) no terminó en 4 minutos. Suele ser porque trae CUIT inactivos, que se buscan en la pantalla de ARCA, o porque ARCA está lento. El server puede haberla terminado igual: revisá el tilde de ARCA de esas personas antes de reintentar.${quienes}`
+              : `La tanda ${i / TANDA_NOMBRES + 1} (${tanda.length} personas) falló: ${e?.response?.data?.error || e?.message || 'error desconocido'}.${quienes}`;
+          break;
+        }
+      }
+      setAvanceNombres(null);
       // Validar una fila suelta no tiene por qué destildar lo que el usuario venía juntando.
-      // De la selección salen los de esta tanda; los que no entraron siguen tildados.
-      if (esSeleccion) setSeleccionados((prev) => new Set([...prev].filter((id) => !ids.includes(id))));
+      // De la selección salen los que ya se procesaron; los demás siguen tildados.
+      if (esSeleccion) setSeleccionados((prev) => new Set([...prev].filter((id) => !hechos.includes(id))));
       await fetchUsers({ silent: true });
+      if (fallo) {
+        const hecho = hechos.length > 0 ? `Se validaron ${hechos.length} de ${ids.length} antes del corte (${r.renombrados.length} nombre(s) corregido(s)); quedaron guardados. ` : '';
+        const siguen = esSeleccion ? `Los ${todos.length - hechos.length} que faltan siguen tildados.\n\n` : '';
+        sweetAlert.warningAlert('La validación se cortó', `${hecho}${siguen}${fallo}`);
+        return;
+      }
       if (r.motivoSinConsultar) {
         sweetAlert.warningAlert('No se pudo consultar', r.motivoSinConsultar);
         return;
@@ -629,6 +689,7 @@ export const UsersPage: React.FC = () => {
     } catch (e: any) {
       sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudieron validar los nombres contra ARCA.');
     } finally {
+      setAvanceNombres(null);
       setValidandoNombres(false);
       setValidandoFila(null);
     }
@@ -1970,7 +2031,7 @@ export const UsersPage: React.FC = () => {
                 className="px-3 py-2 rounded border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors inline-flex items-center gap-2 text-sm disabled:opacity-50"
               >
                 {trayendoTodos && <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" />}
-                Seleccionar todas las páginas
+                {todasLasPaginas && seleccionados.size === todasLasPaginas ? `Todas las páginas (${todasLasPaginas})` : 'Seleccionar todas las páginas'}
               </button>
             )}
             <button
@@ -1984,9 +2045,37 @@ export const UsersPage: React.FC = () => {
               className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors inline-flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FontAwesomeIcon icon={validandoNombres ? faSpinner : faLandmark} spin={validandoNombres} className="h-3.5 w-3.5" />
-              {validandoNombres ? 'Validando…' : seleccionados.size > 0 ? `Validar ${seleccionados.size} nombre${seleccionados.size === 1 ? '' : 's'} en ARCA` : 'Validar nombres en ARCA'}
+              {validandoNombres ? (avanceNombres && avanceNombres.total > TANDA_NOMBRES ? `Validando ${avanceNombres.hechos} de ${avanceNombres.total}…` : 'Validando…') : seleccionados.size > 0 ? `Validar ${seleccionados.size} nombre${seleccionados.size === 1 ? '' : 's'} en ARCA` : 'Validar nombres en ARCA'}
             </button>
           </div>
+
+          {/*
+            LA PREGUNTA DE SIEMPRE AL TILDAR EL ENCABEZADO: ¿sólo esta página o todas?
+
+            El check del encabezado tilda la página, y ahí es donde se busca seguir: un botón aparte en
+            la barra no se ve como la continuación de ese gesto. Cuando ya se trajeron todas, dice
+            cuántas son para que no quede duda de que no son sólo las de la pantalla.
+          */}
+          {totalPages > 1 && todosTildados && (
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+              {todasLasPaginas && seleccionados.size === todasLasPaginas ? (
+                <>
+                  Están tildados los <b>{todasLasPaginas}</b> que faltan validar, de todas las páginas.
+                  <button type="button" onClick={() => setSeleccionados(new Set())} className="font-semibold underline">
+                    Quitar selección
+                  </button>
+                </>
+              ) : (
+                <>
+                  Están tildados los {validablesEnPantalla.length} validables de esta página.
+                  <button type="button" onClick={() => void seleccionarTodasLasPaginas()} disabled={trayendoTodos} className="inline-flex items-center gap-1.5 font-semibold underline disabled:opacity-50">
+                    {trayendoTodos && <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />}
+                    Seleccionar todos los que faltan validar en todas las páginas
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="relative">
             {isFetching && (
