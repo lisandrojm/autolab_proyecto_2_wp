@@ -451,13 +451,51 @@ async function reiniciarGrilla(page) {
  * esta pantalla no ocurre nunca (ver `esperarEstado`). Devuelve si apareció; el que llama decide qué
  * significa que no, porque puede ser el tope, un CUIL inválido o ARCA lento.
  */
+/** Los avisos emergentes (`alert`/`confirm`) que ARCA mostró en el último «Agregar», tal cual. */
+let avisosDelUltimoAgregar = [];
+
+/**
+ * ¿Se puede aceptar este aviso de ARCA?
+ *
+ * Al agregar un CUIL ARCA puede preguntar con un `confirm()` —por ejemplo, que la persona ya tiene
+ * una relación laboral activa— antes de mostrar el bloque. Aceptarlo SOLO abre el bloque: el alta se
+ * registra recién con «Aceptar» abajo, que este motor no aprieta nunca. Igual, un aviso que hable de
+ * registrar o confirmar el alta NO se acepta: ése no es el que aparece al agregar, y si un día
+ * aparece acá, se frena en vez de adivinar.
+ */
+export const avisoAceptable = (texto) => !/registr|confirm[a-z]* (el|la|las|los) alta|dar de alta/i.test(String(texto || ""));
+
 async function agregarCuil(page, cuil) {
   const antes = await bloquesAbiertos(page);
   await page.fill(SEL.cuil, cuil);
   const btn = await boton(page, "Agregar");
   if (!btn) throw new Error("No encontré el botón «Agregar» en la pantalla.");
-  await btn.click();
-  return esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) > antes || (await topeAlcanzado(page)), { que: `el bloque de ${cuil}`, log });
+  /*
+    LOS DIÁLOGOS DE ARCA SE ATIENDEN.
+
+    Sin un manejador, Playwright CANCELA todo `confirm()`. Si ARCA preguntaba algo al agregar —«ya
+    tiene una relación laboral activa, ¿continuar?»—, el motor contestaba que no sin enterarse: el
+    bloque nunca aparecía y la persona salía como «ARCA no respondió a tiempo», cuando la pantalla
+    (a mano) la muestra con su obra social. Que tenga un alta activa no impide leerla.
+  */
+  avisosDelUltimoAgregar = [];
+  const alDialogo = async (d) => {
+    const texto = d.message();
+    avisosDelUltimoAgregar.push(texto);
+    log(`  (aviso de ARCA al agregar ${cuil}: ${texto})`);
+    if (avisoAceptable(texto)) await d.accept().catch(() => {});
+    else await d.dismiss().catch(() => {});
+  };
+  page.on("dialog", alDialogo);
+  const soltar = () => page.off("dialog", alDialogo);
+  const aparecio = await btn.click()
+    .then(() => esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) > antes || (await topeAlcanzado(page)), { que: `el bloque de ${cuil}`, log }))
+    .catch((e) => {
+      soltar();
+      throw e;
+    });
+  soltar();
+  return aparecio;
 }
 
 /**
@@ -801,7 +839,7 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
           relación o un alta registrada con esta empleadora—, y ahí reintentar no cambia nada. Antes las
           dos salían como «no respondió a tiempo», y el cartel, que es la explicación, no llegaba a nadie.
         */
-        const aviso = mensajeNuevo(textoAntes, await textoPagina(page).catch(() => ""), cuil);
+        const aviso = [...avisosDelUltimoAgregar, mensajeNuevo(textoAntes, await textoPagina(page).catch(() => ""), cuil)].filter(Boolean).join(" · ").slice(0, 300);
         const motivo = aviso
           ? `ARCA no agregó a esta persona y mostró: «${aviso}»`
           : `ARCA no respondió a tiempo (${Math.round(ESPERA_POSTBACK_MS / 1000)} s). Puede estar lento: reintentá esta persona.`;
