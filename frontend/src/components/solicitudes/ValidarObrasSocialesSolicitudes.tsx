@@ -14,7 +14,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
   usuario de clave fiscal y fija el RNOS en los contratos. Por eso sólo sirve con aprobadas: una
   pendiente todavía no tiene contrato donde guardarlo.
 
-  El server corre una corrida por vez, así que se valida DE A UNA PERSONA, en fila (ver `correr`).
+  El server corre una corrida por vez: una por empleadora, en fila, y adentro de a una persona (ver `correr`).
   El CUIL se manda para ACOTAR: el server sigue decidiendo quién está pendiente, y quien ya tenía la
   obra social validada no se vuelve a consultar.
 */
@@ -71,32 +71,37 @@ export const ValidarObrasSocialesSolicitudes: React.FC<{ filas: FilaObraSocial[]
       }
     };
 
-    /** Una persona, de principio a fin: arranca su corrida y la sigue hasta que el server la termina. */
-    const validarUna = async (f: FilaObraSocial) => {
-      const cuil = soloDigitos(f.cuit);
+    /**
+     * Las personas de UNA empleadora, en UNA corrida: se entra a ARCA una sola vez y el motor las
+     * consulta de a una adentro. Una corrida por persona era entrar a ARCA catorce veces, y bastaba
+     * con que una entrada se trabara para dejar el modal colgado cinco minutos.
+     */
+    const validarGrupo = async (empresaId: string, grupo: FilaObraSocial[]) => {
+      const cuils = grupo.map((f) => soloDigitos(f.cuit));
+      const pendientes = new Set(cuils);
       for (let intento = 0; intento < 5 && !parar(); intento++) {
         await esperarLibre();
         if (parar()) return;
-        setFase(`Validando a ${f.nombre}: abriendo ARCA en el servidor…`);
-        poner(cuil, { estado: "consultando" });
+        setFase("Abriendo ARCA en el servidor…");
         let total = 0;
         try {
-          total = (await projectsAPI.validarObrasSocialesEnServidor(f.empresaId, [cuil])).total;
-          propia.current = total > 0;
+          total = (await projectsAPI.validarObrasSocialesEnServidor(empresaId, cuils)).total;
         } catch (e: any) {
           const msg = String(e?.response?.data?.error || "");
           // Otra corrida se adelantó entre la espera y el arranque: se vuelve a esperar.
           if (/en curso/i.test(msg)) continue;
           // Casi siempre es «falta configurar algo», y el texto del server ES la instrucción.
-          poner(cuil, { estado: "error", detalle: msg || "El servidor no aceptó la corrida." });
+          for (const c of cuils) poner(c, { estado: "error", detalle: msg || "El servidor no aceptó la corrida." });
           return;
         }
+        propia.current = total > 0;
         if (!total) {
-          poner(cuil, { estado: "sin_pendiente", detalle: "Ya estaba validada, o no tiene contrato pendiente en esa empleadora." });
+          for (const c of cuils) poner(c, { estado: "sin_pendiente", detalle: "Ya estaba validada, o no tiene contrato pendiente en esa empleadora." });
           return;
         }
-        // Seguir la corrida: el server devuelve TODOS los eventos en cada vuelta, y esta corrida es sólo de esta persona.
-        let resuelta = false;
+        // Seguir la corrida: el server devuelve TODOS los eventos en cada vuelta, en orden, así que
+        // el último evento de cada CUIL es su estado — un «alta activa» seguido de un resultado leído
+        // con otra empleadora termina en el resultado.
         for (;;) {
           if (parar()) return;
           await esperar(2000);
@@ -108,41 +113,45 @@ export const ValidarObrasSocialesSolicitudes: React.FC<{ filas: FilaObraSocial[]
           }
           for (const ev of r.eventos as any[]) {
             const c = soloDigitos(ev.cuil || "");
-            if (ev.tipo === "conectado") setFase(`Validando a ${f.nombre}: adentro de ARCA…`);
-            else if (ev.tipo === "resultado" && c === cuil) {
-              resuelta = true;
-              poner(cuil, { estado: "listo", detalle: ev.rnos ? `RNOS ${ev.rnos}` : "Sin declarar en ARCA: rige la del convenio" });
-            } else if (ev.tipo === "error" && c === cuil) {
-              resuelta = true;
-              poner(cuil, { estado: "error", detalle: ev.motivo || "No se pudo validar" });
-            } else if (ev.tipo === "guardando") setFase(`Validando a ${f.nombre}: guardando lo que devolvió ARCA…`);
-            else if (ev.tipo === "fallo" && !resuelta) {
-              resuelta = true;
-              poner(cuil, { estado: "error", detalle: ev.mensaje });
-            }
+            if (ev.tipo === "conectado") setFase("Adentro de ARCA…");
+            else if (ev.tipo === "consultando" && pendientes.has(c)) {
+              setFase(`Consultando ${grupo.find((f) => soloDigitos(f.cuit) === c)?.nombre || c}…`);
+              poner(c, { estado: "consultando" });
+            } else if (ev.tipo === "resultado" && pendientes.has(c)) poner(c, { estado: "listo", detalle: ev.rnos ? `RNOS ${ev.rnos}` : "Sin obra social propia: rige la del convenio" });
+            else if (ev.tipo === "error" && pendientes.has(c)) poner(c, { estado: "error", detalle: ev.motivo || "No se pudo validar" });
+            else if (ev.tipo === "otraEmpleadora") {
+              setFase(`Tienen alta activa con esta empleadora: se leen con ${ev.razonSocial}…`);
+              for (const x of ev.cuils || []) poner(soloDigitos(x), { estado: "consultando", detalle: `con ${ev.razonSocial}` });
+            } else if (ev.tipo === "guardando") setFase("Guardando lo que devolvió ARCA…");
+            else if (ev.tipo === "fallo") for (const x of cuils) setResultados((p) => (p[x]?.estado === "listo" ? p : { ...p, [x]: { estado: "error", detalle: ev.mensaje } }));
           }
           if (!r.corriendo) break;
         }
         propia.current = false;
-        if (!resuelta) poner(cuil, { estado: "sin_pendiente", detalle: "La corrida no la consultó: no quedó pendiente." });
+        // Lo que la corrida no tocó: no estaba pendiente.
+        setResultados((p) => {
+          const n = { ...p };
+          for (const c of cuils) if (n[c]?.estado === "en_cola" || n[c]?.estado === "consultando") n[c] = { estado: "sin_pendiente", detalle: "La corrida no la consultó: no quedó pendiente." };
+          return n;
+        });
         return;
       }
-      if (!parar()) poner(cuil, { estado: "error", detalle: "El servidor siguió ocupado con otras validaciones. Probá de nuevo en un rato." });
+      if (!parar()) for (const c of cuils) poner(c, { estado: "error", detalle: "El servidor siguió ocupado con otras validaciones. Probá de nuevo en un rato." });
     };
 
     /*
-      DE A UNA PERSONA, EN FILA.
+      EN FILA, UNA EMPLEADORA POR VEZ.
 
-      El server corre una sola validación de ARCA por vez (por organización), y todas las de esta
-      tanda iban en un único pedido: si en ese momento había otra andando —otra pestaña, Contratos, un
-      reintento—, las catorce volvían con «Ya hay una validación en curso». Ahora se espera a que el
-      server quede libre y se valida a cada persona en su propia corrida, así una que falla no arrastra
-      a las demás y cada fila dice lo suyo.
+      El server corre una sola validación de ARCA por vez (por organización). Antes de arrancar se
+      espera a que quede libre —otra pestaña, Contratos—, en vez de fallar con «Ya hay una validación
+      en curso». Dentro de cada corrida el motor va de a una persona, y cada fila dice lo suyo.
     */
     const correr = async () => {
-      for (const f of filas) {
+      const porEmpresa = new Map<string, FilaObraSocial[]>();
+      for (const f of filas) porEmpresa.set(f.empresaId, [...(porEmpresa.get(f.empresaId) || []), f]);
+      for (const [empresaId, grupo] of porEmpresa) {
         if (parar()) break;
-        await validarUna(f);
+        await validarGrupo(empresaId, grupo);
       }
       // La ejecución descartada (doble montaje) no cierra nada: el modal lo sigue la que quedó viva.
       if (desmontado) return;

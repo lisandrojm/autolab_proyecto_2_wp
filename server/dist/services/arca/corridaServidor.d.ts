@@ -56,6 +56,12 @@ export type EventoCorrida = {
 } | {
     tipo: "fallo";
     mensaje: string;
+}
+/** Se reintenta con otra empleadora a los que la del contrato rechazó por «alta activa». */
+ | {
+    tipo: "otraEmpleadora";
+    razonSocial: string;
+    cuils: string[];
 };
 interface Corrida {
     tenantId: string;

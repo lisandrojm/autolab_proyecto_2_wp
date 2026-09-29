@@ -139,7 +139,66 @@ export async function arrancarCorrida(opts) {
                 paginaExistente: sesion.page,
                 onProgreso: emitir,
                 señal: corrida.señal,
+                // En el server no hay nadie mirando la ventana: los 5 minutos que el motor le da a una persona
+                // para abrir la pantalla a mano eran 5 minutos de modal colgado. Si en 2 no está, no va a estar.
+                esperaMin: 2,
             });
+            /*
+              «CUIL YA TIENE UN ALTA ACTIVA»: SE LEE CON OTRA EMPLEADORA.
+      
+              Con la empleadora del contrato ARCA no deja agregar a quien ya tiene un alta activa con ella
+              —que es justo el caso de los contratos «Pedido de ARCA» ya presentados—, y la obra social no
+              se puede leer. Pero la obra social que ARCA precompleta es la de la PERSONA, no la de la
+              empleadora: cargada con otra empleadora del tenant, el bloque aparece con el mismo dato (así
+              se comprobó a mano con FZERO para una persona que 2030 rechazaba).
+      
+              Se reintenta con cada una de las otras empleadoras hasta resolverlos, en una sesión nueva
+              (el motor elige el empleador al entrar). Lo leído se GUARDA contra la empleadora del
+              contrato: `aplicarLoteObrasSociales` sigue validando contra las obras sociales que ELLA tiene
+              registradas. Nada se registra: el motor nunca aprieta «Aceptar».
+            */
+            const motivoDe = (cuil) => {
+                for (let i = corrida.eventos.length - 1; i >= 0; i--) {
+                    const e = corrida.eventos[i];
+                    if (e.tipo === "error" && String(e.cuil) === cuil)
+                        return e.motivo || "";
+                }
+                return "";
+            };
+            let conAltaActiva = (r.errores || []).filter((c) => /alta activa/i.test(motivoDe(c)));
+            if (conAltaActiva.length > 0 && !corrida.señal.cortada) {
+                const otras = await Company.find({ _id: { $ne: empresaId }, cuit: { $exists: true, $ne: "" } }).select("cuit razonSocial").lean();
+                for (const otra of otras) {
+                    const otraCuit = String(otra?.cuit || "").replace(/\D/g, "");
+                    if (otraCuit.length !== 11 || conAltaActiva.length === 0 || corrida.señal.cortada)
+                        continue;
+                    emitir({ tipo: "otraEmpleadora", razonSocial: otra.razonSocial || otraCuit, cuils: conAltaActiva });
+                    await sesion?.browser.close().catch(() => { });
+                    sesion = null;
+                    try {
+                        sesion = await abrirSesionArca(tenantId, cred);
+                        const r2 = await validarObrasSociales({
+                            empresa: "",
+                            empresaCuit: otraCuit,
+                            cuils: conAltaActiva,
+                            soloLeer: true,
+                            paginaExistente: sesion.page,
+                            onProgreso: emitir,
+                            señal: corrida.señal,
+                            esperaMin: 1,
+                        });
+                        const leidos = new Set((r2.items || []).map((i) => String(i.cuil)));
+                        r.items.push(...(r2.items || []));
+                        r.errores = (r.errores || []).filter((c) => !leidos.has(String(c)));
+                        r.faltaron = Math.max(0, r.faltaron - leidos.size);
+                        conAltaActiva = conAltaActiva.filter((c) => !leidos.has(c));
+                    }
+                    catch (e) {
+                        // Una empleadora que no se pudo abrir no tumba lo ya leído: se prueba con la siguiente.
+                        console.error(`Obras sociales: reintento con ${otra.razonSocial} falló:`, e?.message || e);
+                    }
+                }
+            }
             // `rnos` vacío no es un error: ARCA contestó que esa persona no tiene afiliación propia y rige
             // la del convenio. Se cuenta aparte para que no infle ni los aciertos ni las fallas.
             log.validadas = r.items.filter((i) => i.rnos).length;
@@ -294,8 +353,10 @@ function motivoDeQueFaltaran(r, eventos = []) {
           motivos reales; con uno solo, es ése.
         */
         const motivos = new Map();
+        // Sólo los que siguen sin leer: el que falló con una empleadora y se leyó con otra ya no falta.
+        const faltan = new Set((r.errores || []).map(String));
         for (const e of eventos)
-            if (e.tipo === "error" && e.motivo)
+            if (e.tipo === "error" && e.motivo && faltan.has(String(e.cuil)))
                 motivos.set(e.motivo, (motivos.get(e.motivo) || 0) + 1);
         if (motivos.size === 1) {
             const [[m, n]] = [...motivos];
