@@ -389,6 +389,23 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
             }
         }
         const filter = andConditions.length > 0 ? { $and: andConditions } : {};
+        /*
+          «SELECCIONAR TODAS LAS PÁGINAS» DE VALIDAR NOMBRES EN ARCA (`?validablesArca=true`).
+    
+          Con los MISMOS filtros que la tabla, sólo los ids de quienes se pueden validar: CUIT con dígito
+          verificador bien, sin «sin CUIT» y sin el sello todavía (la misma regla que `puedeValidarse` de la
+          pantalla y que el filtro de `POST /afip/nombres/validar`). Sin paginar y sin la ficha: traer las
+          mil y pico de fichas completas para tildarlas era lo mismo que no ofrecerlo.
+        */
+        if (req.query.validablesArca === "true") {
+            const candidatos = await User.find({
+                $and: [filter, { "metadata.cuit": { $exists: true, $ne: "" } }, { "metadata.sinCuit": { $ne: true } }, { "metadata.nombreValidadoArcaAt": { $exists: false } }],
+            })
+                .select("_id metadata.cuit")
+                .lean();
+            res.json({ ids: candidatos.filter((u) => cuitEsValido(normalizarCuit(String(u.metadata?.cuit || "")))).map((u) => String(u._id)) });
+            return;
+        }
         const limitNum = Number(limit) || 50;
         const skip = (Number(page) - 1) * limitNum;
         // Modo liviano: para lookups (id -> nombre) que no necesitan el detalle

@@ -615,84 +615,21 @@ class UsersAPI {
     };
   }
 
-  async list(
-    params: {
-      page?: number;
-      limit?: number;
-      email?: string;
-      areaId?: string;
-      clientId?: string;
-      projectId?: string;
-      metadataActivo?: string;
-      isSolicitud?: string;
-      /** Sólo solicitudes de alta, en CUALQUIER estado (pendiente/aprobada/rechazada/cancelada). */
-      solicitudAny?: string;
-      /** Nombre del rol (separadores flexibles), ej. "Administración". Filtra server-side. */
-      roleName?: string;
-      /*
-        Filtro por PERMISO, que reemplaza al filtro por los dos roles Mobile que ya no existen.
-        `permission` deja los que lo tienen; `notPermission`, los que no. Se resuelven server-side
-        porque el cliente no puede listar /roles sin `admin_roles:view`.
-      */
-      permission?: string;
-      notPermission?: string;
-      /* Filtros del equipo de un proyecto (requieren `projectId`): se resuelven sobre el último
-         contrato del miembro / su área-turno, para que la paginación sea correlativa. */
-      vigencia?: string; // "vigente" | "novigente"
-      tipoContrato?: string; // nombre_contrato
-      estadoContrato?: string; // etiqueta del estado
-      areaTurno?: string; // "__none__" | "areaId::shiftId"
-      reemplazo?: string; // "con" | "sin"
-      lightweight?: boolean;
-      /**
-       * Modo selector: nombre, mail, documento y con qué rol empresa figura en sus proyectos. Es lo
-       * que necesita un buscador de personas, sin la ficha entera de cada una.
-       */
-      picker?: boolean;
-      /** Filtro por rol empresa (uno o varios, separados por coma). Mira el vínculo, sus contratos y la ficha. */
-      rolFrame?: string;
-      /** Personas puntuales por _id (separados por coma): para resolver a alguien que no está en la página. */
-      ids?: string;
-      slimProjects?: boolean;
-      /**
-       * Modo tabla de equipo (requiere `projectId`): trae sólo la entrada de ESE proyecto y, de sus
-       * contratos, los campos que la tabla muestra. Suma `metadata.jornadasTotales` y
-       * `metadata.contratosTotales`, calculados en el server sobre todos los proyectos de la persona.
-       */
-      teamTable?: boolean;
-      /** Columna de orden: "name" | "email" | "cuit" | "documento" | "estado" | "contratos" | "roles". */
-      sort?: string;
-      /** Dirección del orden. Por defecto "asc". */
-      order?: "asc" | "desc";
-    } = {},
-  ): Promise<UsersListResponse> {
-    const searchParams = new URLSearchParams();
+  /**
+   * «Seleccionar todas las páginas» de Validar nombres en ARCA: los ids de TODOS los que se pueden
+   * validar con estos filtros (CUIT válido, sin el sello), sin paginar y sin la ficha.
+   */
+  async idsValidablesArca(params: ListadoUsuariosParams = {}): Promise<string[]> {
+    const searchParams = paramsDelListado({ ...params, page: undefined, limit: undefined });
+    searchParams.append("validablesArca", "true");
+    const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
+    return Array.isArray(data?.ids) ? data.ids : [];
+  }
 
-    if (params.sort) searchParams.append("sort", params.sort);
-    if (params.order) searchParams.append("order", params.order);
-    if (params.page) searchParams.append("page", params.page.toString());
-    if (params.limit) searchParams.append("limit", params.limit.toString());
-    if (params.email) searchParams.append("email", params.email);
-    if (params.areaId) searchParams.append("areaId", params.areaId);
-    if (params.clientId) searchParams.append("clientId", params.clientId);
-    if (params.projectId) searchParams.append("projectId", params.projectId);
-    if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
-    if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
-    if (params.solicitudAny) searchParams.append("solicitudAny", params.solicitudAny);
-    if (params.roleName) searchParams.append("roleName", params.roleName);
-    if (params.vigencia) searchParams.append("vigencia", params.vigencia);
-    if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);
-    if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
-    if (params.areaTurno) searchParams.append("areaTurno", params.areaTurno);
-    if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
-    if (params.permission) searchParams.append("permission", params.permission);
-    if (params.notPermission) searchParams.append("notPermission", params.notPermission);
-    if (params.lightweight) searchParams.append("lightweight", "true");
-    if (params.picker) searchParams.append("picker", "true");
-    if (params.rolFrame) searchParams.append("rolFrame", params.rolFrame);
-    if (params.ids) searchParams.append("ids", params.ids);
-    if (params.slimProjects) searchParams.append("slimProjects", "true");
-    if (params.teamTable) searchParams.append("teamTable", "true");
+  async list(
+    params: ListadoUsuariosParams = {},
+  ): Promise<UsersListResponse> {
+    const searchParams = paramsDelListado(params);
 
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
 
@@ -995,6 +932,88 @@ class UsersAPI {
 /** Qué pasó con el contrato al eliminar una solicitud APROBADA. Sin `contrato`: no era una aprobada. */
 export interface ResultadoEliminarSolicitud {
   contrato?: { borrado: boolean; proyecto?: string; desde?: string; hasta?: string };
+}
+
+export type ListadoUsuariosParams = {
+    page?: number;
+    limit?: number;
+    email?: string;
+    areaId?: string;
+    clientId?: string;
+    projectId?: string;
+    metadataActivo?: string;
+    isSolicitud?: string;
+    /** Sólo solicitudes de alta, en CUALQUIER estado (pendiente/aprobada/rechazada/cancelada). */
+    solicitudAny?: string;
+    /** Nombre del rol (separadores flexibles), ej. "Administración". Filtra server-side. */
+    roleName?: string;
+    /*
+      Filtro por PERMISO, que reemplaza al filtro por los dos roles Mobile que ya no existen.
+      `permission` deja los que lo tienen; `notPermission`, los que no. Se resuelven server-side
+      porque el cliente no puede listar /roles sin `admin_roles:view`.
+    */
+    permission?: string;
+    notPermission?: string;
+    /* Filtros del equipo de un proyecto (requieren `projectId`): se resuelven sobre el último
+       contrato del miembro / su área-turno, para que la paginación sea correlativa. */
+    vigencia?: string; // "vigente" | "novigente"
+    tipoContrato?: string; // nombre_contrato
+    estadoContrato?: string; // etiqueta del estado
+    areaTurno?: string; // "__none__" | "areaId::shiftId"
+    reemplazo?: string; // "con" | "sin"
+    lightweight?: boolean;
+    /**
+     * Modo selector: nombre, mail, documento y con qué rol empresa figura en sus proyectos. Es lo
+     * que necesita un buscador de personas, sin la ficha entera de cada una.
+     */
+    picker?: boolean;
+    /** Filtro por rol empresa (uno o varios, separados por coma). Mira el vínculo, sus contratos y la ficha. */
+    rolFrame?: string;
+    /** Personas puntuales por _id (separados por coma): para resolver a alguien que no está en la página. */
+    ids?: string;
+    slimProjects?: boolean;
+    /**
+     * Modo tabla de equipo (requiere `projectId`): trae sólo la entrada de ESE proyecto y, de sus
+     * contratos, los campos que la tabla muestra. Suma `metadata.jornadasTotales` y
+     * `metadata.contratosTotales`, calculados en el server sobre todos los proyectos de la persona.
+     */
+    teamTable?: boolean;
+    /** Columna de orden: "name" | "email" | "cuit" | "documento" | "estado" | "contratos" | "roles". */
+    sort?: string;
+    /** Dirección del orden. Por defecto "asc". */
+    order?: "asc" | "desc";
+  };
+
+/** Los filtros del listado como query string: los usan `list` e `idsValidablesArca`, que tienen que filtrar igual. */
+function paramsDelListado(params: ListadoUsuariosParams): URLSearchParams {
+  const searchParams = new URLSearchParams();
+
+  if (params.sort) searchParams.append("sort", params.sort);
+  if (params.order) searchParams.append("order", params.order);
+  if (params.page) searchParams.append("page", params.page.toString());
+  if (params.limit) searchParams.append("limit", params.limit.toString());
+  if (params.email) searchParams.append("email", params.email);
+  if (params.areaId) searchParams.append("areaId", params.areaId);
+  if (params.clientId) searchParams.append("clientId", params.clientId);
+  if (params.projectId) searchParams.append("projectId", params.projectId);
+  if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
+  if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
+  if (params.solicitudAny) searchParams.append("solicitudAny", params.solicitudAny);
+  if (params.roleName) searchParams.append("roleName", params.roleName);
+  if (params.vigencia) searchParams.append("vigencia", params.vigencia);
+  if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);
+  if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
+  if (params.areaTurno) searchParams.append("areaTurno", params.areaTurno);
+  if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
+  if (params.permission) searchParams.append("permission", params.permission);
+  if (params.notPermission) searchParams.append("notPermission", params.notPermission);
+  if (params.lightweight) searchParams.append("lightweight", "true");
+  if (params.picker) searchParams.append("picker", "true");
+  if (params.rolFrame) searchParams.append("rolFrame", params.rolFrame);
+  if (params.ids) searchParams.append("ids", params.ids);
+  if (params.slimProjects) searchParams.append("slimProjects", "true");
+  if (params.teamTable) searchParams.append("teamTable", "true");
+  return searchParams;
 }
 
 export const usersAPI = new UsersAPI();

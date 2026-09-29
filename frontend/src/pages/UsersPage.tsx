@@ -84,6 +84,9 @@ const invalidateUsersPageCache = () => {
   invalidateRefCache('projects:all');
 };
 
+/** Cuántos nombres consulta el server por corrida (`POST /afip/nombres/validar`, `limite`). */
+const TOPE_VALIDAR_NOMBRES = 300;
+
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
   const puedeAbrir = usePuedeAbrir();
@@ -482,14 +485,42 @@ export const UsersPage: React.FC = () => {
       return n;
     });
 
+  /*
+    SELECCIONAR TODAS LAS PÁGINAS: tilda a TODOS los que se pueden validar con los filtros de la tabla,
+    no sólo los de esta página. El server devuelve sólo los ids (ver `validablesArca`), con la misma
+    regla que `puedeValidarse`.
+  */
+  const [trayendoTodos, setTrayendoTodos] = useState(false);
+  const seleccionarTodasLasPaginas = async () => {
+    setTrayendoTodos(true);
+    try {
+      const ids = await usersAPI.idsValidablesArca(filtrosDelListado());
+      setSeleccionados(new Set(ids));
+      if (ids.length === 0) sweetAlert.info('Nada para validar', 'Con estos filtros no queda nadie con CUIT válido y el nombre sin validar.');
+    } catch {
+      sweetAlert.error('No se pudo', 'No se pudieron traer todas las páginas. Probá de nuevo.');
+    } finally {
+      setTrayendoTodos(false);
+    }
+  };
+
   /** `ids` explícitos = validar una sola fila; sin argumento = validar la selección. */
   const validarNombresEnArca = async (idsPedidos?: string[]) => {
-    const ids = idsPedidos ?? [...seleccionados];
+    const todos = idsPedidos ?? [...seleccionados];
     const esSeleccion = !idsPedidos;
-    if (ids.length === 0) return;
+    if (todos.length === 0) return;
+    /*
+      DE A 300, que es el tope del server por corrida. Con «Seleccionar todas las páginas» la selección
+      puede pasarlo: se manda la primera tanda y el resto queda TILDADO, para seguir con el mismo botón.
+      Mandarlos todos juntos hacía que el server consultara 300 y los demás se perdieran al destildar.
+    */
+    const ids = todos.slice(0, TOPE_VALIDAR_NOMBRES);
+    const quedan = todos.length - ids.length;
     const ok = await sweetAlert.confirm(
       `¿Validar ${ids.length} nombre${ids.length === 1 ? '' : 's'} con ARCA?`,
-      'Se consulta el Padrón por cada persona tildada y, si ARCA tiene otro nombre, se reemplaza por el del organismo. Es el mismo criterio que usa «Validar CUIT».',
+      `Se consulta el Padrón por cada persona tildada y, si ARCA tiene otro nombre, se reemplaza por el del organismo. Es el mismo criterio que usa «Validar CUIT».${
+        quedan > 0 ? `\n\nSe validan de a ${TOPE_VALIDAR_NOMBRES}: ahora van los primeros ${ids.length} y los otros ${quedan} quedan tildados para la próxima.` : ''
+      }`,
       'Sí, validar',
     );
     if (!ok.isConfirmed) return;
@@ -500,7 +531,8 @@ export const UsersPage: React.FC = () => {
       // acá, porque su check está apagado — esto es el cinturón además de los tirantes.
       const r = await afipAPI.validarNombres({ userIds: ids, limite: 300 });
       // Validar una fila suelta no tiene por qué destildar lo que el usuario venía juntando.
-      if (esSeleccion) setSeleccionados(new Set());
+      // De la selección salen los de esta tanda; los que no entraron siguen tildados.
+      if (esSeleccion) setSeleccionados((prev) => new Set([...prev].filter((id) => !ids.includes(id))));
       await fetchUsers({ silent: true });
       if (r.motivoSinConsultar) {
         sweetAlert.warningAlert('No se pudo consultar', r.motivoSinConsultar);
@@ -510,6 +542,7 @@ export const UsersPage: React.FC = () => {
         r.consultados > 0 ? `${r.consultados} consultado(s) en ARCA.` : 'No se consultó a nadie.',
         r.renombrados.length > 0 ? `${r.renombrados.length} nombre(s) corregido(s).` : 'Todos los nombres ya coincidían.',
         r.pendientes > 0 ? `Quedaron ${r.pendientes} sin consultar (el tope es 300 por vez): tildalos y repetí.` : '',
+        quedan > 0 ? `Quedan ${quedan} tildados: apretá «Validar» otra vez para seguir.` : '',
         r.cuitInvalido > 0 ? `${r.cuitInvalido} no se consultaron porque su CUIT no es válido (revisá el dato).` : '',
       ]
         .filter(Boolean)
@@ -601,29 +634,32 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  /** Los filtros de la tabla. Los comparte «Seleccionar todas las páginas», que tiene que ver lo mismo. */
+  const filtrosDelListado = () => {
+    const params: any = {};
+    if (searchTerm) params.email = searchTerm;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    if (clientId) params.clientId = clientId;
+    if (filterProjectId) params.projectId = filterProjectId;
+    if (filterRoleId) params.roleId = filterRoleId;
+    if (filterIsSolicitud) params.isSolicitud = 'true';
+    if (filterUserStatus === 'active') params.metadataActivo = 'true';
+    if (filterUserStatus === 'inactive') params.metadataActivo = 'false';
+    return params;
+  };
+
   const fetchUsers = async ({ silent = false, page = currentPage }: { silent?: boolean; page?: number } = {}) => {
     try {
       if (!silent) setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
       // Always use server-side pagination and filtering
-      const params: any = {
-        page: page,
-        limit: limit,
-      };
+      const params: any = { page: page, limit: limit, ...filtrosDelListado() };
       if (sortBy) {
         params.sort = sortBy;
         params.order = sortDir;
       }
-      if (searchTerm) params.email = searchTerm;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (clientId) params.clientId = clientId;
-      if (filterProjectId) params.projectId = filterProjectId;
-      if (filterRoleId) params.roleId = filterRoleId;
-      if (filterIsSolicitud) params.isSolicitud = 'true';
-      if (filterUserStatus === 'active') params.metadataActivo = 'true';
-      if (filterUserStatus === 'inactive') params.metadataActivo = 'false';
 
       // Reset client context if we're not filtering by client anymore (though normally we stay in the route)
       if (!clientId && selectedClient) setSelectedClient(null);
@@ -1920,6 +1956,23 @@ export const UsersPage: React.FC = () => {
               </label>
             )}
             {seleccionados.size > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.size} seleccionado(s)</span>}
+            {seleccionados.size > 0 && (
+              <button type="button" onClick={() => setSeleccionados(new Set())} className="text-xs font-semibold text-gray-600 hover:underline dark:text-gray-300">
+                Quitar selección
+              </button>
+            )}
+            {totalPages > 1 && (
+              <button
+                type="button"
+                onClick={() => void seleccionarTodasLasPaginas()}
+                disabled={trayendoTodos || validandoNombres}
+                title="Tildar a todos los que faltan validar con los filtros actuales, en todas las páginas (CUIT válido y nombre sin validar)"
+                className="px-3 py-2 rounded border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors inline-flex items-center gap-2 text-sm disabled:opacity-50"
+              >
+                {trayendoTodos && <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" />}
+                Seleccionar todas las páginas
+              </button>
+            )}
             <button
               onClick={() => validarNombresEnArca()}
               disabled={validandoNombres || seleccionados.size === 0}
