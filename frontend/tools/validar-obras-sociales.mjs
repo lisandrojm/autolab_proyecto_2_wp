@@ -460,6 +460,23 @@ async function agregarCuil(page, cuil) {
   return esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) > antes || (await topeAlcanzado(page)), { que: `el bloque de ${cuil}`, log });
 }
 
+/**
+ * El cartel que ARCA agregó a la pantalla: las líneas que están ahora y no estaban antes de «Agregar».
+ *
+ * No se conoce el texto exacto de cada rechazo, así que no se busca un mensaje puntual: se toma lo
+ * NUEVO. Se descartan el CUIL recién tipeado y las líneas cortas (rótulos, botones), y se acota el
+ * largo para que entre en una celda. Vacío = ARCA no mostró nada: fue lentitud, no un rechazo.
+ */
+export function mensajeNuevo(antes, despues, cuil = "") {
+  const vistas = new Set(String(antes || "").split("\n").map((l) => l.trim()).filter(Boolean));
+  const digitos = soloDigitos(cuil);
+  const nuevas = String(despues || "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length >= 12 && !vistas.has(l) && !(digitos && soloDigitos(l) === digitos));
+  return [...new Set(nuevas)].slice(0, 2).join(" · ").slice(0, 300);
+}
+
 /** Cuántos bloques de empleado hay abiertos ahora mismo. Es el invariante de todo el ciclo. */
 const bloquesAbiertos = (page) => page.locator(SEL.obraSocial).count();
 
@@ -763,6 +780,7 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       }
 
       onProgreso?.({ tipo: "consultando", cuil });
+      const textoAntes = await textoPagina(page).catch(() => "");
       const aparecio = await agregarCuil(page, cuil);
 
       /*
@@ -775,7 +793,20 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       */
       if (!aparecio && !(await topeAlcanzado(page))) {
         errores.add(cuil);
-        onProgreso?.({ tipo: "error", cuil, motivo: `ARCA no respondió a tiempo (${Math.round(ESPERA_POSTBACK_MS / 1000)} s). Puede estar lento: reintentá esta persona.`, hechas: hechos.size, total: cuils.length });
+        /*
+          LO QUE ARCA DIJO, si dijo algo.
+
+          «No apareció el bloque» tiene dos causas que piden cosas opuestas: ARCA lento (reintentar) o
+          ARCA que RECHAZA agregar a esa persona con un cartel —por ejemplo, porque ya tiene una
+          relación o un alta registrada con esta empleadora—, y ahí reintentar no cambia nada. Antes las
+          dos salían como «no respondió a tiempo», y el cartel, que es la explicación, no llegaba a nadie.
+        */
+        const aviso = mensajeNuevo(textoAntes, await textoPagina(page).catch(() => ""), cuil);
+        const motivo = aviso
+          ? `ARCA no agregó a esta persona y mostró: «${aviso}»`
+          : `ARCA no respondió a tiempo (${Math.round(ESPERA_POSTBACK_MS / 1000)} s). Puede estar lento: reintentá esta persona.`;
+        log(`  ${cuil}: ${motivo}`);
+        onProgreso?.({ tipo: "error", cuil, motivo, hechas: hechos.size, total: cuils.length });
         await vaciarPantalla(page);
         continue;
       }
