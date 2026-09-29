@@ -193,7 +193,7 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
       log.sinDeclarar = r.items.length - log.validadas;
       log.errores = r.errores?.length || 0;
       log.faltaron = r.faltaron;
-      log.motivo = motivoDeQueFaltaran(r);
+      log.motivo = motivoDeQueFaltaran(r, corrida.eventos);
 
       /*
         Los que difieren, y NADA MÁS que esos.
@@ -272,11 +272,11 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
           tipo: "fin",
           validadas: aplicado.aplicados,
           faltaron: r.faltaron,
-          motivo: motivoDeQueFaltaran(r),
+          motivo: motivoDeQueFaltaran(r, corrida.eventos),
           detalle: detalleDeLoAplicado(aplicado),
         });
       } else {
-        emitir({ tipo: "fin", validadas: 0, faltaron: r.faltaron, motivo: motivoDeQueFaltaran(r), detalle: [] });
+        emitir({ tipo: "fin", validadas: 0, faltaron: r.faltaron, motivo: motivoDeQueFaltaran(r, corrida.eventos), detalle: [] });
       }
     } catch (e: any) {
       log.error = String(e?.message || e);
@@ -323,10 +323,27 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
  * hechas y cero errores, y la pantalla lo mostraba como un final exitoso — veinte filas «en cola»
  * para siempre, sin nada que explicara nada.
  */
-function motivoDeQueFaltaran(r: any): string {
+function motivoDeQueFaltaran(r: any, eventos: EventoCorrida[] = []): string {
   if (!r.faltaron) return "";
   if (r.sinSesion) return "Se cortó la sesión de ARCA, o se pidió detener la corrida.";
-  if (r.errores?.length) return `ARCA no devolvió fila para ${r.errores.length} CUIL. Puede que no tengan relación laboral registrada con esta empleadora.`;
+  if (r.errores?.length) {
+    /*
+      EL MOTIVO DE CADA PERSONA, NO UNA SUPOSICIÓN.
+
+      Decía siempre «puede que no tengan relación laboral registrada», y el motivo real de cada CUIL
+      —que el motor sí informa— era otro: ARCA lento, o un cartel de ARCA rechazando a la persona.
+      Leído en el log, el resumen mandaba a buscar el problema donde no estaba. Ahora se agrupan los
+      motivos reales; con uno solo, es ése.
+    */
+    const motivos = new Map<string, number>();
+    for (const e of eventos) if (e.tipo === "error" && e.motivo) motivos.set(e.motivo, (motivos.get(e.motivo) || 0) + 1);
+    if (motivos.size === 1) {
+      const [[m, n]] = [...motivos];
+      return n === 1 ? m : `${n} CUIL: ${m}`;
+    }
+    if (motivos.size > 1) return [...motivos].map(([m, n]) => `${n} × ${m}`).join(" · ");
+    return `ARCA no devolvió fila para ${r.errores.length} CUIL.`;
+  }
   return "La corrida terminó sin procesar a nadie y el motor no informó ningún error.";
 }
 

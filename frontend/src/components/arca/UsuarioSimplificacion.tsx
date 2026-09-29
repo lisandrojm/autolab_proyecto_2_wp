@@ -131,7 +131,8 @@ export const UsuarioSimplificacion: React.FC<{
                         {log.faltaron > 0 ? ` · ${log.faltaron} sin leer` : ''}
                       </span>
                     </div>
-                    {(log.error || log.motivo) && <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 truncate">{log.error || log.motivo}</p>}
+                    {/* Entero y no cortado en una línea: es el motivo, lo que se viene a leer acá. */}
+                    {(log.error || log.motivo) && <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 break-words">{log.error || log.motivo}</p>}
                   </div>
                   <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">{new Date(log.createdAt).toLocaleString('es-AR')}</span>
                 </button>
