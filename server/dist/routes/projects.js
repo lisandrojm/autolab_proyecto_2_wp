@@ -2525,9 +2525,14 @@ router.post("/contratos/obras-sociales/validar-servidor", requireTenant, authent
             empresaId,
             cuils,
             usuarioId: req.user?.userId,
-            // Las personas de esta corrida: además de la obra social se les confirma el nombre contra el
-            // padrón, con la misma regla que «Validar CUIT».
-            userIds: [...new Set(pendientes.map((p) => p.userId).filter(Boolean))],
+            /*
+              SIN `userIds`: esta corrida valida SOLO la obra social.
+      
+              Pasar las personas hacía que además se comparara el nombre de cada una con el de la pantalla
+              de ARCA, se consultara el padrón por los que diferían y se escribiera el nombre — trabajo que
+              alargaba la corrida de Contratos y de Solicitudes. Los nombres se validan desde Usuarios
+              («Validar nombres en ARCA»). Sin la lista, `arrancarCorrida` no compara ni escribe ninguno.
+            */
         });
         res.json({ arrancada: true, ...r });
     }
