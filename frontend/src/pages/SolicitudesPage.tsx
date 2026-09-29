@@ -67,9 +67,9 @@ export const SolicitudesPage: React.FC = () => {
     aprobadas, que se llevan su contrato) y sobrevive al cambio de página; cambiar un filtro la limpia.
   */
   /** Lo que hace falta de cada seleccionada para las acciones masivas, sin volver a pedirla. */
-  type Elegida = { nombre: string; estado: string; cuit?: string | null; sinCuit?: boolean; empresaContratoId?: string | null; solicitudUserId?: string | null; obraSocial?: ObraSocialDeSolicitud | null };
+  type Elegida = { nombre: string; estado: string; cuit?: string | null; sinCuit?: boolean; empresaContratoId?: string | null; solicitudUserId?: string | null; personaId?: string; obraSocial?: ObraSocialDeSolicitud | null };
   const [seleccion, setSeleccion] = useState<Map<string, Elegida>>(new Map());
-  const elegidaDe = (r: Elegida): Elegida => ({ nombre: r.nombre, estado: r.estado, cuit: r.cuit, sinCuit: r.sinCuit, empresaContratoId: r.empresaContratoId, solicitudUserId: r.solicitudUserId, obraSocial: r.obraSocial });
+  const elegidaDe = (r: Elegida): Elegida => ({ nombre: r.nombre, estado: r.estado, cuit: r.cuit, sinCuit: r.sinCuit, empresaContratoId: r.empresaContratoId, solicitudUserId: r.solicitudUserId, personaId: r.personaId, obraSocial: r.obraSocial });
   /** Validar obras sociales: la lista de la corrida abierta (null = modal cerrado). */
   const [validandoOS, setValidandoOS] = useState<FilaObraSocial[] | null>(null);
   const [validandoNombres, setValidandoNombres] = useState(false);
@@ -375,13 +375,14 @@ export const SolicitudesPage: React.FC = () => {
   /*
     VALIDAR NOMBRES EN ARCA: el mismo `validarNombres` de Usuarios, sobre la selección.
 
-    Una solicitud es un usuario, así que se valida ella; si apunta a una persona que ya existía, esa
-    persona también (el contrato va a su nombre). Quien ya tiene el sello no se vuelve a consultar.
+    Se valida la PERSONA (`personaId`, que resuelve el server): la del contrato si ya está aprobada,
+    la que apunta la solicitud si es de la app, o la solicitud misma si no apunta a nadie. El CUIT que
+    se mira es el de ella. Quien ya tiene el sello no se vuelve a consultar.
   */
   const conCuit = [...seleccion.entries()].filter(([, x]) => !x.sinCuit && cuitEsValido(String(x.cuit || "")));
   const validarNombresSeleccion = async () => {
     if (!conCuit.length) return;
-    const ids = [...new Set(conCuit.flatMap(([id, x]) => [id, ...(x.solicitudUserId && x.solicitudUserId !== id ? [x.solicitudUserId] : [])]))];
+    const ids = [...new Set(conCuit.map(([id, x]) => x.personaId || id))];
     const ok = await sweetAlert.confirm(
       `¿Validar ${conCuit.length} ${conCuit.length === 1 ? "nombre" : "nombres"} con ARCA?`,
       "Se consulta el Padrón por cada CUIT y, si ARCA tiene otro nombre, se reemplaza por el del organismo. Es lo mismo que «Validar nombres en ARCA» de Usuarios.",
@@ -421,7 +422,7 @@ export const SolicitudesPage: React.FC = () => {
   const filaParaValidar = (x: Elegida): FilaObraSocial | null => {
     const os = x.obraSocial;
     if (x.estado !== "aprobada" || !os || os.estado !== "sin_constatar" || !os.empresaContratoId || !cuitEsValido(os.cuil)) return null;
-    return { id: os.contratoId, nombre: x.nombre, cuit: os.cuil, empresaId: os.empresaContratoId };
+    return { id: `${os.userId}:${os.contratoId}`, nombre: x.nombre, cuit: os.cuil, empresaId: os.empresaContratoId };
   };
   const aValidarOS = [...seleccion.values()].map(filaParaValidar).filter((f): f is FilaObraSocial => !!f);
   const validarObrasSocialesSeleccion = async () => {

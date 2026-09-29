@@ -81,6 +81,7 @@ export interface SolicitudVista {
    */
   reenviada?: { veces?: number; el?: string; motivoAnterior?: string } | null;
   /** Para «Validar en ARCA»: el nombre se valida por CUIT; la obra social, contra la empleadora. */
+  personaId?: string;
   cuit?: string | null;
   sinCuit?: boolean;
   nombreValidadoArcaAt?: string | null;

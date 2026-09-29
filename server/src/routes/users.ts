@@ -1414,24 +1414,22 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
       })
         .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl")
         .lean();
-      const personas = await User.find({ _id: { $in: [...new Set(ups.map((up: any) => String(up.userId)))] } })
-        .select("metadata.cuit")
-        .lean();
-      const cuitDe = new Map(personas.map((p: any) => [String(p._id), String(p.metadata?.cuit || "")]));
       const codigosOs = [...new Set(ups.flatMap((up: any) => (up.contracts || []).map((c: any) => c.obraSocialId)).filter((id: any) => id != null))];
       const obras = codigosOs.length ? await ObraSocial.find({ "data.id": { $in: codigosOs } }).select("externalId name data.id data.nombre").lean() : [];
       const obraDe = new Map(obras.map((o: any) => [Number(o.data?.id), o]));
       const pedidas = new Set(idsAprobadas.map(String));
       for (const up of ups as any[]) {
-        for (const c of up.contracts || []) {
+        for (const [i, c] of ((up.contracts || []) as any[]).entries()) {
           const sid = String(c.solicitudId || "");
           if (!pedidas.has(sid)) continue;
           const os = c.obraSocialId != null ? obraDe.get(Number(c.obraSocialId)) : null;
           obraSocialPorSolicitud.set(sid, {
             projectId: String(up.projectId),
             userId: String(up.userId),
-            contratoId: String(c._id || ""),
-            cuil: cuitDe.get(String(up.userId)) || "",
+            // Referencia para `PATCH …/contracts/:index/obra-social`: el `_id` del subdocumento si lo
+            // tiene y, si no (los contratos viejos no lo tienen), su posición en el array.
+            contratoId: c._id ? String(c._id) : String(i),
+            cuil: "", // se completa abajo, con la ficha de la persona
             empresaContratoId: c.empresaContratoId ? String(c.empresaContratoId) : null,
             empresaNombre: c.nombre_empresa_contrato || "",
             // Mismo criterio que `constatacion` de la grilla de Contratos (afipCompleteness).
@@ -1444,8 +1442,32 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
       }
     }
 
+    /*
+      LA PERSONA DE CADA SOLICITUD: a quien se valida en ARCA.
+
+      Una solicitud cargada desde la app es un usuario de paso sin CUIT que apunta a la persona real
+      (`solicitudUserId`), y al aprobarla el contrato va a la ficha de esa persona. El CUIT, el sello
+      del nombre y el CUIL de la obra social son de ELLA: leerlos de la solicitud dejaba a todas las
+      de la app sin «Validar en ARCA» (las 14 aprobadas del 28/09 no tenían CUIT en la solicitud; sus
+      14 personas, sí). La del contrato manda; si no hay contrato, la que apunta la solicitud; si no
+      apunta a nadie, la solicitud misma es la persona.
+    */
+    const personaDe = new Map<string, string>(
+      docs.map((u: any) => [String(u._id), obraSocialPorSolicitud.get(String(u._id))?.userId || (u.metadata?.solicitudUserId ? String(u.metadata.solicitudUserId) : String(u._id))]),
+    );
+    const otrasPersonas = [...new Set([...personaDe.entries()].filter(([sid, pid]) => sid !== pid && Types.ObjectId.isValid(pid)).map(([, pid]) => pid))];
+    const fichaDe = new Map<string, any>(docs.map((u: any) => [String(u._id), u.metadata || {}]));
+    if (otrasPersonas.length > 0) {
+      const personas = await User.find({ _id: { $in: otrasPersonas } }).select("metadata.cuit metadata.sinCuit metadata.nombreValidadoArcaAt").lean();
+      for (const p of personas as any[]) fichaDe.set(String(p._id), p.metadata || {});
+    }
+    for (const [sid, os] of obraSocialPorSolicitud) os.cuil = String(fichaDe.get(os.userId)?.cuit || fichaDe.get(sid)?.cuit || "");
+
     const rows = docs.map((u: any) => {
       const m = u.metadata || {};
+      const personaId = personaDe.get(String(u._id)) || String(u._id);
+      // Si la ficha de la persona no se encontró (borrada), queda lo que trae la solicitud.
+      const ficha = fichaDe.get(personaId) || m;
       const proyectos = (m.projectIds || [])
         .filter((p: any) => p && typeof p === "object")
         .map((p: any) => ({ _id: String(p._id), name: p.name || "", clienteId: p.clientId?._id ? String(p.clientId._id) : "", clienteNombre: p.clientId?.name || "" }));
@@ -1474,11 +1496,12 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         motivoRechazo: m.solicitudMotivoRechazo || null,
         // Renueva un contrato por vencer: la tabla la muestra con la etiqueta «Renovación».
         esRenovacion: !!m.esRenovacion,
-        // Lo que usa «Validar en ARCA» desde Solicitudes: el nombre contra el padrón (por CUIT) y la
-        // obra social de las aprobadas (por empleadora, que es contra quien se valida el RNOS).
-        cuit: m.cuit || null,
-        sinCuit: !!m.sinCuit,
-        nombreValidadoArcaAt: m.nombreValidadoArcaAt || null,
+        // Lo que usa «Validar en ARCA» desde Solicitudes, de la PERSONA (ver `personaDe`): el nombre
+        // contra el padrón (por CUIT) y la obra social de las aprobadas (por empleadora).
+        personaId,
+        cuit: ficha.cuit || m.cuit || null,
+        sinCuit: ficha.cuit ? false : !!(ficha.sinCuit ?? m.sinCuit),
+        nombreValidadoArcaAt: ficha.nombreValidadoArcaAt || null,
         empresaContratoId: m.empresaContratoId ? String(m.empresaContratoId) : null,
         // Sólo las aprobadas: la obra social del contrato que dejó su aprobación.
         obraSocial: obraSocialPorSolicitud.get(String(u._id)) || null,

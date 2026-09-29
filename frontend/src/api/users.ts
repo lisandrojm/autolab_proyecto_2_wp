@@ -243,6 +243,9 @@ export interface SolicitudOverviewRow {
   motivoRechazo?: string | null;
   /** Renueva un contrato por vencer (etiqueta «Renovación»). */
   esRenovacion?: boolean;
+  /** A quién se valida en ARCA: la persona del contrato, la que apunta la solicitud, o ella misma. */
+  personaId?: string;
+  /** CUIT, «sin CUIT» y sello del nombre son de esa PERSONA, no de la solicitud de paso. */
   cuit?: string | null;
   sinCuit?: boolean;
   /** Sello de «Validar nombres en ARCA»: el nombre ya se confirmó contra el padrón. */

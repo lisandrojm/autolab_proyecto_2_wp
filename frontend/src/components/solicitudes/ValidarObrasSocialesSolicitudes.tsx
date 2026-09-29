@@ -229,7 +229,7 @@ export const ObraSocialSolicitudCell: React.FC<{
       return (
         <button
           type="button"
-          onClick={() => onValidar({ id: os.contratoId, nombre, cuit: cuil, empresaId: String(os.empresaContratoId) })}
+          onClick={() => onValidar({ id: `${os.userId}:${os.contratoId}`, nombre, cuit: cuil, empresaId: String(os.empresaContratoId) })}
           disabled={ocupado}
           title={`Validar la obra social de este contrato contra ARCA${os.empresaNombre ? `, como empleada de ${os.empresaNombre}` : ""}.`}
           className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors whitespace-nowrap"
