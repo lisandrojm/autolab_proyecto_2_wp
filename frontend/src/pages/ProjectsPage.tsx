@@ -22,7 +22,7 @@ import { InfoModal } from '../components/ui/InfoModal';
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { SeleccionMultiple } from '../components/ui/SeleccionMultiple';
-import { sedesDelForm, nombresDeSedes, ordenarSedes, favoritasDeEmpresas, sedesParaElForm } from '../utils/sedesProyecto';
+import { sedesDelForm, nombresDeSedes, ordenarSedes, favoritasDeEmpresas, sedesParaElForm, opcionesDeSede, sedesPermitidas } from '../utils/sedesProyecto';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -774,12 +774,12 @@ export const ProjectsPage: React.FC = () => {
                 <SeleccionMultiple
                   label={<span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede *</span>}
                   titulo="Sedes"
-                  descripcion="la primera es la principal"
+                  descripcion={sedesPermitidas(formData.contratoEmpresas || [], companies) ? "las de la Empresa del Contrato · la primera es la principal" : "la primera es la principal"}
                   principal="Principal"
                   placeholder="Elegí una o más sedes…"
                   placeholderBusqueda="Buscar sede..."
                   vacio="No hay sedes cargadas."
-                  opciones={availableSedes.filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
+                  opciones={opcionesDeSede(availableSedes, formData.contratoEmpresas || [], companies, sedesDelForm(formData.metadata)).filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
                   valor={sedesDelForm(formData.metadata).map(String)}
                   onChange={(ids) => setFormData((p) => {
                     // Sin importar en qué orden se eligieron: primero la favorita de la empresa, después el orden general de Sedes.

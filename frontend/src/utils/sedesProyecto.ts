@@ -48,21 +48,42 @@ export const ordenarSedes = (ids: number[], catalogo: Array<{ name?: string; dat
   return [...new Set(ids)].sort((a, b) => fav(a) - fav(b) || orden(a) - orden(b) || String(info.get(a)?.name || "").localeCompare(String(info.get(b)?.name || ""), "es"));
 };
 
+type EmpresaConSedes = { _id: string; sedeIds?: number[]; sedeFavoritaId?: number | null };
+
 /**
- * Las sedes del formulario después de un cambio (de sedes o de Empresa del Contrato): ordenadas, y
- * con la favorita de la empresa PRESELECCIONADA si todavía no había ninguna sede elegida.
- *
- * Solo con el campo vacío: si alguien ya eligió sedes a mano, cambiar de empresa no le agrega una
- * por detrás.
+ * Qué sedes se pueden elegir en un proyecto: las de sus Empresas del Contrato (Configuración →
+ * Empresas → Sedes). `null` = sin restricción: todavía no se eligió empresa, o ninguna de las
+ * elegidas tiene sedes cargadas — ahí se ofrecen todas, para no dejar el campo sin opciones.
  */
-export const sedesParaElForm = (
-  sedeIds: number[],
-  empresaIds: string[],
-  companies: Array<{ _id: string; sedeFavoritaId?: number | null }>,
-  catalogo: Array<{ name?: string; data?: any }>,
-): { sedeIds: number[]; sedeId: number | undefined } => {
+export const sedesPermitidas = (empresaIds: string[], companies: EmpresaConSedes[]): number[] | null => {
+  const ids = new Set<number>();
+  for (const id of empresaIds) for (const s of companies.find((c) => String(c._id) === String(id))?.sedeIds || []) ids.add(Number(s));
+  return ids.size > 0 ? [...ids] : null;
+};
+
+/**
+ * Las opciones del campo Sede: las permitidas, en el orden general. Se suman las que el proyecto YA
+ * tiene elegidas aunque no sean de la empresa (proyectos de antes), para que se vean y se puedan quitar.
+ */
+export const opcionesDeSede = <T extends { name?: string; data?: any }>(catalogo: T[], empresaIds: string[], companies: EmpresaConSedes[], elegidas: number[]): T[] => {
+  const permitidas = sedesPermitidas(empresaIds, companies);
+  if (!permitidas) return catalogo;
+  const visibles = new Set([...permitidas, ...elegidas]);
+  return catalogo.filter((s) => visibles.has(Number(s?.data?.id)));
+};
+
+/**
+ * Las sedes del formulario después de cambiar la Empresa del Contrato: sin las que no son de la
+ * empresa, ordenadas, y con la favorita PRESELECCIONADA si no queda ninguna elegida.
+ *
+ * Si alguien ya eligió sedes de esa empresa, no se le agrega la favorita por detrás: solo se la
+ * pone primera si está entre las elegidas.
+ */
+export const sedesParaElForm = (sedeIds: number[], empresaIds: string[], companies: EmpresaConSedes[], catalogo: Array<{ name?: string; data?: any }>): { sedeIds: number[]; sedeId: number | undefined } => {
   const favoritas = favoritasDeEmpresas(empresaIds, companies);
-  const base = sedeIds.length > 0 ? sedeIds : favoritas.slice(0, 1);
+  const permitidas = sedesPermitidas(empresaIds, companies);
+  const validas = permitidas ? sedeIds.filter((id) => permitidas.includes(id)) : sedeIds;
+  const base = validas.length > 0 ? validas : favoritas.slice(0, 1);
   const ordenadas = ordenarSedes(base, catalogo, favoritas);
   return { sedeIds: ordenadas, sedeId: ordenadas[0] };
 };
