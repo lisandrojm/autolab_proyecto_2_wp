@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useThemeStore } from '../stores/themeStore';
 import { badgesDeValoracion, ChipValoracionDelProyecto, idValoracionDe, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
+import { ValoracionesPorRol } from '../components/proyectos/ValoracionesPorRol';
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
@@ -80,6 +81,7 @@ export const ProjectsPage: React.FC = () => {
     convenioIds: [] as string[],
     /* El margen (%) como texto mientras se edita; decide la valoración. */
     margen: '',
+    valoracionesPorRol: [] as Array<{ rolFrameId: number; contratoId?: string | null; valoracionId: string }>,
     releaseEmpresas: [] as string[],
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     metadata: {
@@ -230,6 +232,7 @@ export const ProjectsPage: React.FC = () => {
       contratoEmpresas: [] as string[],
       convenioIds: [] as string[],
       margen: '',
+      valoracionesPorRol: [] as Array<{ rolFrameId: number; contratoId?: string | null; valoracionId: string }>,
       releaseEmpresas: [] as string[],
       areasConfig: [],
       metadata: {
@@ -260,6 +263,7 @@ export const ProjectsPage: React.FC = () => {
       contratoEmpresas: project.contratoEmpresas || [],
       convenioIds: project.convenioIds || [],
       margen: project.margen == null ? '' : String(project.margen),
+      valoracionesPorRol: (project.valoracionesPorRol || []).map((x: any) => ({ rolFrameId: Number(x.rolFrameId), contratoId: x.contratoId ? String(x.contratoId?._id || x.contratoId) : null, valoracionId: String(x.valoracionId?._id || x.valoracionId) })),
       releaseEmpresas: project.releaseEmpresas || [],
       areasConfig: (project.areasConfig || []).map((ac: any) => ({
         areaId: typeof ac.areaId === 'string' ? ac.areaId : ac.areaId._id,
@@ -840,6 +844,8 @@ export const ProjectsPage: React.FC = () => {
             </div>
 
             <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} margen={formData.margen} onMargen={(v) => setFormData((p) => ({ ...p, margen: v }))} />
+
+            <ValoracionesPorRol className="pt-2" valoraciones={valoraciones} value={formData.valoracionesPorRol || []} onChange={(v) => setFormData((p) => ({ ...p, valoracionesPorRol: v }))} />
 
 
             <div className="grid grid-cols-2 gap-4">

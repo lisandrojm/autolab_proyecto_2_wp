@@ -91,6 +91,8 @@ export interface Project {
   valoracionId?: string | { _id: string; name?: string; color?: string } | null;
   /** La valoración la fijó una persona: el recálculo automático no la pisa. */
   valoracionManual?: boolean;
+  /** Excepciones por rol empresa + tipo de contrato («a este rol, con este contrato, siempre Oro»). Leer con `valoracionParaRol`. */
+  valoracionesPorRol?: Array<{ rolFrameId: number; contratoId?: string | null; valoracionId: string }>;
   assignedUsers?: string[] | any[];
   updatedAt: string;
   vacationConfig?: {
@@ -296,6 +298,9 @@ function normalizeProject(raw: any): Project {
     margen: typeof raw?.margen === "number" ? raw.margen : null,
     valoracionId: raw?.valoracionId ?? null,
     valoracionManual: raw?.valoracionManual === true,
+    valoracionesPorRol: Array.isArray(raw?.valoracionesPorRol)
+      ? raw.valoracionesPorRol.map((x: any) => ({ rolFrameId: Number(x?.rolFrameId), contratoId: x?.contratoId ? String(x.contratoId?._id || x.contratoId) : null, valoracionId: String(x?.valoracionId?._id || x?.valoracionId || "") }))
+      : [],
   };
 }
 
@@ -444,6 +449,7 @@ class ProjectsAPI {
          valoración por defecto (la resuelve el server). */
       valoracionId?: string;
       margen?: number | null;
+      valoracionesPorRol?: Array<{ rolFrameId: number; contratoId?: string | null; valoracionId: string }>;
     },
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {
@@ -547,6 +553,7 @@ class ProjectsAPI {
       margen?: number | null;
       valoracionId?: string | null;
       valoracionManual?: boolean;
+      valoracionesPorRol?: Array<{ rolFrameId: number; contratoId?: string | null; valoracionId: string }>;
       areasConfig?: {
         areaId: string;
         shiftIds: string[];

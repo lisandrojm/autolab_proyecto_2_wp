@@ -127,6 +127,13 @@ export interface IProject extends Document {
    * al editar cualquier otro campo sería peor que no tener cálculo automático.
    */
   valoracionManual?: boolean;
+  /**
+   * EXCEPCIONES POR ROL EMPRESA + TIPO DE CONTRATO: «en este proyecto, al Camarógrafo con contrato
+   * Jornada, siempre Oro», aunque el proyecto sea Plata. Deciden qué categorías se ofrecen al
+   * contratar con ese rol y ese tipo. No dependen del margen. `contratoId` vacío = cualquier tipo.
+   * Leer siempre con `valoracionParaRol` (`compartido/valoracionPorRol.ts`).
+   */
+  valoracionesPorRol?: Array<{ rolFrameId: number; contratoId?: Types.ObjectId | null; valoracionId: Types.ObjectId }>;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -207,6 +214,14 @@ const projectSchema = new Schema<IProject>(
     margen: { type: Number, default: null },
     valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
     valoracionManual: { type: Boolean, default: false },
+    valoracionesPorRol: [
+      {
+        _id: false,
+        rolFrameId: { type: Number, required: true },
+        contratoId: { type: Schema.Types.ObjectId, ref: "Contrato", default: null },
+        valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", required: true },
+      },
+    ],
     createdBy: { type: String, required: true },
 
     assignedUsers: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],

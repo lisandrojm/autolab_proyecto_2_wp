@@ -146,7 +146,7 @@ export function pedidosDe(plantilla: Plantilla, estado: EstadoContratar, catalog
       for (const x of puestosDe(plantilla, e)) {
         const id = x.puesto._id;
         if (x.efectivo.categoriaSatId || puntuales[id]?.categoriaSatId) continue;
-        const porDefecto = catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame);
+        const porDefecto = catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, x.efectivo.contratoId);
         if (porDefecto) puntuales[id] = { ...(puntuales[id] || {}), categoriaSatId: porDefecto };
       }
       return {

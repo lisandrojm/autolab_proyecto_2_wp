@@ -68,7 +68,7 @@ export default function DetallePuesto() {
     regla del alta individual, sin que nadie la elija. Se guarda porque acá se edita la base del
     puesto; al contratar, la misma regla se aplica al vuelo (ver `pedidosDe`).
   */
-  const categoriaPorDefecto = x && !x.efectivo.categoriaSatId && catalogos.categoriasCargadas ? catalogos.categoriaPorDefectoPara(proyecto, empresaDelEquipo, convenioDelEquipo, puesto?.rolesFrame || []) : "";
+  const categoriaPorDefecto = x && !x.efectivo.categoriaSatId && catalogos.categoriasCargadas ? catalogos.categoriaPorDefectoPara(proyecto, empresaDelEquipo, convenioDelEquipo, puesto?.rolesFrame || [], x?.efectivo.contratoId) : "";
   useEffect(() => {
     if (categoriaPorDefecto) void cambiar({ categoriaSatId: categoriaPorDefecto });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,7 +137,7 @@ export default function DetallePuesto() {
   const empresa = empresaDelEquipo;
   const convenio = convenioDelEquipo;
   // La oferta de categorías con la misma regla del alta individual: las del nivel del proyecto, y «ver todas» si no está la que se busca.
-  const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, verTodasDelConvenio, false);
+  const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, verTodasDelConvenio, false, x.efectivo.contratoId);
   const categoriaActual = categoriaDelPuesto || null;
   const diferencia = diferenciaContraEscala(escala, importe);
   /*

@@ -6,6 +6,7 @@ import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
 import { ChipValoracion, useValoraciones, useValoracionDelProyecto } from "../components/proyectos/ChipValoracion";
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from "../components/proyectos/CampoValoracion";
+import { ValoracionesPorRol } from "../components/proyectos/ValoracionesPorRol";
 import { shiftsAPI, Shift } from "../api/shifts";
 
 import { useAuthStore } from "../stores/authStore";
@@ -92,6 +93,7 @@ export const ProjectDetailPage: React.FC = () => {
     presupuesto: "",
     /* El margen, en porcentaje. Es lo que DECIDE la valoración; el presupuesto es contexto. */
     margen: "",
+    valoracionesPorRol: [] as Array<{ rolFrameId: number; contratoId?: string | null; valoracionId: string }>,
     turnos: [] as string[],
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     vacationConfig: {
@@ -139,6 +141,7 @@ export const ProjectDetailPage: React.FC = () => {
         targetAudience: data.targetAudience || "",
         presupuesto: data.presupuesto == null ? "" : String(data.presupuesto),
         margen: data.margen == null ? "" : String(data.margen),
+        valoracionesPorRol: (data.valoracionesPorRol || []).map((x: any) => ({ rolFrameId: Number(x.rolFrameId), contratoId: x.contratoId ? String(x.contratoId?._id || x.contratoId) : null, valoracionId: String(x.valoracionId?._id || x.valoracionId) })),
         turnos: (data.turnos || []).map((t: any) => (typeof t === "string" ? t : (t as any)._id)),
         areasConfig: (data.areasConfig || []).map((ac: any) => ({
           areaId: typeof ac.areaId === "string" ? ac.areaId : ac.areaId._id,
@@ -519,18 +522,20 @@ export const ProjectDetailPage: React.FC = () => {
                       const crudo = e.target.value.replace(",", ".").replace(/(?!^-)[^0-9.]/g, "");
                       const partes = crudo.split(".");
                       const nuevo = partes.length > 2 ? `${partes[0]}.${partes.slice(1).join("")}` : crudo;
-                      // Una valoración forzada no se mueve con el margen: se deshace solo con «Volver a automática».
                       setProjectForm((p) => ({ ...p, margen: nuevo }));
+                      // Cambiar el margen desfija la valoración forzada: vuelve a salir del margen (igual que el server).
+                      if (nuevo !== (project?.margen == null ? "" : String(project.margen))) setValoracionElegida("");
                     }}
                     className="input-field"
                     placeholder="Sin margen cargado"
                   />
                   <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    De acá sale la valoración del proyecto (salvo que esté forzada), y con ella qué categorías se ofrecen al armar un contrato. Por ahora se carga a mano; más adelante lo va a
+                    De acá sale la valoración del proyecto (si la forzaste, cambiar el margen la vuelve a la del margen), y con ella qué categorías se ofrecen al armar un contrato. Por ahora se carga a mano; más adelante lo va a
                     traer el presupuestador.
                   </p>
                 </div>
                 <CampoValoracion valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={project} margen={projectForm.margen} />
+                <ValoracionesPorRol className="pt-2" valoraciones={valoraciones} value={projectForm.valoracionesPorRol || []} onChange={(v) => setProjectForm((p) => ({ ...p, valoracionesPorRol: v }))} />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   <div>

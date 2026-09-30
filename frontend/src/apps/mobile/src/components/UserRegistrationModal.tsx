@@ -12,6 +12,7 @@ import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
 import { armarPayloadDeSolicitud } from "@compartido/solicitudDeContratacion";
+import { valoracionParaRoles } from "@compartido/valoracionPorRol";
 import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSuperposicion";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
@@ -1328,11 +1329,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     wizard, que sí trabaja contra UN proyecto y revalida contra el server— en vez de recortar con el
     criterio del primero de la lista, que sería adivinar.
   */
+  /*
+    Y la del ROL: el proyecto puede tener una excepción para el rol pedido («a este rol, siempre
+    Oro»). Con varios roles que rigen distinto, tampoco se filtra (`valoracionParaRoles`).
+  */
   const valoracionDelProyecto =
-    formData.projectIds.length === 1 && proyectoElegido?.valoracionId
-      ? typeof proyectoElegido.valoracionId === "object"
-        ? String((proyectoElegido.valoracionId as any)._id)
-        : String(proyectoElegido.valoracionId)
+    formData.projectIds.length === 1 && proyectoElegido
+      ? valoracionParaRoles(
+          proyectoElegido as any,
+          roleFrames.filter((rf) => formData.roleFrameIds.includes(rf._id)).map((rf) => rf.data?.rol?.id),
+          formData.contratoId,
+        )
       : "";
 
   const { categorias: categoriasOfrecidasLista, rolNoTieneCategoriasDelConvenio, ocultasPorValoracion, rolNoTieneCategoriasDeLaValoracion } = useMemo(

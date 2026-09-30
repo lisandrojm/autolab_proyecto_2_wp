@@ -10,8 +10,9 @@ import { resolverValoracion } from "@compartido/valoracionAutomatica";
  * Dos modos, y `valor` dice cuál:
  *   - `""` = AUTOMÁTICA: la del margen y, sin margen, la POR DEFECTO. Se MUESTRA mientras se escribe
  *     el margen, con la misma regla que aplica el server (`@compartido/valoracionAutomatica`).
- *   - un id = FORZADA A MANO, con un botón explícito. No depende del margen: cambiarlo no la mueve
- *     (pedido del usuario, 2026-09-30). Se deshace solo con «Volver a automática».
+ *   - un id = FORZADA A MANO, con un botón explícito. Vale para el margen de ese momento: si el
+ *     margen CAMBIA, vuelve sola a la automática (acá al escribirlo, y el server al guardarlo), y
+ *     para tenerla distinta hay que volver a forzarla.
  *
  * Las valoraciones se ven y se eligen como sus BADGES, con su color: un <select> no puede pintarlas.
  */
@@ -52,12 +53,25 @@ export const CampoValoracion: React.FC<{
   const margenNum = textoMargen.trim() === "" ? null : Number(textoMargen);
   const automatica = resolverValoracion(Number.isFinite(margenNum as number) ? margenNum : null, activas as any[]) as SimpleCatalogItem | null;
   const forzada = valor ? valoraciones.find((v) => v._id === valor) : undefined;
+  const margenGuardado = proyecto?.margen == null ? "" : String(proyecto.margen);
+  /** Se desforzó al cambiar el margen: se avisa, para que no parezca que se perdió sola. */
+  const [desforzada, setDesforzada] = useState(false);
+
+  // Cambiar el margen desfija la valoración forzada: vuelve a salir del margen (igual que el server).
+  const escribirMargen = (v: string) => {
+    onMargen?.(v);
+    if (valor && v !== margenGuardado) {
+      onChange("");
+      setDesforzada(true);
+    }
+  };
 
   // Una forzada que después se apagó sigue siendo la del proyecto: se ofrece para no borrarla sin querer.
   const opciones = actual && proyecto?.valoracionManual && actual.activo === false ? [...activas, actual] : activas;
 
   const forzar = (id: string) => {
     onChange(id);
+    setDesforzada(false);
     setForzando(false);
   };
 
@@ -75,7 +89,7 @@ export const CampoValoracion: React.FC<{
               onChange={(e) => {
                 const crudo = e.target.value.replace(",", ".").replace(/(?!^-)[^0-9.]/g, "");
                 const partes = crudo.split(".");
-                onMargen(partes.length > 2 ? `${partes[0]}.${partes.slice(1).join("")}` : crudo);
+                escribirMargen(partes.length > 2 ? `${partes[0]}.${partes.slice(1).join("")}` : crudo);
               }}
               placeholder="Sin margen"
               className="input-field py-2.5"
@@ -88,7 +102,7 @@ export const CampoValoracion: React.FC<{
             {forzada ? (
               <>
                 <ChipValoracion nombre={String(forzada.name)} color={String(forzada.color || "")} manual />
-                <span className="text-[11px] text-amber-700 dark:text-amber-400">Forzada a mano: no depende del margen.</span>
+                <span className="text-[11px] text-amber-700 dark:text-amber-400">Forzada a mano. Si cambiás el margen, vuelve a la del margen.</span>
                 <button type="button" onClick={() => setForzando(true)} className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                   Cambiar
                 </button>
@@ -99,7 +113,10 @@ export const CampoValoracion: React.FC<{
             ) : (
               <>
                 {automatica ? <ChipValoracion nombre={String(automatica.name)} color={String(automatica.color || "")} /> : <ChipSinValorar />}
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">{margenNum == null ? "Sin margen: la valoración por defecto." : `Según el margen (${textoMargen}%).`}</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {margenNum == null ? "Sin margen: la valoración por defecto." : `Según el margen (${textoMargen}%).`}
+                  {desforzada && <span className="text-amber-700 dark:text-amber-400"> Cambiaste el margen: la forzada se quitó. Forzala de nuevo si la querés distinta.</span>}
+                </span>
                 {!forzando && (
                   <button type="button" onClick={() => setForzando(true)} className="ml-auto inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
                     Forzar valoración
@@ -118,7 +135,7 @@ export const CampoValoracion: React.FC<{
       {forzando && (
         <div className="mt-2 rounded-lg border border-amber-200 dark:border-amber-800/70 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5 space-y-2">
           <p className="text-[11.5px] text-amber-800 dark:text-amber-300">
-            <strong>Estás forzando la valoración.</strong> Queda fija en la que elijas, sin importar el margen: aunque el margen cambie, el proyecto sigue en esta valoración hasta que vuelvas a la automática. Decide qué categorías se ofrecen al contratar.
+            <strong>Estás forzando la valoración.</strong> Queda la que elijas en lugar de la que da el margen, y decide qué categorías se ofrecen al contratar. Vale para el margen actual: si después cambiás el margen, vuelve a la del margen y hay que volver a forzarla.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {opciones.map((v) => (

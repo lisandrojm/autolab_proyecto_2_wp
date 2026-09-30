@@ -14,6 +14,8 @@ import { Client } from "../models/Client.js";
 import { Valoracion } from "../models/Valoracion.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { valoracionParaMargen } from "../services/valoracionDelTenant.js";
+import { valoracionParaRol, normalizarValoracionesPorRol } from "../compartido/valoracionPorRol.js";
+import { ContratoFrame } from "../models/ContratoFrame.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
 import { CentroCosto } from "../models/CentroCosto.js";
@@ -298,6 +300,13 @@ const createProjectSchema = z.object({
   margen: z.number().nullable().optional(),
   valoracionId: z.string().nullable().optional(),
   valoracionManual: z.boolean().optional(),
+  /** Excepciones por rol empresa + tipo de contrato: «a este rol, con este contrato, siempre Oro». Reemplaza la lista. */
+  valoracionesPorRol: z
+    .array(z.object({ rolFrameId: z.coerce.number(), contratoId: z.string().nullable().optional(), valoracionId: z.string() }))
+    .optional()
+    .transform((v) =>
+      v === undefined ? undefined : normalizarValoracionesPorRol(v).filter((x) => Types.ObjectId.isValid(x.valoracionId) && (!x.contratoId || Types.ObjectId.isValid(x.contratoId))),
+    ),
   assignedUsers: z.array(z.string()).optional(),
   vacationConfig: z
     .object({
@@ -453,7 +462,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
         // `valoracionId`/`valoracionManual`: la solicitud del móvil FILTRA las categorías por la valoración del
         // proyecto y muestra su tag. Sin estos dos campos ese filtro no se aplicaba nunca —se ofrecían todas las
         // categorías, de cualquier nivel— y el tag decía «sin valorar» en un proyecto que sí lo estaba.
-        .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId valoracionId valoracionManual")
+        .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId valoracionId valoracionManual valoracionesPorRol")
         .populate("clientId", "name")
         .populate("coordinatorAssignments.areaId", "name")
         .populate("coordinatorAssignments.shiftId", "name startTime endTime order days")
@@ -1340,6 +1349,9 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
       }
     }
 
+    // El margen de antes: si cambia, la valoración vuelve al cálculo automático (ver abajo).
+    const margenAntes = currentProject.margen ?? null;
+
     // Apply updates to currentProject
     Object.assign(currentProject, updateData);
 
@@ -1373,9 +1385,10 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
       diga Plata, y que eso se revierta solo al editar el nombre sería peor que no tener cálculo
       automático.
 
-      CAMBIAR EL MARGEN TAMPOCO LA DESFIJA (pedido del usuario, 2026-09-30; antes, desde el
-      2026-09-25, sí la desfijaba). Forzarla es una decisión que no tiene que ver con el margen: se
-      hace con un botón explícito y se deshace solo con «Volver a automática» (`valoracionManual: false`).
+      CAMBIAR EL MARGEN SÍ LA DESFIJA (pedido del usuario, 2026-09-25, confirmado el 2026-09-30): lo
+      forzado vale para el margen de ese momento; con un margen nuevo, el nivel vuelve a salir del
+      margen, y quien lo quiera distinto lo tiene que volver a forzar. Salvo que en el mismo pedido se
+      fuerce una valoración: eso es alguien eligiéndola con el margen nuevo a la vista.
 
       Es el margen y no el presupuesto: un proyecto grande con margen flaco no puede pagar las
       categorías caras.
@@ -1388,7 +1401,8 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
     if (pidieronValoracion) {
       currentProject.valoracionManual = true;
     }
-    const vuelveAlAutomatico = updateData.valoracionManual === false;
+    const cambioElMargen = updateData.margen !== undefined && (updateData.margen ?? null) !== margenAntes;
+    const vuelveAlAutomatico = updateData.valoracionManual === false || (cambioElMargen && !pidieronValoracion);
     if (!currentProject.valoracionManual || vuelveAlAutomatico) {
       currentProject.valoracionId = (await valoracionParaMargen(req.tenantObjectId!, currentProject.margen)) as any;
       currentProject.valoracionManual = false;
@@ -1639,9 +1653,26 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
  * Sólo aplica con las dos puntas: proyecto valorado Y la función valoró esa categoría. Si falta
  * cualquiera, no hay nada que contrastar y pasa como siempre (el modo permisivo del despliegue).
  */
-const revisarValoracion = async (args: { valoracionProyecto: unknown; rolFrameId: unknown; categoriaSatId: unknown; motivo?: unknown }) => {
+/**
+ * EL TIPO DE CONTRATO (`Contrato._id`) DE UN CONTRATO, para las excepciones de valoración por rol.
+ *
+ * El contrato guardado no tiene el `_id` del Contrato: tiene la PLANTILLA (`nombre_contrato`, y su
+ * `data.id` en `tipo_contrato_id`), y la plantilla apunta al Contrato (`ContratoFrame.contratoId`).
+ * En el alta el wizard lo manda directo (`contrato_id`), y se usa ese. `""` = no se pudo saber: rige
+ * la excepción sin tipo, o la del proyecto.
+ */
+const contratoIdDeContrato = async (c: any): Promise<string> => {
+  if (c?.contrato_id && Types.ObjectId.isValid(String(c.contrato_id))) return String(c.contrato_id);
+  const porNombre = c?.nombre_contrato ? await ContratoFrame.findOne({ name: c.nombre_contrato }).select("contratoId").lean() : null;
+  const plantilla: any = porNombre || (c?.tipo_contrato_id != null && c.tipo_contrato_id !== "" ? await ContratoFrame.findOne({ "data.id": Number(c.tipo_contrato_id) }).select("contratoId").lean() : null);
+  return plantilla?.contratoId ? String(plantilla.contratoId) : "";
+};
+
+const revisarValoracion = async (args: { proyecto: { valoracionId?: unknown; valoracionesPorRol?: any[] | null } | null | undefined; rolFrameId: unknown; contratoId?: unknown; categoriaSatId: unknown; motivo?: unknown }) => {
   const motivo = String(args.motivo || "").trim();
-  const delProyectoId = args.valoracionProyecto ? String(args.valoracionProyecto) : "";
+  // La del ROL (y su tipo de contrato) en este proyecto: su excepción si la tiene, si no la del proyecto.
+  const delProyectoId = valoracionParaRol(args.proyecto, args.rolFrameId, args.contratoId);
+  const esExcepcionDelRol = delProyectoId !== "" && delProyectoId !== (args.proyecto?.valoracionId ? String((args.proyecto.valoracionId as any)?._id || args.proyecto.valoracionId) : "");
 
   const rolId = Number(args.rolFrameId);
   const catId = Number(args.categoriaSatId);
@@ -1665,7 +1696,9 @@ const revisarValoracion = async (args: { valoracionProyecto: unknown; rolFrameId
     const [delProyecto, deLaCategoria] = await Promise.all([Valoracion.findById(delProyectoId).select("name").lean(), Valoracion.findById(deLaCategoriaId).select("name").lean()]);
     return {
       rechazo: {
-        error: `La categoría es de valoración «${(deLaCategoria as any)?.name || "?"}» y el proyecto es «${(delProyecto as any)?.name || "?"}». Si corresponde igual, hay que elegirla a mano y dejar el motivo.`,
+        error: esExcepcionDelRol
+          ? `La categoría es de valoración «${(deLaCategoria as any)?.name || "?"}» y en este proyecto ese rol, con ese tipo de contrato, va siempre «${(delProyecto as any)?.name || "?"}». Si corresponde igual, hay que elegirla a mano y dejar el motivo.`
+          : `La categoría es de valoración «${(deLaCategoria as any)?.name || "?"}» y el proyecto es «${(delProyecto as any)?.name || "?"}». Si corresponde igual, hay que elegirla a mano y dejar el motivo.`,
         valoracionProyecto: (delProyecto as any)?.name || null,
         valoracionCategoria: (deLaCategoria as any)?.name || null,
         funcion: nombreFuncion,
@@ -1708,16 +1741,18 @@ const revisarValoracion = async (args: { valoracionProyecto: unknown; rolFrameId
 router.get("/projects/:projectId/contratos-desalineados", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { projectId } = req.params;
-    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("name valoracionId").lean();
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("name valoracionId valoracionesPorRol").lean();
     if (!project) {
       res.status(404).json({ error: "Project not found" });
       return;
     }
 
     const delProyecto = (project as any).valoracionId ? String((project as any).valoracionId) : "";
-    // Sin valoración en el proyecto no hay contra qué comparar: no es que esté todo alineado, es que
-    // la pregunta no aplica. Se dice explícitamente en vez de contestar una lista vacía.
-    if (!delProyecto) {
+    /** Hay roles con su propia valoración: cada contrato se compara con la de SU rol (`valoracionParaRol`). */
+    const conExcepciones = ((project as any).valoracionesPorRol || []).length > 0;
+    // Sin valoración en el proyecto (ni por rol) no hay contra qué comparar: no es que esté todo
+    // alineado, es que la pregunta no aplica. Se dice explícitamente en vez de contestar una lista vacía.
+    if (!delProyecto && !conExcepciones) {
       res.json({ proyecto: (project as any).name, valoracionProyecto: null, sinValorar: true, contratos: [] });
       return;
     }
@@ -1733,26 +1768,38 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
       otro no — justo el caso de una renovación.
     */
     const [ups, valoraciones] = await Promise.all([
-      UserProject.find({ projectId, contracts: { $elemMatch: { valoracion_id: { $nin: [null, new Types.ObjectId(delProyecto)] } } } })
+      /*
+        Con excepciones por rol, un contrato de la valoración del PROYECTO también puede estar
+        desalineado (su rol va con otra), así que el filtro fino se hace abajo, por rol. La consulta
+        sigue trayendo solo las columnas de la tabla.
+      */
+      UserProject.find({ projectId, contracts: { $elemMatch: { valoracion_id: conExcepciones || !delProyecto ? { $ne: null } : { $nin: [null, new Types.ObjectId(delProyecto)] } } } })
         .select(
-          "userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato",
+          "userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.rol_frame_id contracts.nombre_contrato contracts.tipo_contrato_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato",
         )
         .lean(),
       Valoracion.find({ tenantId: req.tenantObjectId }).select("name color").lean(),
     ]);
     const nombreValoracion = new Map((valoraciones as any[]).map((v) => [String(v._id), String(v.name)]));
+    // El tipo de contrato de cada contrato sale de su plantilla (ver `contratoIdDeContrato`); acá en
+    // lote, una sola lectura de plantillas, y solo si hay excepciones que lo necesiten.
+    const plantillas: any[] = conExcepciones ? await ContratoFrame.find({}).select("name data.id contratoId").lean() : [];
+    const contratoPorNombre = new Map(plantillas.filter((f) => f.contratoId).map((f) => [String(f.name), String(f.contratoId)]));
+    const contratoPorDataId = new Map(plantillas.filter((f) => f.contratoId && f.data?.id != null).map((f) => [String(f.data.id), String(f.contratoId)]));
+    const tipoDe = (c: any) => contratoPorNombre.get(String(c?.nombre_contrato || "")) || contratoPorDataId.get(String(c?.tipo_contrato_id ?? "")) || "";
 
     // Primero se arma la lista y DESPUÉS se buscan los nombres, sólo de los que quedaron en ella: ver
     // el comentario de la búsqueda al revés, más abajo.
-    const desalineados: Array<{ up: any; contrato: any; indice: number; delContrato: string }> = [];
+    const desalineados: Array<{ up: any; contrato: any; indice: number; delContrato: string; delRol: string }> = [];
     for (const up of ups as any[]) {
       (up.contracts || []).forEach((c: any, indice: number) => {
         const delContrato = c?.valoracion_id ? String(c.valoracion_id) : "";
         // Un contrato SIN valoración no está desalineado: es anterior a la feature, o su función no
         // estaba valorada. Marcarlo como problema sería inventar trabajo sobre datos que nunca se
         // pidieron.
-        if (!delContrato || delContrato === delProyecto) return;
-        desalineados.push({ up, contrato: c, indice, delContrato });
+        const delRol = valoracionParaRol(project as any, c?.rol_frame_id, conExcepciones ? tipoDe(c) : "");
+        if (!delContrato || !delRol || delContrato === delRol) return;
+        desalineados.push({ up, contrato: c, indice, delContrato, delRol });
       });
     }
 
@@ -1790,7 +1837,7 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
       }
     }
 
-    const contratos = desalineados.map(({ up, contrato: c, indice, delContrato }) => ({
+    const contratos = desalineados.map(({ up, contrato: c, indice, delContrato, delRol }) => ({
       // El UserProject siempre existe; el `userId`, no (ver arriba). Es lo que identifica la fila.
       userProjectId: String(up._id),
       userId: up.userId ? String(up.userId) : null,
@@ -1803,7 +1850,8 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
       // El nombre GUARDADO en el contrato primero: es el que regía cuando se firmó, y puede
       // diferir del actual si la valoración se renombró.
       valoracionContrato: c.nombre_valoracion || nombreValoracion.get(delContrato) || "",
-      valoracionProyecto: nombreValoracion.get(delProyecto) || "",
+      // La que rige para SU rol en este proyecto (la del proyecto, o la excepción del rol).
+      valoracionProyecto: nombreValoracion.get(delRol) || "",
       conOverride: !!c.valoracionOverride?.motivo,
       motivoOverride: (c.valoracionOverride?.motivo as string | undefined) || null,
     }));
@@ -1870,7 +1918,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       falta cualquiera de las dos, no hay nada que contrastar y el alta pasa como siempre (es el modo
       permisivo con el que esto se despliega).
     */
-    const veredicto = await revisarValoracion({ valoracionProyecto: project.valoracionId, rolFrameId: contract.rol_frame_id, categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
+    const veredicto = await revisarValoracion({ proyecto: project as any, rolFrameId: contract.rol_frame_id, contratoId: await contratoIdDeContrato(contract), categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
     if (veredicto.rechazo) return res.status(422).json(veredicto.rechazo);
     Object.assign(contract, veredicto.aGuardar(req.user!.userId));
 
@@ -3057,10 +3105,11 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
 
       El motivo viaja en el body igual que en el wizard; sin él, 422.
     */
-    const proyectoConValoracion = await Project.findById(projectId).select("valoracionId").lean();
+    const proyectoConValoracion = await Project.findById(projectId).select("valoracionId valoracionesPorRol").lean();
     const veredicto = await revisarValoracion({
-      valoracionProyecto: (proyectoConValoracion as any)?.valoracionId,
+      proyecto: proyectoConValoracion as any,
       rolFrameId: contrato.rol_frame_id,
+      contratoId: await contratoIdDeContrato(contrato),
       categoriaSatId: categoriaSatId,
       motivo: req.body?.valoracionOverride?.motivo,
     });

@@ -84,11 +84,11 @@ export const aContratacion = (pestana: "plantillas" | "historial" = "plantillas"
  * LA CATEGORÍA DE CADA PUESTO EN UN EQUIPO: la del nivel del proyecto de ESE equipo (Plata, Oro…), con
  * la misma regla del alta individual. Como el grupo sirve en cualquier proyecto, se calcula por equipo.
  */
-export function categoriasDelNivel(catalogos: CatalogosContratacion, proyecto: Project | null, empresaId: string | null | undefined, convenioId: string | null | undefined, puestos: Pick<Puesto, "_id" | "rolesFrame">[]): Record<string, string> {
+export function categoriasDelNivel(catalogos: CatalogosContratacion, proyecto: Project | null, empresaId: string | null | undefined, convenioId: string | null | undefined, puestos: Array<Pick<Puesto, "_id" | "rolesFrame"> & { contratoId?: string | null }>): Record<string, string> {
   const r: Record<string, string> = {};
   if (!proyecto || !empresaId) return r;
   for (const p of puestos) {
-    const cat = catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId || "", p.rolesFrame.slice(0, 1));
+    const cat = catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId || "", p.rolesFrame.slice(0, 1), p.contratoId);
     if (cat) r[p._id] = cat;
   }
   return r;

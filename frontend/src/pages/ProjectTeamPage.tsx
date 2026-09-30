@@ -55,7 +55,8 @@ import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
-import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
+import { ChipValoracion, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
+import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
 import { cachedFetch } from '../utils/refCache';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { LinkSiPuede } from '../components/LinkSiPuede';
@@ -1247,6 +1248,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     }
   };
 
+  /*
+    LA VALORACIÓN QUE RIGE PARA EL ROL Y EL TIPO DE CONTRATO ELEGIDOS: la del proyecto, salvo que el
+    proyecto tenga una excepción para esa combinación («Camarógrafo con Jornada, siempre Oro»). Es la que filtra las categorías, la que elige
+    la por defecto y contra la que se pide motivo — lo mismo que revalida el server.
+  */
+  const valoracionProyectoId = valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
+  const rolConValoracionPropia = !!excepcionDelRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
+  const valoracionDelRol = useMemo(() => {
+    const v = valoraciones.find((x) => String(x._id) === valoracionProyectoId);
+    return v ? { nombre: String(v.name), color: String(v.color || '') } : null;
+  }, [valoraciones, valoracionProyectoId]);
   const conveniosDisponibles = useMemo(() => conveniosOfrecidos({ codigosEmpleadora: conveniosDeLaEmpleadora, convenioElegido: convenioFiltro, categorias: allCategoriasSat, convenios: allConvenios }), [conveniosDeLaEmpleadora, convenioFiltro, allCategoriasSat, allConvenios]);
   const {
     categorias: availableCategoriasSat,
@@ -1266,11 +1278,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         categorias: allCategoriasSat,
         verTodasDelConvenio,
         categoriaElegidaId: wizardData.categoria_sat_id,
-        // La del PROYECTO: es la que define qué categorías corresponden a este trabajo.
-        valoracionProyecto: project?.valoracionId ? (typeof project.valoracionId === 'object' ? String((project.valoracionId as any)._id) : String(project.valoracionId)) : '',
+        // La del ROL en este proyecto (la del proyecto, o su excepción): define qué categorías corresponden.
+        valoracionProyecto: valoracionProyectoId,
         verTodasLasValoraciones,
       }),
-    [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio, project?.valoracionId, verTodasLasValoraciones],
+    [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio, valoracionProyectoId, verTodasLasValoraciones],
   );
 
   /*
@@ -1284,7 +1296,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     Se decide igual que en el server (`revisarValoracion`): por la valoración de la categoría EN
     ESTA FUNCIÓN, que es donde se carga. Una categoría sin valorar no está desalineada.
   */
-  const valoracionProyectoId = idValoracionDe(project?.valoracionId);
   const categoriaElegidaDeOtraValoracion = useMemo(() => {
     if (!valoracionProyectoId || !wizardData.categoria_sat_id) return false;
     const rol = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
@@ -4258,8 +4269,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                 {coincide
                                   ? `coincide con la valoración del proyecto${delMismoNivel > 1 ? ` · la función tiene ${delMismoNivel} de este nivel, revisá que sea la correcta` : ''}`
                                   : rolNoTieneCategoriasDeLaValoracion
-                                    ? `la función no tiene categorías ${valoracionDelProyecto?.nombre || 'de la valoración del proyecto'}: ésta difiere y hay que explicar por qué`
-                                    : `difiere de la valoración del proyecto (${valoracionDelProyecto?.nombre || 'otra'})`}
+                                    ? `la función no tiene categorías ${valoracionDelRol?.nombre || 'de la valoración del proyecto'}: ésta difiere y hay que explicar por qué`
+                                    : `difiere de ${rolConValoracionPropia ? 'la valoración de este rol en el proyecto' : 'la valoración del proyecto'} (${valoracionDelRol?.nombre || 'otra'})`}
                               </span>
                             ) : (
                               <span className="text-gray-500 dark:text-gray-400">el proyecto no está valorado</span>
@@ -4314,9 +4325,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                       {/* El modo permisivo, dicho: sin esto parece que el filtro no anduvo. Nueva
                       pestaña para no perder lo cargado en el formulario. */}
-                      {rolSinValorar && valoracionDelProyecto && (
+                      {rolSinValorar && valoracionDelRol && (
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                          La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» todavía no tiene categorías valoradas: se ofrecen todas, sin filtrar por la valoración del proyecto ({valoracionDelProyecto.nombre}). Para que se ofrezca y se elija sola la de {valoracionDelProyecto.nombre},{' '}
+                          La función «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» todavía no tiene categorías valoradas: se ofrecen todas, sin filtrar por la valoración {rolConValoracionPropia ? 'de este rol en el proyecto' : 'del proyecto'} ({valoracionDelRol.nombre}). Para que se ofrezca y se elija sola la de {valoracionDelRol.nombre},{' '}
                           {puedeAbrir('/roles-empresa') ? (
                             <a href="/roles-empresa" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
                               valorala en Roles Empresa
@@ -4339,7 +4350,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                       {(verTodasLasValoraciones || categoriaElegidaDeOtraValoracion) && (
                         <div className="ml-1 mt-1 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/30">
-                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">{categoriaElegidaDeOtraValoracion ? `La categoría elegida no es de la valoración del proyecto${valoracionDelProyecto ? ` (${valoracionDelProyecto.nombre})` : ''}: contá por qué.` : 'Estás viendo categorías de otras valoraciones.'}</p>
+                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">{categoriaElegidaDeOtraValoracion ? `La categoría elegida no es de ${rolConValoracionPropia ? 'la valoración de este rol en el proyecto' : 'la valoración del proyecto'}${valoracionDelRol ? ` (${valoracionDelRol.nombre})` : ''}: contá por qué.` : 'Estás viendo categorías de otras valoraciones.'}</p>
                           {/* El motivo es OBLIGATORIO y lo exige el server (422 sin él): un salteo sin
                           explicación es justo lo que después nadie puede reconstruir. */}
                           <input type="text" value={motivoValoracion} onChange={(e) => setMotivoValoracion(e.target.value)} maxLength={200} placeholder="Motivo (obligatorio si elegís una de otra valoración)" className="mt-1.5 w-full rounded border border-amber-300 bg-white px-2 py-1 text-[11px] text-gray-800 dark:border-amber-800 dark:bg-gray-900 dark:text-gray-100" />

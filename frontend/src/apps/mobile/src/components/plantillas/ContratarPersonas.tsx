@@ -277,7 +277,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   */
   const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, equipo);
   // Sin categoría en el puesto, rige la del nivel del proyecto (la misma que manda `pedidosDe`): ya viene elegida.
-  const categoriaPorDefecto = x.efectivo.categoriaSatId ? "" : catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame);
+  const categoriaPorDefecto = x.efectivo.categoriaSatId ? "" : catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, x.efectivo.contratoId);
   const base = {
     contratoId: estado.contratoId || x.efectivo.contratoId || "",
     inTime: x.efectivo.inTime || "",
@@ -290,7 +290,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const contratoDoc = catalogos.contratos.find((c) => c._id === contratoRige) as any;
   const indeterminado = !!contratoDoc?.data?.esTiempoIndeterminado;
   const esServicios = (catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit";
-  const oferta = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, verTodasDelConvenio, false);
+  const oferta = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, verTodasDelConvenio, false, x.efectivo.contratoId);
   const categoriaIdActual = d.categoriaSatId ?? base.categoriaSatId;
   const categoriaActual = catalogos.categoriasSat.find((c) => c._id === categoriaIdActual) || null;
   const cct = catalogos.cctDeConvenio(convenioId);

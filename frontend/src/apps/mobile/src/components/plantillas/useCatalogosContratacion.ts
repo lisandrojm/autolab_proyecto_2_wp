@@ -13,6 +13,7 @@ import { idValoracionDe, useValoraciones } from "../../../../../components/proye
 import { TipoImpositivo, tipoImpositivoDeContrato } from "../../../../../utils/tramiteImpositivo";
 import { claveOrdenTurno, textoDeDias } from "../../../../../utils/jerarquiaTurnos";
 import { useProfile } from "../../hooks/useProfile";
+import { valoracionParaRoles } from "@compartido/valoracionPorRol";
 
 /*
   LOS CATÁLOGOS DE LA CONTRATACIÓN, para las plantillas de equipo.
@@ -183,7 +184,15 @@ export function useCatalogosContratacion(activo = true) {
    * que el formulario individual. Devuelve los documentos del catálogo (`_id`), que es lo que se guarda.
    * Por defecto, sólo las de la valoración del proyecto; con `verTodasLasValoraciones`, todas.
    */
-  const categoriasPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[], verTodasDelConvenio = false, verTodasLasValoraciones = false) => {
+  /** La valoración que rige para esos roles (`_id` de RoleFrame) y ese tipo de contrato en el proyecto. Ver `valoracionParaRoles`. */
+  const valoracionDeRoles = (proyecto: Project | null | undefined, rolesFrameIds: string[], contratoId?: string | null) =>
+    valoracionParaRoles(
+      proyecto as any,
+      roleFrames.filter((rf) => rolesFrameIds.includes(rf._id)).map((rf) => rf.data?.rol?.id),
+      contratoId,
+    );
+
+  const categoriasPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[], verTodasDelConvenio = false, verTodasLasValoraciones = false, contratoId?: string | null) => {
     const r = categoriasOfrecidas({
       rolesFrame: roleFrames.filter((rf) => rolesFrameIds.includes(rf._id)),
       convenioElegido: cctDeConvenio(convenioId),
@@ -191,7 +200,8 @@ export function useCatalogosContratacion(activo = true) {
       categorias: categoriasSat,
       verTodasDelConvenio,
       verTodasLasValoraciones,
-      valoracionProyecto: idValoracionDe(proyecto?.valoracionId),
+      // La que rige para ESTOS roles en el proyecto: la del proyecto, o la excepción del rol.
+      valoracionProyecto: valoracionDeRoles(proyecto, rolesFrameIds, contratoId),
     });
     const porDataId = new Map(categoriasSat.map((c) => [String(c.data?.id), c]));
     // El nivel (Oro, Plata…) de cada categoría EN ESA FUNCIÓN, por `_id` del documento. Sale de las
@@ -219,10 +229,10 @@ export function useCatalogosContratacion(activo = true) {
    * Plata de la función) con la MISMA regla del alta individual (`categoriaPorDefecto`). `""` si el dato
    * no alcanza para decidir (sin empresa, sin categorías o ninguna valorada).
    */
-  const categoriaPorDefectoPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[]) => {
+  const categoriaPorDefectoPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[], contratoId?: string | null) => {
     if (!empresaId || !rolesFrameIds.length) return "";
-    const r = categoriasPara(proyecto, empresaId, convenioId, rolesFrameIds, false, true);
-    const elegida = categoriaPorDefecto({ categorias: r.categorias, valoracionProyecto: idValoracionDe(proyecto?.valoracionId), niveles: valoraciones.map((v) => ({ _id: String(v._id), orden: Number((v as any).orden) })) });
+    const r = categoriasPara(proyecto, empresaId, convenioId, rolesFrameIds, false, true, contratoId);
+    const elegida = categoriaPorDefecto({ categorias: r.categorias, valoracionProyecto: valoracionDeRoles(proyecto, rolesFrameIds, contratoId), niveles: valoraciones.map((v) => ({ _id: String(v._id), orden: Number((v as any).orden) })) });
     if (!elegida) return "";
     return categoriasSat.find((c) => String(c.data?.id) === elegida.id)?._id || "";
   };
