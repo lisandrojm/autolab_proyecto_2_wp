@@ -7,6 +7,9 @@ import { companiesAPI, Company, CompanyInput } from '../../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { infoAPI, InfoItem } from '../../api/info';
+import { SeleccionMultiple } from '../ui/SeleccionMultiple';
+import { ordenarSedes } from '../../utils/sedesProyecto';
 
 const conveniosApi = createSimpleCatalogApi('/convenios');
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
@@ -29,6 +32,8 @@ export const EMPTY_COMPANY_FORM: CompanyInput = {
   convenioIds: [],
   sucursalIds: [],
   obrasSocialesIds: [],
+  sedeIds: [],
+  sedeFavoritaId: null,
 };
 
 /** Los datos de una empresa, en la forma que espera el formulario. */
@@ -50,6 +55,8 @@ export const companyAForm = (c: Company): CompanyInput => ({
   convenioIds: (c.convenioIds || []).map((x) => String(x)),
   sucursalIds: (c.sucursalIds || []).map((x) => String(x)),
   obrasSocialesIds: (c.obrasSocialesIds || []).map((x) => String(x)),
+  sedeIds: (c.sedeIds || []).map(Number),
+  sedeFavoritaId: c.sedeFavoritaId ?? null,
 });
 
 /**
@@ -78,6 +85,7 @@ export const EmpresaFormModal: React.FC<Props> = ({ isOpen, onClose, empresa, on
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   const [sucursales, setSucursales] = useState<ArcaSucursal[]>([]);
+  const [sedes, setSedes] = useState<InfoItem[]>([]);
   // Un flag por catálogo: cada selector avisa que está cargando en vez de mostrarse vacío, que se
   // lee como «no hay ninguno» justo mientras se está pidiendo.
   const [cargandoConvenios, setCargandoConvenios] = useState(false);
@@ -111,7 +119,25 @@ export const EmpresaFormModal: React.FC<Props> = ({ isOpen, onClose, empresa, on
       .then(setSucursales)
       .catch(() => setSucursales([]))
       .finally(() => setCargandoSucursales(false));
+    // Ya vienen en el orden general de Sedes.
+    void infoAPI
+      .listSedes()
+      .then(setSedes)
+      .catch(() => setSedes([]));
   }, [isOpen]);
+
+  const nombreDeSede = (id: number) => {
+    const s = sedes.find((x) => Number(x.data?.id) === id);
+    return s?.name || s?.data?.nombre || `Sede ${id}`;
+  };
+  /** Las sedes elegidas, siempre en el orden general (no en el que se fueron eligiendo). */
+  const cambiarSedes = (ids: string[]) =>
+    setForm((prev) => {
+      const sedeIds = ordenarSedes(ids.map(Number), sedes);
+      // Si se sacó la favorita de la lista, deja de ser favorita (el server hace lo mismo).
+      const sedeFavoritaId = prev.sedeFavoritaId != null && sedeIds.includes(Number(prev.sedeFavoritaId)) ? prev.sedeFavoritaId : null;
+      return { ...prev, sedeIds, sedeFavoritaId };
+    });
 
   const setField = (key: keyof CompanyInput, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -228,6 +254,38 @@ export const EmpresaFormModal: React.FC<Props> = ({ isOpen, onClose, empresa, on
         <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</h4>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Cuáles de las sucursales del padrón le corresponden a esta empresa. Los datos de cada una (código, domicilio, actividades) se cargan en Configuración → ARCA → Sucursales.</p>
         <SucursalSelector sucursales={sucursales} cargando={cargandoSucursales} value={form.sucursalIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, sucursalIds: ids }))} />
+      </div>
+
+      {/*
+        Sedes de la empresa y su FAVORITA. La favorita es la que aparece preseleccionada en el campo
+        Sede de un proyecto al elegir esta empresa como Empresa del Contrato, y queda primera (la
+        principal) por encima del orden general de Sedes.
+      */}
+      <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+        <SeleccionMultiple
+          label={<h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sedes</h4>}
+          titulo="Sedes de la empresa"
+          placeholder="Elegí las sedes con las que trabaja…"
+          placeholderBusqueda="Buscar sede..."
+          vacio="No hay sedes cargadas."
+          opciones={sedes.filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
+          valor={(form.sedeIds || []).map(String)}
+          onChange={cambiarSedes}
+        />
+        {(form.sedeIds || []).length > 0 && (
+          <div className="mt-3 max-w-sm">
+            <label className={labelClass}>Sede favorita</label>
+            <select className={inputClass} value={form.sedeFavoritaId ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, sedeFavoritaId: e.target.value ? Number(e.target.value) : null }))}>
+              <option value="">Ninguna — se usa el orden general de Sedes</option>
+              {(form.sedeIds || []).map((id) => (
+                <option key={id} value={id}>
+                  {nombreDeSede(Number(id))}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Se preselecciona en el proyecto al elegir esta empresa como Empresa del Contrato.</p>
+          </div>
+        )}
       </div>
 
       {/* Representante legal */}

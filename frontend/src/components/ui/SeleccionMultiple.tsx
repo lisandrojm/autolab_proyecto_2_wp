@@ -12,7 +12,8 @@ import { fuzzyMatch } from "../../utils/searchHelpers";
   Empresa del contrato en el formulario de proyecto.
 
   El ORDEN importa donde hay uno principal (la sede: el primero es el que precarga el alta de
-  contratos): se respeta el orden en que se fueron eligiendo.
+  contratos). Acá se agrega al final lo que se va eligiendo; quien usa el componente puede reordenar
+  en su `onChange` (las sedes del proyecto se ordenan con `ordenarSedes`).
 */
 export interface OpcionSeleccion {
   id: string;

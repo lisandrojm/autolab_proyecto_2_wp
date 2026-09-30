@@ -198,6 +198,14 @@ export interface ICompany extends Document {
    * el otro caso —tres oficinas, tres túneles— sin tener que rehacer nada: vacío usa `TANGO_API_URL`.
    */
   tangoApiUrl?: string;
+  /**
+   * Sedes con las que trabaja esta empresa: `data.id` de las Info type:sede, como `Project.metadata.sedeIds`.
+   *
+   * `sedeFavoritaId` es la que se preselecciona —y queda principal— en el proyecto al elegir esta
+   * empresa como Empresa del Contrato. Está por encima del orden general de Sedes, que decide el resto.
+   */
+  sedeIds?: number[];
+  sedeFavoritaId?: number | null;
 }
 
 const companySchema = new Schema<ICompany>(
@@ -225,6 +233,8 @@ const companySchema = new Schema<ICompany>(
     obraSocialDefaultId: { type: Number },
     convenioIds: [{ type: Schema.Types.ObjectId, ref: 'Convenio' }],
     sucursalIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaSucursal' }],
+    sedeIds: [{ type: Number }],
+    sedeFavoritaId: { type: Number, default: null },
     tipoServicioIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaTipoServicio' }],
     grupoTipoServicioIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaGrupoTipoServicio' }],
     modalidadContratacionIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaModalidadContratacion' }],

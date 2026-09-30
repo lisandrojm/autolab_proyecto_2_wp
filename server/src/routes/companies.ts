@@ -46,6 +46,13 @@ const companySchema = z.object({
   /** Ids del catálogo de Sucursales de ARCA. Se manda la lista completa: reemplaza la anterior. */
   sucursalIds: z.array(z.string()).optional(),
   /**
+   * Sedes con las que trabaja esta empresa (`data.id` de las Info type:sede). Reemplaza la lista.
+   * `sedeFavoritaId` es la que se preselecciona en el proyecto al elegir esta empresa; tiene que
+   * estar en `sedeIds` (ver `normalizar`).
+   */
+  sedeIds: z.array(z.number()).optional(),
+  sedeFavoritaId: z.number().nullable().optional(),
+  /**
    * Qué actividades declaró ESTA empleadora en cada domicilio. Reemplaza la lista.
    *
    * Una fila con `actividades: []` significa «ninguna declarada acá», y es distinto de no tener
@@ -147,6 +154,11 @@ const revisarDefaultsArca = (data: Record<string, any>): string | null => {
 const normalizar = (data: Record<string, any>): Record<string, any> => {
   const { obraSocialId, ...resto } = data;
   if (obraSocialId !== undefined && resto.obraSocialDefaultId === undefined) resto.obraSocialDefaultId = obraSocialId;
+  // La favorita tiene que ser una de sus sedes: si se la sacó de la lista, deja de ser favorita.
+  if (Array.isArray(resto.sedeIds)) {
+    resto.sedeIds = [...new Set(resto.sedeIds.map(Number).filter((n: number) => Number.isFinite(n) && n > 0))];
+    if (resto.sedeFavoritaId != null && !resto.sedeIds.includes(Number(resto.sedeFavoritaId))) resto.sedeFavoritaId = null;
+  }
   return resto;
 };
 
@@ -163,7 +175,7 @@ const normalizar = (data: Record<string, any>): Record<string, any> => {
 
   Es opt-in a propósito: quien no lo pide sigue recibiendo la ficha completa, como siempre.
 */
-const CAMPOS_SLIM = "razonSocial cuit convenioIds";
+const CAMPOS_SLIM = "razonSocial cuit convenioIds sedeIds sedeFavoritaId";
 
 router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
   try {

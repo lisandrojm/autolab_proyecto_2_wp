@@ -21,7 +21,7 @@ import { InfoModal } from '../components/ui/InfoModal';
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { SeleccionMultiple } from '../components/ui/SeleccionMultiple';
-import { sedesDelForm, nombresDeSedes } from '../utils/sedesProyecto';
+import { sedesDelForm, nombresDeSedes, ordenarSedes, favoritasDeEmpresas, sedesParaElForm } from '../utils/sedesProyecto';
 import { getImageUrl } from '../utils/imageHelpers';
 import { badgesDeValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { useThemeStore } from '../stores/themeStore';
@@ -530,7 +530,11 @@ export const ClientProjectsPage: React.FC = () => {
                   vacio="No hay sedes cargadas."
                   opciones={availableSedes.filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
                   valor={sedesDelForm(formData.metadata).map(String)}
-                  onChange={(ids) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, sedeIds: ids.map(Number), sedeId: ids.length ? Number(ids[0]) : undefined } }))}
+                  onChange={(ids) => setFormData((p) => {
+                    // Sin importar en qué orden se eligieron: primero la favorita de la empresa, después el orden general de Sedes.
+                    const orden = ordenarSedes(ids.map(Number), availableSedes, favoritasDeEmpresas(p.contratoEmpresas || [], companies));
+                    return { ...p, metadata: { ...p.metadata, sedeIds: orden, sedeId: orden[0] } };
+                  })}
                 />
                       </div>
 
@@ -572,7 +576,7 @@ export const ClientProjectsPage: React.FC = () => {
                     </span>
                   }
                   titulo="Empresa del Contrato"
-                  companies={companies} value={formData.contratoEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids }))}
+                  companies={companies} value={formData.contratoEmpresas} onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids, metadata: { ...p.metadata, ...sedesParaElForm(sedesDelForm(p.metadata), ids, companies, availableSedes) } }))}
                 />
                       </div>
 

@@ -129,6 +129,11 @@ class InfoAPI {
     return data;
   }
 
+  /** Guarda el orden general de las sedes (el de todos los listados y el de las sedes de un proyecto). */
+  async reorderSedes(items: { id: string; orden: number }[]): Promise<void> {
+    await axios.patch(`/info/sede/reorder`, { items });
+  }
+
   async deleteSede(id: string): Promise<void> {
     await axios.delete(`/info/sede/${id}`);
   }

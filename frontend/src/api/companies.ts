@@ -42,6 +42,9 @@ export interface Company {
    * Sucursales, donde vive todo el dato (código, domicilio, actividades). Acá solo se eligen.
    */
   sucursalIds?: string[];
+  /** Sedes con las que trabaja esta empresa (`data.id` de la sede), y la que se preselecciona en el proyecto. */
+  sedeIds?: number[];
+  sedeFavoritaId?: number | null;
   /**
    * Los nomencladores UNIVERSALES que esta empleadora usa. VACÍO SIGNIFICA «TODOS», no «ninguno».
    *

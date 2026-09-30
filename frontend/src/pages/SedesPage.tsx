@@ -3,7 +3,7 @@ import { infoAPI, InfoItem } from "../api/info";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { faBuilding, faTable, faGrip, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faBuilding, faTable, faGrip, faPlus, faEdit, faTrash, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -116,6 +116,44 @@ export const SedesPage: React.FC = () => {
     }
   };
 
+  /**
+   * EL ORDEN GENERAL DE LAS SEDES. Es el de todos los listados y el de las sedes de un proyecto (la
+   * primera es la principal), salvo la favorita de la Empresa del Contrato, que va primero.
+   *
+   * Solo sin búsqueda: con la lista filtrada, «subir» movería la sede respecto de otra que no se ve.
+   */
+  const mover = async (indice: number, delta: -1 | 1) => {
+    const destino = indice + delta;
+    if (searchTerm || destino < 0 || destino >= sedes.length) return;
+    const nuevas = [...sedes];
+    [nuevas[indice], nuevas[destino]] = [nuevas[destino], nuevas[indice]];
+    const conOrden = nuevas.map((s, i) => ({ ...s, data: { ...(s.data || {}), orden: i + 1 } }));
+    const anteriores = sedes;
+    setSedes(conOrden);
+    try {
+      await infoAPI.reorderSedes(conOrden.map((s) => ({ id: s._id, orden: s.data.orden })));
+    } catch (e: any) {
+      setSedes(anteriores);
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar el orden.");
+    }
+  };
+
+  /** Las flechas de orden. Apagadas con búsqueda (ver `mover`). */
+  const flechas = (sede: InfoItem) => {
+    const i = sedes.findIndex((s) => s._id === sede._id);
+    const titulo = searchTerm ? "Borrá la búsqueda para cambiar el orden" : undefined;
+    return (
+      <div className="flex items-center gap-0.5">
+        <button onClick={() => mover(i, -1)} disabled={!!searchTerm || i <= 0} title={titulo || "Subir"} aria-label={`Subir ${sede.name}`} className="p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+          <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5" />
+        </button>
+        <button onClick={() => mover(i, 1)} disabled={!!searchTerm || i >= sedes.length - 1} title={titulo || "Bajar"} aria-label={`Bajar ${sede.name}`} className="p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+          <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  };
+
   const eliminar = async (sede: InfoItem) => {
     const result = await sweetAlert.confirm("¿Eliminar sede?", `Se va a eliminar "${sede.name}". Si viene de la sincronización de FRAME, puede volver a aparecer en la próxima sync.`);
     if (!result.isConfirmed) return;
@@ -189,6 +227,7 @@ export const SedesPage: React.FC = () => {
                   <span className="text-[11px] text-gray-500 dark:text-gray-400">ID Interno: {sede.data?.id ?? "N/A"}</span>
                 </div>
                 <div className="flex items-center gap-1">
+                  {flechas(sede)}
                   <button onClick={() => abrirEditar(sede)} title="Editar sede" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
                     <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                   </button>
@@ -206,6 +245,7 @@ export const SedesPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">Orden</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Interno</th>
@@ -215,6 +255,12 @@ export const SedesPage: React.FC = () => {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                 {filteredSedes.map((sede) => (
                   <tr key={sede._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-mono text-gray-500 dark:text-gray-400 w-5 text-right">{sedes.findIndex((s) => s._id === sede._id) + 1}</span>
+                        {flechas(sede)}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <FontAwesomeIcon icon={faBuilding} className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
