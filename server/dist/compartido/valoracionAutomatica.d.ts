@@ -17,17 +17,15 @@
  * proyecto, que la muestra mientras se escribe el margen (alias `@compartido`, como `jornadas.ts`).
  * Una sola implementación: dos copias de una regla comercial se desincronizan solas.
  */
-
 /** Lo mínimo que hace falta de una valoración para resolver. Evita atar esto al documento de Mongoose. */
 export interface ValoracionParaResolver {
-  _id: unknown;
-  orden?: number | null;
-  margenDesde?: number | null;
-  margenHasta?: number | null;
-  esDefault?: boolean;
-  activo?: boolean;
+    _id: unknown;
+    orden?: number | null;
+    margenDesde?: number | null;
+    margenHasta?: number | null;
+    esDefault?: boolean;
+    activo?: boolean;
 }
-
 /**
  * La valoración que corresponde, o `null` si no hay ninguna aplicable.
  *
@@ -45,26 +43,4 @@ export interface ValoracionParaResolver {
  * `null` en un extremo es ABIERTO (sin mínimo / sin techo), distinto de 0, que es un margen válido:
  * trabajar sin ganancia.
  */
-export function resolverValoracion<T extends ValoracionParaResolver>(margen: number | null | undefined, valoraciones: T[]): T | null {
-  const activas = (valoraciones || []).filter((v) => v.activo !== false);
-  if (activas.length === 0) return null;
-
-  // Por `orden`, y las que no lo tienen al final: sin un criterio estable, dos rangos que se tocaran
-  // darían resultados distintos según cómo los devolvió la base.
-  const porOrden = [...activas].sort((a, b) => (a.orden ?? Number.MAX_SAFE_INTEGER) - (b.orden ?? Number.MAX_SAFE_INTEGER));
-
-  const valor = typeof margen === "number" && Number.isFinite(margen) ? margen : null;
-  if (valor !== null) {
-    const enRango = porOrden.find((v) => {
-      const desde = v.margenDesde ?? Number.NEGATIVE_INFINITY;
-      const hasta = v.margenHasta ?? Number.POSITIVE_INFINITY;
-      // Una valoración SIN rango (los dos extremos nulos) no compite por ningún margen: es la
-      // default o no es nada. Sin este corte se comería todos por ser un rango infinito.
-      if (v.margenDesde == null && v.margenHasta == null) return false;
-      return valor >= desde && valor < hasta;
-    });
-    if (enRango) return enRango;
-  }
-
-  return porOrden.find((v) => v.esDefault === true) || null;
-}
+export declare function resolverValoracion<T extends ValoracionParaResolver>(margen: number | null | undefined, valoraciones: T[]): T | null;

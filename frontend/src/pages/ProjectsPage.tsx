@@ -20,9 +20,9 @@ import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
+import { SedesDelProyecto } from '../components/proyectos/SedesDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
-import { SeleccionMultiple } from '../components/ui/SeleccionMultiple';
-import { sedesDelForm, nombresDeSedes, ordenarSedes, favoritasDeEmpresas, sedesParaElForm, opcionesDeSede, sedesPermitidas } from '../utils/sedesProyecto';
+import { sedesDelForm, nombresDeSedes, sedesParaElForm } from '../utils/sedesProyecto';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -768,53 +768,6 @@ export const ProjectsPage: React.FC = () => {
               <textarea value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del proyecto..." />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
-              <div>
-                {/* Varias sedes, como los roles empresa: la primera es la principal (precarga el alta de contratos). */}
-                <SeleccionMultiple
-                  label={<span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede *</span>}
-                  titulo="Sedes"
-                  descripcion={sedesPermitidas(formData.contratoEmpresas || [], companies) ? "las de la Empresa del Contrato · la primera es la principal" : "la primera es la principal"}
-                  principal="Principal"
-                  placeholder="Elegí una o más sedes…"
-                  placeholderBusqueda="Buscar sede..."
-                  vacio="No hay sedes cargadas."
-                  opciones={opcionesDeSede(availableSedes, formData.contratoEmpresas || [], companies, sedesDelForm(formData.metadata)).filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
-                  valor={sedesDelForm(formData.metadata).map(String)}
-                  onChange={(ids) => setFormData((p) => {
-                    // Sin importar en qué orden se eligieron: primero la favorita de la empresa, después el orden general de Sedes.
-                    const orden = ordenarSedes(ids.map(Number), availableSedes, favoritasDeEmpresas(p.contratoEmpresas || [], companies));
-                    return { ...p, metadata: { ...p.metadata, sedeIds: orden, sedeId: orden[0] } };
-                  })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
-                {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                <SelectorCentroCosto required valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                Coordinador del Proyecto
-                <button type="button" onClick={() => setShowResponsableInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
-                  <FontAwesomeIcon icon={faInfoCircle} />
-                </button>
-              </label>
-              <select className="input-field py-2.5" required value={formData.metadata?.responsableId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, responsableId: idOpcional(e.target.value) } }))}>
-                <option value="">Seleccionar del sistema...</option>
-                {availableCoordinators.map((c) => (
-                  <option key={c._id} value={c.metadata?.id}>
-                    {c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} margen={formData.margen} onMargen={(v) => setFormData((p) => ({ ...p, margen: v }))} />
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
               <div>
                 <CompanyMultiSelect
@@ -855,6 +808,39 @@ export const ProjectsPage: React.FC = () => {
                 <ConveniosDelProyecto companies={companies as any} empresasContrato={formData.contratoEmpresas} value={formData.convenioIds} onChange={(ids) => setFormData((p) => ({ ...p, convenioIds: ids }))} />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+              <div>
+                {/* Varias sedes, como los roles empresa: la primera es la principal (precarga el alta de contratos). */}
+                <SedesDelProyecto sedes={availableSedes} companies={companies} empresasContrato={formData.contratoEmpresas || []} metadata={formData.metadata} onChange={(sedes) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, ...sedes } }))} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
+                {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
+                <SelectorCentroCosto required valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                Coordinador del Proyecto
+                <button type="button" onClick={() => setShowResponsableInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
+                  <FontAwesomeIcon icon={faInfoCircle} />
+                </button>
+              </label>
+              <select className="input-field py-2.5" required value={formData.metadata?.responsableId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, responsableId: idOpcional(e.target.value) } }))}>
+                <option value="">Seleccionar del sistema...</option>
+                {availableCoordinators.map((c) => (
+                  <option key={c._id} value={c.metadata?.id}>
+                    {c.firstName} {c.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <CampoValoracion className="pt-2" valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={modalMode === 'edit' ? editingProject : null} margen={formData.margen} onMargen={(v) => setFormData((p) => ({ ...p, margen: v }))} />
+
 
             <div className="grid grid-cols-2 gap-4">
               <div>

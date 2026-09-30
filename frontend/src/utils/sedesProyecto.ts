@@ -51,24 +51,23 @@ export const ordenarSedes = (ids: number[], catalogo: Array<{ name?: string; dat
 type EmpresaConSedes = { _id: string; sedeIds?: number[]; sedeFavoritaId?: number | null };
 
 /**
- * Qué sedes se pueden elegir en un proyecto: las de sus Empresas del Contrato (Configuración →
- * Empresas → Sedes). `null` = sin restricción: todavía no se eligió empresa, o ninguna de las
- * elegidas tiene sedes cargadas — ahí se ofrecen todas, para no dejar el campo sin opciones.
+ * Qué sedes se pueden elegir en un proyecto: las de sus Empresas del Contrato (Empresas → ficha →
+ * Sedes). `null` = todavía no se eligió empresa; `[]` = las elegidas no tienen sedes asociadas.
  */
 export const sedesPermitidas = (empresaIds: string[], companies: EmpresaConSedes[]): number[] | null => {
+  if (empresaIds.length === 0) return null;
   const ids = new Set<number>();
   for (const id of empresaIds) for (const s of companies.find((c) => String(c._id) === String(id))?.sedeIds || []) ids.add(Number(s));
-  return ids.size > 0 ? [...ids] : null;
+  return [...ids];
 };
 
 /**
- * Las opciones del campo Sede: las permitidas, en el orden general. Se suman las que el proyecto YA
- * tiene elegidas aunque no sean de la empresa (proyectos de antes), para que se vean y se puedan quitar.
+ * Las opciones del campo Sede: las de la Empresa del Contrato, en el orden general. Se suman las que
+ * el proyecto YA tiene elegidas aunque no sean de la empresa (proyectos de antes), para que se vean y
+ * se puedan quitar. Sin empresa, ninguna más que esas.
  */
 export const opcionesDeSede = <T extends { name?: string; data?: any }>(catalogo: T[], empresaIds: string[], companies: EmpresaConSedes[], elegidas: number[]): T[] => {
-  const permitidas = sedesPermitidas(empresaIds, companies);
-  if (!permitidas) return catalogo;
-  const visibles = new Set([...permitidas, ...elegidas]);
+  const visibles = new Set([...(sedesPermitidas(empresaIds, companies) || []), ...elegidas]);
   return catalogo.filter((s) => visibles.has(Number(s?.data?.id)));
 };
 
@@ -82,7 +81,8 @@ export const opcionesDeSede = <T extends { name?: string; data?: any }>(catalogo
 export const sedesParaElForm = (sedeIds: number[], empresaIds: string[], companies: EmpresaConSedes[], catalogo: Array<{ name?: string; data?: any }>): { sedeIds: number[]; sedeId: number | undefined } => {
   const favoritas = favoritasDeEmpresas(empresaIds, companies);
   const permitidas = sedesPermitidas(empresaIds, companies);
-  const validas = permitidas ? sedeIds.filter((id) => permitidas.includes(id)) : sedeIds;
+  // Sin empresa no hay sedes que ofrecer: la sede depende de la Empresa del Contrato.
+  const validas = permitidas ? sedeIds.filter((id) => permitidas.includes(id)) : [];
   const base = validas.length > 0 ? validas : favoritas.slice(0, 1);
   const ordenadas = ordenarSedes(base, catalogo, favoritas);
   return { sedeIds: ordenadas, sedeId: ordenadas[0] };

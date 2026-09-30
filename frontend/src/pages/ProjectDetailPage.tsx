@@ -17,9 +17,9 @@ import { ValoracionProyecto } from "../components/proyectos/ValoracionProyecto";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { InfoModal } from "../components/ui/InfoModal";
 import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
+import { SedesDelProyecto } from '../components/proyectos/SedesDelProyecto';
 import { CompanyMultiSelect } from "../components/CompanyMultiSelect";
-import { SeleccionMultiple } from "../components/ui/SeleccionMultiple";
-import { sedesDelForm, nombresDeSedes, ordenarSedes, favoritasDeEmpresas, sedesParaElForm, opcionesDeSede, sedesPermitidas } from "../utils/sedesProyecto";
+import { sedesDelForm, nombresDeSedes, sedesParaElForm } from "../utils/sedesProyecto";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -519,71 +519,18 @@ export const ProjectDetailPage: React.FC = () => {
                       const crudo = e.target.value.replace(",", ".").replace(/(?!^-)[^0-9.]/g, "");
                       const partes = crudo.split(".");
                       const nuevo = partes.length > 2 ? `${partes[0]}.${partes.slice(1).join("")}` : crudo;
+                      // Una valoración forzada no se mueve con el margen: se deshace solo con «Volver a automática».
                       setProjectForm((p) => ({ ...p, margen: nuevo }));
-                      // Cambiar el margen desfija la valoración: vuelve a salir del margen (igual que el server).
-                      if (nuevo !== (project?.margen == null ? "" : String(project.margen))) setValoracionElegida("");
                     }}
                     className="input-field"
                     placeholder="Sin margen cargado"
                   />
                   <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    De acá sale la valoración del proyecto, y con ella qué categorías se ofrecen al armar un contrato. Se recalcula al guardar. Por ahora se carga a mano; más adelante lo va a
+                    De acá sale la valoración del proyecto (salvo que esté forzada), y con ella qué categorías se ofrecen al armar un contrato. Por ahora se carga a mano; más adelante lo va a
                     traer el presupuestador.
                   </p>
                 </div>
-                <CampoValoracion valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={project} />
-
-                <div className="grid grid-cols-1 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
-                  <div>
-                    {/* Varias sedes, como los roles empresa: la primera es la principal (precarga el alta de contratos). */}
-                <SeleccionMultiple
-                  label={<span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede *</span>}
-                  titulo="Sedes"
-                  descripcion={sedesPermitidas(projectForm.contratoEmpresas || [], companies) ? "las de la Empresa del Contrato · la primera es la principal" : "la primera es la principal"}
-                  principal="Principal"
-                  placeholder="Elegí una o más sedes…"
-                  placeholderBusqueda="Buscar sede..."
-                  vacio="No hay sedes cargadas."
-                  opciones={opcionesDeSede(availableSedes, projectForm.contratoEmpresas || [], companies, sedesDelForm(projectForm.metadata)).filter((s) => s.data?.id != null).map((s) => ({ id: String(s.data.id), nombre: s.name || s.data?.nombre || `Sede ${s.data.id}` }))}
-                  valor={sedesDelForm(projectForm.metadata).map(String)}
-                  onChange={(ids) => setProjectForm((p) => {
-                    // Sin importar en qué orden se eligieron: primero la favorita de la empresa, después el orden general de Sedes.
-                    const orden = ordenarSedes(ids.map(Number), availableSedes, favoritasDeEmpresas(p.contratoEmpresas || [], companies));
-                    return { ...p, metadata: { ...p.metadata, sedeIds: orden, sedeId: orden[0] } };
-                  })}
-                />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
-                    {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} empresaTangoId={projectForm.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    Coordinador del Proyecto
-                    <button 
-                      type="button"
-                      onClick={() => setShowResponsableInfo(true)}
-                      className="text-blue-500 hover:text-blue-600 transition-colors"
-                    >
-                      <FontAwesomeIcon icon={faInfoCircle} />
-                    </button>
-                  </label>
-                  <select
-                    className="input-field py-2.5"
-                    required
-                    value={projectForm.metadata?.responsableId || ""}
-                    onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, responsableId: idOpcional(e.target.value) } }))}
-                  >
-                    <option value="">Seleccionar del sistema...</option>
-                    {availableCoordinators.map(c => (
-                      <option key={c._id} value={c.metadata?.id}>{c.firstName} {c.lastName}</option>
-                    ))}
-                  </select>
-                </div>
+                <CampoValoracion valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={project} margen={projectForm.margen} />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   <div>
@@ -625,6 +572,44 @@ export const ProjectDetailPage: React.FC = () => {
                     <ConveniosDelProyecto companies={companies as any} empresasContrato={projectForm.contratoEmpresas} value={projectForm.convenioIds} onChange={(ids) => setProjectForm((p) => ({ ...p, convenioIds: ids }))} />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+                  <div>
+                    {/* Varias sedes, como los roles empresa: la primera es la principal (precarga el alta de contratos). */}
+                <SedesDelProyecto sedes={availableSedes} companies={companies} empresasContrato={projectForm.contratoEmpresas || []} metadata={projectForm.metadata} onChange={(sedes) => setProjectForm((p) => ({ ...p, metadata: { ...p.metadata, ...sedes } }))} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
+                    {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
+                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} empresaTangoId={projectForm.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    Coordinador del Proyecto
+                    <button 
+                      type="button"
+                      onClick={() => setShowResponsableInfo(true)}
+                      className="text-blue-500 hover:text-blue-600 transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faInfoCircle} />
+                    </button>
+                  </label>
+                  <select
+                    className="input-field py-2.5"
+                    required
+                    value={projectForm.metadata?.responsableId || ""}
+                    onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, responsableId: idOpcional(e.target.value) } }))}
+                  >
+                    <option value="">Seleccionar del sistema...</option>
+                    {availableCoordinators.map(c => (
+                      <option key={c._id} value={c.metadata?.id}>{c.firstName} {c.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
