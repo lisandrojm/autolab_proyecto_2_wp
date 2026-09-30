@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
 import { useAuthStore } from '../stores/authStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faInfoCircle, faLandmark, faFileContract, faChevronDown, faChevronRight, faBriefcaseMedical, faLocationDot, faListCheck, faSliders, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
+import { faInfoCircle, faLandmark, faFileContract, faBuilding, faChevronDown, faChevronRight, faBriefcaseMedical, faLocationDot, faListCheck, faSliders, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 
 /**
  * Nav del contexto Empresa, gemelo de [ClientContextMenu].
@@ -73,6 +73,8 @@ export const EmpresaContextMenu: React.FC = () => {
   const items = [
     { path: base, icon: faInfoCircle, label: 'Información', exact: true },
     { path: `${base}/contratos`, icon: faFileContract, label: 'Contratos' },
+    // Sus sedes y la ★ por defecto, que se preselecciona en el proyecto.
+    { path: `${base}/sedes`, icon: faBuilding, label: 'Sedes' },
   ];
 
   // Un solo permiso para todo el contexto: es la misma entidad Empresa que ya se administra en

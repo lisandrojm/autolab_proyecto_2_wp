@@ -80,6 +80,7 @@ import { EmpresasPage } from "./pages/EmpresasPage";
 import { EmpresaInfoPage } from "./pages/empresa/EmpresaInfoPage";
 import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaGruposTipoServicioPage, EmpresaTiposServicioPage, EmpresaModalidadContratacionPage, EmpresaModalidadLiquidacionPage } from "./pages/empresa/EmpresaArcaPages";
 import { EmpresaContratosPage } from "./pages/empresa/EmpresaContratosPage";
+import { EmpresaSedesPage } from "./pages/empresa/EmpresaSedesPage";
 import { MembretesPage } from "./pages/MembretesPage";
 import { ContratosFramePage } from "./pages/ContratosFramePage";
 
@@ -836,6 +837,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EmpresaModalidadLiquidacionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/sedes"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaSedesPage />
                   </ProtectedRoute>
                 }
               />
