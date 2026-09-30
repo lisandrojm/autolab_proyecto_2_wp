@@ -533,13 +533,7 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
                 <CampoValoracion valoraciones={valoraciones} valor={valoracionElegida} onChange={setValoracionElegida} proyecto={project} />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
-                    {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
-                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} empresaTangoId={projectForm.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
-                  </div>
-
+                <div className="grid grid-cols-1 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   <div>
                     {/* Varias sedes, como los roles empresa: la primera es la principal (precarga el alta de contratos). */}
                 <SeleccionMultiple
@@ -554,6 +548,12 @@ export const ProjectDetailPage: React.FC = () => {
                   valor={sedesDelForm(projectForm.metadata).map(String)}
                   onChange={(ids) => setProjectForm((p) => ({ ...p, metadata: { ...p.metadata, sedeIds: ids.map(Number), sedeId: ids.length ? Number(ids[0]) : undefined } }))}
                 />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
+                    {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
+                    <SelectorCentroCosto required valor={projectForm.metadata?.centroCostoId} empresaTangoId={projectForm.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
                   </div>
                 </div>
 
