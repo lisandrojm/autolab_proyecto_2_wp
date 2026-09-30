@@ -55,7 +55,8 @@ import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
-import { ChipValoracion, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
+import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
+import { SelectorCategoria } from '../components/contratos/SelectorCategoria';
 import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
 import { cachedFetch } from '../utils/refCache';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
@@ -251,6 +252,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
   // modal de contratos. null = no se edita uno puntual (alta nueva o edición genérica → se toca el último).
   const [editingContractIndex, setEditingContractIndex] = useState<number | null>(null);
+  /** La valoración con la que NACIÓ el contrato que se está editando (si salió de una excepción del proyecto). */
+  const [reglaContratoEditado, setReglaContratoEditado] = useState('');
   // Si el wizard se abrió para APROBAR una solicitud, guardamos su id: al guardar, el backend marca la
   // solicitud como aprobada. null = alta/edición normal.
   const [approvingSolicitudId, setApprovingSolicitudId] = useState<string | null>(null);
@@ -1253,8 +1256,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     proyecto tenga una excepción para esa combinación («Camarógrafo con Jornada, siempre Oro»). Es la que filtra las categorías, la que elige
     la por defecto y contra la que se pide motivo — lo mismo que revalida el server.
   */
-  const valoracionProyectoId = valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
-  const rolConValoracionPropia = !!excepcionDelRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
+  /*
+    Las excepciones son para contratos NUEVOS (Agregar miembro, aprobar una solicitud). Editar uno que
+    ya existe lo mide contra la regla con la que nació, o la del proyecto — lo mismo que el server
+    (`reglaDeValoracion`), con el mismo criterio de «edición» que el guardado (`isUpdate`/índice).
+  */
+  const wizardEditaContrato = !approvingSolicitudId && (editingContractIndex != null || (!!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id)));
+  const valoracionProyectoId = wizardEditaContrato ? reglaContratoEditado || idValoracionDe(project?.valoracionId) : valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
+  const rolConValoracionPropia = wizardEditaContrato ? !!reglaContratoEditado : !!excepcionDelRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
   const valoracionDelRol = useMemo(() => {
     const v = valoraciones.find((x) => String(x._id) === valoracionProyectoId);
     return v ? { nombre: String(v.name), color: String(v.color || '') } : null;
@@ -1703,9 +1712,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Default statuses and IDs
     const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes('activo'));
 
+    /*
+      CONTRATO NUEVO EN ESTE PROYECTO (la persona todavía no está en el equipo, o se aprueba una
+      solicitud): la categoría NO se hereda de otro proyecto ni de la ficha. La elige la regla de
+      valoración (`categoriaPorDefecto`, más abajo) con el rol que va a desempeñar: la del nivel del
+      proyecto —o de la excepción de su rol y tipo de contrato—. Heredarla dejaba puesta, por ejemplo,
+      la categoría de otro cliente, y con el campo ya lleno la regla no corría nunca.
+    */
+    const nuevoEnEsteProyecto = !!approveSolicitudId || (typeof contractIndex !== 'number' && !contractOverride && !allUsers.some((m) => m._id === user._id));
+
     // Prioritize IDs from last contract if they exist (numeric IDs stored in UserProject)
     let initialCatId = '';
-    if (lastContract) {
+    if (lastContract && !nuevoEnEsteProyecto) {
       const catIdFromDb = (lastContract as any).categoria_sat_id;
       const catNameFromDb = (lastContract as any).nombre_categoria_sat;
 
@@ -1754,8 +1772,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       }
     }
 
-    // Secondary Fallbacks: User Metadata
-    if (!initialCatId && user.metadata?.categoriaSatId) {
+    // Secondary Fallbacks: User Metadata (no para un contrato nuevo: ver `nuevoEnEsteProyecto`)
+    if (nuevoEnEsteProyecto) {
+      // la decide la regla de valoración
+    } else if (!initialCatId && user.metadata?.categoriaSatId) {
       initialCatId = String(user.metadata.categoriaSatId);
     } else if (!initialCatId && (user.metadata as any)?.categoria_sat_id) {
       initialCatId = String((user.metadata as any).categoria_sat_id);
@@ -1847,12 +1867,26 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       initialSedeId = String((user.metadata as any).sedeId);
     }
 
-    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : '';
+    /*
+      EL ROL A DESEMPEÑAR, AUTOMÁTICO.
+
+      Contrato nuevo en este proyecto: el de su ficha («Rol/es Empresa», `metadata.roles_frame`), que es
+      lo que la persona hace. Si tiene varios, el primero. Si no tiene ninguno, lo de antes: el de su
+      último contrato, o el que guarde la ficha en `roleFrameId`. Editando un contrato de este
+      proyecto, manda el de ese contrato.
+    */
+    const rolesDeLaFicha = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[])
+      .map((rf: any) => String(typeof rf === 'object' ? rf?._id || '' : rf || ''))
+      .filter(Boolean);
+    const rolDeLaFicha = rolesDeLaFicha.map((id) => allRoleFrames.find((rf) => String(rf._id) === id)).find((rf) => rf?.data?.rol?.id != null);
+    let initialRolFrameId = nuevoEnEsteProyecto && rolDeLaFicha ? String(rolDeLaFicha.data.rol.id) : lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : '';
     if (!initialRolFrameId && lastProject?.nombre_rol_frame) {
       // Find role frame by name
       const foundRF = allRoleFrames.find((rf) => rf.name === lastProject.nombre_rol_frame);
       if (foundRF) initialRolFrameId = String(foundRF.data.rol.id);
-    } else if (!initialRolFrameId && user.metadata?.roleFrameId) {
+    }
+    if (!initialRolFrameId && rolDeLaFicha) initialRolFrameId = String(rolDeLaFicha.data.rol.id);
+    if (!initialRolFrameId && user.metadata?.roleFrameId) {
       initialRolFrameId = String(user.metadata.roleFrameId);
     }
 
@@ -2025,6 +2059,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // vuelve a pedir en cada guardado, y hacerlo tipear de nuevo para cambiar un horario no aporta nada.
     // Sólo con un contrato puntual de ESTE proyecto: el de otro proyecto no justifica nada acá.
     setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ''));
+    // El contrato de ESTE proyecto que se va a editar (el del índice, o el último): su regla de nacimiento.
+    const contratosDelProyecto = (currentProjectMeta?.contracts as any[]) || [];
+    const editado = contratoPorIndice || contratosDelProyecto[contratosDelProyecto.length - 1] || null;
+    setReglaContratoEditado(String(editado?.valoracion_regla_id?._id || editado?.valoracion_regla_id || ''));
     setAvisoConvenio('');
 
     // Reset wizard data with pulled data or defaults
@@ -4215,30 +4253,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           Categoría <span className="text-red-500">*</span>
                         </label>
                       </div>
-                      <select
-                        className="input-field w-full"
-                        value={wizardData.categoria_sat_id}
-                        onChange={(e) => {
+                      <SelectorCategoria
+                        opciones={availableCategoriasSat as any[]}
+                        valor={wizardData.categoria_sat_id}
+                        onChange={(id) => {
                           setAvisoConvenio('');
-                          setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
+                          setWizardData((prev) => ({ ...prev, categoria_sat_id: id }));
                         }}
-                        required
-                      >
-                        <option value="">Selecciona categoria...</option>
-                        {availableCategoriasSat.map((c: any) => (
-                          <option key={c.id} value={c.id}>
-                            {c.codigoArca ? `${c.codigoArca} — ` : ''}
-                            {c.nombre}
-                            {/* El nivel, en el texto de la opción: un `<option>` no admite colores, y sin
-                            esto hay que elegir la categoría para recién ahí saber si corresponde al
-                            proyecto. El tag con su color va abajo, ya con la categoría elegida. */}
-                            {(() => {
-                              const v = valoraciones.find((x) => String(x._id) === String(c.valoracionId || ''));
-                              return v ? ` · ${String(v.name)}` : '';
-                            })()}
-                          </option>
-                        ))}
-                      </select>
+                        valoraciones={valoraciones}
+                        valoracionQueRige={valoracionProyectoId}
+                      />
                       {/*
                     EL NIVEL DE LA CATEGORÍA ELEGIDA, CON SU COLOR, Y SI COINCIDE CON EL DEL PROYECTO.
 

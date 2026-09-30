@@ -14,7 +14,7 @@ import { Client } from "../models/Client.js";
 import { Valoracion } from "../models/Valoracion.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { valoracionParaMargen } from "../services/valoracionDelTenant.js";
-import { valoracionParaRol, normalizarValoracionesPorRol } from "../compartido/valoracionPorRol.js";
+import { excepcionDelRol, idDeValoracion, normalizarValoracionesPorRol } from "../compartido/valoracionPorRol.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
@@ -1668,11 +1668,31 @@ const contratoIdDeContrato = async (c: any): Promise<string> => {
   return plantilla?.contratoId ? String(plantilla.contratoId) : "";
 };
 
-const revisarValoracion = async (args: { proyecto: { valoracionId?: unknown; valoracionesPorRol?: any[] | null } | null | undefined; rolFrameId: unknown; contratoId?: unknown; categoriaSatId: unknown; motivo?: unknown }) => {
+/**
+ * CONTRA QUÉ VALORACIÓN SE MIDE UN CONTRATO.
+ *
+ *   - NUEVO (alta desde «Agregar miembro», aprobar una solicitud): la excepción del proyecto para su
+ *     rol empresa + tipo de contrato, si la hay; si no, la del proyecto.
+ *   - EXISTENTE (editarlo, cambiarle la categoría): la regla con la que NACIÓ (`valoracion_regla_id`)
+ *     o, si nació con la del proyecto, la del proyecto. Las excepciones son para contratos nuevos:
+ *     crear o quitar una no reevalúa lo que ya existía.
+ *
+ * `porExcepcion` dice si la regla sale de una excepción: es lo que se guarda en el contrato.
+ */
+const reglaDeValoracion = async (args: { proyecto: any; contrato: any; esNuevo: boolean }): Promise<{ id: string; porExcepcion: boolean }> => {
+  if (args.esNuevo) {
+    const excepcion = excepcionDelRol(args.proyecto, args.contrato?.rol_frame_id, await contratoIdDeContrato(args.contrato));
+    if (excepcion) return { id: idDeValoracion(excepcion.valoracionId), porExcepcion: true };
+    return { id: idDeValoracion(args.proyecto?.valoracionId), porExcepcion: false };
+  }
+  const nacio = idDeValoracion(args.contrato?.valoracion_regla_id);
+  return nacio ? { id: nacio, porExcepcion: true } : { id: idDeValoracion(args.proyecto?.valoracionId), porExcepcion: false };
+};
+
+const revisarValoracion = async (args: { regla: { id: string; porExcepcion: boolean }; rolFrameId: unknown; categoriaSatId: unknown; motivo?: unknown }) => {
   const motivo = String(args.motivo || "").trim();
-  // La del ROL (y su tipo de contrato) en este proyecto: su excepción si la tiene, si no la del proyecto.
-  const delProyectoId = valoracionParaRol(args.proyecto, args.rolFrameId, args.contratoId);
-  const esExcepcionDelRol = delProyectoId !== "" && delProyectoId !== (args.proyecto?.valoracionId ? String((args.proyecto.valoracionId as any)?._id || args.proyecto.valoracionId) : "");
+  const delProyectoId = args.regla.id;
+  const esExcepcionDelRol = args.regla.porExcepcion;
 
   const rolId = Number(args.rolFrameId);
   const catId = Number(args.categoriaSatId);
@@ -1719,6 +1739,8 @@ const revisarValoracion = async (args: { proyecto: { valoracionId?: unknown; val
         campos.nombre_valoracion = nombreDeLaCategoria;
       }
       if (motivo) campos.valoracionOverride = { motivo: motivo.slice(0, 500), por: porUserId, at: new Date() };
+      // La regla con la que nace (o nació) el contrato, si salió de una excepción: ver `reglaDeValoracion`.
+      campos.valoracion_regla_id = esExcepcionDelRol && delProyectoId ? delProyectoId : null;
       return campos;
     },
   };
@@ -1748,7 +1770,7 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
     }
 
     const delProyecto = (project as any).valoracionId ? String((project as any).valoracionId) : "";
-    /** Hay roles con su propia valoración: cada contrato se compara con la de SU rol (`valoracionParaRol`). */
+    /** Cada contrato se compara con la regla con la que NACIÓ (`valoracion_regla_id`) o, si no tiene, con la del proyecto. */
     const conExcepciones = ((project as any).valoracionesPorRol || []).length > 0;
     // Sin valoración en el proyecto (ni por rol) no hay contra qué comparar: no es que esté todo
     // alineado, es que la pregunta no aplica. Se dice explícitamente en vez de contestar una lista vacía.
@@ -1773,20 +1795,21 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
         desalineado (su rol va con otra), así que el filtro fino se hace abajo, por rol. La consulta
         sigue trayendo solo las columnas de la tabla.
       */
-      UserProject.find({ projectId, contracts: { $elemMatch: { valoracion_id: conExcepciones || !delProyecto ? { $ne: null } : { $nin: [null, new Types.ObjectId(delProyecto)] } } } })
+      UserProject.find({
+        projectId,
+        $or: [
+          { contracts: { $elemMatch: { valoracion_id: delProyecto ? { $nin: [null, new Types.ObjectId(delProyecto)] } : { $ne: null } } } },
+          // Los que nacieron con una excepción pueden estar desalineados aunque coincidan con la del proyecto.
+          { "contracts.valoracion_regla_id": { $ne: null } },
+        ],
+      })
         .select(
-          "userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.rol_frame_id contracts.nombre_contrato contracts.tipo_contrato_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato",
+          "userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.rol_frame_id contracts.valoracion_regla_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato",
         )
         .lean(),
       Valoracion.find({ tenantId: req.tenantObjectId }).select("name color").lean(),
     ]);
     const nombreValoracion = new Map((valoraciones as any[]).map((v) => [String(v._id), String(v.name)]));
-    // El tipo de contrato de cada contrato sale de su plantilla (ver `contratoIdDeContrato`); acá en
-    // lote, una sola lectura de plantillas, y solo si hay excepciones que lo necesiten.
-    const plantillas: any[] = conExcepciones ? await ContratoFrame.find({}).select("name data.id contratoId").lean() : [];
-    const contratoPorNombre = new Map(plantillas.filter((f) => f.contratoId).map((f) => [String(f.name), String(f.contratoId)]));
-    const contratoPorDataId = new Map(plantillas.filter((f) => f.contratoId && f.data?.id != null).map((f) => [String(f.data.id), String(f.contratoId)]));
-    const tipoDe = (c: any) => contratoPorNombre.get(String(c?.nombre_contrato || "")) || contratoPorDataId.get(String(c?.tipo_contrato_id ?? "")) || "";
 
     // Primero se arma la lista y DESPUÉS se buscan los nombres, sólo de los que quedaron en ella: ver
     // el comentario de la búsqueda al revés, más abajo.
@@ -1797,7 +1820,7 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
         // Un contrato SIN valoración no está desalineado: es anterior a la feature, o su función no
         // estaba valorada. Marcarlo como problema sería inventar trabajo sobre datos que nunca se
         // pidieron.
-        const delRol = valoracionParaRol(project as any, c?.rol_frame_id, conExcepciones ? tipoDe(c) : "");
+        const delRol = idDeValoracion(c?.valoracion_regla_id) || delProyecto;
         if (!delContrato || !delRol || delContrato === delRol) return;
         desalineados.push({ up, contrato: c, indice, delContrato, delRol });
       });
@@ -1918,7 +1941,21 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       falta cualquiera de las dos, no hay nada que contrastar y el alta pasa como siempre (es el modo
       permisivo con el que esto se despliega).
     */
-    const veredicto = await revisarValoracion({ proyecto: project as any, rolFrameId: contract.rol_frame_id, contratoId: await contratoIdDeContrato(contract), categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
+    /*
+      ¿Contrato NUEVO o edición de uno existente? Mismo criterio que el guardado de abajo: con índice o
+      `isUpdate` se reemplaza un contrato que ya estaba; si no, se agrega uno. Aprobar una solicitud
+      manda los dos vacíos: siempre es un contrato nuevo.
+    */
+    const hayIndice = contractIndex !== undefined && contractIndex !== null && contractIndex !== "";
+    const esContratoNuevo = !hayIndice && !isUpdate;
+    let contratoPrevio: any = null;
+    if (!esContratoNuevo) {
+      const up: any = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id").lean();
+      const lista = (up?.contracts as any[]) || [];
+      contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[lista.length - 1];
+    }
+    const regla = await reglaDeValoracion({ proyecto: project, contrato: esContratoNuevo ? contract : { ...contract, valoracion_regla_id: contratoPrevio?.valoracion_regla_id }, esNuevo: esContratoNuevo });
+    const veredicto = await revisarValoracion({ regla, rolFrameId: contract.rol_frame_id, categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
     if (veredicto.rechazo) return res.status(422).json(veredicto.rechazo);
     Object.assign(contract, veredicto.aGuardar(req.user!.userId));
 
@@ -3107,9 +3144,9 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
     */
     const proyectoConValoracion = await Project.findById(projectId).select("valoracionId valoracionesPorRol").lean();
     const veredicto = await revisarValoracion({
-      proyecto: proyectoConValoracion as any,
+      // Un contrato que ya existe: se mide contra la regla con la que nació (ver `reglaDeValoracion`).
+      regla: await reglaDeValoracion({ proyecto: proyectoConValoracion, contrato, esNuevo: false }),
       rolFrameId: contrato.rol_frame_id,
-      contratoId: await contratoIdDeContrato(contrato),
       categoriaSatId: categoriaSatId,
       motivo: req.body?.valoracionOverride?.motivo,
     });
