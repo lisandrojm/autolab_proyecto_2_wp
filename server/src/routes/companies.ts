@@ -365,6 +365,12 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     // se lo toca, sin depender de que la migración haya corrido.
     const updated = await Company.findByIdAndUpdate(req.params.id, { $set: set, $unset: { obraSocialId: "" } }, { new: true });
     if (!updated) return res.status(404).json({ error: "Empresa no encontrada" });
+    // El formulario de Editar Empresa manda las sedes sin la favorita (la ★ se elige en la ficha):
+    // si le sacaron justo la sede favorita, la ★ no puede quedar apuntando a una sede que ya no tiene.
+    if (Array.isArray(set.sedeIds) && updated.sedeFavoritaId != null && !(set.sedeIds as number[]).includes(Number(updated.sedeFavoritaId))) {
+      updated.sedeFavoritaId = null;
+      await updated.save();
+    }
     res.json(updated);
   } catch (error: any) {
     if (error?.name === "ZodError") {

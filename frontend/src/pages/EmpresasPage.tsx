@@ -16,6 +16,8 @@ import { fuzzyMatch } from '../utils/searchHelpers';
 import { companiesAPI, Company } from '../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../api/arcaSucursales';
+import { infoAPI, InfoItem } from '../api/info';
+import { ordenarSedes } from '../utils/sedesProyecto';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
@@ -44,13 +46,14 @@ const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
  * detalle" es scrollear a ciegas. Con 12 o menos no aparece — sería ruido.
  */
 const DetalleListaModal: React.FC<{
-  detalle: { empresa: Company; tipo: 'convenios' | 'obrasSociales' | 'sucursales' } | null;
+  detalle: { empresa: Company; tipo: 'convenios' | 'obrasSociales' | 'sucursales' | 'sedes' } | null;
   onClose: () => void;
   convenios: SimpleCatalogItem[];
   obrasSociales: SimpleCatalogItem[];
   sucursales: ArcaSucursal[];
+  sedes: InfoItem[];
   obraSocialPorDefectoId?: string;
-}> = ({ detalle, onClose, convenios, obrasSociales, sucursales, obraSocialPorDefectoId }) => {
+}> = ({ detalle, onClose, convenios, obrasSociales, sucursales, sedes, obraSocialPorDefectoId }) => {
   const [q, setQ] = useState('');
   // El filtro se limpia al cambiar de lista: si no, se abre otra y aparece vacía sin motivo visible.
   useEffect(() => setQ(''), [detalle?.empresa._id, detalle?.tipo]);
@@ -62,14 +65,16 @@ const DetalleListaModal: React.FC<{
     convenios: { titulo: 'Convenios', ayuda: 'Definen qué categorías profesionales se le pueden dar de alta.' },
     obrasSociales: { titulo: 'Obras sociales registradas', ayuda: 'ARCA solo acepta altas con una de estas. La ⭐ es la que se usa por defecto cuando la persona no tiene una propia y su convenio tampoco.' },
     sucursales: { titulo: 'Sucursales de ARCA', ayuda: 'Domicilios de explotación declarados. El alta usa uno de ellos y una de sus actividades.' },
+    sedes: { titulo: 'Sedes', ayuda: 'Las sedes con las que trabaja esta empresa, en el orden general de Sedes. La ⭐ es la que se preselecciona en el proyecto al elegirla como Empresa del Contrato.' },
   }[tipo];
 
   const coincide = (texto: string) => texto.toLowerCase().includes(q.trim().toLowerCase());
   const cv = convenios.filter((c) => !q.trim() || coincide(`${c.externalId || ''} ${c.name}`));
   const os = obrasSociales.filter((o) => !q.trim() || coincide(`${formatRnos(o.externalId)} ${o.externalId || ''} ${o.name}`));
   const su = sucursales.filter((s) => !q.trim() || coincide(`${s.codigo} ${s.domicilio}`));
-  const total = tipo === 'convenios' ? cv.length : tipo === 'obrasSociales' ? os.length : su.length;
-  const totalSinFiltrar = tipo === 'convenios' ? convenios.length : tipo === 'obrasSociales' ? obrasSociales.length : sucursales.length;
+  const se = sedes.filter((x) => !q.trim() || coincide(x.name || x.data?.nombre || ''));
+  const total = tipo === 'convenios' ? cv.length : tipo === 'obrasSociales' ? os.length : tipo === 'sedes' ? se.length : su.length;
+  const totalSinFiltrar = tipo === 'convenios' ? convenios.length : tipo === 'obrasSociales' ? obrasSociales.length : tipo === 'sedes' ? sedes.length : sucursales.length;
 
   return (
     <InfoModal isOpen onClose={onClose} title={meta.titulo} subtitle={empresa.razonSocial} size="lg" actions={[{ label: 'Cerrar', onClick: onClose, variant: 'primary' }]}>
@@ -108,6 +113,19 @@ const DetalleListaModal: React.FC<{
                 <span className="text-sm text-gray-900 dark:text-gray-100 truncate flex-1">{o.name}</span>
                 {o._id === obraSocialPorDefectoId && (
                   <span title="Se usa por defecto cuando ni la persona ni su convenio definen una" className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                    <FontAwesomeIcon icon={faStar} className="h-2.5 w-2.5" />
+                    Por defecto
+                  </span>
+                )}
+              </div>
+            ))}
+
+          {tipo === 'sedes' &&
+            se.map((x) => (
+              <div key={x._id} className="px-3 py-2 flex items-center gap-3">
+                <span className="text-sm text-gray-900 dark:text-gray-100 truncate flex-1">{x.name || x.data?.nombre}</span>
+                {empresa.sedeFavoritaId != null && Number(x.data?.id) === Number(empresa.sedeFavoritaId) && (
+                  <span title="Se preselecciona en el proyecto al elegir esta empresa" className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
                     <FontAwesomeIcon icon={faStar} className="h-2.5 w-2.5" />
                     Por defecto
                   </span>
@@ -154,6 +172,9 @@ export const EmpresasPage: React.FC = () => {
   // Catálogo de Sucursales de ARCA: la empresa solo elige cuáles le corresponden.
   const [sucursales, setSucursales] = useState<ArcaSucursal[]>([]);
   const [cargandoSucursales, setCargandoSucursales] = useState(true);
+  // Catálogo de Sedes (ya viene en el orden general): la empresa elige con cuáles trabaja.
+  const [sedes, setSedes] = useState<InfoItem[]>([]);
+  const [cargandoSedes, setCargandoSedes] = useState(true);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -168,7 +189,7 @@ export const EmpresasPage: React.FC = () => {
    * tiene 494 obras sociales registradas, y volcarlas en la celda hacía una fila de pantalla y media
    * en la que no se podía comparar nada entre empresas. El número sí se compara de un vistazo.
    */
-  const [detalleLista, setDetalleLista] = useState<{ empresa: Company; tipo: 'convenios' | 'obrasSociales' | 'sucursales' } | null>(null);
+  const [detalleLista, setDetalleLista] = useState<{ empresa: Company; tipo: 'convenios' | 'obrasSociales' | 'sucursales' | 'sedes' } | null>(null);
   const helpEntry = getHelp(HELP_KEY);
 
   // Vista tabla/tarjetas, como el resto de los ABM: la tabla solo en pantallas grandes.
@@ -208,6 +229,14 @@ export const EmpresasPage: React.FC = () => {
       .then(setSucursales)
       .catch(() => sweetAlert.error('Error', 'No se pudieron cargar las sucursales de ARCA.'))
       .finally(() => setCargandoSucursales(false));
+  }, []);
+
+  useEffect(() => {
+    infoAPI
+      .listSedes()
+      .then(setSedes)
+      .catch(() => setSedes([]))
+      .finally(() => setCargandoSedes(false));
   }, []);
 
   // Mismo criterio que los convenios: son ~500 y el modal se abre muchas veces.
@@ -280,7 +309,7 @@ export const EmpresasPage: React.FC = () => {
    */
   const ContadorLista: React.FC<{
     empresa: Company;
-    tipo: 'convenios' | 'obrasSociales' | 'sucursales';
+    tipo: 'convenios' | 'obrasSociales' | 'sucursales' | 'sedes';
     total: number;
     cargando: boolean;
     singular: string;
@@ -308,6 +337,14 @@ export const EmpresasPage: React.FC = () => {
         {conEtiqueta && <span className="text-[11px] text-gray-500 dark:text-gray-400">{nombre}</span>}
       </button>
     );
+  };
+
+  /** Sedes de la empresa, en el orden general de Sedes. */
+  const sedesDe = (c: Company): InfoItem[] => {
+    const porId = new Map(sedes.map((x) => [Number(x.data?.id), x]));
+    return ordenarSedes((c.sedeIds || []).map(Number), sedes)
+      .map((id) => porId.get(id))
+      .filter(Boolean) as InfoItem[];
   };
 
   /** Sucursales de ARCA de la empresa, resueltas contra el catálogo ya cargado (se guardan como refs). */
@@ -446,6 +483,7 @@ export const EmpresasPage: React.FC = () => {
                   <ContadorLista conEtiqueta empresa={c} tipo="convenios" total={(c.convenioIds || []).length} cargando={cargandoConvenios} singular="convenio" plural="convenios" />
                   <ContadorLista conEtiqueta empresa={c} tipo="obrasSociales" total={(c.obrasSocialesIds || []).length} cargando={cargandoObrasSociales} singular="obra social" plural="obras sociales" />
                   <ContadorLista conEtiqueta empresa={c} tipo="sucursales" total={(c.sucursalIds || []).length} cargando={cargandoSucursales} singular="sucursal" plural="sucursales" />
+                  <ContadorLista conEtiqueta empresa={c} tipo="sedes" total={(c.sedeIds || []).length} cargando={cargandoSedes} singular="sede" plural="sedes" />
                 </div>
               </div>
             </Card>
@@ -470,6 +508,7 @@ export const EmpresasPage: React.FC = () => {
                 <th className="px-4 py-3">Convenios</th>
                 <th className="px-4 py-3">Obras Sociales</th>
                 <th className="px-4 py-3">Sucursales ARCA</th>
+                <th className="px-4 py-3">Sedes</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -513,6 +552,9 @@ export const EmpresasPage: React.FC = () => {
                   <td className="px-4 py-3">
                     <ContadorLista empresa={c} tipo="sucursales" total={(c.sucursalIds || []).length} cargando={cargandoSucursales} singular="sucursal" plural="sucursales" />
                   </td>
+                  <td className="px-4 py-3">
+                    <ContadorLista empresa={c} tipo="sedes" total={(c.sedeIds || []).length} cargando={cargandoSedes} singular="sede" plural="sedes" />
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
@@ -538,7 +580,7 @@ export const EmpresasPage: React.FC = () => {
       />
 
       {/* Detalle de una lista (convenios / obras sociales / sucursales) de UNA empresa. */}
-      <DetalleListaModal detalle={detalleLista} onClose={() => setDetalleLista(null)} convenios={detalleLista ? conveniosDe(detalleLista.empresa) : []} obrasSociales={detalleLista ? obrasSocialesDe(detalleLista.empresa) : []} sucursales={detalleLista ? sucursalesDe(detalleLista.empresa) : []} obraSocialPorDefectoId={detalleLista ? obraSocialPorDefectoDe(detalleLista.empresa)?._id : undefined} />
+      <DetalleListaModal detalle={detalleLista} onClose={() => setDetalleLista(null)} convenios={detalleLista ? conveniosDe(detalleLista.empresa) : []} obrasSociales={detalleLista ? obrasSocialesDe(detalleLista.empresa) : []} sucursales={detalleLista ? sucursalesDe(detalleLista.empresa) : []} sedes={detalleLista ? sedesDe(detalleLista.empresa) : []} obraSocialPorDefectoId={detalleLista ? obraSocialPorDefectoDe(detalleLista.empresa)?._id : undefined} />
 
       {/* Los cuatro requisitos de ARCA para ESTA empleadora. Es el MISMO modal que abre su ficha:
           una sola definición de qué hace falta, mostrada en las dos pantallas. */}

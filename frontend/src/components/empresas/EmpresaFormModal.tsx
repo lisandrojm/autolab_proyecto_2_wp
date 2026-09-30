@@ -3,6 +3,8 @@ import { Modal } from '../ui/Modal';
 import { ConvenioSelector } from './ConvenioSelector';
 import { ObraSocialSelector } from './ObraSocialSelector';
 import { SucursalSelector } from './SucursalSelector';
+import { SedeSelector } from './SedeSelector';
+import { infoAPI, InfoItem } from '../../api/info';
 import { companiesAPI, Company, CompanyInput } from '../../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
@@ -29,6 +31,7 @@ export const EMPTY_COMPANY_FORM: CompanyInput = {
   convenioIds: [],
   sucursalIds: [],
   obrasSocialesIds: [],
+  sedeIds: [],
 };
 
 /** Los datos de una empresa, en la forma que espera el formulario. */
@@ -50,6 +53,7 @@ export const companyAForm = (c: Company): CompanyInput => ({
   convenioIds: (c.convenioIds || []).map((x) => String(x)),
   sucursalIds: (c.sucursalIds || []).map((x) => String(x)),
   obrasSocialesIds: (c.obrasSocialesIds || []).map((x) => String(x)),
+  sedeIds: (c.sedeIds || []).map(Number),
 });
 
 /**
@@ -78,6 +82,8 @@ export const EmpresaFormModal: React.FC<Props> = ({ isOpen, onClose, empresa, on
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   const [sucursales, setSucursales] = useState<ArcaSucursal[]>([]);
+  const [sedes, setSedes] = useState<InfoItem[]>([]);
+  const [cargandoSedes, setCargandoSedes] = useState(false);
   // Un flag por catálogo: cada selector avisa que está cargando en vez de mostrarse vacío, que se
   // lee como «no hay ninguno» justo mientras se está pidiendo.
   const [cargandoConvenios, setCargandoConvenios] = useState(false);
@@ -111,6 +117,12 @@ export const EmpresaFormModal: React.FC<Props> = ({ isOpen, onClose, empresa, on
       .then(setSucursales)
       .catch(() => setSucursales([]))
       .finally(() => setCargandoSucursales(false));
+    setCargandoSedes(true);
+    void infoAPI
+      .listSedes()
+      .then(setSedes)
+      .catch(() => setSedes([]))
+      .finally(() => setCargandoSedes(false));
   }, [isOpen]);
 
   const setField = (key: keyof CompanyInput, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -228,6 +240,13 @@ export const EmpresaFormModal: React.FC<Props> = ({ isOpen, onClose, empresa, on
         <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</h4>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Cuáles de las sucursales del padrón le corresponden a esta empresa. Los datos de cada una (código, domicilio, actividades) se cargan en Configuración → ARCA → Sucursales.</p>
         <SucursalSelector sucursales={sucursales} cargando={cargandoSucursales} value={form.sucursalIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, sucursalIds: ids }))} />
+      </div>
+
+      {/* Sedes: mismo formato que las Sucursales de ARCA. La ★ se elige en la ficha → Sedes. */}
+      <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+        <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sedes</h4>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Con qué sedes trabaja esta empresa. La sede por defecto (★), que se preselecciona en el proyecto, se elige en la ficha de la empresa → Sedes.</p>
+        <SedeSelector sedes={sedes} cargando={cargandoSedes} value={(form.sedeIds || []).map(Number)} favoritaId={editing?.sedeFavoritaId ?? null} onChange={(ids) => setForm((prev) => ({ ...prev, sedeIds: ids }))} />
       </div>
 
       {/* Representante legal */}

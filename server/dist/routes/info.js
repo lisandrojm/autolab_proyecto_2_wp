@@ -82,6 +82,13 @@ router.get("/", requireTenant, authenticateToken, async (req, res) => {
             res.json(items);
             return;
         }
+        if (type === SEDE_TYPE) {
+            // El orden general de Sedes (lo fija el ABM). Las que llegaron por FRAME sin orden van al final.
+            await ensureSedesOrdenBackfilled();
+            const items = await Info.find(filter).sort({ "data.orden": 1, name: 1 }).lean();
+            res.json(items);
+            return;
+        }
         const items = await Info.find(filter).sort({ name: 1 }).lean();
         res.json(items);
     }
@@ -438,6 +445,19 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
  * y un `data.id` incremental para distinguirlas y no chocar con las de FRAME. `data.codigoSucursal`
  * (5 díg.) es el código AFIP para el TXT de Alta masiva. */
 const SEDE_TYPE = "sede";
+/**
+ * El orden general de las sedes (`data.orden`): con él se listan en todos lados y se ordenan las
+ * sedes elegidas en un proyecto. Las que no tienen —las viejas, y las que crea la sync de FRAME— se
+ * numeran al final, por nombre, la primera vez que alguien pide la lista.
+ */
+async function ensureSedesOrdenBackfilled() {
+    const sinOrden = await Info.find({ type: SEDE_TYPE, "data.orden": { $exists: false } }).sort({ name: 1 }).lean();
+    if (sinOrden.length === 0)
+        return;
+    const ultima = await Info.findOne({ type: SEDE_TYPE, "data.orden": { $exists: true } }).sort({ "data.orden": -1 }).lean();
+    let siguiente = (Number(ultima?.data?.orden) || 0) + 1;
+    await Info.bulkWrite(sinOrden.map((s) => ({ updateOne: { filter: { _id: s._id }, update: { $set: { "data.orden": siguiente++ } } } })));
+}
 /** Próximo `data.id` disponible para una sede nueva (evita colisión con las de FRAME). */
 const nextSedeId = async () => {
     const last = await Info.findOne({ type: SEDE_TYPE }).sort({ "data.id": -1 }).lean();
@@ -454,16 +474,43 @@ router.post("/sede", requireTenant, authenticateToken, async (req, res) => {
         const codigoSucursal = req.body?.codigoSucursal != null ? String(req.body.codigoSucursal).trim() : "";
         const externalIdIn = req.body?.externalId != null ? String(req.body.externalId).trim() : "";
         const id = await nextSedeId();
+        // Una sede nueva va al final del orden general.
+        const ultima = await Info.findOne({ type: SEDE_TYPE }).sort({ "data.orden": -1 }).lean();
+        const orden = (Number(ultima?.data?.orden) || 0) + 1;
         const created = await Info.create({
             type: SEDE_TYPE,
             name: nombre,
             externalId: externalIdIn || `local:${id}`,
-            data: { id, nombre, codigoSucursal },
+            data: { id, nombre, codigoSucursal, orden },
         });
         res.status(201).json(created.toObject());
     }
     catch (error) {
         console.error("Create sede error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PATCH /info/sede/reorder — guardar el orden general { items: [{ id, orden }] }.
+// Antes de "/sede/:id", por el mismo motivo que /estados/reorder: si no, "reorder" matchea como :id.
+router.patch("/sede/reorder", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const items = Array.isArray(req.body?.items) ? req.body.items : [];
+        if (items.length === 0) {
+            res.status(400).json({ error: "Se requiere un array de items" });
+            return;
+        }
+        // `Info` la comparten varios `type`: se confirma que todos sean sedes antes de escribir.
+        const ids = items.map((it) => String(it.id));
+        const existentes = await Info.find({ _id: { $in: ids }, type: SEDE_TYPE }).select("_id").lean();
+        if (existentes.length !== ids.length) {
+            res.status(400).json({ error: "Alguna de las sedes no existe" });
+            return;
+        }
+        await Info.bulkWrite(items.map((it) => ({ updateOne: { filter: { _id: it.id, type: SEDE_TYPE }, update: { $set: { "data.orden": Number(it.orden) } } } })));
+        res.json({ ok: true });
+    }
+    catch (error) {
+        console.error("Reorder sedes error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

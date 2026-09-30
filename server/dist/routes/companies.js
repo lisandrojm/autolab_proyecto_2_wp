@@ -44,6 +44,13 @@ const companySchema = z.object({
     /** Ids del catálogo de Sucursales de ARCA. Se manda la lista completa: reemplaza la anterior. */
     sucursalIds: z.array(z.string()).optional(),
     /**
+     * Sedes con las que trabaja esta empresa (`data.id` de las Info type:sede). Reemplaza la lista.
+     * `sedeFavoritaId` es la que se preselecciona en el proyecto al elegir esta empresa; tiene que
+     * estar en `sedeIds` (ver `normalizar`).
+     */
+    sedeIds: z.array(z.number()).optional(),
+    sedeFavoritaId: z.number().nullable().optional(),
+    /**
      * Qué actividades declaró ESTA empleadora en cada domicilio. Reemplaza la lista.
      *
      * Una fila con `actividades: []` significa «ninguna declarada acá», y es distinto de no tener
@@ -142,6 +149,12 @@ const normalizar = (data) => {
     const { obraSocialId, ...resto } = data;
     if (obraSocialId !== undefined && resto.obraSocialDefaultId === undefined)
         resto.obraSocialDefaultId = obraSocialId;
+    // La favorita tiene que ser una de sus sedes: si se la sacó de la lista, deja de ser favorita.
+    if (Array.isArray(resto.sedeIds)) {
+        resto.sedeIds = [...new Set(resto.sedeIds.map(Number).filter((n) => Number.isFinite(n) && n > 0))];
+        if (resto.sedeFavoritaId != null && !resto.sedeIds.includes(Number(resto.sedeFavoritaId)))
+            resto.sedeFavoritaId = null;
+    }
     return resto;
 };
 // GET /companies
@@ -157,7 +170,7 @@ const normalizar = (data) => {
 
   Es opt-in a propósito: quien no lo pide sigue recibiendo la ficha completa, como siempre.
 */
-const CAMPOS_SLIM = "razonSocial cuit convenioIds";
+const CAMPOS_SLIM = "razonSocial cuit convenioIds sedeIds sedeFavoritaId";
 router.get("/", authenticateToken, async (_req, res) => {
     try {
         const slim = _req.query.slim === "true";
@@ -343,6 +356,12 @@ router.put("/:id", authenticateToken, async (req, res) => {
         const updated = await Company.findByIdAndUpdate(req.params.id, { $set: set, $unset: { obraSocialId: "" } }, { new: true });
         if (!updated)
             return res.status(404).json({ error: "Empresa no encontrada" });
+        // El formulario de Editar Empresa manda las sedes sin la favorita (la ★ se elige en la ficha):
+        // si le sacaron justo la sede favorita, la ★ no puede quedar apuntando a una sede que ya no tiene.
+        if (Array.isArray(set.sedeIds) && updated.sedeFavoritaId != null && !set.sedeIds.includes(Number(updated.sedeFavoritaId))) {
+            updated.sedeFavoritaId = null;
+            await updated.save();
+        }
         res.json(updated);
     }
     catch (error) {

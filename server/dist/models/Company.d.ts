@@ -194,5 +194,13 @@ export interface ICompany extends Document {
      * el otro caso —tres oficinas, tres túneles— sin tener que rehacer nada: vacío usa `TANGO_API_URL`.
      */
     tangoApiUrl?: string;
+    /**
+     * Sedes con las que trabaja esta empresa: `data.id` de las Info type:sede, como `Project.metadata.sedeIds`.
+     *
+     * `sedeFavoritaId` es la que se preselecciona —y queda principal— en el proyecto al elegir esta
+     * empresa como Empresa del Contrato. Está por encima del orden general de Sedes, que decide el resto.
+     */
+    sedeIds?: number[];
+    sedeFavoritaId?: number | null;
 }
 export declare const Company: Model<ICompany>;
