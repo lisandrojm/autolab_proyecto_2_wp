@@ -17,6 +17,20 @@ const schema = new Schema({
     error: { type: String },
     detalle: [{ _id: false, cuil: String, rnos: String, error: String }],
     renombrados: [{ _id: false, cuil: String, antes: String, ahora: String }],
+    grupos: [
+        {
+            _id: false,
+            empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
+            empresaRazonSocial: String,
+            empresaCuit: String,
+            total: Number,
+            validadas: Number,
+            guardadas: Number,
+            sinDeclarar: Number,
+            faltaron: Number,
+        },
+    ],
+    tiempos: { type: Schema.Types.Mixed },
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },
 }, { collection: "arca_obras_sociales_logs" });
 schema.index({ tenantId: 1, createdAt: -1 });

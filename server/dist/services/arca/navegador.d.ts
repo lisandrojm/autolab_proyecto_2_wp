@@ -9,9 +9,22 @@ export interface SesionArca {
     page: Page;
     /** `true` si hubo que loguearse; `false` si alcanzó con la sesión guardada. */
     seLogueo: boolean;
+    /** Cuánto costó cada paso de abrirla. Va al log de la corrida (ver `ArcaObrasSocialesLog.tiempos`). */
+    tiempos: {
+        lanzarMs: number;
+        sesionGuardadaMs: number;
+        loginMs: number;
+    };
 }
 /** Lee y descifra las credenciales del tenant./** Lee y descifra las credenciales del tenant. `null` si no están cargadas. */
 export declare function credencialesDe(tenantId: string): Promise<CredencialesArca | null>;
+/**
+ * Guarda la sesión para la próxima corrida.
+ *
+ * Cifrada, igual que la clave: mientras dura, entrar con esta sesión no pide contraseña, así que
+ * dejarla en claro sería guardar la credencial en claro con otro nombre.
+ */
+export declare function guardarSesion(tenantId: string, ctx: BrowserContext): Promise<void>;
 /**
  * Abre un navegador con la sesión de ARCA lista, logueándose solo si hace falta.
  *

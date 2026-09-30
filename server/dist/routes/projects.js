@@ -2491,48 +2491,69 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
  * que ya estaba resuelta, o salteando gente que faltaba.
  */
 /**
- * POST /contratos/obras-sociales/validar-servidor   { empresaId }
+ * POST /contratos/obras-sociales/validar-servidor
+ *   { grupos: [{ empresaId, cuils? }] }      ← varias empleadoras en UNA corrida (Solicitudes)
+ *   { empresaId, cuils? }                    ← una sola (Contratos); es un grupo de uno
  *
  * Dispara la validación contra ARCA desde el SERVIDOR, con el usuario delegado de clave fiscal.
  * Vuelve enseguida: la corrida dura minutos y se sigue por el GET de abajo.
+ *
+ * Todas las empleadoras van en la MISMA sesión de ARCA: antes Solicitudes disparaba una corrida por
+ * empleadora, cada una con su Chromium y su login.
  *
  * Los CUIL salen de `pendientesObraSocial`, la MISMA función que alimenta el contador de la grilla:
  * pedirle al cliente que mande la lista permitiría validar a alguien que la pantalla no mostró.
  */
 router.post("/contratos/obras-sociales/validar-servidor", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
-        const empresaId = String(req.body?.empresaId || "");
-        const todosLosPendientes = await pendientesObraSocial(req.tenantObjectId, empresaId);
+        const pedidosGrupos = Array.isArray(req.body?.grupos)
+            ? req.body.grupos
+            : [{ empresaId: req.body?.empresaId, cuils: req.body?.cuils }];
+        // Un grupo por empleadora aunque el cliente mande dos con la misma: se unen sus CUIL.
+        const porEmpresa = new Map();
+        for (const g of pedidosGrupos) {
+            const empresaId = String(g?.empresaId || "");
+            const lista = (Array.isArray(g?.cuils) ? g.cuils : []).map((c) => String(c || "").replace(/\D/g, "")).filter((c) => c.length === 11);
+            const previo = porEmpresa.get(empresaId) || { todos: false, cuils: new Set() };
+            if (lista.length === 0)
+                previo.todos = true;
+            for (const c of lista)
+                previo.cuils.add(c);
+            porEmpresa.set(empresaId, previo);
+        }
+        const grupos = [];
+        for (const [empresaId, pedido] of porEmpresa) {
+            const todosLosPendientes = await pendientesObraSocial(req.tenantObjectId, empresaId);
+            /*
+              LA SELECCIÓN DEL CLIENTE ACOTA, NUNCA AMPLÍA.
+      
+              Los CUIL siguen saliendo de `pendientesObraSocial` —el server decide quién está pendiente, y
+              nadie que la pantalla no haya mostrado puede colarse—, pero si el cliente manda una lista, se
+              INTERSECTA con ella.
+      
+              Sin esto, validar la obra social de UNA persona desde su modal abría ARCA y procesaba a las
+              veinte pendientes de la empleadora: veinte bloques cargados y borrados en el navegador del
+              servidor, minutos, para un dato de una sola. El contador lo mostraba sin disimulo — «20 de 1».
+            */
+            const pendientes = pedido.todos ? todosLosPendientes : todosLosPendientes.filter((p) => pedido.cuils.has(String(p.cuil || "").replace(/\D/g, "")));
+            const cuils = pendientes.map((p) => String(p.cuil || "").replace(/\D/g, "")).filter((c) => c.length === 11);
+            if (cuils.length > 0)
+                grupos.push({ empresaId, cuils });
+        }
+        // Nadie pendiente no es un error: se contesta sin arrancar nada, y la pantalla lo dice por fila.
+        if (grupos.length === 0) {
+            res.json({ arrancada: false, total: 0, grupos: [] });
+            return;
+        }
         /*
-          LA SELECCIÓN DEL CLIENTE ACOTA, NUNCA AMPLÍA.
-    
-          Los CUIL siguen saliendo de `pendientesObraSocial` —el server decide quién está pendiente, y
-          nadie que la pantalla no haya mostrado puede colarse—, pero si el cliente manda una lista, se
-          INTERSECTA con ella.
-    
-          Sin esto, validar la obra social de UNA persona desde su modal abría ARCA y procesaba a las
-          veinte pendientes de la empleadora: veinte bloques cargados y borrados en el navegador del
-          servidor, minutos, para un dato de una sola. El contador lo mostraba sin disimulo — «20 de 1».
+          SOLO OBRA SOCIAL. Ni nombres, ni padrón, ni documento: los nombres se validan desde Usuarios
+          («Validar nombres en ARCA»), y `arrancarCorrida` ya no los compara ni los escribe.
         */
-        const pedidos = new Set((Array.isArray(req.body?.cuils) ? req.body.cuils : [])
-            .map((c) => String(c || "").replace(/\D/g, ""))
-            .filter((c) => c.length === 11));
-        const pendientes = pedidos.size > 0 ? todosLosPendientes.filter((p) => pedidos.has(String(p.cuil || "").replace(/\D/g, ""))) : todosLosPendientes;
-        const cuils = pendientes.map((p) => String(p.cuil || "").replace(/\D/g, "")).filter((c) => c.length === 11);
         const r = await arrancarCorrida({
             tenantId: String(req.tenantObjectId),
             tenantObjectId: req.tenantObjectId,
-            empresaId,
-            cuils,
+            grupos,
             usuarioId: req.user?.userId,
-            /*
-              SIN `userIds`: esta corrida valida SOLO la obra social.
-      
-              Pasar las personas hacía que además se comparara el nombre de cada una con el de la pantalla
-              de ARCA, se consultara el padrón por los que diferían y se escribiera el nombre — trabajo que
-              alargaba la corrida de Contratos y de Solicitudes. Los nombres se validan desde Usuarios
-              («Validar nombres en ARCA»). Sin la lista, `arrancarCorrida` no compara ni escribe ninguno.
-            */
         });
         res.json({ arrancada: true, ...r });
     }
@@ -2562,7 +2583,7 @@ router.get("/contratos/obras-sociales/validar-servidor", requireTenant, authenti
         res.json({ hay: false, corriendo: false, eventos: [] });
         return;
     }
-    res.json({ hay: true, corriendo: !c.terminada, empresaId: c.empresaId, total: c.total, arrancadaEl: c.arrancadaEl, eventos: c.eventos });
+    res.json({ hay: true, corriendo: !c.terminada, empresaId: c.empresaId, empresaIds: c.empresaIds, total: c.total, arrancadaEl: c.arrancadaEl, eventos: c.eventos });
 });
 /** POST /contratos/obras-sociales/validar-servidor/detener — lo ya guardado queda guardado. */
 router.post("/contratos/obras-sociales/validar-servidor/detener", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {

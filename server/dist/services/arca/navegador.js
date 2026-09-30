@@ -183,7 +183,7 @@ async function sesionGuardada(tenantId) {
  * Cifrada, igual que la clave: mientras dura, entrar con esta sesión no pide contraseña, así que
  * dejarla en claro sería guardar la credencial en claro con otro nombre.
  */
-async function guardarSesion(tenantId, ctx) {
+export async function guardarSesion(tenantId, ctx) {
     const estado = await ctx.storageState();
     await Tenant.findByIdAndUpdate(tenantId, {
         $set: {
@@ -366,6 +366,8 @@ async function loguear(page, cred) {
  * Chromium vivo comiéndose la memoria del VPS.
  */
 export async function abrirSesionArca(tenantId, cred) {
+    const tiempos = { lanzarMs: 0, sesionGuardadaMs: 0, loginMs: 0 };
+    let t = Date.now();
     let browser;
     try {
         browser = await chromium.launch({ headless: true, executablePath: rutaChromium() });
@@ -379,13 +381,34 @@ export async function abrirSesionArca(tenantId, cred) {
     const guardada = await sesionGuardada(tenantId);
     const ctx = await browser.newContext(guardada ? { storageState: guardada } : {});
     let page = await ctx.newPage();
+    tiempos.lanzarMs = Date.now() - t;
     /*
       Camino rápido: con la sesión guardada la URL profunda entra derecho, porque la sesión DEL SERVICIO
       viaja en el `storageState`. Si venció, ARCA devuelve `FinSession.aspx` y se cae al login de abajo.
+  
+      Sin sesión guardada no se prueba: sin cookies ARCA contesta la página de error, y es una
+      navegación entera (varios segundos contra AFIP) para enterarse de algo que ya se sabía.
     */
-    await irA(page, SIMPLIFICACION_URL).catch(() => { });
-    if ((await pantallaDe(page)) === "servicio")
-        return { browser, ctx, page, seLogueo: false };
+    if (guardada) {
+        t = Date.now();
+        await irA(page, SIMPLIFICACION_URL).catch(() => { });
+        const entro = (await pantallaDe(page)) === "servicio";
+        tiempos.sesionGuardadaMs = Date.now() - t;
+        if (entro) {
+            /*
+              SE VUELVE A GUARDAR, aunque no haya habido login.
+      
+              Antes la sesión se guardaba SOLO al loguearse, así que el `storageState` guardado era siempre
+              el de ese momento: las cookies que AFIP renueva en cada visita nunca se persistían, y la
+              sesión guardada vencía a los días de haberse creado aunque se usara todos los días. Guardarla
+              al entrar es lo que la mantiene viva — y cada corrida sin login se ahorra el login entero.
+              Sin `await`: es una escritura en Mongo que no tiene por qué demorar la corrida.
+            */
+            void guardarSesion(tenantId, ctx).catch(() => { });
+            return { browser, ctx, page, seLogueo: false, tiempos };
+        }
+    }
+    t = Date.now();
     try {
         await loguear(page, cred);
         const destino = await abrirServicioDesdeElPortal(ctx, page);
@@ -403,7 +426,8 @@ export async function abrirSesionArca(tenantId, cred) {
         await Tenant.findByIdAndUpdate(tenantId, {
             $set: { "integrations.arcaSimplificacion.ultimoLoginAt": new Date(), "integrations.arcaSimplificacion.ultimoError": "" },
         });
-        return { browser, ctx, page, seLogueo: true };
+        tiempos.loginMs = Date.now() - t;
+        return { browser, ctx, page, seLogueo: true, tiempos };
     }
     catch (e) {
         // El motivo queda guardado para que la pantalla pueda decirlo sin ir a buscar los logs del VPS.
