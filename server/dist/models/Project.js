@@ -22,6 +22,14 @@ const projectSchema = new Schema({
     margen: { type: Number, default: null },
     valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
     valoracionManual: { type: Boolean, default: false },
+    valoracionesPorRol: [
+        {
+            _id: false,
+            rolFrameId: { type: Number, required: true },
+            contratoId: { type: Schema.Types.ObjectId, ref: "Contrato", default: null },
+            valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", required: true },
+        },
+    ],
     createdBy: { type: String, required: true },
     assignedUsers: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
     // Configuración específica de miembros para Novedades

@@ -34,6 +34,7 @@ const contractSchema = new Schema({
     nombre_estado_empleado: { type: String },
     nombre_categoria_sat: { type: String },
     valoracion_id: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
+    valoracion_regla_id: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
     nombre_valoracion: { type: String },
     valoracionOverride: {
         motivo: { type: String },

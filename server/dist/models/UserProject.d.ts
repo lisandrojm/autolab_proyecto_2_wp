@@ -55,6 +55,14 @@ interface IContract {
      * El id queda para cruzar contra la del proyecto y detectar desalineados.
      */
     valoracion_id?: Types.ObjectId | string | null;
+    /**
+     * La valoración con la que NACIÓ este contrato, cuando salió de una excepción del proyecto por rol
+     * empresa + tipo de contrato («Camarógrafo con Jornada, siempre Oro»). Vacío = nació con la del
+     * proyecto. Las excepciones valen para los contratos NUEVOS: con esto, editar este contrato después
+     * (o revisar los desalineados) sigue midiéndolo contra la regla con la que se creó, y crear o quitar
+     * una excepción no reevalúa nada de lo que ya existía.
+     */
+    valoracion_regla_id?: Types.ObjectId | string | null;
     nombre_valoracion?: string;
     /**
      * Por qué se eligió una categoría de OTRA valoración que la del proyecto.
