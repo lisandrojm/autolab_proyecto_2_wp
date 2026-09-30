@@ -137,6 +137,9 @@ export async function nombresPorPantalla(opts: { tenantId: string; tenantObjectI
         soloLeer: true,
         paginaExistente: sesion.page,
         señal: { cortada: false },
+        // El motor ya no lee nombres por defecto (la validación de obras sociales no los usa): acá
+        // son justamente lo que se viene a buscar.
+        leerNombres: true,
       });
 
       for (const item of r.items || []) {

@@ -154,6 +154,22 @@ export interface CorridaObrasSocialesLog {
   detalle: Array<{ cuil: string; rnos?: string; error?: string }>;
   /** Nombres que se corrigieron con los de ARCA durante esta corrida. */
   renombrados?: Array<{ antes: string; ahora: string }>;
+  /** Cuánto costó cada fase (ms). Solo en corridas nuevas; ver `ArcaObrasSocialesLog.tiempos` en el server. */
+  tiempos?: {
+    resumen?: {
+      abrirSesionMs: number;
+      aperturas: number;
+      prepararMs: number;
+      personasMs: number;
+      guardarMs: number;
+      totalMs: number;
+      leidas: number;
+      rechazos: number;
+      porLeidaMs: { agregar: number; leer: number; vaciar: number; total: number };
+      porRechazoMs: { agregar: number; vaciar: number; total: number };
+      vaciarCon: string[];
+    };
+  };
   createdAt: string;
 }
 

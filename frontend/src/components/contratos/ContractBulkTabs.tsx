@@ -733,20 +733,20 @@ const GRUPO_ENCUADRE_TH_FIN = `${GRUPO_ENCUADRE_TH} border-r-2 border-r-blue-500
 /**
  * Cuántas columnas hay antes de que empiece la banda, en la pestaña de Alta temprana.
  *
- * Son: el check, «Datos ARCA», «Usuario», «Alta / Baja», «Alta ARCA» y «CUIT». Lo usa el colSpan
+ * Son: el check, «Datos ARCA», «Fecha de creación», «Usuario», «Alta / Baja», «Alta ARCA» y «CUIT». Lo usa el colSpan
  * de la fila que rotula el grupo: si se agrega una columna a la izquierda y esto no se actualiza,
  * el rótulo se corre y termina titulando columnas que no son.
  */
-const COLUMNAS_ANTES_DEL_GRUPO = 6;
+const COLUMNAS_ANTES_DEL_GRUPO = 7;
 /**
- * Cuántas columnas viajan FIJAS a la izquierda: el check, «Datos ARCA» y «Usuario».
+ * Cuántas columnas viajan FIJAS a la izquierda: el check, «Datos ARCA», «Fecha de creación» y «Usuario».
  *
  * La fila que rotula el grupo la usa para que su primer relleno tape exactamente ese bloque y se
  * quede quieto con él. El resto del hueco de la izquierda se calcula contra
  * `COLUMNAS_ANTES_DEL_GRUPO` en vez de ir como un tercer número suelto: así el bloque sigue sumando
  * lo mismo aunque cambie el offset del grupo.
  */
-const COLUMNAS_FIJAS = 3;
+const COLUMNAS_FIJAS = 4;
 /**
  * EL ANCHO DE LA COLUMNA DEL CHECK: 3rem EXACTAS, EN LAS DOS CELDAS.
  *
@@ -774,6 +774,20 @@ const ANCHO_COL_CHECK = 'w-12 min-w-[3rem] max-w-[3rem]';
  * que sumarla acá o el agujero vuelve.
  */
 const COLUMNAS_DESPUES_DEL_GRUPO = 7;
+
+/**
+ * `fecha_carga` llega en dos formatos según quién creó el contrato: ISO completo (alta desde el
+ * proyecto) o "YYYY-MM-DD" (alta desde el usuario). El ISO va a hora local: cortarlo por la «T»
+ * mostraría el día siguiente para lo cargado después de las 21 h.
+ */
+const fechaDeCarga = (s?: string): string => {
+  if (!s) return '';
+  if (s.includes('T')) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  return formatDate(s);
+};
 
 const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
@@ -1948,7 +1962,7 @@ export const ContractBulkAfipTab: React.FC<{
   const hayEncuadre = filterTipo === 'alta_temprana_afip';
 
   /**
-   * LAS TRES COLUMNAS QUE VIAJAN FIJAS, Y POR QUÉ ACÁ HAY NÚMEROS.
+   * LAS COLUMNAS QUE VIAJAN FIJAS, Y POR QUÉ ACÁ HAY NÚMEROS.
    *
    * «Usuario» está pegada a «Datos ARCA» y las dos quedan fijas al scrollear a lo ancho. Son
    * diecinueve columnas: sin eso, para cuando se llega a Convenio o a Estado Impositivo ya no se
@@ -1964,7 +1978,15 @@ export const ContractBulkAfipTab: React.FC<{
    */
   const anchoColFija = filterTipo === 'sin_cuit' ? 'w-60 min-w-[15rem] max-w-[15rem]' : 'w-44 min-w-[11rem] max-w-[11rem]';
   /** 3rem del check + el ancho de arriba. */
-  const izquierdaColUsuario = filterTipo === 'sin_cuit' ? 'left-[18rem]' : 'left-[14rem]';
+  const izquierdaColFecha = filterTipo === 'sin_cuit' ? 'left-[18rem]' : 'left-[14rem]';
+  /**
+   * «Fecha de creación», entre «Datos ARCA» y «Usuario»: también fija, porque entre dos fijas una que
+   * scrollea pasaría por debajo de la primera y dejaría la fila del rótulo del grupo sin tapar.
+   * Mismo criterio de ancho exacto que `anchoColFija`.
+   */
+  const anchoColFecha = 'w-32 min-w-[8rem] max-w-[8rem]';
+  /** El offset de «Fecha de creación» + sus 8rem. */
+  const izquierdaColUsuario = filterTipo === 'sin_cuit' ? 'left-[26rem]' : 'left-[22rem]';
   /** El borde marcado y la sombra van en la ÚLTIMA fija, que ahora es «Usuario». */
   const bordeFinDeFijas = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
 
@@ -2626,6 +2648,7 @@ export const ContractBulkAfipTab: React.FC<{
                     principio para saber a quién se le estaba tocando el contrato. Ver `anchoColFija`
                     para por qué el ancho de la de al lado está fijado a mano.
                   */}
+                  <th className={`sticky ${izquierdaColFecha} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFecha}`} title="Cuándo se cargó el contrato en el sistema">Fecha de creación</th>
                   <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>Usuario</th>
                   {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
                       y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
@@ -2754,6 +2777,9 @@ export const ContractBulkAfipTab: React.FC<{
                           <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
                         </div>
                       )}
+                    </td>
+                    <td className={`sticky ${izquierdaColFecha} z-[5] px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColFecha} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                      {fechaDeCarga(r.fecha_carga) || <span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>}
                     </td>
                     {/* «Usuario», la otra columna fija: de quién es la fila. Ver `anchoColFija`. */}
                     <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>

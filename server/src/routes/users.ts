@@ -1198,6 +1198,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         empleado_id_reemplezado: c.empleado_id_reemplezado ?? null,
         fecha_alta_contrato: c.fecha_alta_contrato || "",
         fecha_baja_contrato: c.fecha_baja_contrato || "",
+        // Cuándo se cargó el contrato en el sistema (columna «Fecha de creación»).
+        fecha_carga: c.fecha_carga || "",
         sueldo_mano: c.sueldo_mano,
         cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
         hora_inicio: c.hora_inicio,

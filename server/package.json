@@ -106,6 +106,7 @@
     "test:agrupar-contratos": "tsx --test src/utils/agruparContratos.test.ts",
     "test:contrato-solicitud": "tsx --test src/services/contratoDeSolicitud.test.ts",
     "test:arca-pantalla": "tsx --test src/services/arca/pantallaArca.test.ts",
+    "test:arca-corrida": "tsx --test src/services/arca/corridaServidor.test.ts",
     "test:nombre-arca": "tsx --test src/services/arca/nombreArca.test.ts",
     "categorias:legacy-id:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/backfillLegacyIdCategorias.ts",
     "categorias:legacy-id": "dotenv -e .env.production -- tsx src/scripts/backfillLegacyIdCategorias.ts",

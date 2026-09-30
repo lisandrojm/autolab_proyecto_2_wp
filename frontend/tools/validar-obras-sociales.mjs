@@ -257,6 +257,9 @@ async function aceptarSelectorDeCuit(page, cuit) {
     return sel ? [...sel.options].map((o) => ({ value: o.value, texto: o.textContent || "" })) : [];
   });
   const coinciden = opciones.filter((o) => soloDigitos(`${o.value} ${o.texto}`).includes(digitos));
+  // Que NO esté es un dato (el usuario de ARCA no la tiene delegada), no una demora: quien llama
+  // no tiene que reintentar con otra sesión, porque tampoco la va a tener.
+  if (coinciden.length === 0 && opciones.length > 0) cuitAusenteEn.add(page);
   if (coinciden.length !== 1) {
     log(`  (no elijo el CUIT solo: ${coinciden.length} opciones coinciden con ${conGuiones(cuit)})`);
     return false;
@@ -286,14 +289,44 @@ async function aceptarSelectorDeCuit(page, cuit) {
  * Best-effort: si algo no sale, devuelve null y el que llama cae a esperar a la persona — que es
  * exactamente lo que hacía antes. Automatizar esto no puede empeorar el camino que ya funcionaba.
  */
+/**
+ * Con qué empleadora entró ESTE motor en cada pestaña. Solo lo que eligió él: no se adivina.
+ *
+ * Es lo que permite leer varias empleadoras en la misma sesión. Sin esto, una pestaña que ya estaba
+ * en la pantalla de altas se daba por buena para cualquier CUIT, y la segunda empleadora de una
+ * corrida se leía con la primera. Una pestaña que no eligió este motor (la que abrió una persona a
+ * mano, en el camino del Asistente) no figura, y ahí se respeta lo que la persona eligió, como antes.
+ */
+const empleadoraDePagina = new WeakMap();
+
+/** Pestañas cuyo selector de CUIT NO tiene la empleadora pedida. Ver `aceptarSelectorDeCuit`. */
+const cuitAusenteEn = new WeakSet();
+
 async function prepararAltas(ctx, empresaCuit) {
   const page = await buscarPaginaArca(ctx);
   if (!page) return null;
-  if ((await estadoPantalla(page).catch(() => "otra")) === "altas") return page;
+  const elegida = empleadoraDePagina.get(page);
+  const hayQueCambiar = !!empresaCuit && !!elegida && elegida !== soloDigitos(empresaCuit);
+  if (!hayQueCambiar && (await estadoPantalla(page).catch(() => "otra")) === "altas") return page;
 
   try {
+    /*
+      CAMBIAR DE EMPLEADORA SIN SESIÓN NUEVA: se vuelve al selector de CUIT de la misma sesión.
+
+      Antes, leer con otra empleadora era cerrar el Chromium y loguearse de nuevo — decenas de
+      segundos por empleadora. El selector es la puerta de entrada del servicio y está en la misma
+      sesión: volver ahí y elegir otro CUIT es lo que haría una persona. Si ARCA no lo muestra, se
+      devuelve null y quien llama decide (el servidor cae a abrir una sesión nueva).
+    */
+    if (hayQueCambiar && !INDEX_CONTRIBUYENTE_RE.test(page.url())) {
+      const base = page.url().split("/app/")[0];
+      if (!base || base === page.url()) return null;
+      await page.goto(`${base}/app/login/IndexContribuyente.aspx`).catch(() => {});
+      if (!INDEX_CONTRIBUYENTE_RE.test(page.url())) return null;
+    }
     if (INDEX_CONTRIBUYENTE_RE.test(page.url()) && empresaCuit) {
       if (!(await aceptarSelectorDeCuit(page, empresaCuit))) return null;
+      empleadoraDePagina.set(page, soloDigitos(empresaCuit));
     }
 
     /*
@@ -328,15 +361,32 @@ export async function estadoPantalla(page) {
 }
 
 /**
- * ¿ARCA acaba de rechazar por el tope de 10?
+ * El cartel de ARCA cuando ya hay 10 relaciones laborales cargadas.
  *
- * Se chequea aunque el script ya trabaje de a 10: el contador se desincroniza si el operador tenía
- * filas cargadas antes de arrancar. Cuando aparece, el CUIL en curso NO es un error —no se lo pudo ni
- * intentar— así que se reencola para la tanda siguiente.
+ * Se chequea aunque el script trabaje de a uno: el contador se desincroniza si el operador tenía
+ * filas cargadas antes de arrancar. Se mira sobre un texto YA LEÍDO y no leyendo la página: antes
+ * era una lectura entera de `innerText` por cada vuelta de la espera de «Agregar».
  */
-async function topeAlcanzado(page) {
-  return /no es posible ingresar mas de 10 relaciones laborales/i.test(await textoPagina(page));
+export const RE_TOPE = /no es posible ingresar mas de 10 relaciones laborales/i;
+
+/**
+ * ¿ARCA está en medio de un postback AJAX?
+ *
+ * ASP.NET AJAX lo expone en `Sys.WebForms.PageRequestManager`. Mientras está en curso, la pantalla
+ * todavía no dijo nada —ni bloque ni cartel— y leer su texto es gastar una lectura. Devuelve `null`
+ * si la página no tiene ese objeto: ahí no se sabe, y quien llama se cuida por otro lado.
+ */
+async function enPostback(page) {
+  return page
+    .evaluate(() => {
+      const prm = window.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+      return prm ? !!prm.get_isInAsyncPostBack() : null;
+    })
+    .catch(() => null);
 }
+
+/** Líneas que ARCA muestra MIENTRAS procesa. No son un rechazo: son el spinner hablando. */
+const RE_TRANSITORIO = /procesando|cargando|aguarde|espere un momento/i;
 
 /**
  * Lee la grilla: qué obra social le corresponde a cada CUIL cargado.
@@ -346,8 +396,8 @@ async function topeAlcanzado(page) {
  * grilla y el primero es el de otra persona: cada input se emparejaría con el mismo y las obras
  * sociales quedarían corridas, con todas las filas viéndose bien. Dos o más = ambiguo, no se adivina.
  */
-export async function leerFilas(page) {
-  return page.evaluate((selOS) => {
+export async function leerFilas(page, { conNombres = false } = {}) {
+  return page.evaluate(({ selOS, conNombres }) => {
     const RE_CUIL = /\d{2}-\d{8}-\d/g;
     /** El ancestro de la fila y el CUIL que le corresponde, en una sola pasada. */
     const filaDe = (input) => {
@@ -362,7 +412,10 @@ export async function leerFilas(page) {
     };
 
     /*
-      EL NOMBRE SALE DEL MISMO BLOQUE QUE LA OBRA SOCIAL.
+      EL NOMBRE SALE DEL MISMO BLOQUE QUE LA OBRA SOCIAL — pero solo si se pide (`conNombres`).
+
+      La validación de obras sociales NO lo pide: los nombres se validan aparte, desde Usuarios. Lo
+      pide únicamente `nombresPorPantalla` (server), para los CUIT inactivos que el padrón no resuelve.
 
       ARCA lo precompleta al lado del CUIL, con la forma `Empleado: 27-40073687-7 - STOLTZING MICAELA
       SOL`. Leerlo acá no cuesta NADA: es la misma pantalla que ya se está leyendo para el RNOS, en la
@@ -407,8 +460,10 @@ export async function leerFilas(page) {
         ambiguas++;
         continue;
       }
-      const nombre = nombreDeLaFila(fila.node, cuil);
-      if (nombre) nombres[cuil] = nombre;
+      if (conNombres) {
+        const nombre = nombreDeLaFila(fila.node, cuil);
+        if (nombre) nombres[cuil] = nombre;
+      }
       // El código real vive en el input oculto `_AutocompleteValue`; el visible trae la descripción.
       const oculto = document.getElementById(input.id.replace("_AutocompleteText", "_AutocompleteValue"));
       let code = oculto && oculto.value ? oculto.value.replace(/\D/g, "") : "";
@@ -416,7 +471,7 @@ export async function leerFilas(page) {
       out[cuil] = code;
     }
     return { filas: out, nombres, ambiguas, total };
-  }, SEL.obraSocial);
+  }, { selOS: SEL.obraSocial, conNombres });
 }
 
 /**
@@ -465,7 +520,21 @@ let avisosDelUltimoAgregar = [];
  */
 export const avisoAceptable = (texto) => !/registr|confirm[a-z]* (el|la|las|los) alta|dar de alta/i.test(String(texto || ""));
 
-async function agregarCuil(page, cuil) {
+/**
+ * Cuánto tiene que quedarse quieto un cartel para tomarlo como respuesta, cuando la página no dice
+ * si está en un postback (ver `enPostback`). Con ASP.NET AJAX visible no hace falta: se sabe.
+ */
+const CARTEL_ESTABLE_MS = 1500;
+
+/**
+ * Devuelve `{ aparecio, texto, tope }`:
+ *
+ *  - `aparecio`: hay un bloque más. Es el caso normal.
+ *  - `texto`: el último `innerText` leído, o `""` si nunca hizo falta leerlo. Con él, quien llama
+ *    arma el motivo sin volver a leer la página.
+ *  - `tope`: ARCA contestó con el cartel de las 10 relaciones laborales.
+ */
+export async function agregarCuil(page, cuil, textoAntes, textoLimpio = "") {
   const antes = await bloquesAbiertos(page);
   await page.fill(SEL.cuil, cuil);
   const btn = await boton(page, "Agregar");
@@ -477,25 +546,88 @@ async function agregarCuil(page, cuil) {
     tiene una relación laboral activa, ¿continuar?»—, el motor contestaba que no sin enterarse: el
     bloque nunca aparecía y la persona salía como «ARCA no respondió a tiempo», cuando la pantalla
     (a mano) la muestra con su obra social. Que tenga un alta activa no impide leerla.
+
+    Un `confirm` aceptado sigue esperando el bloque: aceptarlo es justamente lo que lo abre. Un
+    `alert`, o un diálogo que se rechazó, ya ES la respuesta: no va a venir ningún bloque detrás.
   */
   avisosDelUltimoAgregar = [];
+  let dialogoDeRechazo = false;
   const alDialogo = async (d) => {
     const texto = d.message();
     avisosDelUltimoAgregar.push(texto);
     log(`  (aviso de ARCA al agregar ${cuil}: ${texto})`);
-    if (avisoAceptable(texto)) await d.accept().catch(() => {});
+    const aceptable = avisoAceptable(texto);
+    if (d.type() !== "confirm" || !aceptable) dialogoDeRechazo = true;
+    if (aceptable) await d.accept().catch(() => {});
     else await d.dismiss().catch(() => {});
   };
   page.on("dialog", alDialogo);
   const soltar = () => page.off("dialog", alDialogo);
+
+  /*
+    UN RECHAZO SE RECONOCE APENAS APARECE, no a los 25 segundos.
+
+    Antes la espera terminaba solo con el bloque (o con el tope): cuando ARCA rechazaba —«CUIL ya
+    tiene un alta activa»— el bloque no venía nunca y se consumía ESPERA_POSTBACK_MS entero, por
+    persona. En una tanda de «Pedido de ARCA» eran casi todas.
+
+    Ahora también termina con un cartel NUEVO (`mensajeNuevo` contra el texto de antes de apretar) o
+    con un diálogo de rechazo. El texto se lee solo cuando el postback terminó: durante el postback
+    la pantalla todavía no dijo nada, y leerla en cada vuelta era la mitad del costo de esperar.
+  */
+  /*
+    EL MISMO CARTEL DOS VECES SEGUIDAS.
+
+    El cartel de un rechazo queda en pantalla, y si la persona siguiente también tiene alta activa
+    ARCA contesta con el MISMO texto: comparado contra lo de antes de apretar, no hay nada nuevo, y
+    se esperaban los 25 s enteros por cada rechazo después del primero. Por eso, cuando se VIO el
+    postback empezar y terminar sin bloque, el cartel se compara además contra la pantalla limpia
+    (`textoLimpio`, leída al arrancar). Solo con `Sys` a la vista: sin él no se puede saber que el
+    postback terminó, y el cartel viejo se tomaría como respuesta antes de que ARCA conteste.
+  */
+  let vioPostback = false;
+  let texto = "";
+  let tope = false;
+  let cartelVistoDesde = 0;
+  let cartelVisto = "";
+  const resolvio = async () => {
+    if ((await bloquesAbiertos(page)) > antes) return true;
+    const ocupada = await enPostback(page);
+    if (ocupada === true) {
+      vioPostback = true;
+      return false;
+    }
+    texto = await textoPagina(page);
+    if (RE_TOPE.test(texto)) {
+      tope = true;
+      return true;
+    }
+    if (dialogoDeRechazo) return true;
+    const cartel = mensajeNuevo(textoAntes, texto, cuil) || (vioPostback && ocupada === false && textoLimpio ? mensajeNuevo(textoLimpio, texto, cuil) : "");
+    if (!cartel) {
+      cartelVistoDesde = 0;
+      return false;
+    }
+    // Con `Sys` a la vista, «no hay postback» es un hecho y el cartel es la respuesta.
+    if (ocupada === false) return true;
+    // Sin `Sys` no se sabe si el postback terminó: se pide que el cartel se quede quieto un rato.
+    if (cartel !== cartelVisto) {
+      cartelVisto = cartel;
+      cartelVistoDesde = Date.now();
+      return false;
+    }
+    return Date.now() - cartelVistoDesde >= CARTEL_ESTABLE_MS;
+  };
+
   const aparecio = await btn.click()
-    .then(() => esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) > antes || (await topeAlcanzado(page)), { que: `el bloque de ${cuil}`, log }))
+    .then(() => esperarEstadoDeArca(resolvio, { que: `el bloque de ${cuil}`, log }))
+    .then(async (termino) => termino && (await bloquesAbiertos(page)) > antes)
     .catch((e) => {
       soltar();
       throw e;
     });
   soltar();
-  return aparecio;
+  return { aparecio, texto, tope, vioPostback };
 }
 
 /**
@@ -511,7 +643,7 @@ export function mensajeNuevo(antes, despues, cuil = "") {
   const nuevas = String(despues || "")
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l.length >= 12 && !vistas.has(l) && !(digitos && soloDigitos(l) === digitos));
+    .filter((l) => l.length >= 12 && !vistas.has(l) && !RE_TRANSITORIO.test(l) && !(digitos && soloDigitos(l) === digitos));
   return [...new Set(nuevas)].slice(0, 2).join(" · ").slice(0, 300);
 }
 
@@ -545,8 +677,8 @@ async function borrarBloque(page) {
 
   const antes = await bloquesAbiertos(page);
   await x.click();
-  await esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) < antes, { que: "que el bloque desaparezca", log });
-  return true;
+  // Devuelve si de verdad sacó el bloque: es lo que decide si se la vuelve a usar (ver `vaciarPantalla`).
+  return esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) < antes, { que: "que el bloque desaparezca", log });
 }
 
 /**
@@ -560,17 +692,43 @@ async function borrarBloque(page) {
  * Cada bloque que queda abierto es un alta a medio iniciar esperando que alguien apriete algo. No
  * dejamos ninguno: lo único que necesitábamos de ARCA —el número que precompleta— ya se leyó.
  */
-async function vaciarPantalla(page) {
-  if ((await bloquesAbiertos(page)) === 0) return;
+/**
+ * Con qué se vació la pantalla la última vez, por pestaña: «x» o «reiniciar».
+ *
+ * EL SELECTOR DE LA ✖ NO ESTÁ CONFIRMADO CONTRA LA PÁGINA REAL (ver `SEL.borrar`). Si no matchea, no
+ * cuesta nada —no hay nada que apretar—; si matchea algo que no borra, cuesta una espera entera de
+ * postback. En los dos casos, probarlo con CADA persona era pagar un intento fallido por persona
+ * antes de caer a «Reiniciar». Acá se aprende una vez por pestaña: lo que funcionó es lo que se usa
+ * primero la próxima. Queda anotado en la medición (`vaciarCon`), así que el log de la primera
+ * corrida real dice cuál de los dos es.
+ */
+const metodoDeVaciado = new WeakMap();
 
-  await borrarBloque(page).catch((e) => log(`  (la ✖ no se pudo usar: ${e.message})`));
-  if ((await bloquesAbiertos(page)) === 0) return;
+/** Devuelve con qué se vació (`"x"`, `"reiniciar"`), o `null` si ya estaba vacía. */
+export async function vaciarPantalla(page) {
+  if ((await bloquesAbiertos(page)) === 0) return null;
+
+  if (metodoDeVaciado.get(page) !== "reiniciar") {
+    // Mientras la ✖ saque bloques se sigue con ella: saca de a uno sin tocar el resto.
+    for (let i = 0; i < TOPE_ARCA; i++) {
+      const saco = await borrarBloque(page).catch((e) => {
+        log(`  (la ✖ no se pudo usar: ${e.message})`);
+        return false;
+      });
+      if (!saco) break;
+      metodoDeVaciado.set(page, "x");
+      if ((await bloquesAbiertos(page)) === 0) return "x";
+    }
+    // No sirvió (o no está): de acá en adelante, directo a «Reiniciar».
+    if (metodoDeVaciado.get(page) !== "x") metodoDeVaciado.set(page, "reiniciar");
+  }
 
   await reiniciarGrilla(page);
   const quedan = await bloquesAbiertos(page);
   if (quedan > 0) {
     throw new Error(`No pude dejar la pantalla de ARCA vacía: quedan ${quedan} bloque(s) cargados.\n\nVaciala a mano en esa ventana y volvé a intentar: cargar arriba de bloques viejos mezclaría los resultados.`);
   }
+  return "reiniciar";
 }
 
 // --------------------------------------------------------------------- salida
@@ -675,7 +833,6 @@ async function esperarSesion(ctx, minutos, onProgreso, señal, empresaCuit) {
  */
 
 /**
- * El trabajo, sin CLI alrededor./**
  * El trabajo, sin CLI alrededor.
  *
  * Separado a propósito: el día que esto se dispare de otra forma —un agente local escuchando un
@@ -706,7 +863,22 @@ async function esperarSesion(ctx, minutos, onProgreso, señal, empresaCuit) {
  * vez de escribir una versión para el servidor: dos copias de las reglas del organismo se separan, y
  * lo que se separa es lo que decide qué obra social se le declara a una persona.
  */
-export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal, paginaExistente = null }) {
+/**
+ * `medicion`: un objeto que el motor llena con cuánto tardó cada fase. Lo pasa quien llama, y no se
+ * devuelve solamente, para que sobreviva a una excepción a mitad de camino — la corrida que se cae es
+ * justo la que hay que poder medir. Forma:
+ *
+ *   { prepararMs, vaciarInicialMs, porCuil: [{ cuil, agregarMs, leerMs, vaciarMs, desenlace, vaciarCon }] }
+ *
+ * `leerNombres`: devuelve además el nombre que ARCA muestra en cada bloque (`item.nombreArca`). Lo
+ * pide solo la corrección de nombres de CUIT inactivos; la validación de obras sociales no.
+ *
+ * `esperaMin: 0`: si la pantalla de altas no está lista con esa empleadora, se corta YA en vez de
+ * esperar a una persona. Es para el servidor, donde nadie la va a abrir a mano.
+ */
+export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal, paginaExistente = null, medicion = {}, leerNombres = false }) {
+  medicion.porCuil = medicion.porCuil || [];
+  const t0 = Date.now();
   // Antes del primer CUIL hay una conexión CDP y una búsqueda de pestañas. Sin este evento, la
   // pantalla se queda en «en cola» sin saber si el Asistente siquiera arrancó.
   onProgreso?.({ tipo: "conectando" });
@@ -766,6 +938,16 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       puede, se le pide a la persona, que es lo que pasaba siempre.
     */
     page = await prepararAltas(ctx, empresaCuit);
+    if (!page && esperaMin <= 0) {
+      const pestaña = await buscarPaginaArca(ctx);
+      const ausente = !!pestaña && cuitAusenteEn.has(pestaña);
+      if (pestaña) cuitAusenteEn.delete(pestaña);
+      throw new Error(
+        ausente
+          ? `La empleadora ${conGuiones(empresaCuit)} no está en el selector de CUIT de ARCA: el usuario de clave fiscal no la tiene delegada.`
+          : `No pude llegar a «Registrar Nuevas Altas» con la empleadora ${conGuiones(empresaCuit) || "pedida"}.`,
+      );
+    }
     if (!page) {
       page = await esperarSesion(ctx, esperaMin, onProgreso, señal, empresaCuit);
       if (!page) {
@@ -782,8 +964,9 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
     /** Los que ARCA no pudo resolver. NO se aplican: ver el filtro final. */
     const errores = new Set();
     let sinSesion = false;
-    /** Lo que ARCA muestra como nombre de cada persona, tal cual, sin partir. */
+    /** Lo que ARCA muestra como nombre de cada persona, tal cual, sin partir. Solo con `leerNombres`. */
     const nombresLeidos = new Map();
+    medicion.prepararMs = Date.now() - t0;
 
     /*
       LA PANTALLA ARRANCA VACÍA, siempre.
@@ -792,7 +975,12 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       Chrome— el primer `Agregar` choca contra el tope de 10 de ARCA y falla EN SILENCIO: pinta un
       cartel rojo y no pasa nada. Sin esta limpieza, la corrida siguiente arranca condenada.
     */
+    const tVaciar = Date.now();
     await vaciarPantalla(page);
+    // La pantalla vacía, sin carteles de esta corrida: contra ella se reconoce un cartel repetido
+    // (ver `agregarCuil`). Una lectura por corrida.
+    const textoLimpio = await textoPagina(page).catch(() => "");
+    medicion.vaciarInicialMs = Date.now() - tVaciar;
 
     /*
       UNA PERSONA A LA VEZ. Nunca más de un bloque abierto.
@@ -810,7 +998,9 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       // Cortar desde afuera se trata como una sesión que se cae: se frena, lo pendiente queda
       // pendiente, y nunca se marca a nadie como "sin obra social" por haber parado.
       if (señal?.cortada) { sinSesion = true; break; }
-      if ((await estadoPantalla(page)) !== "altas") {
+      // Alcanza con el campo de CUIL: sin él no estamos en altas, y el motivo exacto (sesión vencida u
+      // otra pantalla) no cambia lo que se hace — frenar. Antes esto además leía el texto de la página.
+      if (!(await page.locator(SEL.cuil).count())) {
         // Sesión caída a mitad de camino: se FRENA. Lo pendiente queda pendiente — jamás se lo marca
         // como vacío, porque vacío significa "ARCA dijo que no tiene obra social" y se guarda validado.
         sinSesion = true;
@@ -818,8 +1008,15 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       }
 
       onProgreso?.({ tipo: "consultando", cuil });
+      /** Lo que se midió de esta persona. Se agrega ANTES de operar: si algo tira, queda lo que hubo. */
+      const m = { cuil, agregarMs: 0, leerMs: 0, vaciarMs: 0, desenlace: "", vaciarCon: null };
+      medicion.porCuil.push(m);
+      let tFase = Date.now();
+      // La ÚNICA lectura del texto antes de agregar. La siguiente la hace `agregarCuil`, y solo si el
+      // bloque no aparece enseguida.
       const textoAntes = await textoPagina(page).catch(() => "");
-      const aparecio = await agregarCuil(page, cuil);
+      const { aparecio, texto: textoDespues, tope } = await agregarCuil(page, cuil, textoAntes, textoLimpio);
+      m.agregarMs = Date.now() - tFase;
 
       /*
         Si el bloque no llegó a aparecer NO se lee la pantalla.
@@ -829,7 +1026,7 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
         otra es que no esperamos lo suficiente. Confundirlas fue lo que llenó la tabla de rojo con
         ARCA funcionando perfecto.
       */
-      if (!aparecio && !(await topeAlcanzado(page))) {
+      if (!aparecio && !tope) {
         errores.add(cuil);
         /*
           LO QUE ARCA DIJO, si dijo algo.
@@ -839,17 +1036,24 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
           relación o un alta registrada con esta empleadora—, y ahí reintentar no cambia nada. Antes las
           dos salían como «no respondió a tiempo», y el cartel, que es la explicación, no llegaba a nadie.
         */
-        const aviso = [...avisosDelUltimoAgregar, mensajeNuevo(textoAntes, await textoPagina(page).catch(() => ""), cuil)].filter(Boolean).join(" · ").slice(0, 300);
+        // Con el texto que ya leyó la espera; se vuelve a leer solo si nunca llegó a leerlo.
+        const final = textoDespues || (await textoPagina(page).catch(() => ""));
+        const aviso = [...avisosDelUltimoAgregar, mensajeNuevo(textoAntes, final, cuil) || mensajeNuevo(textoLimpio, final, cuil)].filter(Boolean).join(" · ").slice(0, 300);
+        m.desenlace = aviso ? "rechazo" : "sin_respuesta";
         const motivo = aviso
           ? `ARCA no agregó a esta persona y mostró: «${aviso}»`
           : `ARCA no respondió a tiempo (${Math.round(ESPERA_POSTBACK_MS / 1000)} s). Puede estar lento: reintentá esta persona.`;
         log(`  ${cuil}: ${motivo}`);
         onProgreso?.({ tipo: "error", cuil, motivo, hechas: hechos.size, total: cuils.length });
-        await vaciarPantalla(page);
+        tFase = Date.now();
+        m.vaciarCon = await vaciarPantalla(page);
+        m.vaciarMs = Date.now() - tFase;
         continue;
       }
 
-      const { filas, nombres, ambiguas } = await leerFilas(page);
+      tFase = Date.now();
+      const { filas, nombres, ambiguas } = await leerFilas(page, { conNombres: leerNombres });
+      m.leerMs = Date.now() - tFase;
 
       /*
         EL EMPAREJAMIENTO SE HACE SOBRE LOS DÍGITOS, no sobre el string.
@@ -885,34 +1089,39 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
         // `hechos` se indexa con el CUIL COMO VINO: los eventos y los items salen en el mismo formato
         // en que el que llama los mandó, y del otro lado se emparejan sin traducir nada.
         const rnos = porDigitos.get(cuilDigitos);
-        const nombreArca = nombresPorDigitos.get(cuilDigitos) || "";
         hechos.set(cuil, rnos);
-        if (nombreArca) nombresLeidos.set(cuil, nombreArca);
+        m.desenlace = "leido";
+        if (leerNombres) {
+          const nombreArca = nombresPorDigitos.get(cuilDigitos) || "";
+          if (nombreArca) nombresLeidos.set(cuil, nombreArca);
+        }
         // Del mismo lugar que `hechos`: `filas[cuil]` era la búsqueda cruda que fallaba con los CUIL
         // pelados, y habría mandado `rnos: undefined` — que del otro lado se lee como «no tiene obra
         // social declarada». Un dato inventado sobre alguien, que es lo peor que puede salir de acá.
-        // El nombre viaja en el MISMO evento que la obra social: los dos salieron del mismo bloque,
-        // en la misma lectura, y separarlos obligaría a emparejarlos otra vez del otro lado.
-        onProgreso?.({ tipo: "resultado", cuil, rnos, nombreArca, hechas: hechos.size, total: cuils.length });
+        // Sin nombre: la validación de obras sociales no toca nombres (ver `leerNombres`).
+        onProgreso?.({ tipo: "resultado", cuil, rnos, hechas: hechos.size, total: cuils.length });
       } else {
         /*
           El bloque no apareció. ESTO SÍ ES UN ERROR de esta persona, y hay que verificarlo: cuando
           ARCA rechaza por el tope, `Agregar` no hace nada y sin este chequeo se daría a la persona
           por procesada sin haber leído nada — la forma exacta de `faltaron: N` sin errores.
         */
-        const motivo = (await topeAlcanzado(page)) ? "ARCA rechazó por el tope de 10: quedaron bloques de antes en la pantalla." : "ARCA abrió un bloque pero no para este CUIL.";
+        const motivo = tope || RE_TOPE.test(await textoPagina(page).catch(() => "")) ? "ARCA rechazó por el tope de 10: quedaron bloques de antes en la pantalla." : "ARCA abrió un bloque pero no para este CUIL.";
+        m.desenlace = "otro";
         errores.add(cuil);
         onProgreso?.({ tipo: "error", cuil, motivo, hechas: hechos.size, total: cuils.length });
       }
 
       // Y la pantalla vuelve a cero antes del siguiente. Se verifica, no se supone.
-      await vaciarPantalla(page);
+      tFase = Date.now();
+      m.vaciarCon = await vaciarPantalla(page);
+      m.vaciarMs = Date.now() - tFase;
     }
 
-    const items = [...hechos.entries()].map(([cuil, rnos]) => ({ cuil, rnos, nombreArca: nombresLeidos.get(cuil) || "" }));
+    const items = [...hechos.entries()].map(([cuil, rnos]) => (leerNombres ? { cuil, rnos, nombreArca: nombresLeidos.get(cuil) || "" } : { cuil, rnos }));
     // Con `soloLeer` la función termina acá: quien guarda es el navegador, con la sesión de la persona.
     const resultado = soloLeer ? { aplicadas: 0, rechazadas: [], dryRun: true, soloLeer: true } : items.length ? await aplicarLote(empresa, items, { dryRun, forzar }) : { aplicadas: 0, rechazadas: [], dryRun };
-    return { items, errores: [...errores], sinSesion, faltaron: cuils.length - hechos.size, resultado };
+    return { items, errores: [...errores], sinSesion, faltaron: cuils.length - hechos.size, resultado, medicion };
   } finally {
     /*
       LA PANTALLA QUEDA VACÍA SIEMPRE: fin normal, «Detener», o error.

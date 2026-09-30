@@ -6,6 +6,33 @@ import { Modal } from '../ui/Modal';
 import { afipAPI, SimplificacionStatus, CorridaObrasSocialesLog } from '../../api/afip';
 import { sweetAlert } from '../../utils/sweetAlert';
 
+const seg = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+
+/**
+ * Dónde se fue el tiempo de una corrida: abrir ARCA, entrar a cada empleadora, y cada persona
+ * (separando las que ARCA leyó de las que rechazó, que cuestan distinto).
+ */
+const DesgloseTiempos: React.FC<{ r: NonNullable<NonNullable<CorridaObrasSocialesLog['tiempos']>['resumen']> }> = ({ r }) => (
+  <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-300 space-y-0.5">
+    <p className="font-semibold text-gray-700 dark:text-gray-200">Tiempos</p>
+    <p>
+      Abrir ARCA {seg(r.abrirSesionMs)}
+      {r.aperturas > 1 ? ` (${r.aperturas} sesiones)` : ''} · entrar a las empleadoras {seg(r.prepararMs)} · personas {seg(r.personasMs)} · guardar {seg(r.guardarMs)} · total {seg(r.totalMs)}
+    </p>
+    {r.leidas > 0 && (
+      <p>
+        Por persona leída ({r.leidas}): {seg(r.porLeidaMs.total)} — agregar {seg(r.porLeidaMs.agregar)}, leer {seg(r.porLeidaMs.leer)}, vaciar {seg(r.porLeidaMs.vaciar)}
+      </p>
+    )}
+    {r.rechazos > 0 && (
+      <p>
+        Por rechazo ({r.rechazos}): {seg(r.porRechazoMs.total)} — agregar {seg(r.porRechazoMs.agregar)}, vaciar {seg(r.porRechazoMs.vaciar)}
+      </p>
+    )}
+    {r.vaciarCon.length > 0 && <p className="text-gray-400">Pantalla vaciada con: {r.vaciarCon.map((m) => (m === 'x' ? 'la ✖ de cada bloque' : '«Reiniciar»')).join(' y ')}</p>}
+  </div>
+);
+
 /**
  * El usuario de clave fiscal con el que el SERVIDOR opera Simplificación Registral.
  *
@@ -142,6 +169,8 @@ export const UsuarioSimplificacion: React.FC<{
                       Duró {Math.round(log.duracionMs / 1000)} s · {log.seLogueo ? 'tuvo que iniciar sesión' : 'usó la sesión guardada'}
                       {log.empresaCuit ? ` · CUIT ${log.empresaCuit}` : ''}
                     </p>
+                    {/* Dónde se fue el tiempo. Es lo que hay que mirar antes de decir «ARCA está lento». */}
+                    {log.tiempos?.resumen && <DesgloseTiempos r={log.tiempos.resumen} />}
                     {(log.renombrados?.length || 0) > 0 && (
                       <div className="rounded-lg border border-amber-200 dark:border-amber-800/70 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2">
                         <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Nombres corregidos con los de ARCA</p>

@@ -28,7 +28,16 @@ export const ESPERA_POSTBACK_MS = 25_000;
  * distintas y quien llama es el único que sabe cuál es cuál. Confundirlas fue lo que llenó la tabla
  * de errores rojos que no existían.
  */
-export async function esperarEstado(condicion, { ms = ESPERA_POSTBACK_MS, que = "", log } = {}) {
+/**
+ * Cada cuánto se vuelve a mirar la pantalla.
+ *
+ * 100 ms y no 250: cada mirada es un `count()` por CDP que tarda unos milisegundos, y el postback de
+ * ARCA suele contestar en uno o dos segundos. Con 250 ms se perdían en promedio 125 ms por espera, y
+ * hay tres esperas por persona (agregar, borrar, y a veces reiniciar).
+ */
+export const SONDEO_MS = 100;
+
+export async function esperarEstado(condicion, { ms = ESPERA_POSTBACK_MS, que = "", log, cadaMs = SONDEO_MS } = {}) {
   const hasta = Date.now() + ms;
   for (;;) {
     if (await condicion().catch(() => false)) return true;
@@ -36,6 +45,6 @@ export async function esperarEstado(condicion, { ms = ESPERA_POSTBACK_MS, que = 
       log?.(`  (se agotó la espera de ${Math.round(ms / 1000)}s: ${que})`);
       return false;
     }
-    await new Promise((r) => setTimeout(r, 250));
+    await new Promise((r) => setTimeout(r, cadaMs));
   }
 }

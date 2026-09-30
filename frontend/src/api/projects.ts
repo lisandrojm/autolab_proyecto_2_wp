@@ -782,8 +782,18 @@ class ProjectsAPI {
    * intersección, así que mandar de más no valida a nadie que la pantalla no haya mostrado. Omitirlo
    * corre a todos los pendientes de la empleadora.
    */
-  async validarObrasSocialesEnServidor(empresaId: string, cuils?: string[]): Promise<{ arrancada: true; total: number }> {
-    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor`, { empresaId, cuils }, { headers: this.getHeaders() });
+  async validarObrasSocialesEnServidor(empresaId: string, cuils?: string[]): Promise<{ arrancada: boolean; total: number }> {
+    return this.validarObrasSocialesEnServidorPorGrupos([{ empresaId, cuils }]);
+  }
+
+  /**
+   * Varias empleadoras en UNA corrida: el servidor las lee en la misma sesión de ARCA, cambiando de
+   * CUIT en el selector, en vez de abrir un navegador y loguearse por cada una.
+   *
+   * `arrancada: false` con `total: 0` = no había nadie pendiente: no es un error.
+   */
+  async validarObrasSocialesEnServidorPorGrupos(grupos: Array<{ empresaId: string; cuils?: string[] }>): Promise<{ arrancada: boolean; total: number; grupos?: Array<{ empresaId: string; total: number }> }> {
+    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor`, { grupos }, { headers: this.getHeaders() });
     return data;
   }
 
@@ -797,6 +807,7 @@ class ProjectsAPI {
     hay: boolean;
     corriendo: boolean;
     empresaId?: string;
+    empresaIds?: string[];
     total?: number;
     arrancadaEl?: string;
     eventos: Array<Record<string, any>>;

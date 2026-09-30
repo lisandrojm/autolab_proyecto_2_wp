@@ -52,6 +52,27 @@ export interface IArcaObrasSocialesLog extends Document {
   detalle: Array<{ cuil: string; rnos?: string; error?: string }>;
   /** Nombres que se corrigieron con los de ARCA durante esta corrida. */
   renombrados: Array<{ cuil?: string; antes: string; ahora: string }>;
+  /**
+   * Una corrida puede cubrir VARIAS empleadoras en la misma sesión de ARCA (Solicitudes manda toda
+   * la selección junta). `empresaId`/`empresaCuit` quedan con la primera, para que la lista de logs
+   * siga leyéndose igual; el desglose por empleadora va acá.
+   */
+  grupos?: Array<{ empresaId?: Types.ObjectId; empresaRazonSocial?: string; empresaCuit?: string; total: number; validadas: number; guardadas: number; sinDeclarar: number; faltaron: number }>;
+  /**
+   * CUÁNTO COSTÓ CADA FASE, en milisegundos. Existe para poder decir dónde se va el tiempo de una
+   * corrida real antes de tocar nada — y para comparar después.
+   *
+   *   abrirSesion   lanzar Chromium, entrar con la sesión guardada, y login si hizo falta
+   *   grupos[]      por empleadora: prepararMs (selector de CUIT + pantalla de altas),
+   *                 vaciarInicialMs, y porCuil[] con agregarMs, leerMs, vaciarMs, desenlace
+   *                 («leido», «rechazo», «sin_respuesta», «otro») y vaciarCon («x» o «reiniciar»)
+   *   reintentos[]  lo mismo, para las lecturas con otra empleadora por «alta activa»
+   *   guardarMs     escribir en WeProdu lo que devolvió ARCA
+   *
+   * Libre (`Mixed`) a propósito: es instrumentación, y agregarle un campo no tiene que obligar a
+   * migrar nada.
+   */
+  tiempos?: Record<string, any>;
   createdAt: Date;
 }
 
@@ -74,6 +95,20 @@ const schema = new Schema<IArcaObrasSocialesLog>(
     error: { type: String },
     detalle: [{ _id: false, cuil: String, rnos: String, error: String }],
     renombrados: [{ _id: false, cuil: String, antes: String, ahora: String }],
+    grupos: [
+      {
+        _id: false,
+        empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
+        empresaRazonSocial: String,
+        empresaCuit: String,
+        total: Number,
+        validadas: Number,
+        guardadas: Number,
+        sinDeclarar: Number,
+        faltaron: Number,
+      },
+    ],
+    tiempos: { type: Schema.Types.Mixed },
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },
   },
   { collection: "arca_obras_sociales_logs" },

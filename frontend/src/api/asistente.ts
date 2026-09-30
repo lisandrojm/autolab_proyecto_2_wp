@@ -120,8 +120,7 @@ export type EventoProgreso =
   | { tipo: 'conectado' }
   | { tipo: 'listo' }
   | { tipo: 'consultando'; cuil: string }
-  /** `nombreArca`: el nombre que ARCA precompleta en el mismo bloque del que salió el RNOS. */
-  | { tipo: 'resultado'; cuil: string; rnos: string; nombreArca?: string; hechas: number; total: number }
+  | { tipo: 'resultado'; cuil: string; rnos: string; hechas: number; total: number }
   /**
    * ARCA no abrió el bloque para ese CUIL. Es un error DE ESA PERSONA, no de la corrida.
    *

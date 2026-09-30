@@ -127,6 +127,8 @@ export interface ContractOverviewRow {
   empleado_id_reemplezado?: number | null;
   fecha_alta_contrato: string;
   fecha_baja_contrato: string;
+  /** Cuándo se cargó el contrato en el sistema: ISO completo o "YYYY-MM-DD" según quién lo creó; vacío en los importados. */
+  fecha_carga?: string;
   sueldo_mano?: number;
   cantidad_jornadas_laborales?: number;
   hora_inicio?: string;

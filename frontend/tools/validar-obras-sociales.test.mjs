@@ -15,7 +15,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { boton, parsearArgs, conGuiones, ROTULOS_PERMITIDOS, TOPE_ARCA } from "./validar-obras-sociales.mjs";
+import { boton, parsearArgs, conGuiones, ROTULOS_PERMITIDOS, TOPE_ARCA, agregarCuil, vaciarPantalla, mensajeNuevo } from "./validar-obras-sociales.mjs";
 
 const FUENTE = fs.readFileSync(path.resolve("tools/validar-obras-sociales.mjs"), "utf8");
 
@@ -127,7 +127,32 @@ describe("«Aceptar» del selector de CUIT — el mismo rótulo, dos pantallas",
   it("si no puede llegar solo, devuelve null y no rompe nada", () => {
     const fn = FUENTE.slice(FUENTE.indexOf("async function prepararAltas"), FUENTE.indexOf("async function textoPagina"));
     assert.match(fn, /catch \(e\) \{[\s\S]{0,200}return null;/);
-    assert.match(FUENTE, /page = await prepararAltas\(ctx, empresaCuit\);\s*\n\s*if \(!page\) \{\s*\n\s*page = await esperarSesion\(/);
+    // Con `esperaMin > 0` (Asistente, CLI) se sigue esperando a la persona como siempre.
+    assert.match(FUENTE, /page = await prepararAltas\(ctx, empresaCuit\);[\s\S]{0,1200}?if \(!page\) \{\s*\n\s*page = await esperarSesion\(/);
+  });
+
+  /**
+   * En el servidor nadie abre la pantalla a mano: `esperaMin: 0` corta YA. Sin esto, leer con una
+   * empleadora que el usuario de ARCA no tiene en su selector costaba un minuto entero de espera.
+   */
+  it("con esperaMin 0 no espera a nadie: corta con el motivo", () => {
+    assert.match(FUENTE, /if \(!page && esperaMin <= 0\) \{[\s\S]{0,400}?throw new Error\(/);
+    // Y dice si la empleadora directamente no está en el selector: ahí una sesión nueva no ayuda.
+    assert.match(FUENTE, /no está en el selector de CUIT de ARCA/);
+  });
+
+  /**
+   * CAMBIAR DE EMPLEADORA EN LA MISMA SESIÓN: se vuelve al selector de CUIT y se elige la otra.
+   *
+   * Solo cuando fue ESTE motor el que eligió la anterior: una pestaña abierta a mano por una persona
+   * (Asistente) no se cambia de empleadora por detrás.
+   */
+  it("cambia de empleadora volviendo al selector, solo si la anterior la eligió él", () => {
+    const fn = FUENTE.slice(FUENTE.indexOf("async function prepararAltas"), FUENTE.indexOf("async function textoPagina"));
+    assert.match(fn, /const hayQueCambiar = !!empresaCuit && !!elegida && elegida !== soloDigitos\(empresaCuit\);/);
+    assert.match(fn, /IndexContribuyente\.aspx/);
+    // Y se anota la empleadora recién DESPUÉS de que el «Aceptar» del selector salió bien.
+    assert.ok(fn.indexOf("aceptarSelectorDeCuit(page, empresaCuit)") < fn.indexOf("empleadoraDePagina.set("));
   });
 });
 
@@ -155,7 +180,7 @@ describe("reglas del trámite", () => {
    */
   it("si el bloque no aparece, es un error DE ESA PERSONA y dice por qué", () => {
     const cuerpo = FUENTE.slice(FUENTE.indexOf("if (porDigitos.has(cuilDigitos))"), FUENTE.indexOf("await vaciarPantalla(page);", FUENTE.indexOf("if (porDigitos.has(cuilDigitos))")));
-    assert.match(cuerpo, /topeAlcanzado\(page\)/, "hay que distinguir el tope del resto");
+    assert.match(cuerpo, /RE_TOPE\.test\(/, "hay que distinguir el tope del resto");
     assert.match(cuerpo, /errores\.add\(cuil\)/);
     assert.match(cuerpo, /tipo: "error", cuil, motivo/, "el error de la fila tiene que viajar con su motivo");
   });
@@ -170,10 +195,12 @@ describe("reglas del trámite", () => {
   it("se carga de a uno y la pantalla vuelve a cero después de cada persona", () => {
     const bucle = FUENTE.slice(FUENTE.indexOf("for (const cuil of cuils)"), FUENTE.indexOf("const items ="));
     assert.ok(!/TOPE_ARCA/.test(bucle), "ya no se arma ninguna tanda: es de a uno");
-    assert.match(bucle, /await vaciarPantalla\(page\);/, "hay que vaciar después de cada persona");
+    assert.match(bucle, /await vaciarPantalla\(page\)/, "hay que vaciar después de cada persona");
     const vaciar = FUENTE.slice(FUENTE.indexOf("async function vaciarPantalla"));
-    assert.match(vaciar.slice(0, 800), /bloquesAbiertos\(page\)/, "se cuenta lo que quedó: no alcanza con haber apretado algo");
-    assert.match(vaciar.slice(0, 800), /throw new Error/, "si no se pudo vaciar hay que cortar, no seguir cargando encima");
+    // Hasta el final de la función: con el aprendizaje de la ✖ el cuerpo creció, pero la guarda es la misma.
+    const cuerpoVaciar = vaciar.slice(0, vaciar.indexOf("\n}\n"));
+    assert.match(cuerpoVaciar, /bloquesAbiertos\(page\)/, "se cuenta lo que quedó: no alcanza con haber apretado algo");
+    assert.match(cuerpoVaciar, /throw new Error/, "si no se pudo vaciar hay que cortar, no seguir cargando encima");
   });
 
   /**
@@ -198,8 +225,8 @@ describe("reglas del trámite", () => {
     assert.match(compartido, /export async function esperarEstado\(/);
     // Y el que agrega tiene que DEVOLVER si apareció: leer la pantalla igual convierte «no esperé lo
     // suficiente» en «ARCA rechazó a esta persona», que son cosas opuestas.
-    assert.match(FUENTE, /const aparecio = await agregarCuil\(page, cuil\);/);
-    assert.match(FUENTE, /if \(!aparecio && !\(await topeAlcanzado\(page\)\)\)/);
+    assert.match(FUENTE, /const \{ aparecio, texto: textoDespues, tope \} = await agregarCuil\(page, cuil, textoAntes, textoLimpio\);/);
+    assert.match(FUENTE, /if \(!aparecio && !tope\)/);
   });
 
   /** El resultado se emite ANTES de borrar: si el borrado falla, el dato ya está a salvo. */
@@ -285,11 +312,19 @@ describe("el emparejamiento CUIL ↔ fila", () => {
     assert.match(FUENTE, /const rnos = porDigitos\.get\(cuilDigitos\);[\s\S]{0,200}?hechos\.set\(cuil, rnos\);/);
   });
 
-  it("el nombre se lee del MISMO bloque, no de otra consulta", () => {
-    // Si esto se rompe, alguien movió la lectura del nombre a otro servicio: son dos consultas al
-    // mismo organismo por la misma persona, que es lo que este diseño evita.
-    assert.match(FUENTE, /nombresPorDigitos\.get\(cuilDigitos\)/);
-    assert.match(FUENTE, /tipo: "resultado", cuil, rnos, nombreArca/, "el nombre viaja en el mismo evento que la obra social");
+  /**
+   * LA VALIDACIÓN DE OBRAS SOCIALES NO LEE NOMBRES. Los nombres se validan aparte, desde Usuarios.
+   *
+   * El nombre se sigue pudiendo leer del mismo bloque —lo pide `nombresPorPantalla` para los CUIT
+   * inactivos—, pero solo con `leerNombres`, y el evento «resultado» ya no lo lleva.
+   */
+  it("el nombre solo se lee si se pide, y del MISMO bloque", () => {
+    assert.match(FUENTE, /leerFilas\(page, \{ conNombres: leerNombres \}\)/);
+    assert.match(FUENTE, /if \(leerNombres\) \{[\s\S]{0,120}nombresPorDigitos\.get\(cuilDigitos\)/);
+    assert.match(FUENTE, /tipo: "resultado", cuil, rnos, hechas/, "el evento de la obra social no lleva nombre");
+    assert.ok(!/tipo: "resultado", cuil, rnos, nombreArca/.test(FUENTE));
+    // Dentro de la página, `nombreDeLaFila` corre solo con `conNombres`.
+    assert.match(FUENTE, /if \(conNombres\) \{\s*\n\s*const nombre = nombreDeLaFila\(/);
   });
 
   it("el nombre de ARCA no se parte en nombre y apellido", () => {
@@ -410,5 +445,167 @@ describe("la empleadora no se adivina", () => {
     assert.equal(parsearArgs(["--dry-run"]).dryRun, true);
     assert.match(FUENTE, /body: JSON\.stringify\(\{ empresa, origen: "script", items, dryRun, forzar \}\)/, "el flag tiene que viajar al endpoint");
     assert.match(FUENTE, /--dry-run: NO se escribió nada/);
+  });
+});
+
+/**
+ * Una pantalla de altas de mentira, con postbacks que tardan.
+ *
+ * Reproduce lo que importa para medir la espera: el bloque, los carteles, los diálogos y el estado
+ * de `Sys.WebForms.PageRequestManager`. `respuesta(cuil)` dice qué contesta ARCA al «Agregar».
+ */
+function arcaFalsa({ sys = true, demoraMs = 300, conX = true, respuesta = () => ({ tipo: "bloque" }) } = {}) {
+  const st = { bloques: 0, texto: "Registrar Nuevas Altas\nCUIL del empleado\nAgregar", enPostback: false, lecturasTexto: 0, busquedasX: 0, manejadores: [] };
+  const base = st.texto;
+  const postback = (alTerminar) => {
+    st.enPostback = true;
+    st.texto = `${base}\nProcesando, aguarde por favor…`;
+    setTimeout(() => {
+      st.texto = base;
+      alTerminar();
+      st.enPostback = false;
+    }, demoraMs);
+  };
+  const dialogo = (tipo, texto, alAceptar) => ({
+    type: () => tipo,
+    message: () => texto,
+    accept: async () => alAceptar?.(),
+    dismiss: async () => {},
+  });
+  const efecto = (r) => {
+    if (r.tipo === "bloque") st.bloques++;
+    else if (r.tipo === "cartel") st.texto = `${base}\n${r.texto}`;
+    else if (r.tipo === "alert") for (const m of st.manejadores) m(dialogo("alert", r.texto));
+    else if (r.tipo === "confirm") for (const m of st.manejadores) m(dialogo("confirm", r.texto, () => setTimeout(() => st.bloques++, 150)));
+  };
+  const page = {
+    st,
+    on: (_ev, fn) => st.manejadores.push(fn),
+    off: (_ev, fn) => (st.manejadores = st.manejadores.filter((f) => f !== fn)),
+    fill: async (_sel, v) => (st.cuil = v),
+    evaluate: async (fn) => {
+      const src = String(fn);
+      if (src.includes("PageRequestManager")) return sys ? st.enPostback : null;
+      if (src.includes("innerText")) {
+        st.lecturasTexto++;
+        return st.texto;
+      }
+      throw new Error("evaluate no previsto en la página falsa");
+    },
+    locator(sel) {
+      const loc = {
+        first: () => loc,
+        count: async () => {
+          if (sel.includes("ExtendCodeOS")) return st.bloques;
+          if (sel.includes('value="Agregar"')) return 1;
+          if (sel.includes('value="Reiniciar"')) return st.bloques > 0 ? 1 : 0;
+          if (sel.includes("type=image")) {
+            st.busquedasX++;
+            return conX && st.bloques > 0 ? 1 : 0;
+          }
+          return 0;
+        },
+        getAttribute: async (a) => (a === "title" ? "Eliminar" : ""),
+        click: async () => {
+          if (sel.includes('value="Agregar"')) postback(() => efecto(respuesta(st.cuil)));
+          else if (sel.includes('value="Reiniciar"')) postback(() => (st.bloques = 0));
+          else if (sel.includes("type=image")) postback(() => st.bloques--);
+        },
+      };
+      return loc;
+    },
+  };
+  return page;
+};
+
+const cronometrar = async (fn) => {
+  const t = Date.now();
+  const r = await fn();
+  return { ...r, ms: Date.now() - t };
+};
+
+describe("«Agregar» termina apenas ARCA contesta — con bloque o con rechazo", () => {
+  const CUIL = "27-40073687-7";
+
+  /**
+   * «CUIL ya tiene un alta activa» no abre bloque. Antes la espera terminaba recién a los 25 s
+   * (ESPERA_POSTBACK_MS), por persona; ahora termina con el cartel.
+   */
+  it("un rechazo con cartel resuelve cuando termina el postback, no a los 25 s", async () => {
+    const page = arcaFalsa({ respuesta: () => ({ tipo: "cartel", texto: "CUIL ya tiene un alta activa." }) });
+    const r = await cronometrar(() => agregarCuil(page, CUIL, page.st.texto));
+    assert.equal(r.aparecio, false);
+    assert.ok(r.ms < 1500, `tardó ${r.ms} ms`);
+    assert.match(mensajeNuevo(page.st.texto.replace("CUIL ya tiene un alta activa.", ""), r.texto, CUIL), /alta activa/);
+  });
+
+  /**
+   * El cartel del rechazo anterior sigue en pantalla y ARCA contesta el MISMO texto. Antes se
+   * esperaban los 25 s enteros por cada rechazo después del primero.
+   */
+  it("un rechazo repetido (mismo cartel que el anterior) también resuelve enseguida", async () => {
+    const page = arcaFalsa({ respuesta: () => ({ tipo: "cartel", texto: "CUIL ya tiene un alta activa." }) });
+    const limpio = page.st.texto;
+    await agregarCuil(page, CUIL, limpio, limpio);
+    const conCartelViejo = page.st.texto;
+    const r = await cronometrar(() => agregarCuil(page, "20-30000001-1", conCartelViejo, limpio));
+    assert.equal(r.aparecio, false);
+    assert.ok(r.ms < 1500, `tardó ${r.ms} ms`);
+  });
+
+  it("mientras ARCA procesa no se lee el texto de la página", async () => {
+    const page = arcaFalsa({ demoraMs: 800 });
+    const r = await agregarCuil(page, CUIL, page.st.texto);
+    assert.equal(r.aparecio, true);
+    assert.equal(page.st.lecturasTexto, 0, "el bloque apareció: no hacía falta leer nada");
+  });
+
+  it("un confirm aceptado NO es un rechazo: se sigue esperando el bloque", async () => {
+    const page = arcaFalsa({ respuesta: () => ({ tipo: "confirm", texto: "El CUIL ya tiene una relación laboral activa. ¿Desea continuar?" }) });
+    const r = await agregarCuil(page, CUIL, page.st.texto);
+    assert.equal(r.aparecio, true);
+  });
+
+  it("un alert es la respuesta: no viene ningún bloque detrás", async () => {
+    const page = arcaFalsa({ respuesta: () => ({ tipo: "alert", texto: "CUIL inválido" }) });
+    const r = await cronometrar(() => agregarCuil(page, CUIL, page.st.texto));
+    assert.equal(r.aparecio, false);
+    assert.ok(r.ms < 1500, `tardó ${r.ms} ms`);
+  });
+
+  /**
+   * Sin `Sys` a la vista no se sabe si el postback terminó: el cartel tiene que quedarse quieto
+   * CARTEL_ESTABLE_MS. Y lo que ARCA muestra MIENTRAS procesa («Procesando, aguarde…») no cuenta.
+   */
+  it("sin Sys, el cartel tiene que quedarse quieto; el «Procesando» no cuenta", async () => {
+    const rechazo = arcaFalsa({ sys: false, respuesta: () => ({ tipo: "cartel", texto: "CUIL ya tiene un alta activa." }) });
+    const r1 = await cronometrar(() => agregarCuil(rechazo, CUIL, rechazo.st.texto));
+    assert.equal(r1.aparecio, false);
+    assert.ok(r1.ms >= 1500 && r1.ms < 4000, `tardó ${r1.ms} ms`);
+
+    const lento = arcaFalsa({ sys: false, demoraMs: 2500 });
+    const r2 = await agregarCuil(lento, CUIL, lento.st.texto);
+    assert.equal(r2.aparecio, true, "el spinner no puede leerse como un rechazo");
+  });
+});
+
+describe("vaciar la pantalla aprende qué método funciona", () => {
+  it("si la ✖ no está, cae a «Reiniciar» y no la vuelve a buscar", async () => {
+    const page = arcaFalsa({ conX: false, demoraMs: 50 });
+    page.st.bloques = 1;
+    assert.equal(await vaciarPantalla(page), "reiniciar");
+    const busquedas = page.st.busquedasX;
+    page.st.bloques = 1;
+    assert.equal(await vaciarPantalla(page), "reiniciar");
+    assert.equal(page.st.busquedasX, busquedas, "la segunda vez va directo a «Reiniciar»");
+    assert.equal(page.st.bloques, 0);
+  });
+
+  it("si la ✖ funciona, se sigue usando", async () => {
+    const page = arcaFalsa({ demoraMs: 50 });
+    page.st.bloques = 1;
+    assert.equal(await vaciarPantalla(page), "x");
+    page.st.bloques = 1;
+    assert.equal(await vaciarPantalla(page), "x");
   });
 });

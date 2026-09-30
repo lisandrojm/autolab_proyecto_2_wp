@@ -7,7 +7,6 @@ import { AfipValues } from './afipCompleteness';
 import { asistenteAPI, EventoProgreso } from '../../api/asistente';
 import { BloqueAsistente, useAsistente } from './EstadoAsistente';
 import { sweetAlert } from '../../utils/sweetAlert';
-import { NombreArca } from '../arca/NombreArca';
 import { afipAPI } from '../../api/afip';
 import { Modal } from '../ui/Modal';
 import { UsuarioSimplificacion } from '../arca/UsuarioSimplificacion';
@@ -83,29 +82,6 @@ type EnVivo = {
 };
 
 // ─────────────────────────────────────────────────────────────── piezas chicas
-/**
- * En qué quedó el nombre de esta persona.
- *
- * COLUMNA PROPIA Y NO UN ÍCONO PEGADO AL NOMBRE: metido en «Persona», el nombre corregido y el
- * anterior tachado ensanchaban la columna y se leían como una sola cosa. Separado se escanea de
- * arriba a abajo, que es la pregunta real: «¿me tocó algún nombre?».
- *
- * El indicador es el MISMO que en Usuarios y en Contratos (`NombreArca`): un solo dato no puede
- * tener tres formas de mostrarse. Acá se usan dos estados más, propios de una corrida en curso —
- * `corregido` y `difiere`—, con los mismos colores e íconos que allá.
- */
-const CeldaNombreArca: React.FC<{ nombreArca?: EstadoNombre }> = ({ nombreArca }) => {
-  if (!nombreArca) return <span className="text-[11.5px] text-gray-400">—</span>;
-  if (nombreArca.estado === 'coincide') return <NombreArca estado="validado" conTexto />;
-  if (nombreArca.estado === 'difiere') return <NombreArca estado="difiere" conTexto />;
-  return (
-    <span className="flex flex-col gap-0.5">
-      <NombreArca estado="corregido" antes={nombreArca.antes} conTexto />
-    </span>
-  );
-};
-
-type EstadoNombre = { estado: 'coincide' | 'corregido' | 'difiere'; antes?: string; ahora?: string };
 
 const CeldaCuil: React.FC<{ cuil: string }> = ({ cuil }) => {
   const [copiado, setCopiado] = useState(false);
@@ -260,25 +236,6 @@ export const PantallaValidarObrasSociales: React.FC<{
    */
   const [enVivo, setEnVivo] = useState<Record<string, EnVivo>>({});
   const cortarStream = useRef<null | (() => void)>(null);
-  /**
-   * Qué dijo el padrón sobre el nombre de cada persona, por CUIL.
-   *
-   * Se guarda el resultado para las DOS respuestas —«se corrigió» y «ya coincidía»—, porque la
-   * pregunta que se hace quien mira la tabla es «¿me tocó los nombres?», y un blanco no la contesta:
-   * no distingue «estaba bien» de «no se pudo confirmar».
-   */
-  /*
-    Arranca con lo que YA venía validado, no en blanco.
-
-    El sello de cada persona viene en la fila (`userNombreValidadoArca`). Sin esto, todas las filas
-    empezaban en «—» aunque el nombre estuviera confirmado hace meses, y la pantalla parecía decir
-    «esto está sin validar» justo antes de correr un proceso que no hacía falta para ellas.
-  */
-  const [nombres, setNombres] = useState<Record<string, EstadoNombre>>(() =>
-    Object.fromEntries(filas.filter((f) => f.row.userNombreValidadoArca && f.row.cuit).map((f) => [soloDigitos(f.row.cuit || ''), { estado: 'coincide' as const }])),
-  );
-  /** Espejo del anterior: el aviso se dispara dentro del intervalo, donde el estado todavía no llegó. */
-  const nombresRef = useRef<Record<string, EstadoNombre>>({});
   /** Marca de tiempo del último evento recibido. Es lo que reinicia la guardia. */
   const [ultimoEvento, setUltimoEvento] = useState(0);
   /**
@@ -395,14 +352,12 @@ export const PantallaValidarObrasSociales: React.FC<{
    * Un rechazo NO corta el lote. La fila queda en rojo con el motivo y la corrida sigue: el problema
    * es de esa persona —o de la configuración de la empresa— y no de las otras diecinueve.
    */
-  const guardarUna = async (f: FilaConstatacion, cuil: string, rnos: string, nombreArca?: string) => {
+  const guardarUna = async (f: FilaConstatacion, cuil: string, rnos: string) => {
     const antes = f.valores.rnos || f.valores.rnosSugerido || '';
     setEnVivo((p) => ({ ...p, [cuil]: { ...p[cuil], estado: 'guardando', rnos } }));
     try {
-      // `nombreArca` viaja con la fila: es el nombre que el Asistente leyó en la MISMA pantalla de la
-      // que sacó el RNOS, y del otro lado se compara con el guardado. Sin él, el server tendría que
-      // preguntarle al padrón por cada persona «por las dudas».
-      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId as string, [{ cuil, rnos, nombreArca }], false);
+      // Solo la obra social: los nombres se validan aparte, desde Usuarios.
+      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId as string, [{ cuil, rnos }], false);
       if (r.aplicados === 0) {
         setEnVivo((p) => ({ ...p, [cuil]: { estado: 'error', rnos, antes, motivo: motivoDeRechazo(r, cuil) } }));
         return;
@@ -437,10 +392,18 @@ export const PantallaValidarObrasSociales: React.FC<{
       // Se mandan los CUIL de las filas que ESTA pantalla está mostrando. Abierta para una sola
       // persona, la corrida es de una: sin esto el server procesaba a las veinte pendientes de la
       // empleadora para resolver un dato de una.
-      await projectsAPI.validarObrasSocialesEnServidor(
+      const r = await projectsAPI.validarObrasSocialesEnServidor(
         empresaId,
         visibles.map((f) => soloDigitos(f.row.cuit || '')).filter((c) => c.length === 11),
       );
+      if (!r.arrancada) {
+        // Nadie pendiente para el server: no hay corrida que seguir. Se recarga para que la tabla
+        // muestre lo que ya estaba validado.
+        setFaseCorrida('');
+        setArrancando(false);
+        await onRefrescar?.();
+        return;
+      }
     } catch (e: any) {
       setFaseCorrida('');
       setArrancando(false);
@@ -470,34 +433,21 @@ export const PantallaValidarObrasSociales: React.FC<{
       setUltimoEvento((n) => n + 1);
 
       const vivo: Record<string, EnVivo> = {};
-      // Se reconstruye en cada vuelta, igual que `vivo`: el seguimiento relee TODOS los eventos.
-      // Se parte de lo ya sellado: la corrida agrega, no borra lo que estaba confirmado de antes.
-      const parciales: Record<string, EstadoNombre> = { ...nombresRef.current };
       for (const ev of r.eventos as any[]) {
         if (ev.tipo === 'abriendo') setFaseCorrida('Abriendo ARCA en el servidor…');
         else if (ev.tipo === 'conectado') setFaseCorrida('Adentro de ARCA. Buscando la pantalla de altas…');
         else if (ev.tipo === 'consultando') { vivo[ev.cuil] = { estado: 'consultando' }; setFaseCorrida(''); }
-        else if (ev.tipo === 'resultado') {
-          vivo[ev.cuil] = { estado: 'listo', rnos: ev.rnos, sinDeclarar: !ev.rnos, despues: ev.rnos };
-          // El veredicto del nombre viene en el mismo evento: la fila se marca apenas se la lee, sin
-          // esperar a que termine la corrida entera.
-          if (ev.nombreOk === true) parciales[soloDigitos(ev.cuil)] = { estado: 'coincide' };
-          else if (ev.nombreOk === false) parciales[soloDigitos(ev.cuil)] = { estado: 'difiere' };
+        else if (ev.tipo === 'resultado') vivo[ev.cuil] = { estado: 'listo', rnos: ev.rnos, sinDeclarar: !ev.rnos, despues: ev.rnos };
+        else if (ev.tipo === 'otraEmpleadora') {
+          setFaseCorrida(`Tienen alta activa con esta empleadora: se leen con ${ev.razonSocial}…`);
+          for (const c of ev.cuils || []) vivo[c] = { estado: 'consultando' };
         }
         else if (ev.tipo === 'error') vivo[ev.cuil] = { estado: 'error', motivo: ev.motivo };
         else if (ev.tipo === 'guardando') setFaseCorrida('Guardando lo que devolvió ARCA…');
         else if (ev.tipo === 'fallo') setFracaso({ faltaron: total, motivo: ev.mensaje });
         else if (ev.tipo === 'fin' && ev.faltaron > 0) setFracaso({ faltaron: ev.faltaron, motivo: ev.motivo });
-        else if (ev.tipo === 'nombres') {
-          // El cierre: lo que quedó pendiente de resolver se resuelve acá. Lo que sigue en `difiere`
-          // es lo que el padrón no pudo contestar — y se muestra así, no como si estuviera bien.
-          for (const c of ev.confirmados || []) parciales[soloDigitos(c)] = { estado: 'coincide' };
-          for (const r of ev.renombrados || []) parciales[soloDigitos(r.cuil || '')] = { estado: 'corregido', antes: r.antes, ahora: r.ahora };
-        }
       }
       setEnVivo(vivo);
-      nombresRef.current = parciales;
-      setNombres(parciales);
 
       if (!r.corriendo) {
         window.clearInterval(id);
@@ -506,25 +456,8 @@ export const PantallaValidarObrasSociales: React.FC<{
         setFaseCorrida('');
         onLoteAplicado?.();
         await onRefrescar?.();
-        /*
-          El resumen va AL FINAL y después de refrescar, no cuando llega el evento: mientras la
-          corrida avanza hay una pantalla de progreso que se está mirando, y taparla con un modal a
-          mitad de camino es interrumpir justo lo que se vino a ver.
-
-          El detalle fila por fila queda en la tabla, que no se va; esto es solo el aviso de que
-          pasó, para el que no estaba mirando.
-        */
-        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.estado === 'corregido');
-        if (cambiados.length > 0) {
-          const n = cambiados.length;
-          await sweetAlert.warningAlert(
-            `Se corrigi${n === 1 ? 'ó 1 nombre' : `eron ${n} nombres`} con los de ARCA`,
-            `El Padrón tenía registrado otro nombre para est${n === 1 ? 'a persona' : 'as personas'}, y ese es el que vale para el trámite. Quedaron tal cual los devuelve ARCA, en mayúsculas.\n\n` +
-              `Cuáles cambiaron está marcado en ámbar en la columna Persona, con el nombre anterior tachado al lado.`,
-          );
-        }
       }
-    }, 2000);
+    }, 1000);
     // Se reusa `cortarStream` para que «Detener» y el desmontaje corten los dos caminos igual.
     cortarStream.current = () => window.clearInterval(id);
   }, [total, onLoteAplicado, onRefrescar]);
@@ -583,7 +516,7 @@ export const PantallaValidarObrasSociales: React.FC<{
         setEnVivo((p) => ({ ...p, [ev.cuil]: { ...p[ev.cuil], estado: 'consultando' } }));
       } else if (ev.tipo === 'resultado') {
         const f = porCuil.get(ev.cuil);
-        if (f) await guardarUna(f, ev.cuil, ev.rnos, ev.nombreArca);
+        if (f) await guardarUna(f, ev.cuil, ev.rnos);
       } else if (ev.tipo === 'error') {
         setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error', motivo: ev.motivo || 'ARCA no abrió el bloque para este CUIL' } }));
       } else if (ev.tipo === 'fallo') {
@@ -617,23 +550,6 @@ export const PantallaValidarObrasSociales: React.FC<{
         }
         onLoteAplicado?.();
         await onRefrescar?.();
-        /*
-          El resumen va AL FINAL y después de refrescar, no cuando llega el evento: mientras la
-          corrida avanza hay una pantalla de progreso que se está mirando, y taparla con un modal a
-          mitad de camino es interrumpir justo lo que se vino a ver.
-
-          El detalle fila por fila queda en la tabla, que no se va; esto es solo el aviso de que
-          pasó, para el que no estaba mirando.
-        */
-        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.estado === 'corregido');
-        if (cambiados.length > 0) {
-          const n = cambiados.length;
-          await sweetAlert.warningAlert(
-            `Se corrigi${n === 1 ? 'ó 1 nombre' : `eron ${n} nombres`} con los de ARCA`,
-            `El Padrón tenía registrado otro nombre para est${n === 1 ? 'a persona' : 'as personas'}, y ese es el que vale para el trámite. Quedaron tal cual los devuelve ARCA, en mayúsculas.\n\n` +
-              `Cuáles cambiaron está marcado en ámbar en la columna Persona, con el nombre anterior tachado al lado.`,
-          );
-        }
       }
     });
   };
@@ -968,9 +884,6 @@ export const PantallaValidarObrasSociales: React.FC<{
             <tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
               <th className="px-4 py-2.5 font-bold">Persona</th>
               <th className="px-3 py-2.5 font-bold">CUIL</th>
-              {/* El nombre también se valida contra ARCA en esta corrida, con la misma consulta al
-                  Padrón que usa «Validar CUIT». Tiene columna porque es un dato que puede CAMBIAR. */}
-              <th className="px-3 py-2.5 font-bold">Nombre en ARCA</th>
               {/* Qué pasa si NO validás. Es la pregunta que se hace quien duda si vale la pena el trámite. */}
               <th className="px-3 py-2.5 font-bold">Qué va a quedar hoy</th>
               <th className="px-3 py-2.5 font-bold">Resultado</th>
@@ -979,7 +892,7 @@ export const PantallaValidarObrasSociales: React.FC<{
           <tbody>
             {visibles.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-[12px] text-gray-500 dark:text-gray-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-[12px] text-gray-500 dark:text-gray-400">
                   No hay obras sociales pendientes de validar en esta selección.
                 </td>
               </tr>
@@ -992,9 +905,6 @@ export const PantallaValidarObrasSociales: React.FC<{
                     <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{f.row.userName}</td>
                     <td className="px-3 py-2.5">
                       <CeldaCuil cuil={f.row.cuit || ''} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <CeldaNombreArca nombreArca={nombres[soloDigitos(f.row.cuit || '')]} />
                     </td>
                     <td className="px-3 py-2.5 text-[11.5px] text-gray-500 dark:text-gray-400 font-mono">{sugerido || <span className="text-amber-700 dark:text-amber-400">sin default · el convenio no tiene obra social</span>}</td>
                     <td className="px-3 py-2.5">
