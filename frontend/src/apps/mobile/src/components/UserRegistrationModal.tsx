@@ -36,6 +36,7 @@ import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeC
 import { claveOrdenTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
 import { SelectorHora } from "../../../../components/contratacion/SelectorHora";
 import { ImportesDelContrato } from "../../../../components/contratacion/ImportesDelContrato";
+import { EscalaDelContrato } from "../../../../components/contratacion/EscalaDelContrato";
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from "../../../../utils/horario";
 import { esContratoVigente, fechaISO } from "../../../../utils/contratoVigencia";
 import { contratosAPI, ContratoItem } from "../../../../api/contratos";
@@ -2556,6 +2557,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           {/* La categoría: el campo compartido con las plantillas de equipo. Cuelga del convenio: la ventana queda cerrada hasta tenerlo. */}
           <CampoCategoria categoria={categoriaElegida || null} nivel={categoriaElegida ? nivelDeCategoria(categoriaElegida) : null} onAbrir={() => setCategoriaModalOpen(true)} deshabilitado={!convenioCct} motivoDeshabilitado="Elegí primero el convenio" aviso={avisoCascada} />
           </>
+          )}
+
+          {/*
+            LA ESCALA DE LA CATEGORÍA, con lo que se paga en este contrato: básico, adicional, presentismo,
+            bruto y neto. Editar cualquiera mueve el importe por jornada (y con él los cuatro de abajo);
+            ver `EscalaDelContrato`. Un servicio no tiene categoría: no se muestra.
+          */}
+          {!esServicios && categoriaElegida && (
+            <EscalaDelContrato
+              className="contents"
+              categoria={categoriaElegida}
+              multiplicador={multiplicadorDiario}
+              valorJornada={formData.dailyRate}
+              onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
+              bloqueado={importesBloqueados}
+              {...PROPS_IMPORTES_MOVIL}
+            />
           )}
 
           <ImportesDelContrato
