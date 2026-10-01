@@ -742,6 +742,9 @@ class ProjectsAPI {
     payload: ({ obraSocialId: number | null; origen: "constatada" | "manual"; constatadaEn?: "sss" | "arca" } | { noFigura: true; constatadaEn: "sss" | "arca" }) & { forzar?: boolean },
   ): Promise<{ obraSocialId: number | null; obraSocialOrigen: string; obraSocialConstatadaEn: string; obraSocialConstatadaEl: string; obraSocialNoFigura?: boolean }> {
     const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/obra-social`, payload, { headers: this.getHeaders() });
+    // Contratos guarda su listado 5 min (`refCache`): sin esto, lo validado desde otra pantalla
+    // (Solicitudes) se seguía viendo «sin validar» y no dejaba armar el TXT.
+    invalidateRefCache("contracts-overview:");
     return data;
   }
 
@@ -769,6 +772,7 @@ class ProjectsAPI {
     previsualizacion: boolean;
   }> {
     const { data } = await axios.post(`/projects/obras-sociales/aplicar-lote`, { empresaId, filas, previsualizar: !!previsualizar }, { headers: this.getHeaders() });
+    if (!previsualizar) invalidateRefCache("contracts-overview:");
     return data;
   }
 
@@ -820,6 +824,9 @@ class ProjectsAPI {
     eventos: Array<Record<string, any>>;
   }> {
     const { data } = await axios.get(`/contratos/obras-sociales/validar-servidor`, { headers: this.getHeaders() });
+    // La corrida guarda en los contratos de a una persona: mientras hay novedades, el listado
+    // cacheado de Contratos ya no vale (ver `updateObraSocialContrato`).
+    if (data?.corriendo || (Array.isArray(data?.eventos) && data.eventos.length > 0)) invalidateRefCache("contracts-overview:");
     return data;
   }
 
@@ -844,6 +851,7 @@ class ProjectsAPI {
     fallidos: Array<{ projectId: string; userId: string; contratoId: string; motivo: string }>;
   }> {
     const { data } = await axios.post(`/projects/obras-sociales/quitar-lote`, { contratos }, { headers: this.getHeaders() });
+    invalidateRefCache("contracts-overview:");
     return data;
   }
 
