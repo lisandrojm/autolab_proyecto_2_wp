@@ -1480,13 +1480,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     decide. La regla es `categoriaPorDefecto` (con tests); acá sólo se decide CUÁNDO: nunca pisa una
     elegida, ni corre con «Ver todas las de este convenio» abierto —ahí está eligiendo una persona—.
   */
+  /*
+    La que puso este efecto, y con qué valoración: si después cambia la que rige (se eligió el tipo de
+    contrato y aparece la excepción del rol, «Director de Programas + Jornada → Oro»), se vuelve a
+    elegir. La que eligió una persona no se toca.
+  */
+  const categoriaAutomatica = useRef<{ id: string; valoracion: string } | null>(null);
+  // Cada apertura empieza de cero: la categoría de una solicitud que se edita no la puso el efecto.
   useEffect(() => {
-    if (formData.categoriaSatId || verTodasDelConvenio || !convenioCct) return;
+    if (isOpen) categoriaAutomatica.current = null;
+  }, [isOpen]);
+  useEffect(() => {
+    if (verTodasDelConvenio || !convenioCct) return;
+    const auto = categoriaAutomatica.current;
+    const esLaAutomatica = !!auto && auto.id === formData.categoriaSatId;
+    if (formData.categoriaSatId && !(esLaAutomatica && auto!.valoracion !== String(valoracionDelProyecto || ""))) return;
     const niveles = valoraciones.map((v) => ({ _id: String(v._id), orden: Number((v as any).orden) }));
     const elegida = categoriaPorDefecto({ categorias: categoriasOfrecidasLista, valoracionProyecto: valoracionDelProyecto, niveles });
     const doc = elegida ? categoriasSat.find((c) => String(c.data?.id) === elegida.id) : undefined;
     if (!doc) return;
-    setFormData((prev) => ({ ...prev, categoriaSatId: doc._id }));
+    categoriaAutomatica.current = { id: doc._id, valoracion: String(valoracionDelProyecto || "") };
+    if (doc._id !== formData.categoriaSatId) setFormData((prev) => ({ ...prev, categoriaSatId: doc._id }));
     setAvisoCascada("");
   }, [formData.categoriaSatId, verTodasDelConvenio, convenioCct, categoriasOfrecidasLista, valoracionDelProyecto, valoraciones, categoriasSat]);
 

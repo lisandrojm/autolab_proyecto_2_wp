@@ -21,6 +21,7 @@
  */
 import { derivarImportes, erroresDeJornadas, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo, Importes } from "../compartido/jornadas.js";
 import { DatosSolicitud } from "../compartido/solicitudDeContratacion.js";
+import { semanaDelTipoDeContrato } from "../compartido/diasDeTrabajo.js";
 
 export interface PlantillaParaPlan {
   projectId: string;
@@ -132,6 +133,8 @@ export interface ContratoDelPlan {
   horasPorJornada?: number | null;
   /** «Cantidad de jornadas» del tipo: si está, son ésas (ver `jornadasFijadasPorElTipo`). */
   cantidadJornadas?: number | null;
+  /** «Días por semana» del tipo: precargan la semana de cada puesto (ver `semanaDelTipoDeContrato`). */
+  diasPorSemana?: number | null;
 }
 
 export interface Contexto {
@@ -154,6 +157,8 @@ export interface Contexto {
    * con lo que la persona ya tiene y con sus otros puestos del lote, para ESTAS fechas.
    */
   superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
+  /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
+  sedePrincipal?: number | null;
 }
 
 export interface FilaDelPlan {
@@ -243,9 +248,11 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     const periodoPropio = !porDiasSueltos && !!p.desde;
     const desde = porDiasSueltos ? fechasSueltas[0] || "" : (periodoPropio ? p.desde : contratacion.desde) || "";
     const hasta = porDiasSueltos ? fechasSueltas[fechasSueltas.length - 1] || "" : indeterminado ? "" : (periodoPropio ? p.hasta : contratacion.hasta) || "";
-    const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : integ.diasSemana || [];
-    const diasPorSemana = porDiasSueltos ? diasSemana.length : Number(integ.diasPorSemana) || diasSemana.length;
     const rotativos = porDiasSueltos ? false : !!integ.diasRotativos;
+    // Los días por semana del TIPO de contrato («6x6» → 6) mandan sobre los del puesto, igual que en el alta individual.
+    const semanaDelTipo = porDiasSueltos ? null : semanaDelTipoDeContrato(contrato?.diasPorSemana, integ.diasSemana || [], rotativos);
+    const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : semanaDelTipo?.dias || integ.diasSemana || [];
+    const diasPorSemana = porDiasSueltos ? diasSemana.length : semanaDelTipo?.diasPorSemana || Number(integ.diasPorSemana) || diasSemana.length;
     // Igual que el formulario individual: `periodoDeCalculo` con el `indeterminado` del contrato, y las
     // jornadas con la regla compartida.
     const periodo = periodoDeCalculo(desde, hasta, indeterminado);
@@ -334,6 +341,7 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
           inTime,
           outTime,
           empresaContratoId: plantilla.empresaContratoId,
+          sedeId: ctx.sedePrincipal || undefined,
           convenioId: plantilla.convenioId,
           dailyRate,
           isReplacement: !!p.isReplacement,

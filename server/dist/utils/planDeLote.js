@@ -20,6 +20,7 @@
  * ERRORES frenan la contratación entera (el lote es todo o nada). ADVERTENCIAS se muestran y no frenan.
  */
 import { derivarImportes, erroresDeJornadas, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../compartido/jornadas.js";
+import { semanaDelTipoDeContrato } from "../compartido/diasDeTrabajo.js";
 export const MAX_INTEGRANTES_POR_LOTE = 50;
 /** "HH:MM" a horas (cruza la medianoche). `null` si no se entiende. Igual que `horasDelHorario` del formulario. */
 const horasDelHorario = (entrada, salida) => {
@@ -77,9 +78,11 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const periodoPropio = !porDiasSueltos && !!p.desde;
         const desde = porDiasSueltos ? fechasSueltas[0] || "" : (periodoPropio ? p.desde : contratacion.desde) || "";
         const hasta = porDiasSueltos ? fechasSueltas[fechasSueltas.length - 1] || "" : indeterminado ? "" : (periodoPropio ? p.hasta : contratacion.hasta) || "";
-        const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : integ.diasSemana || [];
-        const diasPorSemana = porDiasSueltos ? diasSemana.length : Number(integ.diasPorSemana) || diasSemana.length;
         const rotativos = porDiasSueltos ? false : !!integ.diasRotativos;
+        // Los días por semana del TIPO de contrato («6x6» → 6) mandan sobre los del puesto, igual que en el alta individual.
+        const semanaDelTipo = porDiasSueltos ? null : semanaDelTipoDeContrato(contrato?.diasPorSemana, integ.diasSemana || [], rotativos);
+        const diasSemana = porDiasSueltos ? [...new Set(fechasSueltas.map(diaDeSemana))].sort((a, b) => a - b) : semanaDelTipo?.dias || integ.diasSemana || [];
+        const diasPorSemana = porDiasSueltos ? diasSemana.length : semanaDelTipo?.diasPorSemana || Number(integ.diasPorSemana) || diasSemana.length;
         // Igual que el formulario individual: `periodoDeCalculo` con el `indeterminado` del contrato, y las
         // jornadas con la regla compartida.
         const periodo = periodoDeCalculo(desde, hasta, indeterminado);
@@ -193,6 +196,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
                 inTime,
                 outTime,
                 empresaContratoId: plantilla.empresaContratoId,
+                sedeId: ctx.sedePrincipal || undefined,
                 convenioId: plantilla.convenioId,
                 dailyRate,
                 isReplacement: !!p.isReplacement,

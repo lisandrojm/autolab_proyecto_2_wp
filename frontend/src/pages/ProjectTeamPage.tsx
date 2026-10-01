@@ -1419,14 +1419,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     La regla vive en `categoriaPorDefecto`, con tests. Acá sólo se decide CUÁNDO aplicarla: nunca pisa
     una elección previa, ni corre con el escape manual abierto —ahí ya eligió una persona—.
   */
+  /*
+    LA QUE PUSO ESTE EFECTO, y con qué valoración. Si después cambia la valoración que rige —se eligió
+    el rol antes que el tipo de contrato y aparece la excepción «Director de Programas + Jornada →
+    Oro»— la categoría automática ya no corresponde: se vuelve a elegir. La que eligió una persona
+    (distinta de la automática) no se toca nunca.
+  */
+  const categoriaAutomatica = useRef<{ id: string; valoracion: string } | null>(null);
   useEffect(() => {
-    if (verTodasLasValoraciones || wizardData.categoria_sat_id) return;
+    if (verTodasLasValoraciones) return;
+    const auto = categoriaAutomatica.current;
+    const esLaAutomatica = !!auto && auto.id === String(wizardData.categoria_sat_id);
+    if (wizardData.categoria_sat_id && !(esLaAutomatica && auto!.valoracion !== valoracionProyectoId)) return;
     // `orden` viaja como `unknown` en el catálogo genérico; sin número, `categoriaPorDefecto` no
     // inventa cercanía y devuelve null.
     const niveles = valoraciones.map((v) => ({ _id: String(v._id), orden: Number((v as any).orden) }));
     const porDefecto = categoriaPorDefecto({ categorias: availableCategoriasSat, valoracionProyecto: valoracionProyectoId, niveles });
     if (!porDefecto) return;
-    setWizardData((prev) => ({ ...prev, categoria_sat_id: porDefecto.id }));
+    categoriaAutomatica.current = { id: String(porDefecto.id), valoracion: valoracionProyectoId };
+    if (String(porDefecto.id) !== String(wizardData.categoria_sat_id)) setWizardData((prev) => ({ ...prev, categoria_sat_id: porDefecto.id }));
   }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id, valoracionProyectoId, valoraciones]);
 
   /*
@@ -1725,6 +1736,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
     // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
     setEditingContractIndex(typeof contractIndex === 'number' ? contractIndex : null);
+    // La categoría que se precargue ahora no la puso el efecto automático (ver `categoriaAutomatica`).
+    categoriaAutomatica.current = null;
     // Si viene de aprobar una solicitud, recordamos el id para marcarla aprobada al guardar.
     setApprovingSolicitudId(approveSolicitudId ?? null);
     setComentarioRevision('');
@@ -1795,7 +1808,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       es una contratación nueva —típicamente una renovación de quien ya está—. Fijar el índice haría
       que aprobar pisara el contrato vigente en vez de agregarle el nuevo, y se perdería el anterior.
     */
-    if (!approveSolicitudId && typeof contractIndex !== 'number' && !contractOverride && elQueRige && Array.isArray(lastProject?.contracts)) {
+    /*
+      SÓLO SI ESE CONTRATO ES DE ESTE PROYECTO. `lastProject` cae al último proyecto de la persona
+      cuando todavía no está en éste (para precargar sus datos), y fijar el índice de un contrato de
+      OTRO proyecto convertía el alta en una «edición»: el wizard dejaba de aplicar las excepciones de
+      valoración por rol y tipo de contrato (Director de Programas + Jornada → Oro quedaba en Plata, la
+      del proyecto) y el server, con ese índice, medía igual.
+    */
+    if (!approveSolicitudId && typeof contractIndex !== 'number' && !contractOverride && elQueRige && currentProjectMeta && lastProject === currentProjectMeta && Array.isArray(lastProject?.contracts)) {
       const idxQueRige = (lastProject!.contracts as any[]).indexOf(elQueRige);
       if (idxQueRige >= 0) setEditingContractIndex(idxQueRige);
     }

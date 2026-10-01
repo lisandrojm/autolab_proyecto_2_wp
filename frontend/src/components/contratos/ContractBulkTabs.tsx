@@ -1363,6 +1363,75 @@ const AsignarEmpresaMasivo: React.FC<{
  * actual es un estado impositivo, con su trámite (Alta temprana de ARCA / Constancia de CUIT),
  * filtros y exportación a CSV.
  */
+/**
+ * LOS CATÁLOGOS CON LOS QUE SE RESUELVEN LOS DATOS ARCA DE UNA FILA (`resolveAfipValues`): categorías,
+ * tipos de contrato, obras sociales, sedes, empresas, sucursales, convenios y los defaults de la
+ * instalación. Los usan Trámite impositivo y Generar Documentos (para el filtro de obra social): una
+ * sola carga, para que las dos pestañas clasifiquen igual.
+ */
+function useCatalogosArca(allEstados: InfoItem[]) {
+  const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
+  const [tipos, setTipos] = useState<ContratoItem[]>([]);
+  const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
+  const [sedes, setSedes] = useState<InfoItem[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  // Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades del alta.
+  const [arcaSucursales, setArcaSucursales] = useState<ArcaSucursal[]>([]);
+  /*
+    Los defaults de la INSTALACIÓN: el último escalón de la cascada de ARCA.
+
+    Se traen una vez y viajan en el catálogo, igual que los nomencladores: la resolución de cada fila
+    es una función pura y no puede ir a buscarlos por su cuenta. Si la request falla se sigue con {},
+    que es exactamente el comportamiento anterior (contrato → empresa) — un default global que no
+    llegó no puede bloquear la pantalla.
+  */
+  const [defaultsArcaGlobales, setDefaultsArcaGlobales] = useState<ArcaDefaults>({});
+  useEffect(() => {
+    arcaDefaultsAPI
+      .get()
+      .then(setDefaultsArcaGlobales)
+      .catch(() => setDefaultsArcaGlobales({}));
+  }, []);
+  const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
+
+  useEffect(() => {
+    categoriaSatAPI
+      .list()
+      .then(setCategorias)
+      .catch(() => setCategorias([]));
+    contratosAPI
+      .list()
+      .then(setTipos)
+      .catch(() => setTipos([]));
+    obrasSocialesApi
+      .list()
+      .then(setObrasSociales)
+      .catch(() => setObrasSociales([]));
+    infoAPI
+      .listSedes()
+      .then(setSedes)
+      .catch(() => setSedes([]));
+    companiesAPI
+      .list()
+      .then(setCompanies)
+      .catch(() => setCompanies([]));
+    arcaSucursalesAPI
+      .list()
+      .then(setArcaSucursales)
+      .catch(() => setArcaSucursales([]));
+    conveniosApi
+      .list()
+      .then(setConvenios)
+      .catch(() => setConvenios([]));
+  }, []);
+
+  // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
+  // `estados` entra al catálogo para que el TXT derive el alta temprana del estado del contrato y no
+  // del switch que se eliminó. `allEstados` ya estaba en scope: es la misma lista que arma las bandejas.
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales]);
+  return { afipCat, companies };
+}
+
 export const ContractBulkAfipTab: React.FC<{
   allEstados: InfoItem[];
   contratoFrames: ContratoFrameItem[];
@@ -1406,30 +1475,8 @@ export const ContractBulkAfipTab: React.FC<{
   }, []);
   const effectiveViewMode = isLarge ? viewMode : 'cards';
 
-  // Catálogos para resolver los datos ARCA (completitud).
-  const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
-  const [tipos, setTipos] = useState<ContratoItem[]>([]);
-  const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
-  const [sedes, setSedes] = useState<InfoItem[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  // Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades del alta.
-  const [arcaSucursales, setArcaSucursales] = useState<ArcaSucursal[]>([]);
-  /*
-    Los defaults de la INSTALACIÓN: el último escalón de la cascada de ARCA.
-
-    Se traen una vez y viajan en el catálogo, igual que los nomencladores: la resolución de cada fila
-    es una función pura y no puede ir a buscarlos por su cuenta. Si la request falla se sigue con {},
-    que es exactamente el comportamiento anterior (contrato → empresa) — un default global que no
-    llegó no puede bloquear la pantalla.
-  */
-  const [defaultsArcaGlobales, setDefaultsArcaGlobales] = useState<ArcaDefaults>({});
-  useEffect(() => {
-    arcaDefaultsAPI
-      .get()
-      .then(setDefaultsArcaGlobales)
-      .catch(() => setDefaultsArcaGlobales({}));
-  }, []);
-  const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
+  // Catálogos para resolver los datos ARCA (completitud). Ver `useCatalogosArca`.
+  const { afipCat, companies } = useCatalogosArca(allEstados);
   // Detalle de completitud de una fila (modal).
   /**
    * Detalle de "Datos ARCA" abierto. Se guarda la IDENTIDAD de la fila, no la fila.
@@ -1454,42 +1501,6 @@ export const ContractBulkAfipTab: React.FC<{
   const [datosCuitInfoOpen, setDatosCuitInfoOpen] = useState(false);
   // Explicación de por qué "Empresa Contrato" es obligatoria (modal informativo).
   const [empresaContratoInfoOpen, setEmpresaContratoInfoOpen] = useState(false);
-
-  useEffect(() => {
-    categoriaSatAPI
-      .list()
-      .then(setCategorias)
-      .catch(() => setCategorias([]));
-    contratosAPI
-      .list()
-      .then(setTipos)
-      .catch(() => setTipos([]));
-    obrasSocialesApi
-      .list()
-      .then(setObrasSociales)
-      .catch(() => setObrasSociales([]));
-    infoAPI
-      .listSedes()
-      .then(setSedes)
-      .catch(() => setSedes([]));
-    companiesAPI
-      .list()
-      .then(setCompanies)
-      .catch(() => setCompanies([]));
-    arcaSucursalesAPI
-      .list()
-      .then(setArcaSucursales)
-      .catch(() => setArcaSucursales([]));
-    conveniosApi
-      .list()
-      .then(setConvenios)
-      .catch(() => setConvenios([]));
-  }, []);
-
-  // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
-  // `estados` entra al catálogo para que el TXT derive el alta temprana del estado del contrato y no
-  // del switch que se eliminó. `allEstados` ya estaba en scope: es la misma lista que arma las bandejas.
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales]);
 
   /*
     EL NIVEL (Oro, Plata…) DE CADA CATEGORÍA, PARA VERLO AL ELEGIRLA.
@@ -3757,16 +3768,12 @@ export const ContractBulkFirmaTab: React.FC<{
   const [filterTipoContrato, setFilterTipoContrato] = useState('');
   const [filterEstadoContrato, setFilterEstadoContrato] = useState('');
   const [filterReemplazo, setFilterReemplazo] = useState('');
-  const [companies, setCompanies] = useState<Company[]>([]);
+  /** Estado de la obra social: el mismo filtro y la misma clasificación que Trámite impositivo. */
+  const [filterObraSocial, setFilterObraSocial] = useState<EstadoObraSocial | ''>('');
+  // Las empresas y los catálogos de ARCA: los mismos que Trámite impositivo (ver `useCatalogosArca`).
+  const { afipCat, companies } = useCatalogosArca(allEstados);
   const [enviando, setEnviando] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    companiesAPI
-      .list()
-      .then(setCompanies)
-      .catch(() => setCompanies([]));
-  }, []);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
   // Solo los releases activos cuyo Tipo tiene tildado "Se envía a firmar" — los demás no se generan
@@ -3845,13 +3852,14 @@ export const ContractBulkFirmaTab: React.FC<{
       if (filterClientId && r.clientId !== filterClientId) return false;
       if (filterProjectId && r.projectId !== filterProjectId) return false;
       if (filterEmpresaId && !empresasDelContrato(r).includes(filterEmpresaId)) return false;
+      if (filterObraSocial && estadoObraSocial(r, resolveAfipValues(r, afipCat)) !== filterObraSocial) return false;
       if (q) {
         const hay = [r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato].some((v) => (v || '').toLowerCase().includes(q));
         if (!hay) return false;
       }
       return true;
     });
-  }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo]);
+  }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterObraSocial, afipCat]);
   const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rowsEnEnvio), [rowsEnEnvio]);
   const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(rowsEnEnvio), [rowsEnEnvio]);
 
@@ -3958,6 +3966,7 @@ export const ContractBulkFirmaTab: React.FC<{
               { label: 'Empresa', value: filterEmpresaId, onChange: setFilterEmpresaId, placeholder: 'Todas las empresas', options: empresaOptions },
               { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
               { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+              { label: 'Obra social', value: filterObraSocial, onChange: (v: string) => setFilterObraSocial(v as EstadoObraSocial | ''), placeholder: 'Todas', options: FILTROS_OBRA_SOCIAL },
               { label: 'Estado de contrato', value: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: (opt: { label: string }) => <EstadoBadge name={opt.label} /> },
               { label: 'Reemplazo', value: filterReemplazo, onChange: setFilterReemplazo, placeholder: 'Con y sin reemplazo', options: OPCIONES_REEMPLAZO },
             ]}

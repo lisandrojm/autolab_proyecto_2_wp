@@ -126,6 +126,8 @@ export interface ContratoDelPlan {
     horasPorJornada?: number | null;
     /** «Cantidad de jornadas» del tipo: si está, son ésas (ver `jornadasFijadasPorElTipo`). */
     cantidadJornadas?: number | null;
+    /** «Días por semana» del tipo: precargan la semana de cada puesto (ver `semanaDelTipoDeContrato`). */
+    diasPorSemana?: number | null;
 }
 export interface Contexto {
     /** Los tipos de contrato de los puestos, por `_id`. */
@@ -155,6 +157,8 @@ export interface Contexto {
      * con lo que la persona ya tiene y con sus otros puestos del lote, para ESTAS fechas.
      */
     superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
+    /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
+    sedePrincipal?: number | null;
 }
 export interface FilaDelPlan {
     integranteId: string;

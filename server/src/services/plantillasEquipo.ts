@@ -892,7 +892,7 @@ async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: Integra
   const categoriaIds = [...integrantes.map((i) => i.categoriaSatId), ...Object.values(puntuales).map((x) => x.categoriaSatId)].filter(idOk).map(oid);
   // Los de los puestos, el general del pedido y los puntuales: cualquiera de ellos puede terminar rigiendo una fila.
   const contratoIds = [...new Set([p.contratoId, fechas.contratoId, ...integrantes.map((i) => i.contratoId), ...Object.values(puntuales).map((x) => x.contratoId)].filter(idOk).map(String))].map(oid);
-  const [contratos, hayContratos, convenio, hayConvenios, categorias, personas, equipo, motivos]: any[] = await Promise.all([
+  const [contratos, hayContratos, convenio, hayConvenios, categorias, personas, equipo, motivos, proyecto]: any[] = await Promise.all([
     contratoIds.length ? Contrato.find({ _id: { $in: contratoIds } }).select("name data").lean() : [],
     Contrato.exists({ isActive: { $ne: false } }),
     p.convenioId ? Convenio.findById(p.convenioId).select("externalId").lean() : null,
@@ -901,9 +901,14 @@ async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: Integra
     User.find({ _id: { $in: [...integrantes.map((i) => i.userId), ...Object.values(puntuales).map((x) => x.userId)].filter(idOk).map(oid) }, tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.isSolicitud").lean(),
     User.find({ tenantId, projectIds: oid(p.projectId) }).select("_id").lean(),
     RequestConfig.find({ tenantId, isActive: true }).select("name").lean(),
+    idOk(p.projectId) ? Project.findById(p.projectId).select("metadata.sedeId metadata.sedeIds").lean() : null,
   ]);
+  // La principal: la primera de `sedeIds`, o la única `sedeId` de los proyectos de antes.
+  const sedeIds: number[] = Array.isArray(proyecto?.metadata?.sedeIds) ? proyecto.metadata.sedeIds.map(Number).filter((n: number) => n > 0) : [];
+  const sedePrincipal = sedeIds[0] || (Number(proyecto?.metadata?.sedeId) > 0 ? Number(proyecto.metadata.sedeId) : null);
   return {
-    contratos: new Map(contratos.map((c: any) => [String(c._id), { modoFechas: c.data?.modoFechas, esTiempoIndeterminado: !!c.data?.esTiempoIndeterminado, multiplicadorDiario: c.data?.multiplicadorDiario, horasPorJornada: c.data?.horasPorJornada ?? null, cantidadJornadas: c.data?.cantidadJornadas ?? null }])),
+    sedePrincipal,
+    contratos: new Map(contratos.map((c: any) => [String(c._id), { modoFechas: c.data?.modoFechas, esTiempoIndeterminado: !!c.data?.esTiempoIndeterminado, multiplicadorDiario: c.data?.multiplicadorDiario, horasPorJornada: c.data?.horasPorJornada ?? null, cantidadJornadas: c.data?.cantidadJornadas ?? null, diasPorSemana: c.data?.diasPorSemana ?? null }])),
     hayContratos: !!hayContratos,
     convenioCct: String(convenio?.externalId || "").trim(),
     hayConvenios: !!hayConvenios,
