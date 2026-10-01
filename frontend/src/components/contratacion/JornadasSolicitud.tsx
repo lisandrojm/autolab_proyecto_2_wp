@@ -36,6 +36,11 @@ interface Props {
   mostrarErrores: boolean;
   /** Algo que pasó sin que la persona lo pidiera (se descartó un ajuste), dicho una vez. */
   aviso?: string;
+  /**
+   * El tipo de contrato FIJA las jornadas («Cantidad de jornadas» de su ABM, ver
+   * `jornadasFijadasPorElTipo`): se muestra su nombre y el número no se calcula ni se edita.
+   */
+  fijadasPorTipo?: string | null;
 }
 
 const etiqueta = "text-xs font-bold text-slate-500 uppercase tracking-wider";
@@ -64,8 +69,25 @@ const fechasContadas = (desde: string, hasta: string, dias: number[]): Date[] =>
   return fechas;
 };
 
-export function JornadasSolicitud({ desde, hasta, rotativos, calculadas, dias = [], valor, onValor, ajustado, motivo, nota, onEditarManual, onCancelarAjuste, onMotivo, onNota, errores, mostrarErrores, aviso }: Props) {
+export function JornadasSolicitud({ desde, hasta, rotativos, calculadas, dias = [], valor, onValor, ajustado, motivo, nota, onEditarManual, onCancelarAjuste, onMotivo, onNota, errores, mostrarErrores, aviso, fijadasPorTipo }: Props) {
   const [verCuenta, setVerCuenta] = useState(false);
+  /*
+    FIJADAS POR EL TIPO DE CONTRATO: un plazo fijo son 30, dé lo que dé el calendario. No hay cuenta
+    que mostrar ni ajuste que hacer: si el número no corresponde, lo que hay que cambiar es el tipo.
+  */
+  if (fijadasPorTipo) {
+    return (
+      <div id="bloque-jornadas" className="space-y-2">
+        <label className={etiqueta}>Cantidad de jornadas</label>
+        <div className="flex items-center gap-3 rounded-xl border border-dashed border-slate-300 px-4 py-3 dark:border-slate-600" aria-readonly="true">
+          <FontAwesomeIcon icon={faCalculator} className="h-4 w-4 text-slate-400" />
+          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{calculadas ?? '—'}</span>
+          <input type="hidden" name="workdaysCount" value={valor} readOnly />
+        </div>
+        <p className="text-[11px] text-slate-400">Fijadas por el tipo de contrato «{fijadasPorTipo}»: no dependen de las fechas ni de los días marcados.</p>
+      </div>
+    );
+  }
   const fechas = useMemo(() => (rotativos ? [] : fechasContadas(desde, hasta, dias)), [rotativos, desde, hasta, dias]);
   const corridos = diasCorridos(desde, hasta);
   const cargado = Number(valor);
