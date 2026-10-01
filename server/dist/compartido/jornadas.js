@@ -101,8 +101,19 @@ export const jornadasDelCalendario = (desde, hasta, dias) => {
  *    martes (así se contaba antes, y la solicitud salía con 3).
  *  - con días ROTATIVOS: no hay patrón del cual deducirlas (`null`: se cargan a mano).
  *  - por PERÍODO: los días de la semana marcados que caen en él (`jornadasDelCalendario`).
+ *
+ * SALVO QUE EL TIPO DE CONTRATO LAS FIJE (`jornadasDelTipo`, la «Cantidad de jornadas» de su ABM): un
+ * plazo fijo son 30 aunque el calendario del mes dé 27. Ahí manda el tipo, con período o con días
+ * rotativos. Con días sueltos no: cada día marcado es una jornada, y eso es lo que se paga.
  */
+export const jornadasFijadasPorElTipo = (jornadasDelTipo, porDiasSueltos) => {
+    const n = Number(jornadasDelTipo);
+    return !porDiasSueltos && Number.isFinite(n) && n > 0 ? Math.trunc(n) : null;
+};
 export const jornadasCalculadasDelPedido = (p) => {
+    const fijadas = jornadasFijadasPorElTipo(p.jornadasDelTipo, p.porDiasSueltos);
+    if (fijadas !== null)
+        return fijadas;
     if (p.porDiasSueltos)
         return p.fechas.length > 0 ? new Set(p.fechas).size : null;
     if (p.rotativos)

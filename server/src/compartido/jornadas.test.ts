@@ -159,3 +159,14 @@ test("mesesEquivalentes con días sueltos: cuenta los días marcados, no todo el
   cerca(importes.total!, 600);
   cerca(importes.semana!, 200);
 });
+
+test("jornadas fijadas por el tipo de contrato: mandan sobre el calendario, salvo con días sueltos", () => {
+  // Octubre 2026 de lunes a sábado da 27; un plazo fijo de 30 son 30.
+  assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-10-31", dias: [1, 2, 3, 4, 5, 6] }), 27);
+  assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-10-31", dias: [1, 2, 3, 4, 5, 6], jornadasDelTipo: 30 }), 30);
+  assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "2026-10-01", hasta: "2026-10-31", dias: [], jornadasDelTipo: "30" }), 30);
+  // Días sueltos: cada día marcado es una jornada, aunque el tipo diga 22.
+  assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: true, fechas: ["2026-10-02", "2026-10-09"], rotativos: false, desde: "", hasta: "", dias: [], jornadasDelTipo: 22 }), 2);
+  // Vacío o 0 en el tipo: se calcula.
+  assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "", hasta: "", dias: [], jornadasDelTipo: 0 }), null);
+});

@@ -124,6 +124,8 @@ export interface ContratoDelPlan {
     esTiempoIndeterminado?: boolean;
     multiplicadorDiario?: number | null;
     horasPorJornada?: number | null;
+    /** «Cantidad de jornadas» del tipo: si está, son ésas (ver `jornadasFijadasPorElTipo`). */
+    cantidadJornadas?: number | null;
 }
 export interface Contexto {
     /** Los tipos de contrato de los puestos, por `_id`. */

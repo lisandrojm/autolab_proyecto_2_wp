@@ -953,7 +953,7 @@ async function contextoDe(tenantId, p, integrantes, fechas, puntuales) {
         RequestConfig.find({ tenantId, isActive: true }).select("name").lean(),
     ]);
     return {
-        contratos: new Map(contratos.map((c) => [String(c._id), { modoFechas: c.data?.modoFechas, esTiempoIndeterminado: !!c.data?.esTiempoIndeterminado, multiplicadorDiario: c.data?.multiplicadorDiario, horasPorJornada: c.data?.horasPorJornada ?? null }])),
+        contratos: new Map(contratos.map((c) => [String(c._id), { modoFechas: c.data?.modoFechas, esTiempoIndeterminado: !!c.data?.esTiempoIndeterminado, multiplicadorDiario: c.data?.multiplicadorDiario, horasPorJornada: c.data?.horasPorJornada ?? null, cantidadJornadas: c.data?.cantidadJornadas ?? null }])),
         hayContratos: !!hayContratos,
         convenioCct: String(convenio?.externalId || "").trim(),
         hayConvenios: !!hayConvenios,

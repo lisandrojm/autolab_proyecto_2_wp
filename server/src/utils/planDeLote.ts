@@ -19,7 +19,7 @@
  *
  * ERRORES frenan la contratación entera (el lote es todo o nada). ADVERTENCIAS se muestran y no frenan.
  */
-import { derivarImportes, erroresDeJornadas, importePorJornada, jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo, Importes } from "../compartido/jornadas.js";
+import { derivarImportes, erroresDeJornadas, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo, Importes } from "../compartido/jornadas.js";
 import { DatosSolicitud } from "../compartido/solicitudDeContratacion.js";
 
 export interface PlantillaParaPlan {
@@ -130,6 +130,8 @@ export interface ContratoDelPlan {
   esTiempoIndeterminado?: boolean;
   multiplicadorDiario?: number | null;
   horasPorJornada?: number | null;
+  /** «Cantidad de jornadas» del tipo: si está, son ésas (ver `jornadasFijadasPorElTipo`). */
+  cantidadJornadas?: number | null;
 }
 
 export interface Contexto {
@@ -247,8 +249,9 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     // Igual que el formulario individual: `periodoDeCalculo` con el `indeterminado` del contrato, y las
     // jornadas con la regla compartida.
     const periodo = periodoDeCalculo(desde, hasta, indeterminado);
-    const calculadas = jornadasCalculadasDelPedido({ porDiasSueltos, fechas: fechasSueltas, rotativos, desde: periodo.desde, hasta: periodo.hasta, dias: diasSemana });
-    const jornadas = rotativos ? Number(p.jornadas) || Number(contratacion.jornadasRotativos) || 0 : calculadas || 0;
+    const calculadas = jornadasCalculadasDelPedido({ porDiasSueltos, fechas: fechasSueltas, rotativos, desde: periodo.desde, hasta: periodo.hasta, dias: diasSemana, jornadasDelTipo: contrato?.cantidadJornadas });
+    const fijadasPorTipo = jornadasFijadasPorElTipo(contrato?.cantidadJornadas, porDiasSueltos);
+    const jornadas = fijadasPorTipo ?? (rotativos ? Number(p.jornadas) || Number(contratacion.jornadasRotativos) || 0 : calculadas || 0);
 
     // ── Lo que se paga por jornada ──
     const escala = categoria ? importePorJornada(categoria.neto, multiplicador) : 0;

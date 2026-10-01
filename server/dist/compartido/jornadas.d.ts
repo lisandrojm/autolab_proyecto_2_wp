@@ -62,7 +62,12 @@ export declare const jornadasDelCalendario: (desde: string | undefined, hasta: s
  *    martes (así se contaba antes, y la solicitud salía con 3).
  *  - con días ROTATIVOS: no hay patrón del cual deducirlas (`null`: se cargan a mano).
  *  - por PERÍODO: los días de la semana marcados que caen en él (`jornadasDelCalendario`).
+ *
+ * SALVO QUE EL TIPO DE CONTRATO LAS FIJE (`jornadasDelTipo`, la «Cantidad de jornadas» de su ABM): un
+ * plazo fijo son 30 aunque el calendario del mes dé 27. Ahí manda el tipo, con período o con días
+ * rotativos. Con días sueltos no: cada día marcado es una jornada, y eso es lo que se paga.
  */
+export declare const jornadasFijadasPorElTipo: (jornadasDelTipo: unknown, porDiasSueltos: boolean) => number | null;
 export declare const jornadasCalculadasDelPedido: (p: {
     porDiasSueltos: boolean;
     fechas: string[];
@@ -70,6 +75,7 @@ export declare const jornadasCalculadasDelPedido: (p: {
     desde: string;
     hasta: string;
     dias: number[];
+    jornadasDelTipo?: unknown;
 }) => number | null;
 export interface DatosJornadas {
     desde: string;
