@@ -4,6 +4,7 @@ import { faChevronDown, faSearch, faCheck } from "@fortawesome/free-solid-svg-ic
 import type { SimpleCatalogItem } from "../../api/simpleCatalog";
 import { ChipValoracion, ChipSinValorar } from "../proyectos/ChipValoracion";
 import { fuzzyMatch } from "../../utils/searchHelpers";
+import { etiquetaGrupo } from "../../utils/seleccionConvenioCategoria";
 
 export interface OpcionCategoria {
   id: string | number;
@@ -11,6 +12,8 @@ export interface OpcionCategoria {
   codigoArca?: string;
   /** La valoración de la categoría EN LA FUNCIÓN elegida (`RoleFrame.data.categoriasSat[].valoracionId`). */
   valoracionId?: string | null;
+  /** El grupo del convenio («1»): se muestra como «G1» al lado del nivel. */
+  grupo?: string;
 }
 
 /**
@@ -52,6 +55,8 @@ export const SelectorCategoria: React.FC<{
     const v = valoracion(o.valoracionId);
     return v ? <ChipValoracion nombre={String(v.name)} color={String(v.color || "")} /> : <ChipSinValorar title="Esta categoría no tiene valoración cargada en la función" />;
   };
+  // El grupo al lado del nivel: «Director de Programas [Oro] G1».
+  const grupo = (o: OpcionCategoria) => (etiquetaGrupo(o.grupo) ? <span className="shrink-0 text-[11px] font-bold text-gray-500 dark:text-gray-400" title={`Grupo ${o.grupo} del convenio`}>{etiquetaGrupo(o.grupo)}</span> : null);
   const texto = (o: OpcionCategoria) => `${o.codigoArca ? `${o.codigoArca} — ` : ""}${o.nombre}`;
   const elegida = opciones.find((o) => String(o.id) === String(valor));
   const filtradas = useMemo(() => opciones.filter((o) => !busqueda.trim() || fuzzyMatch(texto(o), busqueda)), [opciones, busqueda]);
@@ -72,6 +77,7 @@ export const SelectorCategoria: React.FC<{
           <>
             <span className="truncate flex-1">{texto(elegida)}</span>
             {tag(elegida)}
+            {grupo(elegida)}
           </>
         ) : (
           <span className="flex-1 text-gray-400 dark:text-gray-500">{placeholder}</span>
@@ -106,6 +112,7 @@ export const SelectorCategoria: React.FC<{
                     <span className="flex-1 min-w-0 truncate text-gray-800 dark:text-gray-200">{texto(o)}</span>
                     {delNivel && <span className="text-[10px] font-semibold text-green-700 dark:text-green-400 shrink-0">corresponde</span>}
                     {tag(o)}
+                    {grupo(o)}
                   </button>
                 </li>
               );

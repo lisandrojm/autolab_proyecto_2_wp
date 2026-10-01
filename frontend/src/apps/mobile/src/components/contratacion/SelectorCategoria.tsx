@@ -73,6 +73,8 @@ export function CampoCategoria({ categoria, nivel, onAbrir, deshabilitado, motiv
             <span className="truncate text-sm text-slate-900 dark:text-white">{categoria.name}</span>
             {/* Siempre se dice el nivel, también cuando no lo tiene: es lo que se compara contra el del proyecto. */}
             {nivel ? <ChipValoracion nombre={nivel.nombre} color={nivel.color} className="shrink-0" /> : <ChipSinValorar className="shrink-0" title="Esta categoría no tiene valoración cargada en la función." />}
+            {/* El grupo del convenio: «Director de Programas [Oro] G1». */}
+            {categoria.data?.numeroCategoria ? <span className="shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400" title={`Grupo ${categoria.data.numeroCategoria} del convenio`}>G{categoria.data.numeroCategoria}</span> : null}
           </>
         ) : (
           <>

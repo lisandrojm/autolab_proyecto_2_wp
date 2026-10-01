@@ -37,7 +37,15 @@ export interface CategoriaOfrecida {
    * código de ARCA puede ser Oro en una función y Plata en otra.
    */
   valoracionId?: string | null;
+  /**
+   * El GRUPO del convenio al que pertenece (`data.numeroCategoria` del catálogo: «1» = Grupo 1). Vacío
+   * si el convenio no publica grupos. No es `numeroCategoria` de arriba, que cae al id cuando no hay.
+   */
+  grupo?: string;
 }
+
+/** «G1» para el Grupo 1; vacío si la categoría no tiene grupo. Así se muestra al lado del nombre. */
+export const etiquetaGrupo = (grupo?: string | number | null): string => (grupo !== undefined && grupo !== null && String(grupo).trim() ? `G${String(grupo).trim()}` : "");
 
 export interface ConvenioOfrecido {
   /** El código de CCT ("0634/11"). Es la clave con la que las categorías declaran su convenio. */
@@ -180,6 +188,8 @@ export const categoriasOfrecidas = ({
   // El convenio de cada categoría vive SOLO en el catálogo: la copia denormalizada de las funciones
   // FRAME no lo guarda, así que todo lo que use el CCT se resuelve contra este mapa por `data.id`.
   const convenioPorId = new Map(categorias.map((c) => [String(c.data?.id), String(c.data?.convenio || "").trim()]));
+  // El grupo también vive sólo en el catálogo (ver `CategoriaOfrecida.grupo`).
+  const grupoPorId = new Map(categorias.filter((c) => c.data?.numeroCategoria).map((c) => [String(c.data?.id), String(c.data?.numeroCategoria)]));
 
   const delRol: CategoriaOfrecida[] = rolesFrame.flatMap((rf) =>
     (Array.isArray(rf.data?.categoriasSat) ? (rf.data.categoriasSat as any[]) : []).map((c) => ({
@@ -188,6 +198,7 @@ export const categoriasOfrecidas = ({
       numeroCategoria: c.numeroCategoria ?? c.id,
       codigoArca: "",
       valoracionId: c.valoracionId ? String(c.valoracionId) : null,
+      grupo: grupoPorId.get(String(c.id)) || "",
     })),
   );
 
@@ -213,7 +224,7 @@ export const categoriasOfrecidas = ({
     desde la función: las que no son de ella siguen sin valorar, que es lo que realmente son acá.
   */
   const valoracionDelRol = new Map(delRol.filter((c) => c.valoracionId).map((c) => [String(c.id), c.valoracionId as string]));
-  const desdeCatalogo = (c: CategoriaSatItem): CategoriaOfrecida => ({ id: c.data?.id, nombre: c.name, numeroCategoria: c.data?.numeroCategoria || c.data?.id, codigoArca: "", valoracionId: valoracionDelRol.get(String(c.data?.id)) ?? null });
+  const desdeCatalogo = (c: CategoriaSatItem): CategoriaOfrecida => ({ id: c.data?.id, nombre: c.name, numeroCategoria: c.data?.numeroCategoria || c.data?.id, codigoArca: "", valoracionId: valoracionDelRol.get(String(c.data?.id)) ?? null, grupo: c.data?.numeroCategoria ? String(c.data.numeroCategoria) : "" });
 
   // Sin categorías por función, el catálogo entero. Se filtran las no elegibles (alias que existen
   // sólo para que resuelvan contratos históricos): acá se ELIGE una para un contrato nuevo.
