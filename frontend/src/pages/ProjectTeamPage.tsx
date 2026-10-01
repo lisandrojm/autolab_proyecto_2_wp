@@ -445,11 +445,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   }, [selectedUserForWizard, unicaEmpresaContrato, unicaEmpresaRelease]);
 
   /*
-    LA SEDE DEL CONTRATO: una de las del proyecto donde trabaja la Empresa del Contrato (ver
-    `sedesDelContrato`), con la favorita de la empresa primero.
+    LA SEDE DEL CONTRATO: una de las del proyecto (ver `sedesDelContrato`). La primera es la principal,
+    la que el proyecto tiene por defecto.
 
-    Vacía, se completa sola con la primera. Al CAMBIAR de empresa, si la elegida no es de la nueva,
-    se reemplaza. Lo que no se hace es pisar al abrir la sede guardada de un contrato de antes: se
+    Vacía, se completa sola con la principal. Al CAMBIAR de empresa (sólo importa si el proyecto no
+    tiene sedes y se ofrecen las de la empresa), si la elegida dejó de valer se reemplaza. Lo que no se hace es pisar al abrir la sede guardada de un contrato de antes: se
     muestra igual (ver `opcionesSedeWizard`) y se cambia sólo si alguien lo decide.
   */
   const sedesOpcionesWizard = useMemo(() => sedesDelContrato(project?.metadata, wizardData.empresaContratoId, companies as any, allSedes), [project?.metadata, wizardData.empresaContratoId, companies, allSedes]);
@@ -1941,9 +1941,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     console.log('[Wizard] FINAL initialEstadoId:', initialEstadoId);
 
     /*
-      LA SEDE SE ELIGE EN EL ALTA, entre las del proyecto que son de la Empresa del Contrato (ver
-      `sedesOpcionesWizard`). Se precarga la del contrato que se edita; si no hay, queda vacía y la
-      completa el efecto de la sede con la favorita de la empresa. La de una solicitud pisa a las dos
+      LA SEDE SE ELIGE EN EL ALTA, entre las del proyecto (ver `sedesOpcionesWizard`). Se precarga la
+      del contrato que se edita; si no hay, queda vacía y la completa el efecto de la sede con la
+      principal del proyecto. La de una solicitud pisa a las dos
       (`deLaSolicitud`).
     */
     let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : '';
@@ -3915,11 +3915,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     {opcionesSedeWizard.map((s) => (
                       <option key={s.id} value={String(s.id)}>
                         {s.nombre}
-                        {s.fuera ? ' (no es del proyecto o de la empresa)' : ''}
+                        {s.fuera ? ' (no es del proyecto)' : ''}
                       </option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Las sedes del proyecto donde trabaja la empresa del contrato.</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Las sedes del proyecto. Viene elegida la principal.</p>
                 </div>
                 {/* La otra mitad de la fila queda libre: el Tipo de contrato y el Estado van juntos abajo. */}
                 <div className="hidden md:block" />

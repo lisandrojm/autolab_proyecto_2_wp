@@ -31,6 +31,7 @@ interface Formulario {
   inTime: string;
   outTime: string;
   empresaContratoId: string;
+  sedeId?: string;
   convenioId: string;
   dailyRate: string;
   isReplacement: boolean;
@@ -87,6 +88,8 @@ function payloadComoAntes(formData: Formulario, c: Contexto, timestamp: number) 
       fechasTrabajadas: formData.fechasTrabajadas.length > 0 ? formData.fechasTrabajadas : undefined,
       schedule: `${formData.inTime} - ${formData.outTime}`,
       empresaContratoId: formData.empresaContratoId || undefined,
+      // Agregado después de congelar la copia: la sede elegida en la solicitud.
+      sedeId: Number(formData.sedeId) > 0 ? Number(formData.sedeId) : undefined,
       convenioId: esServicios ? undefined : formData.convenioId || undefined,
       dailyRate: Number(formData.dailyRate),
       isReplacement: formData.isReplacement,
@@ -130,6 +133,7 @@ function datosDelFormulario(formData: Formulario, c: Contexto): DatosSolicitud {
     inTime: formData.inTime,
     outTime: formData.outTime,
     empresaContratoId: formData.empresaContratoId,
+    sedeId: formData.sedeId,
     convenioId: formData.convenioId,
     dailyRate: formData.dailyRate,
     isReplacement: formData.isReplacement,

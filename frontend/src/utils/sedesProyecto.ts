@@ -91,18 +91,15 @@ export const sedesParaElForm = (sedeIds: number[], empresaIds: string[], compani
 /**
  * LAS SEDES QUE SE PUEDEN ELEGIR PARA UN CONTRATO (alta de miembro, solicitud de contratación).
  *
- * Las del proyecto que también son de la Empresa del Contrato: el contrato se firma con esa empresa y
- * tiene que ser en una sede donde ella trabaja. Si el cruce queda vacío (la empresa no tiene sedes
- * cargadas, o ninguna coincide) se ofrecen las del proyecto; si el proyecto no tiene, las de la
- * empresa. Primero la favorita de la empresa, después el orden general (ver `ordenarSedes`).
+ * Las del PROYECTO, en su orden: la primera es la principal (la que el proyecto tiene por defecto) y
+ * es la que queda preseleccionada. Sólo si el proyecto no tiene ninguna cargada se ofrecen las de la
+ * Empresa del Contrato, con su favorita primero, para no dejar el campo sin opciones.
  */
 export const sedesDelContrato = (projectMeta: any, empresaId: string, companies: EmpresaConSedes[], catalogo: Array<{ name?: string; data?: any }>): number[] => {
   const delProyecto = sedesDelForm(projectMeta);
-  const empresa = companies.find((c) => String(c._id) === String(empresaId));
-  const deLaEmpresa = (empresa?.sedeIds || []).map(Number).filter((n) => n > 0);
-  const cruce = delProyecto.filter((id) => deLaEmpresa.includes(id));
-  const base = cruce.length > 0 ? cruce : delProyecto.length > 0 ? delProyecto : deLaEmpresa;
-  return ordenarSedes(base, catalogo, empresaId ? favoritasDeEmpresas([empresaId], companies) : []);
+  if (delProyecto.length > 0) return delProyecto;
+  const deLaEmpresa = (companies.find((c) => String(c._id) === String(empresaId))?.sedeIds || []).map(Number).filter((n) => n > 0);
+  return ordenarSedes(deLaEmpresa, catalogo, empresaId ? favoritasDeEmpresas([empresaId], companies) : []);
 };
 
 /** La sede que queda elegida: la actual si sigue siendo una opción; si no, la primera (la favorita). */

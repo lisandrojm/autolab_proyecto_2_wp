@@ -11,6 +11,7 @@ import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
+import { sedeElegida, sedesDelContrato } from "../../../../utils/sedesProyecto";
 import { armarPayloadDeSolicitud } from "@compartido/solicitudDeContratacion";
 import { valoracionParaRoles } from "@compartido/valoracionPorRol";
 import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSuperposicion";
@@ -143,6 +144,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const etiquetaProyecto = (p: Project) => (typeof p.clientId === "object" && p.clientId?.name ? `${p.clientId.name} | ${p.name}` : p.name);
   /** Catálogo de empresas y de convenios, para resolver nombres y la cadena proyecto → empresa → CCT. */
   const [companies, setCompanies] = useState<Company[]>([]);
+  /** El catálogo de sedes (Info `sede`): los nombres y el orden general para el campo Sede. */
+  const [catalogoSedes, setCatalogoSedes] = useState<InfoItem[]>([]);
   /** Ya contestó el catálogo de empleadoras (haya traído algo o no). Ver el campo «Empresa que contrata». */
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
@@ -265,7 +268,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     outTime: "",
     /** La empleadora que contrata y el convenio bajo el que lo hace. Salen del proyecto elegido. */
     empresaContratoId: "",
-    /** La sede donde va a trabajar: una de las del proyecto donde trabaja la empresa (ver `sedesDelContrato`). */
+    /** La sede donde va a trabajar: una de las del proyecto, la principal por defecto (ver `sedesDelContrato`). */
     sedeId: "",
     convenioId: "",
     dailyRate: "",
@@ -429,6 +432,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     }
   }, [empresasDelProyecto, formData.empresaContratoId, esServicios]);
 
+  /*
+    LA SEDE: una de las del proyecto, con la principal (la que el proyecto tiene por defecto)
+    preseleccionada. Misma regla que el alta del escritorio (`sedesDelContrato`). Al cambiar de
+    proyecto, la que dejó de valer se reemplaza por la principal del nuevo.
+  */
+  const opcionesSede = useMemo(() => {
+    const proyecto = projects.find((p) => p._id === formData.projectIds[0]);
+    if (!proyecto) return [];
+    return sedesDelContrato(proyecto.metadata, formData.empresaContratoId, companies as any, catalogoSedes).map((id) => ({ id, nombre: catalogoSedes.find((s) => Number(s.data?.id) === id)?.name || `Sede ${id}` }));
+  }, [projects, formData.projectIds, formData.empresaContratoId, companies, catalogoSedes]);
+  useEffect(() => {
+    const ids = opcionesSede.map((o) => o.id);
+    const nueva = sedeElegida(formData.sedeId, ids);
+    const texto = nueva ? String(nueva) : "";
+    if (texto !== formData.sedeId) setFormData((p) => ({ ...p, sedeId: texto }));
+  }, [opcionesSede, formData.sedeId]);
+
   const conveniosApi = createSimpleCatalogApi("/convenios");
 
 
@@ -483,6 +503,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           .list()
           .then(setCategoriasSat)
           .catch((e) => console.error("Error cargando categorías:", e));
+        infoAPI
+          .listByType("sede")
+          .then(setCatalogoSedes)
+          .catch((e) => console.error("Error cargando sedes:", e));
         infoAPI
           .listByType("estado-empleado")
           .then((estados) => {
@@ -2223,6 +2247,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             )}
           </div>
         </div>
+
+        {/* LA SEDE, debajo de la empresa: depende de ella (ver `opcionesSede`). */}
+        {formData.projectIds.length > 0 && opcionesSede.length > 0 && (
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-[10px]" />
+              Sede
+            </label>
+            {opcionesSede.length === 1 ? (
+              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">{opcionesSede[0].nombre}</p>
+            ) : (
+              <select name="sedeId" value={formData.sedeId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
+                {opcionesSede.map((o) => (
+                  <option key={o.id} value={String(o.id)}>
+                    {o.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
 
         {/*
           EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él. Va ANTES de convenio, categoría e importe

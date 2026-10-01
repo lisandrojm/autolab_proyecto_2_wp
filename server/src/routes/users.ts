@@ -2857,7 +2857,8 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
         reemplazo: meta?.isReplacement || false,
         empleado_id_reemplezado: null,
         observaciones,
-        sede_id: 0,
+        // La sede que se pidió en la solicitud (si la eligió).
+        sede_id: Number(meta?.sedeId) > 0 ? Number(meta!.sedeId) : 0,
         rol_frame_id: 0,
         fecha_inicio_participacion: meta?.startDate || null,
         fecha_fin_participacion: meta?.dueDate || null,
