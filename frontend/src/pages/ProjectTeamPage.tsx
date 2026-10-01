@@ -1429,7 +1429,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const categoriaAutomatica = useRef<{ id: string; valoracion: string } | null>(null);
   useEffect(() => {
-    if (verTodasLasValoraciones) return;
+    // Con un tipo de Servicios no hay categoría (otro efecto la suelta): elegir una armaba un rebote.
+    if (verTodasLasValoraciones || esServicios) return;
     const auto = categoriaAutomatica.current;
     const esLaAutomatica = !!auto && auto.id === String(wizardData.categoria_sat_id);
     if (wizardData.categoria_sat_id && !(esLaAutomatica && auto!.valoracion !== valoracionProyectoId)) return;
@@ -1440,7 +1441,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!porDefecto) return;
     categoriaAutomatica.current = { id: String(porDefecto.id), valoracion: valoracionProyectoId };
     if (String(porDefecto.id) !== String(wizardData.categoria_sat_id)) setWizardData((prev) => ({ ...prev, categoria_sat_id: porDefecto.id }));
-  }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id, valoracionProyectoId, valoraciones]);
+  }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id, valoracionProyectoId, valoraciones, esServicios]);
 
   /*
     EL OFICIO QUE SE AGREGA DESDE EL BUSCADOR, y que la persona todavía no tiene en su ficha.

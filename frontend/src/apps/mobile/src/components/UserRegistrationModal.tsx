@@ -555,6 +555,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       const guardadas = meta.workdaysCount;
       const calculadasAlAbrir = rotativos ? null : jornadasDelCalendario(meta.startDate || fuente.hireDate?.split("T")[0] || "", meta.dueDate || "", Array.isArray(m.diasSemana) ? m.diasSemana : []);
       const abreEnAjuste = !rotativos && (!!m.workdaysOverridden || (guardadas != null && calculadasAlAbrir !== null && guardadas !== calculadasAlAbrir));
+      // El importe guardado es el que se pactó: abrir la solicitud no es «cambiar de categoría», así que
+      // no se le vuelve a proponer la escala encima (ver `propuestaAnterior`).
+      propuestaAnterior.current = `${meta.categoriaSatId || ""}::${(meta as any).contratoId || ""}`;
       setFormData({
         fullName: meta.fullName || `${fuente.firstName} ${fuente.lastName}`,
         projectIds: meta.projectIds || [],
@@ -1491,7 +1494,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     if (isOpen) categoriaAutomatica.current = null;
   }, [isOpen]);
   useEffect(() => {
-    if (verTodasDelConvenio || !convenioCct) return;
+    // Con un tipo de Servicios no hay categoría (el efecto de abajo la suelta): proponer una armaba un
+    // rebote —se elegía, se soltaba, se volvía a elegir— y cada vuelta reponía el importe de la escala.
+    if (esServicios || verTodasDelConvenio || !convenioCct) return;
     const auto = categoriaAutomatica.current;
     const esLaAutomatica = !!auto && auto.id === formData.categoriaSatId;
     if (formData.categoriaSatId && !(esLaAutomatica && auto!.valoracion !== String(valoracionDelProyecto || ""))) return;
@@ -1502,7 +1507,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     categoriaAutomatica.current = { id: doc._id, valoracion: String(valoracionDelProyecto || "") };
     if (doc._id !== formData.categoriaSatId) setFormData((prev) => ({ ...prev, categoriaSatId: doc._id }));
     setAvisoCascada("");
-  }, [formData.categoriaSatId, verTodasDelConvenio, convenioCct, categoriasOfrecidasLista, valoracionDelProyecto, valoraciones, categoriasSat]);
+  }, [formData.categoriaSatId, verTodasDelConvenio, convenioCct, categoriasOfrecidasLista, valoracionDelProyecto, valoraciones, categoriasSat, esServicios]);
 
   /*
     EL IMPORTE POR JORNADA LO PROPONE LA CATEGORÍA.
@@ -1521,10 +1526,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       contrato, así que elegir primero la categoría y después el contrato tiene que actualizar el
       número. Sin el contrato en la clave, quedaba la escala sin multiplicar.
     */
+    /*
+      Sin categoría no hay nada que proponer, y NO se registra como cambio: si la misma categoría se
+      vacía y vuelve (una cascada que la limpia y la elige de nuevo), no es otra categoría, y reponer la
+      escala pisaba el importe que se acababa de escribir.
+    */
+    if (!formData.categoriaSatId) return;
     const clave = `${formData.categoriaSatId}::${formData.contratoId}`;
     if (propuestaAnterior.current === clave) return;
     propuestaAnterior.current = clave;
-    if (!formData.categoriaSatId) return;
     const propuesto = importePorJornadaDeCategoria(
       categoriasSat.find((c) => c._id === formData.categoriaSatId),
       multiplicadorDiario,
