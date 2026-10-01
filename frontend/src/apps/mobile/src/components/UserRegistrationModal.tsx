@@ -10,7 +10,7 @@ import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilte
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo, semanaDelTipoDeContrato } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
-import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
+import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
 import { sedeElegida, sedesDelContrato } from "../../../../utils/sedesProyecto";
 import { armarPayloadDeSolicitud } from "@compartido/solicitudDeContratacion";
 import { valoracionParaRoles } from "@compartido/valoracionPorRol";
@@ -1162,6 +1162,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       {!porDiasSueltos && (
       <div className="md:col-span-3">
         <JornadasSolicitud
+          fijadasPorTipo={jornadasFijadas !== null ? contratoElegido?.name : null}
           desde={periodo.desde}
           hasta={periodo.hasta}
           rotativos={formData.diasRotativos}
@@ -1631,8 +1632,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   // Con días sueltos son los días marcados (antes se contaban los días de la semana del período, y
   // «martes 1 y martes 15» salía con 3): regla compartida con el alta masiva, en `jornadas.ts`.
   const jornadasCalculadas = useMemo(
-    () => jornadasCalculadasDelPedido({ porDiasSueltos, fechas: formData.fechasTrabajadas, rotativos: formData.diasRotativos, desde: periodo.desde, hasta: periodo.hasta, dias: formData.diasSemana }),
-    [porDiasSueltos, formData.fechasTrabajadas, formData.diasRotativos, periodo, formData.diasSemana],
+    () => jornadasCalculadasDelPedido({ porDiasSueltos, fechas: formData.fechasTrabajadas, rotativos: formData.diasRotativos, desde: periodo.desde, hasta: periodo.hasta, dias: formData.diasSemana, jornadasDelTipo: contratoElegido?.data?.cantidadJornadas }),
+    [porDiasSueltos, formData.fechasTrabajadas, formData.diasRotativos, periodo, formData.diasSemana, contratoElegido?.data?.cantidadJornadas],
   );
 
   /*
@@ -1641,7 +1642,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     cargado; pero si el cambio de fechas o días hace que vuelvan a coincidir, ya no hay nada que
     justificar y se sale solo del ajuste, limpiando motivo y aclaración.
   */
+  // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
+  const jornadasFijadas = jornadasFijadasPorElTipo(contratoElegido?.data?.cantidadJornadas, porDiasSueltos);
   useEffect(() => {
+    if (jornadasFijadas !== null) {
+      setFormData((p) => (p.workdaysCount === String(jornadasFijadas) && !p.workdaysOverridden ? p : { ...p, workdaysCount: String(jornadasFijadas), workdaysOverridden: false, workdaysOverrideReason: "", workdaysOverrideNote: "" }));
+      return;
+    }
     if (formData.diasRotativos) return;
     setFormData((p) => {
       if (p.workdaysOverridden) {
@@ -1652,7 +1659,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       return p.workdaysCount === valor ? p : { ...p, workdaysCount: valor };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jornadasCalculadas, formData.diasRotativos]);
+  }, [jornadasCalculadas, formData.diasRotativos, jornadasFijadas]);
 
   const editarJornadasAMano = () => {
     setFormData((p) => ({ ...p, workdaysOverridden: true }));

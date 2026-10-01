@@ -30,7 +30,7 @@ import { ImportesDelContrato } from '../components/contratacion/ImportesDelContr
 import { SelectorHora } from '../components/contratacion/SelectorHora';
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
 import { numeroALetras } from '../utils/numeroALetras';
-import { avisoIndeterminado, erroresDeJornadas, jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { avisoIndeterminado, erroresDeJornadas, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
@@ -982,7 +982,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const porDiasSueltosWizard = contratos.find((c) => c._id === wizardData.contrato_id)?.data?.modoFechas === 'dias';
   const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard && !porDiasSueltosWizard);
-  const jornadasCalculadasWizard = jornadasCalculadasDelPedido({ porDiasSueltos: porDiasSueltosWizard, fechas: wizardData.fechas_trabajadas, rotativos: wizardData.dias_rotativos, desde: periodoWizard.desde, hasta: periodoWizard.hasta, dias: wizardData.dias_semana });
+  // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
+  const tipoDelWizard = contratos.find((c) => c._id === wizardData.contrato_id);
+  const jornadasFijadasWizard = jornadasFijadasPorElTipo(tipoDelWizard?.data?.cantidadJornadas, porDiasSueltosWizard);
+  const jornadasCalculadasWizard = jornadasCalculadasDelPedido({ porDiasSueltos: porDiasSueltosWizard, fechas: wizardData.fechas_trabajadas, rotativos: wizardData.dias_rotativos, desde: periodoWizard.desde, hasta: periodoWizard.hasta, dias: wizardData.dias_semana, jornadasDelTipo: tipoDelWizard?.data?.cantidadJornadas });
   /**
    * Los días marcados en el calendario, y lo que se deduce de ellos: el período (primero y último),
    * los días de la semana que tocan y las jornadas (una por día). Misma cuenta que `elegirDiasSueltos`
@@ -1019,6 +1022,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     nota: ajusteJornadas.nota,
   };
   const erroresJornadasWizard = erroresDeJornadas(datosJornadasWizard);
+  // Fijadas por el tipo: no hay ajuste a mano que conservar.
+  useEffect(() => {
+    if (jornadasFijadasWizard !== null && ajusteJornadas.ajustado) setAjusteJornadas({ ajustado: false, motivo: '', nota: '' });
+  }, [jornadasFijadasWizard, ajusteJornadas.ajustado]);
   useEffect(() => {
     if (ajusteJornadas.ajustado || jornadasCalculadasWizard === null) return;
     setWizardData((prev) => (prev.cantidad_jornadas_laborales === jornadasCalculadasWizard ? prev : { ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
@@ -1132,6 +1139,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       {!porDiasSueltosWizard && (
       <div className="md:col-span-2">
         <JornadasSolicitud
+          fijadasPorTipo={jornadasFijadasWizard !== null ? tipoDelWizard?.name : null}
           desde={periodoWizard.desde}
           hasta={periodoWizard.hasta}
           aviso={avisoIndeterminado(wizardData.fecha_alta_contrato, indeterminadoWizard)}

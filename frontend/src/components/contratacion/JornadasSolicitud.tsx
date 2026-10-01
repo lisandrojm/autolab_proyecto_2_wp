@@ -71,6 +71,13 @@ const fechasContadas = (desde: string, hasta: string, dias: number[]): Date[] =>
 
 export function JornadasSolicitud({ desde, hasta, rotativos, calculadas, dias = [], valor, onValor, ajustado, motivo, nota, onEditarManual, onCancelarAjuste, onMotivo, onNota, errores, mostrarErrores, aviso, fijadasPorTipo }: Props) {
   const [verCuenta, setVerCuenta] = useState(false);
+  const fechas = useMemo(() => (rotativos ? [] : fechasContadas(desde, hasta, dias)), [rotativos, desde, hasta, dias]);
+  const corridos = diasCorridos(desde, hasta);
+  const cargado = Number(valor);
+  const diferencia = calculadas !== null && valor !== "" ? cargado - calculadas : 0;
+  const hayDiferencia = !rotativos && ajustado && diferencia !== 0;
+  const errorJornadas = mostrarErrores ? errores.jornadas : undefined;
+
   /*
     FIJADAS POR EL TIPO DE CONTRATO: un plazo fijo son 30, dé lo que dé el calendario. No hay cuenta
     que mostrar ni ajuste que hacer: si el número no corresponde, lo que hay que cambiar es el tipo.
@@ -81,19 +88,13 @@ export function JornadasSolicitud({ desde, hasta, rotativos, calculadas, dias = 
         <label className={etiqueta}>Cantidad de jornadas</label>
         <div className="flex items-center gap-3 rounded-xl border border-dashed border-slate-300 px-4 py-3 dark:border-slate-600" aria-readonly="true">
           <FontAwesomeIcon icon={faCalculator} className="h-4 w-4 text-slate-400" />
-          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{calculadas ?? '—'}</span>
+          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{calculadas ?? "—"}</span>
           <input type="hidden" name="workdaysCount" value={valor} readOnly />
         </div>
         <p className="text-[11px] text-slate-400">Fijadas por el tipo de contrato «{fijadasPorTipo}»: no dependen de las fechas ni de los días marcados.</p>
       </div>
     );
   }
-  const fechas = useMemo(() => (rotativos ? [] : fechasContadas(desde, hasta, dias)), [rotativos, desde, hasta, dias]);
-  const corridos = diasCorridos(desde, hasta);
-  const cargado = Number(valor);
-  const diferencia = calculadas !== null && valor !== "" ? cargado - calculadas : 0;
-  const hayDiferencia = !rotativos && ajustado && diferencia !== 0;
-  const errorJornadas = mostrarErrores ? errores.jornadas : undefined;
 
   return (
     <div id="bloque-jornadas" className="space-y-2">
