@@ -7,6 +7,13 @@ interface IContract {
     fecha_alta_contrato: string;
     fecha_baja_contrato: string;
     tipo_contrato_id: number;
+    /**
+     * EL TIPO DE CONTRATO (`Contrato._id`) con el que se cargó. Antes se deducía de la plantilla, pero
+     * una plantilla puede servir a varios tipos (`ContratoFrame.contratoIds`): sin guardarlo, un «6x6»
+     * que comparte plantilla con un «5x7» se volvía a abrir como «5x7». Los contratos de antes no lo
+     * tienen y se siguen deduciendo de la plantilla.
+     */
+    contrato_id?: Types.ObjectId | null;
     cantidad_jornadas_laborales: number;
     /**
      * Los días de la semana del contrato (0 = domingo … 6 = sábado).

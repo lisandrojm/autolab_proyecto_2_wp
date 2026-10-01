@@ -53,8 +53,6 @@ async function buscarOCrearContrato(nombre: string, plantilla: { data?: any; isA
  */
 async function ensureContratosBackfilled(): Promise<void> {
   const sinContrato = await ContratoFrame.find({ contratoId: { $exists: false } });
-  if (sinContrato.length === 0) return;
-
   for (const plantilla of sinContrato) {
     const nombre = String(plantilla.name || plantilla.data?.nombre || "").trim();
     if (!nombre) continue;
@@ -63,8 +61,18 @@ async function ensureContratosBackfilled(): Promise<void> {
     if (!contrato) continue;
 
     plantilla.contratoId = contrato._id as any;
+    plantilla.contratoIds = [contrato._id as any];
     await plantilla.save();
   }
+  await ensureContratoIdsBackfilled();
+}
+
+/**
+ * LAS PLANTILLAS DE ANTES DE `contratoIds` (una plantilla, varios tipos): la lista arranca con su único
+ * `contratoId`. Corre junto al backfill de arriba; sin pendientes es un no-op rápido.
+ */
+async function ensureContratoIdsBackfilled(): Promise<void> {
+  await ContratoFrame.updateMany({ contratoId: { $exists: true, $ne: null }, contratoIds: { $exists: false } }, [{ $set: { contratoIds: ["$contratoId"] } }]);
 }
 
 // GET / - listar
@@ -218,7 +226,8 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
 // DELETE /:id - eliminar
 router.delete("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const enUso = await ContratoFrame.countDocuments({ contratoId: req.params.id });
+    // Cualquier plantilla que lo use, sea su tipo principal o uno más de su lista.
+    const enUso = await ContratoFrame.countDocuments({ $or: [{ contratoId: req.params.id }, { contratoIds: req.params.id }] });
     if (enUso > 0) {
       res.status(409).json({ error: `No se puede eliminar: ${enUso} plantilla${enUso === 1 ? "" : "s"} lo tiene${enUso === 1 ? "" : "n"} asignado. Reasigná o eliminá esa${enUso === 1 ? "" : "s"} plantilla${enUso === 1 ? "" : "s"} primero.` });
       return;

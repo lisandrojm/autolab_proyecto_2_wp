@@ -16,7 +16,7 @@
  */
 
 import { InfoItem } from "../api/info";
-import { ContratoFrameItem } from "../api/contratosFrame";
+import { ContratoFrameItem, plantillaEsDeContrato } from "../api/contratosFrame";
 
 export type TipoImpositivo = "alta_temprana_afip" | "constancia_cuit";
 
@@ -63,7 +63,8 @@ export const estadoImpositivoDePlantilla = (estados: InfoItem[], contratoFrameId
  */
 export const tipoImpositivoDeContrato = (contratoId: string, contratoFrames: ContratoFrameItem[], estados: InfoItem[]): TipoImpositivo | null => {
   if (!contratoId) return null;
-  const idsPlantillas = contratoFrames.filter((cf) => (typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId) === contratoId).map((cf) => String(cf._id));
+  // Las plantillas que USA ese tipo (una plantilla puede ser de varios tipos: `plantillaEsDeContrato`).
+  const idsPlantillas = contratoFrames.filter((cf) => plantillaEsDeContrato(cf, contratoId)).map((cf) => String(cf._id));
   if (idsPlantillas.length === 0) return null;
 
   const estado = estadosImpositivos(estados).find((e) => (e.data?.contratoFrameIds || []).some((id) => idsPlantillas.includes(String(id))));

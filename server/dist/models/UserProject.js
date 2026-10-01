@@ -7,6 +7,7 @@ const contractSchema = new Schema({
     fecha_alta_contrato: { type: String },
     fecha_baja_contrato: { type: String },
     tipo_contrato_id: { type: Number },
+    contrato_id: { type: Schema.Types.ObjectId, ref: "Contrato" },
     cantidad_jornadas_laborales: { type: Number },
     dias_por_semana: { type: Number },
     dias_semana: { type: [Number], default: undefined },

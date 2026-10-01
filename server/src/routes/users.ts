@@ -2871,6 +2871,8 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
         nombre_estado_empleado: "Activo",
         nombre_categoria_sat: "",
         nombre_contrato,
+        // El tipo de contrato pedido: una plantilla puede ser de varios tipos y no alcanza para deducirlo.
+        contrato_id: meta?.contratoId || undefined,
         nombre_sede,
         nombre_rol_frame: "",
       };

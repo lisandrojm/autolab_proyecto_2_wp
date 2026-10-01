@@ -10,7 +10,7 @@ import { BloqueEstado } from '../ui/BloqueEstado';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
-import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
+import { contratoFrameAPI, ContratoFrameItem, contratosDePlantilla, plantillaEsDeContrato } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
@@ -333,9 +333,9 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   // Cuántas Plantillas ("Plantillas | Contratos") tiene asignadas cada Contrato.
   const plantillasPorContrato = useMemo(() => {
     const conteo = new Map<string, number>();
+    // Una plantilla puede ser de varios tipos (`contratoIds`): cuenta para cada uno.
     plantillas.forEach((p) => {
-      const id = typeof p.contratoId === 'object' ? p.contratoId?._id : p.contratoId;
-      if (id) conteo.set(id, (conteo.get(id) || 0) + 1);
+      for (const id of contratosDePlantilla(p)) conteo.set(id, (conteo.get(id) || 0) + 1);
     });
     return conteo;
   }, [plantillas]);
@@ -348,10 +348,10 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const estadosPorContrato = useMemo(() => {
     const plantillaIdsPorContrato = new Map<string, Set<string>>();
     plantillas.forEach((p) => {
-      const contratoId = typeof p.contratoId === 'object' ? p.contratoId?._id : p.contratoId;
-      if (!contratoId) return;
-      if (!plantillaIdsPorContrato.has(contratoId)) plantillaIdsPorContrato.set(contratoId, new Set());
-      plantillaIdsPorContrato.get(contratoId)!.add(p._id);
+      for (const contratoId of contratosDePlantilla(p)) {
+        if (!plantillaIdsPorContrato.has(contratoId)) plantillaIdsPorContrato.set(contratoId, new Set());
+        plantillaIdsPorContrato.get(contratoId)!.add(p._id);
+      }
     });
 
     const mapa = new Map<string, InfoItem[]>();
@@ -371,7 +371,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const contratosSinEstado = useMemo(() => contratos.filter((c) => (estadosPorContrato.get(c._id) || []).length === 0), [contratos, estadosPorContrato]);
 
   /** Plantillas ("Plantillas | Contratos") que ya tiene asignadas un Contrato (vacío si todavía no tiene ninguna). */
-  const plantillasDe = (contratoId: string): ContratoFrameItem[] => plantillas.filter((p) => (typeof p.contratoId === 'object' ? p.contratoId?._id : p.contratoId) === contratoId);
+  const plantillasDe = (contratoId: string): ContratoFrameItem[] => plantillas.filter((p) => plantillaEsDeContrato(p, contratoId));
 
   /**
    * Los códigos ARCA que tiene cargados un tipo de contrato, resueltos contra sus catálogos.
@@ -409,7 +409,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   /*
     DUPLICAR: el formulario de alta, precargado con todo lo de ese tipo y «(copia)» en el nombre.
 
-    Es un tipo NUEVO: no se lleva sus plantillas —una plantilla es de un solo tipo— y por eso los
+    Es un tipo NUEVO: no se lleva sus plantillas —se le asignan desde Plantillas | Contratos— y por eso los
     estados, que se vinculan a través de las plantillas, se aplican recién al asignarle una (igual que
     a cualquier tipo nuevo). Sale activo aunque el original no lo esté: se duplica para usarlo.
   */
@@ -1093,6 +1093,14 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               const estadosRegulares = estados.filter((e) => !e.data?.esImpositivo && (e.data?.contratoFrameIds || []).length > 0);
               const estadosGlobales = estados.filter((e) => (e.data?.contratoFrameIds || []).length === 0);
               const estadosNoGlobales = estadosImpositivos.length + estadosRegulares.length;
+              /*
+                LAS PLANTILLAS COMPARTIDAS. Los estados se vinculan a la plantilla, no al tipo: si una
+                plantilla de este tipo la usa otro tipo más, cambiar los estados acá los cambia para los
+                dos. Se dice cuáles, para que no sea una sorpresa.
+              */
+              const otrosTipos = editando
+                ? [...new Set(plantillasDe(editando._id).flatMap((p) => contratosDePlantilla(p)).filter((id) => id !== editando._id))].map((id) => contratos.find((c) => c._id === id)?.name || 'otro tipo')
+                : [];
               return (
                 <div className="space-y-2">
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
@@ -1105,6 +1113,11 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Vas a poder elegir sus Estados una vez que le asignes una Plantilla.</p>
                   ) : (
                     <div className="space-y-3">
+                      {otrosTipos.length > 0 && (
+                        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                          Su plantilla también la usa{otrosTipos.length === 1 ? '' : 'n'} <strong>{otrosTipos.join(', ')}</strong>. Los estados van con la plantilla: lo que cambies acá cambia también para {otrosTipos.length === 1 ? 'ese tipo' : 'esos tipos'}.
+                        </p>
+                      )}
                       {estadosImpositivos.length > 0 && (
                         <div className="space-y-1.5">
                           <p className="text-[11px] font-semibold text-purple-700 dark:text-purple-300 ml-1 flex items-center gap-1.5">

@@ -20,7 +20,7 @@ import { User } from "../api/users";
 import { CategoriaSatItem } from "../api/categoriasSat";
 import { InfoItem } from "../api/info";
 import { RoleFrameItem } from "../api/roleFrames";
-import { ContratoFrameItem } from "../api/contratosFrame";
+import { ContratoFrameItem, plantillaEsDeContrato } from "../api/contratosFrame";
 import { ContratoItem } from "../api/contratos";
 import { getContratoActivo } from "./contratoVigencia";
 import { estadoImpositivoDePlantilla, tipoImpositivoDeContrato } from "./tramiteImpositivo";
@@ -79,10 +79,12 @@ export function contratoDesdeSolicitud({ solicitud, persona, proyecto, cat }: { 
 
   // ── La plantilla y el tipo de contrato pedidos (si la solicitud no los trae, los del anterior). ──
   const cfAnterior = cat.contratoFrames.find((cf) => cf.name === anterior?.nombre_contrato) || (anterior?.tipo_contrato_id != null ? cat.contratoFrames.find((cf) => cf.data?.id != null && String(cf.data.id) === String(anterior.tipo_contrato_id)) : undefined);
-  const plantillasPedidas = ms.contratoId ? cat.contratoFrames.filter((cf) => idDe(cf.contratoId) === String(ms.contratoId)) : [];
+  const plantillasPedidas = ms.contratoId ? cat.contratoFrames.filter((cf) => plantillaEsDeContrato(cf, ms.contratoId)) : [];
   const plantillaPedida = plantillasPedidas.length === 1 ? plantillasPedidas[0] : plantillasPedidas.find((cf) => cf._id === cfAnterior?._id);
   const cf = ms.contratoId ? plantillaPedida : cfAnterior;
-  const contratoId = ms.contratoId ? String(ms.contratoId) : idDe(cfAnterior?.contratoId) || String((persona.metadata as any)?.contratoId || "");
+  // Sin pedido: el tipo del contrato anterior (`contrato_id`) y, si no lo guardó, el principal de su
+  // plantilla — que puede ser de varios tipos (`contratoIds`), así que es la última opción.
+  const contratoId = ms.contratoId ? String(ms.contratoId) : idDe(anterior?.contrato_id) || idDe(cfAnterior?.contratoId) || String((persona.metadata as any)?.contratoId || "");
 
   // ── Rol, categoría, sede, estado ──
   const rolIdPedido = idDe(ms.roles_frame?.[0] ?? ms.rolesFrameIds?.[0]);

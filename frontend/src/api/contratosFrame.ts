@@ -9,6 +9,8 @@ export interface ContratoFrameItem {
   content?: string;
   /** Contrato (tipo) al que pertenece esta plantilla. Viaja populado con `{ _id, name, isActive, data.requiereFirma }`. */
   contratoId?: string | { _id: string; name: string; isActive?: boolean; data?: { requiereFirma?: boolean } };
+  /** TODOS los tipos de contrato que usan esta plantilla (el primero es `contratoId`). Ver `contratosDePlantilla`. */
+  contratoIds?: string[];
   data: {
     id?: number;
     nombre: string;
@@ -25,8 +27,8 @@ export interface ContratoFrameItem {
 
 export interface ContratoFrameInput {
   nombre: string;
-  /** Obligatorio: a qué Contrato pertenece esta plantilla. */
-  contratoId: string;
+  /** Los tipos de contrato que usan esta plantilla (al menos uno; el primero es el principal). */
+  contratoIds: string[];
   externalId?: string;
   content?: string;
   usaMembrete?: boolean;
@@ -181,3 +183,19 @@ class ContratoFrameAPI {
 }
 
 export const contratoFrameAPI = new ContratoFrameAPI();
+
+/**
+ * LOS TIPOS DE CONTRATO DE UNA PLANTILLA. Una plantilla puede servir a varios (`contratoIds`); las de
+ * antes de eso sólo traen `contratoId` (que el server rellena en la lista al leerlas). Para preguntar
+ * «¿esta plantilla es de este tipo?» se usa `plantillaEsDeContrato`, nunca `contratoId ===`.
+ */
+export const contratosDePlantilla = (cf: Pick<ContratoFrameItem, "contratoId" | "contratoIds">): string[] => {
+  const lista = Array.isArray(cf.contratoIds) ? cf.contratoIds.map((x: any) => String(x?._id ?? x)).filter(Boolean) : [];
+  if (lista.length > 0) return lista;
+  const uno = typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId;
+  return uno ? [String(uno)] : [];
+};
+export const plantillaEsDeContrato = (cf: Pick<ContratoFrameItem, "contratoId" | "contratoIds">, contratoId: unknown): boolean => {
+  const id = String((contratoId as any)?._id ?? contratoId ?? "");
+  return !!id && contratosDePlantilla(cf).includes(id);
+};

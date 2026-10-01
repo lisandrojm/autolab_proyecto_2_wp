@@ -9,6 +9,13 @@ interface IContract {
   fecha_alta_contrato: string;
   fecha_baja_contrato: string;
   tipo_contrato_id: number;
+  /**
+   * EL TIPO DE CONTRATO (`Contrato._id`) con el que se cargó. Antes se deducía de la plantilla, pero
+   * una plantilla puede servir a varios tipos (`ContratoFrame.contratoIds`): sin guardarlo, un «6x6»
+   * que comparte plantilla con un «5x7» se volvía a abrir como «5x7». Los contratos de antes no lo
+   * tienen y se siguen deduciendo de la plantilla.
+   */
+  contrato_id?: Types.ObjectId | null;
   cantidad_jornadas_laborales: number;
   /**
    * Los días de la semana del contrato (0 = domingo … 6 = sábado).
@@ -294,6 +301,7 @@ const contractSchema = new Schema<IContract>(
     fecha_alta_contrato: { type: String },
     fecha_baja_contrato: { type: String },
     tipo_contrato_id: { type: Number },
+    contrato_id: { type: Schema.Types.ObjectId, ref: "Contrato" },
     cantidad_jornadas_laborales: { type: Number },
     dias_por_semana: { type: Number },
     dias_semana: { type: [Number], default: undefined },

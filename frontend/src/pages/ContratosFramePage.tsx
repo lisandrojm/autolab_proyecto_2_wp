@@ -13,12 +13,13 @@ import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { fuzzyMatch } from '../utils/searchHelpers';
-import { contratoFrameAPI, ContratoFrameItem, contratoVariables } from '../api/contratosFrame';
+import { contratoFrameAPI, ContratoFrameItem, contratoVariables, contratosDePlantilla } from '../api/contratosFrame';
+import { SeleccionMultiple } from '../components/ui/SeleccionMultiple';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
-const emptyForm = { nombre: '', externalId: '', content: '', contratoId: '' };
+const emptyForm = { nombre: '', externalId: '', content: '', contratoIds: [] as string[] };
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
 const hasContent = (html: string): boolean =>
@@ -83,10 +84,12 @@ export const ContratosFramePage: React.FC = () => {
 
   // Contratos (ABM Configuración → Contratos): cada Plantilla elige a cuál pertenece.
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
-  const contratoElegido = contratos.find((c) => c._id === form.contratoId) || null;
-  const nombreContrato = (id?: string | { _id: string; name: string }) => {
-    const contratoId = typeof id === 'object' ? id?._id : id;
-    return contratos.find((c) => c._id === contratoId)?.name || (typeof id === 'object' ? id?.name : '') || 'Sin contrato';
+  // Los tipos que usan la plantilla que se está editando (pueden ser varios: `contratoIds`).
+  const contratosElegidos = form.contratoIds.map((id) => contratos.find((c) => c._id === id)).filter((c): c is ContratoItem => !!c);
+  /** Los nombres de los tipos de una plantilla, para la grilla y la tabla. */
+  const nombresContratos = (item: ContratoFrameItem) => {
+    const ids = contratosDePlantilla(item);
+    return ids.length ? ids.map((id) => contratos.find((c) => c._id === id)?.name || (typeof item.contratoId === 'object' && item.contratoId?._id === id ? item.contratoId.name : '') || 'Contrato borrado').join(', ') : 'Sin contrato';
   };
 
   const load = async () => {
@@ -142,7 +145,7 @@ export const ContratosFramePage: React.FC = () => {
       nombre: item.name || '',
       externalId: item.externalId || '',
       content: item.content || '',
-      contratoId: typeof item.contratoId === 'object' ? item.contratoId?._id || '' : item.contratoId || '',
+      contratoIds: contratosDePlantilla(item),
     });
     setUsaMembrete(!!item.usaMembrete);
     setIsActive(item.isActive ?? true);
@@ -169,8 +172,8 @@ export const ContratosFramePage: React.FC = () => {
       sweetAlert.error('Falta el nombre', 'El nombre de la plantilla es obligatorio.');
       return;
     }
-    if (!form.contratoId) {
-      sweetAlert.error('Falta el Contrato', 'Elegí a qué Contrato pertenece esta plantilla.');
+    if (form.contratoIds.length === 0) {
+      sweetAlert.error('Falta el Contrato', 'Elegí al menos un tipo de contrato para esta plantilla.');
       return;
     }
     // El contenido es opcional: se puede crear la plantilla y redactarla más adelante.
@@ -178,7 +181,7 @@ export const ContratosFramePage: React.FC = () => {
     try {
       const payload = {
         nombre: form.nombre.trim(),
-        contratoId: form.contratoId,
+        contratoIds: form.contratoIds,
         externalId: form.externalId.trim(),
         content: form.content,
         usaMembrete,
@@ -399,7 +402,7 @@ export const ContratosFramePage: React.FC = () => {
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Contrato</label>
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300" title={`${item.data?.cantidadJornadas ?? 0} jornadas · x${item.data?.multiplicadorDiario ?? 0}${item.data?.esTiempoIndeterminado ? ' · Tiempo indeterminado' : ''}`}>
-                  {nombreContrato(item.contratoId)}
+                  {nombresContratos(item)}
                 </div>
               </div>
             </Card>
@@ -444,7 +447,7 @@ export const ContratosFramePage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300" title={`${item.data?.cantidadJornadas ?? 0} jornadas · x${item.data?.multiplicadorDiario ?? 0}${item.data?.esTiempoIndeterminado ? ' · Tiempo indeterminado' : ''}`}>
-                      {nombreContrato(item.contratoId)}
+                      {nombresContratos(item)}
                     </td>
                     <td className="px-5 py-3 text-sm whitespace-nowrap">
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.isActive === false ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{item.isActive === false ? 'Inactivo' : 'Activo'}</span>
@@ -528,30 +531,45 @@ export const ContratosFramePage: React.FC = () => {
           <div className="space-y-6">
             {field('Nombre *', 'nombre')}
 
+            {/*
+              LOS TIPOS DE CONTRATO QUE USAN ESTA PLANTILLA: varios, con el mismo gesto que Rol/es
+              Empresa (badges con ✕ y un [+] que abre la lista con buscador). Sólo se ofrecen los
+              activos; uno inactivo que ya estaba elegido se sigue viendo para poder quitarlo.
+            */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contrato *</label>
-              <select value={form.contratoId} onChange={(e) => setForm((f) => ({ ...f, contratoId: e.target.value }))} className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-                <option value="">{contratos.length ? 'Selecciona un contrato...' : 'No hay contratos cargados'}</option>
-                {tiposDeContratoActivos(contratos, form.contratoId).map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                    {c.isActive === false ? ' (inactivo)' : ''}
-                  </option>
-                ))}
-              </select>
+              <SeleccionMultiple
+                label={<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contratos *</span>}
+                opciones={tiposDeContratoActivos(contratos)
+                  .concat(contratos.filter((c) => c.isActive === false && form.contratoIds.includes(c._id)))
+                  .sort((a, b) => String(a.name).localeCompare(String(b.name), 'es', { sensitivity: 'base' }))
+                  .map((c) => ({ id: c._id, nombre: c.isActive === false ? `${c.name} (inactivo)` : c.name }))}
+                valor={form.contratoIds}
+                onChange={(ids) => setForm((f) => ({ ...f, contratoIds: ids }))}
+                titulo="Contratos"
+                descripcion="los tipos de contrato que usan esta plantilla"
+                placeholder={contratos.length ? 'Elegí uno o más tipos de contrato…' : 'No hay contratos cargados'}
+                placeholderBusqueda="Buscar contrato..."
+                vacio="No hay contratos cargados: creá uno primero en Configuración → Contratos."
+                zIndex={95}
+              />
               <p className="text-xs text-gray-500 mt-1">
-                Define jornadas, multiplicador y vigencia. Se administra en <strong>Configuración → Contratos</strong>.{!contratos.length && ' Todavía no hay contratos cargados: creá uno primero.'}
+                Una plantilla puede servir a varios tipos de contrato. Jornadas, multiplicador y vigencia son de cada tipo: se administran en <strong>Configuración → Contratos</strong>.
               </p>
-              {contratoElegido && (
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
-                  <span>
-                    <strong>{contratoElegido.data.cantidadJornadas}</strong> jornadas
-                  </span>
-                  <span>
-                    Multiplicador <strong>{contratoElegido.data.multiplicadorDiario}</strong>
-                  </span>
-                  {contratoElegido.data.esTiempoIndeterminado && <span className="font-semibold text-blue-600 dark:text-blue-400">Tiempo indeterminado</span>}
-                </div>
+              {contratosElegidos.length > 0 && (
+                <ul className="mt-2 space-y-0.5 text-xs text-gray-600 dark:text-gray-400">
+                  {contratosElegidos.map((c) => (
+                    <li key={c._id} className="flex flex-wrap gap-x-3">
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">{c.name}</span>
+                      <span>
+                        <strong>{c.data.cantidadJornadas}</strong> jornadas
+                      </span>
+                      <span>
+                        Multiplicador <strong>{c.data.multiplicadorDiario}</strong>
+                      </span>
+                      {c.data.esTiempoIndeterminado && <span className="font-semibold text-blue-600 dark:text-blue-400">Tiempo indeterminado</span>}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 

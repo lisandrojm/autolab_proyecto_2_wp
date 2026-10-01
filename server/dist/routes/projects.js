@@ -1843,6 +1843,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         // Sanitize optional reference IDs (empty string -> null) to avoid BSON casting errors
         const sanitizeId = (id) => (id === "" || id === undefined) ? null : id;
         contract.areaId = sanitizeId(contract.areaId);
+        // El tipo de contrato elegido (ver `contrato_id` en UserProject): vacío o inválido no se guarda.
+        contract.contrato_id = isValidId(contract.contrato_id) ? new Types.ObjectId(String(contract.contrato_id)) : undefined;
         contract.shiftId = sanitizeId(contract.shiftId);
         if (contract.shiftId && contract.fecha_alta_contrato) {
             const newStart = new Date(contract.fecha_alta_contrato);

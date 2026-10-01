@@ -35,7 +35,7 @@ import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMulti
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
-import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
+import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato } from '../api/contratosFrame';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
@@ -1924,7 +1924,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       elegido por quien conoce a la persona. Volver a preguntarlo acá era pedir dos veces lo mismo y
       arriesgarse a que la respuesta no coincida con la de la solicitud que se está aprobando.
     */
-    const initialContratoId = (typeof initialCf?.contratoId === 'object' ? initialCf?.contratoId?._id : initialCf?.contratoId) || (user.metadata as any)?.contratoId || '';
+    /*
+      EL TIPO DE CONTRATO, PRIMERO EL GUARDADO EN EL CONTRATO (`contrato_id`). Deducirlo de la plantilla
+      ya no alcanza: una plantilla puede servir a varios tipos (`contratoIds`) y su `contratoId` es sólo
+      el principal. Los contratos de antes no lo guardaron: para ésos queda la deducción.
+    */
+    const contratoGuardado = (lastContract as any)?.contrato_id;
+    const initialContratoId = String((contratoGuardado && typeof contratoGuardado === 'object' ? contratoGuardado._id : contratoGuardado) || '') || (typeof initialCf?.contratoId === 'object' ? initialCf?.contratoId?._id : initialCf?.contratoId) || (user.metadata as any)?.contratoId || '';
 
     let initialEstadoId = '';
     if (lastContract) {
@@ -2125,7 +2131,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       const id = rf && typeof rf === 'object' ? rf._id : rf;
       return id ? allRoleFrames.find((r) => String(r._id) === String(id)) : undefined;
     })();
-    const plantillasDeSolicitud = metaSolicitud?.contratoId ? contratoFrames.filter((cf) => String(typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === String(metaSolicitud.contratoId)) : [];
+    const plantillasDeSolicitud = metaSolicitud?.contratoId ? contratoFrames.filter((cf) => plantillaEsDeContrato(cf, metaSolicitud.contratoId)) : [];
     /*
       La plantilla del tipo pedido: la única que tenga, o la del contrato anterior si es de ESTE tipo.
       Con varias y ninguna conocida queda vacía y se elige en el select de «Plantilla» —que es lo que
@@ -2296,7 +2302,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!wizardData.contrato_id) faltan.push('Tipo de contrato');
     // La Plantilla solo se elige a mano cuando el contrato tiene más de una (si hay una sola se
     // asigna sola, y si no hay ninguna se puede guardar igual: solo no se podrá generar el PDF).
-    const plantillas = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+    const plantillas = contratoFrames.filter((cf) => plantillaEsDeContrato(cf, wizardData.contrato_id));
     if (plantillas.length > 1 && !wizardData.contrato_frame_id) faltan.push('Plantilla');
     if (!wizardData.estado_id) faltan.push('Estado');
     // Un contrato a plazo tiene que decir cuándo termina; los de tiempo indeterminado no llevan baja
@@ -4028,7 +4034,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       const contrato = contratos.find((c) => c._id === contratoId);
                       // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
                       // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
-                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === contratoId);
+                      const plantillasDelContrato = contratoFrames.filter((cf) => plantillaEsDeContrato(cf, contratoId));
                       const unicaPlantilla = plantillasDelContrato.length === 1 ? plantillasDelContrato[0] : undefined;
                       /*
                         LOS DÍAS POR SEMANA DEL TIPO («6x6» → 6), PRECARGADOS: no son sólo un tope.
@@ -4070,7 +4076,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                 {(() => {
                   if (!wizardData.contrato_id) return null;
-                  const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+                  const plantillasDelContrato = contratoFrames.filter((cf) => plantillaEsDeContrato(cf, wizardData.contrato_id));
 
                   // Varias Plantillas para el mismo Contrato: hay que elegir cuál usar para el PDF.
                   if (plantillasDelContrato.length > 1) {

@@ -41,6 +41,23 @@ const sendPdf = (res, buffer, baseName) => {
     res.setHeader("Content-Disposition", contentDisposition(baseName));
     res.send(buffer);
 };
+/**
+ * LOS TIPOS DE CONTRATO QUE PIDE EL FORMULARIO: `contratoIds` (varios) o, de un cliente viejo,
+ * `contratoId` (uno). Sin repetidos y en el orden elegido: el primero es el principal. Devuelve los
+ * documentos, o un error para el 400.
+ */
+async function contratosDelBody(body) {
+    const crudos = Array.isArray(body?.contratoIds) ? body.contratoIds : body?.contratoId ? [body.contratoId] : [];
+    const ids = [...new Set(crudos.map((x) => String(x || "")).filter(Boolean))];
+    if (ids.length === 0)
+        return { error: "Elegí a qué Contrato(s) pertenece esta plantilla" };
+    if (ids.some((id) => !Types.ObjectId.isValid(id)))
+        return { error: "Hay un Contrato inválido en la lista" };
+    const encontrados = await Contrato.find({ _id: { $in: ids } }).lean();
+    if (encontrados.length !== ids.length)
+        return { error: "Alguno de los Contratos elegidos no existe" };
+    return { contratos: ids.map((id) => encontrados.find((c) => String(c._id) === id)) };
+}
 // GET / - listar
 router.get("/", authenticateToken, async (_req, res) => {
     try {
@@ -169,26 +186,25 @@ router.get("/:id/download-filled", authenticateToken, async (req, res) => {
 // POST / - crear
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { nombre, externalId, content, contratoId, usaMembrete, isActive, duplicarDe } = req.body;
+        const { nombre, externalId, content, usaMembrete, isActive, duplicarDe } = req.body;
         if (!nombre || !String(nombre).trim()) {
             res.status(400).json({ error: "El nombre es obligatorio" });
             return;
         }
-        if (!contratoId) {
-            res.status(400).json({ error: "Elegí a qué Contrato pertenece esta plantilla" });
+        const elegidos = await contratosDelBody(req.body);
+        if ("error" in elegidos) {
+            res.status(400).json({ error: elegidos.error });
             return;
         }
-        const contrato = await Contrato.findById(contratoId).lean();
-        if (!contrato) {
-            res.status(400).json({ error: "El Contrato elegido no existe" });
-            return;
-        }
+        // El principal (el primero): de él se copian los datos de `data`, como cuando había uno solo.
+        const contrato = elegidos.contratos[0];
         const idNum = externalId ? Number(externalId) : undefined;
         const created = await ContratoFrame.create({
             name: String(nombre).trim(),
             externalId: externalId ? String(externalId).trim() : "",
             content: htmlHasText(content) ? String(content) : "",
             contratoId: contrato._id,
+            contratoIds: elegidos.contratos.map((c) => c._id),
             usaMembrete: usaMembrete === "true" || usaMembrete === true,
             isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
             // Se copian del Contrato: son la fuente de verdad. Se mantienen acá porque todo el resto del
@@ -222,7 +238,7 @@ router.post("/", authenticateToken, async (req, res) => {
 router.put("/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, externalId, content, contratoId, usaMembrete, isActive } = req.body;
+        const { nombre, externalId, content, contratoId, contratoIds, usaMembrete, isActive } = req.body;
         const item = await ContratoFrame.findById(id);
         if (!item) {
             res.status(404).json({ error: "Contrato no encontrado" });
@@ -244,17 +260,15 @@ router.put("/:id", authenticateToken, async (req, res) => {
         }
         if (content !== undefined)
             item.content = htmlHasText(content) ? String(content) : "";
-        if (contratoId !== undefined) {
-            if (!contratoId) {
-                res.status(400).json({ error: "Elegí a qué Contrato pertenece esta plantilla" });
+        if (contratoId !== undefined || contratoIds !== undefined) {
+            const elegidos = await contratosDelBody(req.body);
+            if ("error" in elegidos) {
+                res.status(400).json({ error: elegidos.error });
                 return;
             }
-            const contrato = await Contrato.findById(contratoId).lean();
-            if (!contrato) {
-                res.status(400).json({ error: "El Contrato elegido no existe" });
-                return;
-            }
+            const contrato = elegidos.contratos[0];
             item.contratoId = contrato._id;
+            item.contratoIds = elegidos.contratos.map((c) => c._id);
             // Se sincronizan con el Contrato elegido (fuente de verdad de estos tres campos).
             item.data.cantidadJornadas = contrato.data?.cantidadJornadas || 0;
             item.data.multiplicadorDiario = contrato.data?.multiplicadorDiario || 0;
