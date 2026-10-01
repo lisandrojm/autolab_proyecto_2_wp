@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye, faCircleInfo, faCopy } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -111,8 +111,23 @@ export const ContratosFramePage: React.FC = () => {
     return !search.trim() || fuzzyMatch(it.name || '', search);
   });
 
+  /*
+    DUPLICAR: el alta precargada con el contenido, el tipo de contrato y el membrete de la original, y
+    «(copia)» en el nombre. Sin el ID externo (es el de FRAME de la original, no de la copia). El server
+    la pone en los mismos estados (`duplicarDe`): si no, quedaría sin estado impositivo.
+  */
+  const [duplicando, setDuplicando] = useState<ContratoFrameItem | null>(null);
+  const openDuplicate = (item: ContratoFrameItem) => {
+    openEdit(item);
+    setEditing(null);
+    setDuplicando(item);
+    setForm((f) => ({ ...f, nombre: `${item.name} (copia)`, externalId: '' }));
+    setIsActive(true);
+  };
+
   const openCreate = () => {
     setEditing(null);
+    setDuplicando(null);
     setForm({ ...emptyForm });
     setUsaMembrete(false);
     setIsActive(true);
@@ -120,6 +135,7 @@ export const ContratosFramePage: React.FC = () => {
   };
 
   const openEdit = (item: ContratoFrameItem) => {
+    setDuplicando(null);
     setEditing(item);
     setForm({
       nombre: item.name || '',
@@ -166,6 +182,7 @@ export const ContratosFramePage: React.FC = () => {
         content: form.content,
         usaMembrete,
         isActive,
+        ...(duplicando && !editing ? { duplicarDe: duplicando._id } : {}),
       };
 
       if (editing) {
@@ -173,7 +190,7 @@ export const ContratosFramePage: React.FC = () => {
         sweetAlert.success('Actualizado', 'Contrato actualizado correctamente.');
       } else {
         await contratoFrameAPI.create(payload);
-        sweetAlert.success('Creado', 'Contrato creado.');
+        sweetAlert.success(duplicando ? 'Duplicado' : 'Creado', duplicando ? 'Se creó la copia, con los mismos estados que la original.' : 'Contrato creado.');
       }
       setShowModal(false);
       await load();
@@ -349,6 +366,15 @@ export const ContratosFramePage: React.FC = () => {
                       ]
                     : []),
                   {
+                    icon: faCopy,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      openDuplicate(item);
+                    },
+                    title: 'Duplicar',
+                    variant: 'default',
+                  },
+                  {
                     icon: faEdit,
                     onClick: (e) => {
                       e.stopPropagation();
@@ -446,6 +472,9 @@ export const ContratosFramePage: React.FC = () => {
                             <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                           </button>
                         )}
+                        <button onClick={() => openDuplicate(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Duplicar">
+                          <FontAwesomeIcon icon={faCopy} className="h-4 w-4" />
+                        </button>
                         <button onClick={() => openEdit(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
                           <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                         </button>
@@ -468,7 +497,7 @@ export const ContratosFramePage: React.FC = () => {
           setShowModal(false);
           setEditing(null);
         }}
-        title={editing ? 'Editar Contrato' : 'Nuevo Contrato'}
+        title={editing ? 'Editar Contrato' : duplicando ? `Duplicar «${duplicando.name}»` : 'Nuevo Contrato'}
         size="lg"
         footer={
           <div className="flex justify-between gap-2 w-full">

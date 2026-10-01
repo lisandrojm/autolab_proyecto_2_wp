@@ -31,6 +31,8 @@ export interface ContratoFrameInput {
   content?: string;
   usaMembrete?: boolean;
   isActive?: boolean;
+  /** Al duplicar: el `_id` de la original. El server pone la copia en los mismos estados. */
+  duplicarDe?: string;
 }
 
 /**

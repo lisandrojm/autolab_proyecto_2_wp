@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { ContratoFrame } from "../models/ContratoFrame.js";
+import { Info } from "../models/Info.js";
+import { ESTADO_TYPE } from "../utils/estadosImpositivosSistema.js";
+import { Types } from "mongoose";
 import { Contrato } from "../models/Contrato.js";
 import { Company } from "../models/Company.js";
 import { Project } from "../models/Project.js";
@@ -166,7 +169,7 @@ router.get("/:id/download-filled", authenticateToken, async (req, res) => {
 // POST / - crear
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { nombre, externalId, content, contratoId, usaMembrete, isActive } = req.body;
+        const { nombre, externalId, content, contratoId, usaMembrete, isActive, duplicarDe } = req.body;
         if (!nombre || !String(nombre).trim()) {
             res.status(400).json({ error: "El nombre es obligatorio" });
             return;
@@ -198,6 +201,16 @@ router.post("/", authenticateToken, async (req, res) => {
                 esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
             },
         });
+        /*
+          DUPLICAR: la copia queda en los MISMOS estados que la original.
+    
+          Los estados (y su trámite impositivo) se vinculan por plantilla (`Info.data.contratoFrameIds`);
+          una plantilla nueva no está en ninguno, y sin estado impositivo los contratos que la usen no
+          caen en la bandeja de ARCA. La copia es otra plantilla del mismo tipo: tiene que comportarse igual.
+        */
+        if (duplicarDe && Types.ObjectId.isValid(String(duplicarDe))) {
+            await Info.updateMany({ type: ESTADO_TYPE, "data.contratoFrameIds": String(duplicarDe) }, { $addToSet: { "data.contratoFrameIds": String(created._id) } });
+        }
         res.status(201).json(created);
     }
     catch (error) {
