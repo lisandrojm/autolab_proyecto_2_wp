@@ -20,7 +20,12 @@ export interface ContratoItem {
     /** Límites de la jornada del tipo de contrato. `null`/ausente = sin límite. */
     horasPorJornada?: number | null;
     diasPorSemana?: number | null;
+    /** «Se envía a firmar el contrato». */
     requiereFirma: boolean;
+    /** «Se envía a firmar el release» (además del tipo de release). Ausente = sí. */
+    requiereFirmaRelease?: boolean;
+    /** «Se envía a firmar el alta de ARCA» (sólo con alta temprana). Ausente = sí. */
+    requiereFirmaAlta?: boolean;
     /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad). */
     afipModalidadContrato?: string;
     afipTipoServicio?: string;
@@ -43,6 +48,8 @@ export interface ContratoInput {
   horasPorJornada?: string | number;
   diasPorSemana?: string | number;
   requiereFirma?: boolean;
+  requiereFirmaRelease?: boolean;
+  requiereFirmaAlta?: boolean;
   isActive?: boolean;
   afipModalidadContrato?: string;
   afipTipoServicio?: string;

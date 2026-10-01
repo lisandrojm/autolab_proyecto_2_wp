@@ -3420,6 +3420,27 @@ const contratoRequiereFirma = (template: ContratoFrameItem | null): boolean => {
   return typeof contratoId === 'object' && contratoId ? contratoId.data?.requiereFirma !== false : true;
 };
 
+/** «Se envía a firmar el release» del Tipo de Contrato. Sin el dato, sí (como antes de existir). */
+const contratoRequiereFirmaRelease = (template: ContratoFrameItem | null): boolean => {
+  const contratoId = template?.contratoId;
+  return typeof contratoId === 'object' && contratoId ? contratoId.data?.requiereFirmaRelease !== false : true;
+};
+
+/** «Se envía a firmar el alta de ARCA» del Tipo de Contrato. Sin el dato, sí. */
+const contratoRequiereFirmaAlta = (template: ContratoFrameItem | null): boolean => {
+  const contratoId = template?.contratoId;
+  return typeof contratoId === 'object' && contratoId ? contratoId.data?.requiereFirmaAlta !== false : true;
+};
+
+/**
+ * LOS RELEASES QUE VAN A FIRMA PARA ESTA FILA: los que su tipo de release manda a firmar, y sólo si el
+ * Tipo de Contrato también lo pide («Se envía a firmar el release»). Tienen que decir que sí los dos.
+ */
+const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[]): Release[] => (contratoRequiereFirmaRelease(template) ? releasesQueFirman : []);
+
+/** El alta de ARCA va a firma: trámite de alta temprana, documento cargado y el tipo lo pide. */
+const altaVaAFirma = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipo?: TipoImpositivo): boolean => tipo === 'alta_temprana_afip' && !!record.altaDocumentoUrl && contratoRequiereFirmaAlta(template);
+
 /** Mismo criterio que `contratoRequiereFirma`, para el Tipo de Release (`release.releaseTipoId`). */
 const releaseRequiereFirma = (release: Release): boolean => {
   const tipo = release.releaseTipoId;
@@ -3432,13 +3453,15 @@ const releaseRequiereFirma = (release: Release): boolean => {
  * no enviado. Si NI el Contrato NI ningún Release de este contrato requieren firma, no hay nada que
  * mandar y la fila nunca se habilita.
  */
-const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesAplicables: Release[]): boolean => {
+const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo): boolean => {
   if (record.firmaEnviadaAt) return false;
   const template = findTemplate(record as unknown as Contract, contratoFrames);
   const contratoAplica = contratoRequiereFirma(template);
+  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman);
   const contratoOk = !contratoAplica || contratoGenerado(record);
   const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
-  const algoAplica = contratoAplica || releasesAplicables.length > 0;
+  // El alta ya está cargada (no se genera acá): si es lo único que va a firma, alcanza con ella.
+  const algoAplica = contratoAplica || releasesAplicables.length > 0 || altaVaAFirma(record, template, tipo);
   return algoAplica && contratoOk && releaseOk;
 };
 
@@ -3640,7 +3663,7 @@ const FirmaReleaseCell: React.FC<{
 
   if (releasesAplicables.length === 0) {
     return (
-      <span className="text-xs text-gray-400" title='Ningún Tipo de Release de este proyecto tiene tildado "Se envía a firmar"'>
+      <span className="text-xs text-gray-400" title='Ni el Tipo de Contrato («Se envía a firmar el release») ni ningún Tipo de Release de este proyecto lo mandan a firmar'>
         No se envía a Firma
       </span>
     );
@@ -3694,20 +3717,22 @@ const FirmaEnviarCell: React.FC<{
   record: ContractOverviewRow;
   contratoAplica: boolean;
   releasesAplicables: Release[];
+  /** El alta de ARCA va a firma (ver `altaVaAFirma`). */
+  altaAplica: boolean;
   tipoImpositivo?: TipoImpositivo;
   onEnviado: (patch?: Partial<ContractOverviewRow>) => void;
-}> = ({ record, contratoAplica, releasesAplicables, tipoImpositivo, onEnviado }) => {
+}> = ({ record, contratoAplica, releasesAplicables, altaAplica, tipoImpositivo, onEnviado }) => {
   const [enviando, setEnviando] = useState(false);
   const contratoOk = !contratoAplica || contratoGenerado(record);
   const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
-  const puedeEnviar = (contratoAplica || releasesAplicables.length > 0) && contratoOk && releaseOk && !record.firmaEnviadaAt;
+  const puedeEnviar = (contratoAplica || releasesAplicables.length > 0 || altaAplica) && contratoOk && releaseOk && !record.firmaEnviadaAt;
 
   const enviar = async () => {
     const confirm = await sweetAlert.confirm('Enviar a firmar', 'Se van a subir el Contrato y el/los Release(s) de esta persona a la carpeta "Outbox" de Dropbox para que Dropbox Sign los importe. ¿Continuar?', 'Sí, enviar', 'Cancelar');
     if (!confirm.isConfirmed) return;
     setEnviando(true);
     try {
-      const res = await firmaDigitalAPI.enviar([{ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex, tipoImpositivo, incluirContrato: contratoAplica }]);
+      const res = await firmaDigitalAPI.enviar([{ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex, tipoImpositivo, incluirContrato: contratoAplica, incluirReleases: releasesAplicables.length > 0, incluirAlta: altaAplica }]);
       const resultado = res.resultados[0];
       if (resultado && !resultado.ok) {
         sweetAlert.error('No se pudo enviar', resultado.error || 'Error desconocido.');
@@ -3885,7 +3910,7 @@ export const ContractBulkFirmaTab: React.FC<{
     });
   // Solo se pueden marcar (y enviar) los contratos con Contrato Y Release(s) ya generados (botones
   // independientes) y todavía no enviados.
-  const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman)), [filtered, contratoFrames, releasesQueFirman]);
+  const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman, tipoDelRow(r))), [filtered, contratoFrames, releasesQueFirman, tipoDelRow]);
 
   // Igual que en la otra pestaña: acota el render, no el conjunto. Ver `usePaginado`.
   // Mismo orden por columna que Trámite impositivo: se ordena todo lo filtrado y después se pagina.
@@ -3925,6 +3950,8 @@ export const ContractBulkFirmaTab: React.FC<{
         contractIndex: r.contractIndex,
         tipoImpositivo: tipoDelRow(r),
         incluirContrato: contratoRequiereFirma(findTemplate(r as unknown as Contract, contratoFrames)),
+        incluirReleases: releasesDeLaFila(findTemplate(r as unknown as Contract, contratoFrames), releasesQueFirman).length > 0,
+        incluirAlta: altaVaAFirma(r, findTemplate(r as unknown as Contract, contratoFrames), tipoDelRow(r)),
       }));
       const res = await firmaDigitalAPI.enviar(targets);
       const fallidos = res.resultados.filter((x) => !x.ok);
@@ -4080,14 +4107,15 @@ export const ContractBulkFirmaTab: React.FC<{
                   const tipo = tipoDelRow(r);
                   const template = findTemplate(r as unknown as Contract, contratoFrames);
                   const contratoAplica = contratoRequiereFirma(template);
-                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman);
+                  const releasesFila = releasesDeLaFila(template, releasesQueFirman);
+                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo);
                   return (
                     <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                       <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!enviable} onChange={() => toggleSel(rowKey(r))} title={enviable ? 'Incluir en el envío a firmar' : r.firmaEnviadaAt ? 'Ya se envió a firmar' : 'Generá primero el Contrato y el/los Release(s) ("Generar")'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                       </td>
                       <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesQueFirman} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
+                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                         {(() => {
@@ -4121,7 +4149,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={(patch) => aplicarCambio(r, patch)} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">

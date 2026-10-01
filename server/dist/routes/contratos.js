@@ -100,7 +100,7 @@ const leerLimitesDeJornada = (horas, dias) => {
 // POST / - crear
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, requiereFirmaRelease, requiereFirmaAlta, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
         if (limites.error) {
             res.status(400).json({ error: limites.error });
@@ -126,6 +126,8 @@ router.post("/", authenticateToken, async (req, res) => {
                 esTiempoIndeterminado: esTiempoIndeterminado === "true" || esTiempoIndeterminado === true,
                 modoFechas: modoFechas === "dias" ? "dias" : "periodo",
                 requiereFirma: requiereFirma === undefined ? true : requiereFirma === "true" || requiereFirma === true,
+                requiereFirmaRelease: requiereFirmaRelease === undefined ? true : requiereFirmaRelease === "true" || requiereFirmaRelease === true,
+                requiereFirmaAlta: requiereFirmaAlta === undefined ? true : requiereFirmaAlta === "true" || requiereFirmaAlta === true,
                 afipModalidadContrato: afipModalidadContrato != null ? String(afipModalidadContrato).trim() : undefined,
                 afipTipoServicio: afipTipoServicio != null ? String(afipTipoServicio).trim() : undefined,
                 afipActividad: afipActividad != null ? String(afipActividad).trim() : undefined,
@@ -149,7 +151,7 @@ router.post("/", authenticateToken, async (req, res) => {
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, requiereFirmaRelease, requiereFirmaAlta, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
         if (limites.error) {
             res.status(400).json({ error: limites.error });
@@ -187,6 +189,10 @@ router.put("/:id", authenticateToken, async (req, res) => {
             item.data.modoFechas = modoFechas === "dias" ? "dias" : "periodo";
         if (requiereFirma !== undefined)
             item.data.requiereFirma = requiereFirma === "true" || requiereFirma === true;
+        if (requiereFirmaRelease !== undefined)
+            item.data.requiereFirmaRelease = requiereFirmaRelease === "true" || requiereFirmaRelease === true;
+        if (requiereFirmaAlta !== undefined)
+            item.data.requiereFirmaAlta = requiereFirmaAlta === "true" || requiereFirmaAlta === true;
         if (generaAlta !== undefined)
             item.data.generaAlta = generaAlta === "true" || generaAlta === true;
         if (afipModalidadContrato !== undefined)

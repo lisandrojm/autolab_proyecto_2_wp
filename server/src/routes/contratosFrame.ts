@@ -64,7 +64,7 @@ async function contratosDelBody(body: any): Promise<{ contratos: any[] } | { err
 router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     await ensureContratosBackfilled();
-    const items = await ContratoFrame.find().sort({ name: 1 }).populate({ path: "contratoId", select: "name isActive data.requiereFirma", model: Contrato }).lean();
+    const items = await ContratoFrame.find().sort({ name: 1 }).populate({ path: "contratoId", select: "name isActive data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta", model: Contrato }).lean();
     res.json(items);
   } catch (error) {
     console.error("Get contratos-frame error:", error);

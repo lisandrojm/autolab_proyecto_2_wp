@@ -56,6 +56,10 @@ export interface EnviarFirmaTarget {
   /** Si el Contrato de este trámite tiene tildado "Se envía a firmar" — default true. Cuando es
    *  false, el server no exige que el Contrato esté generado y no lo incluye en la subida. */
   incluirContrato?: boolean;
+  /** «Se envía a firmar el release» del Tipo de Contrato — default true. */
+  incluirReleases?: boolean;
+  /** «Se envía a firmar el alta de ARCA» del Tipo de Contrato — default true. */
+  incluirAlta?: boolean;
 }
 
 export interface EnviarFirmaResultado extends EnviarFirmaTarget {

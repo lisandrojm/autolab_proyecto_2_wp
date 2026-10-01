@@ -292,6 +292,10 @@ const enviarTargetSchema = z.object({
   // Si el Contrato de este trámite tiene tildado "Se envía a firmar" (default true) — ya lo calcula
   // el frontend con el Tipo de Contrato. Cuando es false no se exige el Contrato generado ni se sube.
   incluirContrato: z.boolean().optional().default(true),
+  // «Se envía a firmar el release» / «…el alta de ARCA» del Tipo de Contrato (default true: así se
+  // comportaba antes de que existieran). Los calcula el frontend con el tipo, igual que el anterior.
+  incluirReleases: z.boolean().optional().default(true),
+  incluirAlta: z.boolean().optional().default(true),
 });
 
 /** Lee un archivo guardado en disco local a partir de su URL pública `/storage/...`. */
@@ -360,21 +364,22 @@ router.post("/enviar", async (req: AuthenticatedRequest & TenantRequest, res) =>
         const carpeta = outboxCarpeta.replace(/\/$/, "");
         const archivos: { nombre: string; buffer: Buffer }[] = [
           ...(t.incluirContrato && contract.firmaContratoUrl ? [{ nombre: contract.firmaContratoNombre || "Contrato.pdf", buffer: leerArchivoStorage(contract.firmaContratoUrl) }] : []),
-          ...((contract.firmaReleases || []) as { nombre: string; url: string }[]).map((r) => ({ nombre: r.nombre, buffer: leerArchivoStorage(r.url) })),
+          ...(t.incluirReleases ? ((contract.firmaReleases || []) as { nombre: string; url: string }[]).map((r) => ({ nombre: r.nombre, buffer: leerArchivoStorage(r.url) })) : []),
         ];
-
-        if (archivos.length === 0) {
-          resultados.push({ ...base, ok: false, error: "No hay ningún documento generado para enviar." });
-          continue;
-        }
 
         // Alta temprana de ARCA: el documento ya cargado (altaDocumentoUrl) se suma, pero renombrado
         // con la nomenclatura del sistema — el nombre original que le puso quien lo subió a mano no
         // necesariamente lo trae, y el cron de estadoDropboxCronService.ts matchea por CUIT en el nombre.
-        if (t.tipoImpositivo === "alta_temprana_afip" && contract.altaDocumentoUrl) {
+        if (t.incluirAlta && t.tipoImpositivo === "alta_temprana_afip" && contract.altaDocumentoUrl) {
           const ext = (contract.altaDocumentoNombre || "").match(/\.[a-z0-9]+$/i)?.[0] || ".pdf";
           const nombreAlta = `${await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "AltaAFIP", user, up, contract, docName: "AltaAFIP" })}${ext}`;
           archivos.push({ nombre: nombreAlta, buffer: leerArchivoStorage(contract.altaDocumentoUrl) });
+        }
+
+        // Después del alta: puede ser lo único que este tipo manda a firmar.
+        if (archivos.length === 0) {
+          resultados.push({ ...base, ok: false, error: "No hay ningún documento generado para enviar." });
+          continue;
         }
 
         for (const archivo of archivos) {

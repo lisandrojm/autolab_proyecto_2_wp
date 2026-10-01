@@ -290,6 +290,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   // Sin Contrato vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
   const contratoRequiereFirma = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirma !== false : true;
+  // «Se envía a firmar el release» del Tipo de Contrato: el release se descarga para firma sólo si lo piden su tipo de release Y este.
+  const tipoPideFirmaRelease = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirmaRelease !== false : true;
 
   // Empresa efectiva por-contrato: si el contrato tiene una empresa guardada, se usa SOLO esa
   // (descarga directa con ella); si no, se ofrecen todas las empresas del proyecto para elegir.
@@ -537,7 +539,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                   {activeReleases.map((r) => {
                     const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(" | ");
                     // Sin ReleaseTipo vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
-                    const releaseRequiereFirma = typeof r.releaseTipoId === "object" ? r.releaseTipoId?.requiereFirma !== false : true;
+                    const releaseRequiereFirma = tipoPideFirmaRelease && (typeof r.releaseTipoId === "object" ? r.releaseTipoId?.requiereFirma !== false : true);
                     return (
                       <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
                         <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>

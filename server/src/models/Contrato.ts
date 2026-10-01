@@ -34,8 +34,18 @@ export interface IContrato extends Document {
      */
     horasPorJornada?: number | null;
     diasPorSemana?: number | null;
-    /** Si al firmar el contrato el documento se envía a firmar (p. ej. por Dropbox Sign). */
+    /** «Se envía a firmar el contrato»: el PDF del contrato de este tipo va a firma (Dropbox Sign). */
     requiereFirma: boolean;
+    /**
+     * «Se envía a firmar el release». Además del tipo de release (que tiene su propio «Se envía a
+     * firmar»): el release va a firma sólo si lo piden los dos. Sin el campo (tipos de antes) = sí.
+     */
+    requiereFirmaRelease?: boolean;
+    /**
+     * «Se envía a firmar el alta de ARCA»: sólo cuenta si el estado impositivo del tipo es de alta
+     * temprana (Pedido de ARCA). El documento del alta ya cargado se suma al envío. Sin el campo = sí.
+     */
+    requiereFirmaAlta?: boolean;
     /**
      * Códigos AFIP para la generación del TXT de Alta masiva. Son específicos del convenio/modalidad,
      * por eso se cargan por Tipo de Contrato. Se guardan como string para conservar ceros a la izquierda.
@@ -88,6 +98,8 @@ const contratoSchema = new Schema<IContrato>(
       horasPorJornada: { type: Number, default: null },
       diasPorSemana: { type: Number, default: null },
       requiereFirma: { type: Boolean, default: true },
+      requiereFirmaRelease: { type: Boolean, default: true },
+      requiereFirmaAlta: { type: Boolean, default: true },
       afipModalidadContrato: { type: String },
       afipTipoServicio: { type: String },
       afipActividad: { type: String },

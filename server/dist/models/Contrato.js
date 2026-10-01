@@ -11,6 +11,8 @@ const contratoSchema = new Schema({
         horasPorJornada: { type: Number, default: null },
         diasPorSemana: { type: Number, default: null },
         requiereFirma: { type: Boolean, default: true },
+        requiereFirmaRelease: { type: Boolean, default: true },
+        requiereFirmaAlta: { type: Boolean, default: true },
         afipModalidadContrato: { type: String },
         afipTipoServicio: { type: String },
         afipActividad: { type: String },

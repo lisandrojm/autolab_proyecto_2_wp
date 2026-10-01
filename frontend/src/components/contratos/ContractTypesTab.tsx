@@ -52,6 +52,8 @@ interface FormState {
   esTiempoIndeterminado: boolean;
   modoFechas: 'periodo' | 'dias';
   requiereFirma: boolean;
+  requiereFirmaRelease: boolean;
+  requiereFirmaAlta: boolean;
   isActive: boolean;
   /** Estados (no globales) que van a quedar vinculados a TODAS las Plantillas de este Contrato. */
   estadoIds: string[];
@@ -62,7 +64,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -71,7 +73,7 @@ const BadgeTiempoIndeterminado: React.FC = () => (
   </span>
 );
 
-const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
+const BadgeFirma: React.FC<{ activo: boolean; que?: string }> = ({ activo, que = 'el contrato' }) => (
   <span
     className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
       activo
@@ -80,7 +82,7 @@ const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
     }`}
   >
     <FontAwesomeIcon icon={faFileSignature} className="h-2.5 w-2.5" />
-    {activo ? 'Se envía a firmar' : 'No se envía a firmar'}
+    {activo ? `Se envía a firmar ${que}` : `No se envía a firmar ${que}`}
   </span>
 );
 
@@ -502,6 +504,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
       modoFechas: contrato.data?.modoFechas === 'dias' ? 'dias' : 'periodo',
       requiereFirma: contrato.data?.requiereFirma !== false,
+      requiereFirmaRelease: contrato.data?.requiereFirmaRelease !== false,
+      requiereFirmaAlta: contrato.data?.requiereFirmaAlta !== false,
       isActive: contrato.isActive !== false,
       // Si el contrato no tenía ninguno —quedaron así los de antes de esta regla— se muestra el
       // default elegido, a la vista y editable, en vez de dejar el formulario a medio llenar.
@@ -622,6 +626,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       esTiempoIndeterminado: form.esTiempoIndeterminado,
       modoFechas: form.modoFechas,
       requiereFirma: form.requiereFirma,
+      requiereFirmaRelease: form.requiereFirmaRelease,
+      requiereFirmaAlta: form.requiereFirmaAlta,
       isActive: form.isActive,
       afipModalidadContrato: form.afipModalidadContrato.trim(),
       afipTipoServicio: form.afipTipoServicio.trim(),
@@ -670,6 +676,36 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo eliminar el contrato.');
     }
   };
+
+  /*
+    QUÉ VA A FIRMA, en tres tildes: el contrato, el release y —sólo si el estado impositivo es de alta
+    temprana (Pedido de ARCA)— el alta de ARCA. Van entre los estados impositivos (y sus códigos de
+    ARCA) y los no impositivos: dependen del trámite elegido arriba, y el del alta sólo existe con él.
+  */
+  const bloqueFirma = (
+    <div className="space-y-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Envío a firmar</span>
+        <button type="button" onClick={() => setShowFirmaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre envío a firmar">
+          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {(
+        [
+          { campo: 'requiereFirma', texto: 'Se envía a firmar el contrato', ver: true },
+          { campo: 'requiereFirmaRelease', texto: 'Se envía a firmar el release', ver: true },
+          { campo: 'requiereFirmaAlta', texto: 'Se envía a firmar el alta de ARCA', ver: generaAlta },
+        ] as const
+      )
+        .filter((x) => x.ver)
+        .map((x) => (
+          <label key={x.campo} className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={form[x.campo]} onChange={(e) => setForm((p) => ({ ...p, [x.campo]: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+            <span className="text-gray-700 dark:text-gray-300">{x.texto}</span>
+          </label>
+        ))}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -742,6 +778,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                       <td className="px-4 py-3">{contrato.data?.esTiempoIndeterminado ? <BadgeTiempoIndeterminado /> : <span className="text-xs text-gray-400">—</span>}</td>
                       <td className="px-4 py-3">
                         <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
+                        <BadgeFirma activo={contrato.data?.requiereFirmaRelease !== false} que="el release" />
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${contrato.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
@@ -827,6 +864,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                 <div className="flex flex-wrap items-center gap-1.5">
                   {contrato.data?.esTiempoIndeterminado && <BadgeTiempoIndeterminado />}
                   <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
+                  <BadgeFirma activo={contrato.data?.requiereFirmaRelease !== false} que="el release" />
                 </div>
 
                 {cantPlantillas > 0 && (
@@ -1025,15 +1063,6 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
-              </label>
-              <button type="button" onClick={() => setShowFirmaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre envío a firmar">
-                <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-              </button>
-            </div>
 
             {/* Códigos ARCA para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
           </div>
@@ -1117,7 +1146,10 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   {misPlantillaIds.length === 0 ? (
                     /* Sin botón propio: el de arriba ya lleva al mismo lugar. Acá solo se explica */
                     /* por qué esta sección está vacía y qué la va a llenar. */
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Vas a poder elegir sus Estados una vez que le asignes una Plantilla.</p>
+                    <div className="space-y-3">
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Vas a poder elegir sus Estados una vez que le asignes una Plantilla.</p>
+                      {bloqueFirma}
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {otrosTipos.length > 0 && (
@@ -1311,6 +1343,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                         )
                       )}
 
+                      {bloqueFirma}
+
                       <div>
                         <div className="flex items-center justify-between gap-2 ml-1">
                           <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Estados no impositivos</span>
@@ -1417,17 +1451,20 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       <InfoModal
         isOpen={showFirmaInfo}
         onClose={() => setShowFirmaInfo(false)}
-        title="Se envía a firmar"
+        title="Envío a firmar"
         size="sm"
         zIndex={120}
         actions={[{ label: 'Entendido', onClick: () => setShowFirmaInfo(false), variant: 'primary' }]}
       >
         <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           <p>
-            Con esta opción <strong>activada</strong>, en Contratos del proyecto se va a poder descargar el contrato de este tipo para enviarlo a firmar.
+            <strong>Se envía a firmar el contrato:</strong> activado, en Contratos del proyecto y en Generar Documentos se puede generar y descargar el contrato de este tipo para enviarlo a firmar. Desactivado, en su lugar se muestra <strong>"No se envía a firmar"</strong>.
           </p>
           <p>
-            Si la <strong>desactivás</strong>, ese botón de descarga no aparece: en su lugar se muestra el aviso <strong>"No se envía a firmar"</strong>.
+            <strong>Se envía a firmar el release:</strong> lo mismo para el release. El tipo de release tiene su propio «Se envía a firmar»: el release va a firma sólo si lo piden <strong>los dos</strong>.
+          </p>
+          <p>
+            <strong>Se envía a firmar el alta de ARCA:</strong> aparece sólo si el estado impositivo es de alta temprana (Pedido de ARCA). Activado, el documento del alta ya cargado se suma al envío a firmar; desactivado, el alta no se manda.
           </p>
         </div>
       </InfoModal>
