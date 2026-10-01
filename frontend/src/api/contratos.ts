@@ -74,3 +74,13 @@ class ContratosAPI {
 }
 
 export const contratosAPI = new ContratosAPI();
+
+/**
+ * LOS TIPOS DE CONTRATO QUE SE OFRECEN PARA ELEGIR: sólo los activos.
+ *
+ * El catálogo entero se sigue usando para mostrar el nombre de un contrato que ya existe; esto es para
+ * los selectores. El que ya está elegido se conserva aunque esté inactivo (`elegidoId`): sacarlo de la
+ * lista haría saltar el select a otro valor al editar un contrato o una plantilla de antes.
+ */
+export const tiposDeContratoActivos = <T extends { _id: string; isActive?: boolean }>(lista: T[], elegidoId?: string | null): T[] =>
+  lista.filter((c) => c.isActive !== false || (!!elegidoId && c._id === elegidoId));

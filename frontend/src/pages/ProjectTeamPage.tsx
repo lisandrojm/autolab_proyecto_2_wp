@@ -40,7 +40,7 @@ import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoD
 import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
 import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
-import { contratosAPI, ContratoItem } from '../api/contratos';
+import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
@@ -952,8 +952,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     guardado y el select quedaría mostrando un valor que no está entre sus opciones.
   */
   const contratosFiltradosPorTramite = useMemo(() => {
-    if (!filtroTramite) return contratos;
-    return contratos.filter((c) => tramitePorContrato.get(c._id) === filtroTramite || c._id === wizardData.contrato_id);
+    // Sólo los activos (el elegido se conserva aunque no lo esté: ver `tiposDeContratoActivos`).
+    const activos = tiposDeContratoActivos(contratos, wizardData.contrato_id);
+    if (!filtroTramite) return activos;
+    return activos.filter((c) => tramitePorContrato.get(c._id) === filtroTramite || c._id === wizardData.contrato_id);
   }, [contratos, filtroTramite, tramitePorContrato, wizardData.contrato_id]);
 
   /*

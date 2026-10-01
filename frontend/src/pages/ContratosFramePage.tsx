@@ -14,7 +14,7 @@ import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { contratoFrameAPI, ContratoFrameItem, contratoVariables } from '../api/contratosFrame';
-import { contratosAPI, ContratoItem } from '../api/contratos';
+import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
@@ -502,7 +502,7 @@ export const ContratosFramePage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contrato *</label>
               <select value={form.contratoId} onChange={(e) => setForm((f) => ({ ...f, contratoId: e.target.value }))} className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
                 <option value="">{contratos.length ? 'Selecciona un contrato...' : 'No hay contratos cargados'}</option>
-                {contratos.map((c) => (
+                {tiposDeContratoActivos(contratos, form.contratoId).map((c) => (
                   <option key={c._id} value={c._id}>
                     {c.name}
                     {c.isActive === false ? ' (inactivo)' : ''}

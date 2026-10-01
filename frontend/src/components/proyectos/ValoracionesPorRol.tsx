@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faXmark, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import type { SimpleCatalogItem } from "../../api/simpleCatalog";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
-import { contratosAPI, ContratoItem } from "../../api/contratos";
+import { contratosAPI, ContratoItem, tiposDeContratoActivos } from "../../api/contratos";
 import { cachedFetch } from "../../utils/refCache";
 import { ChipValoracion } from "./ChipValoracion";
 
@@ -56,7 +56,8 @@ export const ValoracionesPorRol: React.FC<{
   /** Qué valoraciones tiene el rol entre sus categorías: forzar una que no tiene no ofrecería ninguna. */
   const cubre = (id: number, valoracionId: string) => (rolDe(id)?.data?.categoriasSat || []).some((c) => String(c.valoracionId || "") === valoracionId);
   const rolesOrdenados = useMemo(() => roles.filter((r) => r.data?.rol?.id != null).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" })), [roles]);
-  const contratosOrdenados = useMemo(() => [...contratos].sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" })), [contratos]);
+  // Para agregar una excepción, sólo los tipos activos; las filas ya cargadas muestran su nombre igual (`nombreContrato`).
+  const contratosOrdenados = useMemo(() => tiposDeContratoActivos(contratos).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" })), [contratos]);
   /** Ese rol con ese tipo ya tiene excepción: no se ofrece de nuevo (se cambia en su fila). */
   const yaEsta = (rolFrameId: number, contratoId: string) => value.some((x) => claveDe(x) === claveDe({ rolFrameId, contratoId }));
 
@@ -111,9 +112,13 @@ export const ValoracionesPorRol: React.FC<{
                     <span className={`block text-[11px] ${x.contratoId ? "text-gray-500 dark:text-gray-400" : "text-amber-700 dark:text-amber-400"}`}>{nombreContrato(x.contratoId)}</span>
                   </span>
                   <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5 text-gray-400" />
-                  {selector(x.rolFrameId, x.valoracionId, (id) => poner({ ...x, valoracionId: id }))}
+                  {/*
+                    SÓLO LA ELEGIDA. Con los tres niveles en cada fila no se leía cuál regía: parecían
+                    opciones abiertas. Para cambiarla se quita con la ✕ y se vuelve a fijar.
+                  */}
+                  {v ? <ChipValoracion nombre={String(v.name)} color={String(v.color || "")} /> : <span className="text-[11px] text-gray-400">Valoración borrada</span>}
                   {v && !cubre(x.rolFrameId, x.valoracionId) && roles.length > 0 && <span className="text-[11px] text-amber-700 dark:text-amber-400">Este rol no tiene categorías {v.name}.</span>}
-                  <button type="button" onClick={() => quitar(x)} title="Quitar: vuelve a usar la valoración del proyecto" aria-label={`Quitar ${nombreRol(x.rolFrameId)}`} className="ml-auto text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                  <button type="button" onClick={() => quitar(x)} title="Quitar: vuelve a usar la valoración del proyecto. Para cambiar el nivel, quitala y volvé a fijarla." aria-label={`Quitar ${nombreRol(x.rolFrameId)}`} className="ml-auto text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                     <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
                   </button>
                 </li>
