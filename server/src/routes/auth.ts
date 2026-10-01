@@ -89,7 +89,7 @@ router.post("/check-status", async (req, res) => {
       return;
     }
 
-    const users = await User.find({ email: email.toLowerCase(), "metadata.activo": true }).select("lastLoginAt");
+    const users = await User.find({ email: email.toLowerCase(), "metadata.activo": true }).select("lastLoginAt metadata.registro.linkId metadata.registro.registradoAt");
 
     if (users.length === 0) {
       res.json({ exists: false, isFirstLogin: false });
@@ -100,7 +100,14 @@ router.post("/check-status", async (req, res) => {
     // Verificamos si CUALQUIERA de las cuentas asociadas a este email nunca se ha logueado.
     // O mejor, si TODAS las cuentas tienen lastLoginAt null/undefined.
     // Asumiremos que si no se ha logueado en ninguna, es first login.
-    const isFirstLogin = users.every((u) => !u.lastLoginAt);
+    /*
+      QUIEN SE REGISTRÓ POR UN LINK DE REGISTRO ELIGIÓ SU CONTRASEÑA: el aviso «tu contraseña es tu DNI»
+      le mentiría. Ese aviso es para las cuentas que se crearon por otro lado (sync de FRAME, alta
+      desde el panel), cuya contraseña inicial es el DNI. El registro por link deja su marca en
+      `metadata.registro` (ver POST /registro).
+    */
+    const registradoPorLink = (u: any) => !!(u.metadata?.registro?.linkId || u.metadata?.registro?.registradoAt);
+    const isFirstLogin = users.every((u) => !u.lastLoginAt && !registradoPorLink(u));
 
     res.json({ exists: true, isFirstLogin });
   } catch (error) {
