@@ -8,7 +8,7 @@ import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { BloqueEstado } from '../ui/BloqueEstado';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
@@ -406,8 +406,25 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     return estados.filter((e) => (e.data?.contratoFrameIds || []).some((id: string) => misPlantillas.includes(String(id)))).map((e) => e._id);
   };
 
+  /*
+    DUPLICAR: el formulario de alta, precargado con todo lo de ese tipo y «(copia)» en el nombre.
+
+    Es un tipo NUEVO: no se lleva sus plantillas —una plantilla es de un solo tipo— y por eso los
+    estados, que se vinculan a través de las plantillas, se aplican recién al asignarle una (igual que
+    a cualquier tipo nuevo). Sale activo aunque el original no lo esté: se duplica para usarlo.
+  */
+  const [duplicando, setDuplicando] = useState<ContratoItem | null>(null);
+  const abrirDuplicar = (contrato: ContratoItem) => {
+    abrirEditar(contrato);
+    setEditando(null);
+    setDuplicando(contrato);
+    setForm((f) => ({ ...f, name: `${contrato.name} (copia)`, isActive: true }));
+    setEstadoIdsOriginal([]);
+  };
+
   const abrirCrear = () => {
     setEditando(null);
+    setDuplicando(null);
     // Un contrato nuevo arranca declarando alta temprana: es el caso que pide códigos, y arrancar
     // por el que no pide nada dejaría pasar sin fricción justo al que sí la necesita.
     setForm({ ...FORM_VACIO, estadoIds: conImpositivoGarantizado(estados, []) });
@@ -467,6 +484,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
   const abrirEditar = (contrato: ContratoItem) => {
     const seleccionActual = estadoIdsDe(contrato._id);
+    setDuplicando(null);
     setEditando(contrato);
     setForm({
       name: contrato.name,
@@ -618,7 +636,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
         sweetAlert.success('Contrato actualizado', 'Los cambios se guardaron con éxito.');
       } else {
         await contratosAPI.create(payload);
-        sweetAlert.success('Contrato creado', 'Ya podés asignarle una Plantilla desde Plantillas | Contratos.');
+        sweetAlert.success(duplicando ? 'Contrato duplicado' : 'Contrato creado', 'Ya podés asignarle una Plantilla desde Plantillas | Contratos.');
       }
       setShowModal(false);
       await cargar();
@@ -753,6 +771,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          <CardFooterAction icon={faCopy} title="Duplicar contrato" onClick={() => abrirDuplicar(contrato)} />
                           <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
                           <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />
                         </div>
@@ -871,6 +890,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     {cantPlantillas} plantilla{cantPlantillas === 1 ? '' : 's'} asignada{cantPlantillas === 1 ? '' : 's'}
                   </span>
                   <div className="flex items-center gap-1">
+                    <CardFooterAction icon={faCopy} title="Duplicar contrato" onClick={() => abrirDuplicar(contrato)} />
                     <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
                     <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />
                   </div>
@@ -884,8 +904,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editando ? 'Editar Contrato' : 'Nuevo Contrato'}
-        subtitle={editando ? editando.name : 'Se va a poder asignar a una o varias Plantillas'}
+        title={editando ? 'Editar Contrato' : duplicando ? 'Duplicar Contrato' : 'Nuevo Contrato'}
+        subtitle={editando ? editando.name : duplicando ? `Copia de «${duplicando.name}». Las plantillas no se copian: asignale una desde Plantillas | Contratos.` : 'Se va a poder asignar a una o varias Plantillas'}
         size="lg"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
