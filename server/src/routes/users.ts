@@ -913,9 +913,14 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     // Las fechas van siempre (definen cuál es el contrato activo), pero el nombre del contrato, el
     // estado y el flag de reemplazo solo se traen si hay un filtro que los mire: sin filtros, pedirlos
     // es casi la mitad del payload para nada.
-    const necesitaNombreContrato = !!req.query.tipoContrato || !!req.query.search;
-    const necesitaEstado = !!req.query.estadoContrato || !!req.query.estados;
-    const necesitaReemplazo = !!req.query.reemplazo;
+    // Orden por columna de la tabla (ver `components/ui/OrdenTabla` en el front). Sólo columnas que
+    // salen de esta fase: ordenar la página ya recortada sería ordenar 25 filas, no el listado.
+    const COLUMNAS_ORDEN = ["usuario", "cuit", "contratos", "cliente", "proyecto", "rolEmpresa", "estado", "contrato", "estadoContrato", "reemplazo", "altaBaja"];
+    const ordenColumna = COLUMNAS_ORDEN.includes(String(req.query.sort || "")) ? String(req.query.sort) : "";
+    const ordenSigno = req.query.dir === "desc" ? -1 : 1;
+    const necesitaNombreContrato = !!req.query.tipoContrato || !!req.query.search || ordenColumna === "contrato";
+    const necesitaEstado = !!req.query.estadoContrato || !!req.query.estados || ordenColumna === "estadoContrato";
+    const necesitaReemplazo = !!req.query.reemplazo || ordenColumna === "reemplazo";
     // La empleadora solo se trae si se está filtrando por ella (contexto Empresa): sin filtro, pedirla
     // sería payload de la fase 1 para nada, que es justamente lo que esta fase evita.
     const necesitaEmpresa = !!req.query.empresaContratoId;
@@ -1108,11 +1113,43 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         sinCuit: user.metadata?.sinCuit === true,
         // Sólo para ordenar: dos contratos de la misma persona quedan juntos y por fecha.
         _alta: fechaISO(contrato.fecha_alta_contrato),
+        _contratoOrden: ordenColumna ? { n: contrato.nombre_contrato, e: contrato.nombre_estado_empleado, m: contrato.reemplazo } : undefined,
       });
       }
     }
 
-    rows.sort((a, b) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }) || a.projectName.localeCompare(b.projectName, "es") || String(a._alta).localeCompare(String(b._alta)));
+    const valorDeOrden = (r: any): string | number | null => {
+      switch (ordenColumna) {
+        case "usuario": return r.userName;
+        case "cuit": return String(r.cuit || "").replace(/\D/g, "");
+        case "contratos": return r.contractsInProject;
+        case "cliente": return r.clientName;
+        case "proyecto": return r.projectName;
+        case "rolEmpresa": return r.nombreRolFrame;
+        case "estado": return r.userActivo ? 1 : 0;
+        case "contrato": return r._contratoOrden?.n || "";
+        case "estadoContrato": return r._contratoOrden?.e || "";
+        case "reemplazo": return r._contratoOrden?.m ? 1 : 0;
+        case "altaBaja": return r._alta || "";
+        default: return null;
+      }
+    };
+    if (ordenColumna) for (const r of rows) r._orden = valorDeOrden(r);
+    const porDefecto = (a: any, b: any) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }) || a.projectName.localeCompare(b.projectName, "es") || String(a._alta).localeCompare(String(b._alta));
+    if (ordenColumna) {
+      // Los vacíos al final en las dos direcciones, como en las tablas que ordenan en el navegador.
+      const vacio = (v: any) => v === null || v === undefined || v === "";
+      const colador = new Intl.Collator("es", { sensitivity: "base", numeric: true });
+      rows.sort((a, b) => {
+        const va = a._orden;
+        const vb = b._orden;
+        if (vacio(va) || vacio(vb)) return vacio(va) === vacio(vb) ? porDefecto(a, b) : vacio(va) ? 1 : -1;
+        const c = typeof va === "number" && typeof vb === "number" ? va - vb : colador.compare(String(va), String(vb));
+        return ordenSigno * c || porDefecto(a, b);
+      });
+    } else {
+      rows.sort(porDefecto);
+    }
 
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Number(req.query.limit) || 25);
@@ -1186,7 +1223,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       }
     }
 
-    const fullRows = pageRows.map(({ _alta, ...r }) => {
+    const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {
       const c: any = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
       return {
         ...r,

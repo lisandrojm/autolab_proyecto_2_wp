@@ -28,6 +28,7 @@ import { sweetAlert } from '../utils/sweetAlert';
 
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { ContractBulkAfipTab, ContractBulkFirmaTab } from '../components/contratos/ContractBulkTabs';
+import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
 import { ContractDropboxTab, fetchDropboxCounts, InstructivoParaFirmar } from '../components/contratos/ContractDropboxTabs';
 import { AlcanceBanner } from '../components/context/AlcanceBanner';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
@@ -133,6 +134,13 @@ export const ContractsPage: React.FC = () => {
   const initialProjectId = searchParams.get('projectId') || '';
 
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
+  /*
+    ORDEN POR COLUMNA. El listado se pagina en el server, así que el orden también se hace allá
+    (`sort`/`dir` de contracts-overview): ordenar acá sería ordenar sólo las 25 filas de la página.
+    Sólo son ordenables las columnas que el server conoce antes de paginar.
+  */
+  const { orden, alternar } = useOrden();
+  const ordenProps = { orden, onAlternar: alternar };
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [totalRows, setTotalRows] = useState(0);
@@ -288,6 +296,8 @@ export const ContractsPage: React.FC = () => {
         tipoContrato: filterTipoContrato || undefined,
         estadoContrato: filterEstadoContrato || undefined,
         reemplazo: filterReemplazo || undefined,
+        sort: orden?.columna,
+        dir: orden?.direccion,
       });
       if (currentId !== requestIdRef.current) return;
 
@@ -343,7 +353,7 @@ export const ContractsPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId]);
+  }, [searchTerm, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId, orden]);
 
   // Cambio de página → traer esa página del server.
   const pageInitedRef = useRef(false);
@@ -634,22 +644,66 @@ export const ContractsPage: React.FC = () => {
                 <table className="w-full text-left border-collapse min-w-[2750px]">
                   <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                     <tr className="border-b border-gray-100 dark:border-gray-800">
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">CUIT</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center bg-gray-50 dark:bg-gray-900">Contratos</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Cliente</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Proyecto</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="usuario" {...ordenProps}>
+                          Usuario
+                        </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="cuit" {...ordenProps}>
+                          CUIT
+                        </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="contratos" {...ordenProps}>
+                          Contratos
+                        </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="cliente" {...ordenProps}>
+                          Cliente
+                        </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="proyecto" {...ordenProps}>
+                          Proyecto
+                        </BotonOrden>
+                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol/es</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol/es Empresa</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Estado</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="rolEmpresa" {...ordenProps}>
+                          Rol/es Empresa
+                        </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="estado" {...ordenProps}>
+                          Estado
+                        </BotonOrden>
+                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Área / Turno</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Sede</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Contrato</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="contrato" {...ordenProps}>
+                          Contrato
+                        </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="estadoContrato" {...ordenProps}>
+                          Estado Contrato
+                        </BotonOrden>
+                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
                       <ContractDocsHeaders />
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Reemplazo</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Alta / Baja</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="reemplazo" {...ordenProps}>
+                          Reemplazo
+                        </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                        <BotonOrden columna="altaBaja" {...ordenProps}>
+                          Alta / Baja
+                        </BotonOrden>
+                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Monto / Jorn.</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Horario</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>

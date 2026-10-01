@@ -42,6 +42,8 @@ export interface DatosSolicitud {
   inTime: string;
   outTime: string;
   empresaContratoId?: string;
+  /** La sede donde va a trabajar (`data.id` del Info `sede`). */
+  sedeId?: number | string;
   convenioId?: string;
   dailyRate: number | string;
   isReplacement: boolean;
@@ -104,6 +106,7 @@ export function armarPayloadDeSolicitud(d: DatosSolicitud, opciones: OpcionesPay
       schedule: `${d.inTime} - ${d.outTime}`,
       // Con qué CUIT se contrata y bajo qué CCT.
       empresaContratoId: d.empresaContratoId || undefined,
+      sedeId: Number(d.sedeId) > 0 ? Number(d.sedeId) : undefined,
       convenioId: d.esServicios ? undefined : d.convenioId || undefined,
       dailyRate: Number(d.dailyRate),
       isReplacement: d.isReplacement,

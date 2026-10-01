@@ -8,7 +8,7 @@ import { contratosAPI, ContratoItem } from "../../../../../api/contratos";
 import { contratoFrameAPI, ContratoFrameItem } from "../../../../../api/contratosFrame";
 import { infoAPI, InfoItem } from "../../../../../api/info";
 import { activityLogTypesAPI, RequestConfig } from "../../../../../api/requestConfig";
-import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from "../../../../../utils/seleccionConvenioCategoria";
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos } from "../../../../../utils/seleccionConvenioCategoria";
 import { idValoracionDe, useValoraciones } from "../../../../../components/proyectos/ChipValoracion";
 import { TipoImpositivo, tipoImpositivoDeContrato } from "../../../../../utils/tramiteImpositivo";
 import { claveOrdenTurno, textoDeDias } from "../../../../../utils/jerarquiaTurnos";
@@ -149,15 +149,7 @@ export function useCatalogosContratacion(activo = true) {
       companies.find((c) => c._id === empresaId),
       convenios,
     );
-    if (!deLaEmpresa) return null;
-    const delProyecto = new Set<string>();
-    for (const id of (proyecto as any)?.convenioIds || []) {
-      const cct = String(convenios.find((c) => c._id === String(id))?.externalId || "").trim();
-      if (cct) delProyecto.add(cct);
-    }
-    if (delProyecto.size === 0) return deLaEmpresa;
-    const cruce = deLaEmpresa.filter((cct) => delProyecto.has(cct));
-    return cruce.length > 0 ? cruce : deLaEmpresa;
+    return codigosDeConveniosDelProyecto(deLaEmpresa, (proyecto as any)?.convenioIds || [], convenios);
   };
 
   const cctDeConvenio = (convenioId: string | null | undefined) => String(convenios.find((c) => c._id === convenioId)?.externalId || "").trim();

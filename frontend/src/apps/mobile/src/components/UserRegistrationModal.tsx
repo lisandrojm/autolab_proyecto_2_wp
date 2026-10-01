@@ -17,7 +17,7 @@ import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSu
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
-import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
 import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
@@ -265,6 +265,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     outTime: "",
     /** La empleadora que contrata y el convenio bajo el que lo hace. Salen del proyecto elegido. */
     empresaContratoId: "",
+    /** La sede donde va a trabajar: una de las del proyecto donde trabaja la empresa (ver `sedesDelContrato`). */
+    sedeId: "",
     convenioId: "",
     dailyRate: "",
     isReplacement: false,
@@ -327,19 +329,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       companies.find((c) => c._id === formData.empresaContratoId),
       convenios,
     );
-    if (!deLaEmpresa) return null;
-
-    const delProyecto = new Set<string>();
-    for (const p of projects) {
-      if (!formData.projectIds.includes(p._id)) continue;
-      for (const id of p.convenioIds || []) {
-        const cct = String(convenios.find((c) => c._id === String(id))?.externalId || "").trim();
-        if (cct) delProyecto.add(cct);
-      }
-    }
-    if (delProyecto.size === 0) return deLaEmpresa;
-    const cruce = deLaEmpresa.filter((cct) => delProyecto.has(cct));
-    return cruce.length > 0 ? cruce : deLaEmpresa;
+    const delProyecto = projects.filter((p) => formData.projectIds.includes(p._id)).flatMap((p) => p.convenioIds || []);
+    return codigosDeConveniosDelProyecto(deLaEmpresa, delProyecto, convenios);
   }, [companies, convenios, projects, formData.projectIds, formData.empresaContratoId]);
 
   /** El CCT elegido. `formData.convenioId` guarda el `_id`, que es lo que viaja en la solicitud. */
@@ -561,6 +552,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         workdaysOverrideNote: abreEnAjuste ? m.workdaysOverrideNote || "" : "",
         inTime: inTime || "",
         empresaContratoId: meta.empresaContratoId || "",
+        sedeId: Number((meta as any).sedeId) > 0 ? String((meta as any).sedeId) : "",
         convenioId: meta.convenioId || "",
         outTime: outTime || "",
         dailyRate: meta.dailyRate?.toString() || "",
@@ -593,6 +585,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         workdaysOverrideNote: "",
         inTime: "",
         empresaContratoId: "",
+        sedeId: "",
         convenioId: "",
         outTime: "",
         dailyRate: "",
@@ -1889,6 +1882,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         inTime: formData.inTime,
         outTime: formData.outTime,
         empresaContratoId: formData.empresaContratoId,
+        sedeId: formData.sedeId,
         convenioId: formData.convenioId,
         dailyRate: formData.dailyRate,
         isReplacement: formData.isReplacement,
@@ -1953,6 +1947,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         workdaysOverrideNote: "",
         inTime: "",
         empresaContratoId: "",
+        sedeId: "",
         convenioId: "",
         outTime: "",
         dailyRate: "",

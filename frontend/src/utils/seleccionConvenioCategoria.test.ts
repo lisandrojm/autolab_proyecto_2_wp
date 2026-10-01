@@ -17,7 +17,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { categoriasOfrecidas, categoriaPorDefecto } from './seleccionConvenioCategoria.js';
+import { categoriasOfrecidas, categoriaPorDefecto, codigosDeConveniosDelProyecto } from './seleccionConvenioCategoria.js';
 import type { CategoriaSatItem } from '../api/categoriasSat.js';
 import type { RoleFrameItem } from '../api/roleFrames.js';
 
@@ -251,4 +251,21 @@ describe('categoriaPorDefecto — qué viene elegido al abrir el alta', () => {
     // orden de lista.
     assert.equal(categoriaPorDefecto({ categorias: [ofrecida(1, ORO), ofrecida(3, ORO)], valoracionProyecto: PLATA, niveles: [] }), null);
   });
+});
+
+it("codigosDeConveniosDelProyecto: el proyecto acota los convenios de la empleadora", () => {
+  const convenios = [
+    { _id: "c634", externalId: "0634/11" },
+    { _id: "c131", externalId: "0131/75" },
+    { _id: "c999", externalId: "9999/99" },
+  ] as any[];
+  const empleadora = ["0634/11", "0131/75", "9999/99"];
+  assert.deepEqual(codigosDeConveniosDelProyecto(empleadora, ["c634"], convenios), ["0634/11"]);
+  // Poblado ({ _id }) igual que como string.
+  assert.deepEqual(codigosDeConveniosDelProyecto(empleadora, [{ _id: "c131" }], convenios), ["0131/75"]);
+  // Sin convenios declarados: «todavía no se acotó», rigen los de la empleadora.
+  assert.deepEqual(codigosDeConveniosDelProyecto(empleadora, [], convenios), empleadora);
+  // El proyecto declara uno que la empleadora no tiene: no se deja la lista vacía.
+  assert.deepEqual(codigosDeConveniosDelProyecto(["9999/99"], ["c634"], convenios), ["9999/99"]);
+  assert.equal(codigosDeConveniosDelProyecto(null, ["c634"], convenios), null);
 });

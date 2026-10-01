@@ -55,10 +55,11 @@ import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
-import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
 import { SelectorCategoria } from '../components/contratos/SelectorCategoria';
 import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
+import { sedeElegida, sedesDelContrato } from '../utils/sedesProyecto';
 import { cachedFetch } from '../utils/refCache';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { LinkSiPuede } from '../components/LinkSiPuede';
@@ -443,6 +444,37 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     });
   }, [selectedUserForWizard, unicaEmpresaContrato, unicaEmpresaRelease]);
 
+  /*
+    LA SEDE DEL CONTRATO: una de las del proyecto donde trabaja la Empresa del Contrato (ver
+    `sedesDelContrato`), con la favorita de la empresa primero.
+
+    Vacía, se completa sola con la primera. Al CAMBIAR de empresa, si la elegida no es de la nueva,
+    se reemplaza. Lo que no se hace es pisar al abrir la sede guardada de un contrato de antes: se
+    muestra igual (ver `opcionesSedeWizard`) y se cambia sólo si alguien lo decide.
+  */
+  const sedesOpcionesWizard = useMemo(() => sedesDelContrato(project?.metadata, wizardData.empresaContratoId, companies as any, allSedes), [project?.metadata, wizardData.empresaContratoId, companies, allSedes]);
+  const opcionesSedeWizard = useMemo(() => {
+    const actual = Number(wizardData.sede_id);
+    const ids = actual > 0 && !sedesOpcionesWizard.includes(actual) ? [...sedesOpcionesWizard, actual] : sedesOpcionesWizard;
+    return ids.map((id) => ({ id, nombre: allSedes.find((s) => Number(s.data?.id) === id)?.name || `Sede ${id}`, fuera: !sedesOpcionesWizard.includes(id) }));
+  }, [sedesOpcionesWizard, wizardData.sede_id, allSedes]);
+  const empresaDeLaSede = useRef<string>('');
+  useEffect(() => {
+    if (!selectedUserForWizard) {
+      empresaDeLaSede.current = '';
+      return;
+    }
+    const cambioEmpresa = !!empresaDeLaSede.current && empresaDeLaSede.current !== wizardData.empresaContratoId;
+    empresaDeLaSede.current = wizardData.empresaContratoId;
+    setWizardData((prev) => {
+      const actual = Number(prev.sede_id);
+      if (actual > 0 && (!cambioEmpresa || sedesOpcionesWizard.includes(actual))) return prev;
+      const nueva = sedeElegida(actual, sedesOpcionesWizard);
+      const texto = nueva ? String(nueva) : '';
+      return texto === prev.sede_id ? prev : { ...prev, sede_id: texto };
+    });
+  }, [selectedUserForWizard, wizardData.empresaContratoId, sedesOpcionesWizard]);
+
   // Persistence for view mode
   useEffect(() => {
     const saved = localStorage.getItem('projectTeamViewMode');
@@ -641,11 +673,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         setAllAreas(areasData);
         setAllShifts(shiftsData);
 
-        // Default sede from project if available
-        if (projectData.metadata?.sedeId) {
-          const sId = String(projectData.metadata.sedeId);
-          setWizardData((prev) => ({ ...prev, sede_id: sId }));
-        }
 
         // Build user lookup map
         const lookupMap = new Map<number | string, string>();
@@ -1259,14 +1286,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    * dejaría el select vacío sin que el operador pueda hacer nada al respecto desde acá. El checklist
    * de Datos ARCA ya marca esos casos por su cuenta.
    */
+  // Acotados por los convenios del proyecto, si los declaró: misma regla que la solicitud de la app.
   const conveniosDeLaEmpleadora = useMemo(
     () =>
-      codigosDeConveniosDeLaEmpleadora(
-        companies.find((c) => c._id === wizardData.empresaContratoId),
+      codigosDeConveniosDelProyecto(
+        codigosDeConveniosDeLaEmpleadora(
+          companies.find((c) => c._id === wizardData.empresaContratoId),
+          allConvenios,
+        ),
+        project?.convenioIds || [],
         allConvenios,
       ),
-    [companies, allConvenios, wizardData.empresaContratoId],
+    [companies, allConvenios, wizardData.empresaContratoId, project?.convenioIds],
   );
+  /** El proyecto declaró sus convenios y acotan la lista: los textos dicen «del proyecto», no «de la empleadora». */
+  const conveniosAcotadosPorProyecto = (project?.convenioIds || []).length > 0;
 
   /**
    * Los convenios que se pueden elegir. NUNCA el catálogo entero (~2.669): solo los de la empleadora.
@@ -1907,16 +1941,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     console.log('[Wizard] FINAL initialEstadoId:', initialEstadoId);
 
     /*
-      LA SEDE ES LA DEL PROYECTO. Se configura ahí y el alta ya no la pregunta (el paso «Extras» se
-      sacó). Sólo si el proyecto no tiene sede se cae a la del último contrato, para no borrarla.
+      LA SEDE SE ELIGE EN EL ALTA, entre las del proyecto que son de la Empresa del Contrato (ver
+      `sedesOpcionesWizard`). Se precarga la del contrato que se edita; si no hay, queda vacía y la
+      completa el efecto de la sede con la favorita de la empresa. La de una solicitud pisa a las dos
+      (`deLaSolicitud`).
     */
-    let initialSedeId = project?.metadata?.sedeId ? String(project.metadata.sedeId) : lastContract?.sede_id ? String(lastContract.sede_id) : '';
+    let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : '';
     if (!initialSedeId && lastContract?.nombre_sede) {
       const foundSede = allSedes.find((s) => s.name === lastContract.nombre_sede);
       if (foundSede) initialSedeId = String(foundSede.data.id);
-    }
-    if (!initialSedeId && (user.metadata as any)?.sedeId) {
-      initialSedeId = String((user.metadata as any).sedeId);
     }
 
     /*
@@ -2080,6 +2113,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           // El horario pedido, por encima del de un contrato anterior.
           ...(metaHoraInicio && metaHoraFin ? { hora_inicio: metaHoraInicio, hora_fin: metaHoraFin } : {}),
           ...(metaSolicitud.empresaContratoId ? { empresaContratoId: String(metaSolicitud.empresaContratoId) } : {}),
+          // La sede que eligió quien pidió el alta.
+          ...(Number((metaSolicitud as any).sedeId) > 0 ? { sede_id: String((metaSolicitud as any).sedeId) } : {}),
           ...(metaSolicitud.startDate ? { fecha_alta_contrato: String(metaSolicitud.startDate).slice(0, 10) } : {}),
           ...(metaSolicitud.dueDate ? { fecha_baja_contrato: String(metaSolicitud.dueDate).slice(0, 10) } : {}),
           ...(Number(metaSolicitud.diasPorSemana) ? { dias_por_semana: Number(metaSolicitud.diasPorSemana) } : {}),
@@ -3872,6 +3907,23 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   </select>
                 </div>
 
+                {/* La sede, debajo de la empresa: sale de las del proyecto donde trabaja esa empresa. */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede</label>
+                  <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))} disabled={opcionesSedeWizard.length === 0}>
+                    {(opcionesSedeWizard.length === 0 || !wizardData.sede_id) && <option value="">{opcionesSedeWizard.length ? 'Elegí la sede...' : 'El proyecto no tiene sedes cargadas'}</option>}
+                    {opcionesSedeWizard.map((s) => (
+                      <option key={s.id} value={String(s.id)}>
+                        {s.nombre}
+                        {s.fuera ? ' (no es del proyecto o de la empresa)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Las sedes del proyecto donde trabaja la empresa del contrato.</p>
+                </div>
+                {/* La otra mitad de la fila queda libre: el Tipo de contrato y el Estado van juntos abajo. */}
+                <div className="hidden md:block" />
+
                 <div className="space-y-1.5">
                   {/*
                     RÓTULO, FILTRO Y BADGE, TODO EN UNA FILA DE ALTO FIJO.
@@ -4316,7 +4368,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
                       <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
-                        <option value="">Todos los convenios de la empleadora</option>
+                        <option value="">{conveniosAcotadosPorProyecto ? 'Todos los convenios del proyecto' : 'Todos los convenios de la empleadora'}</option>
                         {conveniosDisponibles.map((c) => (
                           <option key={c.externalId} value={c.externalId}>
                             {c.externalId}
@@ -4413,8 +4465,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   */}
                       {conveniosDeLaEmpleadora && (
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(', ')}).`}
-                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ''}
+                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios ${conveniosAcotadosPorProyecto ? 'del proyecto' : 'de la empleadora'} (${conveniosDeLaEmpleadora.join(', ')}).`}
+                          {categoriasOcultasPorConvenio > 0 ? conveniosAcotadosPorProyecto ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otros convenios: no son del proyecto o ARCA no las acepta para esta empresa.` : ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ''}
                           {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ''}
                         </p>
                       )}

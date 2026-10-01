@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSort, faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
+import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../../utils/permisosMobile';
 import { projectsAPI } from '../../api/projects';
@@ -124,6 +126,56 @@ const MOBILE_ROLE_OPTIONS = [
   { value: 'con', label: 'Carga novedades' },
   { value: 'sin', label: 'No carga novedades' },
 ];
+
+const OPCIONES_ESTADO_USUARIOS = [
+  { label: 'Usuarios Activos', value: 'active' },
+  { label: 'Usuarios Inactivos', value: 'inactive' },
+  { label: 'Todos los usuarios', value: '' },
+];
+const OPCIONES_VIGENCIA = [
+  { label: 'Vigentes', value: 'vigente' },
+  { label: 'No Vigentes', value: 'novigente' },
+  { label: 'Todos los contratos', value: '' },
+];
+const OPCIONES_REEMPLAZO = [
+  { value: 'con', label: 'Con reemplazo' },
+  { value: 'sin', label: 'Sin reemplazo' },
+];
+
+/** Los filtros del contrato y de la persona que comparten Trámite impositivo y Generar Documentos. */
+interface FiltrosDeContrato {
+  usuarios: string;
+  vigencia: string;
+  novedades: string;
+  tipoContrato: string;
+  estadoContrato: string;
+  reemplazo: string;
+}
+
+/*
+  UNA SOLA REGLA PARA LAS DOS PESTAÑAS. Generar Documentos ofrece los mismos filtros que Trámite
+  impositivo: si cada una filtrara por su cuenta, «Vigentes» podría traer filas distintas en cada paso
+  del mismo circuito.
+*/
+const pasaFiltrosDeContrato = (r: ContractOverviewRow, f: FiltrosDeContrato): boolean => {
+  if (f.usuarios && r.userActivo !== (f.usuarios === 'active')) return false;
+  if (f.vigencia) {
+    const vig = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+    if (f.vigencia === 'vigente' ? !vig : vig) return false;
+  }
+  if (f.novedades) {
+    const cargaNovedades = (r.userRoles || []).some((rol) => (rol.permissions || []).includes(PERMISO_NOVEDADES_MOBILE));
+    if (f.novedades === 'con' ? !cargaNovedades : cargaNovedades) return false;
+  }
+  if (f.tipoContrato && r.nombre_contrato !== f.tipoContrato) return false;
+  if (f.estadoContrato && estadoLabel(r.nombre_estado_empleado || '') !== f.estadoContrato) return false;
+  if (f.reemplazo && (f.reemplazo === 'con' ? !r.reemplazo : r.reemplazo)) return false;
+  return true;
+};
+
+/** Las opciones de Tipo de contrato y de Estado de contrato: las que aparecen en las filas. */
+const opcionesDeTipoContrato = (rows: ContractOverviewRow[]) => [...new Set(rows.map((r) => r.nombre_contrato).filter(Boolean) as string[])].sort().map((v) => ({ value: v, label: v }));
+const opcionesDeEstadoContrato = (rows: ContractOverviewRow[]) => [...new Set(rows.map((r) => r.nombre_estado_empleado).filter(Boolean).map((e) => estadoLabel(e as string)))].map((v) => ({ value: v, label: v }));
 
 /** YYYYMMDD de hoy para el nombre del archivo. */
 const hoyStamp = (): string => {
@@ -1337,8 +1389,6 @@ export const ContractBulkAfipTab: React.FC<{
   const [filterEstadoContrato, setFilterEstadoContrato] = useState('');
   /** Filtro por estado de la obra social: convierte la grilla en la cola de trabajo del trámite. */
   const [filterObraSocial, setFilterObraSocial] = useState<EstadoObraSocial | ''>('');
-  /** Orden por estado de obra social: agrupa arriba lo que hay que resolver. */
-  const [ordenObraSocial, setOrdenObraSocial] = useState(false);
   const [filterReemplazo, setFilterReemplazo] = useState('');
   const [filterClientId, setFilterClientId] = useState('');
   // Preseleccionado cuando se entra desde el proyecto (Gestionar Equipo → Gestión masiva de Contratos).
@@ -1695,18 +1745,7 @@ export const ContractBulkAfipTab: React.FC<{
   const matchesCommonFilters = useCallback(
     (r: ImpositivoRow): boolean => {
       const q = search.trim().toLowerCase();
-      if (filterUserStatus && r.userActivo !== (filterUserStatus === 'active')) return false;
-      if (filterVigencia) {
-        const vig = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
-        if (filterVigencia === 'vigente' ? !vig : vig) return false;
-      }
-      if (filterRolMobile) {
-        const cargaNovedades = (r.userRoles || []).some((rol) => (rol.permissions || []).includes(PERMISO_NOVEDADES_MOBILE));
-        if (filterRolMobile === 'con' ? !cargaNovedades : cargaNovedades) return false;
-      }
-      if (filterTipoContrato && r.nombre_contrato !== filterTipoContrato) return false;
-      if (filterEstadoContrato && estadoLabel(r.nombre_estado_empleado || '') !== filterEstadoContrato) return false;
-      if (filterReemplazo && (filterReemplazo === 'con' ? !r.reemplazo : r.reemplazo)) return false;
+      if (!pasaFiltrosDeContrato(r, { usuarios: filterUserStatus, vigencia: filterVigencia, novedades: filterRolMobile, tipoContrato: filterTipoContrato, estadoContrato: filterEstadoContrato, reemplazo: filterReemplazo })) return false;
       if (filterClientId && r.clientId !== filterClientId) return false;
       if (filterProjectId && r.projectId !== filterProjectId) return false;
       if (q) {
@@ -1861,10 +1900,8 @@ export const ContractBulkAfipTab: React.FC<{
     // El filtro y el orden se resuelven con `estadoObraSocial`, la MISMA función que pinta la celda:
     // si cada uno clasificara por su cuenta, filtrar "sin constatar" podría traer filas que la celda
     // muestra en verde.
-    const conFiltro = filterObraSocial ? base.filter((x) => estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === filterObraSocial) : base;
-    if (!ordenObraSocial) return conFiltro;
-    return [...conFiltro].sort((a, b) => ORDEN_ESTADO_OS[estadoObraSocial(a.row, resolveAfipValues(a.row, afipCat))] - ORDEN_ESTADO_OS[estadoObraSocial(b.row, resolveAfipValues(b.row, afipCat))]);
-  }, [rowsPorFiltrosComunes, pasaFiltroTramite, filterObraSocial, ordenObraSocial, afipCat]);
+    return filterObraSocial ? base.filter((x) => estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === filterObraSocial) : base;
+  }, [rowsPorFiltrosComunes, pasaFiltroTramite, filterObraSocial, afipCat]);
 
   /**
    * Cuántos contratos hay detrás de cada pestaña de empresa.
@@ -1899,16 +1936,8 @@ export const ContractBulkAfipTab: React.FC<{
       .forEach((r) => r.projectId && m.set(r.projectId, r.projectName || r.projectId));
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [impositivoRows, filterClientId]);
-  const tipoContratoOptions = useMemo(() => {
-    const s = new Set<string>();
-    impositivoRows.forEach((x) => x.row.nombre_contrato && s.add(x.row.nombre_contrato));
-    return [...s].sort().map((v) => ({ value: v, label: v }));
-  }, [impositivoRows]);
-  const estadoContratoOptions = useMemo(() => {
-    const s = new Set<string>();
-    impositivoRows.forEach((x) => x.row.nombre_estado_empleado && s.add(estadoLabel(x.row.nombre_estado_empleado)));
-    return [...s].map((v) => ({ value: v, label: v }));
-  }, [impositivoRows]);
+  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(impositivoRows.map((x) => x.row)), [impositivoRows]);
+  const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(impositivoRows.map((x) => x.row)), [impositivoRows]);
   // Las empresas del filtro son las creadas en el ABM (no solo las ya usadas en algún contrato), para
   // poder elegir de antemano por cuál empresa se va a presentar el alta.
   const empresaOptions = useMemo(() => companies.map((c) => ({ value: c._id, label: c.razonSocial })).sort((a, b) => a.label.localeCompare(b.label)), [companies]);
@@ -2058,8 +2087,39 @@ export const ContractBulkAfipTab: React.FC<{
     });
   const seleccionados = useMemo(() => filtered.filter((x) => selected.has(rowKey(x.row))), [filtered, selected]);
 
+  /*
+    ORDEN POR COLUMNA, COMO UN DATATABLE (ver `components/ui/OrdenTabla`).
+
+    Ordena TODO lo filtrado y después se pagina: ordenar sólo las 25 visibles sería mentir. Cada
+    columna se ordena por lo que muestra —la razón social, no el id; el estado de la obra social en
+    el orden de «primero lo que hay que resolver»—. Las de selectores leen el mismo valor resuelto
+    que dibuja la celda (`resolveAfipValues`).
+  */
+  const { ordenados, orden, alternar } = useOrdenTabla(filtered, {
+    datosArca: ({ result }) => (result.completo ? 0 : result.faltantes),
+    fechaCarga: ({ row }) => row.fecha_carga || '', // ISO o YYYY-MM-DD: los dos ordenan bien como texto
+    usuario: ({ row }) => row.userName,
+    ultimoContrato: ({ row }) => fechaISO(row.fecha_alta_contrato),
+    cuit: ({ row }) => row.cuit,
+    empresaContrato: ({ row }) => row.nombre_empresa_contrato,
+    convenio: ({ row }) => resolveAfipValues(row, afipCat).convenioCategoria,
+    categoria: ({ row }) => {
+      const codigo = resolveAfipValues(row, afipCat).categoriaProf;
+      return codigo ? String(afipCat.categorias.find((c: any) => String(c.data?.codigoAfip ?? '') === codigo)?.name || codigo) : '';
+    },
+    obraSocial: ({ row }) => ORDEN_ESTADO_OS[estadoObraSocial(row, resolveAfipValues(row, afipCat))],
+    sucursal: ({ row }) => resolveAfipValues(row, afipCat).nombreSucursal,
+    actividad: ({ row }) => resolveAfipValues(row, afipCat).actividad,
+    empresaRelease: ({ row }) => row.nombre_empresa_release,
+    cliente: ({ row }) => row.clientName,
+    proyecto: ({ row }) => row.projectName,
+    contrato: ({ row }) => row.nombre_contrato,
+    estado: ({ row }) => row._estadoName,
+  });
+  const ordenProps = { orden, onAlternar: alternar };
+
   // Ojo: esto NO acota `filtered`. Solo dice qué filas se dibujan. Ver `usePaginado`.
-  const pag = usePaginado(filtered);
+  const pag = usePaginado(ordenados);
   /**
    * De lo tildado, lo que efectivamente se puede validar.
    *
@@ -2218,21 +2278,13 @@ export const ContractBulkAfipTab: React.FC<{
                 label: 'Estado de usuarios',
                 value: filterUserStatus,
                 onChange: setFilterUserStatus,
-                options: [
-                  { label: 'Usuarios Activos', value: 'active' },
-                  { label: 'Usuarios Inactivos', value: 'inactive' },
-                  { label: 'Todos los usuarios', value: '' },
-                ],
+                options: OPCIONES_ESTADO_USUARIOS,
               },
               {
                 label: 'Contratos',
                 value: filterVigencia,
                 onChange: setFilterVigencia,
-                options: [
-                  { label: 'Vigentes', value: 'vigente' },
-                  { label: 'No Vigentes', value: 'novigente' },
-                  { label: 'Todos los contratos', value: '' },
-                ],
+                options: OPCIONES_VIGENCIA,
               },
             ]}
             selectFilters={[
@@ -2251,10 +2303,7 @@ export const ContractBulkAfipTab: React.FC<{
                 value: filterReemplazo,
                 onChange: setFilterReemplazo,
                 placeholder: 'Con y sin reemplazo',
-                options: [
-                  { value: 'con', label: 'Con reemplazo' },
-                  { value: 'sin', label: 'Sin reemplazo' },
-                ],
+                options: OPCIONES_REEMPLAZO,
               },
             ]}
           />
@@ -2631,7 +2680,9 @@ export const ContractBulkAfipTab: React.FC<{
                   {filterTipo === 'alta_temprana_afip' ? (
                     <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>
                       <span className="inline-flex items-center gap-1.5">
-                        Datos ARCA
+                        <BotonOrden columna="datosArca" {...ordenProps} title="Ordenar por lo que falta para el TXT">
+                          Datos ARCA
+                        </BotonOrden>
                         <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
                           <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                         </button>
@@ -2648,8 +2699,16 @@ export const ContractBulkAfipTab: React.FC<{
                     principio para saber a quién se le estaba tocando el contrato. Ver `anchoColFija`
                     para por qué el ancho de la de al lado está fijado a mano.
                   */}
-                  <th className={`sticky ${izquierdaColFecha} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFecha}`} title="Cuándo se cargó el contrato en el sistema">Fecha de creación</th>
-                  <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>Usuario</th>
+                  <th className={`sticky ${izquierdaColFecha} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFecha}`} title="Cuándo se cargó el contrato en el sistema">
+                    <BotonOrden columna="fechaCarga" {...ordenProps}>
+                      Fecha de creación
+                    </BotonOrden>
+                  </th>
+                  <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>
+                    <BotonOrden columna="usuario" {...ordenProps}>
+                      Usuario
+                    </BotonOrden>
+                  </th>
                   {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
                       y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
                       Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
@@ -2665,7 +2724,11 @@ export const ContractBulkAfipTab: React.FC<{
                     el alta. El detalle no se pierde: la celda sigue rotulando sus dos líneas con
                     «Alta:» y «Baja:», y arriba lleva el badge de vigencia.
                   */}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Último Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="ultimoContrato" {...ordenProps} title="Ordenar por la fecha de alta del último contrato">
+                      Último Contrato
+                    </BotonOrden>
+                  </th>
                   {layoutConstancia && (
                     <>
                       {filterTipo !== 'sin_cuit' && (
@@ -2689,12 +2752,18 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">CUIT</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="cuit" {...ordenProps}>
+                      CUIT
+                    </BotonOrden>
+                  </th>
                   {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
                       columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
                   <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_TH_INICIO : ''}`}>
                     <span className="inline-flex items-center gap-1.5">
-                      Empresa Contrato
+                      <BotonOrden columna="empresaContrato" {...ordenProps}>
+                        Empresa Contrato
+                      </BotonOrden>
                       {filterTipo === 'alta_temprana_afip' && (
                         <>
                           <span className="text-red-500">*</span>
@@ -2711,11 +2780,15 @@ export const ContractBulkAfipTab: React.FC<{
                   {hayEncuadre && (
                     <>
                       <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
-                        Convenio
+                        <BotonOrden columna="convenio" {...ordenProps}>
+                          Convenio
+                        </BotonOrden>
                         <FlechaEncuadre />
                       </th>
                       <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
-                        Categoría
+                        <BotonOrden columna="categoria" {...ordenProps}>
+                          Categoría
+                        </BotonOrden>
                         <FlechaEncuadre />
                       </th>
                     </>
@@ -2725,10 +2798,9 @@ export const ContractBulkAfipTab: React.FC<{
                       puede resolver—. */}
                   {hayEncuadre && (
                     <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
-                      <button type="button" onClick={() => setOrdenObraSocial((v) => !v)} className={`uppercase tracking-wider font-bold inline-flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-300 ${ordenObraSocial ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                      <BotonOrden columna="obraSocial" {...ordenProps} title="Ordena por estado: primero lo que hay que resolver">
                         Obra Social
-                        <FontAwesomeIcon icon={faSort} className="h-2.5 w-2.5" />
-                      </button>
+                      </BotonOrden>
                     </th>
                   )}
                   {/*
@@ -2743,19 +2815,43 @@ export const ContractBulkAfipTab: React.FC<{
                   {hayEncuadre && (
                     <>
                       <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
-                        Sucursal
+                        <BotonOrden columna="sucursal" {...ordenProps}>
+                          Sucursal
+                        </BotonOrden>
                         <FlechaEncuadre />
                       </th>
                       <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH_FIN}`} title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
-                        Actividad
+                        <BotonOrden columna="actividad" {...ordenProps}>
+                          Actividad
+                        </BotonOrden>
                       </th>
                     </>
                   )}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Empresa Release</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Cliente</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Proyecto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="empresaRelease" {...ordenProps}>
+                      Empresa Release
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="cliente" {...ordenProps}>
+                      Cliente
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="proyecto" {...ordenProps}>
+                      Proyecto
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="contrato" {...ordenProps}>
+                      Contrato
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="estado" {...ordenProps}>
+                      Estado
+                    </BotonOrden>
+                  </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
                   <ContractActionsHeader />
                 </tr>
@@ -3654,6 +3750,13 @@ export const ContractBulkFirmaTab: React.FC<{
   const [filterClientId, setFilterClientId] = useState('');
   const [filterProjectId, setFilterProjectId] = useState('');
   const [filterEmpresaId, setFilterEmpresaId] = useState('');
+  // Los mismos filtros que Trámite impositivo (ver `pasaFiltrosDeContrato`).
+  const [filterUserStatus, setFilterUserStatus] = useState('');
+  const [filterVigencia, setFilterVigencia] = useState('');
+  const [filterRolMobile, setFilterRolMobile] = useState('');
+  const [filterTipoContrato, setFilterTipoContrato] = useState('');
+  const [filterEstadoContrato, setFilterEstadoContrato] = useState('');
+  const [filterReemplazo, setFilterReemplazo] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -3738,6 +3841,7 @@ export const ContractBulkFirmaTab: React.FC<{
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rowsEnEnvio.filter((r) => {
+      if (!pasaFiltrosDeContrato(r, { usuarios: filterUserStatus, vigencia: filterVigencia, novedades: filterRolMobile, tipoContrato: filterTipoContrato, estadoContrato: filterEstadoContrato, reemplazo: filterReemplazo })) return false;
       if (filterClientId && r.clientId !== filterClientId) return false;
       if (filterProjectId && r.projectId !== filterProjectId) return false;
       if (filterEmpresaId && !empresasDelContrato(r).includes(filterEmpresaId)) return false;
@@ -3747,7 +3851,9 @@ export const ContractBulkFirmaTab: React.FC<{
       }
       return true;
     });
-  }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId]);
+  }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo]);
+  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rowsEnEnvio), [rowsEnEnvio]);
+  const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(rowsEnEnvio), [rowsEnEnvio]);
 
   const clientOptions = useMemo(() => {
     const m = new Map<string, string>();
@@ -3774,7 +3880,19 @@ export const ContractBulkFirmaTab: React.FC<{
   const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman)), [filtered, contratoFrames, releasesQueFirman]);
 
   // Igual que en la otra pestaña: acota el render, no el conjunto. Ver `usePaginado`.
-  const pag = usePaginado(filtered);
+  // Mismo orden por columna que Trámite impositivo: se ordena todo lo filtrado y después se pagina.
+  const { ordenados: ordenadosFirma, orden, alternar } = useOrdenTabla(filtered, {
+    altaBaja: (r) => fechaISO(r.fecha_alta_contrato),
+    tramite: (r) => (tipoDelRow(r) ? TIPO_LABEL[tipoDelRow(r)!] : ''),
+    usuario: (r) => r.userName,
+    cuit: (r) => r.cuit,
+    cliente: (r) => r.clientName,
+    proyecto: (r) => r.projectName,
+    tipoContrato: (r) => r.nombre_contrato,
+    estado: (r) => estadoLabel(r.nombre_estado_empleado || ''),
+  });
+  const ordenProps = { orden, onAlternar: alternar };
+  const pag = usePaginado(ordenadosFirma);
   const allSel = enviables.length > 0 && enviables.every((r) => selected.has(rowKey(r)));
   const toggleAll = () =>
     setSelected((prev) => {
@@ -3830,10 +3948,18 @@ export const ContractBulkFirmaTab: React.FC<{
             searchTerm={search}
             onSearchChange={setSearch}
             searchPlaceholder="Buscar por usuario, proyecto o contrato..."
+            radioFilters={[
+              { label: 'Estado de usuarios', value: filterUserStatus, onChange: setFilterUserStatus, options: OPCIONES_ESTADO_USUARIOS },
+              { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
+            ]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
               { label: 'Empresa', value: filterEmpresaId, onChange: setFilterEmpresaId, placeholder: 'Todas las empresas', options: empresaOptions },
+              { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
+              { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+              { label: 'Estado de contrato', value: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: (opt: { label: string }) => <EstadoBadge name={opt.label} /> },
+              { label: 'Reemplazo', value: filterReemplazo, onChange: setFilterReemplazo, placeholder: 'Con y sin reemplazo', options: OPCIONES_REEMPLAZO },
             ]}
           />
         </div>
@@ -3894,16 +4020,48 @@ export const ContractBulkFirmaTab: React.FC<{
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Alta / Baja</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Trámite</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="altaBaja" {...ordenProps}>
+                      Alta / Baja
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="tramite" {...ordenProps}>
+                      Trámite
+                    </BotonOrden>
+                  </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">CUIT</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Cliente</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Proyecto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Tipo de Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="usuario" {...ordenProps}>
+                      Usuario
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="cuit" {...ordenProps}>
+                      CUIT
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="cliente" {...ordenProps}>
+                      Cliente
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="proyecto" {...ordenProps}>
+                      Proyecto
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="tipoContrato" {...ordenProps}>
+                      Tipo de Contrato
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="estado" {...ordenProps}>
+                      Estado
+                    </BotonOrden>
+                  </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
                   <ContractActionsHeader />
                 </tr>

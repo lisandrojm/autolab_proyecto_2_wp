@@ -65,6 +65,29 @@ export const codigosDeConveniosDeLaEmpleadora = (empresa: Company | undefined, c
 };
 
 /**
+ * LOS CCT QUE SE PUEDEN USAR: los de la empleadora, acotados por los del proyecto si éste los declaró.
+ *
+ * ARCA sólo acepta categorías de un convenio que la EMPLEADORA registró: ese es el filtro duro. El
+ * proyecto recorta más con sus `convenioIds`; si no declaró ninguno es «todavía no se acotó», no
+ * «ninguno». Si el cruce queda vacío (el proyecto declara convenios que esta empleadora no tiene), se
+ * vuelve a los de la empleadora: ofrecer nada dejaría el alta trabada sin explicación.
+ *
+ * Una sola regla para el alta del panel, la solicitud de la app y las plantillas de equipo.
+ */
+export const codigosDeConveniosDelProyecto = (deLaEmpleadora: string[] | null, convenioIdsDelProyecto: unknown[], convenios: SimpleCatalogItem[]): string[] | null => {
+  if (!deLaEmpleadora) return null;
+  const delProyecto = new Set<string>();
+  for (const id of convenioIdsDelProyecto) {
+    const ref = id && typeof id === "object" && "_id" in (id as Record<string, unknown>) ? (id as { _id: unknown })._id : id;
+    const cct = String(convenios.find((c) => c._id === String(ref))?.externalId || "").trim();
+    if (cct) delProyecto.add(cct);
+  }
+  if (delProyecto.size === 0) return deLaEmpleadora;
+  const cruce = deLaEmpleadora.filter((cct) => delProyecto.has(cct));
+  return cruce.length > 0 ? cruce : deLaEmpleadora;
+};
+
+/**
  * Los convenios que se pueden elegir. NUNCA el catálogo entero (~2.669): sólo los de la empleadora.
  *
  * Se dice cuántas categorías tiene cada uno porque es lo que anticipa si elegirlo va a servir de algo:
