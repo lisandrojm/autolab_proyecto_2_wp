@@ -413,7 +413,15 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
     nombreTurno: c.nombre_turno || "",
     turno: c.nombre_turno || "",
     fechaAltaContrato: formatDateAr(c.fecha_alta_contrato),
-    fechaBajaContrato: formatDateAr(c.fecha_baja_contrato),
+    /*
+      SIN FECHA DE BAJA, LA DE ALTA: el documento dice que termina el mismo día que empieza.
+
+      Pedido explícito para todos los contratos (un alta de un solo día no carga baja). Antes quedaba
+      el hueco en blanco en el PDF. Ojo con los de tiempo indeterminado: si su plantilla usa
+      {{fechaBajaContrato}}, va a decir que termina el día del alta. Se explica en el «i» de
+      Contenido, en Plantillas | Contratos.
+    */
+    fechaBajaContrato: formatDateAr(c.fecha_baja_contrato) || formatDateAr(c.fecha_alta_contrato),
     horaInicio: c.hora_inicio || "",
     horaFin: c.hora_fin || "",
     cantidadJornadas: c.cantidad_jornadas_laborales != null ? String(c.cantidad_jornadas_laborales) : "",

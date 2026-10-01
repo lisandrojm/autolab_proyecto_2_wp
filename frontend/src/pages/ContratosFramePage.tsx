@@ -71,6 +71,7 @@ export const ContratosFramePage: React.FC = () => {
   const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
   const [showSinContenidoInfo, setShowSinContenidoInfo] = useState(false);
+  const [showFechaBajaInfo, setShowFechaBajaInfo] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<ContratoFrameItem | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
@@ -563,13 +564,30 @@ export const ContratosFramePage: React.FC = () => {
 
             {/* Contenido del contrato */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido</label>
+              <div className="flex items-center gap-1.5 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contenido</label>
+                <button type="button" onClick={() => setShowFechaBajaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué pasa si el contrato no tiene fecha de baja?" aria-label="Qué pasa si el contrato no tiene fecha de baja">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                </button>
+              </div>
               <RichTextEditor value={form.content} onChange={(html) => setForm((f) => ({ ...f, content: html }))} variables={contratoVariables} variablesTitle="Variables del contrato" />
               <p className="text-xs text-gray-500 mt-1">Opcional: podés crear el contrato y redactarlo más adelante, pero sin contenido no se puede generar el PDF. Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Contrato).</p>
             </div>
           </div>
         </form>
       </Modal>
+
+      <InfoModal isOpen={showFechaBajaInfo} onClose={() => setShowFechaBajaInfo(false)} title="Contrato sin fecha de baja" subtitle="Qué pone {{fechaBajaContrato}} cuando no hay baja" size="sm" zIndex={100} actions={[{ label: 'Entendido', onClick: () => setShowFechaBajaInfo(false), variant: 'primary' }]}>
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            Si el contrato <strong>no tiene fecha de baja</strong>, la variable <code className="text-xs">{'{{fechaBajaContrato}}'}</code> se completa con la <strong>fecha de alta</strong> (<code className="text-xs">{'{{fechaAltaContrato}}'}</code>): el documento dice que el contrato empieza y termina el mismo día.
+          </p>
+          <p>Es lo que corresponde a un alta de un solo día, que se carga sin baja. Vale para todas las plantillas: no hay que cambiar el texto.</p>
+          <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            Ojo con los contratos de <strong>tiempo indeterminado</strong>: no tienen baja, así que si su plantilla usa <code className="text-xs">{'{{fechaBajaContrato}}'}</code> el documento va a decir que terminan el día del alta. En esas plantillas conviene no usar esa variable.
+          </p>
+        </div>
+      </InfoModal>
 
       <InfoModal isOpen={showSinContenidoInfo} onClose={() => setShowSinContenidoInfo(false)} title="Contrato sin contenido" subtitle="Por qué está marcado en rojo" size="sm" zIndex={100} actions={[{ label: 'Entendido', onClick: () => setShowSinContenidoInfo(false), variant: 'primary' }]}>
         <div className="space-y-4">
