@@ -108,8 +108,12 @@ export declare const erroresDeJornadas: (d: DatosJornadas) => ErroresJornadas;
  * totalice justo el importe mensual (ver `derivarImportes`).
  *
  * 0 si falta el período o no hay días marcados.
+ *
+ * DÍAS SUELTOS (`fechas`): las jornadas de cada mes son los días MARCADOS, no todos los días de la
+ * semana que caen entre el primero y el último. «Viernes 2, 9 y 23» de octubre son 3 de los 5 viernes
+ * del mes (0,6), no 4 de 5: contando el período, el mensual daba una jornada más cara que la real.
  */
-export declare const mesesEquivalentes: (desde: string | undefined, hasta: string | undefined, dias: number[]) => number;
+export declare const mesesEquivalentes: (desde: string | undefined, hasta: string | undefined, dias: number[], fechas?: string[]) => number;
 /** Qué importe quedó fijo: el último que se cargó entre mensual y total. Ver `derivarImportes`. */
 export type AnclaImporte = {
     unidad: "mensual" | "total";

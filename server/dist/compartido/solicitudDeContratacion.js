@@ -48,6 +48,7 @@ export function armarPayloadDeSolicitud(d, opciones = {}) {
             schedule: `${d.inTime} - ${d.outTime}`,
             // Con qué CUIT se contrata y bajo qué CCT.
             empresaContratoId: d.empresaContratoId || undefined,
+            sedeId: Number(d.sedeId) > 0 ? Number(d.sedeId) : undefined,
             convenioId: d.esServicios ? undefined : d.convenioId || undefined,
             dailyRate: Number(d.dailyRate),
             isReplacement: d.isReplacement,

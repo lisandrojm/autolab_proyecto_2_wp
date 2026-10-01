@@ -447,7 +447,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
                 // `valoracionId`/`valoracionManual`: la solicitud del móvil FILTRA las categorías por la valoración del
                 // proyecto y muestra su tag. Sin estos dos campos ese filtro no se aplicaba nunca —se ofrecían todas las
                 // categorías, de cualquier nivel— y el tag decía «sin valorar» en un proyecto que sí lo estaba.
-                .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId valoracionId valoracionManual valoracionesPorRol")
+                .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId metadata.sedeId metadata.sedeIds valoracionId valoracionManual valoracionesPorRol")
                 .populate("clientId", "name")
                 .populate("coordinatorAssignments.areaId", "name")
                 .populate("coordinatorAssignments.shiftId", "name startTime endTime order days")
@@ -1813,6 +1813,29 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
           `utils/superposicionContratos.ts`) ni si un feriado le cae en día laborable. Misma regla que el
           front, desde `compartido/diasDeTrabajo.ts`. Los contratos que llegan de FRAME no pasan por acá.
         */
+        /*
+          DÍAS SUELTOS: la lista de días manda sobre todo lo demás.
+    
+          Si el tipo de contrato se elige por días sueltos, el wizard manda los días marcados. De ahí salen
+          —acá, y no confiando en el cliente— el alta y la baja (primero y último), los días de la semana
+          que tocan y las jornadas: una por día, igual que en la solicitud de la app.
+        */
+        const fechasSueltas = Array.isArray(contract.fechas_trabajadas) ? [...new Set(contract.fechas_trabajadas.map((f) => String(f).slice(0, 10)).filter((f) => /^\d{4}-\d{2}-\d{2}$/.test(f)))].sort() : [];
+        if (fechasSueltas.length > 0) {
+            const diasSemana = [...new Set(fechasSueltas.map((f) => new Date(`${f}T00:00:00Z`).getUTCDay()))].sort((a, b) => a - b);
+            Object.assign(contract, {
+                fechas_trabajadas: fechasSueltas,
+                fecha_alta_contrato: fechasSueltas[0],
+                fecha_baja_contrato: fechasSueltas[fechasSueltas.length - 1],
+                dias_semana: diasSemana,
+                dias_por_semana: diasSemana.length,
+                dias_rotativos: false,
+                cantidad_jornadas_laborales: fechasSueltas.length,
+            });
+        }
+        else {
+            contract.fechas_trabajadas = undefined;
+        }
         const faltanDias = faltaDefinirDias(Number(contract.dias_por_semana) || 0, !!contract.dias_rotativos, Array.isArray(contract.dias_semana) ? contract.dias_semana.map(Number) : []);
         if (faltanDias)
             return res.status(422).json({ error: `Faltan los días que trabaja: ${faltanDias}.` });

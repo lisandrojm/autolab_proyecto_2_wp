@@ -25,6 +25,15 @@ interface IContract {
     dias_por_semana?: number;
     dias_semana?: number[];
     dias_rotativos?: boolean;
+    /**
+     * LOS DÍAS EXACTOS que se trabajan ("YYYY-MM-DD"), cuando el tipo de contrato se elige por días
+     * sueltos (`Contrato.data.modoFechas === "dias"`). Vacío en los contratos por período.
+     *
+     * Con días sueltos, alta y baja son el primero y el último de la lista y `dias_semana` los días de
+     * la semana que tocan; ninguno de los dos distingue «los martes de septiembre» de «el 2 y el 23».
+     * Es el mismo dato que `fechasTrabajadas` de la solicitud (ver `User.metadata`).
+     */
+    fechas_trabajadas?: string[];
     sueldo_jornada: number;
     sueldo_mano: number;
     sueldo_mano_texto: string;

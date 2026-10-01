@@ -41,6 +41,8 @@ export interface DatosSolicitud {
     inTime: string;
     outTime: string;
     empresaContratoId?: string;
+    /** La sede donde va a trabajar (`data.id` del Info `sede`). */
+    sedeId?: number | string;
     convenioId?: string;
     dailyRate: number | string;
     isReplacement: boolean;
@@ -97,6 +99,7 @@ export declare function armarPayloadDeSolicitud(d: DatosSolicitud, opciones?: Op
         fechasTrabajadas: string[];
         schedule: string;
         empresaContratoId: string;
+        sedeId: number;
         convenioId: string;
         dailyRate: number;
         isReplacement: boolean;

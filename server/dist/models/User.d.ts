@@ -205,6 +205,8 @@ export interface IUserMetadata {
         shiftIds?: Types.ObjectId[];
     }[];
     empresaContratoId?: Types.ObjectId;
+    /** La sede pedida (`data.id` del Info `sede`): al aprobar pasa al `sede_id` del contrato. */
+    sedeId?: number;
     convenioId?: Types.ObjectId;
     empleado_id_reemplezado?: string | number;
     replacedUserId?: Types.ObjectId;

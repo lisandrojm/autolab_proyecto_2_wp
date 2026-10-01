@@ -11,6 +11,7 @@ const contractSchema = new Schema({
     dias_por_semana: { type: Number },
     dias_semana: { type: [Number], default: undefined },
     dias_rotativos: { type: Boolean, default: false },
+    fechas_trabajadas: { type: [String], default: undefined },
     sueldo_jornada: { type: Number },
     sueldo_mano: { type: Number },
     sueldo_mano_texto: { type: String },

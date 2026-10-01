@@ -130,3 +130,14 @@ test("jornadasCalculadasDelPedido: por días sueltos son los días marcados, no 
     assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "2026-09-01", hasta: "2026-09-30", dias: [1, 2, 3, 4, 5] }), null);
     assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-09-01", hasta: "2026-09-30", dias: [1, 2, 3, 4, 5] }), 22);
 });
+test("mesesEquivalentes con días sueltos: cuenta los días marcados, no todo el período", () => {
+    // Octubre 2026 tiene 5 viernes (2, 9, 16, 23, 30). Marcados el 2, el 9 y el 23: 3 de 5, no 4 de 5.
+    const fechas = ["2026-10-02", "2026-10-09", "2026-10-23"];
+    cerca(mesesEquivalentes("2026-10-02", "2026-10-23", [5], fechas), 0.6);
+    cerca(mesesEquivalentes("2026-10-02", "2026-10-23", [5]), 0.8);
+    // Con el mensual como ancla, la jornada es la de un mes de viernes: mensual ÷ 5.
+    const importes = derivarImportes({ ancla: { unidad: "mensual", valor: 1000 }, jornada: null, mesesEq: mesesEquivalentes("2026-10-02", "2026-10-23", [5], fechas), jornadas: 3, diasSemana: 1 });
+    cerca(importes.jornada, 200);
+    cerca(importes.total, 600);
+    cerca(importes.semana, 200);
+});

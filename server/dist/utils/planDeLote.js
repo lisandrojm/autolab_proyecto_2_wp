@@ -107,7 +107,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         else {
             dailyRate = escala;
         }
-        const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana);
+        const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana, porDiasSueltos ? fechasSueltas : undefined);
         const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 ? dailyRate : null, mesesEq, jornadas, diasSemana: diasPorSemana });
         // ── Las reglas del formulario individual ──
         if (sinPersona)
