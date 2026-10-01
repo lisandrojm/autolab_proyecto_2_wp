@@ -31,3 +31,7 @@ export declare const problemaDeDias: (jornadas: number, rotativos: boolean, dias
  * que agrega éste es exigir la cantidad, que es la que habilita todo lo demás.
  */
 export declare const faltaDefinirDias: (jornadas: number, rotativos: boolean, dias: number[]) => string | null;
+export declare const semanaDelTipoDeContrato: (diasPorSemana: number | null | undefined, diasActuales: number[], rotativos?: boolean) => {
+    diasPorSemana: number;
+    dias: number[];
+} | null;

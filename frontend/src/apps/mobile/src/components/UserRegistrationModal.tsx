@@ -8,7 +8,7 @@ import { AyudaImportes, PROPS_IMPORTES_MOVIL } from "./contratacion/AyudaImporte
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
-import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
+import { DiasDeTrabajo, semanaDelTipoDeContrato } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
 import { sedeElegida, sedesDelContrato } from "../../../../utils/sedesProyecto";
@@ -3038,7 +3038,14 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         />
 
         {/* El tipo de contrato: la ventana compartida con las plantillas de equipo (ver contratacion/SelectorTipoContrato). */}
-        <ModalTipoContrato abierto={contratoModalOpen} onCerrar={() => setContratoModalOpen(false)} contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onElegir={(id) => setFormData((prev) => ({ ...prev, contratoId: id }))} />
+        <ModalTipoContrato abierto={contratoModalOpen} onCerrar={() => setContratoModalOpen(false)} contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onElegir={(id) =>
+            setFormData((prev) => {
+              // Los días por semana del tipo («6x6» → 6), precargados y no sólo como tope. Con días sueltos no aplica.
+              const tipo = contratos.find((c) => c._id === id);
+              const semana = tipo?.data?.modoFechas === "dias" ? null : semanaDelTipoDeContrato(tipo?.data?.diasPorSemana, prev.diasSemana, prev.diasRotativos);
+              return { ...prev, contratoId: id, ...(semana ? { diasPorSemana: String(semana.diasPorSemana), diasSemana: semana.dias } : {}) };
+            })
+          } />
 
         {/*
           Elegir el proyecto, cuando hay más de uno.

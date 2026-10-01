@@ -59,8 +59,8 @@ export const maximoDiasElegibles = (jornadas: number, rotativos: boolean): numbe
   `problemaDeDias` y `faltaDefinirDias` viven en `server/src/compartido/diasDeTrabajo.ts`: el server las usa
   para no aceptar un contrato sin días (ver `assign-member`). Se re-exportan con el camino de siempre.
 */
-import { problemaDeDias, faltaDefinirDias } from "@compartido/diasDeTrabajo";
-export { problemaDeDias, faltaDefinirDias };
+import { problemaDeDias, faltaDefinirDias, semanaDelTipoDeContrato } from "@compartido/diasDeTrabajo";
+export { problemaDeDias, faltaDefinirDias, semanaDelTipoDeContrato };
 
 /**
  * Las jornadas TOTALES que salen de trabajar `diasPorSemana` entre dos fechas.

@@ -48,3 +48,21 @@ export const faltaDefinirDias = (jornadas: number, rotativos: boolean, dias: num
   const problema = problemaDeDias(jornadas, rotativos, dias);
   return problema ? problema.replace(/\.$/, "").toLowerCase() : null;
 };
+
+/**
+ * LA SEMANA QUE PROPONE EL TIPO DE CONTRATO («Plazo fijo 6x6» → 6 días por semana).
+ *
+ * Al elegir el tipo, los días por semana pasan a ser los suyos —no sólo un tope—, y los días marcados
+ * se acomodan a esa cantidad: se conservan los que ya estaban (en orden de lunes a domingo), se
+ * recortan si sobran y se completan de lunes en adelante si faltan. Con días rotativos los días son
+ * entre los que rota y pueden ser más: no se tocan. Sin días por semana en el tipo, `null`.
+ */
+const LUNES_PRIMERO = [1, 2, 3, 4, 5, 6, 0];
+export const semanaDelTipoDeContrato = (diasPorSemana: number | null | undefined, diasActuales: number[], rotativos = false): { diasPorSemana: number; dias: number[] } | null => {
+  const n = Number(diasPorSemana);
+  if (!Number.isInteger(n) || n < 1 || n > 7) return null;
+  if (rotativos) return { diasPorSemana: n, dias: diasActuales };
+  const conservados = LUNES_PRIMERO.filter((d) => diasActuales.includes(d)).slice(0, n);
+  const faltan = LUNES_PRIMERO.filter((d) => !conservados.includes(d)).slice(0, n - conservados.length);
+  return { diasPorSemana: n, dias: [...conservados, ...faltan].sort((a, b) => a - b) };
+};

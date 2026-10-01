@@ -24,7 +24,7 @@ import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { TeamJerarquiaTab } from '../components/team/TeamJerarquiaTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
 import { MiembroElegible, SelectorMiembroModal } from '../components/team/SelectorMiembroModal';
-import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA } from '../components/contratos/DiasDeTrabajo';
+import { DiasDeTrabajo, faltaDefinirDias, DIAS_SEMANA, semanaDelTipoDeContrato } from '../components/contratos/DiasDeTrabajo';
 import { JornadasSolicitud } from '../components/contratacion/JornadasSolicitud';
 import { ImportesDelContrato } from '../components/contratacion/ImportesDelContrato';
 import { SelectorHora } from '../components/contratacion/SelectorHora';
@@ -2154,6 +2154,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setReglaContratoEditado(String(editado?.valoracion_regla_id?._id || editado?.valoracion_regla_id || ''));
     setAvisoConvenio('');
 
+    const contratoInicial = contratos.find((c) => c._id === (deLaSolicitud.contrato_id ?? initialContratoId));
+    const semanaInicialCalc =
+      esContratoNuevo && !metaSolicitud && contratoInicial?.data?.modoFechas !== 'dias'
+        ? semanaDelTipoDeContrato(contratoInicial?.data?.diasPorSemana, Array.isArray((lastContract as any)?.dias_semana) ? ((lastContract as any).dias_semana as number[]) : [], !!(lastContract as any)?.dias_rotativos)
+        : null;
+    const semanaInicial = semanaInicialCalc ? { dias_por_semana: semanaInicialCalc.diasPorSemana, dias_semana: semanaInicialCalc.dias } : {};
+
     // Reset wizard data with pulled data or defaults
     setWizardData({
       rol_frame_id: initialRolFrameId,
@@ -2188,6 +2195,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
       observaciones: lastContract?.observaciones || '',
       areaShiftAssignments: areaShiftAssignments,
+      // Contrato NUEVO sin solicitud: la semana del tipo de contrato precargado (ver `semanaDelTipoDeContrato`).
+      ...semanaInicial,
       // Lo de la solicitud, último: es lo que pidió quien la cargó.
       ...deLaSolicitud,
       ...(esContratoNuevo ? { estado_id: estadoDelContratoNuevo ? String(estadoDelContratoNuevo.data.id) : '' } : {}),
@@ -3991,14 +4000,23 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
                       const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === contratoId);
                       const unicaPlantilla = plantillasDelContrato.length === 1 ? plantillasDelContrato[0] : undefined;
-                      setWizardData((prev) => ({
+                      /*
+                        LOS DÍAS POR SEMANA DEL TIPO («6x6» → 6), PRECARGADOS: no son sólo un tope.
+                        Los días marcados se acomodan a esa cantidad (ver `semanaDelTipoDeContrato`).
+                        Con días sueltos no aplica: los días salen del calendario.
+                      */
+                      setWizardData((prev) => {
+                        const semana = contrato?.data?.modoFechas === 'dias' ? null : semanaDelTipoDeContrato(contrato?.data?.diasPorSemana, prev.dias_semana, prev.dias_rotativos);
+                        return {
                         ...prev,
+                        ...(semana ? { dias_por_semana: semana.diasPorSemana, dias_semana: semana.dias } : {}),
                         contrato_id: contratoId,
                         contrato_frame_id: unicaPlantilla?._id || '',
                         nombre_contrato: unicaPlantilla?.name || '',
                         tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : '',
                         fecha_baja_contrato: contrato?.data.esTiempoIndeterminado && contrato?.data.modoFechas !== 'dias' ? '' : prev.fecha_baja_contrato,
-                      }));
+                        };
+                      });
                     }}
                   />
 
