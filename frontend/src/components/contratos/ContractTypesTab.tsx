@@ -271,14 +271,21 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
    * bloquear el guardado por él era pedir que se llene un filtro. Ahora vive adentro del selector de
    * Tipo de servicio, y el que importa es el tipo elegido: ese sí se guarda.
    */
+  /*
+    SIN PLANTILLA NO SE EXIGEN. Los estados (y con ellos el alta temprana) se vinculan a la plantilla:
+    un tipo sin ninguna no muestra la sección de Estados ni este bloque, y el estado que trae el
+    formulario por defecto no se guarda en ningún lado. Exigir los códigos ahí dejaba «Actualizar»
+    deshabilitado por campos que no se ven. Se piden cuando se le asigne una plantilla y se edite.
+  */
+  const tienePlantillas = !!editando && plantillas.some((p) => plantillaEsDeContrato(p, editando._id));
   const codigosFaltantes = useMemo(() => {
-    if (!generaAlta) return [] as string[];
+    if (!generaAlta || !tienePlantillas) return [] as string[];
     const faltan: string[] = [];
     if (!form.afipModalidadContrato) faltan.push('afipModalidadContrato');
     if (!form.afipTipoServicio) faltan.push('afipTipoServicio');
     if (!form.afipModalidadLiquidacion) faltan.push('afipModalidadLiquidacion');
     return faltan;
-  }, [generaAlta, form.afipModalidadContrato, form.afipTipoServicio, form.afipModalidadLiquidacion]);
+  }, [generaAlta, tienePlantillas, form.afipModalidadContrato, form.afipTipoServicio, form.afipModalidadLiquidacion]);
   /**
    * Los errores recién se muestran después del primer intento de guardar.
    *
