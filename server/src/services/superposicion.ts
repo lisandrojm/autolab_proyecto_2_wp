@@ -48,7 +48,7 @@ export async function compromisosDePersona(tenantId: Types.ObjectId, userId: str
   const uid = new Types.ObjectId(userId);
   const [asignaciones, pendientes] = await Promise.all([
     UserProject.find({ userId: uid })
-      .select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno")
+      .select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno")
       .lean() as Promise<any[]>,
     User.find({
       tenantId,
@@ -92,6 +92,8 @@ export async function compromisosDePersona(tenantId: Types.ObjectId, userId: str
         proyectoNombre: nombreDe.get(String(a.projectId)) || a.nombre_proyecto || "",
         desde,
         hasta: fechaISO(c.fecha_baja_contrato),
+        // Por días sueltos: los días exactos, no todos los de la semana que caen en el período.
+        fechas: Array.isArray(c.fechas_trabajadas) && c.fechas_trabajadas.length ? c.fechas_trabajadas.map((f: string) => fechaISO(f)).filter(Boolean) : undefined,
         dias: diasDe(c),
         rotativos: !!c.dias_rotativos,
         inTime: c.hora_inicio || "",

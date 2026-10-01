@@ -2813,6 +2813,7 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
         dias_por_semana: meta?.diasPorSemana ?? undefined,
         dias_semana: meta?.diasSemana || [],
         dias_rotativos: !!meta?.diasRotativos,
+        fechas_trabajadas: Array.isArray(meta?.fechasTrabajadas) && meta.fechasTrabajadas.length ? meta.fechasTrabajadas : undefined,
         sueldo_jornada,
         sueldo_mano,
         sueldo_mano_texto: `$${sueldo_mano}`,

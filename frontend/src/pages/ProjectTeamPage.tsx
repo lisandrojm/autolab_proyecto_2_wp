@@ -30,7 +30,8 @@ import { ImportesDelContrato } from '../components/contratacion/ImportesDelContr
 import { SelectorHora } from '../components/contratacion/SelectorHora';
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
 import { numeroALetras } from '../utils/numeroALetras';
-import { avisoIndeterminado, erroresDeJornadas, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { avisoIndeterminado, erroresDeJornadas, jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
@@ -336,6 +337,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     dias_por_semana: 5,
     dias_semana: [] as number[],
     dias_rotativos: false,
+    /*
+      LOS DÍAS EXACTOS ("YYYY-MM-DD") cuando el tipo de contrato se elige por días sueltos (`modoFechas`
+      en su ABM). De ellos salen el alta y la baja, los días de la semana y las jornadas. Vacío en los
+      contratos por período.
+    */
+    fechas_trabajadas: [] as string[],
     // Step 2: Sueldo
     cantidad_jornadas_laborales: 5,
     sueldo_jornada: 0,
@@ -942,9 +949,34 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const diasSemanaWizard = wizardData.dias_rotativos ? Number(wizardData.dias_por_semana) || 0 : wizardData.dias_semana.length;
   // Sin fecha de baja (tiempo indeterminado) se cuenta sobre el mes del alta: ver `periodoDeCalculo`.
   const indeterminadoWizard = !!contratos.find((c) => c._id === wizardData.contrato_id)?.data?.esTiempoIndeterminado;
-  const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard);
-  const jornadasCalculadasWizard = jornadasDelCalendario(periodoWizard.desde, periodoWizard.hasta, wizardData.dias_semana);
-  const mesesEqWizard = mesesEquivalentes(periodoWizard.desde, periodoWizard.hasta, wizardData.dias_semana);
+  /*
+    EL TIPO DE CONTRATO SE ELIGE POR DÍAS SUELTOS (ver `modoFechas` en su ABM), igual que en la solicitud
+    de la app: en vez de alta y baja se pintan los días en un calendario y cada uno es una jornada.
+  */
+  const porDiasSueltosWizard = contratos.find((c) => c._id === wizardData.contrato_id)?.data?.modoFechas === 'dias';
+  const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard && !porDiasSueltosWizard);
+  const jornadasCalculadasWizard = jornadasCalculadasDelPedido({ porDiasSueltos: porDiasSueltosWizard, fechas: wizardData.fechas_trabajadas, rotativos: wizardData.dias_rotativos, desde: periodoWizard.desde, hasta: periodoWizard.hasta, dias: wizardData.dias_semana });
+  /**
+   * Los días marcados en el calendario, y lo que se deduce de ellos: el período (primero y último),
+   * los días de la semana que tocan y las jornadas (una por día). Misma cuenta que `elegirDiasSueltos`
+   * de la solicitud de mobile; el server la vuelve a hacer al guardar.
+   */
+  const elegirDiasSueltosWizard = (fechas: string[]) => {
+    const dias = [...new Set(fechas.filter(Boolean))].sort();
+    const diasSemana = [...new Set(dias.map((d) => new Date(`${d}T00:00:00`).getDay()))].sort((a, b) => a - b);
+    setAjusteJornadas({ ajustado: false, motivo: '', nota: '' });
+    setWizardData((prev) => ({
+      ...prev,
+      fechas_trabajadas: dias,
+      fecha_alta_contrato: dias[0] || prev.fecha_alta_contrato,
+      fecha_baja_contrato: dias[dias.length - 1] || '',
+      dias_semana: diasSemana,
+      dias_por_semana: diasSemana.length || prev.dias_por_semana,
+      dias_rotativos: false,
+      cantidad_jornadas_laborales: dias.length,
+    }));
+  };
+  const mesesEqWizard = mesesEquivalentes(periodoWizard.desde, periodoWizard.hasta, wizardData.dias_semana, porDiasSueltosWizard ? wizardData.fechas_trabajadas : undefined);
   /** El ajuste manual de las jornadas es de la pantalla: al contrato va el número final. */
   const [ajusteJornadas, setAjusteJornadas] = useState<{ ajustado: boolean; motivo: string; nota: string }>({ ajustado: false, motivo: '', nota: '' });
   const datosJornadasWizard = {
@@ -1014,9 +1046,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         dice a qué hora. Estaban separados —uno acá y el otro solo en mobile— y el escritorio
         guardaba 5 jornadas fijas sin que nadie lo eligiera.
       */}
+      {porDiasSueltosWizard ? (
+        /* Con días sueltos no hay días por semana que elegir: salen de los días marcados arriba. */
+        <div className="md:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 p-2.5 text-[11px] text-gray-500 dark:text-gray-400">
+          {wizardData.fechas_trabajadas.length > 0 ? (
+            <>
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {wizardData.fechas_trabajadas.length} {wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}
+              </span>
+              : {wizardData.fechas_trabajadas.map((d) => new Date(`${d}T00:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })).join(' · ')}
+            </>
+          ) : (
+            'Marcá los días en el calendario de arriba: de ahí salen las jornadas y los días que trabaja.'
+          )}
+        </div>
+      ) : (
       <div className="md:col-span-2">
         <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} limiteContrato={limiteDiasWizard} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
       </div>
+      )}
       {/*
         EL HORARIO, QUE YA VIENE PUESTO CON EL DEL TURNO.
 
@@ -1052,7 +1100,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           </p>
         )}
       </div>
-      {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo. */}
+      {/* Las jornadas que se pagan: se calculan con las fechas y los días, y se ajustan a mano con motivo.
+          Con días sueltos son los días marcados y no se pregunta (igual que en la solicitud de la app). */}
+      {!porDiasSueltosWizard && (
       <div className="md:col-span-2">
         <JornadasSolicitud
           desde={periodoWizard.desde}
@@ -1077,11 +1127,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           mostrarErrores
         />
       </div>
+      )}
     </div>
   );
 
   useEffect(() => {
-    if (limiteDiasWizard == null) return;
+    // Con días sueltos los días de la semana salen del calendario: recortarlos desarmaría lo marcado.
+    if (limiteDiasWizard == null || porDiasSueltosWizard) return;
     setWizardData((prev) => {
       if ((Number(prev.dias_por_semana) || 0) <= limiteDiasWizard) return prev;
       const lunesPrimero = [1, 2, 3, 4, 5, 6, 0];
@@ -1093,7 +1145,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             .sort((a, b) => a - b);
       return { ...prev, dias_por_semana: limiteDiasWizard, dias_semana: dias };
     });
-  }, [limiteDiasWizard]);
+  }, [limiteDiasWizard, porDiasSueltosWizard]);
   useEffect(() => {
     if (!esServicios || !wizardData.categoria_sat_id) return;
     setWizardData((prev) => ({ ...prev, categoria_sat_id: '' }));
@@ -2033,6 +2085,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           ...(Number(metaSolicitud.diasPorSemana) ? { dias_por_semana: Number(metaSolicitud.diasPorSemana) } : {}),
           ...(Array.isArray(metaSolicitud.diasSemana) && metaSolicitud.diasSemana.length > 0 ? { dias_semana: metaSolicitud.diasSemana as number[] } : {}),
           ...(metaSolicitud.diasRotativos !== undefined ? { dias_rotativos: !!metaSolicitud.diasRotativos } : {}),
+          // Los días sueltos pedidos (contratos por día): sin esto aprobar los perdía y quedaba sólo el período.
+          ...(Array.isArray(metaSolicitud.fechasTrabajadas) ? { fechas_trabajadas: (metaSolicitud.fechasTrabajadas as string[]).map((f) => String(f).slice(0, 10)) } : {}),
           ...(Number(metaSolicitud.workdaysCount) ? { cantidad_jornadas_laborales: Number(metaSolicitud.workdaysCount) } : {}),
           ...(Number(metaSolicitud.dailyRate) ? { sueldo_jornada: Number(metaSolicitud.dailyRate) } : {}),
           ...(metaSolicitud.isReplacement !== undefined ? { reemplazo: !!metaSolicitud.isReplacement } : {}),
@@ -2086,6 +2140,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       dias_por_semana: Number((lastContract as any)?.dias_por_semana) || 5,
       dias_semana: Array.isArray((lastContract as any)?.dias_semana) ? ((lastContract as any).dias_semana as number[]) : [],
       dias_rotativos: !!(lastContract as any)?.dias_rotativos,
+      fechas_trabajadas: Array.isArray((lastContract as any)?.fechas_trabajadas) ? ((lastContract as any).fechas_trabajadas as string[]) : [],
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
       sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
@@ -2173,7 +2228,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Un contrato a plazo tiene que decir cuándo termina; los de tiempo indeterminado no llevan baja
     // (de hecho el campo ni se muestra).
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
-    if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
+    const diasSueltos = contratoSel?.data?.modoFechas === 'dias';
+    if (diasSueltos && wizardData.fechas_trabajadas.length === 0) faltan.push('Días que trabaja (marcalos en el calendario)');
+    if (contratoSel && !diasSueltos && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
     if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push('Área y turno');
     if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push('Horario (entrada y salida)');
     if (horarioExcedidoWizard) faltan.push(`Horario dentro de las ${limiteHorasWizard} h por jornada del contrato`);
@@ -2192,7 +2249,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       La regla vive en `faltaDefinirDias` y no se copia acá: comparte con el aviso del campo la parte
       de los días, y agrega la cantidad — que al guardar tampoco puede quedar vacía.
     */
-    const faltaDias = faltaDefinirDias(wizardData.dias_por_semana, wizardData.dias_rotativos, wizardData.dias_semana);
+    const faltaDias = diasSueltos ? '' : faltaDefinirDias(wizardData.dias_por_semana, wizardData.dias_rotativos, wizardData.dias_semana);
     if (faltaDias) faltan.push(`Días que trabaja (${faltaDias})`);
     return faltan;
   };
@@ -2243,7 +2300,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         comentarioRevision: approvingSolicitudId ? comentarioRevision.trim() || undefined : undefined,
         contract: {
           ...wizardData,
-          fecha_baja_contrato: esTiempoIndeterminado ? '' : wizardData.fecha_baja_contrato,
+          fecha_baja_contrato: esTiempoIndeterminado && !porDiasSueltosWizard ? '' : wizardData.fecha_baja_contrato,
+          // Sólo con días sueltos: si el tipo pasó a ser por período, los días que hubiera quedan afuera.
+          fechas_trabajadas: porDiasSueltosWizard ? wizardData.fechas_trabajadas : [],
           areaId: primaryAreaId,
           shiftId: primaryShiftId,
           areaShiftAssignments: wizardData.areaShiftAssignments,
@@ -3886,7 +3945,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         contrato_frame_id: unicaPlantilla?._id || '',
                         nombre_contrato: unicaPlantilla?.name || '',
                         tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : '',
-                        fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? '' : prev.fecha_baja_contrato,
+                        fecha_baja_contrato: contrato?.data.esTiempoIndeterminado && contrato?.data.modoFechas !== 'dias' ? '' : prev.fecha_baja_contrato,
                       }));
                     }}
                   />
@@ -4006,6 +4065,28 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   con los campos sueltos ese hueco corría a todos los de abajo — las horas quedaban
                   apareadas con una fecha según qué contrato estuviera elegido.
                 */}
+                {porDiasSueltosWizard ? (
+                  /*
+                    DÍAS SUELTOS (ver `modoFechas` en el ABM del tipo de contrato): el mismo calendario
+                    que la solicitud de la app. Cada día marcado es una jornada; alta y baja son el
+                    primero y el último.
+                  */
+                  <div className="md:col-span-2 space-y-1.5">
+                    <CustomMultiDatePicker label="Días que trabaja" value={wizardData.fechas_trabajadas} onChange={(d: string | string[]) => elegirDiasSueltosWizard(Array.isArray(d) ? d : d ? [d] : [])} />
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      {wizardData.fechas_trabajadas.length > 0 ? (
+                        <>
+                          <span className="font-semibold text-gray-700 dark:text-gray-200">
+                            {wizardData.fechas_trabajadas.length} {wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}
+                          </span>
+                          , entre el {new Date(`${wizardData.fechas_trabajadas[0]}T00:00:00`).toLocaleDateString('es-AR')} y el {new Date(`${wizardData.fechas_trabajadas[wizardData.fechas_trabajadas.length - 1]}T00:00:00`).toLocaleDateString('es-AR')}.
+                        </>
+                      ) : (
+                        <>«{contratoDelWizard?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
+                      )}
+                    </p>
+                  </div>
+                ) : (
                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
@@ -4020,6 +4101,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
                 <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">

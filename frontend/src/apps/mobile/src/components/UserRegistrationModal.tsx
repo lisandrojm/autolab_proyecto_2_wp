@@ -1679,7 +1679,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   // Las jornadas que se pagan: las ajustadas a mano si se ajustaron (o con días rotativos); si no, las del calendario.
   const jornadasDelContrato = (formData.workdaysOverridden || formData.diasRotativos ? Number(formData.workdaysCount) : jornadasCalculadas) || 0;
   // Cuánto dura el contrato en meses: siempre desde las fechas reales, aunque las jornadas se hayan ajustado.
-  const mesesEq = useMemo(() => mesesEquivalentes(periodo.desde, periodo.hasta, formData.diasSemana), [periodo, formData.diasSemana]);
+  const mesesEq = useMemo(() => mesesEquivalentes(periodo.desde, periodo.hasta, formData.diasSemana, porDiasSueltos ? formData.fechasTrabajadas : undefined), [periodo, formData.diasSemana, porDiasSueltos, formData.fechasTrabajadas]);
   /*
     SIN CATEGORÍA, LOS IMPORTES ESTÁN BLOQUEADOS.
 

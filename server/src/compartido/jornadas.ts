@@ -184,18 +184,24 @@ export const erroresDeJornadas = (d: DatosJornadas): ErroresJornadas => {
  * totalice justo el importe mensual (ver `derivarImportes`).
  *
  * 0 si falta el período o no hay días marcados.
+ *
+ * DÍAS SUELTOS (`fechas`): las jornadas de cada mes son los días MARCADOS, no todos los días de la
+ * semana que caen entre el primero y el último. «Viernes 2, 9 y 23» de octubre son 3 de los 5 viernes
+ * del mes (0,6), no 4 de 5: contando el período, el mensual daba una jornada más cara que la real.
  */
-export const mesesEquivalentes = (desde: string | undefined, hasta: string | undefined, dias: number[]): number => {
+export const mesesEquivalentes = (desde: string | undefined, hasta: string | undefined, dias: number[], fechas?: string[]): number => {
   const d1 = utc(desde);
   const d2 = utc(hasta);
   if (d1 === null || d2 === null || d2 < d1 || dias.length === 0) return 0;
   const marcados = new Set(dias);
+  const sueltas = fechas?.length ? new Set(fechas.map((f) => utc(String(f).slice(0, 10))).filter((t): t is number => t !== null)) : null;
 
   // Jornadas del período por mes. Un mes tocado sin jornadas en el período aporta 0: no se recorre.
   const enPeriodo = new Map<string, { anio: number; mes: number; jornadas: number }>();
   for (let t = d1; t <= d2; t += DIA_MS) {
     const d = new Date(t);
     if (!marcados.has(d.getUTCDay())) continue;
+    if (sueltas && !sueltas.has(t)) continue;
     const clave = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
     const actual = enPeriodo.get(clave) || { anio: d.getUTCFullYear(), mes: d.getUTCMonth(), jornadas: 0 };
     actual.jornadas++;

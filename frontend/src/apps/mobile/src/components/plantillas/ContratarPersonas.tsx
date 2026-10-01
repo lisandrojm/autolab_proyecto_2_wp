@@ -320,7 +320,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const escala = importePorJornadaDeCategoria(categoriaActual || undefined, mult);
   const importesBloqueados = !esServicios && !categoriaIdActual;
   const diasDeSemana = sueltos ? [...new Set(fechas.map((s) => new Date(`${s}T12:00:00Z`).getUTCDay()))] : x.efectivo.diasSemana || [];
-  const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasDeSemana);
+  const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasDeSemana, sueltos ? fechas : undefined);
   const jornadas = fila?.jornadas || (sueltos ? fechas.length : 0);
   const tocoImporte = useRef(false);
   const [valorJornada, setValorJornada] = useState(() => (d.dailyRate ? String(d.dailyRate) : fila?.importes.jornada != null ? String(fila.importes.jornada) : ""));

@@ -248,7 +248,7 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   // Tiempo indeterminado: las jornadas son las de un mes completo y no hay total (ver `periodoDeCalculo`).
   const indeterminado = !!contratos.find((c) => String(c._id) === String(m.contratoId || ""))?.data?.esTiempoIndeterminado;
   const periodo = periodoDeCalculo(m.startDate, m.dueDate, indeterminado);
-  const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana);
+  const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana, Array.isArray(m.fechasTrabajadas) && m.fechasTrabajadas.length ? m.fechasTrabajadas : undefined);
   const totalCalculado = jornadas > 0 ? valorJornada * jornadas : null;
   const mensual = totalCalculado !== null && mesesEq > 0 ? totalCalculado / mesesEq : null;
   const total = indeterminado ? null : totalCalculado;
