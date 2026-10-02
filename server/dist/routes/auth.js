@@ -704,15 +704,10 @@ router.post("/registro/validar-cuit", async (req, res) => {
         }
         const datos = await consultarCuitEnArca(payload.tenantId, String(req.body?.cuit || ""));
         const respuesta = { ...datos, yaExiste: await usuarioExistenteConCuit(payload.tenantId, datos.cuit) };
-        // Copia en Dropbox de lo que se le contestó al formulario (ver `espejoDropboxRegistros.ts`).
-        guardarRespuestaDeRegistro({ tenantId: String(payload.tenantId), tipo: "validar-cuit", cuit: datos.cuit, linkId: payload.linkId, contenido: { status: 200, respuesta } });
         res.json(respuesta);
     }
     catch (error) {
         if (error instanceof ErrorConsultaCuit) {
-            const p = await verifyRegistroToken(String(req.body?.token || ""));
-            if (p)
-                guardarRespuestaDeRegistro({ tenantId: String(p.tenantId), tipo: "validar-cuit", cuit: String(req.body?.cuit || ""), linkId: p.linkId, contenido: { status: error.status, respuesta: { error: error.message } } });
             res.status(error.status).json({ error: error.message });
             return;
         }
@@ -966,7 +961,6 @@ router.post("/registro", async (req, res) => {
         // Copia en Dropbox: lo que respondió ARCA al registrar y con qué nombre quedó (sin la contraseña).
         guardarRespuestaDeRegistro({
             tenantId: String(tenantId),
-            tipo: "registro",
             cuit: String(metadata.cuit || ""),
             linkId: payload.linkId,
             contenido: {

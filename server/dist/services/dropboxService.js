@@ -168,9 +168,10 @@ export async function downloadFileContent(tenantId, cfg, path) {
     });
     return Buffer.from(data);
 }
-export async function uploadFile(tenantId, cfg, path, buffer) {
+/** `sobrescribir`: reemplaza el archivo si ya existe, en vez de crear «nombre (1).ext». */
+export async function uploadFile(tenantId, cfg, path, buffer, sobrescribir = false) {
     const token = await getAccessToken(tenantId, cfg);
-    const arg = { path, mode: "add", autorename: true, mute: false, strict_conflict: false };
+    const arg = sobrescribir ? { path, mode: "overwrite", autorename: false, mute: false, strict_conflict: false } : { path, mode: "add", autorename: true, mute: false, strict_conflict: false };
     const { data } = await axios.post(`${CONTENT}/files/upload`, buffer, {
         headers: {
             Authorization: `Bearer ${token}`,

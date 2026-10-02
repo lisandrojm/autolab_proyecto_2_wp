@@ -1,12 +1,11 @@
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, listFolder, uploadFile } from "./dropboxService.js";
 /**
- * COPIA EN DROPBOX DE LO QUE ARCA CONTESTÓ EN CADA REGISTRO (link de registro público).
+ * COPIA EN DROPBOX DE LO QUE ARCA CONTESTÓ AL REGISTRARSE (link de registro público).
  *
- * Cada consulta de «Validar CUIT» del formulario y cada registro terminado dejan un `.json` en
- * `/WEPRODU/Registros/AAAA-MM/`. Es la evidencia de qué dijo el organismo en ese momento: si después
- * hay que explicar un nombre sellado, un «CUIT ya registrado» o un CUIT inactivo, está la respuesta tal
- * cual vino, no lo que se dedujo de ella.
+ * Un `.json` POR CUIT en `/WEPRODU/Registros/<cuit>_registro.json`, con la ÚLTIMA validación: cada
+ * registro nuevo de ese CUIT lo reemplaza. Las consultas sueltas de «Validar CUIT» no se guardan (eran
+ * un log que no se iba a mirar); lo que importa es con qué respuesta de ARCA quedó registrada la persona.
  *
  * SIN `/FZERO S.R.L` ADELANTE: es el nombre del espacio de equipo en la web, no un path de la API (ver
  * `espejoDropboxParitaria.ts`). Para el token, `/WEPRODU` cuelga de la raíz.
@@ -41,15 +40,6 @@ const verificarBase = (tenantId, cfg) => {
     }
     return p;
 };
-const dos = (n) => String(n).padStart(2, "0");
-/** Fecha y hora de Argentina, para que el nombre del archivo coincida con lo que ve la gente. */
-const ahoraArgentina = () => {
-    const d = new Date(Date.now() - 3 * 60 * 60 * 1000);
-    return {
-        mes: `${d.getUTCFullYear()}-${dos(d.getUTCMonth() + 1)}`,
-        sello: `${d.getUTCFullYear()}-${dos(d.getUTCMonth() + 1)}-${dos(d.getUTCDate())}_${dos(d.getUTCHours())}-${dos(d.getUTCMinutes())}-${dos(d.getUTCSeconds())}`,
-    };
-};
 /**
  * Sube la evidencia en segundo plano. No devuelve nada que haya que esperar y no tira nunca.
  */
@@ -62,14 +52,15 @@ export function guardarRespuestaDeRegistro(o) {
                 return; // sin Dropbox conectado no hay dónde guardar: no es un error del registro
             if (!(await verificarBase(o.tenantId, cfg)))
                 return;
-            const { mes, sello } = ahoraArgentina();
-            const cuit = String(o.cuit || "").replace(/\D/g, "") || "sin-cuit";
-            const ruta = `${base()}/${mes}/${sello}_${cuit}_${o.tipo}.json`;
-            const json = JSON.stringify({ tipo: o.tipo, momento: new Date().toISOString(), cuit: o.cuit || null, linkId: o.linkId || null, ...o.contenido }, null, 2);
-            await uploadFile(o.tenantId, cfg, ruta, Buffer.from(json, "utf8"));
+            const cuit = String(o.cuit || "").replace(/\D/g, "");
+            if (!cuit)
+                return; // sin CUIT no hay validación de ARCA que guardar
+            const ruta = `${base()}/${cuit}_registro.json`;
+            const json = JSON.stringify({ momento: new Date().toISOString(), cuit: o.cuit || null, linkId: o.linkId || null, ...o.contenido }, null, 2);
+            await uploadFile(o.tenantId, cfg, ruta, Buffer.from(json, "utf8"), true);
         }
         catch (e) {
-            console.warn(`[REGISTROS→DROPBOX] No se pudo guardar ${o.tipo} de ${o.cuit || "?"}:`, e?.response?.data?.error_summary || e?.message || e);
+            console.warn(`[REGISTROS→DROPBOX] No se pudo guardar el registro de ${o.cuit || "?"}:`, e?.response?.data?.error_summary || e?.message || e);
         }
     })();
 }

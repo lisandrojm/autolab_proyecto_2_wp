@@ -67,7 +67,8 @@ export declare function listFolder(tenantId: string, cfg: TenantDropboxConfig, p
 export declare function getTemporaryLink(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<string>;
 /** Descarga el contenido de un archivo como Buffer (para armar ZIPs, etc.). */
 export declare function downloadFileContent(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<Buffer>;
-export declare function uploadFile(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer): Promise<DropboxEntry>;
+/** `sobrescribir`: reemplaza el archivo si ya existe, en vez de crear «nombre (1).ext». */
+export declare function uploadFile(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer, sobrescribir?: boolean): Promise<DropboxEntry>;
 /**
  * Subida por SESIÓN, para archivos que no entran en `uploadFile`.
  *
