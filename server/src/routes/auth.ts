@@ -30,6 +30,7 @@ import { Types } from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { NOVEDAD_REGISTRO, nombreDePersona, notificar, responsablesDeQuienSupervisa } from "../services/novedadesNotificaciones.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
+import { guardarRespuestaDeRegistro } from "../services/espejoDropboxRegistros.js";
 
 const registerClientSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -789,9 +790,14 @@ router.post("/registro/validar-cuit", async (req, res) => {
       return;
     }
     const datos = await consultarCuitEnArca(payload.tenantId, String(req.body?.cuit || ""));
-    res.json({ ...datos, yaExiste: await usuarioExistenteConCuit(payload.tenantId, datos.cuit) });
+    const respuesta = { ...datos, yaExiste: await usuarioExistenteConCuit(payload.tenantId, datos.cuit) };
+    // Copia en Dropbox de lo que se le contestó al formulario (ver `espejoDropboxRegistros.ts`).
+    guardarRespuestaDeRegistro({ tenantId: String(payload.tenantId), tipo: "validar-cuit", cuit: datos.cuit, linkId: payload.linkId, contenido: { status: 200, respuesta } });
+    res.json(respuesta);
   } catch (error: any) {
     if (error instanceof ErrorConsultaCuit) {
+      const p = await verifyRegistroToken(String(req.body?.token || ""));
+      if (p) guardarRespuestaDeRegistro({ tenantId: String(p.tenantId), tipo: "validar-cuit", cuit: String(req.body?.cuit || ""), linkId: p.linkId, contenido: { status: error.status, respuesta: { error: error.message } } });
       res.status(error.status).json({ error: error.message });
       return;
     }
@@ -1028,12 +1034,14 @@ router.post("/registro", async (req, res) => {
       nombre que devuelve ARCA, no el que vino tipeado.
     */
     let nombreArca = { firstName, lastName };
+    let respuestaArca: any = null;
     if (req.body?.validarConArca === true) {
       const cuitReg = normalizarCuit(String(metadata.cuit || ""));
       const cfgReg = getTenantAfipConfig(await Tenant.findById(tenantId).lean());
       if (cuitEsValido(cuitReg) && cfgReg) {
         try {
           const r = await consultarPadron(String(tenantId), cfgReg, cuitReg);
+          respuestaArca = r;
           const sellado = r.encontrado ? nombreParaSellar(r, { firstName, lastName }) : null;
           if (sellado) {
             nombreArca = sellado;
@@ -1058,6 +1066,20 @@ router.post("/registro", async (req, res) => {
     });
 
     await user.save();
+
+    // Copia en Dropbox: lo que respondió ARCA al registrar y con qué nombre quedó (sin la contraseña).
+    guardarRespuestaDeRegistro({
+      tenantId: String(tenantId),
+      tipo: "registro",
+      cuit: String(metadata.cuit || ""),
+      linkId: payload.linkId,
+      contenido: {
+        usuario: { _id: String(user._id), email, tipeado: { firstName, lastName }, guardado: nombreArca, documento },
+        validarConArca: req.body?.validarConArca === true,
+        selladoEnArca: !!metadata.nombreValidadoArcaAt,
+        respuestaArca,
+      },
+    });
 
     await Tenant.findByIdAndUpdate(tenantId, {
       $addToSet: { userIds: user._id },
