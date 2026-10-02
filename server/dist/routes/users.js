@@ -47,6 +47,7 @@ import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { claveEstado } from "../utils/estadoClave.js";
+import { nombreParaSellar } from "../services/arca/nombreArca.js";
 const router = Router();
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
  * Estos filtros dependen del ÚLTIMO contrato del miembro en el proyecto o de su asignación de
@@ -1709,9 +1710,10 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
             if (cuitEsValido(cuit) && cfg) {
                 try {
                     const r = await consultarPadron(String(req.tenantObjectId), cfg, cuit);
-                    if (r.encontrado && r.nombre && r.apellido) {
-                        data.firstName = r.nombre;
-                        data.lastName = r.apellido;
+                    const sellado = r.encontrado ? nombreParaSellar(r, data) : null;
+                    if (sellado) {
+                        data.firstName = sellado.firstName;
+                        data.lastName = sellado.lastName;
                         data.metadata = { ...(data.metadata || {}), nombreValidadoArcaAt: new Date() };
                     }
                 }
@@ -2139,9 +2141,10 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
             if (cuitEsValido(cuitEditado) && cfgArca) {
                 try {
                     const r = await consultarPadron(String(targetTenantId), cfgArca, cuitEditado);
-                    if (r.encontrado && r.nombre && r.apellido) {
-                        data.firstName = r.nombre;
-                        data.lastName = r.apellido;
+                    const sellado = r.encontrado ? nombreParaSellar(r, { firstName: data.firstName ?? currentUser.firstName, lastName: data.lastName ?? currentUser.lastName }) : null;
+                    if (sellado) {
+                        data.firstName = sellado.firstName;
+                        data.lastName = sellado.lastName;
                         data.metadata = { ...(data.metadata || {}), nombreValidadoArcaAt: new Date() };
                     }
                 }

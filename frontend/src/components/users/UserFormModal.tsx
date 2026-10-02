@@ -1,3 +1,4 @@
+import { esPersonaJuridica, mismasPalabras, nombreSinPartir, sugerirParticion } from "@compartido/nombreEntero";
 import React, { useEffect, useRef, useState } from "react";
 import { usersAPI, User } from "../../api/users";
 import { rolesAPI, Role } from "../../api/roles";
@@ -205,6 +206,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   */
   const [consultandoPadron, setConsultandoPadron] = useState(false);
   const [validadoEnArca, setValidadoEnArca] = useState(false);
+  /** El nombre entero cuando ARCA no lo mandó partido: nombre y apellido quedan editables, con las mismas palabras. */
+  const [nombreAPartir, setNombreAPartir] = useState<string | null>(null);
   /**
    * Se consulto el padron y contesto que el CUIT esta INACTIVO.
    *
@@ -256,10 +259,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         sweetAlert.warningAlert("El CUIT existe, pero figura INACTIVO en ARCA", "El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo, y el Padrón —que es lo que consulta este botón— no devuelve el nombre de un CUIT inactivo.\n\nEl alta se puede hacer igual: cargá nombre y apellido a mano por ahora. La ficha queda SIN el sello de validada, y el nombre se corrige solo la primera vez que esta persona pase por «Validar obras sociales»: esa pantalla de ARCA sí lo muestra, aunque el CUIT esté de baja.");
         return;
       }
-      if (!r.nombre || !r.apellido) {
+      if (esPersonaJuridica(r)) {
         sweetAlert.warningAlert("Es una persona jurídica", `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
+      // Persona física con el nombre entero en una sola parte: se prellena partido y queda editable.
+      const entero = nombreSinPartir(r);
+      const partido = entero ? sugerirParticion(entero) : { nombre: r.nombre, apellido: r.apellido };
+      setNombreAPartir(entero);
       /*
         LO QUE SE SELLA Y LO QUE SE PRELLENA SON DOS COSAS DISTINTAS.
 
@@ -274,15 +281,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       const tipoDeArca = tipoDocumentoDeArca(tiposDocumentoDisponibles as any[], r.tipoDocumento);
       setFormData((prev) => ({
         ...prev,
-        firstName: r.nombre,
-        lastName: r.apellido,
+        firstName: partido.nombre,
+        lastName: partido.apellido,
         documento: r.documento || prev.documento,
         // El tipo que dice ARCA; si su sigla no existe en el catálogo (TRAM, ACTA, CERT…), lo que ya estaba.
         tipoDocumentoId: tipoDeArca ? (tipoDeArca as any).data.id : (prev.tipoDocumentoId ?? tipoDni?.data.id),
         fechaNac: prev.fechaNac || r.fechaNacimiento || "",
       }));
       setValidadoEnArca(true);
-      sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · ${r.tipoDocumento || "DNI"} ${r.documento}` : ""}`);
+      if (entero) sweetAlert.warningAlert("Revisá nombre y apellido", `ARCA mandó el nombre completo en un solo campo: «${entero}». Lo separamos como apellido + nombre, que es como lo arma ARCA; revisá dónde termina el apellido y corregilo si hace falta. Tienen que quedar las mismas palabras.`);
+      else sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · ${r.tipoDocumento || "DNI"} ${r.documento}` : ""}`);
       // Figura fallecida en el padrón: se avisa y la decisión queda de este lado. No frena el alta.
       if (r.fechaFallecimiento) {
         sweetAlert.warningAlert("ARCA la registra como fallecida", `El padrón devuelve fecha de fallecimiento ${r.fechaFallecimiento} para este CUIT.\n\nRevisá que sea la persona que estás dando de alta antes de seguir.`);
@@ -432,6 +440,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         podía cargar a nadie hasta recargar la página.
       */
       setValidadoEnArca(false);
+      setNombreAPartir(null);
       setInactivoEnArca(false);
       setConsultandoPadron(false);
       return;
@@ -582,6 +591,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (validadoEnArca && nombreAPartir && !mismasPalabras(nombreAPartir, `${formData.lastName} ${formData.firstName}`)) {
+      sweetAlert.error("Nombre y apellido no coinciden con ARCA", `Tienen que tener las mismas palabras que «${nombreAPartir}». Solo se puede cambiar dónde se separan.`);
+      setModalActiveTab("general");
+      return;
+    }
     // El CUIT/CUIL se valida con el algoritmo de ARCA (módulo 11), no solo por largo: un número mal
     // tipeado se detecta acá y no viaja a la base ni al TXT de ARCA.
     /*
@@ -913,6 +927,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     // El sello cae siempre: dejó de corresponder al CUIT que tiene el formulario.
     setValidadoEnArca(false);
     setInactivoEnArca(false);
+    setNombreAPartir(null);
     // Vaciar los campos, solo en el alta. Editando a alguien existente sería borrarle datos guardados
     // por tocar un select; lo que hace falta ahí es destrabarlos para poder corregirlos.
     if (user) return;
@@ -1126,6 +1141,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                             setFormData((prev) => ({ ...prev, cuit: v }));
                             // Tocar el CUIT invalida lo traído: si no, se valida uno y se guarda otro.
                             setValidadoEnArca(false);
+                            setNombreAPartir(null);
                             setInactivoEnArca(false);
                           }}
                           className={`input-field ${cuilVisible ? "" : "opacity-50 cursor-not-allowed"}`}
@@ -1170,13 +1186,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                         Nombre <span className="text-red-500">*</span>
                       </label>
-                      <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className={claseArca} placeholder="Ej: Juan" disabled={camposDeArcaBloqueados} title={tituloArca} />
+                      <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className={nombreAPartir ? "input-field" : claseArca} placeholder="Ej: Juan" disabled={camposDeArcaBloqueados && !nombreAPartir} title={nombreAPartir ? `ARCA: «${nombreAPartir}». Podés mover dónde se separan nombre y apellido.` : tituloArca} />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                         Apellido <span className="text-red-500">*</span>
                       </label>
-                      <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className={claseArca} placeholder="Ej: Pérez" disabled={camposDeArcaBloqueados} title={tituloArca} />
+                      <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className={nombreAPartir ? "input-field" : claseArca} placeholder="Ej: Pérez" disabled={camposDeArcaBloqueados && !nombreAPartir} title={nombreAPartir ? `ARCA: «${nombreAPartir}». Podés mover dónde se separan nombre y apellido.` : tituloArca} />
                     </div>
                   </div>
 

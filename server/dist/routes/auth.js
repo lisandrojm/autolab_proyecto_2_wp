@@ -28,6 +28,7 @@ import { z } from "zod";
 import { Types } from "mongoose";
 import { authenticateToken } from "../middleware/auth.js";
 import { NOVEDAD_REGISTRO, nombreDePersona, notificar, responsablesDeQuienSupervisa } from "../services/novedadesNotificaciones.js";
+import { nombreParaSellar } from "../services/arca/nombreArca.js";
 const registerClientSchema = z.object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email format"),
@@ -930,8 +931,9 @@ router.post("/registro", async (req, res) => {
             if (cuitEsValido(cuitReg) && cfgReg) {
                 try {
                     const r = await consultarPadron(String(tenantId), cfgReg, cuitReg);
-                    if (r.encontrado && r.nombre && r.apellido) {
-                        nombreArca = { firstName: r.nombre, lastName: r.apellido };
+                    const sellado = r.encontrado ? nombreParaSellar(r, { firstName, lastName }) : null;
+                    if (sellado) {
+                        nombreArca = sellado;
                         metadata.nombreValidadoArcaAt = new Date();
                     }
                 }

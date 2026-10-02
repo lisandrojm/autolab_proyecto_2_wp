@@ -1,3 +1,4 @@
+import { esPersonaJuridica, mismasPalabras, nombreSinPartir, sugerirParticion } from "@compartido/nombreEntero";
 import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto, faltanDigitosCbu } from "../utils/cbu";
 import { SIN_BANCO, opcionesTipoEntidad, camposDe, labelTipo, MOTIVOS_SIN_BANCO, MotivoSinBanco, TipoEntidadConfig } from "../utils/bancarios";
 import React, { useEffect, useMemo, useState } from "react";
@@ -503,6 +504,8 @@ export const RegistroPage: React.FC = () => {
   const [rolEmpresaBusqueda, setRolEmpresaBusqueda] = useState("");
   const [rolesEmpresaOpen, setRolesEmpresaOpen] = useState(false);
   const [validadoEnArca, setValidadoEnArca] = useState(false);
+  /** El nombre entero cuando ARCA no lo mandó partido: nombre y apellido quedan editables, con las mismas palabras. */
+  const [nombreAPartir, setNombreAPartir] = useState<string | null>(null);
   /** Se consulto el padron y contesto INACTIVO: no hay sello, pero tampoco se frena el registro. */
   const [inactivoEnArca, setInactivoEnArca] = useState(false);
   const [consultandoPadron, setConsultandoPadron] = useState(false);
@@ -555,10 +558,14 @@ export const RegistroPage: React.FC = () => {
         sweetAlert.warningAlert("Tu CUIT existe, pero figura INACTIVO en ARCA", "El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo, y de un CUIT inactivo el Padrón no devuelve el nombre.\n\nPodés terminar el registro igual: cargá tu nombre y apellido tal como figuran en tu documento. Si más adelante no coincidieran con los que tiene ARCA, la productora los corrige de su lado.");
         return;
       }
-      if (!data.nombre || !data.apellido) {
+      if (esPersonaJuridica(data)) {
         sweetAlert.warningAlert("Es una persona jurídica", `ARCA devolvió «${data.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
+      // Persona física con el nombre entero en una sola parte: se prellena partido y queda editable.
+      const entero = nombreSinPartir(data);
+      const partido = entero ? sugerirParticion(entero) : { nombre: data.nombre, apellido: data.apellido };
+      setNombreAPartir(entero);
       /*
         SE PRELLENA LO QUE ARCA YA MANDÓ EN ESTA MISMA RESPUESTA: nombre, documento y fecha de nacimiento.
 
@@ -569,8 +576,8 @@ export const RegistroPage: React.FC = () => {
       const tipoDeArca = tipoDocumentoDeArca(tiposDocumentoDisponibles as any[], data.tipoDocumento);
       setForm((prev) => ({
         ...prev,
-        firstName: data.nombre,
-        lastName: data.apellido,
+        firstName: partido.nombre,
+        lastName: partido.apellido,
         documento: data.documento || prev.documento,
         // El tipo que dice ARCA; si su sigla no está en el catálogo (TRAM, ACTA, CERT…), lo que ya estaba.
         tipoDocumentoId: tipoDeArca ? String((tipoDeArca as any).id) : prev.tipoDocumentoId || (tipoDni ? String(tipoDni.id) : prev.tipoDocumentoId),
@@ -578,7 +585,8 @@ export const RegistroPage: React.FC = () => {
       }));
       setFieldErrors((prev) => ({ ...prev, firstName: false, lastName: false, documento: false, cuit: false }));
       setValidadoEnArca(true);
-      sweetAlert.success("Datos traídos de ARCA", `${data.nombre} ${data.apellido}${data.documento ? ` · ${data.tipoDocumento || "DNI"} ${data.documento}` : ""}`);
+      if (entero) sweetAlert.warningAlert("Revisá nombre y apellido", `ARCA mandó el nombre completo en un solo campo: «${entero}». Lo separamos como apellido + nombre, que es como lo arma ARCA; revisá dónde termina el apellido y corregilo si hace falta. Tienen que quedar las mismas palabras.`);
+      else sweetAlert.success("Datos traídos de ARCA", `${data.nombre} ${data.apellido}${data.documento ? ` · ${data.tipoDocumento || "DNI"} ${data.documento}` : ""}`);
     } catch {
       const m = mensajeErrorArca(undefined, null);
       sweetAlert.error(m.titulo, m.detalle);
@@ -601,6 +609,7 @@ export const RegistroPage: React.FC = () => {
   const limpiarDatosDeArca = () => {
     setValidadoEnArca(false);
     setInactivoEnArca(false);
+    setNombreAPartir(null);
     setForm((prev) => ({ ...prev, firstName: "", lastName: "", documento: "", tipoDocumentoId: "" }));
   };
 
@@ -791,6 +800,12 @@ export const RegistroPage: React.FC = () => {
         setError("El CUIT/CUIL no es válido. Revisá los 11 dígitos.");
         return;
       }
+    }
+    if (validadoEnArca && nombreAPartir && !mismasPalabras(nombreAPartir, `${form.lastName} ${form.firstName}`)) {
+      setActiveTab("general");
+      setFieldErrors({ firstName: true, lastName: true });
+      setError(`Nombre y apellido tienen que tener las mismas palabras que en ARCA: «${nombreAPartir}». Solo se puede cambiar dónde se separan.`);
+      return;
     }
     setFieldErrors({});
     // Los términos, último: es lo que se acepta con todo lo demás ya cargado.
@@ -1068,13 +1083,13 @@ export const RegistroPage: React.FC = () => {
                         <label className={labelClass}>
                           Nombre <span className="text-red-500">*</span>
                         </label>
-                        <input className={camposDeArcaBloqueados ? claseArca : inputClass("firstName")} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
+                        <input className={camposDeArcaBloqueados && !nombreAPartir ? claseArca : inputClass("firstName")} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} disabled={bloqueadoHastaValidar || (camposDeArcaBloqueados && !nombreAPartir)} title={nombreAPartir ? `ARCA: «${nombreAPartir}». Podés mover dónde se separan nombre y apellido.` : tituloArca} />
                       </div>
                       <div>
                         <label className={labelClass}>
                           Apellido <span className="text-red-500">*</span>
                         </label>
-                        <input className={camposDeArcaBloqueados ? claseArca : inputClass("lastName")} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
+                        <input className={camposDeArcaBloqueados && !nombreAPartir ? claseArca : inputClass("lastName")} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} disabled={bloqueadoHastaValidar || (camposDeArcaBloqueados && !nombreAPartir)} title={nombreAPartir ? `ARCA: «${nombreAPartir}». Podés mover dónde se separan nombre y apellido.` : tituloArca} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -148,3 +148,22 @@ export declare function confirmarNombresConElPadron(opts: {
  * compararlo: con los ids sueltos habría que volver a leer los mismos documentos.
  */
 export declare function usuariosDeCuils(tenantObjectId: any, cuils: string[]): Promise<Map<string, any>>;
+/**
+ * QUÉ NOMBRE SE SELLA AL GUARDAR UNA FICHA validada con «Validar CUIT».
+ *
+ *   · ARCA mandó las dos partes          → esas, tal cual.
+ *   · Mandó el nombre ENTERO en una parte → (`apellido: "PUELLES SOFIA"`, `nombre` vacío; pasa con
+ *     bastantes personas físicas) no se parte a la adivinanza: lo separa quien carga la ficha. Se sella
+ *     solo si lo tipeado tiene exactamente las mismas palabras, y se guarda con la grafía de ARCA.
+ *   · Si no coincide                     → `null`: sin sello, queda lo tipeado.
+ */
+export declare function nombreParaSellar(arca: {
+    nombre?: string;
+    apellido?: string;
+}, tipeado: {
+    firstName?: string;
+    lastName?: string;
+}): {
+    firstName: string;
+    lastName: string;
+} | null;

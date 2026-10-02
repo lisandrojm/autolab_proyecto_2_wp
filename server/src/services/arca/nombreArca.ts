@@ -436,3 +436,22 @@ export async function usuariosDeCuils(tenantObjectId: any, cuils: string[]): Pro
   }
   return out;
 }
+
+/**
+ * QUÉ NOMBRE SE SELLA AL GUARDAR UNA FICHA validada con «Validar CUIT».
+ *
+ *   · ARCA mandó las dos partes          → esas, tal cual.
+ *   · Mandó el nombre ENTERO en una parte → (`apellido: "PUELLES SOFIA"`, `nombre` vacío; pasa con
+ *     bastantes personas físicas) no se parte a la adivinanza: lo separa quien carga la ficha. Se sella
+ *     solo si lo tipeado tiene exactamente las mismas palabras, y se guarda con la grafía de ARCA.
+ *   · Si no coincide                     → `null`: sin sello, queda lo tipeado.
+ */
+export function nombreParaSellar(arca: { nombre?: string; apellido?: string }, tipeado: { firstName?: string; lastName?: string }): { firstName: string; lastName: string } | null {
+  if (arca.nombre && arca.apellido) return { firstName: arca.nombre, lastName: arca.apellido };
+  const entero = String(arca.apellido || arca.nombre || "").trim();
+  const nombre = String(tipeado.firstName || "").trim();
+  const apellido = String(tipeado.lastName || "").trim();
+  if (!entero || !nombre || !apellido || !mismoNombre(entero, `${apellido} ${nombre}`)) return null;
+  const partido = partirConAncla(entero, apellido);
+  return partido ? { firstName: partido.nombre, lastName: partido.apellido } : { firstName: nombre, lastName: apellido };
+}
