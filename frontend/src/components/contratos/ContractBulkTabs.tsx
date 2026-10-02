@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt } from '@fortawesome/free-solid-svg-icons';
 import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
 import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
@@ -1637,7 +1637,9 @@ export const ContractBulkAfipTab: React.FC<{
 
   // Genera el TXT de Alta masiva de ARCA para los contratos con datos completos del conjunto dado;
   // omite los incompletos (no se puede armar una línea válida) e informa cuántos quedaron afuera.
-  const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string) => {
+  // `max`: tope de altas del archivo (TXT URGENTE). Si se pasa, no se baja nada: recortar en
+  // silencio dejaría afuera altas sin que nadie se entere de cuáles.
+  const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string, max?: number) => {
     // Un TXT es de UNA empleadora: se sube logueado con su CUIT. Mezclar produce un archivo
     // rechazado o, peor, altas cargadas bajo la empresa equivocada — que ARCA acepta sin chistar y
     // recién se descubre después. Se corta ANTES de bajar el archivo.
@@ -1671,6 +1673,10 @@ export const ContractBulkAfipTab: React.FC<{
       .filter((r): r is string => r !== null);
     if (registros.length === 0) {
       sweetAlert.error('Sin datos completos', 'Ningún contrato del conjunto tiene todos los datos ARCA cargados. Completá los faltantes (columna «Datos ARCA») antes de generar el TXT.');
+      return;
+    }
+    if (max !== undefined && registros.length > max) {
+      sweetAlert.error(`Más de ${max} altas`, `El TXT URGENTE admite hasta ${max} altas y el conjunto tiene ${registros.length} completas. Tildá como máximo ${max} contratos completos.`);
       return;
     }
     const omitidos = items.length - registros.length;
@@ -2236,6 +2242,9 @@ export const ContractBulkAfipTab: React.FC<{
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
   // `generarTxt` le agrega el CUIT de la empleadora y la fecha: queda `altas_30710295839_20260817.txt`.
   const nombreArchivoTxt = 'altas';
+  // TXT URGENTE: el mismo archivo, con tope de altas. Cuenta lo que realmente entraría (completos).
+  const MAX_TXT_URGENTE = 9; // lo que admite ARCA en «Ingreso masivo de datos»
+  const completosTxt = fuenteTxt.filter((x) => x.result.completo).length;
 
   /**
    * Asignación masiva de Empresa (Contrato/Release). Es el mismo bloque en las tres pestañas del
@@ -2467,6 +2476,22 @@ export const ContractBulkAfipTab: React.FC<{
             >
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
               Generar TXT Masivo (ARCA){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+            </button>
+            <button
+              onClick={() => generarTxt(fuenteTxt, `${nombreArchivoTxt}_urgente`, MAX_TXT_URGENTE)}
+              disabled={completosTxt === 0 || completosTxt > MAX_TXT_URGENTE}
+              title={
+                bloqueoPorValidacion ||
+                (completosTxt === 0
+                  ? 'No hay contratos completos para generar el TXT'
+                  : completosTxt > MAX_TXT_URGENTE
+                    ? `Hay ${completosTxt} contratos completos: tildá como máximo ${MAX_TXT_URGENTE} para el TXT URGENTE`
+                    : `Generar el TXT con ${completosTxt} alta(s) (máximo ${MAX_TXT_URGENTE})`)
+              }
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+            >
+              <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
+              Generar TXT Masivo URGENTE (Max {MAX_TXT_URGENTE}){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
             <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
