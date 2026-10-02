@@ -11,6 +11,7 @@
  *
  * Cuando no quede ningún consumidor de `data.*`, este archivo y `CategoriaSat` se borran juntos.
  */
+import { espejoCategorias, estadoDe } from "../services/arca/espejoArca.js";
 import { Categoria } from "../models/Categoria.js";
 import { escalaDeCategoria } from "./escalaCategoria.js";
 import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
@@ -37,6 +38,14 @@ export interface CategoriaCompat {
     convenio?: string;
     /** Puesto desempeñado de ARCA (4 díg.). Solo para el registro de 85. */
     puestoDesempenado?: string;
+    /** Lo que ARCA dice HOY de este código (espejo `arca_catalogo`). */
+    descripcionArca?: string;
+    /**
+     * El código contra el espejo de ARCA. `null` = espejo sin sembrar (no se sabe, no bloquea). El
+     * alta solo sale con `ok`, o `nombre_distinto` confirmado (`estadoArcaConfirmada`).
+     */
+    estadoArca?: string | null;
+    estadoArcaConfirmada?: boolean;
     grupoId?: any;
     /** Nombre del grupo, si el convenio le da uno («Grupo 1» suele no tenerlo). */
     grupoNombre?: string;
@@ -99,11 +108,23 @@ export const migracionCategoriasCorrida = async (): Promise<boolean> => (await C
  * tal cual.
  */
 export const listarCategoriasCompat = async (): Promise<CategoriaCompat[]> => {
-  const [cats, grupos] = await Promise.all([Categoria.find().lean(), ConvenioGrupo.find().lean()]);
+  const [cats, grupos, espejo] = await Promise.all([Categoria.find().lean(), ConvenioGrupo.find().lean(), espejoCategorias()]);
   if (cats.length === 0) return (await CategoriaSat.find().sort({ name: 1 }).lean()) as any[];
 
   const porGrupo = new Map(grupos.map((g: any) => [String(g._id), g]));
-  return cats.map((c: any) => aplanar(c, porGrupo.get(String(c.grupoId)))).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }));
+  return cats
+    .map((c: any) => {
+      const g: any = porGrupo.get(String(c.grupoId));
+      const plana = aplanar(c, g);
+      // El estado contra ARCA viaja con la categoría: lo leen el chequeo de completitud del alta
+      // (frontend) y la validación del lote (server), que no pueden dejar salir un código cruzado.
+      const e = estadoDe(espejo, c, g ? Number(g.numero) : null);
+      plana.data.descripcionArca = e.descripcionArcaEspejo || c.descripcionArca || "";
+      plana.data.estadoArca = e.estadoArca;
+      plana.data.estadoArcaConfirmada = e.estadoArcaConfirmada;
+      return plana;
+    })
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }));
 };
 
 /**

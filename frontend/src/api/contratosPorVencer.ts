@@ -33,7 +33,7 @@ export interface ContratoPorVencer {
   fechaAlta: string;
   /** "YYYY-MM-DD". Junto con `userProjectId` e `indice`, identifica el contrato. */
   fechaBaja: string;
-  /** 0 = vence hoy. */
+  /** 0 = vence hoy; negativo = ya venció (−1 = ayer). */
   diasRestantes: number;
   /** Por qué le aparece a quien mira. */
   motivo: "supervisa" | "coordina";
@@ -47,9 +47,15 @@ export interface ContratoPorVencer {
 export const DIAS_DE_AVISO_OPCIONES = [7, 15, 30];
 
 export const contratosPorVencerAPI = {
-  /** `dias`: con cuánta anticipación verlos (7 por defecto; el server acepta hasta 60). */
-  async listar(dias?: number): Promise<ContratoPorVencer[]> {
-    const { data } = await axios.get(`/contratos-por-vencer`, dias ? { params: { dias } } : undefined);
+  /**
+   * `dias`: con cuánta anticipación verlos (7 por defecto; el server acepta hasta 60).
+   * `vencidos`: en cambio, los que YA terminaron en los últimos `dias` días sin que nadie decidiera.
+   */
+  async listar(dias?: number, vencidos = false): Promise<ContratoPorVencer[]> {
+    const params: Record<string, unknown> = {};
+    if (dias) params.dias = dias;
+    if (vencidos) params.vencidos = 1;
+    const { data } = await axios.get(`/contratos-por-vencer`, { params });
     return Array.isArray(data?.contratos) ? data.contratos : [];
   },
 

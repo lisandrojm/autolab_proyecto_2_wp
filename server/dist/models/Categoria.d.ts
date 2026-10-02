@@ -89,6 +89,16 @@ export interface ICategoria extends Document {
      * y después al de la instalación.
      */
     puestoDesempenado?: string;
+    /**
+     * Alguien revisó que el NOMBRE propio corresponde al código aunque no se parezca a la descripción de
+     * ARCA (estado `nombre_distinto`), y lo confirmó. Vale solo para esa descripción: si ARCA la cambia,
+     * la confirmación cae sola (ver `estadoCategoria` en `compartido/catalogoArca.ts`).
+     */
+    confirmacionNombre?: {
+        descripcionArca: string;
+        por?: any;
+        el?: Date;
+    } | null;
     /** Nombre de la categoría, sin el sufijo "- GRUPO N" que ARCA le agrega en la descripción. */
     nombre: string;
     /** Descripción completa tal como viene de ARCA, para poder cotejar contra el organismo. */

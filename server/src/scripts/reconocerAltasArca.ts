@@ -32,6 +32,8 @@
  *   archivo <ruta> cargar ese archivo en el input type=file de la pantalla
  *   texto <ruta>   pegar el contenido de ese archivo en el textarea de la pantalla
  *   foto           volver a guardar el fixture de la pantalla actual (sin hacer nada)
+ *   catalogos      informa qué catálogos `window.l_*` trae la pantalla y cuántas filas, y guarda una
+ *                  muestra (5 por catálogo) en fixtures/catalogos-<pantalla>.json. Solo lee.
  *   salir          cerrar
  *
  * ⚠ Los fixtures salen anonimizados (CUIL/CUIT, nombres en grillas, VIEWSTATE), pero REVISALOS antes
@@ -169,6 +171,24 @@ async function main() {
       const linea = (await rl.question("\n> ")).trim();
       if (!linea) continue;
       if (linea === "salir") break;
+      if (linea === "catalogos") {
+        const info = await page.evaluate(() => {
+          const out: Record<string, { filas: number; muestra: unknown[]; claves: string[] }> = {};
+          for (const k of Object.keys(window)) {
+            if (!/^l_[A-Za-z]+$/.test(k)) continue;
+            const v = (window as any)[k];
+            if (!Array.isArray(v)) continue;
+            out[k] = { filas: v.length, muestra: v.slice(0, 5), claves: v[0] ? Object.keys(v[0]) : [] };
+          }
+          return out;
+        });
+        const grilla = await page.evaluate(() => document.querySelectorAll("[id*='rptRegistrosAlta_ctl']").length);
+        console.log(`\nGrilla: ${grilla ? "CON filas" : "vacía"}  ·  ${Object.keys(info).length} catálogo(s):`);
+        for (const [k, v] of Object.entries(info)) console.log(`   ${k.padEnd(10)} ${String(v.filas).padStart(4)} filas  · claves ${v.claves.join(", ")}`);
+        mkdirSync(FIXTURES, { recursive: true });
+        writeFileSync(resolve(FIXTURES, `catalogos-${(accion.split("?")[0].split("/").pop() || "pantalla").replace(/\.aspx$/i, "")}.json`), JSON.stringify({ accion, grillaVacia: !grilla, catalogos: info }, null, 2));
+        continue;
+      }
       if (linea === "foto") {
         ({ accion, ctrls } = await foto(page));
         continue;

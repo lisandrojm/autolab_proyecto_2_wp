@@ -19,6 +19,14 @@ export interface CategoriaCompat {
         convenio?: string;
         /** Puesto desempeñado de ARCA (4 díg.). Solo para el registro de 85. */
         puestoDesempenado?: string;
+        /** Lo que ARCA dice HOY de este código (espejo `arca_catalogo`). */
+        descripcionArca?: string;
+        /**
+         * El código contra el espejo de ARCA. `null` = espejo sin sembrar (no se sabe, no bloquea). El
+         * alta solo sale con `ok`, o `nombre_distinto` confirmado (`estadoArcaConfirmada`).
+         */
+        estadoArca?: string | null;
+        estadoArcaConfirmada?: boolean;
         grupoId?: any;
         /** Nombre del grupo, si el convenio le da uno («Grupo 1» suele no tenerlo). */
         grupoNombre?: string;

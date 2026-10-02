@@ -198,3 +198,22 @@ describe("helpers del formato", () => {
     assert.equal(buildAltasMasivasTexto([]), "");
   });
 });
+
+describe("la categoría contra el espejo de ARCA (barrera del alta)", () => {
+  const conEstado = (estadoArca: string | null, confirmada = false) =>
+    catalogos({
+      categorias: [{ _id: "c1", externalId: "035283", name: "Director de Programas", data: { id: 1, numeroCategoria: 1, nombre: "Director de Programas", codigoAfip: 35283, convenio: "0634/11", sueldoBruto: 2122135.35, puestoDesempenado: "2455", estadoArca, estadoArcaConfirmada: confirmada, descripcionArca: "PRODUCTOR DE PROGRAMAS - GRUPO 1" } }],
+    } as any);
+  it("un código cruzado deja el contrato incompleto, con el texto de ARCA", () => {
+    const r = resolveAfip(fila(), conEstado("nombre_distinto"));
+    assert.equal(r.completo, false);
+    const c = r.checks.find((x) => x.key === "categoriaArca");
+    assert.equal(c?.estado, "error");
+    assert.match(c?.detalle || "", /PRODUCTOR DE PROGRAMAS/);
+  });
+  it("ok, confirmado, o espejo sin sembrar: no bloquea", () => {
+    assert.equal(resolveAfip(fila(), conEstado("ok")).completo, true);
+    assert.equal(resolveAfip(fila(), conEstado("nombre_distinto", true)).completo, true);
+    assert.equal(resolveAfip(fila(), conEstado(null)).completo, true);
+  });
+});

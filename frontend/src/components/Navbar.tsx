@@ -80,7 +80,7 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * autocompletar el código y normalizar la descripción al cargarlas ahí. Por eso va pegado a
  * Domicilios de Explotación y comparte su permiso.
  */
-const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/puestos-desempenados', '/arca/situaciones-revista', '/arca/fuentes-paritaria', '/convenios', '/arca/categorias'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/puestos-desempenados', '/arca/situaciones-revista', '/arca/catalogo', '/arca/fuentes-paritaria', '/convenios', '/arca/categorias'];
 /**
  * La Conexión va DEBAJO DE LA RAYA, con lo que no es nomenclador, y ahí entra por su nombre.
  *
@@ -533,6 +533,8 @@ export const MobileNavbar: React.FC = () => {
       // Las dos que solo pide el alta URGENTE (Altas Masivas, registro de 85).
       if (puedeAbrir('/arca/puestos-desempenados')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/puestos-desempenados', icon: faListCheck, label: 'Puestos Desempeñados', scope: 'global' });
       if (puedeAbrir('/arca/situaciones-revista')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/situaciones-revista', icon: faListCheck, label: 'Situaciones de Revista', scope: 'global' });
+      // El espejo de lo que ARCA publica: contra él se validan los códigos. Se lee de ARCA desde acá.
+      if (puedeAbrir('/arca/catalogo')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/catalogo', icon: faDatabase, label: 'Catálogo de ARCA', scope: 'global' });
     }
 
     return base;

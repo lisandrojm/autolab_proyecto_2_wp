@@ -44,4 +44,4 @@ export interface ContratoPorVencer {
  */
 export declare const variantesDMY: (desde: string, dias: number) => string[];
 export declare function olvidarContratosPorVencer(): void;
-export declare function listarContratosPorVencer(tenantId: Types.ObjectId | string, userId: string, hoy?: string, dias?: number): Promise<ContratoPorVencer[]>;
+export declare function listarContratosPorVencer(tenantId: Types.ObjectId | string, userId: string, hoy?: string, dias?: number, vencidos?: boolean): Promise<ContratoPorVencer[]>;

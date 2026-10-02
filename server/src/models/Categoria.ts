@@ -90,6 +90,12 @@ export interface ICategoria extends Document {
    * y después al de la instalación.
    */
   puestoDesempenado?: string;
+  /**
+   * Alguien revisó que el NOMBRE propio corresponde al código aunque no se parezca a la descripción de
+   * ARCA (estado `nombre_distinto`), y lo confirmó. Vale solo para esa descripción: si ARCA la cambia,
+   * la confirmación cae sola (ver `estadoCategoria` en `compartido/catalogoArca.ts`).
+   */
+  confirmacionNombre?: { descripcionArca: string; por?: any; el?: Date } | null;
   /** Nombre de la categoría, sin el sufijo "- GRUPO N" que ARCA le agrega en la descripción. */
   nombre: string;
   /** Descripción completa tal como viene de ARCA, para poder cotejar contra el organismo. */
@@ -129,6 +135,7 @@ const categoriaSchema = new Schema<ICategoria>(
       default: "",
       validate: { validator: (v: string) => !v || /^\d{4}$/.test(v), message: (p: any) => `"${p.value}" no es un código de puesto desempeñado: son 4 dígitos (ej. "2455")` },
     },
+    confirmacionNombre: { type: new Schema({ descripcionArca: String, por: { type: Schema.Types.ObjectId, ref: "User" }, el: Date }, { _id: false }), default: null },
     nombre: { type: String, required: true, trim: true },
     descripcionArca: { type: String, default: "" },
     legacyId: { type: Number },
@@ -137,8 +144,15 @@ const categoriaSchema = new Schema<ICategoria>(
   { timestamps: true, collection: "categorias" }
 );
 
-// El código identifica a la categoría dentro de su convenio.
-categoriaSchema.index({ convenio: 1, codigoArca: 1 });
+/*
+  EL CÓDIGO IDENTIFICA A LA CATEGORÍA DENTRO DE SU CONVENIO, y ahora la base lo garantiza.
+
+  Era un índice común: nada impedía dos categorías activas con el mismo código, y así fue como 41
+  categorías del 0634/11 terminaron con el código de otra. Único y PARCIAL: solo entre las activas con
+  código —las dos heredadas rotas sin convenio ni código (Actor, Musico) y las dadas de baja no
+  cuentan—. Lo crea `scripts/crearIndiceUnicoCategorias.ts`, que antes verifica que no haya duplicados.
+*/
+categoriaSchema.index({ convenio: 1, codigoArca: 1 }, { unique: true, name: "convenio_codigoArca_unico", partialFilterExpression: { isActive: true, codigoArca: { $gt: "" } } });
 // Los contratos siguen apuntando por el id numérico viejo mientras dure la convivencia.
 categoriaSchema.index({ legacyId: 1 });
 

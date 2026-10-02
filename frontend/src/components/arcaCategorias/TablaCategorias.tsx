@@ -1,3 +1,4 @@
+import { EstadoArcaChip } from './EstadoArcaChip';
 import React, { useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faXmark, faArrowRightArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -69,6 +70,7 @@ export const TablaCategorias: React.FC<Props> = ({ filas, cargando, busqueda, on
             <tr>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Cód. ARCA</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción de ARCA</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Convenio</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Grupo</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Contratos</th>
@@ -80,7 +82,7 @@ export const TablaCategorias: React.FC<Props> = ({ filas, cargando, busqueda, on
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {visibles.length === 0 ? (
               <tr>
-                <td colSpan={onAbrirConvenio ? 7 : 6} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={onAbrirConvenio ? 8 : 7} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   No hay ninguna categoría que coincida.
                 </td>
               </tr>
@@ -97,6 +99,12 @@ export const TablaCategorias: React.FC<Props> = ({ filas, cargando, busqueda, on
                         NO ELEGIBLE
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="inline-flex items-center gap-1.5">
+                      <EstadoArcaChip estado={f.cat.estadoArca} confirmada={f.cat.estadoArcaConfirmada} descripcion={f.cat.descripcionArca} />
+                      {f.cat.descripcionArca || '—'}
+                    </span>
                   </td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     <span className="font-mono text-xs text-blue-700 dark:text-blue-400">{f.convenio}</span>

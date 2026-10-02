@@ -74,6 +74,7 @@ import { FuentesParitariaPage } from "./pages/FuentesParitariaPage";
 import { ArcaModalidadesLiquidacionPage } from "./pages/ArcaModalidadesLiquidacionPage";
 import { ArcaPuestosDesempenadosPage } from "./pages/ArcaPuestosDesempenadosPage";
 import { ArcaSituacionesRevistaPage } from "./pages/ArcaSituacionesRevistaPage";
+import { ArcaCatalogoPage } from "./pages/ArcaCatalogoPage";
 import { ConveniosPage } from "./pages/ConveniosPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
 import { ContratosPage } from "./pages/ContratosPage";
@@ -738,6 +739,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ArcaPuestosDesempenadosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/catalogo"
+                element={
+                  <ProtectedRoute>
+                    <ArcaCatalogoPage />
                   </ProtectedRoute>
                 }
               />

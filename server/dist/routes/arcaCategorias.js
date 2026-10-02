@@ -13,6 +13,9 @@ import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
 import { Convenio } from "../models/Convenio.js";
 import { Company } from "../models/Company.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { CategoriaArcaInvalida, validarCategoriaContraEspejo } from "../services/arca/validarCategoriaArca.js";
+import { espejoCategorias, estadoDe } from "../services/arca/espejoArca.js";
+import { ArcaCatalogo } from "../models/ArcaCatalogo.js";
 /**
  * ABM de Categorías profesionales de ARCA, en la forma en la que ARCA las modela:
  *
@@ -224,6 +227,55 @@ router.get("/contratos-huerfanos", authenticateToken, async (_req, res) => {
     }
 });
 /**
+ * GET /api/v1/arca/categorias/codigos-arca?convenio=0634/11
+ *
+ * Los códigos VIGENTES del espejo de ARCA para ese convenio: de acá se elige el código de una
+ * categoría (no se tipea). Solo lectura del espejo.
+ */
+router.get("/codigos-arca", authenticateToken, async (req, res) => {
+    try {
+        const convenio = String(req.query.convenio || "").trim();
+        if (!convenio)
+            return res.status(400).json({ error: "Falta el convenio" });
+        const filas = await ArcaCatalogo.find({ tabla: "CATEGORIA_CCT", filtroPadre: convenio, vigente: true }).select("codigo descripcion").sort({ codigo: 1 }).lean();
+        const usados = await Categoria.find({ convenio, isActive: { $ne: false } }).select("codigoArca nombre").lean();
+        const usadoPor = new Map(usados.map((c) => [String(c.codigoArca), String(c.nombre)]));
+        res.json(filas.map((f) => ({ codigo: f.codigo, descripcion: f.descripcion, usadoPor: usadoPor.get(f.codigo) || null })));
+    }
+    catch (error) {
+        console.error("Get códigos ARCA error:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+/**
+ * GET /api/v1/arca/categorias/estado-catalogo
+ *
+ * Las categorías activas (o con contratos) cuyo código no coincide con lo que ARCA dice de él, con
+ * cuántos contratos afectan. Alimenta el banner de Categorías. `espejo: false` = sin sembrar.
+ */
+router.get("/estado-catalogo", authenticateToken, async (_req, res) => {
+    try {
+        const [espejo, cats, grupos, uso] = await Promise.all([espejoCategorias(), Categoria.find({ convenio: { $ne: "" } }).lean(), ConvenioGrupo.find().select("numero").lean(), contratosPorLegacyId()]);
+        if (!espejo.hay)
+            return res.json({ espejo: false, total: 0, contratosAfectados: 0, porEstado: {}, categorias: [] });
+        const numero = new Map(grupos.map((g) => [String(g._id), Number(g.numero)]));
+        const categorias = cats
+            .map((c) => {
+            const e = estadoDe(espejo, c, c.grupoId ? numero.get(String(c.grupoId)) : null);
+            return { _id: c._id, nombre: c.nombre, convenio: c.convenio, codigoArca: c.codigoArca, grupo: c.grupoId ? numero.get(String(c.grupoId)) ?? null : null, isActive: c.isActive !== false, contratos: c.legacyId != null ? uso.get(Number(c.legacyId)) || 0 : 0, ...e };
+        })
+            .filter((c) => c.estadoArca && c.estadoArca !== "ok" && !(c.estadoArca === "nombre_distinto" && c.estadoArcaConfirmada) && (c.isActive || c.contratos > 0));
+        const porEstado = {};
+        for (const c of categorias)
+            porEstado[c.estadoArca] = (porEstado[c.estadoArca] || 0) + 1;
+        res.json({ espejo: true, total: categorias.length, contratosAfectados: categorias.reduce((n, c) => n + c.contratos, 0), porEstado, categorias });
+    }
+    catch (error) {
+        console.error("Get estado catálogo error:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+/**
  * GET /api/v1/arca/categorias/huerfanas
  *
  * Categorías que no se pueden usar: sin convenio, o con un código que no es un código de ARCA.
@@ -277,7 +329,7 @@ router.get("/", authenticateToken, async (req, res) => {
         const convenio = String(req.query.convenio || "").trim();
         if (!convenio)
             return res.status(400).json({ error: "Falta el convenio: las categorías se leen dentro de un convenio" });
-        const [grupos, cats, nombres, uso] = await Promise.all([ConvenioGrupo.find({ convenio }).sort({ numero: 1 }).lean(), Categoria.find({ convenio }).lean(), nombresDeConvenio(), contratosPorLegacyId()]);
+        const [grupos, cats, nombres, uso, espejo] = await Promise.all([ConvenioGrupo.find({ convenio }).sort({ numero: 1 }).lean(), Categoria.find({ convenio }).lean(), nombresDeConvenio(), contratosPorLegacyId(), espejoCategorias()]);
         const porGrupoId = new Map(grupos.map((g) => [String(g._id), g]));
         /*
           Las categorías SIN GRUPO salen en su propia lista, no se descartan.
@@ -305,11 +357,16 @@ router.get("/", authenticateToken, async (req, res) => {
               cliente: un bruto heredado y uno propio se ven idénticos.
             */
             const propia = Number(c?.sueldoBruto || 0) > 0;
+            // La descripción de ARCA sale del ESPEJO, no de lo guardado en la fila: es lo que ARCA dice HOY de
+            // ese código, y el estado compara contra eso.
+            const arca = estadoDe(espejo, c, c.grupoId ? porGrupoId.get(String(c.grupoId))?.numero : null);
             return {
                 _id: c._id,
                 codigoArca: String(c.codigoArca || ""),
                 nombre: c.nombre,
-                descripcionArca: c.descripcionArca || "",
+                descripcionArca: arca.descripcionArcaEspejo || c.descripcionArca || "",
+                estadoArca: arca.estadoArca,
+                estadoArcaConfirmada: arca.estadoArcaConfirmada,
                 puestoDesempenado: c.puestoDesempenado || "",
                 isActive: c.isActive !== false,
                 legacyId: c.legacyId ?? null,
@@ -460,6 +517,8 @@ class DatoInvalido extends Error {
 const responderError = (res, error, contexto) => {
     if (error instanceof DatoInvalido)
         return res.status(400).json({ error: error.message });
+    if (error instanceof CategoriaArcaInvalida)
+        return res.status(error.status).json({ error: error.message, ...error.extra });
     if (error?.name === "ValidationError") {
         const detalle = Object.values(error.errors || {}).map((e) => e.message);
         return res.status(400).json({ error: detalle.join(" · ") || error.message });
@@ -514,6 +573,7 @@ router.post("/", authenticateToken, async (req, res) => {
         if (yaExiste)
             return res.status(409).json({ error: `El convenio ${convenio} ya tiene la categoría ${codigoArca} ("${yaExiste.nombre}")` });
         const grupo = await resolverGrupo(convenio, req.body);
+        const arca = await validarCategoriaContraEspejo({ convenio, codigoArca, nombre, grupoNumero: grupo ? Number(grupo.numero) : null, confirmarNombre: req.body.confirmarNombre === true, usuarioId: req.user?.userId });
         // La escala propia solo se guarda si vino: con grupo, la escala es del grupo y duplicarla acá
         // garantiza que se desincronicen en la próxima paritaria.
         const { nombre: _descartado, ...escalaPropia } = escalaDelBody(req.body);
@@ -527,7 +587,9 @@ router.post("/", authenticateToken, async (req, res) => {
             legacyId: await proximoLegacyId(),
             codigoArca,
             nombre,
-            descripcionArca: String(req.body.descripcionArca || "").trim(),
+            // La descripción NO se carga: es la del espejo de ARCA para ese código.
+            descripcionArca: arca.descripcionArca,
+            confirmacionNombre: arca.confirmacionNombre,
             puestoDesempenado: String(req.body.puestoDesempenado || "").replace(/\D/g, ""),
             isActive: req.body.isActive !== false,
         });
@@ -560,8 +622,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
         }
         if (req.body.nombre !== undefined)
             item.nombre = String(req.body.nombre || "").trim();
-        if (req.body.descripcionArca !== undefined)
-            item.descripcionArca = String(req.body.descripcionArca || "").trim();
+        // `descripcionArca` ya no se recibe: se resuelve del espejo al validar (abajo).
         if (req.body.puestoDesempenado !== undefined) {
             const puesto = String(req.body.puestoDesempenado || "").replace(/\D/g, "");
             if (puesto && puesto.length !== 4)
@@ -608,10 +669,29 @@ router.put("/:id", authenticateToken, async (req, res) => {
         const { nombre: _descartado, ...escalaPropia } = escalaDelBody(req.body);
         for (const [k, v] of Object.entries(escalaPropia))
             item[k] = v;
+        // Contra el espejo, si cambió algo de lo que define qué se declara (código, nombre, convenio,
+        // grupo) o si se reactiva. Cambiar solo la escala o el puesto no re-valida.
+        const tocaArca = ["codigoArca", "nombre", "convenio", "grupoId", "numeroGrupo"].some((k) => req.body[k] !== undefined) || req.body.isActive === true;
+        if (tocaArca && item.isActive !== false) {
+            const g = item.grupoId ? await ConvenioGrupo.findById(item.grupoId).select("numero").lean() : null;
+            const arca = await validarCategoriaContraEspejo({
+                convenio: item.convenio,
+                codigoArca: item.codigoArca,
+                nombre: item.nombre,
+                grupoNumero: g ? Number(g.numero) : null,
+                confirmarNombre: req.body.confirmarNombre === true,
+                confirmacionActual: item.confirmacionNombre,
+                usuarioId: req.user?.userId,
+            });
+            item.descripcionArca = arca.descripcionArca;
+            item.confirmacionNombre = arca.confirmacionNombre;
+        }
         await item.save();
         res.json(item);
     }
     catch (error) {
+        if (error?.code === 11000)
+            return res.status(409).json({ error: "Ya hay otra categoría activa de ese convenio con ese código de ARCA." });
         responderError(res, error, "Update categoría error");
     }
 });
@@ -666,10 +746,10 @@ const aFechaDeCelda = (v) => {
     if (typeof v === "number" && Number.isFinite(v))
         return new Date(Date.UTC(1899, 11, 30) + v * 86400000).toISOString().slice(0, 10);
     const t = String(v).trim();
-    const iso = /^(d{4})-(d{2})-(d{2})/.exec(t);
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
     if (iso)
         return `${iso[1]}-${iso[2]}-${iso[3]}`;
-    const dmy = /^(d{1,2})[/-](d{1,2})[/-](d{4})$/.exec(t);
+    const dmy = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(t);
     // En la planilla la escribe alguien de acá: día primero, como en todo el resto de la app.
     if (dmy)
         return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
@@ -816,6 +896,24 @@ router.post("/importar", authenticateToken, upload.single("file"), async (req, r
                     ...(aFechaDeCelda(row["vigenciaHasta"] ?? row["Vigencia Hasta"]) ? { vigenciaHasta: aFechaDeCelda(row["vigenciaHasta"] ?? row["Vigencia Hasta"]) } : {}),
                 },
             });
+        }
+        /*
+          LAS FILAS POR CÓDIGO SE VALIDAN CONTRA ARCA. La planilla ubica la categoría por (convenio,
+          código): una planilla vieja, de antes de una corrección de códigos, le pondría la escala a la
+          categoría equivocada. Se rechaza la fila si ese código no está «ok» contra el espejo.
+        */
+        const conCodigo = items.filter((i) => i.codigoArca);
+        if (conCodigo.length > 0) {
+            const espejo = await espejoCategorias();
+            const locales = await Categoria.find({ $or: conCodigo.map((i) => ({ convenio: i.convenio, codigoArca: i.codigoArca })) }).lean();
+            for (const it of conCodigo) {
+                const c = locales.find((x) => x.convenio === it.convenio && x.codigoArca === it.codigoArca);
+                if (!c)
+                    continue; // lo reporta «no encontrados» más abajo
+                const e = estadoDe(espejo, c, null);
+                if (e.estadoArca && e.estadoArca !== "ok" && !(e.estadoArca === "nombre_distinto" && e.estadoArcaConfirmada))
+                    errores.push(`${it.convenio} ${it.codigoArca}: «${c.nombre}» no coincide con ARCA (${e.descripcionArcaEspejo || "sin descripción"}). Revisala antes de importarle una escala.`);
+            }
         }
         if (errores.length > 0)
             return res.status(400).json({ error: "Errores de validación en el archivo Excel", details: errores });

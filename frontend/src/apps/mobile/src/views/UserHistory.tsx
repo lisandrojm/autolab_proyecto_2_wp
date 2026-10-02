@@ -117,18 +117,24 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const [diasAviso, setDiasAviso] = useState<number>(leerDiasGuardados);
   const [tiposElegidos, setTiposElegidos] = useState<string[]>([]);
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  /*
+    «YA VENCIDOS»: la misma lista mirando hacia atrás —los que terminaron en los últimos N días sin que
+    nadie decidiera—. No se guarda en el teléfono: es una consulta puntual, y abrir la pestaña y ver
+    vencidos en vez de lo que viene sería una sorpresa.
+  */
+  const [vencidos, setVencidos] = useState(false);
 
-  const cargarPorVencer = (dias: number = diasAviso) => {
+  const cargarPorVencer = (dias: number = diasAviso, soloVencidos: boolean = vencidos) => {
     contratosPorVencerAPI
-      .listar(dias)
+      .listar(dias, soloVencidos)
       .then(setPorVencer)
       .catch(() => setPorVencer([]));
   };
   useEffect(() => {
     setPorVencer(null);
-    cargarPorVencer(diasAviso);
+    cargarPorVencer(diasAviso, vencidos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diasAviso]);
+  }, [diasAviso, vencidos]);
 
   const cambiarDias = (dias: number) => {
     setDiasAviso(dias);
@@ -145,7 +151,8 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   (porVencer || []).forEach((c) => cuentaPorTipo.set(tipoDe(c), (cuentaPorTipo.get(tipoDe(c)) || 0) + 1));
   const tiposDisponibles = [...cuentaPorTipo.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const porVencerVisibles = (porVencer || []).filter((c) => tiposElegidos.length === 0 || tiposElegidos.includes(tipoDe(c)));
-  const cantidadFiltros = tiposElegidos.length + (diasAviso === DIAS_DE_AVISO_OPCIONES[0] ? 0 : 1);
+  const cantidadFiltros = tiposElegidos.length + (diasAviso === DIAS_DE_AVISO_OPCIONES[0] ? 0 : 1) + (vencidos ? 1 : 0);
+  const rangoTexto = vencidos ? `los últimos ${diasAviso} días` : `los próximos ${diasAviso} días`;
 
   /*
     Un contrato no tiene `_id` propio: lo nombran su asignación, su fecha de baja y SU POSICIÓN en el
@@ -172,7 +179,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     const [y, m, d] = String(f || "").slice(0, 10).split("-");
     return y && m && d ? `${d}/${m}/${y.slice(2)}` : f || "—";
   };
-  const textoVence = (dias: number) => (dias <= 0 ? "Vence hoy" : dias === 1 ? "Vence mañana" : `Vence en ${dias} días`);
+  const textoVence = (dias: number) => (dias < -1 ? `Venció hace ${-dias} días` : dias === -1 ? "Venció ayer" : dias === 0 ? "Vence hoy" : dias === 1 ? "Vence mañana" : `Vence en ${dias} días`);
 
   /*
     DECIDIR ES CALIFICAR: tanto Renovar como Dejar vencer piden primero calificar la actuación de la
@@ -221,7 +228,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const barraDeFiltros = (
     <div className="mb-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] text-slate-500 dark:text-slate-400">{porVencer && tiposElegidos.length > 0 ? `${porVencerVisibles.length} de ${porVencer.length} · próximos ${diasAviso} días` : `Vencen en los próximos ${diasAviso} días`}</p>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">{porVencer && tiposElegidos.length > 0 ? `${porVencerVisibles.length} de ${porVencer.length} · ${rangoTexto}` : vencidos ? `Vencidos en los últimos ${diasAviso} días` : `Vencen en los próximos ${diasAviso} días`}</p>
         <button
           type="button"
           onClick={() => setFiltrosAbiertos(true)}
@@ -234,7 +241,8 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
       {/* Qué filtros están puestos, con su ✕: «Filtrar (2)» avisa que hay, pero no cuáles. */}
       {cantidadFiltros > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {diasAviso !== DIAS_DE_AVISO_OPCIONES[0] && badgeFiltro(`Vencen en ${diasAviso} días`, () => cambiarDias(DIAS_DE_AVISO_OPCIONES[0]))}
+          {vencidos && badgeFiltro("Ya vencidos", () => setVencidos(false))}
+          {diasAviso !== DIAS_DE_AVISO_OPCIONES[0] && badgeFiltro(vencidos ? `Últimos ${diasAviso} días` : `Vencen en ${diasAviso} días`, () => cambiarDias(DIAS_DE_AVISO_OPCIONES[0]))}
           {tiposElegidos.map((t) => badgeFiltro(t, () => alternarTipo(t)))}
         </div>
       )}
@@ -263,8 +271,10 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 <FontAwesomeIcon icon={faClock} className="w-3.5 h-3.5 text-amber-500" />
               </span>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">No hay contratos por vencer</p>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Acá aparecen los contratos de tu gente que terminan en los próximos {diasAviso} días. Con «Filtrar» podés mirar más lejos.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{vencidos ? "No hay contratos vencidos sin decidir" : "No hay contratos por vencer"}</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              {vencidos ? `Acá aparecen los contratos de tu gente que terminaron en los últimos ${diasAviso} días sin que nadie decidiera si se renuevan.` : `Acá aparecen los contratos de tu gente que terminan en los próximos ${diasAviso} días.`} Con «Filtrar» podés mirar más lejos.
+            </p>
           </div>
         </>
       );
@@ -272,7 +282,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
       return (
         <>
           {barraDeFiltros}
-          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">Ninguno de esos tipos de contrato vence en los próximos {diasAviso} días.</p>
+          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">Ninguno de esos tipos de contrato {vencidos ? "venció en" : "vence en"} {rangoTexto}.</p>
         </>
       );
     return (
@@ -717,7 +727,22 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
 
             <div className="flex-1 space-y-5 overflow-y-auto p-4">
               <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">¿Cuánto antes querés verlos?</p>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Contratos</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { v: false, t: "Por vencer" },
+                    { v: true, t: "Ya vencidos" },
+                  ].map((o) => (
+                    <button key={o.t} type="button" onClick={() => setVencidos(o.v)} aria-pressed={vencidos === o.v} className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors ${vencidos === o.v ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
+                      {o.t}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-400">«Ya vencidos»: los que terminaron sin que nadie decidiera. Todavía se pueden renovar o dejar vencer.</p>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{vencidos ? "¿Hasta cuánto atrás?" : "¿Cuánto antes querés verlos?"}</p>
                 <div className="flex flex-wrap gap-2">
                   {DIAS_DE_AVISO_OPCIONES.map((d) => (
                     <button key={d} type="button" onClick={() => cambiarDias(d)} aria-pressed={diasAviso === d} className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors ${diasAviso === d ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
@@ -731,7 +756,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipo de contrato</p>
                 {tiposDisponibles.length === 0 ? (
-                  <p className="text-[11px] text-slate-400">No hay contratos por vencer para filtrar.</p>
+                  <p className="text-[11px] text-slate-400">{vencidos ? "No hay contratos vencidos para filtrar." : "No hay contratos por vencer para filtrar."}</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {tiposDisponibles.map(([tipo, cuenta]) => {
@@ -754,6 +779,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 type="button"
                 onClick={() => {
                   setTiposElegidos([]);
+                  setVencidos(false);
                   cambiarDias(DIAS_DE_AVISO_OPCIONES[0]);
                 }}
                 disabled={cantidadFiltros === 0}

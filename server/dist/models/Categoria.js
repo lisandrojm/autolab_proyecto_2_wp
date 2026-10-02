@@ -26,13 +26,21 @@ const categoriaSchema = new Schema({
         default: "",
         validate: { validator: (v) => !v || /^\d{4}$/.test(v), message: (p) => `"${p.value}" no es un código de puesto desempeñado: son 4 dígitos (ej. "2455")` },
     },
+    confirmacionNombre: { type: new Schema({ descripcionArca: String, por: { type: Schema.Types.ObjectId, ref: "User" }, el: Date }, { _id: false }), default: null },
     nombre: { type: String, required: true, trim: true },
     descripcionArca: { type: String, default: "" },
     legacyId: { type: Number },
     isActive: { type: Boolean, default: true },
 }, { timestamps: true, collection: "categorias" });
-// El código identifica a la categoría dentro de su convenio.
-categoriaSchema.index({ convenio: 1, codigoArca: 1 });
+/*
+  EL CÓDIGO IDENTIFICA A LA CATEGORÍA DENTRO DE SU CONVENIO, y ahora la base lo garantiza.
+
+  Era un índice común: nada impedía dos categorías activas con el mismo código, y así fue como 41
+  categorías del 0634/11 terminaron con el código de otra. Único y PARCIAL: solo entre las activas con
+  código —las dos heredadas rotas sin convenio ni código (Actor, Musico) y las dadas de baja no
+  cuentan—. Lo crea `scripts/crearIndiceUnicoCategorias.ts`, que antes verifica que no haya duplicados.
+*/
+categoriaSchema.index({ convenio: 1, codigoArca: 1 }, { unique: true, name: "convenio_codigoArca_unico", partialFilterExpression: { isActive: true, codigoArca: { $gt: "" } } });
 // Los contratos siguen apuntando por el id numérico viejo mientras dure la convivencia.
 categoriaSchema.index({ legacyId: 1 });
 export const Categoria = mongoose.model("Categoria", categoriaSchema);

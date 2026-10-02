@@ -29,7 +29,19 @@ const pesos = (n: unknown) => {
  * `onQuitar` lo convierte en removible, para el formulario. El mismo badge que usan las tarjetas del
  * listado: es la misma cosa mostrada en dos lados, y dos versiones terminan divergiendo.
  */
-const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; convenioNombre?: string; valoracion?: { name: string; color?: string }; onQuitar?: () => void }> = ({ label, convenio, convenioNombre, valoracion, onQuitar }) => {
+/**
+ * El grupo salarial de la categoría, como se lo nombra: «Grupo 7», o con su nombre si el convenio
+ * le da uno («Grupo 2 · Técnicos»). Vacío si el convenio no tiene grupos (0322/75, por ejemplo).
+ */
+const grupoDe = (c?: CategoriaSatItem): string => {
+  const n = c?.data?.numeroCategoria;
+  const nombre = String(c?.data?.grupoNombre || '').trim();
+  if (!c?.data?.grupoId && !nombre) return '';
+  if (!n) return nombre;
+  return nombre && !/^grupo\b/i.test(nombre) ? `Grupo ${n} · ${nombre}` : nombre || `Grupo ${n}`;
+};
+
+const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; convenioNombre?: string; valoracion?: { name: string; color?: string }; grupo?: string; onQuitar?: () => void }> = ({ label, convenio, convenioNombre, valoracion, grupo, onQuitar }) => {
   const oscuro = useThemeStore((st) => st.theme) === 'dark';
   return (
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -45,6 +57,15 @@ const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; convenioNo
       <span className="ml-0.5 px-1 rounded-sm font-bold border" style={estiloValoracion(valoracion.color, oscuro)} title={`Valoración: ${valoracion.name}`}>
         {valoracion.name}
       </span>
+    )}
+    {/* El grupo salarial, al final: es de donde sale la escala (el bruto) de la categoría. */}
+    {grupo && (
+      <>
+        <span className="opacity-40">|</span>
+        <span className="opacity-80" title="Grupo salarial del convenio: de él sale la escala de esta categoría">
+          {grupo}
+        </span>
+      </>
     )}
     {onQuitar && (
       <button type="button" onClick={onQuitar} title={`Quitar ${label}`} aria-label={`Quitar ${label}`} className="ml-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
@@ -334,7 +355,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
    * (`numeroCategoria`) es el del GRUPO salarial — lo compartían decenas de categorías distintas, así
    * que como etiqueta no identificaba nada. Lo que identifica es el código de ARCA de 6 dígitos.
    */
-  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; nombre: string; convenio: string; convenioNombre: string; valoracion?: { name: string; color?: string } }> =>
+  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; nombre: string; convenio: string; convenioNombre: string; grupo: string; valoracion?: { name: string; color?: string } }> =>
     (role.data?.categoriasSat || []).map((c: any, i: number) => {
       const vigente = catalogoPorId.get(String(c.id));
       const codigo = String(vigente?.data?.codigoArca || '').trim();
@@ -348,6 +369,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         nombre,
         convenio: cct,
         convenioNombre: nombreDelConvenio(cct),
+        grupo: grupoDe(vigente),
         valoracion: v ? { name: String(v.name), color: String(v.color || '') } : undefined,
       };
     });
@@ -539,6 +561,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         return {
           id: c._id,
           label: codigo ? `${codigo} · ${nombre}` : nombre,
+          grupo: grupoDe(c),
           codigo,
           nombre,
           bruto: Number.isFinite(bruto) && bruto > 0 ? bruto : null,
@@ -646,7 +669,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                     {categoriasDe(role).map((c) => (
-                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} />
+                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} grupo={c.grupo} />
                     ))}
                   </>
                 )}
@@ -692,7 +715,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                             {categoriasDe(role).map((c) => (
-                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} />
+                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} grupo={c.grupo} />
                             ))}
                           </>
                         )}
@@ -775,6 +798,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Cód. ARCA</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Nombre</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Valoración</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Grupo</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Bruto</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Neto</th>
                       </tr>
@@ -804,6 +828,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                                 <span className="text-gray-400 dark:text-gray-600">sin valorar</span>
                               )}
                             </td>
+                            {/* Pegado al bruto: el grupo salarial es de donde sale ese importe. */}
+                            <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{grupoDe(vigente) || <span className="text-gray-400 dark:text-gray-600">sin grupo</span>}</td>
                             <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.sueldoBruto ?? cat.sueldoBruto)?.toLocaleString()}</td>
                             <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.neto ?? cat.neto)?.toLocaleString()}</td>
                           </tr>
@@ -981,7 +1007,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
               // Con tope de alto, para que veinte categorías no se coman la ventana.
               <div className="flex flex-wrap gap-1.5 mb-3 shrink-0 max-h-24 overflow-y-auto">
                 {categoriasElegidas.map((c) => (
-                  <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} convenioNombre={nombreDelConvenio(c.convenio)} valoracion={c.valoracion} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
+                  <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} convenioNombre={nombreDelConvenio(c.convenio)} valoracion={c.valoracion} grupo={c.grupo} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
                 ))}
               </div>
             )}

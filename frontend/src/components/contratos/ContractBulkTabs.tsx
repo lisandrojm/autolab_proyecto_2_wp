@@ -33,6 +33,7 @@ import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { buildAltaRecord85, buildAltasMasivasTexto } from './afipTxt85';
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
 import { CorridaAltasArca, LoteParaPresentar } from './CorridaAltasArca';
+import { arcaCatalogoAPI, DIAS_CATALOGO_VIEJO } from '../../api/arcaCatalogo';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
@@ -2268,6 +2269,23 @@ export const ContractBulkAfipTab: React.FC<{
   const [loteAltas, setLoteAltas] = useState<LoteParaPresentar | null>(null);
   const [corridaAltasOpen, setCorridaAltasOpen] = useState(false);
 
+  /*
+    ¿HACE CUÁNTO SE LEYÓ EL CATÁLOGO DE ARCA CON ESTA EMPLEADORA? Los códigos de las altas se validan
+    contra ese espejo: si es viejo, ARCA pudo haber cambiado algo que todavía no vemos. Solo avisa (a los
+    `DIAS_CATALOGO_VIEJO` días o si nunca se leyó): la barrera real es el estado de cada categoría.
+  */
+  const [lecturaCatalogo, setLecturaCatalogo] = useState<{ cuit: string; ultima: string | null } | null>(null);
+  useEffect(() => {
+    if (!empresaDeLaPestana) return setLecturaCatalogo(null);
+    const cuit = String(empresaDeLaPestana.cuit || '').replace(/\D/g, '');
+    arcaCatalogoAPI
+      .empleadoras()
+      .then((lista) => setLecturaCatalogo({ cuit, ultima: lista.find((x) => x.cuit === cuit)?.ultimaLectura ?? null }))
+      .catch(() => setLecturaCatalogo(null));
+  }, [empresaDeLaPestana?._id]);
+  const diasCatalogo = lecturaCatalogo?.ultima ? Math.floor((Date.now() - new Date(lecturaCatalogo.ultima).getTime()) / 86_400_000) : null;
+  const catalogoViejo = !!lecturaCatalogo && (diasCatalogo === null || diasCatalogo > DIAS_CATALOGO_VIEJO);
+
   // Si hay una corrida de altas en curso (se cerró el modal, se recargó la página), se reengancha.
   useEffect(() => {
     projectsAPI
@@ -2462,6 +2480,23 @@ export const ContractBulkAfipTab: React.FC<{
         */}
       {filterTipo === 'alta_temprana_afip' && (
         <div className="space-y-2">
+          {catalogoViejo && empresaDeLaPestana && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0" />
+              {diasCatalogo === null ? (
+                <span>
+                  El catálogo de ARCA nunca se leyó con <strong>{empresaDeLaPestana.razonSocial}</strong>: los códigos se validan contra la copia del repo.
+                </span>
+              ) : (
+                <span>
+                  El catálogo de ARCA de <strong>{empresaDeLaPestana.razonSocial}</strong> se leyó hace {diasCatalogo} días: ARCA pudo haber cambiado algún código.
+                </span>
+              )}
+              <LinkSiPuede to="/arca/catalogo" className="ml-1 font-semibold underline">
+                Leer de ARCA
+              </LinkSiPuede>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Contratos con todos los datos ARCA cargados">
               <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />

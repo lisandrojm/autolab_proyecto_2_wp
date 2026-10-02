@@ -18,13 +18,24 @@ import { DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarCont
   el formulario, por `/calificar`.
 */
 const router = Router();
+/**
+ * Dónde se busca el contrato sobre el que se decide: lo que vence en la ventana más amplia y lo que ya
+ * venció. Con la lista de 7 días, decidir sobre uno que se vio con el filtro de 30 —o sobre uno
+ * vencido— daba 404.
+ */
+const listaParaDecidir = async (tenantId, userId) => {
+    const [porVencer, vencidos] = await Promise.all([listarContratosPorVencer(tenantId, userId, undefined, DIAS_DE_AVISO_MAX), listarContratosPorVencer(tenantId, userId, undefined, DIAS_DE_AVISO_MAX, true)]);
+    return [...porVencer, ...vencidos];
+};
 router.get("/", requireTenant, authenticateToken, async (req, res) => {
     try {
         // `dias`: con cuánta anticipación se quieren ver (el filtro del móvil). Fuera de rango, la de siempre.
         const pedidos = Number(req.query.dias);
         const dias = Number.isInteger(pedidos) && pedidos >= 1 && pedidos <= DIAS_DE_AVISO_MAX ? pedidos : DIAS_DE_AVISO;
-        const contratos = await listarContratosPorVencer(req.tenantObjectId, req.user.userId, undefined, dias);
-        res.json({ contratos, dias });
+        // `vencidos=1`: los que ya terminaron en los últimos `dias` días sin que nadie decidiera.
+        const vencidos = req.query.vencidos === "1" || req.query.vencidos === "true";
+        const contratos = await listarContratosPorVencer(req.tenantObjectId, req.user.userId, undefined, dias, vencidos);
+        res.json({ contratos, dias, vencidos });
     }
     catch (error) {
         console.error("Contratos por vencer error:", error);
@@ -83,7 +94,7 @@ router.post("/dejar-vencer", requireTenant, authenticateToken, async (req, res) 
             return;
         }
         // El permiso ES la lista: sólo se decide sobre un contrato que hoy le aparece a quien decide.
-        const lista = await listarContratosPorVencer(req.tenantObjectId, req.user.userId);
+        const lista = await listaParaDecidir(req.tenantObjectId, req.user.userId);
         const elegido = contratoPedido(lista, req.body);
         if ("error" in elegido) {
             res.status(elegido.codigo).json({ error: elegido.error });
@@ -126,7 +137,7 @@ router.post("/calificar", requireTenant, authenticateToken, async (req, res) => 
             return;
         }
         // Mismo control que al dejar vencer: sólo sobre un contrato que hoy le aparece a quien califica.
-        const lista = await listarContratosPorVencer(req.tenantObjectId, req.user.userId);
+        const lista = await listaParaDecidir(req.tenantObjectId, req.user.userId);
         const elegido = contratoPedido(lista, req.body);
         if ("error" in elegido) {
             res.status(elegido.codigo).json({ error: elegido.error });

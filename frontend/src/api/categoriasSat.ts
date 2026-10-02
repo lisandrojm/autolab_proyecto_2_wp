@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import type { EstadoCategoriaArca } from "@compartido/catalogoArca";
 
 export interface CategoriaSatItem {
   _id: string;
@@ -36,6 +37,15 @@ export interface CategoriaSatItem {
      * Masivas); vacío = cae al default de la empleadora / instalación.
      */
     puestoDesempenado?: string;
+    /** Lo que ARCA dice HOY de este código (espejo de ARCA). */
+    descripcionArca?: string;
+    /**
+     * El código contra el espejo de ARCA: `ok` / `nombre_distinto` / `grupo_distinto` /
+     * `no_existe_en_arca` / `no_vigente`. `null` = espejo sin sembrar (no se sabe, no bloquea).
+     */
+    estadoArca?: EstadoCategoriaArca | null;
+    /** `nombre_distinto` que alguien revisó y confirmó: no bloquea el alta. */
+    estadoArcaConfirmada?: boolean;
     presentismo: number;
     sueldoBasico: number;
     sueldoAdicional: number;

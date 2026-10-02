@@ -166,7 +166,7 @@ export async function esPantallaObrasSociales(page) {
 }
 
 /** El catálogo, leído de la página. Nunca hardcodeado: las 494 de hoy pueden ser otras mañana. */
-async function leerCatalogo(page) {
+export async function leerCatalogo(page) {
   return page.evaluate(() => (window.l_OS || []).map((o) => ({ _value: String(o._value ?? ""), _text: String(o._text ?? "") })));
 }
 

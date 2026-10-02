@@ -204,3 +204,11 @@ npm run test:arca:altas        # el motor de altas (frontend/)
 npm run test:afip85            # el registro de 85 (frontend/)
 npm run test:arca-altas        # el cotejo del lote y el candado (server/)
 ```
+
+## Catálogos de ARCA (`catalogos-arca.mjs`)
+
+Lee los nomencladores que publica «Registrar Nuevas Altas» (`window.l_CCT`, `l_CatCCT`, `l_PD`, `l_SR`, `l_GTS`, `l_TS`, `l_MC`, `l_ML`, `l_Dom`, `l_ActDom`) y las obras sociales (`leerCatalogo` de `registrar-obras-sociales.mjs`, reutilizado). **Cero clicks propios**: la única interacción es elegir la empleadora con `aceptarSelectorDeCuit`, y verifica su CUIT en pantalla antes de leer. Lo corre el servidor (`server/src/services/arca/catalogoArcaSync.ts`), con el mismo candado de una corrida por tenant. Ver `documentation/catalogo-arca.md`.
+
+```bash
+npm run test:arca:catalogos   # cero .click(), CUIT antes de leer, mapeo de variables a tablas
+```

@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import type { EstadoCategoriaArca } from "@compartido/catalogoArca";
 
 /**
  * Categorías profesionales de ARCA, en la forma en que ARCA las modela:
@@ -60,6 +61,10 @@ export interface CategoriaArca extends EscalaResuelta {
   nombre: string;
   /** Descripción completa de ARCA, con el sufijo "- GRUPO N" si lo trae. */
   descripcionArca: string;
+  /** El código contra el espejo de ARCA. `null` = espejo sin sembrar. */
+  estadoArca?: EstadoCategoriaArca | null;
+  /** `nombre_distinto` que alguien revisó y confirmó. */
+  estadoArcaConfirmada?: boolean;
   /** Puesto desempeñado de ARCA (4 díg.). Solo lo informa el registro de 85 (Altas Masivas). */
   puestoDesempenado?: string;
   /** `false` = resuelve para contratos ya cargados, pero no se ofrece en contratos nuevos. */
@@ -191,6 +196,18 @@ class ArcaCategoriasAPI {
   }
 
   /** Las que no se pueden usar. Van en un banner de error, no en un filtro. */
+  /** Los códigos VIGENTES del espejo de ARCA para un convenio: de acá se elige el de una categoría. */
+  async codigosArca(convenio: string): Promise<CodigoArcaDisponible[]> {
+    const { data } = await axios.get(`${BASE}/codigos-arca`, { params: { convenio } });
+    return data;
+  }
+
+  /** Las categorías que no coinciden con lo que ARCA dice de su código. */
+  async estadoCatalogo(): Promise<EstadoCatalogoArca> {
+    const { data } = await axios.get(`${BASE}/estado-catalogo`);
+    return data;
+  }
+
   async huerfanas(): Promise<CategoriaHuerfana[]> {
     const { data } = await axios.get(`${BASE}/huerfanas`);
     return data;
@@ -238,12 +255,12 @@ class ArcaCategoriasAPI {
    * Los importes solo tienen sentido SIN grupo. Con grupo la escala vive en el grupo, y mandarlos
    * acá la convierte en propia: esa categoría deja de seguir las paritarias del grupo para siempre.
    */
-  async crearCategoria(payload: { convenio: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca: string; nombre: string; descripcionArca?: string; puestoDesempenado?: string } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
+  async crearCategoria(payload: { convenio: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca: string; nombre: string; puestoDesempenado?: string; confirmarNombre?: boolean } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
     const { data } = await axios.post(BASE, payload);
     return data;
   }
 
-  async actualizarCategoria(id: string, payload: { convenio?: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca?: string; nombre?: string; descripcionArca?: string; puestoDesempenado?: string; isActive?: boolean } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
+  async actualizarCategoria(id: string, payload: { convenio?: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca?: string; nombre?: string; puestoDesempenado?: string; isActive?: boolean; confirmarNombre?: boolean } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
     const { data } = await axios.put(`${BASE}/${id}`, payload);
     return data;
   }
@@ -270,3 +287,20 @@ class ArcaCategoriasAPI {
 }
 
 export const arcaCategoriasAPI = new ArcaCategoriasAPI();
+
+export interface CodigoArcaDisponible {
+  codigo: string;
+  /** Texto literal de ARCA («PEINADOR - GRUPO 7»). */
+  descripcion: string;
+  /** Categoría activa de WeProdu que ya usa ese código, o null. */
+  usadoPor: string | null;
+}
+
+export interface EstadoCatalogoArca {
+  /** `false` = el espejo de ARCA todavía no se sembró. */
+  espejo: boolean;
+  total: number;
+  contratosAfectados: number;
+  porEstado: Partial<Record<EstadoCategoriaArca, number>>;
+  categorias: Array<{ _id: string; nombre: string; convenio: string; codigoArca: string; grupo: number | null; contratos: number; estadoArca: EstadoCategoriaArca; descripcionArcaEspejo: string }>;
+}

@@ -1,0 +1,912 @@
+{
+  "categorias": [
+    {
+      "_id": "6a7f7ef2812e94259a9ec852",
+      "nombre": "Director de Programas",
+      "codigoArca": "035283",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec850"
+    },
+    {
+      "_id": "6a7f7ef2812e94259a9ec853",
+      "nombre": "Productor de Programas",
+      "codigoArca": "035284",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec850"
+    },
+    {
+      "_id": "6a7f7ef2812e94259a9ec851",
+      "nombre": "Tecnico Electrónico",
+      "codigoArca": "035285",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec850"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec85b",
+      "nombre": "Camarógrafo Realizador",
+      "codigoArca": "035286",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec854"
+    },
+    {
+      "_id": "6a7f7ef2812e94259a9ec855",
+      "nombre": "Escenógrafo",
+      "codigoArca": "035287",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec854"
+    },
+    {
+      "_id": "6a7f7ef2812e94259a9ec856",
+      "nombre": "Iluminador",
+      "codigoArca": "035288",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec854"
+    },
+    {
+      "_id": "6a7f7ef2812e94259a9ec857",
+      "nombre": "Operador Realizador Cinematográfico",
+      "codigoArca": "035289",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec854"
+    },
+    {
+      "_id": "6a7f7ef2812e94259a9ec858",
+      "nombre": "Operador Técnico de Planta Trasmisora",
+      "codigoArca": "035290",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec854"
+    },
+    {
+      "_id": "6a7f7ef2812e94259a9ec859",
+      "nombre": "Téc. de Mant. afectado a Planta Trasmisora",
+      "codigoArca": "035291",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec854"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec85a",
+      "nombre": "Técnico de Mantenimiento Electónico",
+      "codigoArca": "035292",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef2812e94259a9ec854"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec863",
+      "nombre": "Asistente de Dirección",
+      "codigoArca": "035293",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec85d",
+      "nombre": "Asesor de Vestuario",
+      "codigoArca": "035294",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec85e",
+      "nombre": "Coordinador",
+      "codigoArca": "035295",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec85f",
+      "nombre": "Creativo de Campañas Promocionales",
+      "codigoArca": "035296",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec860",
+      "nombre": "Operador de Cámaras de Video Tape Portátil",
+      "codigoArca": "035297",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec861",
+      "nombre": "Operador Técnico de VTR Especializado en Conversión de Normas",
+      "codigoArca": "035298",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec862",
+      "nombre": "Operador Técnico Editor de VTR",
+      "codigoArca": "035299",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec865",
+      "nombre": "Técnico en Efectos Especiales Visuales",
+      "codigoArca": "035300",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec864",
+      "nombre": "Técnico en Proceso Cinematográfico",
+      "codigoArca": "035301",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec85c"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec867",
+      "nombre": "Compaginador Musical",
+      "codigoArca": "035302",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec869",
+      "nombre": "Mezclador de Control Central",
+      "codigoArca": "035303",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec86a",
+      "nombre": "Operador de Cámaras",
+      "codigoArca": "035304",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec86b",
+      "nombre": "Operador de Computadoras",
+      "codigoArca": "035305",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec868",
+      "nombre": "Operador de Sonido",
+      "codigoArca": "035306",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec86c",
+      "nombre": "Operador de Video Film",
+      "codigoArca": "035307",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec86d",
+      "nombre": "Operador Técnico de Video",
+      "codigoArca": "035308",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec86e",
+      "nombre": "Operador Técnico de Video Tape",
+      "codigoArca": "035309",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec86f",
+      "nombre": "Realizador de Escenografía",
+      "codigoArca": "035310",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef3812e94259a9ec870",
+      "nombre": "Técnico Mecánico",
+      "codigoArca": "035311",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef3812e94259a9ec866"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec872",
+      "nombre": "Ambientador General",
+      "codigoArca": "035312",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec877",
+      "nombre": "Asistente de Iluminación",
+      "codigoArca": "035313",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec878",
+      "nombre": "Continuista",
+      "codigoArca": "035314",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec879",
+      "nombre": "Dibujante de Arte Publicitario",
+      "codigoArca": "035315",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec87a",
+      "nombre": "Dibujante Técnico",
+      "codigoArca": "035316",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec87b",
+      "nombre": "Fotógrafo",
+      "codigoArca": "035317",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec87c",
+      "nombre": "Oficial Administrativo",
+      "codigoArca": "035318",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec87d",
+      "nombre": "Operador de Máquinas Contables",
+      "codigoArca": "035319",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec87e",
+      "nombre": "Promotor de Ventas",
+      "codigoArca": "035320",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec873",
+      "nombre": "Proyectorista de Control Central",
+      "codigoArca": "035321",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec874",
+      "nombre": "Secretaria Bilingüe",
+      "codigoArca": "035322",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec875",
+      "nombre": "Técnico de Mantenimiento Mecánico",
+      "codigoArca": "035323",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec876",
+      "nombre": "Técnico Electricista",
+      "codigoArca": "035324",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec871"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec88a",
+      "nombre": "Asistente de Producción",
+      "codigoArca": "035325",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec88b",
+      "nombre": "Caracterizador",
+      "codigoArca": "035326",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec88c",
+      "nombre": "Carpintero Realizador",
+      "codigoArca": "035327",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec88d",
+      "nombre": "Cobrador",
+      "codigoArca": "035328",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec880",
+      "nombre": "Conductor Motorista Mecánico",
+      "codigoArca": "035329",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec881",
+      "nombre": "Operador Revisor de Filmoteca",
+      "codigoArca": "035330",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec882",
+      "nombre": "Perforador de Máquinas Contables",
+      "codigoArca": "035331",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec883",
+      "nombre": "Perfoverificador de Computadoras",
+      "codigoArca": "035332",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec884",
+      "nombre": "Pintor Corpóreo Letrista",
+      "codigoArca": "035333",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec885",
+      "nombre": "Redactor de Textos Publicitarios",
+      "codigoArca": "035334",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef4812e94259a9ec886",
+      "nombre": "Tapicero Realizador",
+      "codigoArca": "035335",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec887",
+      "nombre": "Técnico de Mant. de Aire Acondicionado",
+      "codigoArca": "035336",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec888",
+      "nombre": "Utilero de Calle",
+      "codigoArca": "035337",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec889",
+      "nombre": "Utilero Realizador",
+      "codigoArca": "035338",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef4812e94259a9ec87f"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec898",
+      "nombre": "Asistente de Arte",
+      "codigoArca": "035339",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec89d",
+      "nombre": "Asistente de cámara especializado / Grip",
+      "codigoArca": "035340",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec89e",
+      "nombre": "Auxiliar Administrativo",
+      "codigoArca": "035341",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec89f",
+      "nombre": "Auxiliar de Estudios",
+      "codigoArca": "035342",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a0",
+      "nombre": "Ayudante de Utilero de Calle",
+      "codigoArca": "035343",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec88f",
+      "nombre": "Calderista",
+      "codigoArca": "035344",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec895",
+      "nombre": "Chequeador",
+      "codigoArca": "035345",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a1",
+      "nombre": "Compaginador de Filmoteca",
+      "codigoArca": "035346",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a2",
+      "nombre": "Laborista Fotográfico",
+      "codigoArca": "035347",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a3",
+      "nombre": "Microfonista",
+      "codigoArca": "035348",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a4",
+      "nombre": "Modista Realizadora",
+      "codigoArca": "035349",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec899",
+      "nombre": "Montador de Escenografía",
+      "codigoArca": "035350",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec89a",
+      "nombre": "Oficial de Mantenimiento de Edificio",
+      "codigoArca": "035351",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec89b",
+      "nombre": "Peinador",
+      "codigoArca": "035352",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec89c",
+      "nombre": "Pintor Corpóreo",
+      "codigoArca": "035353",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec896",
+      "nombre": "Reflectorista",
+      "codigoArca": "035354",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec890",
+      "nombre": "Secretaria",
+      "codigoArca": "035355",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec891",
+      "nombre": "Sombrerero",
+      "codigoArca": "035356",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec892",
+      "nombre": "Tablerista de Iluminación",
+      "codigoArca": "035357",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec893",
+      "nombre": "Utilero",
+      "codigoArca": "035358",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec894",
+      "nombre": "Utilero Preparador",
+      "codigoArca": "035359",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef5812e94259a9ec897",
+      "nombre": "Visualizador / Logger",
+      "codigoArca": "035360",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef5812e94259a9ec88e"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8ab",
+      "nombre": "Auxiliar de Almacenes y/o Depósito",
+      "codigoArca": "035361",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8a5"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a6",
+      "nombre": "Auxiliar de Despacho",
+      "codigoArca": "035362",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8a5"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a7",
+      "nombre": "Auxiliar de Tráfico",
+      "codigoArca": "035363",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8a5"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a8",
+      "nombre": "Auxiliar Mimeografista",
+      "codigoArca": "035364",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8a5"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8a9",
+      "nombre": "Conductor de Cámaras",
+      "codigoArca": "035365",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8a5"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8aa",
+      "nombre": "Telecontrol",
+      "codigoArca": "035366",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8a5"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8b3",
+      "nombre": "Auxiliar Electricista",
+      "codigoArca": "035367",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8ac"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8ad",
+      "nombre": "Conductor de Automotores de Intendencia",
+      "codigoArca": "035368",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8ac"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8ae",
+      "nombre": "Conductor de Automotores de Operaciones",
+      "codigoArca": "035369",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8ac"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8af",
+      "nombre": "Modista",
+      "codigoArca": "035370",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8ac"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8b0",
+      "nombre": "Operador de Telex",
+      "codigoArca": "035371",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8ac"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8b1",
+      "nombre": "Preparador de Sastrería",
+      "codigoArca": "035372",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8ac"
+    },
+    {
+      "_id": "6a7f7ef6812e94259a9ec8b2",
+      "nombre": "Telefonista ( Operador/a )",
+      "codigoArca": "035373",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef6812e94259a9ec8ac"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8bb",
+      "nombre": "Auxiliar de Camarines",
+      "codigoArca": "035374",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8b4"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8b6",
+      "nombre": "Auxiliar de Forilloteca",
+      "codigoArca": "035375",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8b4"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8b7",
+      "nombre": "Auxiliar Revisor de Filmoteca",
+      "codigoArca": "035376",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8b4"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8b8",
+      "nombre": "Ayudante de Realización",
+      "codigoArca": "035377",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8b4"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8b5",
+      "nombre": "Ayudante General de Técnica",
+      "codigoArca": "035378",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8b4"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8b9",
+      "nombre": "Mozo de Cafetería",
+      "codigoArca": "035379",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8b4"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8ba",
+      "nombre": "Ordenanza",
+      "codigoArca": "035380",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8b4"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8c3",
+      "nombre": "Auxiliar de Depósito",
+      "codigoArca": "035381",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8bc"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8bd",
+      "nombre": "Auxiliar de limpieza",
+      "codigoArca": "035382",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8bc"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8be",
+      "nombre": "Auxiliar Recepcionista",
+      "codigoArca": "035383",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8bc"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8bf",
+      "nombre": "Bombero",
+      "codigoArca": "035384",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8bc"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8c0",
+      "nombre": "Jardinero",
+      "codigoArca": "035385",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8bc"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8c1",
+      "nombre": "Peón de Estudios",
+      "codigoArca": "035386",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8bc"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8c2",
+      "nombre": "Sereno",
+      "codigoArca": "035387",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8bc"
+    },
+    {
+      "_id": "6a7f7ef7812e94259a9ec8c5",
+      "nombre": "Cadete",
+      "codigoArca": "035388",
+      "descripcionArca": "",
+      "grupoId": "6a7f7ef7812e94259a9ec8c4"
+    }
+  ],
+  "categoriasSat": [
+    {
+      "_id": "6966c02e54bcb393d9f43834",
+      "codigoAfip": 35286
+    },
+    {
+      "_id": "6966c02854bcb393d9f437e5",
+      "codigoAfip": 35312
+    },
+    {
+      "_id": "6966c02b54bcb393d9f4380a",
+      "codigoAfip": 35339
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437f9",
+      "codigoAfip": 35287
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437fa",
+      "codigoAfip": 35288
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437fb",
+      "codigoAfip": 35289
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437fc",
+      "codigoAfip": 35290
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437fd",
+      "codigoAfip": 35291
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437fe",
+      "codigoAfip": 35292
+    },
+    {
+      "_id": "6966c02c54bcb393d9f43817",
+      "codigoAfip": 35313
+    },
+    {
+      "_id": "6966c02c54bcb393d9f43818",
+      "codigoAfip": 35314
+    },
+    {
+      "_id": "6966c02c54bcb393d9f43819",
+      "codigoAfip": 35315
+    },
+    {
+      "_id": "6966c02c54bcb393d9f4381a",
+      "codigoAfip": 35316
+    },
+    {
+      "_id": "6966c02c54bcb393d9f4381b",
+      "codigoAfip": 35317
+    },
+    {
+      "_id": "6966c02c54bcb393d9f4381c",
+      "codigoAfip": 35318
+    },
+    {
+      "_id": "6966c02c54bcb393d9f4381d",
+      "codigoAfip": 35319
+    },
+    {
+      "_id": "6966c02c54bcb393d9f4381e",
+      "codigoAfip": 35320
+    },
+    {
+      "_id": "6966c02854bcb393d9f437e6",
+      "codigoAfip": 35321
+    },
+    {
+      "_id": "6966c02854bcb393d9f437e7",
+      "codigoAfip": 35322
+    },
+    {
+      "_id": "6966c02954bcb393d9f437e8",
+      "codigoAfip": 35323
+    },
+    {
+      "_id": "6966c02a54bcb393d9f43804",
+      "codigoAfip": 35324
+    },
+    {
+      "_id": "6966c02e54bcb393d9f43836",
+      "codigoAfip": 35340
+    },
+    {
+      "_id": "6966c02e54bcb393d9f43837",
+      "codigoAfip": 35341
+    },
+    {
+      "_id": "6966c02e54bcb393d9f43838",
+      "codigoAfip": 35342
+    },
+    {
+      "_id": "6966c02e54bcb393d9f43839",
+      "codigoAfip": 35343
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437f7",
+      "codigoAfip": 35344
+    },
+    {
+      "_id": "6966c02b54bcb393d9f43807",
+      "codigoAfip": 35345
+    },
+    {
+      "_id": "6966c02e54bcb393d9f4383a",
+      "codigoAfip": 35346
+    },
+    {
+      "_id": "6966c02e54bcb393d9f4383b",
+      "codigoAfip": 35347
+    },
+    {
+      "_id": "6966c02e54bcb393d9f4383c",
+      "codigoAfip": 35348
+    },
+    {
+      "_id": "6966c02e54bcb393d9f4383d",
+      "codigoAfip": 35349
+    },
+    {
+      "_id": "6966c02b54bcb393d9f4380b",
+      "codigoAfip": 35350
+    },
+    {
+      "_id": "6966c02b54bcb393d9f4380c",
+      "codigoAfip": 35351
+    },
+    {
+      "_id": "6966c02b54bcb393d9f4380d",
+      "codigoAfip": 35352
+    },
+    {
+      "_id": "6966c02e54bcb393d9f43835",
+      "codigoAfip": 35353
+    },
+    {
+      "_id": "6966c02b54bcb393d9f43808",
+      "codigoAfip": 35354
+    },
+    {
+      "_id": "6966c02a54bcb393d9f437ff",
+      "codigoAfip": 35355
+    },
+    {
+      "_id": "6966c02a54bcb393d9f43800",
+      "codigoAfip": 35356
+    },
+    {
+      "_id": "6966c02a54bcb393d9f43801",
+      "codigoAfip": 35357
+    },
+    {
+      "_id": "6966c02a54bcb393d9f43802",
+      "codigoAfip": 35358
+    },
+    {
+      "_id": "6966c02a54bcb393d9f43803",
+      "codigoAfip": 35359
+    }
+  ]
+}

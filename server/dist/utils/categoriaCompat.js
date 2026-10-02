@@ -11,6 +11,7 @@
  *
  * Cuando no quede ningún consumidor de `data.*`, este archivo y `CategoriaSat` se borran juntos.
  */
+import { espejoCategorias, estadoDe } from "../services/arca/espejoArca.js";
 import { Categoria } from "../models/Categoria.js";
 import { escalaDeCategoria } from "./escalaCategoria.js";
 import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
@@ -57,11 +58,23 @@ export const migracionCategoriasCorrida = async () => (await Categoria.estimated
  * tal cual.
  */
 export const listarCategoriasCompat = async () => {
-    const [cats, grupos] = await Promise.all([Categoria.find().lean(), ConvenioGrupo.find().lean()]);
+    const [cats, grupos, espejo] = await Promise.all([Categoria.find().lean(), ConvenioGrupo.find().lean(), espejoCategorias()]);
     if (cats.length === 0)
         return (await CategoriaSat.find().sort({ name: 1 }).lean());
     const porGrupo = new Map(grupos.map((g) => [String(g._id), g]));
-    return cats.map((c) => aplanar(c, porGrupo.get(String(c.grupoId)))).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }));
+    return cats
+        .map((c) => {
+        const g = porGrupo.get(String(c.grupoId));
+        const plana = aplanar(c, g);
+        // El estado contra ARCA viaja con la categoría: lo leen el chequeo de completitud del alta
+        // (frontend) y la validación del lote (server), que no pueden dejar salir un código cruzado.
+        const e = estadoDe(espejo, c, g ? Number(g.numero) : null);
+        plana.data.descripcionArca = e.descripcionArcaEspejo || c.descripcionArca || "";
+        plana.data.estadoArca = e.estadoArca;
+        plana.data.estadoArcaConfirmada = e.estadoArcaConfirmada;
+        return plana;
+    })
+        .sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }));
 };
 /**
  * Resuelve categorías por `_id` en la forma vieja, mirando las DOS colecciones.

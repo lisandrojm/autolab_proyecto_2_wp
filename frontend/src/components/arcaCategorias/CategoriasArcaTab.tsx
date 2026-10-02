@@ -8,6 +8,9 @@ import { InfoModal } from '../ui/InfoModal';
 import { BannerFuncionesRotas } from './BannerFuncionesRotas';
 import { BannerContratosHuerfanos } from './BannerContratosHuerfanos';
 import { BannerEscalasVencidas } from './BannerEscalasVencidas';
+import { BannerCategoriasDesalineadas } from './BannerCategoriasDesalineadas';
+import { EstadoArcaChip } from './EstadoArcaChip';
+import { SelectorCodigoArca } from './SelectorCodigoArca';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../utils/fechas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -192,7 +195,9 @@ export const CategoriasArcaTab: React.FC = () => {
 
   // Categoría (crear / editar). `categoriaHuerfana` marca que se abrió desde el banner.
   const [showCategoria, setShowCategoria] = useState(false);
-  const [categoriaEnEdicion, setCategoriaEnEdicion] = useState<{ _id: string; contratos: number } | null>(null);
+  const [categoriaEnEdicion, setCategoriaEnEdicion] = useState<{ _id: string; contratos: number; codigoArca?: string } | null>(null);
+  // Se incrementa al guardar una categoría: el banner de categorías desalineadas vuelve a preguntar.
+  const [recargaEstadoArca, setRecargaEstadoArca] = useState(0);
   const [formCategoria, setFormCategoria] = useState({ convenio: '', numeroGrupo: '', codigoArca: '', nombre: '', descripcionArca: '', puestoDesempenado: '', isActive: true });
   /*
     La escala PROPIA de la categoría, para los convenios sin grupo.
@@ -472,7 +477,7 @@ export const CategoriasArcaTab: React.FC = () => {
 
   /** `grupo` es `null` para las categorías sueltas: no todas cuelgan de uno. */
   const abrirEditarCategoria = (cat: CategoriaArca, grupo: GrupoConvenio | null, convenio: string) => {
-    setCategoriaEnEdicion({ _id: cat._id, contratos: cat.contratos });
+    setCategoriaEnEdicion({ _id: cat._id, contratos: cat.contratos, codigoArca: cat.codigoArca });
     setFormCategoria({ convenio, numeroGrupo: grupo ? String(grupo.numero) : '', codigoArca: cat.codigoArca, nombre: cat.nombre, descripcionArca: cat.descripcionArca, puestoDesempenado: cat.puestoDesempenado || '', isActive: cat.isActive });
     setFormEscalaCat(escalaPropiaAlForm(cat));
     cargarGruposPara(convenio);
@@ -484,7 +489,7 @@ export const CategoriasArcaTab: React.FC = () => {
    * el que hay que elegir, no algo que se pueda heredar del contexto.
    */
   const abrirHuerfana = (h: CategoriaHuerfana) => {
-    setCategoriaEnEdicion({ _id: h._id, contratos: h.contratos });
+    setCategoriaEnEdicion({ _id: h._id, contratos: h.contratos, codigoArca: h.codigoArca });
     setFormCategoria({ convenio: h.convenio, numeroGrupo: '', codigoArca: esCodigoValido(h.codigoArca) ? h.codigoArca : '', nombre: h.nombre, descripcionArca: '', puestoDesempenado: '', isActive: true });
     setFormEscalaCat(ESCALA_VACIA);
     cargarGruposPara(h.convenio);
@@ -520,7 +525,6 @@ export const CategoriasArcaTab: React.FC = () => {
       numeroGrupo: conGrupo ? Number(formCategoria.numeroGrupo) : ('' as const),
       codigoArca: codigo,
       nombre: formCategoria.nombre.trim(),
-      descripcionArca: formCategoria.descripcionArca.trim(),
       puestoDesempenado: formCategoria.puestoDesempenado.replace(/\D/g, ''),
       isActive: formCategoria.isActive,
       ...(conGrupo
@@ -537,12 +541,26 @@ export const CategoriasArcaTab: React.FC = () => {
           }),
     };
 
+    /*
+      Si el nombre no se parece a lo que ARCA dice del código, el servidor contesta 409 con
+      `requiereConfirmacion`. Se le muestra a la persona qué dice ARCA y, si confirma, se reenvía:
+      queda registrado quién lo confirmó.
+    */
+    const enviar = async (confirmarNombre: boolean) =>
+      categoriaEnEdicion ? arcaCategoriasAPI.actualizarCategoria(categoriaEnEdicion._id, { ...payload, confirmarNombre }) : arcaCategoriasAPI.crearCategoria({ ...payload, confirmarNombre });
     try {
+      try {
+        await enviar(false);
+      } catch (e: any) {
+        if (e?.response?.status !== 409 || !e?.response?.data?.requiereConfirmacion) throw e;
+        const ok = await sweetAlert.confirm('¿Es la misma categoría?', `${e.response.data.error}`, 'Sí, es la misma', 'Revisar');
+        if (!ok.isConfirmed) return;
+        await enviar(true);
+      }
+      setRecargaEstadoArca((n) => n + 1);
       if (categoriaEnEdicion) {
-        await arcaCategoriasAPI.actualizarCategoria(categoriaEnEdicion._id, payload);
         sweetAlert.success('Categoría actualizada', categoriaEnEdicion.contratos > 0 ? `Los ${categoriaEnEdicion.contratos} contratos que la usan pasan a resolver contra ${convenio} · ${codigo}.` : 'Los cambios se guardaron correctamente.');
       } else {
-        await arcaCategoriasAPI.crearCategoria(payload);
         sweetAlert.success('Categoría creada', conGrupo ? `${codigo} — ${payload.nombre} quedó en el grupo ${payload.numeroGrupo} de ${convenio}.` : `${codigo} — ${payload.nombre} quedó en ${convenio}, sin grupo: su escala es la que se cargó acá.`);
       }
       setShowCategoria(false);
@@ -775,6 +793,7 @@ export const CategoriasArcaTab: React.FC = () => {
         {banner}
         <BannerFuncionesRotas />
       <BannerContratosHuerfanos />
+      <BannerCategoriasDesalineadas recarga={recargaEstadoArca} />
       <BannerEscalasVencidas />
         {modalHuerfanas}
         <div className="flex items-start justify-between gap-4">
@@ -932,6 +951,7 @@ export const CategoriasArcaTab: React.FC = () => {
       {banner}
       <BannerFuncionesRotas />
       <BannerContratosHuerfanos />
+      <BannerCategoriasDesalineadas recarga={recargaEstadoArca} />
       <BannerEscalasVencidas />
       {modalHuerfanas}
 
@@ -1114,7 +1134,7 @@ export const CategoriasArcaTab: React.FC = () => {
                                       <tr className="border-b border-gray-200 dark:border-gray-700/60">
                                         <th className="pl-14 pr-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cód. ARCA</th>
                                         <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
-                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Descripción de ARCA</th>
+                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descripción de ARCA</th>
                                         <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contratos</th>
                                         {/* Última antes de Acciones, como en todos los nomencladores. */}
                                         <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
@@ -1141,7 +1161,13 @@ export const CategoriasArcaTab: React.FC = () => {
                                               </span>
                                             )}
                                           </td>
-                                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{c.descripcionArca || '—'}</td>
+                                          {/* Siempre visible, al lado del nombre: es lo que muestra si el código dice lo mismo que el nombre. */}
+                                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
+                                            <span className="inline-flex items-center gap-1.5">
+                                              <EstadoArcaChip estado={c.estadoArca} confirmada={c.estadoArcaConfirmada} descripcion={c.descripcionArca} />
+                                              {c.descripcionArca || '—'}
+                                            </span>
+                                          </td>
                                           <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
                                           <td className="px-4 py-2">
                                             <DefaultArcaStar campo="categoria" valor={c.codigoArca} nombre={`${c.codigoArca} — ${c.nombre}`} queEs="la categoría que se ofrece primero" />
@@ -1209,6 +1235,7 @@ export const CategoriasArcaTab: React.FC = () => {
                     <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cód. ARCA</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción de ARCA</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Neto</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
@@ -1235,7 +1262,12 @@ export const CategoriasArcaTab: React.FC = () => {
                               NO ELEGIBLE
                             </span>
                           )}
-                          {c.descripcionArca && <span className="block text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[380px]">{c.descripcionArca}</span>}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="inline-flex items-center gap-1.5">
+                            <EstadoArcaChip estado={c.estadoArca} confirmada={c.estadoArcaConfirmada} descripcion={c.descripcionArca} />
+                            {c.descripcionArca || '—'}
+                          </span>
                         </td>
                         <td className="px-4 py-2.5">
                           {/*
@@ -1549,16 +1581,8 @@ export const CategoriasArcaTab: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código de ARCA *</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={formCategoria.codigoArca}
-              onChange={(e) => setFormCategoria((p) => ({ ...p, codigoArca: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-              onBlur={(e) => setFormCategoria((p) => ({ ...p, codigoArca: e.target.value ? aCodigoArca(e.target.value) : '' }))}
-              className={`input-field font-mono ${formCategoria.codigoArca && !esCodigoValido(aCodigoArca(formCategoria.codigoArca)) ? 'border-red-400 dark:border-red-600' : ''}`}
-              placeholder="035283"
-            />
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">6 dígitos, con los ceros a la izquierda, tal como lo escribe ARCA.</p>
+            {/* Se ELIGE de lo que ARCA publica para el convenio: no hay campo libre (así se cruzaron 41 códigos). */}
+            <SelectorCodigoArca convenio={formCategoria.convenio} valor={formCategoria.codigoArca} codigoPropio={categoriaEnEdicion?.codigoArca} onChange={(codigo) => setFormCategoria((p) => ({ ...p, codigoArca: codigo }))} />
           </div>
 
           <div>
@@ -1566,10 +1590,6 @@ export const CategoriasArcaTab: React.FC = () => {
             <input type="text" value={formCategoria.nombre} onChange={(e) => setFormCategoria((p) => ({ ...p, nombre: e.target.value }))} className="input-field" placeholder="Ej: Director de Programas" />
           </div>
 
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de ARCA</label>
-            <input type="text" value={formCategoria.descripcionArca} onChange={(e) => setFormCategoria((p) => ({ ...p, descripcionArca: e.target.value }))} className="input-field" placeholder="Tal como viene del organismo, ej: DIRECTOR DE PROGRAMAS - GRUPO 1" />
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Puesto desempeñado</label>

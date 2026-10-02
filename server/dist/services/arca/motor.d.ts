@@ -18,3 +18,5 @@ export declare const MOTOR: string;
  * garantiza que nunca aprieta «Aceptar», y éste lo necesita. Cada uno con su lista blanca y su test.
  */
 export declare const MOTOR_ALTAS: string;
+/** El lector de catálogos de ARCA (solo lectura, cero clicks). Ver `catalogoArcaSync.ts`. */
+export declare const MOTOR_CATALOGOS: string;

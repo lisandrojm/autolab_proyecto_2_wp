@@ -61,24 +61,24 @@ const cache = new Map();
 export function olvidarContratosPorVencer() {
     cache.clear();
 }
-export function listarContratosPorVencer(tenantId, userId, hoy = hoyArgentina(), dias = DIAS_DE_AVISO) {
+export function listarContratosPorVencer(tenantId, userId, hoy = hoyArgentina(), dias = DIAS_DE_AVISO, vencidos = false) {
     const ventana = Number.isInteger(dias) && dias >= 1 && dias <= DIAS_DE_AVISO_MAX ? dias : DIAS_DE_AVISO;
     const ahora = Date.now();
     for (const [k, v] of cache)
         if (v.hasta <= ahora)
             cache.delete(k);
-    // La ventana va en la clave: 7 y 15 días son dos listas distintas y no pueden pisarse entre sí.
-    const clave = `${tenantId}:${userId}:${hoy}:${ventana}`;
+    // La ventana y el sentido van en la clave: 7 y 15 días, o por vencer y vencidos, son listas distintas.
+    const clave = `${tenantId}:${userId}:${hoy}:${ventana}:${vencidos ? "v" : "p"}`;
     const guardado = cache.get(clave);
     if (guardado)
         return guardado.promesa;
-    const promesa = calcular(tenantId, userId, hoy, ventana);
+    const promesa = calcular(tenantId, userId, hoy, ventana, vencidos);
     cache.set(clave, { hasta: ahora + CACHE_MS, promesa });
     // Un error no se guarda: el próximo pedido vuelve a intentar.
     promesa.catch(() => cache.delete(clave));
     return promesa;
 }
-async function calcular(tenantId, userId, hoy, dias) {
+async function calcular(tenantId, userId, hoy, dias, vencidos = false) {
     const t0 = Date.now();
     const tenant = new Types.ObjectId(String(tenantId));
     const yo = new Types.ObjectId(String(userId));
@@ -109,11 +109,13 @@ async function calcular(tenantId, userId, hoy, dias) {
       lista de formas posibles). Lo usa el índice de `contracts.fecha_baja_contrato`. El filtro exacto
       sigue acá abajo: la base puede dejar pasar de más, nunca de menos.
     */
-    const limite = sumarDias(hoy, dias);
+    // La ventana de bajas: [hoy, hoy+dias] por vencer; [hoy−dias, ayer] vencidos.
+    const desde = vencidos ? sumarDias(hoy, -dias) : hoy;
+    const limite = vencidos ? sumarDias(hoy, -1) : sumarDias(hoy, dias);
     const seleccion = ["projectId", "userId", ...CAMPOS_CONTRATO.map((c) => `contracts.${c}`)].join(" ");
     const asignaciones = await UserProject.find({
         projectId: { $in: projectIds.map((id) => new Types.ObjectId(id)) },
-        $or: [{ "contracts.fecha_baja_contrato": { $gte: hoy, $lt: sumarDias(limite, 1) } }, { "contracts.fecha_baja_contrato": { $in: variantesDMY(hoy, dias) } }],
+        $or: [{ "contracts.fecha_baja_contrato": { $gte: desde, $lt: sumarDias(limite, 1) } }, { "contracts.fecha_baja_contrato": { $in: variantesDMY(desde, diasEntre(desde, limite)) } }],
     })
         .select(seleccion)
         .lean();
@@ -128,7 +130,7 @@ async function calcular(tenantId, userId, hoy, dias) {
             // Sin alta no se sabe cuánto dura; sin baja es por tiempo indeterminado y no vence.
             if (!alta || !baja)
                 continue;
-            if (alta > hoy || baja < hoy || baja > limite)
+            if (alta > hoy || baja < desde || baja > limite)
                 continue;
             if (diasEntre(alta, baja) + 1 <= DIAS_DE_AVISO)
                 continue;

@@ -22,3 +22,6 @@ export const MOTOR = resolve(RAIZ_REPO, "frontend/tools/validar-obras-sociales.m
  * garantiza que nunca aprieta «Aceptar», y éste lo necesita. Cada uno con su lista blanca y su test.
  */
 export const MOTOR_ALTAS = resolve(RAIZ_REPO, "frontend/tools/altas-arca.mjs");
+
+/** El lector de catálogos de ARCA (solo lectura, cero clicks). Ver `catalogoArcaSync.ts`. */
+export const MOTOR_CATALOGOS = resolve(RAIZ_REPO, "frontend/tools/catalogos-arca.mjs");

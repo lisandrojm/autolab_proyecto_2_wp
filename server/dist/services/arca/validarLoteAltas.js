@@ -132,6 +132,13 @@ export async function validarLoteAltas(o) {
         }
         const categoria = categorias.find((x) => Number(x?.data?.id) === Number(c.categoria_sat_id));
         const convenioCodigo = String(categoria?.data?.convenio || "").trim();
+        // La categoría tiene que coincidir con lo que ARCA dice de su código (espejo). Un código cruzado
+        // pasa todos los demás chequeos —es un código válido, de otra categoría— y ARCA lo acepta.
+        const est = categoria?.data?.estadoArca;
+        if (est && est !== "ok" && !(est === "nombre_distinto" && categoria?.data?.estadoArcaConfirmada)) {
+            errores.push(`${etiqueta}: la categoría «${categoria?.data?.nombre || categoria?.name}» tiene el código ${categoria?.data?.codigoArca}, que ARCA describe como «${categoria?.data?.descripcionArca || "—"}» (${est}). Corregila en Configuración → ARCA → Categorías.`);
+            return;
+        }
         // La misma cascada de obra social que `resolveAfipValues`: validada en ARCA, o la del convenio
         // si ARCA respondió que no figura. Sin validar NO hay obra social, y el lote no sale.
         let rnos = "";

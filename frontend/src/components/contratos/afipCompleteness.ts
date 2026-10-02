@@ -9,6 +9,7 @@ import { cuitEsValido } from "../../utils/cuit";
 import { fechaAfip, finAnteriorAlInicio } from "./afipTxt";
 import { estadoGeneraAltaTemprana } from "./altaTemprana";
 import { claveEstado } from "../../utils/estadoClave";
+import { TEXTO_ESTADO_CATEGORIA, type EstadoCategoriaArca } from "@compartido/catalogoArca";
 
 /**
  * Chequeo de completitud de datos para la generación del TXT de Alta masiva de ARCA.
@@ -346,6 +347,13 @@ export interface AfipValues {
    */
   situacionRevista: string;
   situacionRevistaOrigen: OrigenValorArca;
+  /** La categoría contra el espejo de ARCA (ver `compartido/catalogoArca.ts`). `null` = sin espejo. */
+  estadoArcaCategoria: EstadoCategoriaArca | null;
+  estadoArcaCategoriaConfirmada: boolean;
+  /** Lo que ARCA dice del código de la categoría. */
+  descripcionArcaCategoria: string;
+  /** Nombre propio de la categoría, para los mensajes. */
+  nombreCategoria: string;
 }
 
 /** Situación de revista de un alta nueva cuando nadie configuró otra: «01 — Activo». */
@@ -644,6 +652,10 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     constatadaEl: String(row.obraSocialConstatadaEl || ""),
     rnosOrigen: obraSocialPropia ? ((row.obraSocialOrigen || "heredada-usuario") as "constatada" | "manual" | "heredada-usuario") : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : "ninguno",
     sucursal: sucursal?.codigo ? String(sucursal.codigo) : "",
+    estadoArcaCategoria: (categoria?.data?.estadoArca as EstadoCategoriaArca | null | undefined) ?? null,
+    estadoArcaCategoriaConfirmada: !!categoria?.data?.estadoArcaConfirmada,
+    descripcionArcaCategoria: String(categoria?.data?.descripcionArca || ""),
+    nombreCategoria: String(categoria?.data?.nombre || categoria?.name || ""),
     puesto: soloDigitos(puestoResuelto.valor),
     puestoOrigen: puestoResuelto.origen,
     situacionRevista: soloDigitos(revistaResuelta.valor),
@@ -759,6 +771,19 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   // aporta el código. Nombrar el grupo evita mandar a buscar un campo de sueldo en la categoría.
   checks.push(v.retribucion <= 0 ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", "", "falta", "El grupo salarial de esta categoría no tiene cargado el sueldo bruto.") : !v.retribucionOk ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "error", "El importe no entra en las 15 posiciones del campo.") : mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "ok"));
   checks.push(presencia("categoriaProf", "Categoría profesional (cód. ARCA)", "categoria_sat", v.categoriaProf, "La categoría no tiene cargado su código de ARCA."));
+
+  /*
+    --- La categoría contra lo que ARCA dice de su código.
+
+    Un código cruzado pasa todos los demás chequeos —es un código válido, de OTRA categoría— y ARCA lo
+    acepta sin avisar. Así 41 categorías declararon durante meses la categoría equivocada. Sin espejo
+    sembrado (`null`) no se sabe y no se bloquea.
+  */
+  if (v.categoriaProf && v.estadoArcaCategoria && v.estadoArcaCategoria !== "ok" && !(v.estadoArcaCategoria === "nombre_distinto" && v.estadoArcaCategoriaConfirmada)) {
+    const codigo = String(v.categoriaProf).padStart(6, "0");
+    const dice = v.descripcionArcaCategoria ? `ARCA dice que el ${codigo} es «${v.descripcionArcaCategoria}»` : `ARCA no tiene el código ${codigo} para el convenio ${v.convenioCategoria}`;
+    checks.push(mk("categoriaArca", "Categoría según ARCA", "categoria_sat", codigo, "error", `La categoría «${v.nombreCategoria}» tiene el código ${codigo}. ${dice} (${TEXTO_ESTADO_CATEGORIA[v.estadoArcaCategoria]}). Corregila en Configuración → ARCA → Categorías.`));
+  }
 
   // Categoría ∈ convenios de la empresa. ARCA no tiene un catálogo global de categorías: el combo
   // `l_CatCCT` viene filtrado por convenio y solo ofrece los de los CCT que la empleadora tiene

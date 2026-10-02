@@ -124,6 +124,7 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/arca/modalidades-liquidacion", permisos: ["config_arca_tablas:view"] },
   { path: "/arca/puestos-desempenados", permisos: ["config_arca_tablas:view"] },
   { path: "/arca/situaciones-revista", permisos: ["config_arca_tablas:view"] },
+  { path: "/arca/catalogo", permisos: ["config_arca_tablas:view"] },
 
   // --- Entradas: redirigen a la primera pantalla permitida (ver `rutaInicial`) --------------------
   { path: "/", entrada: true },

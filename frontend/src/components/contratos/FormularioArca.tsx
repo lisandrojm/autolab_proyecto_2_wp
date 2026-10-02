@@ -1,3 +1,4 @@
+import { EstadoArcaChip } from "../arcaCategorias/EstadoArcaChip";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock, faChevronDown, faChevronRight, faRotate, faPenToSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
@@ -729,6 +730,15 @@ export const FormularioArca: React.FC<{
                         ) : valores.convenioCategoria ? (
                           <>
                             del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato
+                            {/* Lo que ARCA dice de ESTE código: es lo que se declara, no el nombre interno. */}
+                            {valores.descripcionArcaCategoria && (
+                              <span className="flex items-center gap-1.5 mt-0.5">
+                                <EstadoArcaChip estado={valores.estadoArcaCategoria} confirmada={valores.estadoArcaCategoriaConfirmada} descripcion={valores.descripcionArcaCategoria} />
+                                <span>
+                                  ARCA: <strong>{String(valores.categoriaProf).padStart(6, "0")}</strong> · {valores.descripcionArcaCategoria}
+                                </span>
+                              </span>
+                            )}
                           </>
                         ) : (
                           <>elegí una del convenio {convenioElegido}</>
