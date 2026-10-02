@@ -1495,6 +1495,7 @@ export const ContractBulkAfipTab: React.FC<{
   const [cargarArcaInfoOpen, setCargarArcaInfoOpen] = useState(false);
   // Explicación del flujo completo: Generar TXT → Cargar en ARCA → sincronización automática.
   const [flujoTxtInfoOpen, setFlujoTxtInfoOpen] = useState(false);
+  const [urgenteInfoOpen, setUrgenteInfoOpen] = useState(false);
   const [validarObrasSocialesInfoOpen, setValidarObrasSocialesInfoOpen] = useState(false);
   /** Fila cuyo ⓘ de Obra Social se tocó: no se puede validar porque todavía no tiene empleadora. */
   const [obraSocialSinEmpresa, setObraSocialSinEmpresa] = useState<ContractOverviewRow | null>(null);
@@ -2548,6 +2549,9 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
               Generar TXT Masivo (ARCA){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
+            <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
             <button
               onClick={presentarAltasMasivas}
               disabled={!empresaDeLaPestana || completos85.length === 0 || completos85.length > MAX_ALTAS_MASIVAS}
@@ -2567,7 +2571,8 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
               Generar TXT Masivo URGENTE (Max {MAX_ALTAS_MASIVAS}){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
-            <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
+            {/* Su propio ⓘ, en ámbar como el botón: es otro trámite (otro formato, otra pantalla de ARCA). */}
+            <button type="button" onClick={() => setUrgenteInfoOpen(true)} title="Cómo funciona el TXT URGENTE" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
             <button
@@ -3347,18 +3352,43 @@ export const ContractBulkAfipTab: React.FC<{
 
       {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => load(true)} />}
 
+      {urgenteInfoOpen && (
+        <Modal isOpen={urgenteInfoOpen} onClose={() => setUrgenteInfoOpen(false)} title="TXT Masivo URGENTE (Altas Masivas)" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Es el camino rápido para pocas altas: en vez de subir un archivo por Carga Masiva, los registros se pegan en <strong>Relaciones Laborales → Registrar Nuevas Altas → Altas Masivas</strong> y quedan dadas en el momento.
+            </p>
+            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
+              <li>
+                Tildá hasta <strong>{MAX_ALTAS_MASIVAS} contratos</strong> completos (o dejá el filtro con {MAX_ALTAS_MASIVAS} o menos). Es el máximo que admite ARCA en esa pantalla.
+              </li>
+              <li>
+                Al apretar el botón se arman los registros de <strong>85 posiciones</strong> —un formato distinto del TXT Masivo— y se <strong>copian al portapapeles</strong>, por si hay que pegarlos a mano.
+              </li>
+              <li>
+                Se abre el panel: confirmás empleadora y personas, y WeProdu los presenta en ARCA solo. Verifica que la grilla de altas esté vacía antes de pegar y que queden exactamente las personas pedidas antes de aceptar.
+              </li>
+              <li>Al terminar muestra el resultado por persona: alta dada o rechazada, con el motivo de ARCA.</li>
+            </ol>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Además de los datos del TXT Masivo, este formato informa <strong>puesto desempeñado</strong> (de la categoría o el default de la empleadora), <strong>convenio</strong> (de la categoría) y <strong>situación de revista</strong> («01 — Activo» si no se configuró otra). Un contrato sin puesto queda afuera y el botón lo dice.
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Solo se habilita en la pestaña de una empresa. Lo presentado no se deshace y nunca se reintenta: si no se puede leer el resultado, queda «sin confirmar» y hay que mirarlo en ARCA.
+            </p>
+          </div>
+        </Modal>
+      )}
+
       {flujoTxtInfoOpen && (
-        <Modal isOpen={flujoTxtInfoOpen} onClose={() => setFlujoTxtInfoOpen(false)} title="Qué hacer con el TXT" size="sm" zIndex={80}>
+        <Modal isOpen={flujoTxtInfoOpen} onClose={() => setFlujoTxtInfoOpen(false)} title="TXT Masivo (Carga Masiva)" size="sm" zIndex={80}>
           <div className="space-y-3">
             <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
               <li>
                 <strong>Generar TXT Masivo (ARCA)</strong>: descarga el TXT con las altas completas (de respaldo) y lo <strong>presenta en ARCA solo</strong>, por Relaciones Laborales → Carga Masiva: crea la novedad, sube el archivo, espera la validación y la envía. Antes de empezar pide confirmación.
               </li>
               <li>
-                <strong>Generar TXT Masivo URGENTE</strong>: arma los registros de 85 posiciones (otro formato: informa puesto, convenio y situación de revista), los <strong>copia al portapapeles</strong> y los presenta por Registrar Nuevas Altas → Altas Masivas. Máximo {MAX_ALTAS_MASIVAS}.
-              </li>
-              <li>
-                Las dos solo se habilitan en la pestaña de <strong>una empresa</strong>, y nunca reintentan un envío: si no se puede leer el resultado, el contrato queda «indeterminado» y hay que mirarlo en ARCA.
+                Solo se habilita en la pestaña de <strong>una empresa</strong>, y nunca reintentan un envío: si no se puede leer el resultado, el contrato queda «indeterminado» y hay que mirarlo en ARCA.
               </li>
               <li>
                 <strong>Cargar en ARCA</strong>: el camino manual de siempre, por si la presentación automática falla. Abre el portal para subir a mano el TXT descargado.
