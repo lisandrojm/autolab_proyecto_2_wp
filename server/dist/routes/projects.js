@@ -87,6 +87,8 @@ import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../servi
 import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
+import { Contrato } from "../models/Contrato.js";
+import { numeroALetras } from "../utils/numeroALetras.js";
 import { cambiosAlAprobar } from "../services/revisionDeSolicitud.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1903,6 +1905,25 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         // para guardarla junto al id (parity con los otros nombre_*; útil para el detalle y el PDF).
         const empresaContratoDoc = contract.empresaContratoId ? await Company.findById(contract.empresaContratoId).select("razonSocial").lean() : null;
         const empresaReleaseDoc = contract.empresaReleaseId ? await Company.findById(contract.empresaReleaseId).select("razonSocial").lean() : null;
+        /*
+          LAS JORNADAS QUE FIJA EL TIPO DE CONTRATO SE RESPETAN SIEMPRE («Cantidad de jornadas» de su ABM;
+          un plazo fijo, 30). El formulario ya las usa, pero arma sus cuentas con catálogos que llegan de a
+          uno: una aprobación se guardó con las 27 del calendario de octubre en vez de las 30 del tipo, y
+          con el importe recalculado para abajo. Acá se corrige a la fuerza, y el sueldo en mano se rehace con
+          el importe por jornada (que es lo que se pidió). No aplica a los tipos por días sueltos.
+        */
+        if (isValidId(contract.contrato_id)) {
+            const tipoContrato = await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas").lean();
+            const fijas = Math.trunc(Number(tipoContrato?.data?.cantidadJornadas) || 0);
+            if (fijas > 0 && tipoContrato?.data?.modoFechas !== "dias" && Number(contract.cantidad_jornadas_laborales) !== fijas) {
+                contract.cantidad_jornadas_laborales = fijas;
+                const jornada = Number(contract.sueldo_jornada) || 0;
+                if (jornada > 0) {
+                    contract.sueldo_mano = Number((jornada * fijas).toFixed(2));
+                    contract.sueldo_mano_texto = numeroALetras(contract.sueldo_mano);
+                }
+            }
+        }
         const enrichedContract = {
             ...contract,
             empresaContratoId: contract.empresaContratoId || null,
@@ -3058,11 +3079,12 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
             return;
         }
         const camposDeValoracion = veredicto.aGuardar(req.user.userId);
-        const jornada = Number(contrato.sueldo_jornada || 0);
         const sueldo_neto = Number(Number(cat.data?.neto ?? 0).toFixed(2));
         const sueldo_bruto = Number(Number(cat.data?.sueldoBruto ?? 0).toFixed(2));
         const sueldo_diario_neto = Number((sueldo_neto / 30).toFixed(2));
-        const diferencia_diaria_neto = Number((jornada - sueldo_diario_neto).toFixed(2));
+        // La diferencia diaria mide cuánto se cambió el importe por jornada respecto del pedido: cambiar la
+        // categoría no toca el importe, así que se conserva la que tenía.
+        const diferencia_diaria_neto = Number(contrato.diferencia_diaria_neto || 0);
         up.contracts[idx] = {
             ...contrato.toObject(),
             ...camposDeValoracion,

@@ -513,6 +513,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     };
   }, [effectiveViewMode, allProjects.length]);
 
+  /**
+   * EL IMPORTE POR JORNADA CON EL QUE ABRIÓ EL FORMULARIO: el que pidió la solicitud o el que tenía el
+   * contrato. La «Diferencia diaria neto» se mide contra ESTE valor —arranca en 0 y muestra cuánto se lo
+   * subió o bajó al editar—, no contra la escala. `null` = no había (contrato nuevo sin solicitud):
+   * ahí se compara contra el diario neto de la escala, como antes.
+   */
+  const jornadaBaseWizard = useRef<number | null>(null);
+
   /* -------------------------- Auto-Calculations ---------------------------
    * El Sueldo NETO y BRUTO salen de la Categoría seleccionada (ya vienen
    * calculados en el catálogo: bruto = básico + adicional + presentismo; neto = bruto × 0.81).
@@ -526,7 +534,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const sueldo_neto = cat ? Number(Number(cat.data?.neto ?? 0).toFixed(2)) : 0;
     const sueldo_bruto = cat ? Number(Number(cat.data?.sueldoBruto ?? 0).toFixed(2)) : 0;
     const sueldo_diario_neto = cat ? Number((sueldo_neto / 30).toFixed(2)) : 0;
-    const diferencia_diaria_neto = cat ? Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2)) : 0;
+    const base = jornadaBaseWizard.current;
+    const diferencia_diaria_neto = base !== null ? Number((wizardData.sueldo_jornada - base).toFixed(2)) : cat ? Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2)) : 0;
     const sueldo_mano_texto = numeroALetras(sueldo_mano);
 
     if (sueldo_mano !== wizardData.sueldo_mano || sueldo_neto !== wizardData.sueldo_neto || sueldo_bruto !== wizardData.sueldo_bruto || sueldo_diario_neto !== wizardData.sueldo_diario_neto || diferencia_diaria_neto !== wizardData.diferencia_diaria_neto || sueldo_mano_texto !== wizardData.sueldo_mano_texto) {
@@ -2198,6 +2207,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         : null;
     const semanaInicial = semanaInicialCalc ? { dias_por_semana: semanaInicialCalc.diasPorSemana, dias_semana: semanaInicialCalc.dias } : {};
 
+    // La jornada con la que abre: lo pedido en la solicitud, o lo que tenía el contrato.
+    const jornadaInicial = Number(deLaSolicitud.sueldo_jornada) || Number(lastContract?.sueldo_jornada) || 0;
+    jornadaBaseWizard.current = jornadaInicial > 0 ? jornadaInicial : null;
     // Reset wizard data with pulled data or defaults
     setWizardData({
       rol_frame_id: initialRolFrameId,

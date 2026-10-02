@@ -197,7 +197,8 @@ export function contratoDesdeSolicitud({ solicitud, persona, proyecto, cat }: { 
     sueldo_neto: sueldoNeto,
     sueldo_bruto: sueldoBruto,
     sueldo_diario_neto: sueldoDiarioNeto,
-    diferencia_diaria_neto: catDelContrato ? Number((sueldoJornada - sueldoDiarioNeto).toFixed(2)) : 0,
+    // Se aprueba tal como se pidió: la diferencia mide cuánto se cambió el importe pedido, y acá no se cambió.
+    diferencia_diaria_neto: 0,
     sede_id: Number(sedeId),
     reemplazo,
     empleado_id_reemplezado: reemplazado ? Number(reemplazado) : null,
