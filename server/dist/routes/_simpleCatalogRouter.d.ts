@@ -119,5 +119,17 @@ export interface SimpleCatalogConfig {
      * APAGADO POR DEFECTO: los seis catálogos que ya lo usan se comportan exactamente igual.
      */
     tenantScoped?: boolean;
+    /**
+     * Antes de borrar: devuelve un motivo si el registro está EN USO (y entonces no se borra, 409), o
+     * `null` si se puede. Para los catálogos a los que otros datos referencian por código: borrar el
+     * código deja esas referencias apuntando a nada. Sin el gancho, se borra como siempre.
+     */
+    antesDeBorrar?: (item: any) => Promise<string | null>;
+    /**
+     * Campos que se escriben cuando alguien carga o corrige un registro A MANO desde el ABM (alta, o
+     * edición del nombre o del código). Ej.: `{ origen: "manual" }`, para que una importación de la
+     * tabla oficial no lo pise. Cambiar solo un interruptor (activo) no cuenta como edición manual.
+     */
+    alEditarAMano?: Record<string, unknown>;
 }
 export declare function createSimpleCatalogRouter(model: Model<any>, config: SimpleCatalogConfig): Router;

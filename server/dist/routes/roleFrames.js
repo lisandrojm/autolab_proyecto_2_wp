@@ -1,3 +1,5 @@
+import { codigoPuesto } from "../compartido/puestosDesempenados.js";
+import { puestoActivo } from "../services/arca/puestosDesempenados.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { RoleFrame } from "../models/RoleFrame.js";
@@ -17,7 +19,21 @@ const router = Router();
  * mande la forma vieja o una clave mal escrita creería que guardó valoraciones que no se guardaron.
  * Mismo criterio que `_simpleCatalogRouter`: si no se puede guardar, no se contesta OK.
  */
-const CLAVES_ACEPTADAS = new Set(["name", "categorias", "categoryIds"]);
+const CLAVES_ACEPTADAS = new Set(["name", "categorias", "categoryIds", "puestoDesempenado"]);
+/**
+ * El puesto desempeñado de ARCA de la función (registro de 85). Vacío lo quita; si viene, tiene que
+ * existir y estar ACTIVO en el catálogo. `undefined` = no vino (no se toca).
+ */
+const puestoDelBody = async (body) => {
+    if (body?.puestoDesempenado === undefined)
+        return {};
+    const c = codigoPuesto(body.puestoDesempenado);
+    if (!c)
+        return { valor: "" };
+    if (!(await puestoActivo(c)))
+        return { error: `El puesto desempeñado ${c} no existe o está desactivado en el catálogo (Configuración → ARCA → Puestos Desempeñados).` };
+    return { valor: c };
+};
 const clavesDeMas = (body) => (body && typeof body === "object" ? Object.keys(body).filter((k) => !CLAVES_ACEPTADAS.has(k)) : []);
 /**
  * Acepta las dos formas: la nueva (`categorias`) y la vieja (`categoryIds`).
@@ -214,6 +230,9 @@ router.post("/", requireTenant, authenticateToken, async (req, res) => {
         if (!name || !name.trim()) {
             return res.status(400).json({ error: "El nombre es obligatorio" });
         }
+        const puesto = await puestoDelBody(req.body);
+        if (puesto.error)
+            return res.status(400).json({ error: puesto.error });
         const categoriasSatData = await armarCategoriasSatData(normalizarCategorias(req.body) || []);
         const externalId = Date.now().toString();
         const newRole = new RoleFrame({
@@ -224,7 +243,8 @@ router.post("/", requireTenant, authenticateToken, async (req, res) => {
                     id: Date.now(),
                     nombre: name.trim()
                 },
-                categoriasSat: categoriasSatData
+                categoriasSat: categoriasSatData,
+                puestoDesempenado: puesto.valor || "",
             }
         });
         await newRole.save();
@@ -263,6 +283,15 @@ router.put("/:id", requireTenant, authenticateToken, async (req, res) => {
                     role.data.rol.nombre = name.trim();
                 }
             }
+        }
+        const puesto = await puestoDelBody(req.body);
+        if (puesto.error)
+            return res.status(400).json({ error: puesto.error });
+        if (puesto.valor !== undefined) {
+            if (!role.data)
+                role.data = { rol: { id: Date.now(), nombre: role.name }, categoriasSat: [] };
+            role.data.puestoDesempenado = puesto.valor;
+            role.markModified("data");
         }
         if (categorias !== undefined) {
             const categoriasSatData = await armarCategoriasSatData(categorias);

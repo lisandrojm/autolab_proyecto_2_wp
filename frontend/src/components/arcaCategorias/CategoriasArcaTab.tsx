@@ -11,6 +11,7 @@ import { BannerEscalasVencidas } from './BannerEscalasVencidas';
 import { BannerCategoriasDesalineadas } from './BannerCategoriasDesalineadas';
 import { EstadoArcaChip } from './EstadoArcaChip';
 import { SelectorCodigoArca } from './SelectorCodigoArca';
+import { SelectorPuestoDesempenado } from '../arca/SelectorPuestoDesempenado';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../utils/fechas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -1591,10 +1592,10 @@ export const CategoriasArcaTab: React.FC = () => {
           </div>
 
 
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Puesto desempeñado</label>
-            <input type="text" inputMode="numeric" maxLength={4} value={formCategoria.puestoDesempenado} onChange={(e) => setFormCategoria((p) => ({ ...p, puestoDesempenado: e.target.value.replace(/\D/g, '') }))} className="input-field" placeholder="Ej: 2455" />
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">4 dígitos de la tabla de ARCA. Solo lo pide el alta URGENTE (Altas Masivas); vacío = el default de la empleadora.</p>
+            <SelectorPuestoDesempenado valor={formCategoria.puestoDesempenado} onChange={(codigo) => setFormCategoria((p) => ({ ...p, puestoDesempenado: codigo }))} />
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Solo lo pide el alta URGENTE (Altas Masivas). Manda el del Rol Empresa del contrato; si la función no tiene, rige este, y después el de la empleadora.</p>
           </div>
 
           {/*

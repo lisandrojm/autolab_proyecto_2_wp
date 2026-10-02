@@ -25,7 +25,7 @@
  * herencia.
  */
 
-export type OrigenValorArca = "contrato" | "tipo_contrato" | "categoria" | "empresa" | "global" | "ninguno";
+export type OrigenValorArca = "contrato" | "tipo_contrato" | "funcion" | "categoria" | "empresa" | "global" | "ninguno";
 
 export interface ValorConOrigen {
   valor: string;
@@ -109,6 +109,7 @@ export const conCascada = (valorDelContrato: unknown, origenDelContrato: OrigenV
 export const ETIQUETA_ORIGEN: Record<OrigenValorArca, string> = {
   contrato: "cargado en el contrato",
   tipo_contrato: "del tipo de contrato",
+  funcion: "del Rol Empresa",
   categoria: "de la categoría",
   empresa: "por defecto de la empleadora",
   global: "por defecto de la instalación",

@@ -1,4 +1,6 @@
 import { Types } from "mongoose";
+import { RoleFrame } from "../../models/RoleFrame.js";
+import { resolverPuesto } from "../../compartido/puestosDesempenados.js";
 import UserProject from "../../models/UserProject.js";
 import { Project } from "../../models/Project.js";
 import { User } from "../../models/User.js";
@@ -137,6 +139,9 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
     sucursales: actividadesPorSucursal,
   };
   const dg: any = defaultsGlobales || {};
+  // Los Roles Empresa de los contratos del lote: de ahí sale primero el puesto desempeñado.
+  const rolIds = [...new Set(ups.flatMap((u) => (u.contracts || []).map((c: any) => Number(c?.rol_frame_id)).filter((n: number) => Number.isFinite(n) && n > 0)))];
+  const rolPorId = new Map(((await RoleFrame.find({ "data.rol.id": { $in: rolIds } }).select("data.rol.id data.puestoDesempenado").lean()) as any[]).map((r) => [Number(r.data?.rol?.id), r]));
   const de: any = empresa.defaultsArca || {};
 
   const errores: Array<string | Diferencia> = [];
@@ -201,7 +206,8 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
       retribucion: Number(categoria?.data?.sueldoBruto || 0),
       rnos,
       rnosMotivo,
-      puesto: digitos(categoria?.data?.puestoDesempenado || de.puestoDesempenado || dg.puestoDesempenado || ""),
+      // Mismo orden que el generador del registro: Rol Empresa → Categoría → empresa → instalación.
+      puesto: resolverPuesto({ rol: rolPorId.get(Number(c.rol_frame_id))?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, empresa: de.puestoDesempenado, global: dg.puestoDesempenado }).codigo,
       situacionRevista: digitos(de.situacionRevista || dg.situacionRevista || "01"),
     };
     const dif = cotejarRegistro(modo, it.registro, esperado, cat);

@@ -111,6 +111,18 @@ export interface SimpleCatalogConfig {
    * APAGADO POR DEFECTO: los seis catálogos que ya lo usan se comportan exactamente igual.
    */
   tenantScoped?: boolean;
+  /**
+   * Antes de borrar: devuelve un motivo si el registro está EN USO (y entonces no se borra, 409), o
+   * `null` si se puede. Para los catálogos a los que otros datos referencian por código: borrar el
+   * código deja esas referencias apuntando a nada. Sin el gancho, se borra como siempre.
+   */
+  antesDeBorrar?: (item: any) => Promise<string | null>;
+  /**
+   * Campos que se escriben cuando alguien carga o corrige un registro A MANO desde el ABM (alta, o
+   * edición del nombre o del código). Ej.: `{ origen: "manual" }`, para que una importación de la
+   * tabla oficial no lo pise. Cambiar solo un interruptor (activo) no cuenta como edición manual.
+   */
+  alEditarAMano?: Record<string, unknown>;
 }
 
 /**
@@ -490,6 +502,7 @@ export function createSimpleCatalogRouter(
         const b = aBooleanoOpcional((req.body as Record<string, unknown>)[f.key]);
         if (b !== undefined) newItem[f.key] = b;
       }
+      Object.assign(newItem, config.alEditarAMano || {});
       const created = await model.create(newItem);
       res.status(201).json(created);
     } catch (error) {
@@ -550,6 +563,7 @@ export function createSimpleCatalogRouter(
         const b = aBooleanoOpcional((req.body as Record<string, unknown>)[f.key]);
         if (b !== undefined) item[f.key] = b;
       }
+      if (config.alEditarAMano && (nombre !== undefined || externalId !== undefined)) for (const [k, v] of Object.entries(config.alEditarAMano)) item[k] = v;
 
       await item.save();
       res.json(item);
@@ -563,6 +577,14 @@ export function createSimpleCatalogRouter(
   router.delete("/:id", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
+      if (config.antesDeBorrar) {
+        const item = await model.findOne({ _id: id, ...delTenant(req) }).lean();
+        const motivo = item ? await config.antesDeBorrar(item) : null;
+        if (motivo) {
+          res.status(409).json({ error: motivo });
+          return;
+        }
+      }
       const result = await model.deleteOne({ _id: id, ...delTenant(req) });
       if (result.deletedCount === 0) {
         res.status(404).json({ error: `${config.entityLabel} no encontrado` });

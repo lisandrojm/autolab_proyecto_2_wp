@@ -10,6 +10,7 @@ import { fechaAfip, finAnteriorAlInicio } from "./afipTxt";
 import { estadoGeneraAltaTemprana } from "./altaTemprana";
 import { claveEstado } from "../../utils/estadoClave";
 import { TEXTO_ESTADO_CATEGORIA, type EstadoCategoriaArca } from "@compartido/catalogoArca";
+import { resolverPuesto } from "@compartido/puestosDesempenados";
 
 /**
  * Chequeo de completitud de datos para la generación del TXT de Alta masiva de ARCA.
@@ -88,6 +89,11 @@ export interface AfipCatalogs {
    * código de CCT ("0131/75") con el que se compara el convenio de la categoría.
    */
   convenios?: Array<SimpleCatalogItem & { obraSocialDefaultId?: number | null }>;
+  /**
+   * Los Roles Empresa (funciones): de la del contrato (`rol_frame_id` = `data.rol.id`) sale PRIMERO el
+   * puesto desempeñado del registro de 85. Opcional: sin ellos se resuelve desde la categoría.
+   */
+  roleFrames?: Array<{ data?: { rol?: { id?: number }; puestoDesempenado?: string } }>;
 }
 
 /**
@@ -605,7 +611,10 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const modalidadLiqResuelta = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", defaultsEmpresa, defaultsGlobales);
   // Solo para el registro de 85. El puesto lo define la categoría (cada categoría de un CCT es un
   // puesto); la situación de revista no tiene escalón de contrato: un alta nueva es «Activo».
-  const puestoResuelto = conCascada(categoria?.data?.puestoDesempenado, "categoria", "puestoDesempenado", defaultsEmpresa, defaultsGlobales);
+  // Rol Empresa → Categoría → empresa → instalación (`compartido/puestosDesempenados.ts`, el mismo que usa el server).
+  const rolDelContrato = row.rol_frame_id != null ? cat.roleFrames?.find((r) => Number(r.data?.rol?.id) === Number(row.rol_frame_id)) : undefined;
+  const puestoR = resolverPuesto({ rol: rolDelContrato?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, empresa: defaultsEmpresa?.puestoDesempenado, global: defaultsGlobales?.puestoDesempenado });
+  const puestoResuelto = { valor: puestoR.codigo, origen: puestoR.origen as OrigenValorArca };
   const revistaCascada = conCascada(undefined, "contrato", "situacionRevista", defaultsEmpresa, defaultsGlobales);
   const revistaResuelta = revistaCascada.valor ? revistaCascada : { valor: SITUACION_REVISTA_ALTA, origen: "global" as OrigenValorArca };
 
@@ -1086,7 +1095,7 @@ export function resumenArca(r: AfipRowResult): { tono: TonoArca; texto: string }
 export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base: AfipRowResult = resolveAfip(row, cat)): { checks: AfipFieldCheck[]; completo: boolean } {
   const v = resolveAfipValues(row, cat);
   const de = (origen: OrigenValorArca) =>
-    origen === "categoria" ? "De la categoría del contrato." : origen === "empresa" ? "Del default de la empleadora." : origen === "global" ? "Del default de la instalación." : undefined;
+    origen === "funcion" ? "Del Rol Empresa del contrato." : origen === "categoria" ? "De la categoría del contrato." : origen === "empresa" ? "Del default de la empleadora." : origen === "global" ? "Del default de la instalación." : undefined;
   const puesto: AfipFieldCheck = v.puesto
     ? { key: "puesto", label: "Puesto desempeñado (solo Altas Masivas)", origen: v.puestoOrigen === "categoria" ? "categoria_sat" : "empresa", value: v.puesto, estado: "ok", ok: true, detalle: de(v.puestoOrigen) }
     : {
@@ -1096,7 +1105,7 @@ export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base:
         value: "",
         estado: "falta",
         ok: false,
-        detalle: "Ni la categoría ni la empleadora tienen cargado el código de puesto desempeñado. El registro de 85 lo exige; la Carga Masiva no.",
+        detalle: "Ni el Rol Empresa del contrato, ni la categoría, ni la empleadora tienen cargado el código de puesto desempeñado. Cargalo en el Rol Empresa (Usuarios → Roles Empresa). El registro de 85 lo exige; la Carga Masiva no.",
       };
   const revista: AfipFieldCheck = {
     key: "situacionRevista",

@@ -351,6 +351,7 @@ model, config) {
                 if (b !== undefined)
                     newItem[f.key] = b;
             }
+            Object.assign(newItem, config.alEditarAMano || {});
             const created = await model.create(newItem);
             res.status(201).json(created);
         }
@@ -413,6 +414,9 @@ model, config) {
                 if (b !== undefined)
                     item[f.key] = b;
             }
+            if (config.alEditarAMano && (nombre !== undefined || externalId !== undefined))
+                for (const [k, v] of Object.entries(config.alEditarAMano))
+                    item[k] = v;
             await item.save();
             res.json(item);
         }
@@ -425,6 +429,14 @@ model, config) {
     router.delete("/:id", ...guardias, async (req, res) => {
         try {
             const { id } = req.params;
+            if (config.antesDeBorrar) {
+                const item = await model.findOne({ _id: id, ...delTenant(req) }).lean();
+                const motivo = item ? await config.antesDeBorrar(item) : null;
+                if (motivo) {
+                    res.status(409).json({ error: motivo });
+                    return;
+                }
+            }
             const result = await model.deleteOne({ _id: id, ...delTenant(req) });
             if (result.deletedCount === 0) {
                 res.status(404).json({ error: `${config.entityLabel} no encontrado` });

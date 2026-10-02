@@ -1375,6 +1375,7 @@ const AsignarEmpresaMasivo: React.FC<{
  */
 function useCatalogosArca(allEstados: InfoItem[]) {
   const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
+  const [roleFramesCat, setRoleFramesCat] = useState<RoleFrameItem[]>([]);
   const [tipos, setTipos] = useState<ContratoItem[]>([]);
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   const [sedes, setSedes] = useState<InfoItem[]>([]);
@@ -1427,12 +1428,17 @@ function useCatalogosArca(allEstados: InfoItem[]) {
       .list()
       .then(setConvenios)
       .catch(() => setConvenios([]));
+    // De la función del contrato sale primero el puesto desempeñado del registro de 85.
+    roleFrameAPI
+      .list()
+      .then(setRoleFramesCat)
+      .catch(() => setRoleFramesCat([]));
   }, []);
 
   // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
   // `estados` entra al catálogo para que el TXT derive el alta temprana del estado del contrato y no
   // del switch que se eliminó. `allEstados` ya estaba en scope: es la misma lista que arma las bandejas.
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales]);
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales, roleFrames: roleFramesCat }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales, roleFramesCat]);
   return { afipCat, companies };
 }
 
@@ -2326,9 +2332,16 @@ export const ContractBulkAfipTab: React.FC<{
     const sinPuesto = fuenteTxt.filter((x) => x.result.completo && !completos85.includes(x));
     if (sinPuesto.length > 0) {
       const nombres = sinPuesto.slice(0, 5).map((x) => x.row.userName).join(', ');
+      // Lo más útil es decir QUÉ ROLES no lo tienen: con cargarlo en el rol se resuelven todos sus contratos.
+      const porRol = new Map<string, number>();
+      for (const x of sinPuesto) {
+        const rol = rolesFrame.find((r) => Number(r.data?.rol?.id) === Number(x.row.rol_frame_id))?.name || 'sin Rol Empresa';
+        porRol.set(rol, (porRol.get(rol) || 0) + 1);
+      }
+      const roles = [...porRol.entries()].map(([r, n]) => `${r} (${n})`).join(', ');
       sweetAlert.error(
         'Falta el puesto desempeñado',
-        `Altas Masivas (registro de 85) exige el código de puesto desempeñado, y ${sinPuesto.length === 1 ? 'este contrato no lo tiene' : `${sinPuesto.length} contratos no lo tienen`}: ${nombres}${sinPuesto.length > 5 ? '…' : ''}. Cargalo en la categoría (Configuración → ARCA → Categorías → «Puesto desempeñado») o como default de ${empresaDeLaPestana.razonSocial} (ficha de la empresa → ARCA → Puesto Desempeñado). La Carga Masiva no lo necesita.`,
+        `Altas Masivas (registro de 85) exige el código de puesto desempeñado, y ${sinPuesto.length === 1 ? 'este contrato no lo tiene' : `${sinPuesto.length} contratos no lo tienen`}: ${nombres}${sinPuesto.length > 5 ? '…' : ''}. Roles sin puesto: ${roles}. Cargalo en el Rol Empresa (Usuarios → Roles Empresa), en la categoría (Configuración → ARCA → Categorías) o como default de ${empresaDeLaPestana.razonSocial} (ficha de la empresa → ARCA → Puesto Desempeñado). La Carga Masiva no lo necesita.`,
       );
       return;
     }

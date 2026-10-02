@@ -13,6 +13,7 @@ import { estiloValoracion } from '../proyectos/ChipValoracion';
 import { useThemeStore } from '../../stores/themeStore';
 import { valoracionesPorBrutoAPI, ValoracionSugerida } from '../../api/valoraciones';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { SelectorPuestoDesempenado, listarPuestos } from '../arca/SelectorPuestoDesempenado';
 
 const valoracionesApi = createSimpleCatalogApi('/valoraciones');
 const conveniosApi = createSimpleCatalogApi('/convenios');
@@ -153,6 +154,17 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   const [showModal, setShowModal] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleFrameItem | null>(null);
   const [formName, setFormName] = useState('');
+  /** Puesto desempeñado de ARCA de la función (registro de 85 de Altas Masivas). */
+  const [formPuesto, setFormPuesto] = useState('');
+  /** Solo las funciones sin puesto: para completarlas una atrás de otra. */
+  const [soloSinPuesto, setSoloSinPuesto] = useState(false);
+  /** La función a la que se le está asignando el puesto desde la lista (asignación rápida). */
+  const [asignandoPuesto, setAsignandoPuesto] = useState<RoleFrameItem | null>(null);
+  const [puestos, setPuestos] = useState<SimpleCatalogItem[]>([]);
+  useEffect(() => {
+    void listarPuestos().then(setPuestos);
+  }, []);
+  const descripcionPuesto = (codigo?: string) => (codigo ? puestos.find((p) => p.externalId === codigo)?.name || '' : '');
   /*
     LAS CATEGORÍAS ELEGIDAS, CON SU VALORACIÓN.
 
@@ -340,10 +352,55 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   }, []);
 
   const filteredRoles = useMemo(() => {
-    if (!searchTerm) return roles;
+    const base = soloSinPuesto ? roles.filter((r) => !r.data?.puestoDesempenado) : roles;
+    if (!searchTerm) return base;
     const lowerSearch = searchTerm.toLowerCase();
-    return roles.filter((r) => r.name.toLowerCase().includes(lowerSearch) || r.externalId.toLowerCase().includes(lowerSearch));
-  }, [roles, searchTerm]);
+    return base.filter((r) => r.name.toLowerCase().includes(lowerSearch) || r.externalId.toLowerCase().includes(lowerSearch));
+  }, [roles, searchTerm, soloSinPuesto]);
+  const sinPuesto = roles.filter((r) => !r.data?.puestoDesempenado).length;
+
+  /** Asignación rápida: guarda SOLO el puesto (el PUT no toca las categorías si no se mandan). */
+  const asignarPuesto = async (role: RoleFrameItem, codigo: string) => {
+    try {
+      await roleFrameAPI.update(role._id, { puestoDesempenado: codigo });
+      setRoles((prev) => prev.map((r) => (r._id === role._id ? { ...r, data: { ...r.data, puestoDesempenado: codigo } } : r)));
+      setAsignandoPuesto(null);
+    } catch (error: any) {
+      sweetAlert.error('No se pudo asignar', error?.response?.data?.error || 'Error al guardar el puesto');
+    }
+  };
+
+  /** El puesto de la función, o el aviso de que falta con el botón para asignarlo. */
+  const PuestoDeFuncion: React.FC<{ role: RoleFrameItem }> = ({ role }) => {
+    const codigo = role.data?.puestoDesempenado || '';
+    return codigo ? (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setAsignandoPuesto(role);
+        }}
+        title="Puesto desempeñado de ARCA (registro de 85 de Altas Masivas). Click para cambiarlo."
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 max-w-full"
+      >
+        <span className="font-mono">{codigo}</span>
+        <span className="truncate">{descripcionPuesto(codigo)}</span>
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setAsignandoPuesto(role);
+        }}
+        title="Sin puesto desempeñado: las Altas Masivas de sus contratos lo van a pedir. Click para asignarlo."
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
+      >
+        <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+        Sin puesto ARCA · Asignar
+      </button>
+    );
+  };
 
   /** Índice del catálogo por el id numérico legacy, para resolver convenio y código de cada asociada. */
   const catalogoPorId = useMemo(() => new Map(allCategories.map((c) => [String(c.data?.id), c])), [allCategories]);
@@ -380,6 +437,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   const openCreate = () => {
     setEditingRole(null);
     setFormName('');
+    setFormPuesto('');
     setSelectedCategorias([]);
     setManuales(new Set());
     setCatSearch('');
@@ -392,6 +450,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   const openEdit = (role: RoleFrameItem) => {
     setEditingRole(role);
     setFormName(role.name);
+    setFormPuesto(role.data?.puestoDesempenado || '');
 
     // Resolve associated category _ids from the loaded list. Se matchea por `id` (el id numérico
     // propio de cada categoría, `data.id`), NO por `numeroCategoria`: varias categorías con
@@ -434,6 +493,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
       const payload = {
         name: formName.trim(),
         categorias: selectedCategorias,
+        puestoDesempenado: formPuesto,
       };
 
       if (editingRole) {
@@ -596,6 +656,16 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         <div className="flex-1 w-full">
           <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o ID externo..." />
         </div>
+        {/* Para completar el puesto de ARCA de todas las funciones sin abrirlas una por una. */}
+        <button
+          type="button"
+          onClick={() => setSoloSinPuesto((v) => !v)}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${soloSinPuesto ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 border-amber-300 dark:border-amber-800'}`}
+          title="Funciones sin puesto desempeñado de ARCA: sus contratos no pueden generar las Altas Masivas"
+        >
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+          Sin puesto ARCA ({sinPuesto})
+        </button>
         {/* El `+` se mudó al encabezado de la página, al lado del info del título. */}
         <div className="flex items-center gap-2 shrink-0">
           {isLarge && (
@@ -658,6 +728,9 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                 ],
               }}
             >
+              <div className="mb-2">
+                <PuestoDeFuncion role={role} />
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {categoriasDe(role).length === 0 ? (
                   <span className="text-xs text-gray-400">Sin categorías</span>
@@ -685,6 +758,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Puesto ARCA</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categorías</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
@@ -702,6 +776,9 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-900 px-2 py-0.5 rounded">{role.externalId}</span>
+                    </td>
+                    <td className="px-6 py-4 max-w-[260px]" onClick={(e) => e.stopPropagation()}>
+                      <PuestoDeFuncion role={role} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1.5 max-w-md">
@@ -873,6 +950,12 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre de la Función *</label>
               <input type="text" required value={formName} onChange={(e) => setFormName(e.target.value)} className="input-field w-full px-3 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Ej: Motion Graphic" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Puesto desempeñado (ARCA)</label>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">Lo pide el alta URGENTE (Altas Masivas, registro de 85). Es lo primero que se mira: si la función lo tiene, no hace falta en la categoría ni en la empresa.</p>
+              <SelectorPuestoDesempenado valor={formPuesto} onChange={setFormPuesto} />
             </div>
 
             <div>
@@ -1096,6 +1179,11 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                   )}
                 </div>
           </div>
+        </Modal>
+      )}
+      {asignandoPuesto && (
+        <Modal isOpen={!!asignandoPuesto} onClose={() => setAsignandoPuesto(null)} title="Puesto desempeñado (ARCA)" subtitle={asignandoPuesto.name} size="md" zIndex={90}>
+          <SelectorPuestoDesempenado autoFocus valor={asignandoPuesto.data?.puestoDesempenado || ''} onChange={(codigo) => void asignarPuesto(asignandoPuesto, codigo)} />
         </Modal>
       )}
     </div>

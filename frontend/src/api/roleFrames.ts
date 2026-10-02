@@ -10,6 +10,8 @@ export interface RoleFrameItem {
     };
     /** Cada ítem es la copia de la categoría + lo de la asociación: `valoracionId`. */
     categoriasSat: Array<{ id?: number; nombre?: string; codigoAfip?: number; sueldoBruto?: number; valoracionId?: string | null; [k: string]: unknown }>;
+    /** Puesto desempeñado de ARCA (4 díg.) de esta función. Primer escalón del registro de 85. */
+    puestoDesempenado?: string;
   };
   name: string;
   createdAt: string;
@@ -70,12 +72,12 @@ class RoleFrameAPI {
     return data;
   }
 
-  async create(payload: { name: string; categorias: CategoriaAsociada[] }): Promise<RoleFrameItem> {
+  async create(payload: { name: string; categorias: CategoriaAsociada[]; puestoDesempenado?: string }): Promise<RoleFrameItem> {
     const { data } = await axios.post("/role-frames", payload);
     return data;
   }
 
-  async update(id: string, payload: { name?: string; categorias?: CategoriaAsociada[] }): Promise<RoleFrameItem> {
+  async update(id: string, payload: { name?: string; categorias?: CategoriaAsociada[]; puestoDesempenado?: string }): Promise<RoleFrameItem> {
     const { data } = await axios.put(`/role-frames/${id}`, payload);
     return data;
   }

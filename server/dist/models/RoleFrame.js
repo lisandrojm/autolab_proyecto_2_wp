@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 const roleFrameSchema = new Schema({
     externalId: { type: String, required: true },
     data: {
+        puestoDesempenado: { type: String, default: "" },
         rol: {
             id: { type: Number },
             nombre: { type: String },

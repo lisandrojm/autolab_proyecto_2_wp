@@ -13,6 +13,12 @@ export interface IArcaPuestoDesempenado extends Document {
         id: number;
         nombre: string;
     };
+    /** Se ofrece en los selectores. Uno en uso no se borra: se desactiva. */
+    activo: boolean;
+    /** `arca` = vino de la tabla oficial (importación); `manual` = se cargó o corrigió a mano: la importación no lo pisa. */
+    origen: "arca" | "manual";
+    /** Última vez que una importación de la tabla oficial lo vio. */
+    sincronizadoEl?: Date;
     createdAt: Date;
     updatedAt: Date;
 }

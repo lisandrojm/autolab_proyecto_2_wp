@@ -217,3 +217,22 @@ describe("la categoría contra el espejo de ARCA (barrera del alta)", () => {
     assert.equal(resolveAfip(fila(), conEstado(null)).completo, true);
   });
 });
+
+describe("puesto desde el Rol Empresa del contrato", () => {
+  const conRol = (puesto: string) => catalogos({ roleFrames: [{ data: { rol: { id: 77 }, puestoDesempenado: puesto } }] } as any);
+  it("el Rol Empresa manda sobre la categoría: posiciones 29-32", () => {
+    // La categoría 1 del fixture tiene 2455; el rol trae 5142.
+    const r = buildAltaRecord85(fila({ rol_frame_id: 77 } as any), conRol("5142"))!;
+    assert.equal(r.slice(28, 32), "5142");
+    assert.equal(describirRegistro85(fila({ rol_frame_id: 77 } as any), conRol("5142")).valores.puestoOrigen, "funcion");
+  });
+  it("sin puesto en el rol, sigue la categoría", () => {
+    assert.equal(buildAltaRecord85(fila({ rol_frame_id: 77 } as any), conRol(""))!.slice(28, 32), "2455");
+  });
+  it("una categoría sin puesto se completa con el del rol (sin el error)", () => {
+    const row = fila({ categoria_sat_id: 12, rol_frame_id: 77 } as any);
+    const cat = conRol("2455");
+    assert.equal(resolveAfip85(row, cat).completo, true);
+    assert.equal(buildAltaRecord85(row, cat)!.slice(28, 32), "2455");
+  });
+});

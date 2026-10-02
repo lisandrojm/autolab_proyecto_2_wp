@@ -32,6 +32,12 @@ export interface IRoleFrame extends Document {
             nombre: string;
         };
         categoriasSat: ICategoriaSat[];
+        /**
+         * PUESTO DESEMPEÑADO de ARCA (4 díg.) de esta función: el registro de 85 de Altas Masivas lo exige.
+         * Es el primer escalón de la resolución (función → categoría → empresa → instalación, ver
+         * `compartido/puestosDesempenados.ts`). Código del catálogo `arca-puestos-desempenados`. Opcional.
+         */
+        puestoDesempenado?: string;
     };
     name: string;
     createdAt: Date;

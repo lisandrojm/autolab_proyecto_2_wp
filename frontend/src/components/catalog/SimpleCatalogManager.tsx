@@ -264,6 +264,8 @@ interface SimpleCatalogManagerProps {
   permiteImportExcel?: boolean;
   /** Acciones propias del catálogo en el encabezado, antes del «+» (ej. «Importar JSON»). */
   accionesEncabezado?: React.ReactNode;
+  /** Cambiarlo recarga el listado: para acciones de afuera que escriben en el catálogo (una importación). */
+  recarga?: number;
   /**
    * Cómo se llama el campo obligatorio en ESTE catálogo. Default "Nombre".
    *
@@ -458,7 +460,7 @@ const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v
   );
 };
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, nombreLabel = 'Nombre', permiteImportExcel = true, accionesEncabezado, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen, ordenable }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, nombreLabel = 'Nombre', permiteImportExcel = true, accionesEncabezado, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen, ordenable, recarga }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [filtroServidorValor, setFiltroServidorValor] = useState(filtroServidor?.valorInicial || '');
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
@@ -575,6 +577,10 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (recarga) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recarga]);
 
   // Arranca acotado salvo que el catálogo diga lo contrario (ver `arrancaAcotado`).
   const [soloDestacados, setSoloDestacados] = useState(filtroDestacado?.arrancaAcotado !== false);
@@ -831,8 +837,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       await api.remove(item._id);
       sweetAlert.success('Eliminado', 'Registro eliminado correctamente.');
       await load();
-    } catch {
-      sweetAlert.error('Error', 'No se pudo eliminar el registro.');
+    } catch (e: any) {
+      // El motivo del server dice qué hacer («está en uso: desactivalo»); el genérico no.
+      sweetAlert.error('No se pudo eliminar', e?.response?.data?.error || 'No se pudo eliminar el registro.');
     }
   };
 
