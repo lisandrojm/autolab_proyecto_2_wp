@@ -2300,6 +2300,20 @@ export const ContractBulkAfipTab: React.FC<{
   /** URGENTE: registros de 85, al portapapeles, y la corrida que los pega en Altas Masivas. */
   const presentarAltasMasivas = async () => {
     if (!empresaDeLaPestana) return;
+    /*
+      SIN PUESTO NO HAY REGISTRO DE 85, y se dice acá en vez de dejar el botón apagado: un botón gris
+      no explica nada. Lo que falta es configuración (categoría o default de la empleadora), no un
+      dato de la persona, así que se nombra el lugar.
+    */
+    const sinPuesto = fuenteTxt.filter((x) => x.result.completo && !completos85.includes(x));
+    if (sinPuesto.length > 0) {
+      const nombres = sinPuesto.slice(0, 5).map((x) => x.row.userName).join(', ');
+      sweetAlert.error(
+        'Falta el puesto desempeñado',
+        `Altas Masivas (registro de 85) exige el código de puesto desempeñado, y ${sinPuesto.length === 1 ? 'este contrato no lo tiene' : `${sinPuesto.length} contratos no lo tienen`}: ${nombres}${sinPuesto.length > 5 ? '…' : ''}. Cargalo en la categoría (Configuración → ARCA → Categorías → «Puesto desempeñado») o como default de ${empresaDeLaPestana.razonSocial} (ficha de la empresa → ARCA → Puesto Desempeñado). La Carga Masiva no lo necesita.`,
+      );
+      return;
+    }
     const items = completos85.map((x) => ({ x, registro: buildAltaRecord85(x.row, afipCat) })).filter((y): y is { x: (typeof fuenteTxt)[number]; registro: string } => !!y.registro);
     if (items.length === 0 || items.length > MAX_ALTAS_MASIVAS) return;
     const texto = buildAltasMasivasTexto(items.map((y) => y.registro));
@@ -2554,17 +2568,17 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
             <button
               onClick={presentarAltasMasivas}
-              disabled={!empresaDeLaPestana || completos85.length === 0 || completos85.length > MAX_ALTAS_MASIVAS}
+              disabled={!empresaDeLaPestana || completosTxt === 0 || completosTxt > MAX_ALTAS_MASIVAS}
               title={
                 bloqueoPorValidacion ||
                 motivoSinEmpresa ||
-                (completos85.length === 0
-                  ? faltan85 > 0
-                    ? `Hay ${faltan85} contrato(s) completo(s) para Carga Masiva a los que les falta el puesto desempeñado (categoría o default de la empleadora), que Altas Masivas exige`
-                    : 'No hay contratos completos para Altas Masivas'
-                  : completos85.length > MAX_ALTAS_MASIVAS
-                    ? `Hay ${completos85.length} contratos completos: tildá como máximo ${MAX_ALTAS_MASIVAS} para Altas Masivas`
-                    : `Copia ${completos85.length} registro(s) de 85 al portapapeles y los presenta en ARCA por Altas Masivas (máximo ${MAX_ALTAS_MASIVAS})${faltan85 > 0 ? `. ${faltan85} quedan afuera por falta de puesto desempeñado` : ''}`)
+                (completosTxt === 0
+                  ? 'No hay contratos completos para Altas Masivas'
+                  : completosTxt > MAX_ALTAS_MASIVAS
+                    ? `Hay ${completosTxt} contratos completos: tildá como máximo ${MAX_ALTAS_MASIVAS} para Altas Masivas`
+                    : faltan85 > 0
+                      ? `A ${faltan85} de los ${completosTxt} contrato(s) les falta el puesto desempeñado, que Altas Masivas exige. Apretá para ver dónde se carga`
+                      : `Copia ${completosTxt} registro(s) de 85 al portapapeles y los presenta en ARCA por Altas Masivas (máximo ${MAX_ALTAS_MASIVAS})`)
               }
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
