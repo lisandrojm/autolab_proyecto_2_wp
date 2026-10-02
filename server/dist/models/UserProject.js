@@ -65,6 +65,18 @@ const contractSchema = new Schema({
     obraSocialBloqueada: { type: Boolean, default: false },
     obraSocialAplicadaOrigen: { type: String, enum: ["panel", "script"] },
     obraSocialAplicadaPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    altaArcaPresentada: {
+        type: new Schema({
+            via: { type: String, enum: ["carga_masiva", "altas_masivas"] },
+            fecha: { type: Date },
+            resultado: { type: String, enum: ["presentada", "indeterminado", "fallida"] },
+            codigoNovedad: { type: String },
+            nroTransaccion: { type: String },
+            motivo: { type: String },
+            logId: { type: Schema.Types.ObjectId, ref: "ArcaAltasLog" },
+        }, { _id: false }),
+        default: undefined,
+    },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     constanciaVigenciaDesde: { type: String },

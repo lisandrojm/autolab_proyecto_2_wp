@@ -90,6 +90,22 @@ export const NOMENCLADORES_ARCA: NomencladorArca[] = [
     descripcionAmbito: 'Tabla general de ARCA, igual para todas las empresas. No se declara por empresa: se elige en el alta de cada relación laboral.',
   },
   {
+    id: 'puestos-desempenados',
+    label: 'Puestos Desempeñados',
+    ruta: '/arca/puestos-desempenados',
+    ambito: 'general',
+    fuente: 'ARCA',
+    descripcionAmbito: 'Tabla general de ARCA, igual para todas las empresas. Solo la pide el alta URGENTE (Altas Masivas, registro de 85): el puesto sale de la categoría, y si no lo tiene, de este default.',
+  },
+  {
+    id: 'situaciones-revista',
+    label: 'Situaciones de Revista',
+    ruta: '/arca/situaciones-revista',
+    ambito: 'general',
+    fuente: 'ARCA',
+    descripcionAmbito: 'Tabla general de ARCA, igual para todas las empresas. Solo la pide el alta URGENTE (Altas Masivas, registro de 85). Un alta nueva es «01 — Activo».',
+  },
+  {
     id: 'tipos-servicio',
     label: 'Tipos de Servicio',
     ruta: '/arca/tipos-servicio',

@@ -5,14 +5,16 @@ import mongoose from "mongoose";
  * Siembra las tablas oficiales de ARCA (Simplificación Registral) desde el CSV extraído de la
  * pantalla de alta individual del organismo.
  *
- * Solo carga las TRES que necesita el formato de 130 caracteres (Carga Masiva):
+ * Carga las tres que necesita el formato de 130 caracteres (Carga Masiva):
  *   - MODALIDAD_CONTRATACION → pos. 17-19
  *   - TIPO_SERVICIO          → pos. 107-109
  *   - MODALIDAD_LIQUIDACION  → pos. 73
  *
- * Las demás tablas del CSV quedan afuera a propósito: puesto desempeñado y convenio colectivo van en
- * blanco en este layout, y la situación de revista directamente no existe como campo. Sirven para el
- * formato de 85 caracteres (el que se pega a mano, máximo 9 registros), que hoy no se usa.
+ * y las dos que agrega el de 85 (Registrar Nuevas Altas → Altas Masivas, máximo 9 registros):
+ *   - PUESTO_DESEMPENADO     → pos. 29-32 del de 85
+ *   - SITUACION_REVISTA      → pos. 84-85 del de 85
+ *
+ * El convenio colectivo no se carga de acá: sale de la categoría (`Categoria.convenio`).
  *
  * Es idempotente: hace upsert por (colección, código), así que se puede volver a correr cuando ARCA
  * actualice el nomenclador. NO borra los códigos que ya no estén en el CSV — si ARCA da de baja uno,
@@ -34,6 +36,10 @@ const TABLAS = [
   { csv: "MODALIDAD_CONTRATACION", coleccion: "arca-modalidades-contratacion", largo: 3, etiqueta: "Modalidades de Contrato" },
   { csv: "TIPO_SERVICIO", coleccion: "arca-tipos-servicio", largo: 3, etiqueta: "Tipos de servicio" },
   { csv: "MODALIDAD_LIQUIDACION", coleccion: "arca-modalidades-liquidacion", largo: 1, etiqueta: "Modalidades de liquidación" },
+  // Las dos que solo usa el registro de 85 (Altas Masivas): de acá salen los combos del puesto (en la
+  // categoría y en los defaults) y de la situación de revista, y contra ellas valida el servidor.
+  { csv: "PUESTO_DESEMPENADO", coleccion: "arca-puestos-desempenados", largo: 4, etiqueta: "Puestos desempeñados" },
+  { csv: "SITUACION_REVISTA", coleccion: "arca-situaciones-revista", largo: 2, etiqueta: "Situaciones de revista" },
 ];
 
 /**

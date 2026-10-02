@@ -72,13 +72,15 @@ import { ArcaTiposServicioPage } from "./pages/ArcaTiposServicioPage";
 import { ArcaGruposTipoServicioPage } from "./pages/ArcaGruposTipoServicioPage";
 import { FuentesParitariaPage } from "./pages/FuentesParitariaPage";
 import { ArcaModalidadesLiquidacionPage } from "./pages/ArcaModalidadesLiquidacionPage";
+import { ArcaPuestosDesempenadosPage } from "./pages/ArcaPuestosDesempenadosPage";
+import { ArcaSituacionesRevistaPage } from "./pages/ArcaSituacionesRevistaPage";
 import { ConveniosPage } from "./pages/ConveniosPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
 import { ContratosPage } from "./pages/ContratosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
 // Contexto Empresa (la empleadora como eje, igual que Cliente).
 import { EmpresaInfoPage } from "./pages/empresa/EmpresaInfoPage";
-import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaGruposTipoServicioPage, EmpresaTiposServicioPage, EmpresaModalidadContratacionPage, EmpresaModalidadLiquidacionPage } from "./pages/empresa/EmpresaArcaPages";
+import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaGruposTipoServicioPage, EmpresaTiposServicioPage, EmpresaModalidadContratacionPage, EmpresaModalidadLiquidacionPage, EmpresaPuestoDesempenadoPage, EmpresaSituacionRevistaPage } from "./pages/empresa/EmpresaArcaPages";
 import { EmpresaContratosPage } from "./pages/empresa/EmpresaContratosPage";
 import { EmpresaSedesPage } from "./pages/empresa/EmpresaSedesPage";
 import { MembretesPage } from "./pages/MembretesPage";
@@ -732,6 +734,22 @@ function App() {
                 }
               />
               <Route
+                path="/arca/puestos-desempenados"
+                element={
+                  <ProtectedRoute>
+                    <ArcaPuestosDesempenadosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/situaciones-revista"
+                element={
+                  <ProtectedRoute>
+                    <ArcaSituacionesRevistaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/convenios"
                 element={
                   <ProtectedRoute>
@@ -837,6 +855,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EmpresaModalidadLiquidacionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/puestos-desempenados"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaPuestoDesempenadoPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/situaciones-revista"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaSituacionRevistaPage />
                   </ProtectedRoute>
                 }
               />

@@ -200,6 +200,26 @@ interface IContract {
     obraSocialAplicadaOrigen?: "panel" | "script";
     /** Quién la aplicó. En el camino automático es el dueño del token que corrió el script. */
     obraSocialAplicadaPor?: Types.ObjectId | null;
+    /**
+     * La PRESENTACIÓN del alta en ARCA hecha por la corrida automática (Carga Masiva o Altas Masivas).
+     *
+     * NO cambia el estado del contrato: el avance a «Generar Documentos» lo sigue haciendo la
+     * constancia que llega por Dropbox. Esto es la constancia de NUESTRO lado —qué se presentó, cuándo
+     * y con qué número— y la traba para no presentar dos veces la misma alta.
+     *
+     * `resultado`: `presentada` (ARCA lo confirmó), `indeterminado` (se apretó y no se pudo leer el
+     * resultado: hay que mirarlo en ARCA, NO volver a presentar) o `fallida` (rechazada: se puede
+     * volver a intentar).
+     */
+    altaArcaPresentada?: {
+        via: "carga_masiva" | "altas_masivas";
+        fecha: Date;
+        resultado: "presentada" | "indeterminado" | "fallida";
+        codigoNovedad?: string;
+        nroTransaccion?: string;
+        motivo?: string;
+        logId?: Types.ObjectId;
+    };
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;
     constanciaVigenciaDesde?: string;

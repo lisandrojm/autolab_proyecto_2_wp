@@ -12,6 +12,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test:afip": "tsx --test src/components/contratos/afipTxt.test.ts",
+    "test:afip85": "tsx --test src/components/contratos/afipTxt85.test.ts",
+    "test:arca:altas": "node --test tools/altas-arca.test.mjs",
     "test:fechas": "tsx --test src/utils/fechas.test.ts",
     "test:estado-fuente": "tsx --test src/components/paritarias/estadoFuente.test.ts",
     "validar-obras-sociales": "node tools/validar-obras-sociales.cli.mjs",

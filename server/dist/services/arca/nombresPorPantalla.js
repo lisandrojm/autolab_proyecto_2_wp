@@ -3,7 +3,7 @@ import { User } from "../../models/User.js";
 import UserProject from "../../models/UserProject.js";
 import { abrirSesionArca, credencialesDe } from "./navegador.js";
 import { aplicarNombreDeArca } from "./nombreArca.js";
-import { corriendo } from "./corridaServidor.js";
+import { NOMBRE_CORRIDA, quienTiene, soltarCandado, tomarCandado } from "./candadoArca.js";
 import { MOTOR } from "./motor.js";
 /**
  * EL NOMBRE DE LOS QUE EL PADRÓN NO PUEDE RESOLVER, leído de la pantalla de altas.
@@ -48,8 +48,9 @@ export async function nombresPorPantalla(opts) {
       el estado a la primera en el medio del trámite. Entre interrumpir una corrida que está registrando
       obras sociales y postergar una corrección de nombre, no hay duda de cuál cede.
     */
-    if (corriendo(tenantId))
-        return vacio("Hay una validación de obras sociales en curso. Los nombres de los CUIT inactivos se corrigen cuando termine.");
+    const ocupada = quienTiene(tenantId);
+    if (ocupada)
+        return vacio(`Hay una corrida de ARCA en curso (${NOMBRE_CORRIDA[ocupada.tipo]}). Los nombres de los CUIT inactivos se corrigen cuando termine.`);
     const cred = await credencialesDe(tenantId);
     if (!cred)
         return vacio("No está configurada la conexión de «Obras sociales, nombres y documentos», que es la única que ve el nombre de un CUIT inactivo.");
@@ -97,6 +98,7 @@ export async function nombresPorPantalla(opts) {
     const renombrados = [];
     const confirmados = [];
     let sesion = null;
+    let tomoCandado = false;
     let restantes = LIMITE;
     try {
         for (const [empresaId, cuilsDeLaEmpresa] of porEmpresa) {
@@ -111,8 +113,13 @@ export async function nombresPorPantalla(opts) {
             const tanda = cuilsDeLaEmpresa.slice(0, restantes);
             restantes -= tanda.length;
             // El navegador se abre recién cuando hay algo real que consultar, y una sola vez para todas.
-            if (!sesion)
+            // El candado se toma recién acá, junto con el navegador: antes no se tocó ARCA. Si otra corrida
+            // lo tomó en el medio, esta cede (ver el comentario de arriba).
+            if (!sesion) {
+                tomarCandado(tenantId, "nombres");
+                tomoCandado = true;
                 sesion = await abrirSesionArca(tenantId, cred);
+            }
             const { validarObrasSociales } = (await import(MOTOR));
             const r = await validarObrasSociales({
                 empresa: "",
@@ -167,6 +174,8 @@ export async function nombresPorPantalla(opts) {
     finally {
         // El navegador lo abrió esta función, así que lo cierra esta función.
         await sesion?.browser.close().catch(() => { });
+        if (tomoCandado)
+            soltarCandado(tenantId, "nombres");
     }
     return { renombrados, confirmados, sinResolver };
 }

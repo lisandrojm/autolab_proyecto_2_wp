@@ -26,10 +26,13 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
-import { resolveAfip, resolveAfipValues, esResuelto, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
+import { resolveAfip, resolveAfip85, resolveAfipValues, esResuelto, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
 import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
 import { useValoraciones } from '../proyectos/ChipValoracion';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
+import { buildAltaRecord85, buildAltasMasivasTexto } from './afipTxt85';
+import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
+import { CorridaAltasArca, LoteParaPresentar } from './CorridaAltasArca';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
@@ -1639,7 +1642,7 @@ export const ContractBulkAfipTab: React.FC<{
   // omite los incompletos (no se puede armar una línea válida) e informa cuántos quedaron afuera.
   // `max`: tope de altas del archivo (TXT URGENTE). Si se pasa, no se baja nada: recortar en
   // silencio dejaría afuera altas sin que nadie se entere de cuáles.
-  const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string, max?: number) => {
+  const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string, max?: number): boolean => {
     // Un TXT es de UNA empleadora: se sube logueado con su CUIT. Mezclar produce un archivo
     // rechazado o, peor, altas cargadas bajo la empresa equivocada — que ARCA acepta sin chistar y
     // recién se descubre después. Se corta ANTES de bajar el archivo.
@@ -1651,7 +1654,7 @@ export const ContractBulkAfipTab: React.FC<{
     if (empresasDelLote.length > 1) {
       const nombres = empresasDelLote.map((id) => companies.find((c) => c._id === id)?.razonSocial || id);
       sweetAlert.error('El TXT sería de más de una empleadora', `El conjunto mezcla altas de ${nombres.join(' y ')}. El archivo se sube logueado con un solo CUIT: elegí una empresa en «Empresa Contrato» —o entrá desde el contexto de esa empresa— y generá un TXT por cada una.`);
-      return;
+      return false;
     }
 
     /**
@@ -1673,11 +1676,11 @@ export const ContractBulkAfipTab: React.FC<{
       .filter((r): r is string => r !== null);
     if (registros.length === 0) {
       sweetAlert.error('Sin datos completos', 'Ningún contrato del conjunto tiene todos los datos ARCA cargados. Completá los faltantes (columna «Datos ARCA») antes de generar el TXT.');
-      return;
+      return false;
     }
     if (max !== undefined && registros.length > max) {
       sweetAlert.error(`Más de ${max} altas`, `El TXT URGENTE admite hasta ${max} altas y el conjunto tiene ${registros.length} completas. Tildá como máximo ${max} contratos completos.`);
-      return;
+      return false;
     }
     const omitidos = items.length - registros.length;
     // Se nombra el motivo del primero: "se omitieron 3" sin decir por qué manda a abrir tres modales.
@@ -1696,6 +1699,7 @@ export const ContractBulkAfipTab: React.FC<{
     } else {
       sweetAlert.success('TXT generado', `Se incluyeron ${registros.length} alta(s) en el archivo.`);
     }
+    return true;
   };
 
   // Solo los contratos cuyo estado actual es impositivo, con su chequeo de completitud ARCA.
@@ -2242,9 +2246,76 @@ export const ContractBulkAfipTab: React.FC<{
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
   // `generarTxt` le agrega el CUIT de la empleadora y la fecha: queda `altas_30710295839_20260817.txt`.
   const nombreArchivoTxt = 'altas';
-  // TXT URGENTE: el mismo archivo, con tope de altas. Cuenta lo que realmente entraría (completos).
-  const MAX_TXT_URGENTE = 9; // lo que admite ARCA en «Ingreso masivo de datos»
+  /*
+    LAS DOS CORRIDAS AUTOMÁTICAS DE ALTA EN ARCA.
+
+    «Generar TXT Masivo (ARCA)» baja el archivo de 130 (como siempre, de respaldo) y lo presenta por
+    Carga Masiva. «URGENTE» arma registros de 85 —otro formato: informa puesto, convenio y situación
+    de revista— y los pega en Altas Masivas, máximo 9. Las dos corren en el SERVIDOR (ver
+    `CorridaAltasArca` y `server/src/services/arca/corridaAltas.ts`), que vuelve a cotejar cada
+    registro contra la base antes de mandarlo.
+
+    SOLO DESDE LA PESTAÑA DE UNA EMPRESA. Un TXT es de UNA empleadora y se presenta logueado con su
+    CUIT: desde «Todas» o «Sin asignar» no hay a nombre de quién presentarlo.
+  */
+  const empresaDeLaPestana = filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? companies.find((c) => c._id === filterEmpresaId) : undefined;
+  const motivoSinEmpresa = !empresaDeLaPestana ? 'Elegí la pestaña de UNA empresa (arriba, en «Empresa Contrato»): un TXT es de una sola empleadora y se presenta logueado con su CUIT.' : '';
   const completosTxt = fuenteTxt.filter((x) => x.result.completo).length;
+  // URGENTE: completos para el de 130 Y con puesto y situación de revista (lo que agrega el de 85).
+  const completos85 = useMemo(() => fuenteTxt.filter((x) => resolveAfip85(x.row, afipCat, x.result).completo), [fuenteTxt, afipCat]);
+  const faltan85 = completosTxt - completos85.length;
+  const [loteAltas, setLoteAltas] = useState<LoteParaPresentar | null>(null);
+  const [corridaAltasOpen, setCorridaAltasOpen] = useState(false);
+
+  // Si hay una corrida de altas en curso (se cerró el modal, se recargó la página), se reengancha.
+  useEffect(() => {
+    projectsAPI
+      .estadoAltasArca()
+      .then((r) => {
+        if (r.corriendo) {
+          setLoteAltas(null);
+          setCorridaAltasOpen(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const personaDe = (row: ImpositivoRow) => ({ nombre: row.userName || '', cuil: String(row.cuit || '').replace(/\D/g, '') });
+
+  /** Carga Masiva: baja el TXT de 130 (respaldo) y abre la corrida que lo presenta. */
+  const presentarCargaMasiva = () => {
+    if (!empresaDeLaPestana) return;
+    const items = fuenteTxt.filter((x) => x.result.completo).map((x) => ({ x, registro: buildAltaRecord(x.row, afipCat) })).filter((y): y is { x: (typeof fuenteTxt)[number]; registro: string } => !!y.registro);
+    if (!generarTxt(fuenteTxt, nombreArchivoTxt)) return;
+    setLoteAltas({
+      modo: 'carga_masiva',
+      empresa: { _id: empresaDeLaPestana._id, razonSocial: empresaDeLaPestana.razonSocial, cuit: String(empresaDeLaPestana.cuit || '').replace(/\D/g, '') },
+      personas: items.map((y) => personaDe(y.x.row)),
+      items: items.map((y) => ({ userProjectId: y.x.row._id, contractIndex: y.x.row.contractIndex, registro: y.registro })),
+    });
+    setCorridaAltasOpen(true);
+  };
+
+  /** URGENTE: registros de 85, al portapapeles, y la corrida que los pega en Altas Masivas. */
+  const presentarAltasMasivas = async () => {
+    if (!empresaDeLaPestana) return;
+    const items = completos85.map((x) => ({ x, registro: buildAltaRecord85(x.row, afipCat) })).filter((y): y is { x: (typeof fuenteTxt)[number]; registro: string } => !!y.registro);
+    if (items.length === 0 || items.length > MAX_ALTAS_MASIVAS) return;
+    const texto = buildAltasMasivasTexto(items.map((y) => y.registro));
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch {
+      sweetAlert.info('No se pudo copiar', 'El navegador no dejó copiar al portapapeles. El texto queda en el panel para copiarlo a mano.');
+    }
+    setLoteAltas({
+      modo: 'altas_masivas',
+      empresa: { _id: empresaDeLaPestana._id, razonSocial: empresaDeLaPestana.razonSocial, cuit: String(empresaDeLaPestana.cuit || '').replace(/\D/g, '') },
+      personas: items.map((y) => personaDe(y.x.row)),
+      items: items.map((y) => ({ userProjectId: y.x.row._id, contractIndex: y.x.row.contractIndex, registro: y.registro })),
+      texto,
+    });
+    setCorridaAltasOpen(true);
+  };
 
   /**
    * Asignación masiva de Empresa (Contrato/Release). Es el mismo bloque en las tres pestañas del
@@ -2469,29 +2540,32 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
 
             <button
-              onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)}
-              disabled={fuenteTxt.every((x) => !x.result.completo)}
-              title={bloqueoPorValidacion || (seleccionados.length > 0 ? 'Generar el TXT con los contratos seleccionados (solo los completos)' : 'Generar el TXT con los contratos completos del listado (o marcá algunos con el check)')}
+              onClick={presentarCargaMasiva}
+              disabled={!empresaDeLaPestana || fuenteTxt.every((x) => !x.result.completo)}
+              title={bloqueoPorValidacion || motivoSinEmpresa || (seleccionados.length > 0 ? 'Genera el TXT con los contratos seleccionados (solo los completos) y lo presenta en ARCA por Carga Masiva' : 'Genera el TXT con los contratos completos del listado y lo presenta en ARCA por Carga Masiva (o marcá algunos con el check)')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
               Generar TXT Masivo (ARCA){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
             <button
-              onClick={() => generarTxt(fuenteTxt, `${nombreArchivoTxt}_urgente`, MAX_TXT_URGENTE)}
-              disabled={completosTxt === 0 || completosTxt > MAX_TXT_URGENTE}
+              onClick={presentarAltasMasivas}
+              disabled={!empresaDeLaPestana || completos85.length === 0 || completos85.length > MAX_ALTAS_MASIVAS}
               title={
                 bloqueoPorValidacion ||
-                (completosTxt === 0
-                  ? 'No hay contratos completos para generar el TXT'
-                  : completosTxt > MAX_TXT_URGENTE
-                    ? `Hay ${completosTxt} contratos completos: tildá como máximo ${MAX_TXT_URGENTE} para el TXT URGENTE`
-                    : `Generar el TXT con ${completosTxt} alta(s) (máximo ${MAX_TXT_URGENTE})`)
+                motivoSinEmpresa ||
+                (completos85.length === 0
+                  ? faltan85 > 0
+                    ? `Hay ${faltan85} contrato(s) completo(s) para Carga Masiva a los que les falta el puesto desempeñado (categoría o default de la empleadora), que Altas Masivas exige`
+                    : 'No hay contratos completos para Altas Masivas'
+                  : completos85.length > MAX_ALTAS_MASIVAS
+                    ? `Hay ${completos85.length} contratos completos: tildá como máximo ${MAX_ALTAS_MASIVAS} para Altas Masivas`
+                    : `Copia ${completos85.length} registro(s) de 85 al portapapeles y los presenta en ARCA por Altas Masivas (máximo ${MAX_ALTAS_MASIVAS})${faltan85 > 0 ? `. ${faltan85} quedan afuera por falta de puesto desempeñado` : ''}`)
               }
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
-              Generar TXT Masivo URGENTE (Max {MAX_TXT_URGENTE}){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+              Generar TXT Masivo URGENTE (Max {MAX_ALTAS_MASIVAS}){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
             <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
@@ -2499,7 +2573,7 @@ export const ContractBulkAfipTab: React.FC<{
             <button
               onClick={() => window.open('https://www.arca.gob.ar', '_blank', 'noopener,noreferrer')}
               disabled={!txtGeneradoPara}
-              title={bloqueoPorValidacion || (txtGeneradoPara ? 'Abrir ARCA para subir el TXT que acabás de generar' : 'Primero generá el TXT: este botón abre ARCA para subir ese archivo')}
+              title={bloqueoPorValidacion || (txtGeneradoPara ? 'Camino manual: abrir ARCA para subir a mano el TXT que se descargó (si la presentación automática falló)' : 'Primero generá el TXT: este botón abre ARCA para subir ese archivo a mano')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-4 w-4" />
@@ -3203,7 +3277,9 @@ export const ContractBulkAfipTab: React.FC<{
       {cargarArcaInfoOpen && (
         <Modal isOpen={cargarArcaInfoOpen} onClose={() => setCargarArcaInfoOpen(false)} title="Cargar en ARCA" size="sm" zIndex={80}>
           <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">Este botón redirige a la página de ARCA. Una vez ahí:</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Normalmente no hace falta: <strong>Generar TXT Masivo</strong> ya presenta el archivo en ARCA solo. Este botón es el camino manual, para cuando la presentación automática falló. Redirige a la página de ARCA; una vez ahí:
+            </p>
             <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
               <li>
                 Iniciar sesión con Clave Fiscal en <span className="font-mono text-xs">https://www.arca.gob.ar</span> (dominio oficial actual — es el portal <span className="font-mono text-xs">afip.gob.ar</span> renombrado; si ya tenés abierto <span className="font-mono text-xs">portalcf.cloud.afip.gob.ar/portal/app/</span>, es el mismo portal de acceso).
@@ -3269,15 +3345,23 @@ export const ContractBulkAfipTab: React.FC<{
         </Modal>
       )}
 
+      {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => load(true)} />}
+
       {flujoTxtInfoOpen && (
         <Modal isOpen={flujoTxtInfoOpen} onClose={() => setFlujoTxtInfoOpen(false)} title="Qué hacer con el TXT" size="sm" zIndex={80}>
           <div className="space-y-3">
             <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
               <li>
-                <strong>Generar TXT Masivo (ARCA)</strong>: descarga el archivo TXT con las altas completas, listo para importar.
+                <strong>Generar TXT Masivo (ARCA)</strong>: descarga el TXT con las altas completas (de respaldo) y lo <strong>presenta en ARCA solo</strong>, por Relaciones Laborales → Carga Masiva: crea la novedad, sube el archivo, espera la validación y la envía. Antes de empezar pide confirmación.
               </li>
               <li>
-                <strong>Cargar en ARCA</strong>: abre el portal de ARCA para importar ese TXT y generar las altas.
+                <strong>Generar TXT Masivo URGENTE</strong>: arma los registros de 85 posiciones (otro formato: informa puesto, convenio y situación de revista), los <strong>copia al portapapeles</strong> y los presenta por Registrar Nuevas Altas → Altas Masivas. Máximo {MAX_ALTAS_MASIVAS}.
+              </li>
+              <li>
+                Las dos solo se habilitan en la pestaña de <strong>una empresa</strong>, y nunca reintentan un envío: si no se puede leer el resultado, el contrato queda «indeterminado» y hay que mirarlo en ARCA.
+              </li>
+              <li>
+                <strong>Cargar en ARCA</strong>: el camino manual de siempre, por si la presentación automática falla. Abre el portal para subir a mano el TXT descargado.
               </li>
               <li>
                 Cuando ARCA sincronice las altas, se guardarán automáticamente en la carpeta de Dropbox <span className="font-mono text-xs">WEPRODU/ARCA/Alta temprana de Arca</span> y los contratos van a aparecer en la bandeja <strong>Firma Digital</strong>.

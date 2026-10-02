@@ -35,6 +35,8 @@ export interface CategoriaCompat {
     codigoAfip: number;
     codigoArca?: string;
     convenio?: string;
+    /** Puesto desempeñado de ARCA (4 díg.). Solo para el registro de 85. */
+    puestoDesempenado?: string;
     grupoId?: any;
     /** Nombre del grupo, si el convenio le da uno («Grupo 1» suele no tenerlo). */
     grupoNombre?: string;
@@ -73,6 +75,7 @@ const aplanar = (c: any, g: any): CategoriaCompat => {
       codigoAfip: c.codigoArca ? Number(c.codigoArca) : 0,
       codigoArca: c.codigoArca,
       convenio: c.convenio,
+      puestoDesempenado: c.puestoDesempenado || "",
       grupoId: c.grupoId,
       sueldoBasico: e.sueldoBasico,
       sueldoAdicional: e.sueldoAdicional,

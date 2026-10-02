@@ -1176,6 +1176,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 // Documentos descargables/subibles del contrato ACTIVO (para las columnas de la tabla).
                 altaDocumentoUrl: c.altaDocumentoUrl || "",
                 altaDocumentoNombre: c.altaDocumentoNombre || "",
+                // Lo que presentó la corrida automática de altas (Carga Masiva / Altas Masivas). No es el
+                // estado del contrato: es la marca que evita presentarlo dos veces.
+                altaArcaPresentada: c.altaArcaPresentada || null,
                 // Datos leídos del PDF de la Constancia de CUIT (vigencia = cuándo hay que volver a pedirla).
                 constanciaVigenciaDesde: c.constanciaVigenciaDesde || "",
                 constanciaVigenciaHasta: c.constanciaVigenciaHasta || "",

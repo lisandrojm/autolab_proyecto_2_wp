@@ -80,7 +80,7 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * autocompletar el código y normalizar la descripción al cargarlas ahí. Por eso va pegado a
  * Domicilios de Explotación y comparte su permiso.
  */
-const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/fuentes-paritaria', '/convenios', '/arca/categorias'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/puestos-desempenados', '/arca/situaciones-revista', '/arca/fuentes-paritaria', '/convenios', '/arca/categorias'];
 /**
  * La Conexión va DEBAJO DE LA RAYA, con lo que no es nomenclador, y ahí entra por su nombre.
  *
@@ -530,6 +530,9 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/arca/grupos-tipo-servicio')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/grupos-tipo-servicio', icon: faLayerGroup, label: 'Grupos de Tipo de Servicio', scope: 'global' });
       if (puedeAbrir('/arca/fuentes-paritaria')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/fuentes-paritaria', icon: faListCheck, label: 'Fuentes de Paritarias', scope: 'global' });
       if (puedeAbrir('/arca/modalidades-liquidacion')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/modalidades-liquidacion', icon: faClock, label: 'Modalidades de Liquidación', scope: 'global' });
+      // Las dos que solo pide el alta URGENTE (Altas Masivas, registro de 85).
+      if (puedeAbrir('/arca/puestos-desempenados')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/puestos-desempenados', icon: faListCheck, label: 'Puestos Desempeñados', scope: 'global' });
+      if (puedeAbrir('/arca/situaciones-revista')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/situaciones-revista', icon: faListCheck, label: 'Situaciones de Revista', scope: 'global' });
     }
 
     return base;

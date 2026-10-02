@@ -13,6 +13,7 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { AfipLog } from "../models/AfipLog.js";
 import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
+import { ArcaAltasLog } from "../models/ArcaAltasLog.js";
 import { aplicarNombreDeArca, confirmarNombresConElPadron } from "../services/arca/nombreArca.js";
 import { nombresPorPantalla } from "../services/arca/nombresPorPantalla.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -256,6 +257,22 @@ router.get("/simplificacion/logs", async (req, res) => {
     }
     catch (error) {
         console.error("ARCA obras sociales logs error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /afip/simplificacion/altas-logs - las últimas corridas de ALTAS (Carga Masiva / Altas Masivas).
+// Sin el HTML de la pantalla de resultado: pesa, y se pide por id cuando hace falta mirarlo.
+router.get("/simplificacion/altas-logs", async (req, res) => {
+    try {
+        if (!isAdmin(req)) {
+            res.status(403).json({ error: "Solo un administrador puede ver los logs de ARCA." });
+            return;
+        }
+        const logs = await ArcaAltasLog.find({ tenantId: req.tenantObjectId }).select("-htmlResultado").sort({ createdAt: -1 }).limit(50).lean();
+        res.json({ logs });
+    }
+    catch (error) {
+        console.error("ARCA altas logs error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

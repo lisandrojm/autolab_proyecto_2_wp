@@ -76,6 +76,10 @@ export interface IArcaDefault extends Document {
      * fuente vale para todos los CUIT —es el sitio del sindicato—, así que no tiene escalón de empresa.
      */
     fuenteParitariaId?: any;
+    /** Puesto desempeñado (4 díg.). Solo registro de 85; la categoría manda si tiene el suyo. */
+    puestoDesempenado?: string;
+    /** Situación de revista (2 díg.). Solo registro de 85; vacío = «01 Activo». */
+    situacionRevista?: string;
     createdAt: Date;
     updatedAt: Date;
 }

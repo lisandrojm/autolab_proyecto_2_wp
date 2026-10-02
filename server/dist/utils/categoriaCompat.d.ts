@@ -17,6 +17,8 @@ export interface CategoriaCompat {
         codigoAfip: number;
         codigoArca?: string;
         convenio?: string;
+        /** Puesto desempeñado de ARCA (4 díg.). Solo para el registro de 85. */
+        puestoDesempenado?: string;
         grupoId?: any;
         /** Nombre del grupo, si el convenio le da uno («Grupo 1» suele no tenerlo). */
         grupoNombre?: string;

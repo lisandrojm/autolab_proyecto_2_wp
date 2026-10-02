@@ -60,6 +60,8 @@ export interface CategoriaArca extends EscalaResuelta {
   nombre: string;
   /** Descripción completa de ARCA, con el sufijo "- GRUPO N" si lo trae. */
   descripcionArca: string;
+  /** Puesto desempeñado de ARCA (4 díg.). Solo lo informa el registro de 85 (Altas Masivas). */
+  puestoDesempenado?: string;
   /** `false` = resuelve para contratos ya cargados, pero no se ofrece en contratos nuevos. */
   isActive: boolean;
   legacyId: number | null;
@@ -236,12 +238,12 @@ class ArcaCategoriasAPI {
    * Los importes solo tienen sentido SIN grupo. Con grupo la escala vive en el grupo, y mandarlos
    * acá la convierte en propia: esa categoría deja de seguir las paritarias del grupo para siempre.
    */
-  async crearCategoria(payload: { convenio: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca: string; nombre: string; descripcionArca?: string } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
+  async crearCategoria(payload: { convenio: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca: string; nombre: string; descripcionArca?: string; puestoDesempenado?: string } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
     const { data } = await axios.post(BASE, payload);
     return data;
   }
 
-  async actualizarCategoria(id: string, payload: { convenio?: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca?: string; nombre?: string; descripcionArca?: string; isActive?: boolean } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
+  async actualizarCategoria(id: string, payload: { convenio?: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca?: string; nombre?: string; descripcionArca?: string; puestoDesempenado?: string; isActive?: boolean } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
     const { data } = await axios.put(`${BASE}/${id}`, payload);
     return data;
   }

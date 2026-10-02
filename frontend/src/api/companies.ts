@@ -102,6 +102,10 @@ export interface Company {
     actividad?: string;
     /** `codigoArca` de la categoría que se ofrece primero. Tiene que ser de uno de sus convenios. */
     categoria?: string;
+    /** Puesto desempeñado (4 díg.). Solo registro de 85; la categoría manda si tiene el suyo. */
+    puestoDesempenado?: string;
+    /** Situación de revista (2 díg.). Solo registro de 85; vacío = «01 — Activo». */
+    situacionRevista?: string;
   };
   createdAt?: string;
   updatedAt?: string;

@@ -33,6 +33,8 @@ const RUTA_GLOBAL: Record<CampoDefaultArca, string> = {
   actividad: "/arca/actividades",
   categoria: "/arca/categorias",
   fuenteParitariaId: "/arca/fuentes-paritaria",
+  puestoDesempenado: "/arca/puestos-desempenados",
+  situacionRevista: "/arca/situaciones-revista",
 };
 
 interface Props {

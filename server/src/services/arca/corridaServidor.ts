@@ -3,6 +3,7 @@ import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
 import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR } from "./motor.js";
+import { soltarCandado, tomarCandado } from "./candadoArca.js";
 
 /**
  * Validar obras sociales contra ARCA desde el SERVIDOR, sin que nadie tenga que instalar nada.
@@ -118,7 +119,10 @@ interface MedicionLectura {
 export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: any; grupos: GrupoCorrida[]; usuarioId?: string }): Promise<{ total: number; grupos: Array<{ empresaId: string; total: number }> }> {
   const { tenantId, tenantObjectId, usuarioId } = opts;
 
-  if (corriendo(tenantId)) throw new Error("Ya hay una validación en curso.");
+  // El candado es COMPARTIDO con las corridas de altas (ver `candadoArca.ts`): usan la misma sesión.
+  // Se toma antes de cualquier `await`, para que dos requests simultáneos no pasen los dos.
+  tomarCandado(tenantId, "obras_sociales");
+  try {
 
   // Normalizado y sin grupos vacíos. Un mismo CUIL puede estar en dos empleadoras (tiene contrato
   // con las dos): se LEE una vez —la obra social es de la persona— y se GUARDA en las dos.
@@ -156,10 +160,15 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
   corridas.set(tenantId, corrida);
   const emitir = (e: EventoCorrida) => corrida.eventos.push(e);
 
-  // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya.
+  // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya. El candado lo suelta
+  // `correr` al terminar.
   void correr({ corrida, emitir, tenantId, tenantObjectId, usuarioId, cred, grupos: conCuit, total: todos.size });
 
   return { total: todos.size, grupos: grupos.map((g) => ({ empresaId: g.empresaId, total: g.cuils.length })) };
+  } catch (e) {
+    soltarCandado(tenantId, "obras_sociales");
+    throw e;
+  }
 }
 
 async function correr(o: {
@@ -414,6 +423,8 @@ async function correr(o: {
     // El navegador lo abrió esta función, así que lo cierra esta función. Cada corrida que se
     // olvide de cerrarlo deja un Chromium vivo comiéndose la memoria del VPS.
     await s?.browser.close().catch(() => {});
+    // Recién con el navegador cerrado se libera la sesión de ARCA para otra corrida.
+    soltarCandado(tenantId, "obras_sociales");
 
     tiempos.totalMs = Date.now() - inicio;
     tiempos.resumen = resumirTiempos(tiempos);

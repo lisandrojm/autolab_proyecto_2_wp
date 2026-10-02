@@ -235,7 +235,7 @@ export async function boton(page, rotulo) {
   la URL. La guarda es por URL, es dura, y tira en vez de devolver `false` — un
   `false` lo puede ignorar quien llama; una excepción no.
 */
-async function aceptarSelectorDeCuit(page, cuit) {
+export async function aceptarSelectorDeCuit(page, cuit) {
   if (!INDEX_CONTRIBUYENTE_RE.test(page.url())) {
     throw new Error(`Me pidieron apretar «Aceptar» en ${page.url()}. Solo se aprieta en el selector de CUIT: en la pantalla de altas ese botón registra las altas ante el organismo.`);
   }

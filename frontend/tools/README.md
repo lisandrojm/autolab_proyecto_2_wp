@@ -135,3 +135,72 @@ npm run test:obras-sociales                   # las reglas del server (server/)
 Los cuatro primeros son sobre **Aceptar** y no se tocan: uno prueba que `boton()` se niega, otro que
 la lista blanca son exactamente `Agregar` y `Reiniciar`, otro escanea la fuente buscando `.click()`
 fuera de `boton()`, y el último que los botones se buscan por texto y nunca por posición.
+
+## Altas en ARCA desde el servidor (Carga Masiva y Altas Masivas)
+
+`altas-arca.mjs` es el tercer motor y el único que **presenta altas**. Lo corre el servidor
+(`server/src/services/arca/corridaAltas.ts`) en el Chromium del usuario delegado: no hay pestañas en
+el navegador del operador ni se pide clave fiscal en la app. Los dos botones de Contratos → Trámite
+impositivo → Alta temprana lo disparan:
+
+| Botón | Formato | Camino en ARCA | Termina en |
+|---|---|---|---|
+| Generar TXT Masivo (ARCA) | archivo de 130 (`afipTxt.ts`), se baja igual de respaldo | Relaciones Laborales → Carga Masiva: Nuevo → archivo → Cargar → validación → **Enviar** | la novedad enviada, con Nro. de Transacción |
+| Generar TXT Masivo URGENTE | pegado de 85 (`afipTxt85.ts`), máx. 9, va al portapapeles | Registrar Nuevas Altas → Altas Masivas: pegar → Aceptar → grilla → **Aceptar** | resultado por persona |
+
+Las posiciones de los dos formatos viven en `server/src/compartido/layoutAltaArca.ts`: el frontend arma
+los registros con ellas y el servidor las usa para partirlos y cotejarlos.
+
+### Las garantías
+
+- **Dos botones irreversibles, cada uno en su función.** `enviarNovedad` (Button_envio) y
+  `aceptarGrilla` (el `btnAceptar` de Altas.aspx). Un click, sin reintento. El test escanea la fuente
+  y exige exactamente tres `btn.click()`: `apretar`, y esos dos.
+- **Botones por id exacto y atados a su pantalla.** `boton(page, clave)` tira si la pantalla actual no
+  es la del botón: el mismo `btnAceptar` pasa el texto a la grilla en `ArchivoAltas.aspx` y registra
+  en `Altas.aspx`.
+- **La pantalla se reconoce por el formulario, no por la URL.** El sitio usa `Server.Transfer` y la
+  barra queda una pantalla atrás. `pantallaAltas({ accion, ids })` es puro y se testea.
+- **CUIT de la empleadora verificado en pantalla antes de escribir.** Sin flag para saltearlo.
+- **Altas Masivas: grilla vacía antes de pegar, y exactamente los CUIL del lote antes de aceptar.** La
+  grilla persiste en ARCA entre sesiones y su «Aceptar» registra todo lo que tenga. Nunca se aprieta
+  «Reiniciar».
+- **Nunca se reintenta un envío.** Si después del click no se puede leer el resultado, la corrida y el
+  contrato quedan en «indeterminado» y se resuelve leyendo en ARCA. El servidor rechaza volver a
+  presentar un contrato con `altaArcaPresentada` (salvo `fallida`).
+- **«Detener» solo hasta el paso anterior al envío.** Desde el evento `irreversible` el servidor
+  contesta 409.
+- **En seco por defecto en desarrollo** (`ARCA_ALTAS_EN_SECO`; en producción, real salvo `=true`).
+  Carga Masiva llega hasta la validación y deja la novedad sin enviar. Altas Masivas corta **antes**
+  de pasar el texto a la grilla: dejarla cargada «para probar» deja altas a medio dar.
+- **El lote lo decide el servidor.** `validarLoteAltas.ts` coteja cada registro contra la base (CUIL,
+  fechas, categoría, convenio, obra social, retribución, sucursal/actividad de la empleadora,
+  códigos de los nomencladores, puesto y revista): una línea que no coincide rechaza el lote entero.
+- **Una corrida de ARCA por tenant**, compartida con la validación de obras sociales y la lectura de
+  nombres (`candadoArca.ts`): usan la misma sesión.
+- **Registro persistente** en `arca_altas_logs` (sin TTL): quién, cuándo, empleadora, contratos,
+  novedad, transacción, resultado por persona, tiempos y el HTML anonimizado de la pantalla de
+  resultado. Sin claves; el TXT y los CUIL no van a la consola.
+
+### Lo que todavía hay que relevar
+
+El `input type=file` y el botón «Cargar» de Carga Masiva no se vieron nunca: están como `POR_RELEVAR`
+y la corrida se frena ahí con un error que lo dice. Se relevan con el reconocimiento, con alguien
+mirando:
+
+```bash
+cd server
+./node_modules/.bin/dotenv -e .env.production -v TENANT=<slug> -v EMPRESA_CUIT=<cuit> -- tsx src/scripts/reconocerAltasArca.ts
+```
+
+Abre un Chromium visible y en cada pantalla guarda un fixture anonimizado en
+`server/src/services/arca/fixtures/` (revisalo antes de commitear). No aprieta nunca «Enviar», el
+«Aceptar» de la grilla ni «Reiniciar»; «Nuevo» y el «Aceptar» del pegado piden escribir SI. Lo que pasa
+**después** de Enviar y del Aceptar de la grilla no se puede relevar sin presentar de verdad: la
+primera corrida real guarda esa pantalla en el log, y con eso se cierra el lector del resultado.
+
+```bash
+npm run test:arca:altas        # el motor de altas (frontend/)
+npm run test:afip85            # el registro de 85 (frontend/)
+npm run test:arca-altas        # el cotejo del lote y el candado (server/)
+```

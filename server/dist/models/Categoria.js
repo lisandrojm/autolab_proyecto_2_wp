@@ -21,6 +21,11 @@ const categoriaSchema = new Schema({
         // 6 dígitos exactos y no todo ceros: "0" y "000000" son la ausencia de código disfrazada.
         validate: { validator: (v) => /^\d{6}$/.test(v) && v !== "000000", message: (p) => `"${p.value}" no es un código de ARCA: son 6 dígitos, con ceros a la izquierda (ej. "035283")` },
     },
+    puestoDesempenado: {
+        type: String,
+        default: "",
+        validate: { validator: (v) => !v || /^\d{4}$/.test(v), message: (p) => `"${p.value}" no es un código de puesto desempeñado: son 4 dígitos (ej. "2455")` },
+    },
     nombre: { type: String, required: true, trim: true },
     descripcionArca: { type: String, default: "" },
     legacyId: { type: Number },

@@ -315,6 +315,7 @@ router.get("/", authenticateToken, async (req: AuthenticatedRequest, res: Respon
         codigoArca: String(c.codigoArca || ""),
         nombre: c.nombre,
         descripcionArca: c.descripcionArca || "",
+        puestoDesempenado: c.puestoDesempenado || "",
         isActive: c.isActive !== false,
         legacyId: c.legacyId ?? null,
         contratos: c.legacyId != null ? uso.get(Number(c.legacyId)) || 0 : 0,
@@ -528,6 +529,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       codigoArca,
       nombre,
       descripcionArca: String(req.body.descripcionArca || "").trim(),
+      puestoDesempenado: String(req.body.puestoDesempenado || "").replace(/\D/g, ""),
       isActive: req.body.isActive !== false,
     });
 
@@ -558,6 +560,11 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     }
     if (req.body.nombre !== undefined) item.nombre = String(req.body.nombre || "").trim();
     if (req.body.descripcionArca !== undefined) item.descripcionArca = String(req.body.descripcionArca || "").trim();
+    if (req.body.puestoDesempenado !== undefined) {
+      const puesto = String(req.body.puestoDesempenado || "").replace(/\D/g, "");
+      if (puesto && puesto.length !== 4) return res.status(400).json({ error: 'El puesto desempeñado son 4 dígitos (ej. "2455")' });
+      item.puestoDesempenado = puesto;
+    }
     /*
       DAR DE BAJA CON FUNCIONES APUNTANDO SE RECHAZA.
 

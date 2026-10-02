@@ -1,5 +1,7 @@
 import { ContractOverviewRow } from "../../api/users";
 import { AfipCatalogs, AfipValues, resolveAfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO } from "./afipCompleteness";
+// La constante vive en el código compartido: el servidor la usa para cotejar el importe del lote.
+import { RETRIBUCION_130_EN_CENTAVOS } from "@compartido/layoutAltaArca";
 
 /**
  * Generación del archivo TXT de "Alta masiva sin límite de registros" de ARCA.
@@ -76,7 +78,7 @@ export const noInformableEnAlta = (desde: number, hasta: number): boolean =>
  * `true` por un `false` y no repasar el generador, los tests y el tooltip. Mientras no esté
  * confirmado, el tooltip del campo lo dice en la pantalla en vez de dejarlo sólo en el código.
  */
-export const RETRIBUCION_EN_CENTAVOS = true;
+export const RETRIBUCION_EN_CENTAVOS = RETRIBUCION_130_EN_CENTAVOS;
 
 /** Solo dígitos, justificado a la derecha con ceros a la izquierda, a lo sumo `len` caracteres. */
 const num = (v: string | number | null | undefined, len: number): string =>

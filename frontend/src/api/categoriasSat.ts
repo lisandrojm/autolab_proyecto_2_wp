@@ -31,6 +31,11 @@ export interface CategoriaSatItem {
      * que la categoría sea de un convenio habilitado para la empleadora del contrato.
      */
     convenio?: string;
+    /**
+     * Código de puesto desempeñado de ARCA (4 díg.). Solo lo informa el registro de 85 (Altas
+     * Masivas); vacío = cae al default de la empleadora / instalación.
+     */
+    puestoDesempenado?: string;
     presentismo: number;
     sueldoBasico: number;
     sueldoAdicional: number;

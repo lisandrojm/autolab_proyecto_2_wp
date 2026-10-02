@@ -63,6 +63,8 @@ export const EmpresaContextMenu: React.FC = () => {
     { path: `${base}/arca/grupos-tipo-servicio`, icon: faLayerGroup, label: 'Grupos de Tipo de Servicio' },
     { path: `${base}/arca/modalidades-contratacion`, icon: faFileContract, label: 'Modalidad de Contratación' },
     { path: `${base}/arca/modalidades-liquidacion`, icon: faSliders, label: 'Modalidad de Liquidación' },
+    { path: `${base}/arca/puestos-desempenados`, icon: faListCheck, label: 'Puesto Desempeñado' },
+    { path: `${base}/arca/situaciones-revista`, icon: faSliders, label: 'Situación de Revista' },
     { path: `${base}/arca/tipos-servicio`, icon: faListCheck, label: 'Tipos de Servicio' },
   ].sort(porNombre);
 

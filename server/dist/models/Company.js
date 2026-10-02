@@ -46,6 +46,8 @@ const companySchema = new Schema({
         categoria: { type: String, default: '' },
         sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', default: null },
         convenioId: { type: Schema.Types.ObjectId, ref: 'Convenio', default: null },
+        puestoDesempenado: { type: String, default: '' },
+        situacionRevista: { type: String, default: '' },
     },
 }, {
     timestamps: true,

@@ -81,6 +81,14 @@ export interface ICategoria extends Document {
      * `buildAltaRecord` devuelve null), así que dejar entrar el dato solo posterga el error.
      */
     codigoArca: string;
+    /**
+     * Código de PUESTO DESEMPEÑADO de ARCA (4 dígitos, tabla `arca-puestos-desempenados`).
+     *
+     * Solo lo informa el registro de 85 (Altas Masivas); el de 130 lo deja en blanco. Vive en la
+     * categoría porque cada categoría de un CCT ES un puesto. Vacío = cae al default de la empleadora
+     * y después al de la instalación.
+     */
+    puestoDesempenado?: string;
     /** Nombre de la categoría, sin el sufijo "- GRUPO N" que ARCA le agrega en la descripción. */
     nombre: string;
     /** Descripción completa tal como viene de ARCA, para poder cotejar contra el organismo. */

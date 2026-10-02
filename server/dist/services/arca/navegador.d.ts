@@ -35,4 +35,6 @@ export declare function guardarSesion(tenantId: string, ctx: BrowserContext): Pr
  * Quien llama TIENE que cerrar el browser (`await sesion.browser.close()`), o cada corrida deja un
  * Chromium vivo comiéndose la memoria del VPS.
  */
-export declare function abrirSesionArca(tenantId: string, cred: CredencialesArca): Promise<SesionArca>;
+export declare function abrirSesionArca(tenantId: string, cred: CredencialesArca, opciones?: {
+    visible?: boolean;
+}): Promise<SesionArca>;

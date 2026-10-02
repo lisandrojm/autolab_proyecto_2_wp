@@ -154,6 +154,10 @@ export interface ICompany extends Document {
     modalidadContratacion?: string;
     /** Código de Modalidad de Liquidación (pos. 73 del TXT). */
     modalidadLiquidacion?: string;
+    /** Puesto desempeñado (4 díg.). Solo registro de 85; la categoría manda si tiene el suyo. */
+    puestoDesempenado?: string;
+    /** Situación de revista (2 díg.). Solo registro de 85; vacío = «01 Activo». */
+    situacionRevista?: string;
     /**
      * RNOS de la obra social que esta empleadora OFRECE PRIMERO, pisando la de la instalación.
      *
@@ -256,6 +260,8 @@ const companySchema = new Schema<ICompany>(
       categoria: { type: String, default: '' },
       sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', default: null },
       convenioId: { type: Schema.Types.ObjectId, ref: 'Convenio', default: null },
+      puestoDesempenado: { type: String, default: '' },
+      situacionRevista: { type: String, default: '' },
     },
   },
   {

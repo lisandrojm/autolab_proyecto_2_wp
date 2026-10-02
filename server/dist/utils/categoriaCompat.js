@@ -35,6 +35,7 @@ const aplanar = (c, g) => {
             codigoAfip: c.codigoArca ? Number(c.codigoArca) : 0,
             codigoArca: c.codigoArca,
             convenio: c.convenio,
+            puestoDesempenado: c.puestoDesempenado || "",
             grupoId: c.grupoId,
             sueldoBasico: e.sueldoBasico,
             sueldoAdicional: e.sueldoAdicional,

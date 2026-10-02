@@ -31,7 +31,7 @@ interface Props {
   empresa: Company;
   recargar: () => Promise<void>;
   /** La clave de `Company.defaultsArca` que marca esta pantalla. */
-  campo: 'tipoServicio' | 'modalidadContratacion' | 'modalidadLiquidacion';
+  campo: 'tipoServicio' | 'modalidadContratacion' | 'modalidadLiquidacion' | 'puestoDesempenado' | 'situacionRevista';
   /** El nomenclador del que se elige. */
   api: SimpleCatalogApi;
   /** Cómo se nombra lo que se marca, para los tooltips ("el tipo de servicio"). */
@@ -106,7 +106,9 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
    * opciones de un día para el otro. Además es el default sano: recortar es la excepción, y una
    * empleadora que nunca tocó el filtro quiere ver el nomenclador entero.
    */
-  const asignados = ((empresa[CAMPO_IDS_DE_VINCULO[campo]] as string[] | undefined) || []).map(String);
+  // Puesto y situación de revista no tienen vínculo por empresa: se ofrece el nomenclador entero.
+  const campoVinculo = campo in CAMPO_IDS_DE_VINCULO ? CAMPO_IDS_DE_VINCULO[campo as keyof typeof CAMPO_IDS_DE_VINCULO] : undefined;
+  const asignados = ((campoVinculo ? (empresa[campoVinculo] as string[] | undefined) : undefined) || []).map(String);
   const delaEmpresa = useMemo(() => (asignados.length === 0 ? items : items.filter((i) => asignados.includes(i._id))), [items, asignados.join(',')]);
 
   const visibles = useMemo(() => {

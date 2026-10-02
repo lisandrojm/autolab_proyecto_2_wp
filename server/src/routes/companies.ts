@@ -82,6 +82,9 @@ const companySchema = z.object({
       actividad: z.string().optional().default(""),
       /** `codigoArca` de la categoría que se ofrece primero. Preselección: no decide el alta. */
       categoria: z.string().optional().default(""),
+      /** Puesto desempeñado (4 díg.) y situación de revista (2 díg.): solo registro de 85. */
+      puestoDesempenado: z.string().optional().default(""),
+      situacionRevista: z.string().optional().default(""),
     })
     .optional(),
 });

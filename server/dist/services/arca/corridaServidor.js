@@ -3,6 +3,7 @@ import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
 import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR } from "./motor.js";
+import { soltarCandado, tomarCandado } from "./candadoArca.js";
 /**
  * Una corrida por tenant, en memoria.
  *
@@ -40,45 +41,53 @@ const soloDigitos = (v) => String(v ?? "").replace(/\D/g, "");
  */
 export async function arrancarCorrida(opts) {
     const { tenantId, tenantObjectId, usuarioId } = opts;
-    if (corriendo(tenantId))
-        throw new Error("Ya hay una validación en curso.");
-    // Normalizado y sin grupos vacíos. Un mismo CUIL puede estar en dos empleadoras (tiene contrato
-    // con las dos): se LEE una vez —la obra social es de la persona— y se GUARDA en las dos.
-    const grupos = opts.grupos
-        .map((g) => ({ empresaId: String(g.empresaId || ""), cuils: [...new Set(g.cuils.map(soloDigitos).filter((c) => c.length === 11))] }))
-        .filter((g) => g.empresaId && g.cuils.length > 0);
-    const todos = new Set(grupos.flatMap((g) => g.cuils));
-    if (todos.size === 0)
-        throw new Error("No hay ninguna persona para validar.");
-    const cred = await credencialesDe(tenantId);
-    if (!cred)
-        throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
-    const empresas = await Company.find({ _id: { $in: grupos.map((g) => g.empresaId) } })
-        .select("cuit razonSocial")
-        .lean();
-    const empresaDe = new Map(empresas.map((e) => [String(e._id), e]));
-    const conCuit = grupos.map((g) => {
-        const e = empresaDe.get(g.empresaId);
-        return { ...g, empresaCuit: soloDigitos(e?.cuit), razonSocial: String(e?.razonSocial || "") };
-    });
-    if (conCuit.every((g) => g.empresaCuit.length !== 11)) {
-        throw new Error("La empleadora no tiene CUIT cargado: sin eso no se puede elegir en ARCA.");
+    // El candado es COMPARTIDO con las corridas de altas (ver `candadoArca.ts`): usan la misma sesión.
+    // Se toma antes de cualquier `await`, para que dos requests simultáneos no pasen los dos.
+    tomarCandado(tenantId, "obras_sociales");
+    try {
+        // Normalizado y sin grupos vacíos. Un mismo CUIL puede estar en dos empleadoras (tiene contrato
+        // con las dos): se LEE una vez —la obra social es de la persona— y se GUARDA en las dos.
+        const grupos = opts.grupos
+            .map((g) => ({ empresaId: String(g.empresaId || ""), cuils: [...new Set(g.cuils.map(soloDigitos).filter((c) => c.length === 11))] }))
+            .filter((g) => g.empresaId && g.cuils.length > 0);
+        const todos = new Set(grupos.flatMap((g) => g.cuils));
+        if (todos.size === 0)
+            throw new Error("No hay ninguna persona para validar.");
+        const cred = await credencialesDe(tenantId);
+        if (!cred)
+            throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
+        const empresas = await Company.find({ _id: { $in: grupos.map((g) => g.empresaId) } })
+            .select("cuit razonSocial")
+            .lean();
+        const empresaDe = new Map(empresas.map((e) => [String(e._id), e]));
+        const conCuit = grupos.map((g) => {
+            const e = empresaDe.get(g.empresaId);
+            return { ...g, empresaCuit: soloDigitos(e?.cuit), razonSocial: String(e?.razonSocial || "") };
+        });
+        if (conCuit.every((g) => g.empresaCuit.length !== 11)) {
+            throw new Error("La empleadora no tiene CUIT cargado: sin eso no se puede elegir en ARCA.");
+        }
+        const corrida = {
+            tenantId,
+            empresaId: grupos[0].empresaId,
+            empresaIds: grupos.map((g) => g.empresaId),
+            total: todos.size,
+            eventos: [],
+            terminada: false,
+            señal: { cortada: false },
+            arrancadaEl: new Date(),
+        };
+        corridas.set(tenantId, corrida);
+        const emitir = (e) => corrida.eventos.push(e);
+        // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya. El candado lo suelta
+        // `correr` al terminar.
+        void correr({ corrida, emitir, tenantId, tenantObjectId, usuarioId, cred, grupos: conCuit, total: todos.size });
+        return { total: todos.size, grupos: grupos.map((g) => ({ empresaId: g.empresaId, total: g.cuils.length })) };
     }
-    const corrida = {
-        tenantId,
-        empresaId: grupos[0].empresaId,
-        empresaIds: grupos.map((g) => g.empresaId),
-        total: todos.size,
-        eventos: [],
-        terminada: false,
-        señal: { cortada: false },
-        arrancadaEl: new Date(),
-    };
-    corridas.set(tenantId, corrida);
-    const emitir = (e) => corrida.eventos.push(e);
-    // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya.
-    void correr({ corrida, emitir, tenantId, tenantObjectId, usuarioId, cred, grupos: conCuit, total: todos.size });
-    return { total: todos.size, grupos: grupos.map((g) => ({ empresaId: g.empresaId, total: g.cuils.length })) };
+    catch (e) {
+        soltarCandado(tenantId, "obras_sociales");
+        throw e;
+    }
 }
 async function correr(o) {
     const { corrida, emitir, tenantId, tenantObjectId, usuarioId, cred, grupos, total } = o;
@@ -337,6 +346,8 @@ async function correr(o) {
         // El navegador lo abrió esta función, así que lo cierra esta función. Cada corrida que se
         // olvide de cerrarlo deja un Chromium vivo comiéndose la memoria del VPS.
         await s?.browser.close().catch(() => { });
+        // Recién con el navegador cerrado se libera la sesión de ARCA para otra corrida.
+        soltarCandado(tenantId, "obras_sociales");
         tiempos.totalMs = Date.now() - inicio;
         tiempos.resumen = resumirTiempos(tiempos);
         // El log se escribe al final y de una sola vez, no evento por evento: una corrida son minutos

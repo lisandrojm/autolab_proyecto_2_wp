@@ -365,12 +365,17 @@ async function loguear(page, cred) {
  * Quien llama TIENE que cerrar el browser (`await sesion.browser.close()`), o cada corrida deja un
  * Chromium vivo comiéndose la memoria del VPS.
  */
-export async function abrirSesionArca(tenantId, cred) {
+export async function abrirSesionArca(tenantId, cred, opciones = {}) {
     const tiempos = { lanzarMs: 0, sesionGuardadaMs: 0, loginMs: 0 };
     let t = Date.now();
     let browser;
     try {
-        browser = await chromium.launch({ headless: true, executablePath: rutaChromium() });
+        /*
+          `visible` existe SOLO para el reconocimiento de pantallas (`scripts/reconocerAltasArca.ts`),
+          que se corre en una máquina local con alguien mirando. En el VPS no hay pantalla, y ningún
+          camino del servidor lo pasa.
+        */
+        browser = await chromium.launch({ headless: !opciones.visible, executablePath: rutaChromium() });
     }
     catch (e) {
         // El «falta el navegador» tiene que llegar como instrucción, no como el cartel de Playwright.

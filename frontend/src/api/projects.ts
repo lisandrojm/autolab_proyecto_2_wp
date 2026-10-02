@@ -837,6 +837,30 @@ class ProjectsAPI {
   }
 
   /**
+   * Presenta altas en ARCA desde el servidor: Carga Masiva (registros de 130) o Altas Masivas (85,
+   * máximo 9). El servidor coteja cada registro contra la base antes de abrir ARCA: si algo no
+   * coincide, contesta 400 con el `detalle` y no manda nada.
+   */
+  async arrancarAltasArca(payload: { modo: ModoAltasArca; empresaId: string; items: Array<{ userProjectId: string; contractIndex: number; registro: string }>; enSeco?: boolean; forzar?: boolean }): Promise<{ arrancada: boolean; total: number; enSeco: boolean; empresa: { _id: string; cuit: string; razonSocial: string } }> {
+    const { data } = await axios.post(`/contratos/altas-arca/corrida`, payload, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Estado de la corrida de altas, con TODOS sus eventos. Se consulta por polling. */
+  async estadoAltasArca(): Promise<EstadoCorridaAltas> {
+    const { data } = await axios.get(`/contratos/altas-arca/corrida`, { headers: this.getHeaders() });
+    // Al terminar se marcan los contratos presentados: el listado cacheado ya no vale.
+    if (data?.hay && !data?.corriendo) invalidateRefCache("contracts-overview:");
+    return data;
+  }
+
+  /** Corta la corrida, solo hasta el paso anterior al envío. Después el servidor contesta 409. */
+  async detenerAltasArca(): Promise<{ detenida: boolean; motivo?: string }> {
+    const { data } = await axios.post(`/contratos/altas-arca/corrida/detener`, {}, { headers: this.getHeaders(), validateStatus: (s) => s === 200 || s === 409 });
+    return data;
+  }
+
+  /**
    * Saca la obra social de varios contratos de una vez. Cada uno vuelve a quedar SIN VALIDAR.
    *
    * Es un endpoint y no un bucle de `updateObraSocialContrato` por el mismo motivo que
@@ -893,3 +917,25 @@ class ProjectsAPI {
 }
 
 export const projectsAPI = new ProjectsAPI();
+
+export type ModoAltasArca = "carga_masiva" | "altas_masivas";
+
+export interface EstadoCorridaAltas {
+  hay: boolean;
+  corriendo: boolean;
+  tipo?: ModoAltasArca;
+  empresaId?: string;
+  empresaRazonSocial?: string;
+  empresaCuit?: string;
+  personas?: Array<{ cuil: string; nombre: string }>;
+  total?: number;
+  enSeco?: boolean;
+  /** Ya se apretó el botón que presenta: «Detener» no corta. */
+  irreversible?: boolean;
+  arrancadaEl?: string;
+  eventos: Array<Record<string, any> & { tipo: string }>;
+  /** El servidor corre en seco salvo configuración explícita (desarrollo). */
+  enSecoForzado?: boolean;
+  /** Otra corrida de ARCA tiene la sesión del tenant (obras sociales, nombres, altas). */
+  ocupadaPor?: string | null;
+}

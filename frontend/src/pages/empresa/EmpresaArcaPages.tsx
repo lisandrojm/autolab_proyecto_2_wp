@@ -45,6 +45,8 @@ const conveniosApi = createSimpleCatalogApi('/convenios');
 const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
 const gruposTipoServicioApi = createSimpleCatalogApi('/arca/grupos-tipo-servicio');
 const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
+const puestosApi = createSimpleCatalogApi('/arca/puestos-desempenados');
+const situacionesRevistaApi = createSimpleCatalogApi('/arca/situaciones-revista');
 const modalidadesContratacionApi = createSimpleCatalogApi('/arca/modalidades-contratacion');
 
 /**
@@ -1206,5 +1208,19 @@ export const EmpresaModalidadLiquidacionPage: React.FC = () => (
   <EmpresaContextLayout titulo="Modalidad de Liquidación" icono={faSliders} ayuda="empresaDefaults">
     {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="modalidadLiquidacion"
         ambito={nomencladorPorId("modalidades-liquidacion")!.descripcionAmbito} api={modalidadesLiqApi} queEs="la modalidad de liquidación" nota="Posición 73 del TXT de alta." />}
+  </EmpresaContextLayout>
+);
+
+export const EmpresaPuestoDesempenadoPage: React.FC = () => (
+  <EmpresaContextLayout titulo="Puesto Desempeñado" icono={faListCheck} ayuda="empresaDefaults">
+    {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="puestoDesempenado"
+        ambito={nomencladorPorId("puestos-desempenados")!.descripcionAmbito} api={puestosApi} queEs="el puesto desempeñado" nota="Posiciones 29-32 del registro de 85 (alta URGENTE). Rige solo si la categoría del contrato no tiene su propio puesto." />}
+  </EmpresaContextLayout>
+);
+
+export const EmpresaSituacionRevistaPage: React.FC = () => (
+  <EmpresaContextLayout titulo="Situación de Revista" icono={faSliders} ayuda="empresaDefaults">
+    {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="situacionRevista"
+        ambito={nomencladorPorId("situaciones-revista")!.descripcionAmbito} api={situacionesRevistaApi} queEs="la situación de revista" nota="Posiciones 84-85 del registro de 85 (alta URGENTE). Sin marcar rige la de la instalación, y si tampoco hay, «01 — Activo»." />}
   </EmpresaContextLayout>
 );

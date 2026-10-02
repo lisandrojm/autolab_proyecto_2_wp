@@ -38,6 +38,8 @@ const patchSchema = z.object({
   actividad: nullable,
   categoria: nullable,
   fuenteParitariaId: nullable,
+  puestoDesempenado: nullable,
+  situacionRevista: nullable,
 });
 
 router.get("/", requireTenant, authenticateToken, async (_req: AuthenticatedRequest & TenantRequest, res) => {

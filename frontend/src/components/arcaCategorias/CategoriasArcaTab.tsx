@@ -193,7 +193,7 @@ export const CategoriasArcaTab: React.FC = () => {
   // Categoría (crear / editar). `categoriaHuerfana` marca que se abrió desde el banner.
   const [showCategoria, setShowCategoria] = useState(false);
   const [categoriaEnEdicion, setCategoriaEnEdicion] = useState<{ _id: string; contratos: number } | null>(null);
-  const [formCategoria, setFormCategoria] = useState({ convenio: '', numeroGrupo: '', codigoArca: '', nombre: '', descripcionArca: '', isActive: true });
+  const [formCategoria, setFormCategoria] = useState({ convenio: '', numeroGrupo: '', codigoArca: '', nombre: '', descripcionArca: '', puestoDesempenado: '', isActive: true });
   /*
     La escala PROPIA de la categoría, para los convenios sin grupo.
 
@@ -447,7 +447,7 @@ export const CategoriasArcaTab: React.FC = () => {
 
   const abrirNuevaCategoria = () => {
     setCategoriaEnEdicion(null);
-    setFormCategoria({ convenio: convenioSel, numeroGrupo: '', codigoArca: '', nombre: '', descripcionArca: '', isActive: true });
+    setFormCategoria({ convenio: convenioSel, numeroGrupo: '', codigoArca: '', nombre: '', descripcionArca: '', puestoDesempenado: '', isActive: true });
     setFormEscalaCat(ESCALA_VACIA);
     cargarGruposPara(convenioSel);
     setShowCategoria(true);
@@ -473,7 +473,7 @@ export const CategoriasArcaTab: React.FC = () => {
   /** `grupo` es `null` para las categorías sueltas: no todas cuelgan de uno. */
   const abrirEditarCategoria = (cat: CategoriaArca, grupo: GrupoConvenio | null, convenio: string) => {
     setCategoriaEnEdicion({ _id: cat._id, contratos: cat.contratos });
-    setFormCategoria({ convenio, numeroGrupo: grupo ? String(grupo.numero) : '', codigoArca: cat.codigoArca, nombre: cat.nombre, descripcionArca: cat.descripcionArca, isActive: cat.isActive });
+    setFormCategoria({ convenio, numeroGrupo: grupo ? String(grupo.numero) : '', codigoArca: cat.codigoArca, nombre: cat.nombre, descripcionArca: cat.descripcionArca, puestoDesempenado: cat.puestoDesempenado || '', isActive: cat.isActive });
     setFormEscalaCat(escalaPropiaAlForm(cat));
     cargarGruposPara(convenio);
     setShowCategoria(true);
@@ -485,7 +485,7 @@ export const CategoriasArcaTab: React.FC = () => {
    */
   const abrirHuerfana = (h: CategoriaHuerfana) => {
     setCategoriaEnEdicion({ _id: h._id, contratos: h.contratos });
-    setFormCategoria({ convenio: h.convenio, numeroGrupo: '', codigoArca: esCodigoValido(h.codigoArca) ? h.codigoArca : '', nombre: h.nombre, descripcionArca: '', isActive: true });
+    setFormCategoria({ convenio: h.convenio, numeroGrupo: '', codigoArca: esCodigoValido(h.codigoArca) ? h.codigoArca : '', nombre: h.nombre, descripcionArca: '', puestoDesempenado: '', isActive: true });
     setFormEscalaCat(ESCALA_VACIA);
     cargarGruposPara(h.convenio);
     setShowCategoria(true);
@@ -521,6 +521,7 @@ export const CategoriasArcaTab: React.FC = () => {
       codigoArca: codigo,
       nombre: formCategoria.nombre.trim(),
       descripcionArca: formCategoria.descripcionArca.trim(),
+      puestoDesempenado: formCategoria.puestoDesempenado.replace(/\D/g, ''),
       isActive: formCategoria.isActive,
       ...(conGrupo
         ? {}
@@ -1568,6 +1569,12 @@ export const CategoriasArcaTab: React.FC = () => {
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de ARCA</label>
             <input type="text" value={formCategoria.descripcionArca} onChange={(e) => setFormCategoria((p) => ({ ...p, descripcionArca: e.target.value }))} className="input-field" placeholder="Tal como viene del organismo, ej: DIRECTOR DE PROGRAMAS - GRUPO 1" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Puesto desempeñado</label>
+            <input type="text" inputMode="numeric" maxLength={4} value={formCategoria.puestoDesempenado} onChange={(e) => setFormCategoria((p) => ({ ...p, puestoDesempenado: e.target.value.replace(/\D/g, '') }))} className="input-field" placeholder="Ej: 2455" />
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">4 dígitos de la tabla de ARCA. Solo lo pide el alta URGENTE (Altas Masivas); vacío = el default de la empleadora.</p>
           </div>
 
           {/*

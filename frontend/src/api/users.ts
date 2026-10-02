@@ -136,6 +136,11 @@ export interface ContractOverviewRow {
   // Documentos del contrato ACTIVO, para las columnas de descarga/carga de la tabla de Contratos.
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
+  /**
+   * Lo que presentó la corrida automática de altas en ARCA. No es el estado del contrato: es la marca
+   * que evita presentarlo dos veces. `indeterminado` = hay que mirarlo en ARCA antes de hacer nada.
+   */
+  altaArcaPresentada?: AltaArcaPresentada | null;
   /** Datos leídos del PDF de la Constancia de CUIT de ARCA ("YYYY-MM-DD"). Vale un mes: la vigencia marca cuándo hay que volver a pedirla. */
   constanciaVigenciaDesde?: string;
   constanciaVigenciaHasta?: string;
@@ -1029,3 +1034,12 @@ function paramsDelListado(params: ListadoUsuariosParams): URLSearchParams {
 }
 
 export const usersAPI = new UsersAPI();
+
+export interface AltaArcaPresentada {
+  via: "carga_masiva" | "altas_masivas";
+  fecha: string;
+  resultado: "presentada" | "indeterminado" | "fallida";
+  codigoNovedad?: string;
+  nroTransaccion?: string;
+  motivo?: string;
+}

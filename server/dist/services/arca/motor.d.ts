@@ -13,3 +13,8 @@
  */
 export declare const RAIZ_REPO: string;
 export declare const MOTOR: string;
+/**
+ * El motor de las ALTAS (Carga Masiva y Altas Masivas). Archivo aparte a propósito: el de arriba
+ * garantiza que nunca aprieta «Aceptar», y éste lo necesita. Cada uno con su lista blanca y su test.
+ */
+export declare const MOTOR_ALTAS: string;

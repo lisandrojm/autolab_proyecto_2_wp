@@ -334,7 +334,22 @@ export interface AfipValues {
    */
   rnosSugerido: string;
   nombreObraSocialSugerida: string;
+  /**
+   * Puesto desempeñado (4 díg.). SOLO lo informa el registro de 85 (Altas Masivas): el de 130 lo deja
+   * en blanco. Cascada: categoría → empleadora → instalación.
+   */
+  puesto: string;
+  puestoOrigen: OrigenValorArca;
+  /**
+   * Situación de revista (2 díg.). SOLO la informa el registro de 85. Cascada: empleadora →
+   * instalación → «01» (Activo), que es lo que es toda alta nueva.
+   */
+  situacionRevista: string;
+  situacionRevistaOrigen: OrigenValorArca;
 }
+
+/** Situación de revista de un alta nueva cuando nadie configuró otra: «01 — Activo». */
+export const SITUACION_REVISTA_ALTA = "01";
 
 /**
  * EL TIPO DE CONTRATO NO SE ENCUENTRA POR IGUALDAD DE NOMBRE, y por eso los tres códigos de ARCA
@@ -580,6 +595,11 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const tipoServicioResuelto = conCascada(tipo?.data?.afipTipoServicio, "tipo_contrato", "tipoServicio", defaultsEmpresa, defaultsGlobales);
   const modalidadContratoResuelta = conCascada(tipo?.data?.afipModalidadContrato, "tipo_contrato", "modalidadContratacion", defaultsEmpresa, defaultsGlobales);
   const modalidadLiqResuelta = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", defaultsEmpresa, defaultsGlobales);
+  // Solo para el registro de 85. El puesto lo define la categoría (cada categoría de un CCT es un
+  // puesto); la situación de revista no tiene escalón de contrato: un alta nueva es «Activo».
+  const puestoResuelto = conCascada(categoria?.data?.puestoDesempenado, "categoria", "puestoDesempenado", defaultsEmpresa, defaultsGlobales);
+  const revistaCascada = conCascada(undefined, "contrato", "situacionRevista", defaultsEmpresa, defaultsGlobales);
+  const revistaResuelta = revistaCascada.valor ? revistaCascada : { valor: SITUACION_REVISTA_ALTA, origen: "global" as OrigenValorArca };
 
   return {
     cuil,
@@ -624,6 +644,10 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     constatadaEl: String(row.obraSocialConstatadaEl || ""),
     rnosOrigen: obraSocialPropia ? ((row.obraSocialOrigen || "heredada-usuario") as "constatada" | "manual" | "heredada-usuario") : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : "ninguno",
     sucursal: sucursal?.codigo ? String(sucursal.codigo) : "",
+    puesto: soloDigitos(puestoResuelto.valor),
+    puestoOrigen: puestoResuelto.origen,
+    situacionRevista: soloDigitos(revistaResuelta.valor),
+    situacionRevistaOrigen: revistaResuelta.origen,
   };
 }
 
@@ -1021,4 +1045,43 @@ export function resumenArca(r: AfipRowResult): { tono: TonoArca; texto: string }
   // Solo la fracción: que el badge sea una ACCIÓN lo dice el ícono de tuerca, no una palabra que
   // repite en cada fila lo mismo y le come el lugar al único dato que distingue una de otra.
   return { tono: r.errores > 0 ? "error" : r.configuracionesPendientes > 0 ? "falta" : "en_fila", texto: `${resueltos}/${total}` };
+}
+
+/**
+ * LO QUE AGREGA EL REGISTRO DE 85 (Altas Masivas) SOBRE EL DE 130.
+ *
+ * Es una función aparte y no dos checks más dentro de `resolveAfip` a propósito: el de 130 no
+ * informa ni el puesto ni la situación de revista, y sumarlos a sus checks dejaría «incompleto» un
+ * contrato que se puede presentar perfectamente por Carga Masiva. `completo` acá = completo para el
+ * de 130 Y con los dos campos propios del de 85 resueltos.
+ *
+ * El convenio NO es un check nuevo: el de 85 lo informa, pero sale de la categoría y `resolveAfip`
+ * ya lo exige y lo valida contra los convenios de la empleadora.
+ */
+export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base: AfipRowResult = resolveAfip(row, cat)): { checks: AfipFieldCheck[]; completo: boolean } {
+  const v = resolveAfipValues(row, cat);
+  const de = (origen: OrigenValorArca) =>
+    origen === "categoria" ? "De la categoría del contrato." : origen === "empresa" ? "Del default de la empleadora." : origen === "global" ? "Del default de la instalación." : undefined;
+  const puesto: AfipFieldCheck = v.puesto
+    ? { key: "puesto", label: "Puesto desempeñado (solo Altas Masivas)", origen: v.puestoOrigen === "categoria" ? "categoria_sat" : "empresa", value: v.puesto, estado: "ok", ok: true, detalle: de(v.puestoOrigen) }
+    : {
+        key: "puesto",
+        label: "Puesto desempeñado (solo Altas Masivas)",
+        origen: "categoria_sat",
+        value: "",
+        estado: "falta",
+        ok: false,
+        detalle: "Ni la categoría ni la empleadora tienen cargado el código de puesto desempeñado. El registro de 85 lo exige; la Carga Masiva no.",
+      };
+  const revista: AfipFieldCheck = {
+    key: "situacionRevista",
+    label: "Situación de revista (solo Altas Masivas)",
+    origen: "empresa",
+    value: v.situacionRevista,
+    estado: v.situacionRevista.length === 2 ? "ok" : "error",
+    ok: v.situacionRevista.length === 2,
+    detalle: v.situacionRevista.length === 2 ? (v.situacionRevista === SITUACION_REVISTA_ALTA && v.situacionRevistaOrigen === "global" ? "01 — Activo, la de toda alta nueva." : de(v.situacionRevistaOrigen)) : "El código de situación de revista tiene que tener 2 dígitos.",
+  };
+  const checks = [puesto, revista];
+  return { checks, completo: base.completo && checks.every((c) => c.ok) };
 }

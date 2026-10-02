@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilePdf, faUpload, faDownload, faSpinner, faLock, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { ContractOverviewRow, Contract } from "../../api/users";
+import { ContractOverviewRow, Contract, AltaArcaPresentada } from "../../api/users";
 import { ContratoFrameItem, contratoFrameAPI } from "../../api/contratosFrame";
 import { InfoItem } from "../../api/info";
 import { Release, releasesAPI } from "../../api/release";
@@ -246,6 +246,8 @@ export const ContractDocsColumns: React.FC<{
                 </span>
               )}
             </div>
+            {/* Lo que presentó la corrida automática. No es el PDF: el PDF llega después, por Dropbox. */}
+            {!esConstanciaCuit && record.altaArcaPresentada && <InsigniaAltaPresentada a={record.altaArcaPresentada} />}
           </div>
         ) : (
           <span className="text-xs text-gray-400">—</span>
@@ -367,3 +369,30 @@ export const ContractActionsCell: React.FC<{ record: ContractOverviewRow; onDele
     <ContractActionsButtons record={record} onDeleted={onDeleted} />
   </td>
 );
+
+/**
+ * La marca de la presentación automática: Carga Masiva o Altas Masivas.
+ *
+ * «Indeterminada» va en ámbar y lo dice: se apretó el botón y no se pudo leer el resultado. Es la
+ * que más importa ver, porque es la que alguien podría volver a presentar sin mirar ARCA.
+ */
+const InsigniaAltaPresentada: React.FC<{ a: AltaArcaPresentada }> = ({ a }) => {
+  const via = a.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva";
+  const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString("es-AR") : "";
+  const estilo =
+    a.resultado === "presentada"
+      ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+      : a.resultado === "indeterminado"
+        ? "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
+        : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
+  const texto = a.resultado === "presentada" ? "Presentada en ARCA" : a.resultado === "indeterminado" ? "Presentación sin confirmar" : "Rechazada por ARCA";
+  const title =
+    a.resultado === "indeterminado"
+      ? `Se presentó por ${via} el ${fecha} y no se pudo leer el resultado. Mirá en ARCA si figura antes de volver a presentarla.`
+      : `${via} · ${fecha}${a.codigoNovedad ? ` · novedad ${a.codigoNovedad}` : ""}${a.nroTransaccion ? ` · transacción ${a.nroTransaccion}` : ""}${a.motivo ? ` · ${a.motivo}` : ""}`;
+  return (
+    <span title={title} className={`self-start inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${estilo}`}>
+      {texto}
+    </span>
+  );
+};

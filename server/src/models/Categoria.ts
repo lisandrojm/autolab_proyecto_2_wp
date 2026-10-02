@@ -82,6 +82,14 @@ export interface ICategoria extends Document {
    * `buildAltaRecord` devuelve null), así que dejar entrar el dato solo posterga el error.
    */
   codigoArca: string;
+  /**
+   * Código de PUESTO DESEMPEÑADO de ARCA (4 dígitos, tabla `arca-puestos-desempenados`).
+   *
+   * Solo lo informa el registro de 85 (Altas Masivas); el de 130 lo deja en blanco. Vive en la
+   * categoría porque cada categoría de un CCT ES un puesto. Vacío = cae al default de la empleadora
+   * y después al de la instalación.
+   */
+  puestoDesempenado?: string;
   /** Nombre de la categoría, sin el sufijo "- GRUPO N" que ARCA le agrega en la descripción. */
   nombre: string;
   /** Descripción completa tal como viene de ARCA, para poder cotejar contra el organismo. */
@@ -115,6 +123,11 @@ const categoriaSchema = new Schema<ICategoria>(
       required: [true, "La categoría tiene que tener su código de ARCA"],
       // 6 dígitos exactos y no todo ceros: "0" y "000000" son la ausencia de código disfrazada.
       validate: { validator: (v: string) => /^\d{6}$/.test(v) && v !== "000000", message: (p: any) => `"${p.value}" no es un código de ARCA: son 6 dígitos, con ceros a la izquierda (ej. "035283")` },
+    },
+    puestoDesempenado: {
+      type: String,
+      default: "",
+      validate: { validator: (v: string) => !v || /^\d{4}$/.test(v), message: (p: any) => `"${p.value}" no es un código de puesto desempeñado: son 4 dígitos (ej. "2455")` },
     },
     nombre: { type: String, required: true, trim: true },
     descripcionArca: { type: String, default: "" },

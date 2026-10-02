@@ -25,6 +25,10 @@ export interface ArcaDefaults {
   categoria?: string;
   /** `_id` de la fuente de paritarias que se ofrece primero. No cambia qué escala rige. */
   fuenteParitariaId?: string | null;
+  /** Puesto desempeñado (4 díg.). Solo registro de 85 (Altas Masivas); la categoría manda si tiene el suyo. */
+  puestoDesempenado?: string;
+  /** Situación de revista (2 díg.). Solo registro de 85; vacío = «01 — Activo». */
+  situacionRevista?: string;
 }
 
 /** Las claves que puede marcar una pantalla de nomenclador con su ★. */

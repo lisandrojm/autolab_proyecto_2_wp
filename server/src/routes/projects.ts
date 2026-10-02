@@ -21,6 +21,10 @@ import { Info } from "../models/Info.js";
 import { CentroCosto } from "../models/CentroCosto.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
 import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
+import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
+import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
+import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
+import { requirePermission } from "../middleware/permissions.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
 import UserProject from "../models/UserProject.js";
 
@@ -2881,6 +2885,82 @@ router.get("/contratos/obras-sociales/validar-servidor", requireTenant, authenti
 /** POST /contratos/obras-sociales/validar-servidor/detener — lo ya guardado queda guardado. */
 router.post("/contratos/obras-sociales/validar-servidor/detener", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   res.json({ detenida: detenerCorrida(String(req.tenantObjectId)) });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * ALTAS EN ARCA DESDE EL SERVIDOR (Carga Masiva / Altas Masivas)
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * POST /contratos/altas-arca/corrida
+ *   { modo: "carga_masiva" | "altas_masivas", empresaId, items: [{ userProjectId, contractIndex, registro }], enSeco?, forzar? }
+ *
+ * Mismo patrón que la validación de obras sociales: arranca y vuelve enseguida; el estado se sigue por
+ * el GET. El lote se coteja contra la base ANTES de abrir ARCA (`validarLoteAltas.ts`): si una línea
+ * no coincide, 400 con el detalle y no se manda nada. Si hay otra corrida de ARCA en el tenant
+ * (incluida la de obras sociales), 409.
+ *
+ * Permiso: el de la pantalla de Contratos. Presentar altas es lo más delicado que hace esa pantalla.
+ */
+router.post("/contratos/altas-arca/corrida", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const r = await arrancarCorridaAltas({
+      tenantId: String(req.tenantObjectId),
+      tenantObjectId: req.tenantObjectId,
+      usuarioId: req.user?.userId,
+      modo: req.body?.modo,
+      empresaId: String(req.body?.empresaId || ""),
+      items: Array.isArray(req.body?.items) ? req.body.items : [],
+      enSeco: req.body?.enSeco === true,
+      forzar: req.body?.forzar === true,
+    });
+    res.json({ arrancada: true, ...r });
+  } catch (error: any) {
+    if (error instanceof LoteAltasError) {
+      res.status(error.status).json({ error: error.message, detalle: error.detalle });
+      return;
+    }
+    if (error instanceof CandadoArcaOcupado) {
+      res.status(409).json({ error: error.message, ocupadaPor: error.tipo });
+      return;
+    }
+    // Los demás son instrucciones de configuración (credenciales, CUIT): se devuelven tal cual.
+    res.status(400).json({ error: String(error?.message || error) });
+  }
+});
+
+/** GET /contratos/altas-arca/corrida — estado y TODOS los eventos de la corrida en curso (o la última). */
+router.get("/contratos/altas-arca/corrida", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  const tenantId = String(req.tenantObjectId);
+  const c = corridaAltasDe(tenantId);
+  const ocupada = quienTiene(tenantId);
+  const enSecoPorDefecto = enSecoForzado();
+  if (!c) {
+    res.json({ hay: false, corriendo: false, eventos: [], enSecoForzado: enSecoPorDefecto, ocupadaPor: ocupada?.tipo || null });
+    return;
+  }
+  res.json({
+    hay: true,
+    corriendo: !c.terminada,
+    tipo: c.tipo,
+    empresaId: c.empresaId,
+    empresaRazonSocial: c.empresaRazonSocial,
+    empresaCuit: c.empresaCuit,
+    personas: c.personas,
+    total: c.total,
+    enSeco: c.enSeco,
+    irreversible: c.irreversible,
+    arrancadaEl: c.arrancadaEl,
+    eventos: c.eventos,
+    enSecoForzado: enSecoPorDefecto,
+    ocupadaPor: ocupada?.tipo || null,
+  });
+});
+
+/** POST /contratos/altas-arca/corrida/detener — 409 si ya se apretó el botón que presenta. */
+router.post("/contratos/altas-arca/corrida/detener", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  const r = detenerCorridaAltas(String(req.tenantObjectId));
+  res.status(r.detenida ? 200 : 409).json(r);
 });
 
 router.get("/contratos/obras-sociales/pendientes", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {

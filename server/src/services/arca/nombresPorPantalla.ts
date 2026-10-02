@@ -3,7 +3,7 @@ import { User } from "../../models/User.js";
 import UserProject from "../../models/UserProject.js";
 import { abrirSesionArca, credencialesDe } from "./navegador.js";
 import { aplicarNombreDeArca, Renombre } from "./nombreArca.js";
-import { corriendo } from "./corridaServidor.js";
+import { NOMBRE_CORRIDA, quienTiene, soltarCandado, tomarCandado } from "./candadoArca.js";
 import { MOTOR } from "./motor.js";
 
 /**
@@ -63,7 +63,8 @@ export async function nombresPorPantalla(opts: { tenantId: string; tenantObjectI
     el estado a la primera en el medio del trámite. Entre interrumpir una corrida que está registrando
     obras sociales y postergar una corrección de nombre, no hay duda de cuál cede.
   */
-  if (corriendo(tenantId)) return vacio("Hay una validación de obras sociales en curso. Los nombres de los CUIT inactivos se corrigen cuando termine.");
+  const ocupada = quienTiene(tenantId);
+  if (ocupada) return vacio(`Hay una corrida de ARCA en curso (${NOMBRE_CORRIDA[ocupada.tipo]}). Los nombres de los CUIT inactivos se corrigen cuando termine.`);
 
   const cred = await credencialesDe(tenantId);
   if (!cred) return vacio("No está configurada la conexión de «Obras sociales, nombres y documentos», que es la única que ve el nombre de un CUIT inactivo.");
@@ -113,6 +114,7 @@ export async function nombresPorPantalla(opts: { tenantId: string; tenantObjectI
   const renombrados: Renombre[] = [];
   const confirmados: string[] = [];
   let sesion: Awaited<ReturnType<typeof abrirSesionArca>> | null = null;
+  let tomoCandado = false;
   let restantes = LIMITE;
 
   try {
@@ -127,7 +129,13 @@ export async function nombresPorPantalla(opts: { tenantId: string; tenantObjectI
       restantes -= tanda.length;
 
       // El navegador se abre recién cuando hay algo real que consultar, y una sola vez para todas.
-      if (!sesion) sesion = await abrirSesionArca(tenantId, cred);
+      // El candado se toma recién acá, junto con el navegador: antes no se tocó ARCA. Si otra corrida
+      // lo tomó en el medio, esta cede (ver el comentario de arriba).
+      if (!sesion) {
+        tomarCandado(tenantId, "nombres");
+        tomoCandado = true;
+        sesion = await abrirSesionArca(tenantId, cred);
+      }
 
       const { validarObrasSociales } = (await import(MOTOR)) as any;
       const r = await validarObrasSociales({
@@ -179,6 +187,7 @@ export async function nombresPorPantalla(opts: { tenantId: string; tenantObjectI
   } finally {
     // El navegador lo abrió esta función, así que lo cierra esta función.
     await sesion?.browser.close().catch(() => {});
+    if (tomoCandado) soltarCandado(tenantId, "nombres");
   }
 
   return { renombrados, confirmados, sinResolver };

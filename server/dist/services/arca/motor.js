@@ -15,3 +15,8 @@ import { dirname, resolve } from "node:path";
  */
 export const RAIZ_REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 export const MOTOR = resolve(RAIZ_REPO, "frontend/tools/validar-obras-sociales.mjs");
+/**
+ * El motor de las ALTAS (Carga Masiva y Altas Masivas). Archivo aparte a propósito: el de arriba
+ * garantiza que nunca aprieta «Aceptar», y éste lo necesita. Cada uno con su lista blanca y su test.
+ */
+export const MOTOR_ALTAS = resolve(RAIZ_REPO, "frontend/tools/altas-arca.mjs");

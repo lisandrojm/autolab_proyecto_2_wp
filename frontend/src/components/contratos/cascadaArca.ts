@@ -25,7 +25,7 @@
  * herencia.
  */
 
-export type OrigenValorArca = "contrato" | "tipo_contrato" | "empresa" | "global" | "ninguno";
+export type OrigenValorArca = "contrato" | "tipo_contrato" | "categoria" | "empresa" | "global" | "ninguno";
 
 export interface ValorConOrigen {
   valor: string;
@@ -57,6 +57,15 @@ export interface DefaultsArca {
   modalidadLiquidacion?: string;
   sucursalId?: string | null;
   convenioId?: string | null;
+  /**
+   * Los dos que SOLO informa el registro de 85 (Altas Masivas). El de 130 los deja en blanco.
+   *
+   * `puestoDesempenado` (4 díg.): el escalón de arriba es la CATEGORÍA del contrato —cada categoría
+   * de un CCT es un puesto—; este default entra cuando la categoría no lo tiene cargado.
+   * `situacionRevista` (2 díg.): un alta nueva es «01 Activo»; si nadie dijo otra cosa, rige ese.
+   */
+  puestoDesempenado?: string;
+  situacionRevista?: string;
   /*
     Los cuatro de abajo son PRESELECCIÓN: ordenan los selectores, no deciden lo que se declara.
 
@@ -100,6 +109,7 @@ export const conCascada = (valorDelContrato: unknown, origenDelContrato: OrigenV
 export const ETIQUETA_ORIGEN: Record<OrigenValorArca, string> = {
   contrato: "cargado en el contrato",
   tipo_contrato: "del tipo de contrato",
+  categoria: "de la categoría",
   empresa: "por defecto de la empleadora",
   global: "por defecto de la instalación",
   ninguno: "sin definir",
