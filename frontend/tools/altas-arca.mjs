@@ -230,20 +230,33 @@ export async function htmlAnonimo(page) {
 
 // ------------------------------------------------------------------ guardas comunes
 /**
- * Entra con la empleadora del lote y VERIFICA en pantalla que es ella, antes de cualquier escritura.
- * Un TXT subido bajo otra empresa ARCA lo acepta sin avisar.
+ * Entra con la empleadora del lote: SIEMPRE por el selector de CUIT, aunque la página ya esté adentro
+ * (podría estar con otra empleadora). No verifica todavía: la pantalla a la que lleva el selector no
+ * muestra el CUIT; el encabezado «Empleador / CUIT» aparece en las de Relaciones Laborales. La
+ * verificación la hace `verificarEmpleadora`, ya en la pantalla de trabajo y antes de escribir.
  */
-async function entrarComo(page, empresaCuit, onProgreso) {
+async function entrarComo(page, empresaCuit) {
   const cuit = soloDigitos(empresaCuit);
   if (cuit.length !== 11) throw new Error("La empleadora no tiene un CUIT de 11 dígitos. No se escribió nada.");
-  if ((await pantallaActual(page)) === "selector_cuit") {
-    const ok = await aceptarSelectorDeCuit(page, cuit);
-    if (!ok) throw new Error(`No pude elegir la empleadora ${cuit} en el selector de ARCA (¿el usuario delegado la tiene?). No se escribió nada.`);
+  if ((await pantallaActual(page)) !== "selector_cuit") {
+    await page.goto(`${page.url().split("/app/")[0]}/app/login/IndexContribuyente.aspx`, { waitUntil: "domcontentloaded" });
   }
-  const enPantalla = await cuitsEnPantalla(page);
-  if (!enPantalla.includes(cuit)) throw new Error(`La pantalla de ARCA no muestra el CUIT ${cuit} de la empleadora del lote. No se escribió nada.`);
-  onProgreso({ tipo: "empleadoraVerificada", cuit });
+  const ok = await aceptarSelectorDeCuit(page, cuit);
+  if (!ok) throw new Error(`No pude elegir la empleadora ${cuit} en el selector de ARCA (¿el usuario delegado la tiene?). No se escribió nada.`);
   return page.url().split("/app/")[0];
+}
+
+/**
+ * VERIFICA en pantalla que la empleadora es la del lote, antes de cualquier escritura: un TXT subido
+ * bajo otra empresa ARCA lo acepta sin avisar. Espera unos segundos a que el encabezado lo muestre, y
+ * TIRA si no está (nunca devuelve false).
+ */
+async function verificarEmpleadora(page, empresaCuit, onProgreso) {
+  const cuit = soloDigitos(empresaCuit);
+  await esperarEstado(async () => (await cuitsEnPantalla(page)).includes(cuit), { ms: 10_000, que: "el CUIT de la empleadora en pantalla", log });
+  const enPantalla = await cuitsEnPantalla(page);
+  if (!enPantalla.includes(cuit)) throw new Error(`La pantalla de ARCA no muestra el CUIT ${cuit} de la empleadora del lote (muestra ${enPantalla.length ? enPantalla.length + " otro(s)" : "ninguno"}). No se escribió nada.`);
+  onProgreso({ tipo: "empleadoraVerificada", cuit });
 }
 
 const cortar = (señal, paso) => {
@@ -261,10 +274,11 @@ export async function cargaMasiva({ page, empresaCuit, txt, registros, enSeco = 
   const estado = { aceptarDialogo: false, dialogos: [] };
   const soltar = manejarDialogos(page, estado, onProgreso);
   try {
-    const base = await entrarComo(page, empresaCuit, onProgreso);
+    const base = await entrarComo(page, empresaCuit);
     cortar(señal, "abrir Carga Masiva");
     await page.goto(`${base}/app/Contribuyente/RelacionLaboral/CargaMasiva.aspx`, { waitUntil: "domcontentloaded" });
     if (!(await esperarPantalla(page, ["carga_masiva_listado"], "listado de novedades"))) throw new Error(`No llegué al listado de novedades de Carga Masiva (estoy en ${await pantallaActual(page)}).`);
+    await verificarEmpleadora(page, empresaCuit, onProgreso);
     onProgreso({ tipo: "pantalla", que: "carga_masiva" });
 
     cortar(señal, "crear la novedad");
@@ -339,10 +353,11 @@ export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = t
   const pedidos = [...new Set((cuils || []).map(soloDigitos))];
   try {
     if (pedidos.length === 0 || pedidos.length > 9) throw new Error(`Altas Masivas admite de 1 a 9 registros y el lote tiene ${pedidos.length}.`);
-    const base = await entrarComo(page, empresaCuit, onProgreso);
+    const base = await entrarComo(page, empresaCuit);
     cortar(señal, "abrir Registrar Nuevas Altas");
     await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
     if (!(await esperarPantalla(page, ["altas"], "Registrar Nuevas Altas"))) throw new Error(`No llegué a Registrar Nuevas Altas (estoy en ${await pantallaActual(page)}).`);
+    await verificarEmpleadora(page, empresaCuit, onProgreso);
     onProgreso({ tipo: "pantalla", que: "altas" });
 
     // LA GRILLA TIENE QUE ESTAR VACÍA: su «Aceptar» registra TODO lo que haya, también lo que cargó

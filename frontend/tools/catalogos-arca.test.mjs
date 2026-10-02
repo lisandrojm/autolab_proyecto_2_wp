@@ -22,7 +22,8 @@ test("no toca la grilla de altas ni lanza navegadores", () => {
 });
 
 test("la verificación del CUIT tira antes de leer", () => {
-  assert.ok(CODIGO.indexOf("includes(cuit)) throw") < CODIGO.indexOf("Altas.aspx"));
+  // Se verifica en Registrar Nuevas Altas (donde está el encabezado), y antes de leer los catálogos.
+  assert.ok(CODIGO.indexOf("includes(cuit)) throw") < CODIGO.indexOf("const globales"));
 });
 
 test("filasDeCatalogos: tabla, padre (convenio) y lo que faltó", () => {

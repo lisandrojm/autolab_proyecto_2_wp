@@ -69,16 +69,19 @@ async function cuitsEnPantalla(page) {
 export async function leerCatalogosArca({ page, empresaCuit, onProgreso = () => {} }) {
   const cuit = soloDigitos(empresaCuit);
   if (cuit.length !== 11) throw new Error("La empleadora no tiene un CUIT de 11 dígitos.");
-  if (/IndexContribuyente\.aspx/i.test(page.url())) {
-    const ok = await aceptarSelectorDeCuit(page, cuit);
-    if (!ok) throw new Error(`No pude elegir la empleadora ${cuit} en el selector de ARCA.`);
-  }
-  if (!(await cuitsEnPantalla(page)).includes(cuit)) throw new Error(`La pantalla de ARCA no muestra el CUIT ${cuit}: no se leyó nada.`);
-  onProgreso({ tipo: "empleadoraVerificada", cuit });
+  // Siempre por el selector: la página podría estar adentro con otra empleadora.
+  if (!/IndexContribuyente\.aspx/i.test(page.url())) await page.goto(`${page.url().split("/app/")[0]}/app/login/IndexContribuyente.aspx`, { waitUntil: "domcontentloaded" });
+  const ok = await aceptarSelectorDeCuit(page, cuit);
+  if (!ok) throw new Error(`No pude elegir la empleadora ${cuit} en el selector de ARCA (¿el usuario delegado la tiene?).`);
   const base = page.url().split("/app/")[0];
 
   await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
   await esperarEstado(async () => page.evaluate(() => Array.isArray(window.l_PD) || !!document.querySelector("[id$='InputCuil_txtCuil']")), { que: "Registrar Nuevas Altas", log });
+  // El CUIT se verifica ACÁ: el encabezado «Empleador / CUIT» está en esta pantalla, no en la del selector.
+  await esperarEstado(async () => (await cuitsEnPantalla(page)).includes(cuit), { ms: 10_000, que: "el CUIT de la empleadora en pantalla", log });
+  const enPantalla = await cuitsEnPantalla(page);
+  if (!enPantalla.includes(cuit)) throw new Error(`La pantalla de ARCA no muestra el CUIT ${cuit} (muestra ${enPantalla.length ? enPantalla.length + " otro(s)" : "ninguno"}): no se leyó nada.`);
+  onProgreso({ tipo: "empleadoraVerificada", cuit });
   const globales = await page.evaluate((nombres) => {
     const out = {};
     for (const n of nombres) {

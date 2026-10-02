@@ -64,7 +64,7 @@ test("CUIT verificado antes de la primera escritura, y el modo en seco antes del
     ["altasMasivas", "aceptarGrilla("],
   ]) {
     const c = cuerpo(f);
-    const iCuit = c.indexOf("entrarComo(");
+    const iCuit = c.indexOf("verificarEmpleadora(");
     const iPrimera = c.indexOf("apretar(");
     const iSeco = c.indexOf("if (enSeco)");
     const iIrr = c.indexOf(irreversible);
@@ -82,8 +82,10 @@ test("CUIT verificado antes de la primera escritura, y el modo en seco antes del
 });
 
 test("la verificación de CUIT tira, no devuelve false", () => {
-  const c = cuerpo("entrarComo");
+  const c = cuerpo("verificarEmpleadora");
   assert.match(c, /if \(!enPantalla\.includes\(cuit\)\) throw/);
+  // Elegir la empleadora pasa SIEMPRE por el selector, aunque la página ya esté adentro con otra.
+  assert.match(cuerpo("entrarComo"), /aceptarSelectorDeCuit\(page, cuit\)/);
 });
 
 // ------------------------------------------------------------------ boton()

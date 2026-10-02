@@ -100,12 +100,55 @@ export const ArcaCatalogoPage: React.FC = () => {
   };
 
   const pendientes = lecturas.filter((l) => l.estado === "pendiente");
+  const [info, setInfo] = useState(false);
 
   return (
     <PageLayout
       title="Catálogo de ARCA"
       subtitle="Lo que ARCA publica, tal cual: contra esto se validan los códigos de las categorías y de cada alta. No se edita a mano."
       faIcon={{ icon: faBook }}
+      infoModal={{
+        isOpen: info,
+        onOpen: () => setInfo(true),
+        onClose: () => setInfo(false),
+        title: "Qué es el Catálogo de ARCA",
+        size: "md",
+        content: (
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+            <p>
+              Es una <strong>copia exacta de las tablas que publica ARCA</strong> en Simplificación Registral: convenios, categorías de cada convenio, puestos desempeñados, situaciones de revista, tipos de
+              servicio, modalidades de contratación y de liquidación, domicilios, actividades y obras sociales. Nadie la edita a mano.
+            </p>
+            <p className="font-semibold">Para qué sirve</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>Que una categoría no pueda declarar otra.</strong> El código de ARCA de cada categoría se elige de este catálogo, y su nombre tiene que coincidir con lo que ARCA dice de ese código. Así
+                se detectó y corrigió el cruce de 41 categorías del 0634/11 (por ejemplo, «Peinador» tenía el código de «Reflectorista»).
+              </li>
+              <li>
+                <strong>Frenar un alta mal declarada.</strong> Un contrato cuya categoría no coincide con ARCA queda incompleto y no se presenta, ni a mano ni con la carga automática.
+              </li>
+              <li>
+                <strong>Enterarse de lo que cambia en ARCA.</strong> Si ARCA agrega, saca o renombra un código, aparece acá para revisarlo antes de que llegue a un alta.
+              </li>
+            </ul>
+            <p className="font-semibold">Cómo se mantiene</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Arrancó con la copia verificada que está en el repo (la «Semilla»).</li>
+              <li>
+                <strong>Leer de ARCA</strong> entra con el usuario delegado del servidor, con la empleadora elegida, y lee las tablas sin apretar ningún botón en ARCA. Cada empleadora ve sus propios convenios y
+                domicilios: por eso se lee por empleadora.
+              </li>
+              <li>
+                Lo leído <strong>no se aplica solo</strong>: queda como lectura pendiente con lo nuevo, lo que dejó de publicarse y lo que cambió de descripción, y qué categorías y contratos toca cada cambio.
+                Se aplica o se descarta acá.
+              </li>
+              <li>Conviene leerlo al menos una vez por mes: en Contratos aparece un aviso si pasaron más de {DIAS_CATALOGO_VIEJO} días.</li>
+            </ul>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Las categorías que no coinciden con este catálogo se ven en Configuración → ARCA → Categorías, con su estado y un aviso rojo arriba.</p>
+          </div>
+        ),
+      }}
       searchAndFilters={
         <div className="space-y-6">
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
