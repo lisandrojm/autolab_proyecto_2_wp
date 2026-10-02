@@ -326,7 +326,7 @@ export default function ContratarRevision() {
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {r && <Pill tono={motivo ? "azul" : "ambar"}>{`Reemplaza a ${r.nombre}${motivo ? ` · ${motivo}` : " · falta el motivo"}`}</Pill>}
                             {horarioDistinto && <Pill>{`Horario ${textoHorario(x.inTime, x.outTime)}`}</Pill>}
-                            {x.advertencias.length > 0 && <Pill tono={x.superposicionHorario ? "rojo" : "ambar"}>Se superpone</Pill>}
+                            {x.advertencias.length > 0 && <Pill tono={x.superposicionHorario ? "rojo" : "ambar"}>Superposición a confirmar</Pill>}
                             {x.errores.length > 0 && <Pill tono="rojo">{x.errores.length === 1 ? "1 error" : `${x.errores.length} errores`}</Pill>}
                           </div>
                         )}

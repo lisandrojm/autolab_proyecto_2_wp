@@ -205,7 +205,7 @@ export default function ContratarPersonas() {
                             {excluido && <Pill>Sacado esta vez</Pill>}
                             {distinto && !excluido && <Pill>Sólo esta vez</Pill>}
                             {fila && fila.errores.length > 0 && <Pill tono="rojo">{fila.errores.length === 1 ? fila.errores[0] : `${fila.errores.length} errores`}</Pill>}
-                            {fila && fila.advertencias.length > 0 && <Pill tono={fila.superposicionHorario ? "rojo" : "ambar"}>Se superpone</Pill>}
+                            {fila && fila.advertencias.length > 0 && <Pill tono={fila.superposicionHorario ? "rojo" : "ambar"}>Superposición a confirmar</Pill>}
                           </span>
                         )}
                       </button>

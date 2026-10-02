@@ -15,6 +15,8 @@ import { HojaModal } from "./HojaModal";
 import CampoConvenio from "./CampoConvenio";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
 import { CLASE_CAMPO, Pill } from "./comun";
+import { EstadoBadge } from "../../../../../components/EstadoSelect";
+import { estadoImpositivoPorTipo } from "../../../../../utils/tramiteImpositivo";
 
 /*
   PANTALLA 3 · UN EQUIPO. Arriba, «Condiciones del equipo»: contrato, área y turno, horario y días, UNA
@@ -41,6 +43,14 @@ export default function PantallaEquipo() {
   const { id = "", equipoId = "" } = useParams();
   const navigate = useNavigate();
   const { catalogos, guardar, areasDe } = usePlantillas();
+  /** El contrato que rige en el puesto y el estado de su trámite impositivo (para el badge). */
+  const contratoDe = (x: PuestoDelEquipo): { nombre: string; tramite: string | null } | null => {
+    const id = x.efectivo.contratoId;
+    const c = id ? catalogos.contratos.find((k) => k._id === id) : undefined;
+    if (!c) return null;
+    const tipo = catalogos.tramitePorContrato.get(c._id);
+    return { nombre: c.name, tramite: tipo ? estadoImpositivoPorTipo(catalogos.estados, tipo)?.name || null : null };
+  };
   const { plantilla: p, noEsta } = usePlantilla(id);
   const [hoja, setHoja] = useState<HojaCondicion | "nombre" | "proyecto" | { asignar: PuestoDelEquipo }>(null);
   const equipo = p?.equipos.find((e) => e._id === equipoId);
@@ -148,14 +158,26 @@ export default function PantallaEquipo() {
                     <span className="min-w-0 flex-1 space-y-1">
                       <span className="block truncate text-xs font-semibold text-slate-600 dark:text-slate-300">{nombreRoles(catalogos.roleFrames, x.puesto.rolesFrame)}</span>
                       <span className={`block truncate text-base font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</span>
-                      {(a?.reemplazo || x.diferencias.length > 0 || avisos.length > 0 || (persona && !persona.activo)) && (
-                        <span className="flex flex-wrap gap-1.5">
+                      {(contratoDe(x) || a?.reemplazo || x.diferencias.length > 0 || avisos.length > 0 || (persona && !persona.activo)) && (
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          {/*
+                            EL CONTRATO DE CADA PUESTO, SIEMPRE, con su trámite (Pedido de ARCA / de Servicios).
+                            Con todos a la vista, el que difiere del equipo se ve solo: no hace falta «Otro contrato».
+                          */}
+                          {contratoDe(x) && (
+                            <>
+                              <Pill>{contratoDe(x)!.nombre}</Pill>
+                              {contratoDe(x)!.tramite && <EstadoBadge name={contratoDe(x)!.tramite!} />}
+                            </>
+                          )}
                           {persona && !persona.activo && <Pill tono="rojo">Inactiva</Pill>}
                           {a?.reemplazo && <Pill tono={a.reemplazo.revisarMotivo || !motivo ? "ambar" : "azul"}>{`Reemplaza a ${a.reemplazo.nombre}${motivo ? ` · ${motivo}` : " · Revisar motivo"}`}</Pill>}
-                          {x.diferencias.map((d) => (
-                            <Pill key={d}>{d}</Pill>
-                          ))}
-                          {avisos.length > 0 && <Pill tono="rojo">Se superpone</Pill>}
+                          {x.diferencias
+                            .filter((d) => d !== "Otro contrato" || !contratoDe(x))
+                            .map((d) => (
+                              <Pill key={d}>{d}</Pill>
+                            ))}
+                          {avisos.length > 0 && <Pill tono="rojo">Superposición a confirmar</Pill>}
                         </span>
                       )}
                     </span>
