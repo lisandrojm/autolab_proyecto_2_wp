@@ -457,6 +457,19 @@ export async function abrirSesionArca(tenantId: string, cred: CredencialesArca, 
       throw new Error(`Abrí «Simplificación Registral» desde el portal pero la pantalla que apareció no es la del servicio (${estadoPantalla}): ${destino.url()}`);
     }
     page = destino;
+    /*
+      SE ENTREGA PARADA EN EL SELECTOR DE CUIT, igual que el camino rápido.
+
+      Al entrar desde el portal, el servicio puede abrir en otra página que no es el selector. Los
+      motores eligen la empleadora SOLO si están en el selector: desde otra página iban derecho a
+      Registrar Nuevas Altas sin empleadora elegida, ARCA no la mostraba, y la validación de obras
+      sociales esperaba hasta agotarse (~90 s) y terminaba como «sesión cortada». Pasaba exactamente en
+      las corridas que tenían que loguearse; con la sesión guardada, que ya arranca acá, andaba.
+    */
+    if (!/\/login\/IndexContribuyente\.aspx/i.test(page.url())) {
+      await irA(page, SIMPLIFICACION_URL).catch(() => {});
+      if ((await pantallaDe(page)) !== "servicio") throw new Error(`Entré al servicio pero no pude llegar al selector de CUIT: ${page.url()}`);
+    }
 
     await guardarSesion(tenantId, ctx);
     await Tenant.findByIdAndUpdate(tenantId, {

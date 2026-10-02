@@ -170,3 +170,8 @@ test("jornadas fijadas por el tipo de contrato: mandan sobre el calendario, salv
   // Vacío o 0 en el tipo: se calcula.
   assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "", hasta: "", dias: [], jornadasDelTipo: 0 }), null);
 });
+
+test("erroresDeJornadas: sin fechas no se envía, aunque las jornadas estén cargadas a mano", () => {
+  assert.match(erroresDeJornadas({ ...base, desde: "", hasta: "", ajustado: true, calculadas: null, jornadas: "30" }).fechas || "", /inicio/);
+  assert.match(erroresDeJornadas({ ...base, hasta: "" }).fechas || "", /fin/);
+});

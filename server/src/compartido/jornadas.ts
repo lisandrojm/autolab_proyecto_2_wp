@@ -154,7 +154,14 @@ export const hayAjuste = (d: Pick<DatosJornadas, "rotativos" | "ajustado" | "cal
 export const erroresDeJornadas = (d: DatosJornadas): ErroresJornadas => {
   const e: ErroresJornadas = {};
 
-  if (d.desde && d.hasta && diasCorridos(d.desde, d.hasta) === null) e.fechas = "La fecha de fin no puede ser anterior a la de inicio.";
+  /*
+    LAS FECHAS SON OBLIGATORIAS. Sin «Desde» se aceptaba una solicitud con las jornadas tipeadas a
+    mano y sin período: llegaba al aprobador como «Desde —, Hasta Indeterminado» en un plazo fijo. En
+    tiempo indeterminado el «hasta» lo pone `periodoDeCalculo` (fin del mes del alta): alcanza el desde.
+  */
+  if (!d.desde) e.fechas = "Cargá la fecha de inicio del contrato.";
+  else if (!d.hasta) e.fechas = "Cargá la fecha de fin del contrato.";
+  else if (diasCorridos(d.desde, d.hasta) === null) e.fechas = "La fecha de fin no puede ser anterior a la de inicio.";
 
   const porSemana = Number(d.diasPorSemana);
   if (!d.diasPorSemana || !Number.isInteger(porSemana) || porSemana < 1 || porSemana > 7) {
