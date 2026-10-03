@@ -804,7 +804,10 @@ class ProjectsAPI {
    * `arrancada: false` con `total: 0` = no había nadie pendiente: no es un error.
    */
   async validarObrasSocialesEnServidorPorGrupos(grupos: Array<{ empresaId: string; cuils?: string[] }>): Promise<{ arrancada: boolean; total: number; grupos?: Array<{ empresaId: string; total: number }> }> {
-    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor`, { grupos }, { headers: this.getHeaders() });
+    // Antes de contestar, el server resuelve quiénes están pendientes leyendo contratos de Atlas: con
+    // muchas personas puede pasar del minuto del cliente general, y cortar acá dejaba la corrida
+    // arrancando igual, sin pantalla que la siga. Margen propio, generoso.
+    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor`, { grupos }, { headers: this.getHeaders(), timeout: 5 * 60 * 1000 });
     return data;
   }
 

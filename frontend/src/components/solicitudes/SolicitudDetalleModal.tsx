@@ -230,7 +230,21 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.roles_frame, m.rolesFrameIds, m.roleFrameId, catalogos.roleFrames]);
 
-  const categoria = catalogos.categoriasSat.find((c) => String(c._id) === String(m.categoriaSatId || ""));
+  /*
+    La categoría, por `_id` o por su id numérico: las solicitudes guardan el `_id` del catálogo, pero
+    las de antes de la migración (y lo que copia un contrato) traen el número (`data.id`). Las dos
+    formas resuelven; «—» queda sólo para lo que de verdad no está.
+  */
+  const idCategoria = String(m.categoriaSatId || "");
+  const categoria = idCategoria ? catalogos.categoriasSat.find((c) => String(c._id) === idCategoria) || catalogos.categoriasSat.find((c) => String(c.data?.id) === idCategoria) : undefined;
+  /*
+    El convenio, CON SU NÚMERO. El nombre solo («TELEVISIÓN») no identifica el CCT: es el número
+    (0634/11) lo que va a ARCA y lo que figura en el contrato. Si la solicitud no guardó el convenio,
+    se toma el de la categoría, que es el que rige de todos modos.
+  */
+  const convenioElegido = convenios.find((c) => String(c._id) === String(m.convenioId || "")) || (categoria?.data?.convenio ? convenios.find((c) => String(c.externalId || "").trim() === String(categoria.data.convenio).trim()) : undefined);
+  const cctTexto = convenioElegido ? [String(convenioElegido.externalId || "").trim(), convenioElegido.name].filter(Boolean).join(" · ") : String(categoria?.data?.convenio || "");
+  const grupoTexto = categoria?.data?.numeroCategoria ? `Grupo ${categoria.data.numeroCategoria}${categoria.data.grupoNombre ? ` — ${categoria.data.grupoNombre}` : ""}` : categoria ? "Sin grupo" : "";
   /** Un servicio no tiene convenio ni categoría: el importe se carga a mano (regla del formulario). */
   const esServicios = m.tipoImpositivo === "constancia_cuit";
   const tramite = catalogos.resolverTramite(m.tipoImpositivo);
@@ -254,10 +268,19 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   const total = indeterminado ? null : totalCalculado;
   const semanal = valorJornada > 0 && diasPorSemana > 0 ? valorJornada * diasPorSemana : null;
 
-  const areasTurnos: { area: string; turnos: string[] }[] = (m.areaShiftAssignments || []).map((a: any) => ({
-    area: nombreDe(areas, a.areaId, (x) => x.name) || "Área",
-    turnos: (a.shiftIds || []).map((s: any) => nombreDe(turnos, s, (x) => x.name)).filter(Boolean),
-  }));
+  /*
+    ÁREA Y TURNO, CON HORARIO Y DÍAS. El nombre del turno solo («Tarde») no dice a qué hora ni qué
+    días: eso es lo que define el turno en el ABM y lo que quien aprueba quiere ver, abreviado.
+  */
+  const areasTurnos: { area: string; turnos: string[]; detalle: { nombre: string; horario: string; dias: string }[] }[] = (m.areaShiftAssignments || []).map((a: any) => {
+    const detalle = (a.shiftIds || [])
+      .map((s: any) => {
+        const t = turnos.find((x) => String(x._id) === String(typeof s === "object" && s ? s._id : s));
+        return t ? { nombre: t.name, horario: t.startTime && t.endTime ? `${t.startTime}–${t.endTime}` : "", dias: textoDeDias(t.days) } : null;
+      })
+      .filter(Boolean) as { nombre: string; horario: string; dias: string }[];
+    return { area: nombreDe(areas, a.areaId, (x) => x.name) || "Área", turnos: detalle.map((d) => d.nombre), detalle };
+  });
 
   /** Qué se corrigió al aprobarla y qué dejó dicho quien aprobó (ver `solicitudRevision`). */
   const revision: { cambios?: CambioDeRevision[]; comentario?: string; porNombre?: string; el?: string } | null = m.solicitudRevision || null;
@@ -498,8 +521,21 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                   <p className="border-b border-gray-100 py-2 text-[11px] text-gray-500 dark:border-gray-700/60 dark:text-gray-400">Es un servicio: no hay convenio ni categoría, así que el importe se cargó a mano.</p>
                 ) : (
                   <>
-                    <Fila label="Convenio (CCT)" valor={nombreDe(convenios, m.convenioId, (c) => c.name)} />
-                    <Fila label="Categoría" valor={categoria?.name} />
+                    <Fila label="Convenio (CCT)" valor={cctTexto} />
+                    <Fila
+                      label="Categoría"
+                      valor={
+                        categoria ? (
+                          <span>
+                            {categoria.name}
+                            {categoria.data?.codigoArca && <span className="ml-1.5 font-mono text-[11px] text-gray-400">{categoria.data.codigoArca}</span>}
+                          </span>
+                        ) : (
+                          ""
+                        )
+                      }
+                    />
+                    <Fila label="Grupo" valor={grupoTexto} />
                   </>
                 )}
                 <Fila label="Importe por jornada" valor={pesos(valorJornada || null)} />
@@ -514,7 +550,20 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                     <Fila
                       key={`${a.area}-${i}`}
                       label={a.area}
-                      valor={a.turnos.length > 0 ? a.turnos.join(", ") : <span className="text-gray-400">Sin turno</span>}
+                      valor={
+                        a.detalle.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {a.detalle.map((t, j) => (
+                              <p key={`${t.nombre}-${j}`}>
+                                {t.nombre}
+                                {(t.horario || t.dias) && <span className="ml-1.5 text-xs font-normal text-gray-500 dark:text-gray-400">{[t.horario, t.dias].filter(Boolean).join(" · ")}</span>}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Sin turno</span>
+                        )
+                      }
                     />
                   ))
                 ) : (

@@ -128,14 +128,19 @@ export const useCatalogosDeSolicitudes = () => {
 
   useEffect(() => {
     let vivo = true;
-    Promise.all([roleFrameAPI.list(), categoriaSatAPI.list(), infoAPI.listByType("estado-empleado").catch(() => [] as InfoItem[])])
-      .then(([frames, cats, infos]) => {
-        if (!vivo) return;
-        setRoleFrames(frames);
-        setCategoriasSat(cats);
-        setEstados(infos);
-      })
-      .catch((e) => console.error("Error cargando catálogos de solicitudes:", e));
+    // Cada catálogo por su cuenta: si uno falla (un permiso que la app no tiene), los otros igual
+    // resuelven sus columnas. Con `Promise.all` un solo 403 dejaba las tres listas vacías.
+    const o = <T,>(p: Promise<T>, vacio: T, que: string) =>
+      p.catch((e) => {
+        console.error(`Error cargando ${que} para solicitudes:`, e);
+        return vacio;
+      });
+    Promise.all([o(roleFrameAPI.list(), [] as RoleFrameItem[], "roles frame"), o(categoriaSatAPI.list(), [] as CategoriaSatItem[], "categorías"), o(infoAPI.listByType("estado-empleado"), [] as InfoItem[], "estados")]).then(([frames, cats, infos]) => {
+      if (!vivo) return;
+      setRoleFrames(frames);
+      setCategoriasSat(cats);
+      setEstados(infos);
+    });
     return () => {
       vivo = false;
     };

@@ -189,12 +189,41 @@ export async function pendientesObraSocial(tenantObjectId, empresaId) {
         .select("_id metadata.cuit firstName lastName")
         .lean();
     const porId = new Map(usuarios.map((u) => [String(u._id), u]));
-    const ups = await UserProject.find({
-        userId: { $in: usuarios.map((u) => u._id) },
-        "contracts.empresaContratoId": new Types.ObjectId(empresaId),
-    })
-        .select("userId contracts")
-        .lean();
+    /*
+      SÓLO LOS CONTRATOS DE ESTA EMPLEADORA, Y DE CADA UNO SÓLO LO QUE SE MIRA.
+  
+      Esto es lo primero que espera el botón «Validar obra social» antes de contestar. Con
+      `select("userId contracts")` viajaban los contratos ENTEROS de cada persona —113 en un caso— aunque
+      acá se leen cinco campos de los de una empleadora: medido, 7,27 MB y 88 segundos para 2030 S.R.L.,
+      con el cliente cortando a los 60. El usuario veía «el servidor no aceptó la corrida» y la corrida
+      arrancaba igual, medio minuto después, con el candado tomado. El peso es lo que tarda (ver
+      `utils/contratosQueRigen`): se filtra y se proyecta en la base.
+    */
+    // El id de la empleadora puede estar guardado como ObjectId o como texto: `find` lo casteaba por el
+    // schema, el aggregate no. Se aceptan las dos formas.
+    const idsEmpresa = [new Types.ObjectId(empresaId), empresaId];
+    const ups = await UserProject.aggregate([
+        { $match: { userId: { $in: usuarios.map((u) => u._id) }, "contracts.empresaContratoId": { $in: idsEmpresa } } },
+        {
+            $project: {
+                userId: 1,
+                contracts: {
+                    $map: {
+                        input: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond: { $in: ["$$c.empresaContratoId", idsEmpresa] } } },
+                        as: "c",
+                        in: {
+                            _id: "$$c._id",
+                            empresaContratoId: "$$c.empresaContratoId",
+                            obraSocialId: "$$c.obraSocialId",
+                            obraSocialNoFigura: "$$c.obraSocialNoFigura",
+                            obraSocialConstatadaEn: "$$c.obraSocialConstatadaEn",
+                            obraSocialBloqueada: "$$c.obraSocialBloqueada",
+                        },
+                    },
+                },
+            },
+        },
+    ]);
     // `userId` va incluido porque la corrida confirma además el NOMBRE de cada persona contra el
     // padrón (ver `services/arca/nombreArca.ts`): sin esto habría que volver a resolver CUIT → usuario
     // del otro lado, que es resolver dos veces lo mismo.
