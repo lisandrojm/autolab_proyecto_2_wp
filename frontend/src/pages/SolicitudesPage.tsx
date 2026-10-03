@@ -74,8 +74,10 @@ const vistaObraSocialDe = (nombre: string, os: ObraSocialDeSolicitud | null | un
     rnosSugerido: sugerido,
     nombreSugerida: os.nombreSugerida || "",
     distintaDelConvenio: base === "validada_arca" && propio !== sugerido,
-    puedeValidar: !!os.empresaContratoId && os.tieneCategoria && cuil.length === 11,
-    motivoNoPuede: !os.empresaContratoId ? "Todavía no se puede validar: el contrato no tiene Empresa Contrato. Asignala en Contratos." : !os.tieneCategoria ? "Todavía no se puede validar: el contrato no tiene categoría (de ella sale el convenio y su obra social). Elegila en Contratos." : "Todavía no se puede validar: la persona no tiene un CUIL válido.",
+    // `tieneCategoria` sólo apaga el botón cuando el server dice EXPRESAMENTE que no hay categoría: un
+    // server que todavía no manda el campo (deploy a medias) no puede dejar sin validar lo que sí se puede.
+    puedeValidar: !!os.empresaContratoId && os.tieneCategoria !== false && cuil.length === 11,
+    motivoNoPuede: !os.empresaContratoId ? "Todavía no se puede validar: el contrato no tiene Empresa Contrato. Asignala en Contratos." : os.tieneCategoria === false ? "Todavía no se puede validar: el contrato no tiene categoría (de ella sale el convenio y su obra social). Elegila en Contratos." : "Todavía no se puede validar: la persona no tiene un CUIL válido.",
     nombrePersona: nombre,
     quitar: { projectId: os.projectId, userId: os.userId, ref: os.contratoId },
   };
@@ -481,7 +483,7 @@ export const SolicitudesPage: React.FC = () => {
   const filaParaValidar = (x: Elegida): { nombre: string; os: ObraSocialDeSolicitud } | null => {
     const os = x.obraSocial;
     // Mismo requisito que la grilla de Contratos: empleadora Y categoría (de ella sale el convenio, y de él la obra social por defecto).
-    if (x.estado !== "aprobada" || !os || os.estado !== "sin_constatar" || !os.empresaContratoId || !os.tieneCategoria || !cuitEsValido(os.cuil)) return null;
+    if (x.estado !== "aprobada" || !os || os.estado !== "sin_constatar" || !os.empresaContratoId || os.tieneCategoria === false || !cuitEsValido(os.cuil)) return null;
     return { nombre: x.nombre, os };
   };
   const aValidarOS = [...seleccion.values()].map(filaParaValidar).filter((f): f is { nombre: string; os: ObraSocialDeSolicitud } => !!f);

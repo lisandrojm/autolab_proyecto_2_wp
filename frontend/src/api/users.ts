@@ -285,8 +285,8 @@ export interface ObraSocialDeSolicitud {
   rnosSugerido: string;
   nombreSugerida: string;
   convenioCct: string;
-  /** Sin categoría no se puede validar: de ella sale el convenio, y del convenio la obra social por defecto. */
-  tieneCategoria: boolean;
+  /** Sin categoría no se puede validar: de ella sale el convenio, y del convenio la obra social por defecto. Un server anterior no lo manda. */
+  tieneCategoria?: boolean;
   /** La que rige está entre las registradas por la empleadora ante ARCA. `null` = la empleadora no tiene el padrón extraído. */
   registrada: boolean | null;
   /** El CUIT de la empleadora: con él el Asistente la elige solo en ARCA. */

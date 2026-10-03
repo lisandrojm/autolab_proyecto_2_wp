@@ -45,7 +45,7 @@ async function main() {
       console.log(`  UserProject ${up._id} · persona ${up.userId} · proyecto ${up.projectId} · ${(up.contracts || []).length} contrato(s)`);
       (up.contracts || []).forEach((c: any, i: number) => {
         console.log(
-          `    [${i}] _id=${c._id || "-"} solicitudId=${c.solicitudId || "-"} empresa=${c.empresaContratoId || "-"} (${c.nombre_empresa_contrato || "-"}) alta=${dia(c.fecha_alta_contrato)} baja=${dia(c.fecha_baja_contrato)} contrato=${c.nombre_contrato || "-"}`,
+          `    [${i}] _id=${c._id || "-"} solicitudId=${c.solicitudId || "-"} empresa=${c.empresaContratoId || "-"} (${c.nombre_empresa_contrato || "-"}) alta=${dia(c.fecha_alta_contrato)} baja=${dia(c.fecha_baja_contrato)} contrato=${c.nombre_contrato || "-"} categoria_sat_id=${c.categoria_sat_id ?? "null"} categoria_id=${c.categoria_id ?? "null"}`,
         );
         console.log(
           `        obraSocialId=${c.obraSocialId ?? "null"} origen=${c.obraSocialOrigen || "-"} noFigura=${!!c.obraSocialNoFigura} constatadaEn=${c.obraSocialConstatadaEn || "-"} constatadaEl=${dia(c.obraSocialConstatadaEl) || "-"} bloqueada=${!!c.obraSocialBloqueada} aplicada=${c.obraSocialAplicadaOrigen || "-"}`,
