@@ -24,6 +24,8 @@ import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
 import { Company } from "../models/Company.js";
 import { ObraSocial } from "../models/ObraSocial.js";
+import { CategoriaSat } from "../models/CategoriaSat.js";
+import { Convenio } from "../models/Convenio.js";
 import bcrypt from "bcryptjs";
 // Side-effect imports to be extra sure they are registered
 import "../models/User.js";
@@ -1397,18 +1399,53 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
                 ...(projectIds.length ? { projectId: { $in: projectIds.map((id) => new Types.ObjectId(id)) } } : {}),
                 "contracts.solicitudId": { $in: idsAprobadas },
             })
-                .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl")
+                .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.categoria_sat_id contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl")
                 .lean();
-            const codigosOs = [...new Set(ups.flatMap((up) => (up.contracts || []).map((c) => c.obraSocialId)).filter((id) => id != null))];
-            const obras = codigosOs.length ? await ObraSocial.find({ "data.id": { $in: codigosOs } }).select("externalId name data.id data.nombre").lean() : [];
-            const obraDe = new Map(obras.map((o) => [Number(o.data?.id), o]));
             const pedidas = new Set(idsAprobadas.map(String));
+            const contratos = ups.flatMap((up) => (up.contracts || []).filter((c) => pedidas.has(String(c.solicitudId || ""))));
+            /*
+              LA MISMA CASCADA QUE LA GRILLA DE CONTRATOS (`afipCompleteness`), resuelta acá para que
+              Solicitudes muestre el MISMO código: categoría → convenio (o la empleadora, si la categoría es
+              de excluidos de convenio) → obra social por defecto. Es lo que rige cuando ARCA no devuelve
+              una propia («no figura»), y es lo que la celda escribe en ese caso. Antes Solicitudes decía
+              «Convenio» a secas, sin el número, y Contratos decía «120900»: el mismo contrato, dos lecturas.
+            */
+            const CONVENIO_EXCLUIDO = "9999/99";
+            const categoriaIds = [...new Set(contratos.map((c) => c.categoria_sat_id).filter((id) => id != null).map(Number))];
+            const categorias = categoriaIds.length ? await CategoriaSat.find({ "data.id": { $in: categoriaIds } }).select("data.id data.convenio").lean() : [];
+            const cctDeCategoria = new Map(categorias.map((c) => [Number(c.data?.id), String(c.data?.convenio || "").trim()]));
+            const ccts = [...new Set([...cctDeCategoria.values()].filter(Boolean))];
+            const convenios = ccts.length ? await Convenio.find({ externalId: { $in: ccts } }).select("externalId obraSocialDefaultId obraSocialId").lean() : [];
+            const convenioPorCct = new Map(convenios.map((c) => [String(c.externalId || "").trim(), c]));
+            const empresaIds = [...new Set(contratos.map((c) => c.empresaContratoId).filter(Boolean).map(String))];
+            const empresas = empresaIds.length ? await Company.find({ _id: { $in: empresaIds.map((id) => new Types.ObjectId(id)) } }).select("razonSocial cuit obraSocialDefaultId obraSocialId obrasSocialesIds").lean() : [];
+            const empresaPorId = new Map(empresas.map((e) => [String(e._id), e]));
+            const cctDe = (c) => cctDeCategoria.get(Number(c.categoria_sat_id)) || "";
+            // El `data.id` de la obra social que rige por defecto para ese contrato, o null si nada la define.
+            const sugeridaDe = (c) => {
+                const cct = cctDe(c);
+                if (!cct)
+                    return null;
+                const fuente = cct === CONVENIO_EXCLUIDO ? empresaPorId.get(String(c.empresaContratoId || "")) : convenioPorCct.get(cct);
+                const id = fuente ? (fuente.obraSocialDefaultId ?? fuente.obraSocialId ?? null) : null;
+                return id != null ? Number(id) : null;
+            };
+            const codigosOs = [...new Set([...contratos.map((c) => c.obraSocialId), ...contratos.map(sugeridaDe)].filter((id) => id != null).map(Number))];
+            const obras = codigosOs.length ? await ObraSocial.find({ "data.id": { $in: codigosOs } }).select("_id externalId name data.id data.nombre").lean() : [];
+            const obraDe = new Map(obras.map((o) => [Number(o.data?.id), o]));
             for (const up of ups) {
                 for (const [i, c] of (up.contracts || []).entries()) {
                     const sid = String(c.solicitudId || "");
                     if (!pedidas.has(sid))
                         continue;
                     const os = c.obraSocialId != null ? obraDe.get(Number(c.obraSocialId)) : null;
+                    const idSugerida = sugeridaDe(c);
+                    const sugerida = idSugerida != null ? obraDe.get(idSugerida) : null;
+                    const empresa = empresaPorId.get(String(c.empresaContratoId || ""));
+                    // La que rige tiene que estar REGISTRADA por la empleadora ante ARCA; sin padrón extraído no se opina (null).
+                    const registradas = (empresa?.obrasSocialesIds || []).map(String);
+                    const rige = os || sugerida;
+                    const registrada = !rige || registradas.length === 0 ? null : registradas.includes(String(rige._id));
                     obraSocialPorSolicitud.set(sid, {
                         projectId: String(up.projectId),
                         userId: String(up.userId),
@@ -1423,6 +1460,13 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
                         rnos: os?.externalId ? String(os.externalId) : "",
                         nombre: os?.data?.nombre || os?.name || "",
                         constatadaEl: c.obraSocialConstatadaEl || null,
+                        // Lo que la celda compartida necesita para decir lo mismo que Contratos (ver CeldaObraSocial).
+                        rnosSugerido: sugerida?.externalId ? String(sugerida.externalId) : "",
+                        nombreSugerida: sugerida?.data?.nombre || sugerida?.name || "",
+                        convenioCct: cctDe(c),
+                        tieneCategoria: c.categoria_sat_id != null,
+                        registrada,
+                        empresaCuit: String(empresa?.cuit || ""),
                     });
                 }
             }
