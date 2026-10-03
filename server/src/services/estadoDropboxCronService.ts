@@ -7,6 +7,7 @@ import { getTenantDropboxConfig, listFolder, downloadFileContent, verifyAccount,
 import { cargarEstadosPorEvento, aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
 import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
+import { momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
 
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
@@ -107,6 +108,8 @@ interface Candidato {
   email: string;
   fechaAlta: string;
   fechaBaja: string;
+  /** `fecha_carga` del contrato en ms: un archivo anterior no puede ser su documento (ver `archivoDeContrato`). */
+  creadoEl: number | null;
 }
 
 /** "YYYY-MM-DD" → "YYYYMMDD". "" si no matchea ese formato (mismo criterio que `employeeDocData.ts`). */
@@ -285,6 +288,7 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
           email: "",
           fechaAlta: fechaCompacta(c.fecha_alta_contrato),
           fechaBaja: fechaCompacta(c.fecha_baja_contrato),
+          creadoEl: momentoDeCarga(c.fecha_carga),
         });
       }
     });
@@ -404,6 +408,22 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
       }
 
       const candidato = matches[0];
+
+      /*
+        ES LA PERSONA, PERO ¿ES ESTE CONTRATO? Identificar a la persona no alcanza: en las carpetas quedan
+        para siempre archivos viejos que la nombran (contratos firmados de antes, recibos de sueldo) y,
+        con un solo contrato suyo en estado anterior —el recién creado—, cualquiera de ellos lo
+        "avanzaba". Así un recibo de julio pasó a «Disponible» un contrato aprobado el 1/10, que se fue de
+        la bandeja de ARCA sin alta. El archivo tiene que ser posterior al contrato y, si trae fechas,
+        tienen que ser las suyas (`archivoDeContrato`). El archivo descartado no se "consume": queda
+        para el contrato que sí le corresponda, si lo hay.
+      */
+      const descarte = motivoParaDescartarArchivo({ modificadoEl: file.serverModified }, candidato, extraerFechasDeNombre(file.name));
+      if (descarte) {
+        logSiCambio(key, descarte, `[ESTADO-DROPBOX-CRON] ${file.path}: ${TEXTO_DESCARTE[descarte]} (${candidato.userId} [${candidato.idx}]) — se omite (destino: ${estadoDestino.name})`);
+        continue;
+      }
+
       disponibles = disponibles.filter((c) => c !== candidato);
       const resultado = await aplicarTransicion(candidato.up, candidato.idx, estadoDestino);
       if (resultado.aplicada) {
