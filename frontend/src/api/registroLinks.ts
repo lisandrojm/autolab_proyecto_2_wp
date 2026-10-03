@@ -7,7 +7,10 @@ export interface RegistroLink {
   clientName: string | null;
   label: string | null;
   active: boolean;
+  /** Veces que se usó el link. No baja si el registro se borra después. */
   usageCount: number;
+  /** Personas que HOY existen registradas con este link. Un server anterior no lo manda. */
+  registradosCount?: number;
   lastUsedAt: string | null;
   createdAt: string;
   expiresAt: string | null;

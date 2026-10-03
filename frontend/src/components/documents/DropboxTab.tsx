@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
-import { faFolder, faFileLines, faDownload, faTrash, faPen, faUpload, faFolderPlus, faRotate, faChevronRight, faSpinner, faTriangleExclamation, faPlug, faFileZipper } from "@fortawesome/free-solid-svg-icons";
+import { faFolder, faFileLines, faFileCode, faEye, faDownload, faTrash, faPen, faUpload, faFolderPlus, faRotate, faChevronRight, faSpinner, faTriangleExclamation, faPlug, faFileZipper } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { dropboxAPI, DropboxEntry, DropboxStatus } from "../../api/dropbox";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { ArchivoParaVer, VisorArchivoDropbox, esArchivoVisible } from "./VisorArchivoDropbox";
 
 const formatSize = (n?: number): string => {
   if (!n && n !== 0) return "";
@@ -127,6 +128,26 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
       await loadStatus();
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo desconectar.");
+    }
+  };
+
+  /** El archivo abierto en el visor (JSON, texto), o null. */
+  const [viendo, setViendo] = useState<ArchivoParaVer | null>(null);
+  const [cargandoVista, setCargandoVista] = useState(false);
+
+  /*
+    VER SIN BAJAR. Los .json de Registros y DDBB (y cualquier texto) se abren en un modal en vez de
+    descargarse: el contenido lo trae el server, recortado si es grande (ver `/dropbox/ver`).
+  */
+  const handleVer = async (entry: DropboxEntry) => {
+    setCargandoVista(true);
+    try {
+      const r = await dropboxAPI.ver(entry.path, full, entry.id);
+      setViendo({ nombre: entry.name, modificado: entry.serverModified, ...r });
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo leer el archivo.");
+    } finally {
+      setCargandoVista(false);
     }
   };
 
@@ -600,6 +621,11 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                         <button onClick={() => loadFolder(e.path)} className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-100 hover:text-blue-600">
                           <FontAwesomeIcon icon={faFolder} className="text-amber-500" /> {e.name}
                         </button>
+                      ) : esArchivoVisible(e.name) ? (
+                        /* Los que se pueden ver se abren con un click en el nombre, como las carpetas. */
+                        <button onClick={() => handleVer(e)} title="Ver el contenido" className="flex items-center gap-2 text-left text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
+                          <FontAwesomeIcon icon={faFileCode} className="text-emerald-500" /> {e.name}
+                        </button>
                       ) : (
                         <span className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
                           <FontAwesomeIcon icon={faFileLines} className="text-blue-400" /> {e.name}
@@ -610,6 +636,9 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                     <td className="px-4 py-2.5 text-gray-500 text-xs">{formatDate(e.serverModified)}</td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center justify-end gap-1">
+                        {e.tag === "file" && esArchivoVisible(e.name) && (
+                          <button onClick={() => handleVer(e)} title="Ver el contenido sin descargar" className="p-2 rounded text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"><FontAwesomeIcon icon={faEye} /></button>
+                        )}
                         {e.tag === "file" && (
                           <button onClick={() => handleDownload(e)} title="Descargar" className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"><FontAwesomeIcon icon={faDownload} /></button>
                         )}
@@ -624,6 +653,20 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
           </table>
         </div>
       </div>
+
+      {cargandoVista && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-gray-900/40">
+          <FontAwesomeIcon icon={faSpinner} spin className="h-6 w-6 text-white" />
+        </div>
+      )}
+      <VisorArchivoDropbox
+        archivo={viendo}
+        onClose={() => setViendo(null)}
+        onDescargar={() => {
+          const entry = entries.find((x) => x.name === viendo?.nombre && x.tag === "file");
+          if (entry) void handleDownload(entry);
+        }}
+      />
     </div>
   );
 };

@@ -74,6 +74,15 @@ export const dropboxAPI = {
   },
 
   /**
+   * El contenido de un archivo para VERLO en pantalla (JSON, texto), recortado por el server si es
+   * grande. `full`, `id`: igual que `tempLink`.
+   */
+  async ver(path: string, full?: boolean, id?: string): Promise<{ contenido: string; bytes: number; recortado: boolean; limite: number }> {
+    const { data } = await axios.get("/dropbox/ver", { params: { path, id, full: full ? "1" : undefined }, timeout: 2 * 60 * 1000 });
+    return data;
+  },
+
+  /**
    * Descarga varios archivos como un ZIP.
    *
    * Se manda el `id` de Dropbox de cada archivo además del path, y el server baja POR ID. El path

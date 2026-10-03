@@ -54,6 +54,22 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
 
     const links = await RegistroLink.find({ tenantId }).sort({ createdAt: -1 }).lean();
 
+    /*
+      CUÁNTAS PERSONAS QUEDARON de cada link, además de cuántas veces se usó.
+
+      `usageCount` cuenta registros hechos y no baja cuando el registro se borra (desde el móvil se
+      puede borrar un registrado que todavía no tiene contrato). Un link decía «4 registros» y en
+      Registrados no había nadie suyo: eran cuatro pruebas de la misma persona, borradas después. Lo que
+      la pantalla tiene que decir es cuántas personas HAY hoy; los usos quedan como dato secundario.
+    */
+    const porLink: any[] = links.length
+      ? await User.aggregate([
+          { $match: { tenantId, "metadata.registro.linkId": { $in: links.map((l: any) => l._id) } } },
+          { $group: { _id: "$metadata.registro.linkId", n: { $sum: 1 } } },
+        ])
+      : [];
+    const registradosPorLink = new Map(porLink.map((p) => [String(p._id), p.n as number]));
+
     // Etiquetas de cliente, creador y —para los links del móvil— proyecto, área y turno.
     const unicos = (campo: "clientId" | "createdBy" | "projectId" | "areaId" | "shiftId") => [...new Set(links.filter((l: any) => l[campo]).map((l: any) => String(l[campo])))];
     const [clients, users, projects, areas, shifts] = await Promise.all([
@@ -78,6 +94,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       label: l.label || null,
       active: l.active,
       usageCount: l.usageCount,
+      registradosCount: registradosPorLink.get(String(l._id)) || 0,
       lastUsedAt: l.lastUsedAt || null,
       createdAt: l.createdAt,
       expiresAt: new Date(getRegistroLinkExpiry(l)).toISOString(),

@@ -1,13 +1,13 @@
 import { useCallback, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faFileSignature } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark, faFileSignature, faIdCard } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { DropboxTab } from "../components/documents/DropboxTab";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
-type TabKey = "dropbox" | "afip" | "paritarias";
+type TabKey = "dropbox" | "afip" | "paritarias" | "registros";
 
 export function DocumentsPage() {
   const puedeAbrir = usePuedeAbrir();
@@ -43,6 +43,10 @@ export function DocumentsPage() {
                 <FontAwesomeIcon icon={faFileSignature} className="text-xs" />
                 Paritarias
               </button>
+              <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === "registros" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("registros")} title="Lo que ARCA contestó al registrarse cada persona: un JSON por CUIT">
+                <FontAwesomeIcon icon={faIdCard} className="text-xs" />
+                Registros
+              </button>
             </div>
               {puedeAbrir("/escaneo-dropbox") && (
                 <a
@@ -72,6 +76,12 @@ export function DocumentsPage() {
               pasó con ARCA cuando «/AFIP» se convirtió en «/WEPRODU/ARCA».
             */}
             {activeTab === "paritarias" && <DropboxTab key="paritarias" fixedRoot="/WEPRODU/Paritarias" rootLabel="Paritarias" onCountChange={handleCountChange} />}
+            {/*
+              Registros: lo que ARCA contestó al registrarse cada persona por el link público, un .json
+              por CUIT (lo escribe `espejoDropboxRegistros`, misma constante `BASE_REGISTROS`). Los .json
+              se abren en pantalla desde la tabla, sin bajarlos.
+            */}
+            {activeTab === "registros" && <DropboxTab key="registros" fixedRoot="/WEPRODU/Registros" rootLabel="Registros" onCountChange={handleCountChange} />}
           </div>
         </div>
       }

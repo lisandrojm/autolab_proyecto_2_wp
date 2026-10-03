@@ -210,6 +210,35 @@ router.get("/temp-link", async (req: AuthenticatedRequest & TenantRequest, res) 
   }
 });
 
+/*
+  GET /dropbox/ver?path=&id=&full= — el CONTENIDO de un archivo, para verlo en pantalla sin bajarlo.
+
+  Es para los .json de Registros (lo que ARCA contestó al registrarse cada persona), los de DDBB y
+  cualquier archivo de texto. Se recorta a `MAX_VISTA` bytes: lo que pase de eso no se lee en un modal,
+  se descarga. Mismo criterio de ruta e id que /temp-link: el path valida dónde vive, el id es con lo que
+  se le pide a Dropbox (no depende de cómo se llame el archivo).
+*/
+const MAX_VISTA = 1024 * 1024;
+
+router.get("/ver", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const cfg = await requireConfig(req, res);
+    if (!cfg) return;
+    const path = String(req.query.path || "");
+    const id = String(req.query.id || "");
+    const full = req.query.full === "1" || req.query.full === "true";
+    if (!path || (!full && !isWithinRoot(cfg, path))) {
+      res.status(403).json({ error: "Ruta inválida." });
+      return;
+    }
+    const buf = await downloadFileContent(String(req.tenantObjectId), cfg, id ? (id.startsWith("id:") ? id : `id:${id}`) : path);
+    const recortado = buf.length > MAX_VISTA;
+    res.json({ contenido: buf.subarray(0, MAX_VISTA).toString("utf8"), bytes: buf.length, recortado, limite: MAX_VISTA });
+  } catch (error) {
+    dropboxError(res, error);
+  }
+});
+
 // POST /dropbox/download-zip { paths: string[], full? } - baja varios archivos y los devuelve como un
 // único ZIP. Con full=true, permite rutas fuera del rootPath (ver /temp-link).
 router.post("/download-zip", async (req: AuthenticatedRequest & TenantRequest, res) => {

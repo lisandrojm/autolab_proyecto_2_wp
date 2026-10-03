@@ -30,6 +30,8 @@ type Origen = 'todos' | 'web' | 'mobile';
 const DURACIONES_MOVIL = [1, 3, 7, 15, 30, 60, 90];
 
 const fecha = (d?: string | number | null) => (d ? new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+/* Con la hora: dos personas que se registran el mismo día se ordenan por hora, y sin verla el orden parece arbitrario. */
+const fechaHora = (d?: string | number | null) => (d ? `${fecha(d)} ${new Date(d).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : '—');
 const dias = (n: number) => `${n} ${n === 1 ? 'día' : 'días'}`;
 
 interface Props {
@@ -375,13 +377,31 @@ export const RegistroModal: React.FC<Props> = ({ isOpen, onClose, clientId, onAb
                     {chipOrigen(origenDe(link))}
                     {link.clientName && <span className="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{link.clientName}</span>}
                     {link.projectName && <span className="inline-flex items-center rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">{[link.projectName, link.areaName, link.shiftName].filter(Boolean).join(' · ')}</span>}
-                    {link.usageCount > 0 ? (
-                      <button type="button" onClick={() => verRegistradosDe(link)} className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400" title="Ver quiénes se registraron con este link">
-                        {link.usageCount} {link.usageCount === 1 ? 'registro' : 'registros'} →
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">0 registros</span>
-                    )}
+                    {/*
+                      Las PERSONAS que quedaron, no los usos: un registro borrado después (pruebas) sigue
+                      contando en `usageCount`. Si hubo más usos que personas, se dice al lado, apagado.
+                      Con un server que todavía no manda `registradosCount` se muestran los usos, como antes.
+                    */}
+                    {(() => {
+                      const personas = link.registradosCount ?? link.usageCount;
+                      const borrados = link.registradosCount !== undefined ? Math.max(0, link.usageCount - link.registradosCount) : 0;
+                      return (
+                        <>
+                          {personas > 0 ? (
+                            <button type="button" onClick={() => verRegistradosDe(link)} className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400" title="Ver quiénes se registraron con este link">
+                              {personas} {personas === 1 ? 'registro' : 'registros'} →
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">0 registros</span>
+                          )}
+                          {borrados > 0 && (
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500" title={`El link se usó ${link.usageCount} ${link.usageCount === 1 ? 'vez' : 'veces'}; ${borrados} ${borrados === 1 ? 'registro se borró' : 'registros se borraron'} después (desde el móvil se puede borrar un registrado sin contrato).`}>
+                              · {link.usageCount} usos, {borrados} {borrados === 1 ? 'borrado' : 'borrados'}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                     {usable && quedan !== null && <span className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${quedan <= 5 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{quedan === 0 ? 'Vence hoy' : `Vence en ${dias(quedan)}`}</span>}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
@@ -481,14 +501,14 @@ export const RegistroModal: React.FC<Props> = ({ isOpen, onClose, clientId, onAb
       ) : (
         <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
           {/* Encabezado de columnas: sólo donde hay ancho para columnas */}
-          <div className="sticky top-0 hidden grid-cols-[minmax(0,2fr)_110px_minmax(0,1.5fr)_120px] gap-3 border-b border-gray-200 bg-gray-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 md:grid">
+          <div className="sticky top-0 hidden grid-cols-[minmax(0,2fr)_130px_minmax(0,1.5fr)_120px] gap-3 border-b border-gray-200 bg-gray-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 md:grid">
             <span>Persona</span>
             <span>Se registró</span>
             <span>Link</span>
             <span>Estado</span>
           </div>
           {registradosVisibles.map((r) => (
-            <button key={r._id} type="button" onClick={() => abrirUsuario(r)} disabled={abriendo !== null} className="grid w-full grid-cols-1 gap-1.5 border-b border-gray-100 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-blue-50/60 disabled:cursor-wait dark:border-gray-800 dark:hover:bg-gray-800/60 md:grid-cols-[minmax(0,2fr)_110px_minmax(0,1.5fr)_120px] md:items-center md:gap-3">
+            <button key={r._id} type="button" onClick={() => abrirUsuario(r)} disabled={abriendo !== null} className="grid w-full grid-cols-1 gap-1.5 border-b border-gray-100 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-blue-50/60 disabled:cursor-wait dark:border-gray-800 dark:hover:bg-gray-800/60 md:grid-cols-[minmax(0,2fr)_130px_minmax(0,1.5fr)_120px] md:items-center md:gap-3">
               <span className="min-w-0">
                 <span className="flex items-center gap-2 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {abriendo === r._id && <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3 text-gray-400" />}
@@ -499,7 +519,7 @@ export const RegistroModal: React.FC<Props> = ({ isOpen, onClose, clientId, onAb
                   {r.cuit ? ` · ${r.cuit}` : ''}
                 </span>
               </span>
-              <span className="text-xs text-gray-600 dark:text-gray-300">{fecha(r.registradoAt)}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-300">{fechaHora(r.registradoAt)}</span>
               <span className="flex min-w-0 flex-wrap items-center gap-1.5">
                 {chipOrigen(r.origen)}
                 <span className="truncate text-xs text-gray-600 dark:text-gray-300">{r.compartidoPor ? `Compartido por ${r.compartidoPor}` : 'Sin autor'}</span>
