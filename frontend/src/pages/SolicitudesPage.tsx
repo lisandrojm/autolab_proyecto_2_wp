@@ -15,7 +15,9 @@ import { contratoFrameAPI } from "../api/contratosFrame";
 import { contratosAPI } from "../api/contratos";
 import { CatalogosAprobacion, contratoDesdeSolicitud } from "../utils/aprobacionMasiva";
 import { afipAPI } from "../api/afip";
-import { FilaObraSocial, ObraSocialSolicitudCell, ValidarObrasSocialesSolicitudes } from "../components/solicitudes/ValidarObrasSocialesSolicitudes";
+import { Modal } from "../components/ui/Modal";
+import { CeldaObraSocial, EstadoObraSocial, VistaObraSocial } from "../components/contratos/CeldaObraSocial";
+import { FilaConstatacion, PantallaValidarObrasSociales } from "../components/contratos/PantallaValidarObrasSociales";
 import { cuitEsValido } from "../utils/cuit";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -47,6 +49,54 @@ const PAGE_SIZE = 25;
 
 const CLAVE_AYUDA = "solicitudes" as const;
 
+const digitosDe = (v?: string | null) => String(v || "").replace(/\D/g, "");
+
+/**
+ * LA VISTA DE LA CELDA, desde lo que el server resolvió para la solicitud. Es el gemelo del adaptador
+ * de Contratos (`ObraSocialCell` en ContractBulkTabs): mismas reglas, otra fuente. Sin contrato
+ * (pendiente, rechazada), `null`: todavía no hay dónde guardarla.
+ */
+const vistaObraSocialDe = (nombre: string, os: ObraSocialDeSolicitud | null | undefined): VistaObraSocial | null => {
+  if (!os) return null;
+  const sugerido = digitosDe(os.rnosSugerido);
+  const propio = digitosDe(os.rnos);
+  const base: EstadoObraSocial = os.estado === "no_figura" ? "validada_default" : os.estado === "afiliada" ? "validada_arca" : "sin_validar";
+  // El error va primero, como en Contratos: una obra social que la empleadora no registró hace que ARCA rechace el alta.
+  const estado: EstadoObraSocial = base !== "sin_validar" && os.registrada === false ? "no_registrada" : base;
+  const codigo = base === "validada_arca" ? propio : base === "validada_default" ? sugerido : "";
+  const cuil = digitosDe(os.cuil);
+  return {
+    estado,
+    codigo,
+    nombre: os.nombre || os.nombreSugerida || "",
+    fecha: os.constatadaEl ? new Date(os.constatadaEl).toLocaleDateString("es-AR") : "",
+    delConvenio: os.convenioCct ? `convenio ${os.convenioCct}` : "convenio",
+    rnosSugerido: sugerido,
+    nombreSugerida: os.nombreSugerida || "",
+    distintaDelConvenio: base === "validada_arca" && propio !== sugerido,
+    puedeValidar: !!os.empresaContratoId && os.tieneCategoria && cuil.length === 11,
+    motivoNoPuede: !os.empresaContratoId ? "Todavía no se puede validar: el contrato no tiene Empresa Contrato. Asignala en Contratos." : !os.tieneCategoria ? "Todavía no se puede validar: el contrato no tiene categoría (de ella sale el convenio y su obra social). Elegila en Contratos." : "Todavía no se puede validar: la persona no tiene un CUIL válido.",
+    nombrePersona: nombre,
+    quitar: { projectId: os.projectId, userId: os.userId, ref: os.contratoId },
+  };
+};
+
+/** Un grupo de la cola de validación: una empleadora y sus filas, en la forma que pide la pantalla de Contratos. */
+type GrupoOS = { empresaId: string; empleadora: string; empleadoraCuit: string; filas: FilaConstatacion[] };
+
+const gruposDeValidacion = (items: { nombre: string; os: ObraSocialDeSolicitud }[]): GrupoOS[] => {
+  const grupos = new Map<string, GrupoOS>();
+  for (const { nombre, os } of items) {
+    const empresaId = String(os.empresaContratoId || "");
+    if (!empresaId) continue;
+    const g = grupos.get(empresaId) || { empresaId, empleadora: os.empresaNombre, empleadoraCuit: os.empresaCuit || "", filas: [] };
+    // La clave de la pantalla es `_id-contractIndex`: con el contrato en el `_id` queda única por fila.
+    g.filas.push({ row: { _id: `${os.userId}:${os.contratoId}`, contractIndex: 0, userName: nombre, cuit: os.cuil, empresaContratoId: os.empresaContratoId || undefined }, valores: { rnosSugerido: os.rnosSugerido || "", nombreObraSocialSugerida: os.nombreSugerida || "", constatacion: os.estado, rnos: os.rnos || "" } });
+    grupos.set(empresaId, g);
+  }
+  return [...grupos.values()];
+};
+
 export const SolicitudesPage: React.FC = () => {
   const catalogos = useCatalogosDeSolicitudes();
   /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
@@ -71,7 +121,16 @@ export const SolicitudesPage: React.FC = () => {
   const [seleccion, setSeleccion] = useState<Map<string, Elegida>>(new Map());
   const elegidaDe = (r: Elegida): Elegida => ({ nombre: r.nombre, estado: r.estado, cuit: r.cuit, sinCuit: r.sinCuit, empresaContratoId: r.empresaContratoId, solicitudUserId: r.solicitudUserId, personaId: r.personaId, obraSocial: r.obraSocial });
   /** Validar obras sociales: la lista de la corrida abierta (null = modal cerrado). */
-  const [validandoOS, setValidandoOS] = useState<FilaObraSocial[] | null>(null);
+  /*
+    LA VALIDACIÓN DE OBRAS SOCIALES ES LA DE CONTRATOS: la misma pantalla, por el Asistente WeProdu.
+    Solicitudes tenía la suya —la corrida en el servidor, con su Chromium— que quedaba «Abriendo ARCA
+    en el servidor…» minutos y terminaba fallando. Es el mismo trámite sobre el mismo contrato; la
+    pantalla que funciona es una sola.
+
+    La pantalla es por EMPLEADORA (la validación del RNOS es por CUIT), así que una selección de varias
+    se atiende de a una: una cola de grupos, y al cerrar el modal sigue el próximo.
+  */
+  const [colaOS, setColaOS] = useState<GrupoOS[]>([]);
   const [validandoNombres, setValidandoNombres] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   /** Avance de «Aprobar N» / «Rechazar N»: van de a una y la tanda puede tardar. */
@@ -419,12 +478,13 @@ export const SolicitudesPage: React.FC = () => {
     lo que pidió la solicitud: al aprobar se pudo cambiar la empleadora, y el contrato puede ser de otra
     persona que la solicitud de paso. Las demás de la selección se dicen y se saltean.
   */
-  const filaParaValidar = (x: Elegida): FilaObraSocial | null => {
+  const filaParaValidar = (x: Elegida): { nombre: string; os: ObraSocialDeSolicitud } | null => {
     const os = x.obraSocial;
-    if (x.estado !== "aprobada" || !os || os.estado !== "sin_constatar" || !os.empresaContratoId || !cuitEsValido(os.cuil)) return null;
-    return { id: `${os.userId}:${os.contratoId}`, nombre: x.nombre, cuit: os.cuil, empresaId: os.empresaContratoId };
+    // Mismo requisito que la grilla de Contratos: empleadora Y categoría (de ella sale el convenio, y de él la obra social por defecto).
+    if (x.estado !== "aprobada" || !os || os.estado !== "sin_constatar" || !os.empresaContratoId || !os.tieneCategoria || !cuitEsValido(os.cuil)) return null;
+    return { nombre: x.nombre, os };
   };
-  const aValidarOS = [...seleccion.values()].map(filaParaValidar).filter((f): f is FilaObraSocial => !!f);
+  const aValidarOS = [...seleccion.values()].map(filaParaValidar).filter((f): f is { nombre: string; os: ObraSocialDeSolicitud } => !!f);
   const validarObrasSocialesSeleccion = async () => {
     const salteadas = seleccion.size - aValidarOS.length;
     if (salteadas > 0) {
@@ -435,7 +495,7 @@ export const SolicitudesPage: React.FC = () => {
       );
       if (!r.isConfirmed) return;
     }
-    setValidandoOS(aValidarOS);
+    setColaOS(gruposDeValidacion(aValidarOS));
   };
 
   const eliminarSeleccionadas = async () => {
@@ -567,7 +627,7 @@ export const SolicitudesPage: React.FC = () => {
                 </button>
               )}
               {aValidarOS.length > 0 && (
-                <button type="button" onClick={() => void validarObrasSocialesSeleccion()} disabled={!!validandoOS || !!procesando} className="inline-flex items-center gap-2 rounded-lg border border-blue-300 px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/40">
+                <button type="button" onClick={() => void validarObrasSocialesSeleccion()} disabled={colaOS.length > 0 || !!procesando} className="inline-flex items-center gap-2 rounded-lg border border-blue-300 px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/40">
                   Validar obra social ({aValidarOS.length})
                 </button>
               )}
@@ -577,7 +637,18 @@ export const SolicitudesPage: React.FC = () => {
               </button>
             </div>
           )}
-          {validandoOS && <ValidarObrasSocialesSolicitudes filas={validandoOS} onCerrar={() => setValidandoOS(null)} onTerminado={() => cargar(page)} />}
+          {colaOS[0] && (
+            <Modal
+              isOpen
+              onClose={() => setColaOS((c) => c.slice(1))}
+              title={colaOS[0].filas.length === 1 ? `Validar obra social — ${colaOS[0].filas[0].row.userName}` : `Validar obras sociales (${colaOS[0].filas.length})`}
+              subtitle={`${colaOS[0].empleadora}${colaOS.length > 1 ? ` · al cerrar siguen ${colaOS.length - 1} empleadora${colaOS.length - 1 === 1 ? "" : "s"} más` : ""}`}
+              size="95"
+              zIndex={70}
+            >
+              <PantallaValidarObrasSociales filas={colaOS[0].filas} empleadora={colaOS[0].empleadora} empleadoraCuit={colaOS[0].empleadoraCuit} empresaId={colaOS[0].empresaId} onRefrescar={() => cargar(page)} onLoteAplicado={() => cargar(page)} />
+            </Modal>
+          )}
           <SolicitudesTable
             seleccionadas={new Set(seleccion.keys())}
             onCambiarSeleccion={cambiarSeleccion}
@@ -591,7 +662,10 @@ export const SolicitudesPage: React.FC = () => {
             onReabrir={(s) => cambiarEstado(s, "pendiente")}
             onEliminar={eliminar}
             onEditarAprobada={editarAprobada}
-            renderObraSocial={(s) => <ObraSocialSolicitudCell os={s.obraSocial} nombre={s.nombre} ocupado={!!validandoOS} onValidar={(f) => setValidandoOS([f])} onQuitada={() => cargar(page)} />}
+            renderObraSocial={(s) => {
+              const vista = vistaObraSocialDe(s.nombre, s.obraSocial);
+              return vista ? <CeldaObraSocial vista={vista} onValidar={() => s.obraSocial && setColaOS(gruposDeValidacion([{ nombre: s.nombre, os: s.obraSocial }]))} onQuitado={() => cargar(page)} /> : <span className="text-xs text-gray-400">—</span>;
+            }}
           />
 
           {/* Revisar acá; aprobar sigue llevando al equipo del proyecto, que es donde se carga el contrato. */}

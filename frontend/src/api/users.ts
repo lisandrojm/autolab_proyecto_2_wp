@@ -281,6 +281,16 @@ export interface ObraSocialDeSolicitud {
   rnos: string;
   nombre: string;
   constatadaEl: string | null;
+  /** La del convenio (o de la empleadora, si es excluida): lo que rige cuando ARCA no devuelve una propia. Resuelta en el server con la misma cascada que la grilla de Contratos. */
+  rnosSugerido: string;
+  nombreSugerida: string;
+  convenioCct: string;
+  /** Sin categoría no se puede validar: de ella sale el convenio, y del convenio la obra social por defecto. */
+  tieneCategoria: boolean;
+  /** La que rige está entre las registradas por la empleadora ante ARCA. `null` = la empleadora no tiene el padrón extraído. */
+  registrada: boolean | null;
+  /** El CUIT de la empleadora: con él el Asistente la elige solo en ARCA. */
+  empresaCuit: string;
 }
 
 export interface UserProjectMetadata {

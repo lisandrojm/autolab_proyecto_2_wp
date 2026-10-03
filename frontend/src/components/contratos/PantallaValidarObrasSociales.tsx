@@ -51,8 +51,12 @@ const formatCuil = (v: string): string => conGuiones(soloDigitos(v));
  */
 const TOPE_SIN_EVENTOS_MS = 90_000;
 
-/** Una fila del lote: el contrato y los valores ya resueltos por el checklist. */
-export type FilaConstatacion = { row: ContractOverviewRow; valores: AfipValues };
+/**
+ * Una fila del lote: lo mínimo del contrato y de los valores que esta pantalla usa. Es un `Pick` y no
+ * la fila entera para que Solicitudes pueda armarla desde su propio listado, sin fabricar una fila de
+ * Contratos: la misma pantalla sirve para las dos, que es el punto.
+ */
+export type FilaConstatacion = { row: Pick<ContractOverviewRow, '_id' | 'contractIndex' | 'userName' | 'cuit' | 'empresaContratoId'>; valores: Pick<AfipValues, 'rnosSugerido' | 'nombreObraSocialSugerida' | 'constatacion' | 'rnos'> };
 
 /**
  * El estado de una fila durante la corrida.
@@ -263,7 +267,7 @@ export const PantallaValidarObrasSociales: React.FC<{
    */
   const [fracaso, setFracaso] = useState<{ faltaron: number; motivo: string } | null>(null);
 
-  const clave = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
+  const clave = (r: FilaConstatacion['row']) => `${r._id}-${r.contractIndex}`;
 
   /**
    * Las que estaban pendientes al ABRIR, congeladas.

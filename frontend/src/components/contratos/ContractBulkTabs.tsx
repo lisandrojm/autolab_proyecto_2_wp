@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock, faCircleCheck, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt } from '@fortawesome/free-solid-svg-icons';
+import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt } from '@fortawesome/free-solid-svg-icons';
 import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
 import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
@@ -35,6 +35,7 @@ import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
 import { CorridaAltasArca, LoteParaPresentar } from './CorridaAltasArca';
 import { arcaCatalogoAPI, DIAS_CATALOGO_VIEJO } from '../../api/arcaCatalogo';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
+import { CeldaObraSocial, EstadoObraSocial, VistaObraSocial } from './CeldaObraSocial';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -719,7 +720,7 @@ const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrat
  * el orden y el contador del botón de lote. Con la clasificación repetida en cada uno, el botón decía
  * 26 y el filtro traía 24 — que es exactamente lo que pasaba antes.
  */
-export type EstadoObraSocial = 'sin_validar' | 'validada_default' | 'validada_arca' | 'no_registrada';
+export type { EstadoObraSocial };
 
 export const estadoObraSocial = (_row: ContractOverviewRow, v: AfipValues): EstadoObraSocial => {
   // El error va primero: una obra social que la empleadora no registró hace que ARCA rechace el alta,
@@ -855,169 +856,37 @@ const ObraSocialCell: React.FC<{
   onSinEmpresa: () => void;
   onQuitado: (patch: Partial<ContractOverviewRow>) => void;
 }> = ({ record, valores, onAbrir, onValidar, onSinEmpresa, onQuitado }) => {
-  const [quitando, setQuitando] = useState(false);
+  /*
+    EL DIBUJO VIVE EN `CeldaObraSocial`, compartida con Solicitudes. Acá sólo se arma la vista desde el
+    checklist de ARCA, que es lo que esta grilla tiene y Solicitudes no (allá la resuelve el server).
+  */
   const estado = estadoObraSocial(record, valores);
   const codigo = String(valores.rnos || '').replace(/\D/g, '');
-  const fecha = valores.constatadaEl ? new Date(valores.constatadaEl).toLocaleDateString('es-AR') : '';
-  const nombre = valores.nombreObraSocial || '';
-  const delConvenio = valores.convenioCategoria ? `convenio ${valores.convenioCategoria}` : 'convenio';
-
-  /**
-   * Quitar la obra social desde la grilla.
-   *
-   * Va con `forzar` porque lo sellado en ARCA es inmutable para el server (sin eso contesta 409).
-   * Estaba solo en el detalle del contrato: para corregir una obra social mal validada había que
-   * abrir la ficha de cada persona, cuando la revisión se hace mirando esta columna.
-   */
-  const quitar = async () => {
-    const r = await sweetAlert.confirm(
-      '¿Quitar la obra social?',
-      `${record.userName}: el contrato vuelve a quedar SIN VALIDAR y no entra en el TXT hasta validarlo de nuevo en ARCA. No se pierde nada: el valor lo devuelve el organismo, no se carga a mano.`,
-      'Sí, quitar',
-    );
-    if (!r.isConfirmed) return;
-    setQuitando(true);
-    try {
-      const ref = record.contratoId || record.contractIndex;
-      await projectsAPI.updateObraSocialContrato(record.projectId, record.userId, ref as never, { obraSocialId: null, origen: 'manual', forzar: true });
-      onQuitado({ osId: null, obraSocialOrigen: '', obraSocialConstatadaEn: '', obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false } as Partial<ContractOverviewRow>);
-    } catch (e: any) {
-      sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudo quitar la obra social.');
-    } finally {
-      setQuitando(false);
-    }
+  const sugerido = String(valores.rnosSugerido || '').replace(/\D/g, '');
+  // Para validar hacen falta empleadora Y categoría: la obra social que rige cuando ARCA no devuelve
+  // una propia es la del CONVENIO, y el convenio sale de la categoría.
+  const vista: VistaObraSocial = {
+    estado,
+    codigo,
+    nombre: valores.nombreObraSocial || '',
+    fecha: valores.constatadaEl ? new Date(valores.constatadaEl).toLocaleDateString('es-AR') : '',
+    delConvenio: valores.convenioCategoria ? `convenio ${valores.convenioCategoria}` : 'convenio',
+    rnosSugerido: sugerido,
+    nombreSugerida: valores.nombreObraSocialSugerida || '',
+    distintaDelConvenio: estado === 'validada_arca' && codigo !== sugerido,
+    puedeValidar: !!record.empresaContratoId && !!valores.categoriaProf,
+    motivoNoPuede: record.empresaContratoId ? 'Todavía no se puede validar: falta la Categoría (y su convenio). Elegila en la columna de al lado.' : 'Todavía no se puede validar: falta la Empresa Contrato. Tocá para ver por qué.',
+    nombrePersona: record.userName,
+    quitar: { projectId: record.projectId, userId: record.userId, ref: record.contratoId || record.contractIndex },
   };
-
-  /* Sin validar no lleva ícono: el "?" no agregaba nada al lado de la palabra «sin validar» —el
-     estado ya está escrito— y sumaba un tercer glifo en una celda que además tiene el ⓘ. Los
-     estados validados sí lo llevan: ahí el ícono ES el estado (candado, tilde, cruz) y lo escrito
-     es el código. */
-  const { icono, clase, titulo } = {
-    sin_validar: {
-      icono: null,
-      clase: 'text-gray-400 dark:text-gray-500',
-      titulo: `Sin validar en ARCA — este contrato todavía no tiene obra social y su TXT no se puede generar.${
-        valores.rnosSugerido ? ` Si el organismo no devuelve ninguna, va a quedar la del ${delConvenio}: ${valores.rnosSugerido} · ${valores.nombreObraSocialSugerida}.` : ''
-      }${record.empresaContratoId ? '' : ' Elegí la empleadora para poder validarla.'}`,
-    },
-    validada_default: {
-      icono: faCircleCheck,
-      clase: 'text-green-700 dark:text-green-400',
-      titulo: `${nombre} — por defecto (${delConvenio}) · validada en ARCA${fecha ? ` el ${fecha}` : ''}: el organismo no tiene afiliación propia para esta persona, así que rige la del convenio.`,
-    },
-    validada_arca: {
-      icono: faLock,
-      clase: 'text-green-700 dark:text-green-400',
-      titulo: `${nombre} — la devolvió ARCA${fecha ? ` el ${fecha}` : ''} · queda fija, no editable.`,
-    },
-    no_registrada: {
-      icono: faXmark,
-      clase: 'text-red-600 dark:text-red-400',
-      titulo: `${nombre} — no está entre las obras sociales que la empleadora tiene registradas ante ARCA: el organismo va a rechazar el alta.`,
-    },
-  }[estado];
-
-  /*
-    AZUL = esta persona NO lleva la obra social del convenio.
-
-    Es la única fila que hay que mirar de verdad en esta columna. El resto —validadas por defecto,
-    validadas y coincidentes— confirman lo que ya se sabía; estas son las que ARCA cambió, y son
-    justamente las que el circuito entero existe para no declarar mal.
-
-    En verde y con el candado se distinguía del `validada_default` solo por el glifo, que a la
-    velocidad a la que se barre una grilla de 16 columnas es lo mismo que no distinguirse. El color
-    se ve sin leer.
-
-    Sin sugerida del convenio también va azul: si el convenio no aporta ninguna, la que quedó no es
-    «la de por defecto» — no hay ninguna por defecto.
-  */
-  const distintaDelConvenio = estado === 'validada_arca' && codigo !== String(valores.rnosSugerido || '').replace(/\D/g, '');
-  const claseFinal = distintaDelConvenio ? 'text-blue-600 dark:text-blue-400' : clase;
-  const tituloFinal = distintaDelConvenio
-    ? `${titulo} DISTINTA de la del ${delConvenio}${valores.rnosSugerido ? ` (${valores.rnosSugerido}${valores.nombreObraSocialSugerida ? ` · ${valores.nombreObraSocialSugerida}` : ''})` : ' — el convenio no aporta ninguna'}: esta es la que va al TXT.`
-    : titulo;
-
-  /*
-   * Sin validar, la celda es UNA sola cosa según se pueda validar o no:
-   *
-   *  - con Empresa Contrato → el botón «Validar», solo. Decir «sin validar  Validar» era repetir el
-   *    mismo estado dos veces: el botón ya dice qué falta y qué hacer;
-   *  - sin ella → «sin validar» + un ⓘ que abre el modal con el motivo. Es un botón y no un
-   *    tooltip: el hover no existe en touch y el motivo lleva una instrucción —ir a asignar la
-   *    empresa—, no un dato suelto.
-   *
-   * Al elegir la empresa, esa pareja se reemplaza por el «Validar» pelado.
-   */
-  /*
-    Para validar hacen falta empleadora Y categoría, no solo empleadora.
-
-    La obra social que rige cuando ARCA no devuelve una propia es la del CONVENIO, y el convenio sale
-    de la categoría. Validar antes es validar contra un default que todavía puede cambiar: se elige
-    otra categoría y esa validación queda hablando de otra obra social. Es la misma cascada del modal.
-  */
-  const listoParaValidar = !!record.empresaContratoId && !!valores.categoriaProf;
-
-  if (estado === 'sin_validar' && listoParaValidar) {
-    /* Mismo botón que «Validar obras sociales» de la barra —mismo ícono, mismo estilo—, en tamaño
-       de fila: es la MISMA acción sobre un solo contrato, y escrita como link azul se leía como
-       otra cosa. */
-    return (
-      <button
-        type="button"
-        onClick={onValidar}
-        title={`Validar la obra social de este contrato contra ARCA.${valores.rnosSugerido ? ` Si el organismo no devuelve ninguna, va a quedar la del ${delConvenio}: ${valores.rnosSugerido} · ${valores.nombreObraSocialSugerida}.` : ''}`}
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-      >
-        <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
-        Validar obra social
-      </button>
-    );
-  }
-
-  if (estado === 'sin_validar') {
-    /*
-     * El gemelo apagado del botón de arriba: misma caja y el MISMO ícono, para que las dos filas se
-     * lean como el mismo control en dos estados y no como dos cosas distintas. El ⓘ va al final y
-     * en el color del texto: es el sufijo "hay algo que explicar", no un estado aparte.
-     *
-     * Se ve deshabilitado —que es la verdad: todavía no se puede validar— pero SÍ responde al clic,
-     * y lo único que hace es abrir el modal con el motivo. Un `disabled` de verdad no recibe
-     * eventos y dejaría el porqué sin forma de leerse en touch.
-     */
-    return (
-      <button
-        type="button"
-        onClick={onSinEmpresa}
-        aria-disabled
-        title={record.empresaContratoId ? 'Todavía no se puede validar: falta la Categoría (y su convenio). Elegila en la columna de al lado.' : 'Todavía no se puede validar: falta la Empresa Contrato. Tocá para ver por qué.'}
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-70 hover:opacity-100 cursor-pointer transition-opacity whitespace-nowrap"
-      >
-        <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
-        Sin validar
-        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-      </button>
-    );
-  }
-
   return (
-    <span className="inline-flex items-center gap-2 whitespace-nowrap">
-      <button type="button" onClick={onAbrir} title={tituloFinal} className={`inline-flex items-center gap-1.5 font-mono text-xs font-semibold hover:underline ${claseFinal}`}>
-        {icono && <FontAwesomeIcon icon={icono} className="h-3 w-3 shrink-0" />}
-        {codigo || <span className="font-sans font-normal">sin validar</span>}
-      </button>
-      {/* Acá abajo solo llegan los validados: quitar con el mismo trash que el detalle del contrato,
-          en la fila donde se revisa. */}
-      <button
-        type="button"
-        onClick={quitar}
-        disabled={quitando}
-        title="Quitar la obra social: el contrato vuelve a quedar sin validar"
-        aria-label="Quitar la obra social"
-        className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
-      >
-        <FontAwesomeIcon icon={quitando ? faSpinner : faTrash} spin={quitando} className="h-3 w-3" />
-      </button>
-    </span>
+    <CeldaObraSocial
+      vista={vista}
+      onAbrir={onAbrir}
+      onValidar={onValidar}
+      onSinEmpresa={onSinEmpresa}
+      onQuitado={() => onQuitado({ osId: null, obraSocialOrigen: '', obraSocialConstatadaEn: '', obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false } as Partial<ContractOverviewRow>)}
+    />
   );
 };
 
