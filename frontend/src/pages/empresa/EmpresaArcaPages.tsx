@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { codigoSucursal } from '@compartido/sucursalesDeEmpresa';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faLayerGroup, faEye } from '@fortawesome/free-solid-svg-icons';
@@ -564,6 +565,13 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   const mapaDeclaradas = (e: Company): Record<string, ActividadDomicilio[]> => Object.fromEntries((e.sucursalActividades || []).map((x) => [String(x.sucursalId), (x.actividades || []).map((a) => ({ codigo: String(a.codigo), descripcion: a.descripcion || '' }))]));
 
   const [actividadesPorSucursal, setActividadesPorSucursal] = useState<Record<string, ActividadDomicilio[]>>(() => mapaDeclaradas(empresa));
+  /*
+    EL CÓDIGO DE CADA SUCURSAL ES DE ESTA EMPRESA. En ARCA el código es por CUIT —Ruiz Huidobro es la
+    00001 de 2030 y la 00003 de FZERO—, así que se guarda acá, en la asociación empresa–domicilio, al
+    lado de las actividades. Vacío = todavía no se cargó el de esta empresa y rige el del catálogo.
+  */
+  const mapaCodigos = (e: Company): Record<string, string> => Object.fromEntries((e.sucursalActividades || []).map((x) => [String(x.sucursalId), codigoSucursal(x.codigo)]));
+  const [codigosPorSucursal, setCodigosPorSucursal] = useState<Record<string, string>>(() => mapaCodigos(empresa));
   /** El domicilio cuyas actividades se están editando. `null` = modal cerrado. */
   const [editandoActividades, setEditandoActividades] = useState<ArcaSucursal | null>(null);
 
@@ -577,12 +585,14 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   useEffect(() => {
     setIds(empresa.sucursalIds || []);
     setActividadesPorSucursal(mapaDeclaradas(empresa));
+    setCodigosPorSucursal(mapaCodigos(empresa));
   }, [empresa]);
 
   const normalizar = (m: Record<string, ActividadDomicilio[]>) => JSON.stringify(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].map((a) => a.codigo).sort()])));
   /* Solo las ACTIVIDADES: qué domicilios tiene la empleadora se registra en el nomenclador, y el
      botón de guardar no debe encenderse por algo que esta pantalla ya no cambia. */
-  const sucio = normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa));
+  const codigosIguales = (a: Record<string, string>, b: Record<string, string>) => [...new Set([...Object.keys(a), ...Object.keys(b)])].every((k) => codigoSucursal(a[k]) === codigoSucursal(b[k]));
+  const sucio = normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa)) || !codigosIguales(codigosPorSucursal, mapaCodigos(empresa));
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
   const porDefectoId = empresa.defaultsArca?.sucursalId || '';
   const { defaults: arcaDefaultsDeLaInstalacion } = useArcaDefaults();
@@ -626,16 +636,26 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                   teniendo: una fila para uno que ya no tiene quedaría huérfana y volvería a aplicar
                   si alguien se lo reasigna, con un recorte que nadie recuerda.
                 */
-                sucursalActividades: Object.entries(actividadesPorSucursal)
-                  .filter(([sucursalId]) => ids.includes(sucursalId))
-                  .map(([sucursalId, actividades]) => {
-                    // La lista se guarda entera: el código de ESTA empresa para el domicilio y su origen
-                    // viajan con la fila, o guardar las actividades los borraría.
+                /*
+                  Una fila por domicilio que tenga actividades declaradas O un código cargado. La lista
+                  se guarda ENTERA, así que el código y el origen viajan con la fila.
+
+                  El origen dice de dónde salió lo que hay: una fila que se tocó acá (código o
+                  actividades) pasa a «a mano»; la que no se tocó conserva el suyo, así lo leído de
+                  ARCA sigue marcado como tal.
+                */
+                sucursalActividades: ids
+                  .filter((sucursalId) => actividadesPorSucursal[sucursalId] !== undefined || !!codigoSucursal(codigosPorSucursal[sucursalId]))
+                  .map((sucursalId) => {
                     const previa = (empresa.sucursalActividades || []).find((x) => String(x.sucursalId) === sucursalId);
-                    return { sucursalId, actividades, ...(previa?.codigo ? { codigo: previa.codigo } : {}), ...(previa?.origen ? { origen: previa.origen } : {}) };
+                    const actividades = actividadesPorSucursal[sucursalId] || [];
+                    const codigo = codigoSucursal(codigosPorSucursal[sucursalId]);
+                    const tocada = codigo !== codigoSucursal(previa?.codigo) || normalizar({ x: actividades }) !== normalizar({ x: (previa?.actividades || []).map((a) => ({ codigo: String(a.codigo), descripcion: a.descripcion || '' })) });
+                    const origen = tocada ? 'manual' : previa?.origen;
+                    return { sucursalId, actividades, ...(codigo ? { codigo } : {}), ...(origen ? { origen } : {}) };
                   }),
               } as any,
-              `Actividades guardadas para ${empresa.razonSocial}.`,
+              `Sucursales guardadas para ${empresa.razonSocial}.`,
             )
           }
         />
@@ -647,7 +667,8 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
         valorEmpresa={porDefectoId}
         nombreDe={(id) => {
           const s = sucursales.find((x) => x._id === id);
-          return s ? `${s.codigo} — ${s.domicilio}` : '';
+          // Con el código de ESTA empresa para el domicilio; si no tiene, el del catálogo.
+          return s ? `${codigoSucursal(codigosPorSucursal[s._id]) || s.codigo} — ${s.domicilio}` : '';
         }}
         /* El código de domicilio es POR CUIT: uno global puede no existir para este CUIT, y ARCA
            rechazaría el alta. La cascada del TXT lo descarta por lo mismo. */
@@ -701,7 +722,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Código</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El código de sucursal de ESTA empresa en ARCA. Es por CUIT.">Código</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio y actividades declaradas</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
                     <span className="inline-flex items-center gap-1.5">
@@ -716,7 +737,34 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                 {elegidas.map((s) => (
                   <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                     <td className="px-4 py-2.5 align-top whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-blue-700 dark:text-blue-400 font-bold">{s.codigo}</span>
+                      {/*
+                        EL CÓDIGO DE ESTA EMPRESA para el domicilio, editable. Es el que va al TXT.
+                        Vacío rige el del catálogo (se ve de fondo, y se avisa): es el compartido, que
+                        puede no ser el de este CUIT. Al lado, de dónde salió: leído de ARCA o a mano.
+                      */}
+                      <div className="flex flex-col items-start gap-1">
+                        <input
+                          maxLength={5}
+                          inputMode="numeric"
+                          value={codigosPorSucursal[s._id] ?? ''}
+                          onChange={(e) => setCodigosPorSucursal((prev) => ({ ...prev, [s._id]: e.target.value.replace(/\D/g, '') }))}
+                          placeholder={s.codigo}
+                          title={`Código con el que ${empresa.razonSocial} tiene registrado este domicilio en ARCA (Datos del Empleador → Domicilios de Explotación). Es por CUIT: puede ser distinto del de otra empresa en el mismo domicilio.`}
+                          aria-label={`Código de sucursal de ${s.domicilio} para ${empresa.razonSocial}`}
+                          className="input-field w-20 font-mono text-xs font-bold py-1 px-2 text-blue-700 dark:text-blue-400"
+                        />
+                        {(() => {
+                          const previa = (empresa.sucursalActividades || []).find((x) => String(x.sucursalId) === s._id);
+                          const actual = codigoSucursal(codigosPorSucursal[s._id]);
+                          if (!actual) return <span className="text-[10px] italic text-amber-700 dark:text-amber-400" title="Todavía no se cargó el código de esta empresa para este domicilio.">rige {s.codigo}, el del catálogo</span>;
+                          const sinTocar = actual === codigoSucursal(previa?.codigo);
+                          return sinTocar && previa?.origen === 'arca' ? (
+                            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400" title="Leído de ARCA">de ARCA</span>
+                          ) : (
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400" title="Cargado a mano">a mano</span>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td className="px-4 py-2.5">
                       <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>

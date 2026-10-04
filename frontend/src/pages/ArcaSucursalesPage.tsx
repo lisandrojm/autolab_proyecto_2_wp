@@ -14,6 +14,7 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 import { EmpresasDelItemArca, ColumnaEmpresasArca } from "../components/arca/EmpresasDelItemArca";
 import { companiesAPI, Company } from "../api/companies";
+import { CodigosDeSucursalPorEmpresa } from "../components/arca/CodigosDeSucursalPorEmpresa";
 
 const HELP_KEY = "arcaSucursales" as const;
 
@@ -184,7 +185,7 @@ export const ArcaSucursalesPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" title="El código de sucursal es de cada CUIT: el mismo domicilio puede tener uno distinto para cada empresa">Código por empresa</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
                   {/* Última antes de Acciones, como en todos los nomencladores: la ★ se busca
                       recorriendo siempre el mismo borde de la tabla. Lleva rótulo porque una estrella
@@ -203,7 +204,8 @@ export const ArcaSucursalesPage: React.FC = () => {
                 {filtrados.map((s) => (
                   <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-mono font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50">{s.codigo}</span>
+                      {/* El código es POR EMPRESA: se muestra el de cada una que tiene este domicilio. */}
+                      <CodigosDeSucursalPorEmpresa sucursalId={s._id} codigoDelCatalogo={s.codigo} empresas={empresas} />
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.domicilio}</p>
