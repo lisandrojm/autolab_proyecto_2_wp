@@ -1034,13 +1034,13 @@ export const FormularioArca: React.FC<{
           describe este formulario —por eso no cuenta en «N de N completos»—, pero el alta masiva
           URGENTE (registro de 85) lo exige, y antes se descubría que faltaba recién al generarla.
         */}
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-3">
+        <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-3">
           <CampoPuestoDesempenado
             valor={row.puestoDesempenado || ""}
             porDefecto={{ codigo: valores.puestoPorDefecto, origen: valores.puestoPorDefectoOrigen as OrigenPuesto }}
             onCambiar={guardarPuesto}
             guardando={guardando === "puesto"}
-            claseEtiqueta="block text-sm text-gray-700 dark:text-gray-300"
+            claseEtiqueta="block text-sm text-gray-600 dark:text-gray-400"
           />
         </div>
         <ValoresFijos />

@@ -37,6 +37,12 @@ const DE_DONDE: Record<OrigenPuesto, string> = {
   ninguno: 'sin definir',
 };
 
+/** «Por defecto del convenio», «Por defecto, del Rol Empresa»: sin repetir «por defecto» cuando el origen ya lo dice. */
+const notaDelDefault = (origen: OrigenPuesto): string => {
+  const de = DE_DONDE[origen];
+  return de.startsWith('por defecto') ? de.charAt(0).toUpperCase() + de.slice(1) : `Por defecto, ${de}`;
+};
+
 export interface PuestoPorDefecto {
   codigo: string;
   origen: OrigenPuesto;
@@ -69,9 +75,7 @@ export const CampoPuestoDesempenado: React.FC<{
 
   return (
     <div className="space-y-1.5">
-      <label className={claseEtiqueta}>
-        Puesto desempeñado <span className="font-normal normal-case tracking-normal text-gray-400">· alta masiva URGENTE</span>
-      </label>
+      <label className={claseEtiqueta}>Puesto desempeñado</label>
       <div className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${efectivo ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800' : 'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20'}`}>
         <div className="min-w-0">
           {cargandoDefault && !elegido ? (
@@ -81,11 +85,12 @@ export const CampoPuestoDesempenado: React.FC<{
             </span>
           ) : efectivo ? (
             <>
-              <p className="text-sm text-gray-900 dark:text-gray-100">
-                <span className="font-mono font-bold mr-2">{efectivo}</span>
+              {/* Como el resto del formulario: sólo el CÓDIGO va en blanco; el nombre y la nota, en gris. */}
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-mono font-semibold mr-2 text-gray-900 dark:text-gray-100">{efectivo}</span>
                 {nombre(efectivo) || (puestos ? <span className="italic text-amber-600 dark:text-amber-400">no está en el catálogo</span> : '')}
               </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">{esExcepcion ? `Elegido en este contrato${defecto ? ` · por defecto le toca ${defecto} (${DE_DONDE[porDefecto.origen]})` : ''}` : `Por defecto, ${DE_DONDE[porDefecto.origen]}`}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-500">{esExcepcion ? `Elegido en este contrato${defecto ? ` · por defecto le toca ${defecto} (${DE_DONDE[porDefecto.origen]})` : ''}` : notaDelDefault(porDefecto.origen)}</p>
             </>
           ) : (
             <p className="text-xs text-amber-800 dark:text-amber-300">
