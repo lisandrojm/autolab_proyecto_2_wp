@@ -284,7 +284,9 @@ async function correrPorTandas(o) {
             motor: {
                 leerTope: () => motor.leerTopeAltasMasivas(comun),
                 // «Detener» no entra al motor: corta entre tandas (`cortePedido`), nunca en el medio de una.
-                presentar: (t) => motor.altasMasivas({ ...comun, ...t, enSeco: corrida.enSeco, señal: { cortada: false } }),
+                // `yaAdentro`: la empleadora ya se eligió al leer el tope. Volver al selector de CUIT desde
+                // adentro cierra la sesión de ARCA (FinSession), y la primera tanda moría ahí.
+                presentar: (t) => motor.altasMasivas({ ...comun, ...t, yaAdentro: true, enSeco: corrida.enSeco, señal: { cortada: false } }),
                 consultar: (c) => motor.consultarAltaPorCuil({ page, ...c }),
             },
             guardar,

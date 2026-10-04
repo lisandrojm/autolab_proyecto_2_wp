@@ -494,20 +494,26 @@ export async function consultarAltaPorCuil({ page, cuil, fechaInicio }) {
  *     Si además TODAS siguen en la grilla, ese error bloqueó la tanda: las demás vuelven «devuelta»
  *     (no registradas) y se sacan también, para que el servidor las presente en otra tanda.
  *
+ * `yaAdentro`: la sesión ya eligió la empleadora en esta corrida (lo hizo `leerTopeAltasMasivas`).
+ *
  * `antesDeAceptar(cuils)` se espera justo antes del click que no se deshace: ahí el servidor deja
  * escrito en cada contrato que se está presentando, para que un corte no deje altas sin rastro.
  *
  * Devuelve `{ resultado, porPersona }` con `resultado` en `aceptada` | `rechazada` | `seco` |
  * `indeterminado`, y cada persona en `alta` | `rechazada` | `devuelta` | `indeterminado`.
  */
-export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = true, tope = TOPE_PEGADO, onProgreso = () => {}, antesDeAceptar = async () => {}, señal = { cortada: false } }) {
+export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = true, tope = TOPE_PEGADO, yaAdentro = false, onProgreso = () => {}, antesDeAceptar = async () => {}, señal = { cortada: false } }) {
   const estado = { aceptarDialogo: false, dialogos: [] };
   const soltar = manejarDialogos(page, estado, onProgreso);
   const pedidos = [...new Set((cuils || []).map(soloDigitos))];
   const limite = Math.min(Number(tope) || TOPE_PEGADO, TOPE_PEGADO);
   try {
     if (pedidos.length === 0 || pedidos.length > limite) throw new Error(`Altas Masivas admite de 1 a ${limite} registros por tanda y esta tiene ${pedidos.length}.`);
-    const base = await entrarComo(page, empresaCuit);
+    // POR EL SELECTOR SE ENTRA UNA SOLA VEZ POR SESIÓN. Volver a `IndexContribuyente.aspx` estando
+    // adentro no muestra el selector: ARCA cierra la sesión (`FinSession.aspx`). En una corrida por
+    // tandas ya entró `leerTopeAltasMasivas`, así que las tandas van directo a la pantalla de altas.
+    // La garantía de la empleadora no cambia: `verificarEmpleadora` la mira en pantalla en CADA tanda.
+    const base = yaAdentro ? page.url().split("/app/")[0] : await entrarComo(page, empresaCuit);
     cortar(señal, "abrir Registrar Nuevas Altas");
     await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
     if (!(await esperarPantalla(page, ["altas"], "Registrar Nuevas Altas"))) throw new Error(`No llegué a Registrar Nuevas Altas (estoy en ${await pantallaActual(page)}).`);

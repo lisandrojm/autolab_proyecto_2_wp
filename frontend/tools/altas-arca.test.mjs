@@ -97,6 +97,9 @@ test("CUIT verificado antes de la primera escritura, y el modo en seco antes del
   // Por tandas: el tope de la pantalla se lee antes de pegar, y el contrato se marca antes del Aceptar.
   assert.ok(am.indexOf("topeDelPegado(") >= 0 && am.indexOf("topeDelPegado(") < am.indexOf("area.fill(texto)"));
   assert.ok(am.indexOf("await antesDeAceptar(aPresentar)") >= 0 && am.indexOf("await antesDeAceptar(aPresentar)") < am.indexOf("aceptarGrilla("));
+  // Por el selector de CUIT se entra una sola vez por sesión: volver a él desde adentro la cierra (FinSession).
+  assert.ok(am.includes('yaAdentro ? page.url().split("/app/")[0] : await entrarComo(page, empresaCuit)'));
+  assert.equal(cuerpo("consultarAltaPorCuil").includes("entrarComo("), false, "la consulta no vuelve al selector");
   // UN solo Aceptar de la grilla por tanda: el bucle del pegado no lo alcanza.
   assert.equal(am.split("aceptarGrilla(").length - 1, 1);
   assert.ok(am.indexOf("for (;;)") < am.indexOf("aceptarGrilla(") && am.indexOf("break;") < am.indexOf("aceptarGrilla("));

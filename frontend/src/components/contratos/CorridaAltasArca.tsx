@@ -487,10 +487,20 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
                 Prueba en seco terminada: no se presentó nada.{seco.codigoNovedad ? ` La novedad ${seco.codigoNovedad} quedó creada en ARCA, sin enviar.` : ''}
               </p>
             )}
-            {porTandas && fin && !seco && !progreso?.corte && (
-              <p className={`text-xs font-semibold ${progreso && progreso.cuenta.incierta + progreso.cuenta.rechazada > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>
-                Corrida terminada: {progreso?.cuenta.registrada} registrada(s), {progreso?.cuenta.rechazada} rechazada(s), {progreso?.cuenta.incierta} incierta(s).
-                {progreso && progreso.cuenta.incierta > 0 ? ' Las inciertas NO se vuelven a presentar desde acá: miralas en ARCA → Relaciones Laborales → Consultas.' : ''}
+            {/* ── Cierre: éxito a la vista si quedaron TODAS registradas; si no, qué quedó sin resolver ── */}
+            {porTandas && fin && !seco && !progreso?.corte && progreso && progreso.cuenta.registrada > 0 && progreso.cuenta.incierta + progreso.cuenta.rechazada + progreso.cuenta.pendiente === 0 && (
+              <div className="rounded-lg border border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 text-green-800 dark:text-green-300">
+                <p className="text-sm font-semibold">
+                  <FontAwesomeIcon icon={faCircleCheck} className="mr-1.5" />
+                  {progreso.cuenta.registrada === 1 ? 'El alta quedó registrada en ARCA.' : `Las ${progreso.cuenta.registrada} altas quedaron registradas en ARCA.`}
+                </p>
+                <p className="text-xs mt-1">Cada contrato quedó marcado como presentado. El estado avanza cuando se cargue la constancia de alta temprana de cada persona.</p>
+              </div>
+            )}
+            {porTandas && fin && !seco && !progreso?.corte && progreso && progreso.cuenta.incierta + progreso.cuenta.rechazada + progreso.cuenta.pendiente > 0 && (
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                Corrida terminada: {progreso.cuenta.registrada} registrada(s), {progreso.cuenta.rechazada} rechazada(s), {progreso.cuenta.incierta} incierta(s){progreso.cuenta.pendiente > 0 ? `, ${progreso.cuenta.pendiente} sin presentar` : ''}.
+                {progreso.cuenta.incierta > 0 ? ' Las inciertas NO se vuelven a presentar desde acá: miralas en ARCA → Relaciones Laborales → Consultas.' : ''}
               </p>
             )}
             {!porTandas && fin && !seco && !indeterminado && fin.resultado !== 'fallo' && (
