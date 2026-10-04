@@ -2229,7 +2229,8 @@ export const ContractBulkAfipTab: React.FC<{
       return;
     }
     const items = completos85.map((x) => ({ x, registro: buildAltaRecord85(x.row, afipCat) })).filter((y): y is { x: (typeof fuenteTxt)[number]; registro: string } => !!y.registro);
-    if (items.length === 0 || items.length > MAX_ALTAS_MASIVAS) return;
+    // Sin tope: el servidor las presenta en tandas de a lo sumo MAX_ALTAS_MASIVAS (ver `tandasAltas.ts`).
+    if (items.length === 0) return;
     const texto = buildAltasMasivasTexto(items.map((y) => y.registro));
     try {
       await navigator.clipboard.writeText(texto);
@@ -2499,22 +2500,20 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
             <button
               onClick={presentarAltasMasivas}
-              disabled={!empresaDeLaPestana || completosTxt === 0 || completosTxt > MAX_ALTAS_MASIVAS}
+              disabled={!empresaDeLaPestana || completosTxt === 0}
               title={
                 bloqueoPorValidacion ||
                 motivoSinEmpresa ||
                 (completosTxt === 0
                   ? 'No hay contratos completos para Altas Masivas'
-                  : completosTxt > MAX_ALTAS_MASIVAS
-                    ? `Hay ${completosTxt} contratos completos: tildá como máximo ${MAX_ALTAS_MASIVAS} para Altas Masivas`
-                    : faltan85 > 0
+                  : faltan85 > 0
                       ? `A ${faltan85} de los ${completosTxt} contrato(s) les falta el puesto desempeñado, que Altas Masivas exige. Apretá para ver dónde se carga`
-                      : `Copia ${completosTxt} registro(s) de 85 al portapapeles y los presenta en ARCA por Altas Masivas (máximo ${MAX_ALTAS_MASIVAS})`)
+                      : `Copia ${completosTxt} registro(s) de 85 al portapapeles y los presenta en ARCA por Altas Masivas${completosTxt > MAX_ALTAS_MASIVAS ? `, en ${Math.ceil(completosTxt / MAX_ALTAS_MASIVAS)} tandas de hasta ${MAX_ALTAS_MASIVAS}` : ''}`)
               }
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
-              Generar TXT Masivo URGENTE (Max {MAX_ALTAS_MASIVAS}){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+              Generar TXT Masivo URGENTE{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
             {/* Su propio ⓘ, en ámbar como el botón: es otro trámite (otro formato, otra pantalla de ARCA). */}
             <button type="button" onClick={() => setUrgenteInfoOpen(true)} title="Cómo funciona el TXT URGENTE" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 shrink-0">
@@ -3305,7 +3304,7 @@ export const ContractBulkAfipTab: React.FC<{
             </p>
             <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
               <li>
-                Tildá hasta <strong>{MAX_ALTAS_MASIVAS} contratos</strong> completos (o dejá el filtro con {MAX_ALTAS_MASIVAS} o menos). Es el máximo que admite ARCA en esa pantalla.
+                Tildá los contratos completos que quieras presentar (o dejá el filtro). ARCA admite <strong>{MAX_ALTAS_MASIVAS} registros por pegado</strong>: si son más, WeProdu los presenta en <strong>tandas sucesivas</strong>, una después de la otra.
               </li>
               <li>
                 Al apretar el botón se arman los registros de <strong>85 posiciones</strong> —un formato distinto del TXT Masivo— y se <strong>copian al portapapeles</strong>, por si hay que pegarlos a mano.
@@ -3313,13 +3312,14 @@ export const ContractBulkAfipTab: React.FC<{
               <li>
                 Se abre el panel: confirmás empleadora y personas, y WeProdu los presenta en ARCA solo. Verifica que la grilla de altas esté vacía antes de pegar y que queden exactamente las personas pedidas antes de aceptar.
               </li>
-              <li>Al terminar muestra el resultado por persona: alta dada o rechazada, con el motivo de ARCA.</li>
+              <li>Muestra el avance por tanda y por persona: registrada, rechazada (con el motivo de ARCA) o incierta. Cada alta se guarda en su contrato antes de pasar a la tanda siguiente, y al final se puede bajar el resumen.</li>
+              <li>Si la corrida se corta, se vuelve a lanzar con la misma selección: lo ya presentado se saltea y sigue desde donde quedó.</li>
             </ol>
             <p className="text-sm text-gray-600 dark:text-gray-300">
               Además de los datos del TXT Masivo, este formato informa <strong>puesto desempeñado</strong> (de la categoría o el default de la empleadora), <strong>convenio</strong> (de la categoría) y <strong>situación de revista</strong> («01 — Activo» si no se configuró otra). Un contrato sin puesto queda afuera y el botón lo dice.
             </p>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              Solo se habilita en la pestaña de una empresa. Lo presentado no se deshace y nunca se reintenta: si no se puede leer el resultado, queda «sin confirmar» y hay que mirarlo en ARCA.
+              Solo se habilita en la pestaña de una empresa. Lo presentado no se deshace y nunca se reintenta: si no se puede leer el resultado, se consulta en ARCA por CUIL; si aun así no se confirma, queda «sin confirmar» y hay que mirarlo en ARCA. «Detener» corta al terminar la tanda en curso.
             </p>
           </div>
         </Modal>

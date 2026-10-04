@@ -382,14 +382,16 @@ const InsigniaAltaPresentada: React.FC<{ a: AltaArcaPresentada }> = ({ a }) => {
   const estilo =
     a.resultado === "presentada"
       ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-      : a.resultado === "indeterminado"
+      : a.resultado === "indeterminado" || a.resultado === "presentando"
         ? "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
         : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-  const texto = a.resultado === "presentada" ? "Presentada en ARCA" : a.resultado === "indeterminado" ? "Presentación sin confirmar" : "Rechazada por ARCA";
+  // «presentando» que quedó escrito es una corrida cortada justo en el Aceptar: se trata como sin confirmar.
+  const sinConfirmar = a.resultado === "indeterminado" || a.resultado === "presentando";
+  const texto = a.resultado === "presentada" ? "Presentada en ARCA" : sinConfirmar ? "Presentación sin confirmar" : "Rechazada por ARCA";
   const title =
-    a.resultado === "indeterminado"
+    sinConfirmar
       ? `Se presentó por ${via} el ${fecha} y no se pudo leer el resultado. Mirá en ARCA si figura antes de volver a presentarla.`
-      : `${via} · ${fecha}${a.codigoNovedad ? ` · novedad ${a.codigoNovedad}` : ""}${a.nroTransaccion ? ` · transacción ${a.nroTransaccion}` : ""}${a.motivo ? ` · ${a.motivo}` : ""}`;
+      : `${via} · ${fecha}${a.codigoNovedad ? ` · novedad ${a.codigoNovedad}` : ""}${a.nroTransaccion ? ` · transacción ${a.nroTransaccion}` : ""}${a.tanda ? ` · tanda ${a.tanda}` : ""}${a.cat ? ` · C.A.T. ${a.cat}` : ""}${a.porConsulta ? " · confirmada por consulta en ARCA" : ""}${a.motivo ? ` · ${a.motivo}` : ""}`;
   return (
     <span title={title} className={`self-start inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${estilo}`}>
       {texto}

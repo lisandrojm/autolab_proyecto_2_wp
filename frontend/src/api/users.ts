@@ -1050,8 +1050,13 @@ export const usersAPI = new UsersAPI();
 export interface AltaArcaPresentada {
   via: "carga_masiva" | "altas_masivas";
   fecha: string;
-  resultado: "presentada" | "indeterminado" | "fallida";
+  /** `presentando`: se marcó antes del «Aceptar» de ARCA y la corrida se cortó sin resultado. */
+  resultado: "presentada" | "indeterminado" | "fallida" | "presentando";
   codigoNovedad?: string;
   nroTransaccion?: string;
   motivo?: string;
+  /** Altas Masivas por tandas. */
+  tanda?: number;
+  cat?: string;
+  porConsulta?: boolean;
 }

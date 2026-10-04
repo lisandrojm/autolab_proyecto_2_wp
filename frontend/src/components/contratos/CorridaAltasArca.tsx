@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faSpinner, faCircle, faTriangleExclamation, faCopy, faFlask, faCircleQuestion } from '@fortawesome/free-solid-svg-icons';
+import { faCircleCheck, faCircleXmark, faSpinner, faCircle, faTriangleExclamation, faCopy, faFlask, faCircleQuestion, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
 import { projectsAPI, EstadoCorridaAltas, ModoAltasArca } from '../../api/projects';
+import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
+import { ETIQUETA_ESTADO, EstadoPersonaTanda, progresoPorTandas, resumenCsv } from './progresoTandas';
 
 /**
  * EL TRÁMITE DE ALTA EN ARCA, EN VIVO: Carga Masiva (archivo) o Altas Masivas (pegado, URGENTE).
@@ -13,6 +15,10 @@ import { projectsAPI, EstadoCorridaAltas, ModoAltasArca } from '../../api/projec
  *
  * Antes de arrancar pide confirmación explícita con la empleadora, la cantidad y los nombres: lo que
  * sigue no se deshace. «Detener» funciona hasta el paso anterior al envío; después se deshabilita.
+ *
+ * ALTAS MASIVAS VA POR TANDAS (ARCA admite 9 registros por pegado): una sola confirmación para toda
+ * la selección, y después el avance por tanda y por persona (`progresoTandas.ts`). Ahí «Detener» no
+ * se deshabilita: corta al terminar la tanda en curso.
  */
 
 const POLL_MS = 2000;
@@ -45,6 +51,16 @@ interface Paso {
   detalle?: string;
 }
 
+/** Cómo se ve cada estado de una persona en la lista de tandas. */
+const VISTA_ESTADO: Record<EstadoPersonaTanda, { icon: typeof faCircle; clase: string; spin?: boolean }> = {
+  pendiente: { icon: faCircle, clase: 'text-gray-300 dark:text-gray-600' },
+  presentando: { icon: faSpinner, clase: 'text-blue-500', spin: true },
+  registrada: { icon: faCircleCheck, clase: 'text-green-600 dark:text-green-400' },
+  rechazada: { icon: faCircleXmark, clase: 'text-red-600 dark:text-red-400' },
+  incierta: { icon: faCircleQuestion, clase: 'text-amber-600 dark:text-amber-400' },
+  seco: { icon: faFlask, clase: 'text-gray-400' },
+};
+
 const fmtCuit = (c: string) => (c && c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 
 /** Los pasos de cada trámite y qué evento marca cada uno como hecho. */
@@ -61,11 +77,9 @@ const PASOS: Record<ModoAltasArca, Array<{ clave: string; titulo: string; hecho:
   altas_masivas: [
     { clave: 'sesion', titulo: 'Abriendo sesión en ARCA', hecho: 'sesion' },
     { clave: 'empleadora', titulo: 'Eligiendo la empleadora', hecho: 'empleadoraVerificada' },
-    { clave: 'pantalla', titulo: 'Relaciones Laborales → Registrar Nuevas Altas', hecho: 'pantalla' },
-    { clave: 'grilla', titulo: 'Grilla vacía verificada', hecho: 'grillaVacia' },
-    { clave: 'pegado', titulo: 'Registros pegados', hecho: 'pegado' },
-    { clave: 'cargados', titulo: 'Registros pasados a la grilla', hecho: 'grillaCargada' },
-    { clave: 'aceptado', titulo: 'Altas registradas', hecho: 'persona' },
+    // Lo que pasa UNA vez. Lo que se repite en cada tanda (pegar, grilla, Aceptar) va en la lista de tandas.
+    { clave: 'tope', titulo: 'Relaciones Laborales → Registrar Nuevas Altas', hecho: 'tope' },
+    { clave: 'plan', titulo: 'Tandas armadas', hecho: 'plan' },
   ],
 };
 
@@ -98,12 +112,9 @@ export function pasosDeLaCorrida(modo: ModoAltasArca, e: EstadoCorridaAltas): Pa
       const s = ult('enviada');
       if (s) detalle = `${s.estado} · Nro. de transacción ${s.nroTransaccion || '—'} · presentada el ${s.fechaPresentacion || '—'}`;
     }
-    if (p.clave === 'pegado' && hay('pegado')) detalle = `${ult('pegado')?.registros} registro(s)`;
+    if (p.clave === 'tope' && hay('tope')) detalle = `ARCA admite ${ult('tope')?.enPantalla} registros por pegado · se usan ${ult('tope')?.usado}`;
+    if (p.clave === 'plan' && hay('plan')) detalle = `${ult('plan')?.total} alta(s) en ${ult('plan')?.tandas} tanda(s) de hasta ${ult('plan')?.tope}`;
     if (p.clave === 'empleadora' && hay('empleadoraVerificada')) detalle = `CUIT ${fmtCuit(ult('empleadoraVerificada')?.cuit || '')} verificado en pantalla`;
-    if (p.clave === 'aceptado' && hay('persona')) {
-      const ps = ev.filter((x) => x.tipo === 'persona');
-      detalle = `${ps.filter((x) => x.estado === 'alta').length} dada(s) de alta · ${ps.filter((x) => x.estado === 'rechazada').length} rechazada(s)`;
-    }
     return { clave: p.clave, titulo: p.titulo, estado, detalle };
   });
 }
@@ -216,19 +227,44 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
   const ev = estado?.eventos || [];
   const indeterminado = [...ev].reverse().find((x) => x.tipo === 'indeterminado');
   const fin = [...ev].reverse().find((x) => x.tipo === 'fin');
+  const falloEv = [...ev].reverse().find((x) => x.tipo === 'fallo');
   const seco = ev.find((x) => x.tipo === 'seco');
   const personasResultado = ev.filter((x) => x.tipo === 'persona');
   const nombreDe = (cuil: string) => estado?.personas?.find((p) => p.cuil === cuil)?.nombre || fmtCuit(cuil);
   const colgada = corriendo && Date.now() - ultimoCambio > TOPE_SIN_EVENTOS_MS;
   const otraCorrida = !corriendo && !confirmado && estado?.ocupadaPor;
   const titulo = modo === 'altas_masivas' ? 'Altas Masivas en ARCA (URGENTE)' : 'Carga Masiva en ARCA';
+  // Por tandas: Altas Masivas. Antes de arrancar se muestra el plan con el tope de siempre; una vez
+  // que corre, manda lo que el servidor leyó de la pantalla de ARCA.
+  const porTandas = modo === 'altas_masivas';
+  const tandasDelLote = lote ? Math.ceil(lote.personas.length / MAX_ALTAS_MASIVAS) : 0;
+  const progreso = useMemo(
+    () => (porTandas && estado && (confirmado || corriendo) ? progresoPorTandas({ eventos: estado.eventos || [], personas: estado.personas || [], descartadas: estado.descartadas }) : null),
+    [porTandas, estado, confirmado, corriendo],
+  );
+  const bajarResumen = () => {
+    if (!progreso) return;
+    // Con BOM: sin él Excel abre los acentos rotos.
+    const url = URL.createObjectURL(new Blob(['\ufeff' + resumenCsv(progreso, { razonSocial: estado?.empresaRazonSocial, cuit: estado?.empresaCuit })], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `altas-masivas-${estado?.empresaCuit || 'arca'}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const enSecoEfectivo = corriendo || confirmado ? !!estado?.enSeco : !!estado?.enSecoForzado || enSecoPedido;
 
   const pie = (
     <div className="flex items-center justify-end gap-2">
       {(corriendo || confirmado) && (
-        <button type="button" onClick={detener} disabled={!corriendo || !!estado?.irreversible || deteniendo} title={estado?.irreversible ? 'Ya se apretó el botón que presenta: no se puede detener.' : 'Corta antes del próximo paso. No se presenta nada.'} className="px-4 py-2 rounded-lg text-sm font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-40 disabled:cursor-not-allowed">
-          Detener
+        <button type="button" onClick={detener} disabled={!corriendo || (!porTandas && !!estado?.irreversible) || !!estado?.detenerPedido || deteniendo} title={porTandas ? (estado?.detenerPedido ? 'Se detiene al terminar la tanda en curso.' : 'Corta al terminar la tanda en curso: lo ya presentado queda guardado.') : estado?.irreversible ? 'Ya se apretó el botón que presenta: no se puede detener.' : 'Corta antes del próximo paso. No se presenta nada.'} className="px-4 py-2 rounded-lg text-sm font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-40 disabled:cursor-not-allowed">
+          {porTandas && estado?.detenerPedido && corriendo ? 'Deteniendo…' : 'Detener'}
+        </button>
+      )}
+      {progreso && !corriendo && (
+        <button type="button" onClick={bajarResumen} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+          <FontAwesomeIcon icon={faDownload} className="h-3.5 w-3.5" />
+          Bajar resumen
         </button>
       )}
       {!confirmado && !corriendo && lote && (
@@ -244,13 +280,13 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={titulo} size="md" zIndex={80} footer={pie}>
+    <Modal isOpen={isOpen} onClose={onClose} title={titulo} size={porTandas ? 'lg' : 'md'} zIndex={80} footer={pie}>
       <div className="space-y-4 text-sm text-gray-700 dark:text-gray-200">
         {enSecoEfectivo && (
           <div className="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-xs">
             <FontAwesomeIcon icon={faFlask} className="mr-1.5" />
             <strong>En seco:</strong> llega hasta justo antes de presentar y no envía nada.
-            {modo === 'carga_masiva' ? ' Deja la novedad creada en ARCA, sin enviar.' : ' Pega el texto pero no lo pasa a la grilla.'}
+            {modo === 'carga_masiva' ? ' Deja la novedad creada en ARCA, sin enviar.' : ' Recorre todas las tandas: en cada una pega el texto pero no lo pasa a la grilla.'}
           </div>
         )}
 
@@ -270,6 +306,11 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
               <p className="text-xs text-red-700 dark:text-red-400 mt-1">
                 Empleadora: <strong>{lote.empresa.razonSocial}</strong> · CUIT {fmtCuit(lote.empresa.cuit)}. Se verifica en la pantalla de ARCA antes de escribir.
               </p>
+              {porTandas && (
+                <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                  Se presentan en <strong>{tandasDelLote} tanda(s)</strong> de hasta {MAX_ALTAS_MASIVAS}, una después de la otra, con esta única confirmación. Lo que ya esté presentado se saltea. «Detener» corta al terminar la tanda en curso: lo presentado hasta ahí queda presentado.
+                </p>
+              )}
             </div>
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
               {lote.personas.map((p) => (
@@ -297,7 +338,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
                 Copiar
               </button>
             </div>
-            <textarea readOnly value={lote.texto} rows={Math.min(9, lote.personas.length) + 1} className="w-full font-mono text-[11px] p-2 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900" />
+            <textarea readOnly value={lote.texto} rows={Math.min(6, lote.personas.length) + 1} className="w-full font-mono text-[11px] p-2 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900" />
           </div>
         )}
 
@@ -340,7 +381,83 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
               })}
             </ol>
 
-            {personasResultado.length > 0 && (
+            {/* ── Por tandas: cada tanda con sus personas ── */}
+            {progreso && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-300">
+                  {progreso.cuenta.registrada} registrada(s) · {progreso.cuenta.rechazada} rechazada(s) · {progreso.cuenta.incierta} incierta(s) · {progreso.cuenta.pendiente + progreso.cuenta.presentando} sin presentar
+                  {progreso.cuenta.seco > 0 ? ` · ${progreso.cuenta.seco} en seco` : ''}
+                </p>
+                {(estado?.descartadas || []).some((d) => d.motivo === 'presentada') && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{(estado?.descartadas || []).filter((d) => d.motivo === 'presentada').length} contrato(s) de la selección ya estaban presentados y se saltearon.</p>
+                )}
+                <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+                  {progreso.consultadas.length > 0 && (
+                    <div className="border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="px-3 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-t-lg">Sin resultado de una corrida anterior: no se presentan, se consultan en ARCA</p>
+                      <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {progreso.consultadas.map((f) => (
+                          <li key={f.cuil} className="px-3 py-1 flex items-center gap-2 text-xs">
+                            <FontAwesomeIcon icon={VISTA_ESTADO[f.estado].icon} spin={VISTA_ESTADO[f.estado].spin} className={`h-3 w-3 shrink-0 ${VISTA_ESTADO[f.estado].clase}`} />
+                            <span className="flex-1">{f.nombre}</span>
+                            <span className="text-gray-500">{f.estado === 'pendiente' ? 'Por consultar' : f.estado === 'registrada' ? 'Figura en ARCA: registrada' : 'Sigue incierta'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {progreso.tandas.map((t) => (
+                    <div key={t.n} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="px-3 py-1.5 text-xs font-semibold bg-gray-50 dark:bg-gray-900/40 rounded-t-lg flex items-center justify-between">
+                        <span>
+                          Tanda {t.n} de {progreso.tandas.length} · {t.personas.length} persona(s)
+                        </span>
+                        <span className={t.estado === 'presentando' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}>
+                          {t.estado === 'pendiente' ? 'Pendiente' : t.estado === 'presentando' ? 'Presentando…' : `Terminada${t.duracionMs ? ` en ${Math.round(t.duracionMs / 1000)} s` : ''}`}
+                        </span>
+                      </p>
+                      <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {t.personas.map((f) => (
+                          <li key={f.cuil} className="px-3 py-1 flex items-start gap-2 text-xs">
+                            <FontAwesomeIcon icon={VISTA_ESTADO[f.estado].icon} spin={VISTA_ESTADO[f.estado].spin} className={`h-3 w-3 mt-0.5 shrink-0 ${VISTA_ESTADO[f.estado].clase}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="flex justify-between gap-2">
+                                <span className="truncate">{f.nombre}</span>
+                                <span className="shrink-0 text-gray-500 dark:text-gray-400">
+                                  {ETIQUETA_ESTADO[f.estado]}
+                                  {f.cat ? ` · C.A.T. ${f.cat}` : ''}
+                                  {f.porConsulta ? ' · por consulta' : ''}
+                                </span>
+                              </p>
+                              {f.motivo && <p className={f.estado === 'rechazada' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}>{f.motivo}</p>}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                {/* Un fallo después de armar las tandas no cae en ningún paso de arriba: se dice acá. */}
+                {falloEv && pasos.every((p) => p.estado === 'listo') && (
+                  <div className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-800 dark:text-red-300">
+                    <p className="font-semibold">La corrida falló: {falloEv.mensaje}</p>
+                    <p className="mt-0.5">Lo que quedó «presentando» no se vuelve a presentar: la próxima corrida lo consulta en ARCA.</p>
+                  </div>
+                )}
+                {progreso.corte && (
+                  <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                    <p className="font-semibold">
+                      <FontAwesomeIcon icon={faTriangleExclamation} className="mr-1.5" />
+                      {progreso.corte.motivo === 'detenida' ? 'Corrida detenida.' : 'La corrida se cortó sola.'}
+                    </p>
+                    <p className="mt-0.5">{progreso.corte.mensaje}</p>
+                    <p className="mt-0.5">Lo presentado quedó guardado. Para seguir, volvé a lanzarla con la misma selección: lo ya presentado se saltea.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!porTandas && personasResultado.length > 0 && (
               <ul className="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
                 {personasResultado.map((p) => (
                   <li key={p.cuil} className="px-3 py-1.5 flex items-start gap-2">
@@ -356,7 +473,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
 
             {colgada && <p className="text-xs text-amber-700 dark:text-amber-400">Hace más de un minuto y medio que ARCA no avanza. La corrida sigue; si no se mueve, mirá la pantalla de ARCA antes de hacer nada.</p>}
 
-            {indeterminado && (
+            {indeterminado && !porTandas && (
               <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
                 <p className="font-semibold">
                   <FontAwesomeIcon icon={faCircleQuestion} className="mr-1.5" />
@@ -370,7 +487,13 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
                 Prueba en seco terminada: no se presentó nada.{seco.codigoNovedad ? ` La novedad ${seco.codigoNovedad} quedó creada en ARCA, sin enviar.` : ''}
               </p>
             )}
-            {fin && !seco && !indeterminado && fin.resultado !== 'fallo' && (
+            {porTandas && fin && !seco && !progreso?.corte && (
+              <p className={`text-xs font-semibold ${progreso && progreso.cuenta.incierta + progreso.cuenta.rechazada > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>
+                Corrida terminada: {progreso?.cuenta.registrada} registrada(s), {progreso?.cuenta.rechazada} rechazada(s), {progreso?.cuenta.incierta} incierta(s).
+                {progreso && progreso.cuenta.incierta > 0 ? ' Las inciertas NO se vuelven a presentar desde acá: miralas en ARCA → Relaciones Laborales → Consultas.' : ''}
+              </p>
+            )}
+            {!porTandas && fin && !seco && !indeterminado && fin.resultado !== 'fallo' && (
               <p className="text-xs font-semibold text-green-700 dark:text-green-400">
                 <FontAwesomeIcon icon={faCircleCheck} className="mr-1.5" />
                 {modo === 'carga_masiva' ? 'Novedad enviada.' : 'Altas registradas.'} Los contratos quedaron marcados como presentados; el estado avanza cuando llegue la constancia.

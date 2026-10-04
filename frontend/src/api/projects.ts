@@ -841,7 +841,7 @@ class ProjectsAPI {
 
   /**
    * Presenta altas en ARCA desde el servidor: Carga Masiva (registros de 130) o Altas Masivas (85,
-   * máximo 9). El servidor coteja cada registro contra la base antes de abrir ARCA: si algo no
+   * cualquier cantidad: el servidor las presenta en tandas de a 9). El servidor coteja cada registro contra la base antes de abrir ARCA: si algo no
    * coincide, contesta 400 con el `detalle` y no manda nada.
    */
   async arrancarAltasArca(payload: { modo: ModoAltasArca; empresaId: string; items: Array<{ userProjectId: string; contractIndex: number; registro: string }>; enSeco?: boolean; forzar?: boolean }): Promise<{ arrancada: boolean; total: number; enSeco: boolean; empresa: { _id: string; cuit: string; razonSocial: string } }> {
@@ -953,6 +953,11 @@ export interface EstadoCorridaAltas {
   enSeco?: boolean;
   /** Ya se apretó el botón que presenta: «Detener» no corta. */
   irreversible?: boolean;
+  /** Altas Masivas: la corrida va por tandas y «Detener» corta al terminar la que está en curso. */
+  porTandas?: boolean;
+  detenerPedido?: boolean;
+  /** Lo que venía en la selección y no se presenta: ya presentado, o sin resultado (solo se consulta). */
+  descartadas?: Array<{ cuil: string; nombre: string; motivo: "presentada" | "incierta" }>;
   arrancadaEl?: string;
   eventos: Array<Record<string, any> & { tipo: string }>;
   /** El servidor corre en seco salvo configuración explícita (desarrollo). */
