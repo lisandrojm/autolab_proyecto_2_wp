@@ -14,7 +14,8 @@
  *
  * `actividadHabitual` NO VIENE DE ARCA: es la decisión de la empresa sobre cuál se preselecciona en el
  * contrato cuando la sucursal tiene más de una (como la ★ del domicilio). Sin ese campo no se marca
- * ninguna y la actividad se elige en cada contrato — que es lo que se quiere para FZERO en Tronador.
+ * ninguna y la actividad se elige en cada contrato. Las dos sucursales con más de una actividad
+ * (FZERO en Tronador, 2030 en Ruiz Huidobro) tienen la suya: siempre hay una por defecto.
  */
 export const LEIDO_EL = "2026-10-04";
 export const SUCURSALES_POR_EMPRESA_ARCA = [
@@ -31,6 +32,9 @@ export const SUCURSALES_POR_EMPRESA_ARCA = [
                     { codigo: "900030", descripcion: "Servicios conexos a la producción de espectáculos teatrales y musicales" },
                     { codigo: "921430", descripcion: "Servicios conexos a la producción de espectáculos teatrales y musicales" },
                 ],
+                // La habitual de FZERO en Tronador: 921430, la que llevan sus altas ya presentadas en ARCA
+                // (Consultas de Relaciones Laborales, 4/10/2026). Se puede cambiar por fila a 900030.
+                actividadHabitual: "921430",
             },
             { codigo: "00003", domicilio: "RUIZ HUIDOBRO 4365", codigoPostal: "1430", actividades: [{ codigo: "591110", descripcion: "Producción de filmes y videocintas" }] },
             { codigo: "00004", domicilio: "VALDENEGRO 4867", codigoPostal: "1430", actividades: [{ codigo: "591120", descripcion: "Postproducción de filmes y videocintas" }] },
@@ -49,13 +53,13 @@ export const SUCURSALES_POR_EMPRESA_ARCA = [
                     { codigo: "591110", descripcion: "Producción de filmes y videocintas" },
                 ],
                 /*
-                  PENDIENTE DE DEFINIR: cuál de las dos es la habitual de 2030 en Ruiz Huidobro. El pedido la
-                  dejó en blanco y no se elige por inferencia. Mientras falte, los contratos de 2030 sin
-                  presentar piden elegir la actividad en cada fila. Para definirla, descomentar UNA:
-        
-                  actividadHabitual: "591110",
-                  actividadHabitual: "602900",
+                  LA HABITUAL DE 2030 EN RUIZ HUIDOBRO: 591110. Es la que llevan sus altas ya presentadas en
+                  ARCA (Consultas de Relaciones Laborales, 4/10/2026: sucursal 00001, actividad 591110 —
+                  Producción de filmes y videocintas). Se preselecciona en cada contrato y se puede cambiar
+                  por fila a 602900. Si la empresa pasa a declarar la otra como habitual, se cambia acá (o
+                  con la ★ de la actividad en su ficha).
                 */
+                actividadHabitual: "591110",
             },
         ],
     },

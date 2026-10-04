@@ -15,7 +15,8 @@ import type { EmpresaSegunArca } from "../../utils/planSucursalesPorEmpresa.js";
  *
  * `actividadHabitual` NO VIENE DE ARCA: es la decisión de la empresa sobre cuál se preselecciona en el
  * contrato cuando la sucursal tiene más de una (como la ★ del domicilio). Sin ese campo no se marca
- * ninguna y la actividad se elige en cada contrato — que es lo que se quiere para FZERO en Tronador.
+ * ninguna y la actividad se elige en cada contrato. Las dos sucursales con más de una actividad
+ * (FZERO en Tronador, 2030 en Ruiz Huidobro) tienen la suya: siempre hay una por defecto.
  */
 export declare const LEIDO_EL = "2026-10-04";
 export declare const SUCURSALES_POR_EMPRESA_ARCA: EmpresaSegunArca[];

@@ -16,8 +16,10 @@ const empresas = () => [
     { _id: "e-2030", cuit: "30-71706837-4", razonSocial: "2030 S.R.L.", sucursalIds: [RUIZ], sucursalActividades: [{ sucursalId: RUIZ, actividades: [{ codigo: "591110" }] }], habitualId: RUIZ },
     { _id: "e-grini", cuit: "33-71767374-9", razonSocial: "GRINI S.R.L.", sucursalIds: [RUIZ], sucursalActividades: [], habitualId: RUIZ },
 ];
-/** Los datos de ARCA, con la habitual de 2030 en Ruiz Huidobro puesta (o no). */
-const datosCon = (habitualDe2030) => SUCURSALES_POR_EMPRESA_ARCA.map((e) => (e.cuit === "30-71706837-4" ? { ...e, sucursales: e.sucursales.map((s) => ({ ...s, ...(habitualDe2030 ? { actividadHabitual: habitualDe2030 } : {}) })) } : e));
+/** Los datos de ARCA SIN ninguna habitual: lo que ARCA tiene, sin las decisiones de la empresa. */
+const SOLO_ARCA = SUCURSALES_POR_EMPRESA_ARCA.map((e) => ({ ...e, sucursales: e.sucursales.map(({ actividadHabitual: _fuera, ...s }) => s) }));
+/** …con la habitual de 2030 en Ruiz Huidobro puesta (o no). */
+const datosCon = (habitualDe2030) => SOLO_ARCA.map((e) => (e.cuit === "30-71706837-4" ? { ...e, sucursales: e.sucursales.map((s) => ({ ...s, ...(habitualDe2030 ? { actividadHabitual: habitualDe2030 } : {}) })) } : e));
 const planear = (datos, es = empresas()) => planSucursalesPorEmpresa({ datos, empresas: es, catalogo, actividadesDelNomenclador: nomenclador, quitar: true });
 const fila = (p, cuit, sucursalId) => p.empresas.find((e) => e.cuit === cuit).sucursalActividades.find((f) => f.sucursalId === sucursalId);
 const aplicar = (es, p) => es.map((e) => ({ ...e, sucursalIds: p.empresas.find((x) => x.empresaId === e._id).sucursalIds, sucursalActividades: p.empresas.find((x) => x.empresaId === e._id).sucursalActividades }));
@@ -30,13 +32,20 @@ describe("la carga deja marcada la actividad habitual", () => {
             assert.ok(!p.sinHabitual.some((s) => s.cuit === "30-71706837-4"));
         }
     });
-    it("FZERO en Tronador tiene dos y los datos no marcan ninguna: queda sin habitual y se lista", () => {
+    it("una sucursal con dos actividades y sin habitual en los datos queda sin marcar, y se lista", () => {
         const p = planear(datosCon("591110"));
         assert.equal(fila(p, "30-71029583-9", TRONADOR).actividadHabitual, "");
         assert.deepEqual(p.sinHabitual.map((s) => `${s.razonSocial}:${s.sucursal}`), ["FZERO S.R.L:00002 TRONADOR 671"]);
     });
-    it("los datos que están en el repo NO traen la habitual de 2030: quedó pendiente de definir, no se infiere", () => {
+    it("los datos del repo: toda sucursal con más de una actividad tiene su habitual (2030 → 591110, FZERO Tronador → 921430)", () => {
         const p = planear(SUCURSALES_POR_EMPRESA_ARCA);
+        assert.equal(fila(p, "30-71706837-4", RUIZ).actividadHabitual, "591110");
+        assert.equal(fila(p, "30-71029583-9", TRONADOR).actividadHabitual, "921430");
+        assert.deepEqual(p.sinHabitual, [], "siempre hay una por defecto");
+        assert.deepEqual(p.habitualesInvalidas, []);
+    });
+    it("sin habitual en los datos, 2030 queda sin marcar y se lista", () => {
+        const p = planear(SOLO_ARCA);
         assert.equal(fila(p, "30-71706837-4", RUIZ).actividadHabitual, "");
         assert.ok(p.sinHabitual.some((s) => s.cuit === "30-71706837-4" && s.actividades.join("+") === "602900+591110"));
     });
