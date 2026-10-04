@@ -218,6 +218,72 @@ describe("la categoría contra el espejo de ARCA (barrera del alta)", () => {
   });
 });
 
+describe("puesto desde el CONVENIO de la categoría", () => {
+  /** El 0634/11 con su puesto por defecto; la empleadora, opcionalmente, con el suyo. */
+  const conConvenio = (puestoConvenio: string, defaultsArca: Record<string, string> = {}, over: Record<string, unknown> = {}) =>
+    catalogos({
+      convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 7, puestoDesempenadoDefault: puestoConvenio }],
+      empresas: [{ _id: EMPRESA_ID, sucursalActividades: [{ sucursalId: SUCURSAL_ID, actividades: [{ codigo: "921430" }] }], sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], defaultsArca }],
+      ...over,
+    } as any);
+  // La categoría 12 (Cadete, 0634/11) no tiene puesto; el contrato no tiene Rol Empresa con puesto.
+  const sinRolNiCategoria = fila({ categoria_sat_id: 12, rol_frame_id: 87 } as any);
+  const rolSinPuesto = { roleFrames: [{ data: { rol: { id: 87, nombre: "Coordinador General" }, puestoDesempenado: "" } }] };
+
+  it("0634/11 sin puesto en rol ni categoría: 4132 en las posiciones 29-32", () => {
+    const cat = conConvenio("4132", {}, rolSinPuesto);
+    const r = buildAltaRecord85(sinRolNiCategoria, cat)!;
+    assert.ok(r, "con el default del convenio el registro se arma");
+    assert.equal(r.length, 85);
+    assert.equal(tramo(r, 29, 32), "4132");
+    assert.equal(partirRegistro85(r).puesto, "4132");
+    const v = describirRegistro85(sinRolNiCategoria, cat).valores;
+    assert.equal(v.puesto, "4132");
+    assert.equal(v.puestoOrigen, "convenio");
+  });
+
+  it("deja de estar incompleto para el 85, y el detalle dice que salió del convenio", () => {
+    const cat = conConvenio("4132", {}, rolSinPuesto);
+    const r85 = resolveAfip85(sinRolNiCategoria, cat);
+    assert.equal(r85.completo, true);
+    const check = r85.checks.find((c) => c.key === "puesto")!;
+    assert.equal(check.estado, "ok");
+    assert.equal(check.value, "4132");
+    assert.match(String(check.detalle), /convenio/i);
+  });
+
+  it("el convenio gana sobre el default de la empleadora y el de la instalación", () => {
+    const cat = conConvenio("4132", { puestoDesempenado: "5142" }, { ...rolSinPuesto, defaultsArcaGlobales: { puestoDesempenado: "2421" } });
+    assert.equal(tramo(buildAltaRecord85(sinRolNiCategoria, cat)!, 29, 32), "4132");
+  });
+
+  it("un convenio SIN default deja pasar a la empleadora, como antes", () => {
+    const v = describirRegistro85(sinRolNiCategoria, conConvenio("", { puestoDesempenado: "5142" }, rolSinPuesto)).valores;
+    assert.equal(v.puesto, "5142");
+    assert.equal(v.puestoOrigen, "empresa");
+  });
+
+  it("NO cambia lo que ya resolvían la categoría y el rol: el registro es idéntico con o sin default en el convenio", () => {
+    // Categoría 1: tiene 2455.
+    assert.equal(buildAltaRecord85(fila(), conConvenio("4132")), buildAltaRecord85(fila(), catalogos()));
+    assert.equal(tramo(buildAltaRecord85(fila(), conConvenio("4132"))!, 29, 32), "2455");
+    // Rol con puesto, categoría sin puesto.
+    const conRolCargado = { roleFrames: [{ data: { rol: { id: 87 }, puestoDesempenado: "5142" } }] };
+    assert.equal(buildAltaRecord85(sinRolNiCategoria, conConvenio("4132", {}, conRolCargado)), buildAltaRecord85(sinRolNiCategoria, catalogos(conRolCargado as any)));
+    assert.equal(tramo(buildAltaRecord85(sinRolNiCategoria, conConvenio("4132", {}, conRolCargado))!, 29, 32), "5142");
+  });
+
+  it("sin nada en ningún escalón sigue faltando, y el mensaje nombra al convenio como lugar donde cargarlo", () => {
+    const cat = conConvenio("", {}, rolSinPuesto);
+    assert.equal(buildAltaRecord85(sinRolNiCategoria, cat), null);
+    const check = resolveAfip85(sinRolNiCategoria, cat).checks.find((c) => c.key === "puesto")!;
+    assert.equal(check.estado, "falta");
+    assert.match(String(check.detalle), /convenio/i);
+    // Y la Carga Masiva (130) no se entera: sigue completa.
+    assert.equal(resolveAfip(sinRolNiCategoria, cat).completo, true);
+  });
+});
+
 describe("puesto desde el Rol Empresa del contrato", () => {
   const conRol = (puesto: string) => catalogos({ roleFrames: [{ data: { rol: { id: 77 }, puestoDesempenado: puesto } }] } as any);
   it("el Rol Empresa manda sobre la categoría: posiciones 29-32", () => {

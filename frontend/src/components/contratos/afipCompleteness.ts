@@ -1096,9 +1096,9 @@ export function resumenArca(r: AfipRowResult): { tono: TonoArca; texto: string }
 export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base: AfipRowResult = resolveAfip(row, cat)): { checks: AfipFieldCheck[]; completo: boolean } {
   const v = resolveAfipValues(row, cat);
   const de = (origen: OrigenValorArca) =>
-    origen === "funcion" ? "Del Rol Empresa del contrato." : origen === "categoria" ? "De la categoría del contrato." : origen === "empresa" ? "Del default de la empleadora." : origen === "global" ? "Del default de la instalación." : undefined;
+    origen === "funcion" ? "Del Rol Empresa del contrato." : origen === "categoria" ? "De la categoría del contrato." : origen === "convenio" ? "Del default del convenio de la categoría (ni el Rol Empresa ni la categoría tienen el suyo)." : origen === "empresa" ? "Del default de la empleadora." : origen === "global" ? "Del default de la instalación." : undefined;
   const puesto: AfipFieldCheck = v.puesto
-    ? { key: "puesto", label: "Puesto desempeñado (solo Altas Masivas)", origen: v.puestoOrigen === "categoria" ? "categoria_sat" : "empresa", value: v.puesto, estado: "ok", ok: true, detalle: de(v.puestoOrigen) }
+    ? { key: "puesto", label: "Puesto desempeñado (solo Altas Masivas)", origen: v.puestoOrigen === "categoria" || v.puestoOrigen === "convenio" ? "categoria_sat" : "empresa", value: v.puesto, estado: "ok", ok: true, detalle: de(v.puestoOrigen) }
     : {
         key: "puesto",
         label: "Puesto desempeñado (solo Altas Masivas)",
@@ -1106,7 +1106,7 @@ export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base:
         value: "",
         estado: "falta",
         ok: false,
-        detalle: "Ni el Rol Empresa del contrato, ni la categoría, ni la empleadora tienen cargado el código de puesto desempeñado. Cargalo en el Rol Empresa (Usuarios → Roles Empresa). El registro de 85 lo exige; la Carga Masiva no.",
+        detalle: "Ni el Rol Empresa del contrato, ni la categoría, ni su convenio, ni la empleadora tienen cargado el código de puesto desempeñado. Cargalo en el Rol Empresa (Usuarios → Roles Empresa) o, para todos los contratos de ese convenio de una vez, como puesto por defecto del convenio (Convenios → editar el convenio). El registro de 85 lo exige; la Carga Masiva no.",
       };
   const revista: AfipFieldCheck = {
     key: "situacionRevista",

@@ -2195,7 +2195,7 @@ export const ContractBulkAfipTab: React.FC<{
     if (!empresaDeLaPestana) return;
     /*
       SIN PUESTO NO HAY REGISTRO DE 85, y se dice acá en vez de dejar el botón apagado: un botón gris
-      no explica nada. Lo que falta es configuración (categoría o default de la empleadora), no un
+      no explica nada. Lo que falta es configuración (rol, categoría, convenio o default de la empleadora), no un
       dato de la persona, así que se nombra el lugar.
     */
     const sinPuesto = fuenteTxt.filter((x) => x.result.completo && !completos85.includes(x));
@@ -2210,7 +2210,7 @@ export const ContractBulkAfipTab: React.FC<{
       const roles = [...porRol.entries()].map(([r, n]) => `${r} (${n})`).join(', ');
       sweetAlert.error(
         'Falta el puesto desempeñado',
-        `Altas Masivas (registro de 85) exige el código de puesto desempeñado, y ${sinPuesto.length === 1 ? 'este contrato no lo tiene' : `${sinPuesto.length} contratos no lo tienen`}: ${nombres}${sinPuesto.length > 5 ? '…' : ''}. Roles sin puesto: ${roles}. Cargalo en el Rol Empresa (Usuarios → Roles Empresa), en la categoría (Configuración → ARCA → Categorías) o como default de ${empresaDeLaPestana.razonSocial} (ficha de la empresa → ARCA → Puesto Desempeñado). La Carga Masiva no lo necesita.`,
+        `Altas Masivas (registro de 85) exige el código de puesto desempeñado, y ${sinPuesto.length === 1 ? 'este contrato no lo tiene' : `${sinPuesto.length} contratos no lo tienen`}: ${nombres}${sinPuesto.length > 5 ? '…' : ''}. Roles sin puesto: ${roles}. Cargalo en el Rol Empresa (Usuarios → Roles Empresa), en la categoría (Configuración → ARCA → Categorías), como puesto por defecto del convenio (Convenios → editar el convenio: resuelve de una vez a todos los que trabajan bajo él) o como default de ${empresaDeLaPestana.razonSocial} (ficha de la empresa → ARCA → Puesto Desempeñado). La Carga Masiva no lo necesita.`,
       );
       return;
     }
