@@ -172,6 +172,8 @@ function manejarDialogos(page, estado, onProgreso) {
       await d.accept().catch(() => {});
     } else {
       onProgreso({ tipo: "pantalla", que: `ARCA preguntó «${msg}» y se respondió que no` });
+      // Aparte, con su tipo: la corrida por tandas se corta sola si ARCA pregunta algo que nadie esperaba.
+      onProgreso({ tipo: "dialogoInesperado", mensaje: msg });
       await d.dismiss().catch(() => {});
     }
   };
@@ -446,7 +448,6 @@ export async function leerTopeAltasMasivas({ page, empresaCuit, onProgreso = () 
     const enPantalla = topeDelPegado((await leerPantalla(page)).texto);
     await apretar(page, "volver_del_pegado");
     await esperarPantalla(page, ["altas"], "volver a Registrar Nuevas Altas");
-    onProgreso({ tipo: "tope", enPantalla });
     return enPantalla;
   } finally {
     soltar();

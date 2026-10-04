@@ -2,7 +2,6 @@ import {
   CHARSET_REGISTRO,
   LARGO_130,
   LARGO_85,
-  MAX_ALTAS_MASIVAS,
   RETRIBUCION_130_EN_CENTAVOS,
   fecha85,
   partirRegistro130,
@@ -76,7 +75,7 @@ export function problemasDeForma(modo: ModoAltas, registros: string[]): string[]
   const largo = modo === "carga_masiva" ? LARGO_130 : LARGO_85;
   const out: string[] = [];
   if (registros.length === 0) out.push("El lote no tiene registros.");
-  if (modo === "altas_masivas" && registros.length > MAX_ALTAS_MASIVAS) out.push(`Altas Masivas admite hasta ${MAX_ALTAS_MASIVAS} registros y el lote tiene ${registros.length}.`);
+  // Sin tope de cantidad: Altas Masivas se presenta por tandas (`tandasAltas.ts`), y cada tanda respeta el suyo.
   registros.forEach((r, i) => {
     if (typeof r !== "string") out.push(`El registro ${i + 1} no es texto.`);
     else if (r.length !== largo) out.push(`El registro ${i + 1} mide ${r.length} caracteres; tienen que ser ${largo}.`);

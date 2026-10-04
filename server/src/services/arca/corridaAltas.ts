@@ -1,15 +1,17 @@
 import { Types } from "mongoose";
+import { pathToFileURL } from "node:url";
 import UserProject from "../../models/UserProject.js";
 import { ArcaAltasLog } from "../../models/ArcaAltasLog.js";
 import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR_ALTAS } from "./motor.js";
 import { soltarCandado, tomarCandado } from "./candadoArca.js";
-import { ItemLoteAltas, LoteAltasValidado, validarLoteAltas } from "./validarLoteAltas.js";
+import { ItemLoteAltas, LoteAltasError, LoteAltasValidado, validarLoteAltas } from "./validarLoteAltas.js";
+import { EventoTandas, GuardadoTandas, ItemTanda, ResultadoTandas, correrTandas } from "./tandasAltas.js";
 import type { ModoAltas } from "./cotejoAltas.js";
 
 /**
  * PRESENTAR ALTAS EN ARCA DESDE EL SERVIDOR: Carga Masiva (archivo de 130) o Altas Masivas (pegado
- * de 85, máximo 9).
+ * de 85, de a 9 por tanda: cualquier cantidad, en tandas sucesivas — ver `tandasAltas.ts`).
  *
  * Mismo mecanismo que la validación de obras sociales (`corridaServidor.ts`): arranca, vuelve
  * enseguida, y el progreso se sigue por eventos que el modal pide cada ~2 s. Comparte con ella el
@@ -19,6 +21,7 @@ import type { ModoAltas } from "./cotejoAltas.js";
  *
  *   · El lote lo decide el servidor (`validarLoteAltas.ts`): cada registro se coteja contra la base.
  *   · «Detener» funciona hasta el paso ANTERIOR al envío. Desde el evento `irreversible` ya no.
+ *     En Altas Masivas por tandas corta al TERMINAR la tanda en curso: una tanda no se abandona.
  *   · Nunca se reintenta un Enviar ni un Aceptar. Si después del click algo falla o no se puede leer,
  *     el resultado es «indeterminado», y queda así en el contrato para que nadie lo vuelva a presentar
  *     sin mirar ARCA primero.
@@ -38,7 +41,9 @@ export type EventoAltas =
   | { tipo: "grillaCargada"; cuils: string[] }
   | { tipo: "irreversible"; que: "enviar" | "aceptar" }
   | { tipo: "enviada"; estado: string; fechaPresentacion: string; nroTransaccion: string }
-  | { tipo: "persona"; cuil: string; estado: "alta" | "rechazada" | "indeterminado"; motivo?: string }
+  | { tipo: "persona"; cuil: string; estado: "alta" | "rechazada" | "devuelta" | "indeterminado"; motivo?: string }
+  | { tipo: "dialogoInesperado"; mensaje: string }
+  | EventoTandas
   | { tipo: "seco"; codigoNovedad?: string }
   | { tipo: "indeterminado"; comoVerificar: string }
   | { tipo: "fin"; resultado: string }
@@ -57,6 +62,13 @@ interface CorridaAltas {
   terminada: boolean;
   /** Se apretó (o se está por apretar) el botón que no se deshace. Desde acá «Detener» no corta. */
   irreversible: boolean;
+  /** Altas Masivas: la corrida va por tandas, y «Detener» corta al terminar la que está en curso. */
+  porTandas: boolean;
+  detenerPedido: boolean;
+  /** ARCA abrió un diálogo que nadie esperaba: la corrida por tandas no arranca otra tanda. */
+  dialogoInesperado?: string;
+  /** Lo que venía en la selección y no se presenta porque ya tenía marca (ver `validarLoteAltas`). */
+  descartadas: Array<{ cuil: string; nombre: string; motivo: "presentada" | "incierta" }>;
   señal: { cortada: boolean };
   arrancadaEl: Date;
 }
@@ -81,6 +93,12 @@ export const enSecoForzado = (): boolean => {
 export function detenerCorridaAltas(tenantId: string): { detenida: boolean; motivo?: string } {
   const c = corridas.get(tenantId);
   if (!c || c.terminada) return { detenida: false, motivo: "No hay una corrida de altas en curso." };
+  if (c.porTandas) {
+    // No se corta en el medio de una tanda: lo que ya está en la grilla de ARCA se termina de presentar
+    // y se guarda. La que no arranca es la tanda siguiente.
+    c.detenerPedido = true;
+    return { detenida: true, motivo: "Se detiene al terminar la tanda en curso." };
+  }
   if (c.irreversible) return { detenida: false, motivo: "Ya se apretó el botón que presenta las altas: no se puede detener. Esperá el resultado." };
   c.señal.cortada = true;
   return { detenida: true };
@@ -100,7 +118,12 @@ export async function arrancarCorridaAltas(opts: {
   // El candado ANTES de cualquier await: dos clicks seguidos no pueden arrancar dos corridas.
   tomarCandado(tenantId, modo);
   try {
-    const lote = await validarLoteAltas({ tenantObjectId, modo, empresaId: opts.empresaId, items: opts.items, forzar: !!opts.forzar });
+    // Altas Masivas valida TODA la selección de una vez, sin tope, y saltea lo ya presentado: así
+    // una corrida cortada se relanza con la misma selección y no duplica.
+    const lote = await validarLoteAltas({ tenantObjectId, modo, empresaId: opts.empresaId, items: opts.items, forzar: !!opts.forzar, descartarPresentadas: modo === "altas_masivas" });
+    if (lote.items.length === 0 && !lote.descartadas.some((d) => d.motivo === "incierta")) {
+      throw new LoteAltasError("Todos los contratos de la selección ya están presentados en ARCA: no queda nada por presentar.");
+    }
     const cred = await credencialesDe(tenantId);
     if (!cred) throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
     const enSeco = enSecoForzado() || !!opts.enSeco;
@@ -117,11 +140,14 @@ export async function arrancarCorridaAltas(opts: {
       eventos: [],
       terminada: false,
       irreversible: false,
+      porTandas: modo === "altas_masivas",
+      detenerPedido: false,
+      descartadas: lote.descartadas.map((d) => ({ cuil: d.cuil, nombre: d.nombre, motivo: d.motivo })),
       señal: { cortada: false },
       arrancadaEl: new Date(),
     };
     corridas.set(tenantId, corrida);
-    void correr({ corrida, lote, tenantObjectId, usuarioId, cred });
+    void (modo === "altas_masivas" ? correrPorTandas : correr)({ corrida, lote, tenantObjectId, usuarioId, cred });
     return { total: lote.items.length, enSeco, empresa: lote.empresa };
   } catch (e) {
     soltarCandado(tenantId, modo);
@@ -147,7 +173,8 @@ async function correr(o: { corrida: CorridaAltas; lote: LoteAltasValidado; tenan
     emitir({ tipo: "abriendo" });
     sesion = await abrirSesionArca(corrida.tenantId, cred);
     emitir({ tipo: "sesion", seLogueo: sesion.seLogueo });
-    const motor = (await import(MOTOR_ALTAS)) as any;
+    // Como URL `file://`: en Windows una ruta absoluta («C:\…») no se puede importar tal cual.
+    const motor = (await import(pathToFileURL(MOTOR_ALTAS).href)) as any;
     const comun = { page: sesion.page, empresaCuit: lote.empresa.cuit, enSeco: corrida.enSeco, onProgreso: emitir, señal: corrida.señal };
     r =
       lote.modo === "carga_masiva"
@@ -239,6 +266,140 @@ async function correr(o: { corrida: CorridaAltas; lote: LoteAltasValidado; tenan
           },
         },
       ).catch((e: any) => console.error("Altas ARCA: no pude marcar el contrato:", e?.message || e));
+    }
+  }
+}
+
+/** Pausa entre tandas: el ritmo de una persona, no el de un script. Configurable para los tests. */
+const pausaEntreTandas = (): Promise<void> => {
+  const base = Number(process.env.ARCA_ALTAS_PAUSA_TANDAS_MS);
+  const ms = (Number.isFinite(base) && base >= 0 ? base : 4000) + Math.floor(Math.random() * 2000);
+  return new Promise((r) => setTimeout(r, ms));
+};
+
+/** Cómo se llama en el contrato y en el log cada estado de una persona de la corrida por tandas. */
+const NOMBRE_EN_LOG: Record<string, string> = { registrada: "presentada", rechazada: "rechazada", incierta: "indeterminado", pendiente: "pendiente", seco: "seco", presentando: "indeterminado" };
+
+/**
+ * ALTAS MASIVAS POR TANDAS. El orden lo decide `correrTandas` (`tandasAltas.ts`); acá se le dan el
+ * navegador y la base.
+ *
+ * Lo que cambia respecto de `correr` es CUÁNDO se escribe: el contrato se marca «presentando» antes
+ * de cada «Aceptar» y con su resultado apenas ARCA contesta, tanda por tanda. Si el servidor se cae
+ * a mitad, lo que quedó «presentando» no se vuelve a presentar: la corrida siguiente lo consulta.
+ */
+async function correrPorTandas(o: { corrida: CorridaAltas; lote: LoteAltasValidado; tenantObjectId: any; usuarioId?: string; cred: NonNullable<Awaited<ReturnType<typeof credencialesDe>>> }) {
+  const { corrida, lote, tenantObjectId, usuarioId, cred } = o;
+  const emitir = (e: EventoAltas) => {
+    if (e.tipo === "dialogoInesperado") corrida.dialogoInesperado = e.mensaje;
+    corrida.eventos.push(e);
+  };
+  const inicio = Date.now();
+  let sesion: Awaited<ReturnType<typeof abrirSesionArca>> | null = null;
+  let r: ResultadoTandas | null = null;
+  let resultado = "fallo";
+  let error: string | undefined;
+
+  const contratosParaLog = (resultados: ResultadoTandas["resultados"] | null) =>
+    resultados
+      ? resultados.map((x) => ({ userProjectId: x.item.userProjectId, contractIndex: x.item.contractIndex, cuil: x.item.cuil, nombre: x.item.nombre, resultado: NOMBRE_EN_LOG[x.estado] || x.estado, motivo: x.motivo, tanda: x.tanda, cat: x.cat, porConsulta: x.porConsulta }))
+      : lote.items.map((i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, resultado: "pendiente" }));
+
+  // El log se crea ANTES de presentar y se va completando por tanda: si el servidor se cae, queda.
+  const log = await ArcaAltasLog.create({
+    tenantId: tenantObjectId,
+    tipo: "altas_masivas",
+    usuarioId: usuarioId && Types.ObjectId.isValid(usuarioId) ? usuarioId : undefined,
+    empresaId: lote.empresa._id,
+    empresaCuit: lote.empresa.cuit,
+    empresaRazonSocial: lote.empresa.razonSocial,
+    enSeco: corrida.enSeco,
+    contratos: contratosParaLog(null),
+    resultado: "en_curso",
+    irreversible: false,
+  }).catch((e: any) => {
+    console.error("Altas ARCA: no pude crear el log:", e?.message || e);
+    return null;
+  });
+
+  const marcar = async (i: ItemTanda, campos: Record<string, unknown>) => {
+    await UserProject.updateOne({ _id: i.userProjectId }, { $set: { [`contracts.${i.contractIndex}.altaArcaPresentada`]: { via: "altas_masivas", fecha: new Date(), logId: log?._id, ...campos } } });
+  };
+  // Sin `catch` a propósito: si no se puede dejar el rastro, la tanda NO se presenta (ver `correrTandas`).
+  const guardar: GuardadoTandas = {
+    presentando: async (items, tanda) => {
+      for (const i of items) await marcar(i, { resultado: "presentando", tanda });
+    },
+    resultado: async (x) => {
+      if (x.estado === "pendiente") {
+        // No se presentó: se borra la marca de «presentando», y solo esa.
+        const campo = `contracts.${x.item.contractIndex}.altaArcaPresentada`;
+        await UserProject.updateOne({ _id: x.item.userProjectId, [`${campo}.resultado`]: "presentando" }, { $unset: { [campo]: "" } });
+        return;
+      }
+      const res = x.estado === "registrada" ? "presentada" : x.estado === "rechazada" ? "fallida" : "indeterminado";
+      await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined });
+    },
+    tanda: async (t, resultados) => {
+      if (!log) return;
+      await ArcaAltasLog.updateOne({ _id: log._id }, { $push: { tandas: t }, $set: { contratos: contratosParaLog(resultados), irreversible: true } }).catch((e: any) => console.error("Altas ARCA: no pude actualizar el log:", e?.message || e));
+    },
+  };
+
+  try {
+    emitir({ tipo: "abriendo" });
+    sesion = await abrirSesionArca(corrida.tenantId, cred);
+    emitir({ tipo: "sesion", seLogueo: sesion.seLogueo });
+    const motor = (await import(pathToFileURL(MOTOR_ALTAS).href)) as any;
+    const page = sesion.page;
+    const comun = { page, empresaCuit: lote.empresa.cuit, onProgreso: emitir };
+    const aItem = (i: { userProjectId: string; contractIndex: number; cuil: string; nombre: string; registro: string }): ItemTanda => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, registro: i.registro });
+    r = await correrTandas({
+      items: lote.items.map(aItem),
+      inciertas: lote.descartadas.filter((d) => d.motivo === "incierta").map(aItem),
+      enSeco: corrida.enSeco,
+      motor: {
+        leerTope: () => motor.leerTopeAltasMasivas(comun),
+        // «Detener» no entra al motor: corta entre tandas (`cortePedido`), nunca en el medio de una.
+        presentar: (t) => motor.altasMasivas({ ...comun, ...t, enSeco: corrida.enSeco, señal: { cortada: false } }),
+        consultar: (c) => motor.consultarAltaPorCuil({ page, ...c }),
+      },
+      guardar,
+      emitir,
+      cortePedido: () =>
+        corrida.dialogoInesperado
+          ? { motivo: "dialogo", mensaje: `ARCA preguntó algo que no se esperaba («${corrida.dialogoInesperado}») y se respondió que no. Se cortó antes de la tanda siguiente: mirá la pantalla de ARCA.` }
+          : corrida.detenerPedido
+            ? { motivo: "detenida", mensaje: "Detenida a pedido, al terminar la tanda en curso." }
+            : null,
+      pausa: pausaEntreTandas,
+    });
+    resultado = r.corte ? (r.corte.motivo === "detenida" ? "detenida" : "cortada") : corrida.enSeco ? "seco" : r.resultados.some((x) => x.estado === "incierta") ? "indeterminado" : "aceptada";
+    error = r.corte && r.corte.motivo !== "detenida" ? r.corte.mensaje : undefined;
+    emitir({ tipo: "fin", resultado });
+  } catch (e: any) {
+    error = String(e?.message || e);
+    emitir({ tipo: "fallo", mensaje: error, textoArca: e?.textoArca });
+  } finally {
+    corrida.terminada = true;
+    const s: any = sesion;
+    if (s && !error) await guardarSesion(corrida.tenantId, s.ctx).catch(() => {});
+    await s?.browser.close().catch(() => {});
+    soltarCandado(corrida.tenantId, "altas_masivas");
+    if (log) {
+      await ArcaAltasLog.updateOne(
+        { _id: log._id },
+        {
+          $set: {
+            ...(r ? { contratos: contratosParaLog(r.resultados), topeEnPantalla: r.topeEnPantalla ?? undefined, topeUsado: r.tope, motivoCorte: r.corte?.motivo } : {}),
+            resultado,
+            error,
+            seLogueo: s?.seLogueo,
+            tiempos: s?.tiempos,
+            duracionMs: Date.now() - inicio,
+          },
+        },
+      ).catch((e: any) => console.error("Altas ARCA: no pude cerrar el log:", e?.message || e));
     }
   }
 }

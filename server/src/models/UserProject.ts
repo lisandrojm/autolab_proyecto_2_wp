@@ -224,11 +224,21 @@ interface IContract {
   altaArcaPresentada?: {
     via: "carga_masiva" | "altas_masivas";
     fecha: Date;
-    resultado: "presentada" | "indeterminado" | "fallida";
+    /**
+     * `presentando`: se escribió justo ANTES de apretar «Aceptar» en ARCA y todavía no hay resultado.
+     * Si queda así, la corrida se cortó en el medio: no se vuelve a presentar, se consulta en ARCA.
+     */
+    resultado: "presentada" | "indeterminado" | "fallida" | "presentando";
     codigoNovedad?: string;
     nroTransaccion?: string;
     motivo?: string;
     logId?: Types.ObjectId;
+    /** Altas Masivas por tandas: en qué tanda de la corrida fue. */
+    tanda?: number;
+    /** Clave de alta temprana, si ARCA la mostró. */
+    cat?: string;
+    /** El alta se confirmó leyendo Relaciones Laborales → Consultas, no por el resultado de la presentación. */
+    porConsulta?: boolean;
   };
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
@@ -391,11 +401,14 @@ const contractSchema = new Schema<IContract>(
         {
           via: { type: String, enum: ["carga_masiva", "altas_masivas"] },
           fecha: { type: Date },
-          resultado: { type: String, enum: ["presentada", "indeterminado", "fallida"] },
+          resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando"] },
           codigoNovedad: { type: String },
           nroTransaccion: { type: String },
           motivo: { type: String },
           logId: { type: Schema.Types.ObjectId, ref: "ArcaAltasLog" },
+          tanda: { type: Number },
+          cat: { type: String },
+          porConsulta: { type: Boolean },
         },
         { _id: false },
       ),

@@ -44,6 +44,12 @@ export interface LoteAltasValidado {
   items: Array<{ userProjectId: string; contractIndex: number; cuil: string; nombre: string; registro: string }>;
   /** El texto tal cual va a ARCA: LF, LF final en el archivo; sin LF final en el pegado. */
   texto: string;
+  /**
+   * Solo con `descartarPresentadas`: lo que venía en la selección y NO se presenta porque ya tiene
+   * marca. `presentada` se saltea; `incierta` (sin resultado: «presentando» o «indeterminado») se
+   * consulta en ARCA antes que nada, y tampoco se presenta.
+   */
+  descartadas: Array<{ userProjectId: string; contractIndex: number; cuil: string; nombre: string; registro: string; motivo: "presentada" | "incierta" }>;
 }
 
 export class LoteAltasError extends Error {
@@ -59,7 +65,7 @@ export class LoteAltasError extends Error {
 const digitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 const pad = (v: unknown, largo: number) => digitos(v).slice(-largo).padStart(largo, "0");
 
-export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas; empresaId: string; items: ItemLoteAltas[]; forzar?: boolean }): Promise<LoteAltasValidado> {
+export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas; empresaId: string; items: ItemLoteAltas[]; forzar?: boolean; descartarPresentadas?: boolean }): Promise<LoteAltasValidado> {
   const { tenantObjectId, modo, empresaId } = o;
   if (modo !== "carga_masiva" && modo !== "altas_masivas") throw new LoteAltasError("Modo de alta desconocido.");
   if (!Array.isArray(o.items)) throw new LoteAltasError("Falta la lista de contratos.");
@@ -150,6 +156,7 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
 
   const errores: Array<string | Diferencia> = [];
   const salida: LoteAltasValidado["items"] = [];
+  const descartadas: LoteAltasValidado["descartadas"] = [];
 
   items.forEach((it, n) => {
     const up = upPorId.get(it.userProjectId);
@@ -172,6 +179,12 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
     }
     if (!clavesAltaTemprana.has(claveEstado(String(c.nombre_estado_empleado || "")))) {
       errores.push(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
+      return;
+    }
+    if (!o.forzar && o.descartarPresentadas && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
+      // Por tandas se RETOMA: lo ya presentado no es un error del lote, se saltea. Así una corrida
+      // cortada se relanza con la misma selección y sigue desde la primera tanda sin resultado.
+      descartadas.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex, cuil: digitos(u?.metadata?.cuit), nombre, registro: it.registro, motivo: c.altaArcaPresentada.resultado === "presentada" ? "presentada" : "incierta" });
       return;
     }
     if (!o.forzar && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
@@ -229,6 +242,7 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
     modo,
     empresa: { _id: String(empresa._id), cuit: empresaCuit, razonSocial: String(empresa.razonSocial || "") },
     items: salida,
+    descartadas,
     // El archivo de Carga Masiva cierra con LF; el pegado no (una línea vacía al final puede leerse
     // como un registro más). Ver `buildAltasMasivasTexto` en el frontend.
     texto: modo === "carga_masiva" ? unirRegistros(registros) : registros.join("\n"),

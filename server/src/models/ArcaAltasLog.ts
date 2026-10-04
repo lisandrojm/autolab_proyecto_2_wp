@@ -20,12 +20,19 @@ export interface IArcaAltasLog extends Document {
   empresaCuit?: string;
   empresaRazonSocial?: string;
   enSeco: boolean;
-  contratos: Array<{ userProjectId: Types.ObjectId; contractIndex: number; cuil: string; nombre: string; resultado: string; motivo?: string }>;
+  contratos: Array<{ userProjectId: Types.ObjectId; contractIndex: number; cuil: string; nombre: string; resultado: string; motivo?: string; tanda?: number; cat?: string; porConsulta?: boolean }>;
+  /** Altas Masivas por tandas: cada tanda con sus tiempos y su resultado. */
+  tandas?: Array<{ n: number; cuils: string[]; inicio: Date; fin: Date; duracionMs: number; resultado: string; error?: string }>;
+  /** El tope del pegado que decía la pantalla, y el que se usó (el menor entre ese y la constante). */
+  topeEnPantalla?: number;
+  topeUsado?: number;
+  /** Por qué se cortó antes de terminar: `detenida`, `error`, `dialogo`, `rechazos_seguidos`… */
+  motivoCorte?: string;
   codigoNovedad?: string;
   nroTransaccion?: string;
   fechaPresentacion?: string;
   estadoArca?: string;
-  /** `enviada` | `aceptada` | `seco` | `indeterminado` | `fallo` | `detenida`. */
+  /** `enviada` | `aceptada` | `seco` | `indeterminado` | `fallo` | `detenida` | `en_curso` | `cortada`. */
   resultado: string;
   /** Si se llegó a apretar el botón irreversible. */
   irreversible: boolean;
@@ -49,7 +56,11 @@ const schema = new Schema<IArcaAltasLog>(
     empresaCuit: String,
     empresaRazonSocial: String,
     enSeco: { type: Boolean, default: true },
-    contratos: [{ _id: false, userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" }, contractIndex: Number, cuil: String, nombre: String, resultado: String, motivo: String }],
+    contratos: [{ _id: false, userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" }, contractIndex: Number, cuil: String, nombre: String, resultado: String, motivo: String, tanda: Number, cat: String, porConsulta: Boolean }],
+    tandas: [{ _id: false, n: Number, cuils: [String], inicio: Date, fin: Date, duracionMs: Number, resultado: String, error: String }],
+    topeEnPantalla: Number,
+    topeUsado: Number,
+    motivoCorte: String,
     codigoNovedad: String,
     nroTransaccion: String,
     fechaPresentacion: String,
