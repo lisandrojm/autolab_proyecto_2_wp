@@ -57,7 +57,11 @@ const companySchema = z.object({
      * fila —que significa «no se recortó, valen todas las del domicilio»—. Por eso la lista se manda
      * entera y no se hace merge: el merge no puede expresar «lo dejé vacío a propósito».
      */
-    sucursalActividades: z.array(z.object({ sucursalId: z.string(), actividades: z.array(z.object({ codigo: z.string(), descripcion: z.string().optional() })) })).optional(),
+    // `codigo` y `origen` viajan con la fila: la lista se guarda ENTERA, así que un cliente que no los
+    // mandara los borraría. El código es el de esa empresa para ese domicilio (ver el modelo).
+    sucursalActividades: z
+        .array(z.object({ sucursalId: z.string(), codigo: z.string().optional(), origen: z.enum(["arca", "manual"]).optional(), actividades: z.array(z.object({ codigo: z.string(), descripcion: z.string().optional() })) }))
+        .optional(),
     /* Los universales que esta empleadora usa. Vacío = todos: ver `models/Company.ts`. */
     tipoServicioIds: z.array(z.string()).optional(),
     grupoTipoServicioIds: z.array(z.string()).optional(),

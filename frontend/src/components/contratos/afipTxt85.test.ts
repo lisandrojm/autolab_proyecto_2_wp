@@ -302,3 +302,71 @@ describe("puesto desde el Rol Empresa del contrato", () => {
     assert.equal(buildAltaRecord85(row, cat)!.slice(28, 32), "2455");
   });
 });
+
+describe("sucursal y actividad POR EMPRESA (el código de sucursal es de cada CUIT)", () => {
+  /*
+    El caso real: Ruiz Huidobro 4365 es UN domicilio en el catálogo (con el código 00003, el de FZERO),
+    pero 2030 S.R.L. lo tiene declarado en ARCA como su sucursal 00001, con dos actividades. Un alta de
+    2030 salía con 00003 y ARCA la cambiaba sola a 00001, dejando la actividad vacía.
+  */
+  const RUIZ = "6a7f000000000000000000s3";
+  const de2030 = (over: Record<string, unknown> = {}) =>
+    catalogos({
+      sucursales: [{ _id: RUIZ, codigo: "00003", domicilio: "RUIZ HUIDOBRO 4365", actividades: [] }],
+      empresas: [
+        {
+          _id: EMPRESA_ID,
+          sucursalIds: [RUIZ],
+          convenioIds: ["cv1"],
+          sucursalActividades: [{ sucursalId: RUIZ, codigo: "00001", origen: "arca", actividades: [{ codigo: "602900", descripcion: "SERVICIOS DE TELEVISIÓN N.C.P." }, { codigo: "591110", descripcion: "PRODUCCIÓN DE FILMES Y VIDEOCINTAS" }] }],
+          ...over,
+        },
+      ],
+    } as any);
+  const contrato = (actividadArca: string) => fila({ sucursalArcaId: RUIZ, actividadArca } as any);
+
+  it("2030 S.R.L. en Ruiz Huidobro: 00001 en las posiciones 18-22 y 591110 en las 23-28", () => {
+    const r = buildAltaRecord85(contrato("591110"), de2030())!;
+    assert.ok(r, "el registro se arma");
+    assert.equal(r.length, 85);
+    assert.equal(tramo(r, 18, 22), "00001");
+    assert.equal(tramo(r, 23, 28), "591110");
+  });
+
+  it("…o 602900, la otra actividad que 2030 tiene habilitada ahí", () => {
+    const r = buildAltaRecord85(contrato("602900"), de2030())!;
+    assert.equal(tramo(r, 18, 22), "00001");
+    assert.equal(tramo(r, 23, 28), "602900");
+  });
+
+  it("el registro de 130 lleva el mismo código de sucursal de la empresa", () => {
+    const partes = partirRegistro130(buildAltaRecord(contrato("591110"), de2030())!);
+    assert.equal(partes.sucursal, "00001");
+    assert.equal(partes.actividad, "591110");
+  });
+
+  it("con dos actividades habilitadas y ninguna elegida no hay registro: se elige, no se adivina", () => {
+    assert.equal(buildAltaRecord85(contrato(""), de2030()), null);
+    assert.equal(describirRegistro85(contrato(""), de2030()).valores.actividadOrigen, "ambigua");
+  });
+
+  it("una actividad que esa empresa no tiene habilitada en esa sucursal no entra", () => {
+    // 620100 es la de GRINI en el mismo domicilio: para 2030 no vale.
+    assert.equal(buildAltaRecord85(contrato("620100"), de2030()), null);
+  });
+
+  it("el domicilio habitual de la empleadora también resuelve con SU código", () => {
+    const cat = de2030({ defaultsArca: { sucursalId: RUIZ } });
+    const r = buildAltaRecord85(fila({ sucursalArcaId: null, actividadArca: "591110" } as any), cat)!;
+    assert.equal(tramo(r, 18, 22), "00001");
+  });
+
+  it("sin código propio cargado rige el del catálogo: lo que ya salía bien sale IGUAL", () => {
+    const sinCodigo = de2030({ sucursalActividades: [{ sucursalId: RUIZ, actividades: [{ codigo: "591110" }] }] });
+    const r = buildAltaRecord85(fila({ sucursalArcaId: RUIZ } as any), sinCodigo)!;
+    assert.equal(tramo(r, 18, 22), "00003");
+    assert.equal(tramo(r, 23, 28), "591110");
+    // Y el fixture de siempre (sin `codigo` en la asociación) da exactamente el mismo registro que antes.
+    assert.equal(tramo(buildAltaRecord85(fila(), catalogos())!, 18, 22), "00001");
+  });
+});

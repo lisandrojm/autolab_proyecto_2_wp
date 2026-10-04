@@ -11,6 +11,7 @@ import { estadoGeneraAltaTemprana } from "./altaTemprana";
 import { claveEstado } from "../../utils/estadoClave";
 import { TEXTO_ESTADO_CATEGORIA, type EstadoCategoriaArca } from "@compartido/catalogoArca";
 import { resolverPuesto } from "@compartido/puestosDesempenados";
+import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "@compartido/sucursalesDeEmpresa";
 
 /**
  * Chequeo de completitud de datos para la generación del TXT de Alta masiva de ARCA.
@@ -63,7 +64,7 @@ export interface AfipCatalogs {
     obrasSocialesIds?: string[];
     sucursalIds?: string[];
     /** Qué actividades declaró ESTA empleadora en cada domicilio. Ver `Company.sucursalActividades`. */
-    sucursalActividades?: Array<{ sucursalId: string; actividades: Array<{ codigo: string; descripcion?: string }> }>;
+    sucursalActividades?: Array<{ sucursalId: string; codigo?: string; origen?: "arca" | "manual"; actividades: Array<{ codigo: string; descripcion?: string }> }>;
     convenioIds?: string[];
     /**
      * La elección habitual de esta empleadora dentro del nomenclador (ARCA → Defaults).
@@ -479,7 +480,15 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
 
   // Sucursal y actividad salen del catálogo de Sucursales de ARCA, filtrado por las que tiene
   // asignadas la empresa empleadora. Nada de esto cuelga de la Sede: son entidades distintas.
-  const sucursalesEmpresa = (cat.sucursales || []).filter((s) => (empresa?.sucursalIds || []).map(String).includes(s._id));
+  /*
+    CADA SUCURSAL, CON EL CÓDIGO DE ESTA EMPRESA. El domicilio es uno solo en el catálogo, pero el
+    código es por CUIT (Ruiz Huidobro es la 00001 de 2030 y la 00003 de FZERO): acá se reemplaza el del
+    catálogo por el de la empleadora, y todo lo que sigue —el registro, el checklist, el selector— ve
+    el correcto. Sin código propio queda el del catálogo, como antes (`compartido/sucursalesDeEmpresa.ts`).
+  */
+  const sucursalesEmpresa = (cat.sucursales || [])
+    .filter((s) => (empresa?.sucursalIds || []).map(String).includes(s._id))
+    .map((s) => ({ ...s, codigo: codigoDeSucursalParaEmpresa(empresa?.sucursalActividades, s._id, s.codigo).codigo || s.codigo }));
 
   // Convenios habilitados para la empleadora, traducidos de refs a códigos de CCT. ARCA solo ofrece
   // las categorías de esos convenios (l_CatCCT viene filtrado por CCT), así que son el conjunto
@@ -524,10 +533,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     declaración es de la empresa, no existe una lista de la cual heredar. El checklist lo dice con
     `sin_actividades`, que es lo correcto — un alta ahí la rechaza ARCA.
   */
-  const declaradas =
-    (empresa as { sucursalActividades?: Array<{ sucursalId: string; actividades: Array<{ codigo: string; descripcion?: string }> }> } | undefined)?.sucursalActividades?.find(
-      (x) => String(x.sucursalId) === String(sucursalId),
-    )?.actividades || [];
+  const declaradas = actividadesDeSucursalParaEmpresa(empresa?.sucursalActividades, sucursalId);
   const actividades = declaradas.filter((a) => !!a.codigo);
 
   const elegida = row.actividadArca ? actividades.find((a) => a.codigo === row.actividadArca) : undefined;

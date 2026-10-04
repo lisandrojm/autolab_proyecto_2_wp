@@ -63,7 +63,14 @@ export interface Company {
    * mismo domicilio pueden tener declaradas distintas. Sin fila para un domicilio rigen todas las
    * suyas; con la lista vacía, ninguna.
    */
-  sucursalActividades?: Array<{ sucursalId: string; actividades: Array<{ codigo: string; descripcion?: string }> }>;
+  sucursalActividades?: Array<{
+    sucursalId: string;
+    /** El código de sucursal de ESTA empresa para ese domicilio (es por CUIT). Vacío = rige el del catálogo. */
+    codigo?: string;
+    actividades: Array<{ codigo: string; descripcion?: string }>;
+    /** Leída de ARCA o cargada a mano. */
+    origen?: 'arca' | 'manual';
+  }>;
   /**
    * Elección habitual de esta empleadora dentro del nomenclador de ARCA, para no repetirla en cada
    * alta. Guarda el código tal cual viaja al TXT.

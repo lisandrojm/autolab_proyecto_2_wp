@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { codigoSucursal } from '../compartido/sucursalesDeEmpresa.js';
 
 // Empresa / Productora usada para armar los contratos (datos de "La Empleadora").
 export interface ICompany extends Document {
@@ -109,7 +110,20 @@ export interface ICompany extends Document {
    */
   sucursalActividades?: Array<{
     sucursalId: mongoose.Types.ObjectId;
+    /**
+     * EL CÓDIGO DE SUCURSAL QUE ARCA LE ASIGNÓ A ESTA EMPRESA para ese domicilio (5 dígitos).
+     *
+     * Es por CUIT, igual que las actividades: Ruiz Huidobro 4365 es la 00001 de 2030 S.R.L. y la
+     * 00003 de FZERO. Mientras el código vivía solo en el domicilio (`ArcaSucursal.codigo`), un alta
+     * de 2030 salió con 00003 y ARCA la cambió sola a la 00001, dejando la actividad vacía.
+     *
+     * Vacío = todavía no se cargó el de esta empresa: rige el del catálogo, como antes (ver
+     * `compartido/sucursalesDeEmpresa.ts`, que es quien resuelve, para el front y para el server).
+     */
+    codigo?: string;
     actividades: Array<{ codigo: string; descripcion?: string }>;
+    /** De dónde salió la fila: leída de ARCA (Domicilios de Explotación) o cargada a mano. */
+    origen?: "arca" | "manual";
   }>;
   /**
    * Valores por defecto de ARCA para los contratos de esta empleadora.
@@ -247,7 +261,10 @@ const companySchema = new Schema<ICompany>(
       {
         _id: false,
         sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', required: true },
+        // Siempre 5 dígitos o vacío, lo escriba quien lo escriba (ficha, script de carga).
+        codigo: { type: String, default: '', set: (v: unknown) => codigoSucursal(v) },
         actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: '' } }],
+        origen: { type: String, enum: ['arca', 'manual'] },
       },
     ],
     defaultsArca: {

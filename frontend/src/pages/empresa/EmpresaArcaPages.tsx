@@ -628,7 +628,12 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                 */
                 sucursalActividades: Object.entries(actividadesPorSucursal)
                   .filter(([sucursalId]) => ids.includes(sucursalId))
-                  .map(([sucursalId, actividades]) => ({ sucursalId, actividades })),
+                  .map(([sucursalId, actividades]) => {
+                    // La lista se guarda entera: el código de ESTA empresa para el domicilio y su origen
+                    // viajan con la fila, o guardar las actividades los borraría.
+                    const previa = (empresa.sucursalActividades || []).find((x) => String(x.sucursalId) === sucursalId);
+                    return { sucursalId, actividades, ...(previa?.codigo ? { codigo: previa.codigo } : {}), ...(previa?.origen ? { origen: previa.origen } : {}) };
+                  }),
               } as any,
               `Actividades guardadas para ${empresa.razonSocial}.`,
             )

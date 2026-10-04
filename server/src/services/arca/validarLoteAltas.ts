@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { RoleFrame } from "../../models/RoleFrame.js";
 import { resolverPuesto } from "../../compartido/puestosDesempenados.js";
+import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "../../compartido/sucursalesDeEmpresa.js";
 import UserProject from "../../models/UserProject.js";
 import { Project } from "../../models/Project.js";
 import { User } from "../../models/User.js";
@@ -125,10 +126,13 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
   };
   const actividadesPorSucursal = new Map<string, Set<string>>();
   for (const s of sucursales as any[]) {
-    const declaradas = (empresa.sucursalActividades || []).find((x: any) => String(x.sucursalId) === String(s._id))?.actividades || [];
+    const declaradas = actividadesDeSucursalParaEmpresa(empresa.sucursalActividades, s._id);
+    // La clave es el código de ESTA EMPRESA para ese domicilio (`compartido/sucursalesDeEmpresa.ts`),
+    // el mismo que escribe el generador: con el del catálogo, un registro bien armado para 2030
+    // (sucursal 00001) no encontraba su sucursal acá y el lote se rechazaba.
     // Con el mismo relleno que el registro: el código guardado puede venir sin los ceros.
     actividadesPorSucursal.set(
-      pad(s.codigo, 5),
+      pad(codigoDeSucursalParaEmpresa(empresa.sucursalActividades, s._id, s.codigo).codigo, 5),
       new Set(declaradas.map((a: any) => digitos(a.codigo)).filter(Boolean).map((a: string) => pad(a, 6))),
     );
   }

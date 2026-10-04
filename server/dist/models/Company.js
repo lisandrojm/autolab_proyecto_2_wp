@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { codigoSucursal } from '../compartido/sucursalesDeEmpresa.js';
 const companySchema = new Schema({
     razonSocial: { type: String, required: true },
     cuit: { type: String },
@@ -33,7 +34,10 @@ const companySchema = new Schema({
         {
             _id: false,
             sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', required: true },
+            // Siempre 5 dígitos o vacío, lo escriba quien lo escriba (ficha, script de carga).
+            codigo: { type: String, default: '', set: (v) => codigoSucursal(v) },
             actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: '' } }],
+            origen: { type: String, enum: ['arca', 'manual'] },
         },
     ],
     defaultsArca: {
