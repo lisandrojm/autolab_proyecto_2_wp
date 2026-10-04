@@ -60,7 +60,7 @@ const companySchema = z.object({
     // `codigo` y `origen` viajan con la fila: la lista se guarda ENTERA, así que un cliente que no los
     // mandara los borraría. El código es el de esa empresa para ese domicilio (ver el modelo).
     sucursalActividades: z
-        .array(z.object({ sucursalId: z.string(), codigo: z.string().optional(), origen: z.enum(["arca", "manual"]).optional(), actividades: z.array(z.object({ codigo: z.string(), descripcion: z.string().optional() })) }))
+        .array(z.object({ sucursalId: z.string(), codigo: z.string().optional(), actividadHabitual: z.string().optional(), origen: z.enum(["arca", "manual"]).optional(), actividades: z.array(z.object({ codigo: z.string(), descripcion: z.string().optional() })) }))
         .optional(),
     /* Los universales que esta empleadora usa. Vacío = todos: ver `models/Company.ts`. */
     tipoServicioIds: z.array(z.string()).optional(),

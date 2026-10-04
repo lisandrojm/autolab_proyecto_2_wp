@@ -11,7 +11,7 @@ import { estadoGeneraAltaTemprana } from "./altaTemprana";
 import { claveEstado } from "../../utils/estadoClave";
 import { TEXTO_ESTADO_CATEGORIA, type EstadoCategoriaArca } from "@compartido/catalogoArca";
 import { resolverPuesto } from "@compartido/puestosDesempenados";
-import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa, TEXTO_PROBLEMA_SUCURSAL } from "@compartido/sucursalesDeEmpresa";
+import { actividadHabitualDe, actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa, TEXTO_PROBLEMA_SUCURSAL } from "@compartido/sucursalesDeEmpresa";
 import type { ProblemaDeSucursal } from "@compartido/sucursalesDeEmpresa";
 
 /**
@@ -65,7 +65,7 @@ export interface AfipCatalogs {
     obrasSocialesIds?: string[];
     sucursalIds?: string[];
     /** Qué actividades declaró ESTA empleadora en cada domicilio. Ver `Company.sucursalActividades`. */
-    sucursalActividades?: Array<{ sucursalId: string; codigo?: string; origen?: "arca" | "manual"; actividades: Array<{ codigo: string; descripcion?: string }> }>;
+    sucursalActividades?: Array<{ sucursalId: string; codigo?: string; actividadHabitual?: string; origen?: "arca" | "manual"; actividades: Array<{ codigo: string; descripcion?: string }> }>;
     convenioIds?: string[];
     /**
      * La elección habitual de esta empleadora dentro del nomenclador (ARCA → Defaults).
@@ -107,6 +107,8 @@ export type ActividadOrigen =
   | "unica"
   /** La sucursal tiene varias actividades y el contrato eligió una. */
   | "elegida"
+  /** Varias actividades, el contrato no eligió, y rige la HABITUAL de la empresa en esa sucursal (la ★). */
+  | "habitual"
   /** Todavía no se sabe la empleadora, así que no se sabe qué sucursales se pueden elegir. */
   | "sin_empresa"
   /** El contrato todavía no eligió sucursal. */
@@ -568,6 +570,18 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   } else if (elegida) {
     actividad = elegida.codigo;
     actividadOrigen = "elegida";
+  } else if (!String(row.actividadArca || "").trim() && actividadHabitualDe(empresa?.sucursalActividades, sucursalId)) {
+    /*
+      LA HABITUAL DE LA EMPRESA EN ESA SUCURSAL, cuando el contrato no eligió ninguna. Es el mismo
+      mecanismo que la ★ del domicilio: se RESUELVE al leer y no se escribe en el contrato, así que
+      marcarla en la ficha alcanza para todos los contratos sin presentar, sin tocarlos de a uno, y
+      elegir otra en la fila la pisa.
+
+      Sólo si el contrato NO tiene nada escrito: una actividad escrita que la empresa no tiene
+      habilitada ahí no se tapa con la habitual — sigue como «ambigua» y la frena la validación.
+    */
+    actividad = actividadHabitualDe(empresa?.sucursalActividades, sucursalId);
+    actividadOrigen = "habitual";
   } else {
     // Varias actividades y ninguna elegida: se deja vacío a propósito. Antes se tomaba la del Tipo
     // de Contrato, que daba un código plausible pero de otro domicilio — un alta válida para ARCA
@@ -965,6 +979,11 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
       case "elegida":
         checks.push(mk("sucursal", "Sucursal de ARCA", "sucursal", v.sucursal, "ok"));
         checks.push(mk("actividad", "Actividad del domicilio", "sucursal", v.actividad, "ok", "Elegida en el contrato."));
+        break;
+      case "habitual":
+        checks.push(mk("sucursal", "Sucursal de ARCA", "sucursal", v.sucursal, "ok"));
+        // No se le pide nada al operador, pero se dice de dónde salió y que se puede cambiar.
+        checks.push(mk("actividad", "Actividad del domicilio", "sucursal", v.actividad, "ok", `La habitual de la empresa en ${v.nombreSucursal} (${v.actividadesDisponibles.length} habilitadas). Se puede elegir otra en esta fila.`));
         break;
       default:
         checks.push(mk("sucursal", "Sucursal de ARCA", "sucursal", v.sucursal, v.sucursal ? "ok" : "falta"));

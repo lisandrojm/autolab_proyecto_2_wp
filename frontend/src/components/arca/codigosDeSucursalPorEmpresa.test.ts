@@ -29,7 +29,10 @@ describe("el código de sucursal se ve por empresa", () => {
   it("la ficha de la empresa edita el código y lo guarda con la fila, junto a las actividades y el origen", () => {
     const ficha = leer("pages/empresa/EmpresaArcaPages.tsx");
     assert.match(ficha, /const \[codigosPorSucursal, setCodigosPorSucursal\]/);
-    assert.match(ficha, /return \{ sucursalId, actividades, \.\.\.\(codigo \? \{ codigo \} : \{\}\), \.\.\.\(origen \? \{ origen \} : \{\}\) \};/);
+    assert.match(ficha, /return \{ sucursalId, actividades, \.\.\.\(codigo \? \{ codigo \} : \{\}\), \.\.\.\(actividadHabitual \? \{ actividadHabitual \} : \{\}\), \.\.\.\(origen \? \{ origen \} : \{\}\) \};/);
+    // La ★ de la actividad sólo se ofrece con más de una, y marcarla no vuelve «a mano» lo leído de ARCA.
+    assert.match(ficha, /\(actividadesPorSucursal\[s\._id\] \|\| \[\]\)\.length > 1 && \(/);
+    assert.match(ficha, /const actividadHabitual = habitualDe\(sucursalId\);/);
     // Tocar una fila la marca «a mano»; la que no se tocó conserva lo que tenía (p. ej. «arca»).
     assert.match(ficha, /const origen = tocada \? 'manual' : previa\?\.origen;/);
     // El botón de guardar se enciende también al cambiar un código.

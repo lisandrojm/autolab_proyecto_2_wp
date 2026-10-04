@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { actividadesDeSucursalParaEmpresa, codigoActividad, codigoDeSucursalParaEmpresa, codigoSucursal, problemaDeSucursalYActividad } from "./sucursalesDeEmpresa.js";
+import { actividadHabitualDe, actividadesDeSucursalParaEmpresa, codigoActividad, codigoDeSucursalParaEmpresa, codigoSucursal, problemaDeSucursalYActividad } from "./sucursalesDeEmpresa.js";
 const AQUI = dirname(fileURLToPath(import.meta.url));
 // El mismo domicilio (Ruiz Huidobro 4365), declarado por tres empresas con códigos y actividades propios.
 const RUIZ = "aaaaaaaaaaaaaaaaaaaaaa03";
@@ -105,5 +105,35 @@ describe("una sola resolución para el generador y para el cotejo del lote", () 
             assert.ok(fuente.includes("codigoDeSucursalParaEmpresa("), `${quien} no resuelve el código por empresa`);
             assert.ok(fuente.includes("actividadesDeSucursalParaEmpresa("), `${quien} no resuelve las actividades por empresa`);
         }
+    });
+});
+describe("la actividad habitual de la empresa en una sucursal", () => {
+    const dos = (actividadHabitual) => [{ sucursalId: RUIZ, codigo: "00001", actividades: [{ codigo: "602900" }, { codigo: "591110" }], actividadHabitual }];
+    it("con una sola habilitada, es esa sin marcar nada", () => {
+        assert.equal(actividadHabitualDe(DE_GRINI, RUIZ), "620100");
+        assert.equal(actividadHabitualDe(DE_FZERO, ZAPIOLA), "921430");
+    });
+    it("con varias, la que marcó la empresa", () => {
+        assert.equal(actividadHabitualDe(dos("591110"), RUIZ), "591110");
+        assert.equal(actividadHabitualDe(dos("602900"), RUIZ), "602900");
+    });
+    it("con varias y sin marca, ninguna: se elige en cada contrato (FZERO en Tronador)", () => {
+        assert.equal(actividadHabitualDe(dos(), RUIZ), "");
+        assert.equal(actividadHabitualDe(DE_FZERO, TRONADOR), "");
+    });
+    it("una marca que quedó apuntando a una actividad que ya no tiene no se usa", () => {
+        assert.equal(actividadHabitualDe(dos("620100"), RUIZ), "");
+    });
+    it("sin actividades o sin fila, ninguna", () => {
+        assert.equal(actividadHabitualDe([{ sucursalId: RUIZ, actividades: [] }], RUIZ), "");
+        assert.equal(actividadHabitualDe(DE_2030, ZAPIOLA), "");
+    });
+    it("la validación previa deja pasar al contrato que no eligió si hay habitual, y sigue frenando lo mal cargado", () => {
+        const base = { sucursalIdsDeLaEmpresa: [RUIZ], codigoDelCatalogo: "00003", sucursalId: RUIZ };
+        assert.equal(problemaDeSucursalYActividad({ ...base, asociaciones: dos("591110"), actividad: "" }), null);
+        assert.equal(problemaDeSucursalYActividad({ ...base, asociaciones: dos(), actividad: "" }), "actividad_sin_elegir");
+        // Elegir otra habilitada en la fila vale; una que no está habilitada sigue siendo un error.
+        assert.equal(problemaDeSucursalYActividad({ ...base, asociaciones: dos("591110"), actividad: "602900" }), null);
+        assert.equal(problemaDeSucursalYActividad({ ...base, asociaciones: dos("591110"), actividad: "620100" }), "actividad_no_habilitada");
     });
 });

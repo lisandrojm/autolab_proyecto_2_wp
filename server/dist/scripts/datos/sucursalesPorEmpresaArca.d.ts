@@ -12,6 +12,10 @@ import type { EmpresaSegunArca } from "../../utils/planSucursalesPorEmpresa.js";
  *
  * OJO: 900030 y 921430 tienen la misma descripción y son DOS códigos distintos. FZERO tiene los dos
  * en Tronador.
+ *
+ * `actividadHabitual` NO VIENE DE ARCA: es la decisión de la empresa sobre cuál se preselecciona en el
+ * contrato cuando la sucursal tiene más de una (como la ★ del domicilio). Sin ese campo no se marca
+ * ninguna y la actividad se elige en cada contrato — que es lo que se quiere para FZERO en Tronador.
  */
 export declare const LEIDO_EL = "2026-10-04";
 export declare const SUCURSALES_POR_EMPRESA_ARCA: EmpresaSegunArca[];

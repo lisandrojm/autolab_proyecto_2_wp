@@ -432,3 +432,58 @@ describe("validación previa a generar los TXT: sucursal y actividad contra la e
     assert.match(fuente, /const presentarAltasMasivas = async \(\) => \{\s+if \(!empresaDeLaPestana\) return;[\s\S]{0,200}if \(frenaPorSucursal\(fuenteTxt\)\) return;/);
   });
 });
+
+describe("actividad habitual de la empresa en la sucursal (la ★ de la actividad)", () => {
+  const RUIZ = "6a7f000000000000000000s3";
+  const de2030 = (actividadHabitual?: string) =>
+    catalogos({
+      sucursales: [{ _id: RUIZ, codigo: "00003", domicilio: "RUIZ HUIDOBRO 4365", actividades: [] }],
+      empresas: [{ _id: EMPRESA_ID, razonSocial: "2030 S.R.L.", sucursalIds: [RUIZ], convenioIds: ["cv1"], defaultsArca: { sucursalId: RUIZ }, sucursalActividades: [{ sucursalId: RUIZ, codigo: "00001", actividades: [{ codigo: "602900" }, { codigo: "591110" }], ...(actividadHabitual ? { actividadHabitual } : {}) }] }],
+    } as any);
+  // Un contrato sin presentar, como los 148 de 2030: no eligió sucursal ni actividad.
+  const sinElegir = fila({ sucursalArcaId: null, actividadArca: "" } as any);
+
+  it("el contrato que no eligió hereda la habitual: sale el registro, sin tocar el contrato", () => {
+    const r = buildAltaRecord85(sinElegir, de2030("591110"))!;
+    assert.ok(r, "con la habitual marcada el registro se arma");
+    assert.equal(tramo(r, 18, 22), "00001");
+    assert.equal(tramo(r, 23, 28), "591110");
+    const v = describirRegistro85(sinElegir, de2030("591110")).valores;
+    assert.equal(v.actividadOrigen, "habitual");
+    assert.equal(resolveAfip(sinElegir, de2030("591110")).completo, true);
+  });
+
+  it("vale para la otra también: la habitual es la que se marque", () => {
+    assert.equal(tramo(buildAltaRecord85(sinElegir, de2030("602900"))!, 23, 28), "602900");
+  });
+
+  it("se puede cambiar por fila: la elegida en el contrato manda sobre la habitual", () => {
+    const r = buildAltaRecord85(fila({ sucursalArcaId: RUIZ, actividadArca: "602900" } as any), de2030("591110"))!;
+    assert.equal(tramo(r, 23, 28), "602900");
+    assert.equal(describirRegistro85(fila({ sucursalArcaId: RUIZ, actividadArca: "602900" } as any), de2030("591110")).valores.actividadOrigen, "elegida");
+  });
+
+  it("sin habitual marcada y con dos actividades, se elige en cada contrato (FZERO en Tronador)", () => {
+    assert.equal(buildAltaRecord85(sinElegir, de2030()), null);
+    assert.equal(describirRegistro85(sinElegir, de2030()).valores.actividadOrigen, "ambigua");
+  });
+
+  it("una actividad ESCRITA que la empresa no tiene ahí no se tapa con la habitual: se frena", () => {
+    const mal = fila({ sucursalArcaId: RUIZ, actividadArca: "620100" } as any);
+    assert.equal(buildAltaRecord85(mal, de2030("591110")), null);
+    assert.deepEqual(problemasDeSucursalParaTxt([mal], de2030("591110")).map((p) => p.problema), ["actividad_no_habilitada"]);
+    // Y el que hereda la habitual no frena nada.
+    assert.deepEqual(problemasDeSucursalParaTxt([sinElegir], de2030("591110")), []);
+  });
+
+  it("una marca que apunta a una actividad que la empresa ya no tiene no se usa", () => {
+    assert.equal(buildAltaRecord85(sinElegir, de2030("620100")), null);
+  });
+
+  it("el checklist dice que es la habitual y que se puede cambiar", () => {
+    const check = resolveAfip(sinElegir, de2030("591110")).checks.find((c) => c.key === "actividad")!;
+    assert.equal(check.estado, "ok");
+    assert.equal(check.value, "591110");
+    assert.match(String(check.detalle), /habitual/i);
+  });
+});

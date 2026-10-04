@@ -39,6 +39,12 @@ export interface SucursalDeEmpresa {
     /** El código con el que esta empresa tiene registrado el domicilio en ARCA. Vacío = sin cargar. */
     codigo?: string | null;
     actividades?: ActividadDeSucursal[] | null;
+    /**
+     * LA ACTIVIDAD HABITUAL de esta empresa en esta sucursal: la que se preselecciona en el contrato
+     * cuando hay más de una habilitada. Es una elección de la empresa, no un dato de ARCA. Vacía = con
+     * varias habilitadas se elige en cada contrato. Con una sola no hace falta marcar nada.
+     */
+    actividadHabitual?: string | null;
     /** De dónde salió la fila: leída de ARCA o cargada a mano. */
     origen?: "arca" | "manual" | null;
 }
@@ -64,6 +70,18 @@ export declare function codigoDeSucursalParaEmpresa(asociaciones: SucursalDeEmpr
  * hereda de otra empresa ni del domicilio (ARCA rechaza una que ese CUIT no declaró ahí).
  */
 export declare function actividadesDeSucursalParaEmpresa(asociaciones: SucursalDeEmpresa[] | null | undefined, sucursalId: unknown): ActividadDeSucursal[];
+/**
+ * LA ACTIVIDAD QUE SE PRESELECCIONA cuando el contrato no eligió ninguna. "" = no hay: hay que elegir.
+ *
+ *   · con UNA sola habilitada, es esa: no hay nada que marcar ni que decidir;
+ *   · con varias, la que la empresa marcó como habitual (la ★), siempre que siga habilitada ahí —una
+ *     marca que quedó apuntando a una actividad que ya no tiene no se usa—;
+ *   · con varias y sin marca, ninguna: se elige en cada contrato.
+ *
+ * Es el mismo mecanismo que la ★ del domicilio: se RESUELVE al leer y no se escribe en el contrato.
+ * El contrato sigue diciendo la verdad —«no eligió»— y elegir otra en la fila la pisa.
+ */
+export declare function actividadHabitualDe(asociaciones: SucursalDeEmpresa[] | null | undefined, sucursalId: unknown): string;
 export type ProblemaDeSucursal = 
 /** El contrato apunta a un domicilio que su empresa no tiene. */
 "sucursal_ajena"

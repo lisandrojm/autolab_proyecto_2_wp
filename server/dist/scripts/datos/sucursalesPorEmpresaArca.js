@@ -11,6 +11,10 @@
  *
  * OJO: 900030 y 921430 tienen la misma descripción y son DOS códigos distintos. FZERO tiene los dos
  * en Tronador.
+ *
+ * `actividadHabitual` NO VIENE DE ARCA: es la decisión de la empresa sobre cuál se preselecciona en el
+ * contrato cuando la sucursal tiene más de una (como la ★ del domicilio). Sin ese campo no se marca
+ * ninguna y la actividad se elige en cada contrato — que es lo que se quiere para FZERO en Tronador.
  */
 export const LEIDO_EL = "2026-10-04";
 export const SUCURSALES_POR_EMPRESA_ARCA = [
@@ -44,6 +48,14 @@ export const SUCURSALES_POR_EMPRESA_ARCA = [
                     { codigo: "602900", descripcion: "Servicios de televisión n.c.p." },
                     { codigo: "591110", descripcion: "Producción de filmes y videocintas" },
                 ],
+                /*
+                  PENDIENTE DE DEFINIR: cuál de las dos es la habitual de 2030 en Ruiz Huidobro. El pedido la
+                  dejó en blanco y no se elige por inferencia. Mientras falte, los contratos de 2030 sin
+                  presentar piden elegir la actividad en cada fila. Para definirla, descomentar UNA:
+        
+                  actividadHabitual: "591110",
+                  actividadHabitual: "602900",
+                */
             },
         ],
     },

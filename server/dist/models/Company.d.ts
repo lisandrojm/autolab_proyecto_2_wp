@@ -117,6 +117,13 @@ export interface ICompany extends Document {
             codigo: string;
             descripcion?: string;
         }>;
+        /**
+         * LA ACTIVIDAD HABITUAL de esta empresa en esta sucursal (6 dígitos): la que se preselecciona en
+         * el contrato cuando hay más de una habilitada, como la ★ del domicilio. Es una elección de la
+         * empresa, no un dato de ARCA. Vacía = con varias se elige en cada contrato; con una sola no hace
+         * falta. Se resuelve al leer (`actividadHabitualDe`): no se escribe en los contratos.
+         */
+        actividadHabitual?: string;
         /** De dónde salió la fila: leída de ARCA (Domicilios de Explotación) o cargada a mano. */
         origen?: "arca" | "manual";
     }>;

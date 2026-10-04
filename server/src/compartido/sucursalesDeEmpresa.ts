@@ -49,6 +49,12 @@ export interface SucursalDeEmpresa {
   /** El código con el que esta empresa tiene registrado el domicilio en ARCA. Vacío = sin cargar. */
   codigo?: string | null;
   actividades?: ActividadDeSucursal[] | null;
+  /**
+   * LA ACTIVIDAD HABITUAL de esta empresa en esta sucursal: la que se preselecciona en el contrato
+   * cuando hay más de una habilitada. Es una elección de la empresa, no un dato de ARCA. Vacía = con
+   * varias habilitadas se elige en cada contrato. Con una sola no hace falta marcar nada.
+   */
+  actividadHabitual?: string | null;
   /** De dónde salió la fila: leída de ARCA o cargada a mano. */
   origen?: "arca" | "manual" | null;
 }
@@ -88,6 +94,25 @@ export function actividadesDeSucursalParaEmpresa(asociaciones: SucursalDeEmpresa
   return (filaDeSucursal(asociaciones, sucursalId)?.actividades || []).filter((a) => !!a && !!String(a.codigo || "").trim());
 }
 
+/**
+ * LA ACTIVIDAD QUE SE PRESELECCIONA cuando el contrato no eligió ninguna. "" = no hay: hay que elegir.
+ *
+ *   · con UNA sola habilitada, es esa: no hay nada que marcar ni que decidir;
+ *   · con varias, la que la empresa marcó como habitual (la ★), siempre que siga habilitada ahí —una
+ *     marca que quedó apuntando a una actividad que ya no tiene no se usa—;
+ *   · con varias y sin marca, ninguna: se elige en cada contrato.
+ *
+ * Es el mismo mecanismo que la ★ del domicilio: se RESUELVE al leer y no se escribe en el contrato.
+ * El contrato sigue diciendo la verdad —«no eligió»— y elegir otra en la fila la pisa.
+ */
+export function actividadHabitualDe(asociaciones: SucursalDeEmpresa[] | null | undefined, sucursalId: unknown): string {
+  const habilitadas = actividadesDeSucursalParaEmpresa(asociaciones, sucursalId).map((a) => codigoActividad(a.codigo));
+  if (habilitadas.length === 0) return "";
+  if (habilitadas.length === 1) return habilitadas[0];
+  const marcada = codigoActividad(filaDeSucursal(asociaciones, sucursalId)?.actividadHabitual);
+  return marcada && habilitadas.includes(marcada) ? marcada : "";
+}
+
 export type ProblemaDeSucursal =
   /** El contrato apunta a un domicilio que su empresa no tiene. */
   | "sucursal_ajena"
@@ -124,7 +149,8 @@ export function problemaDeSucursalYActividad(o: {
   const habilitadas = actividadesDeSucursalParaEmpresa(o.asociaciones, id).map((a) => codigoActividad(a.codigo));
   if (habilitadas.length === 0) return "sin_actividades";
   const elegida = codigoActividad(o.actividad);
-  if (!elegida) return habilitadas.length === 1 ? null : "actividad_sin_elegir";
+  // Sin elegir no es problema si hay de dónde heredar: la única, o la habitual de la empresa.
+  if (!elegida) return actividadHabitualDe(o.asociaciones, id) ? null : "actividad_sin_elegir";
   return habilitadas.includes(elegida) ? null : "actividad_no_habilitada";
 }
 

@@ -68,6 +68,8 @@ export interface Company {
     /** El código de sucursal de ESTA empresa para ese domicilio (es por CUIT). Vacío = rige el del catálogo. */
     codigo?: string;
     actividades: Array<{ codigo: string; descripcion?: string }>;
+    /** La actividad que se preselecciona en el contrato cuando la sucursal tiene más de una. Vacía = se elige en cada contrato. */
+    actividadHabitual?: string;
     /** Leída de ARCA o cargada a mano. */
     origen?: 'arca' | 'manual';
   }>;

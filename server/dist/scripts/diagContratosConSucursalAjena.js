@@ -33,7 +33,7 @@ async function main() {
     // Cómo queda cada empresa según ARCA (el plan con `quitar`), sin escribir nada.
     const plan = planSucursalesPorEmpresa({
         datos: SUCURSALES_POR_EMPRESA_ARCA,
-        empresas: empresas.map((e) => ({ _id: String(e._id), cuit: String(e.cuit || ""), razonSocial: String(e.razonSocial || ""), sucursalIds: (e.sucursalIds || []).map(String), sucursalActividades: (e.sucursalActividades || []).map((f) => ({ sucursalId: String(f.sucursalId), codigo: f.codigo, origen: f.origen, actividades: f.actividades || [] })), habitualId: e.defaultsArca?.sucursalId ? String(e.defaultsArca.sucursalId) : null })),
+        empresas: empresas.map((e) => ({ _id: String(e._id), cuit: String(e.cuit || ""), razonSocial: String(e.razonSocial || ""), sucursalIds: (e.sucursalIds || []).map(String), sucursalActividades: (e.sucursalActividades || []).map((f) => ({ sucursalId: String(f.sucursalId), codigo: f.codigo, origen: f.origen, actividadHabitual: f.actividadHabitual, actividades: f.actividades || [] })), habitualId: e.defaultsArca?.sucursalId ? String(e.defaultsArca.sucursalId) : null })),
         catalogo: catalogo.map((d) => ({ _id: String(d._id), domicilio: String(d.domicilio || ""), codigo: d.codigo })),
         actividadesDelNomenclador: SUCURSALES_POR_EMPRESA_ARCA.flatMap((e) => e.sucursales.flatMap((s) => s.actividades.map((a) => a.codigo))),
         quitar: true,

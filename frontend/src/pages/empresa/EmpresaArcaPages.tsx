@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { codigoSucursal } from '@compartido/sucursalesDeEmpresa';
+import { codigoActividad, codigoSucursal } from '@compartido/sucursalesDeEmpresa';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faLayerGroup, faEye } from '@fortawesome/free-solid-svg-icons';
@@ -572,6 +572,18 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   */
   const mapaCodigos = (e: Company): Record<string, string> => Object.fromEntries((e.sucursalActividades || []).map((x) => [String(x.sucursalId), codigoSucursal(x.codigo)]));
   const [codigosPorSucursal, setCodigosPorSucursal] = useState<Record<string, string>>(() => mapaCodigos(empresa));
+  /*
+    LA ACTIVIDAD HABITUAL de cada sucursal (la ★ de la actividad). Con más de una habilitada, es la
+    que se preselecciona en el contrato; sin marcar, se elige en cada contrato. Con una sola no hay
+    nada que marcar: rige esa.
+  */
+  const mapaHabituales = (e: Company): Record<string, string> => Object.fromEntries((e.sucursalActividades || []).map((x) => [String(x.sucursalId), codigoActividad(x.actividadHabitual)]));
+  const [habitualPorSucursal, setHabitualPorSucursal] = useState<Record<string, string>>(() => mapaHabituales(empresa));
+  /** La habitual que vale: la marcada, sólo si sigue entre las actividades de esa sucursal. */
+  const habitualDe = (sucursalId: string): string => {
+    const marcada = codigoActividad(habitualPorSucursal[sucursalId]);
+    return marcada && (actividadesPorSucursal[sucursalId] || []).some((a) => codigoActividad(a.codigo) === marcada) ? marcada : '';
+  };
   /** El domicilio cuyas actividades se están editando. `null` = modal cerrado. */
   const [editandoActividades, setEditandoActividades] = useState<ArcaSucursal | null>(null);
 
@@ -586,13 +598,15 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
     setIds(empresa.sucursalIds || []);
     setActividadesPorSucursal(mapaDeclaradas(empresa));
     setCodigosPorSucursal(mapaCodigos(empresa));
+    setHabitualPorSucursal(mapaHabituales(empresa));
   }, [empresa]);
 
   const normalizar = (m: Record<string, ActividadDomicilio[]>) => JSON.stringify(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].map((a) => a.codigo).sort()])));
   /* Solo las ACTIVIDADES: qué domicilios tiene la empleadora se registra en el nomenclador, y el
      botón de guardar no debe encenderse por algo que esta pantalla ya no cambia. */
   const codigosIguales = (a: Record<string, string>, b: Record<string, string>) => [...new Set([...Object.keys(a), ...Object.keys(b)])].every((k) => codigoSucursal(a[k]) === codigoSucursal(b[k]));
-  const sucio = normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa)) || !codigosIguales(codigosPorSucursal, mapaCodigos(empresa));
+  const habitualesIguales = [...new Set([...Object.keys(habitualPorSucursal), ...Object.keys(mapaHabituales(empresa))])].every((k) => habitualDe(k) === codigoActividad(mapaHabituales(empresa)[k]));
+  const sucio = normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa)) || !codigosIguales(codigosPorSucursal, mapaCodigos(empresa)) || !habitualesIguales;
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
   const porDefectoId = empresa.defaultsArca?.sucursalId || '';
   const { defaults: arcaDefaultsDeLaInstalacion } = useArcaDefaults();
@@ -652,7 +666,10 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                     const codigo = codigoSucursal(codigosPorSucursal[sucursalId]);
                     const tocada = codigo !== codigoSucursal(previa?.codigo) || normalizar({ x: actividades }) !== normalizar({ x: (previa?.actividades || []).map((a) => ({ codigo: String(a.codigo), descripcion: a.descripcion || '' })) });
                     const origen = tocada ? 'manual' : previa?.origen;
-                    return { sucursalId, actividades, ...(codigo ? { codigo } : {}), ...(origen ? { origen } : {}) };
+                    // La habitual es una elección de la empresa, no un dato de ARCA: cambiarla no
+                    // vuelve «a mano» lo que se leyó del organismo.
+                    const actividadHabitual = habitualDe(sucursalId);
+                    return { sucursalId, actividades, ...(codigo ? { codigo } : {}), ...(actividadHabitual ? { actividadHabitual } : {}), ...(origen ? { origen } : {}) };
                   }),
               } as any,
               `Sucursales guardadas para ${empresa.razonSocial}.`,
@@ -785,6 +802,24 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                         ) : (
                           (actividadesPorSucursal[s._id] || []).map((a) => (
                             <span key={a.codigo} title={a.descripcion} className="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded text-[11px] bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                              {/*
+                                LA ★ DE LA ACTIVIDAD, sólo cuando hay más de una: marca la habitual,
+                                la que se preselecciona en el contrato. Con una sola no se dibuja —rige
+                                esa—. Sin ninguna marcada, se elige en cada contrato. Tocar la marcada
+                                la desmarca.
+                              */}
+                              {(actividadesPorSucursal[s._id] || []).length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setHabitualPorSucursal((prev) => ({ ...prev, [s._id]: habitualDe(s._id) === codigoActividad(a.codigo) ? '' : codigoActividad(a.codigo) }))}
+                                  title={habitualDe(s._id) === codigoActividad(a.codigo) ? `${a.codigo} es la actividad habitual acá: se preselecciona en los contratos. Tocá para desmarcarla.` : `Marcar ${a.codigo} como la actividad habitual de ${empresa.razonSocial} en este domicilio.`}
+                                  aria-label={`Actividad habitual: ${a.codigo}`}
+                                  aria-pressed={habitualDe(s._id) === codigoActividad(a.codigo)}
+                                  className="shrink-0"
+                                >
+                                  <FontAwesomeIcon icon={faStar} className={`h-2.5 w-2.5 ${habitualDe(s._id) === codigoActividad(a.codigo) ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'}`} />
+                                </button>
+                              )}
                               <span className="font-mono font-semibold">{a.codigo}</span>
                               {a.descripcion && <span className="truncate max-w-[16rem]">{a.descripcion}</span>}
                               <button type="button" onClick={() => setActividadesPorSucursal((prev) => ({ ...prev, [s._id]: (prev[s._id] || []).filter((x) => x.codigo !== a.codigo) }))} title={`Quitar ${a.codigo} de este domicilio`} className="ml-0.5 text-blue-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">

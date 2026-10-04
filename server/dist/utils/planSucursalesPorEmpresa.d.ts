@@ -18,6 +18,10 @@
  *  · El domicilio habitual (`defaultsArca.sucursalId`): si queda apuntando a una sucursal que la
  *    empresa ya no tiene, se informa. Sólo se elige otra cuando le queda UNA sola — ahí no hay nada
  *    que decidir—; con varias, no se elige por ella.
+ *  · LA ACTIVIDAD HABITUAL de una sucursal con varias actividades es una decisión de la empresa, no
+ *    un dato de ARCA: se marca la que traigan los datos, si está entre las de esa sucursal. Si los
+ *    datos no dicen nada, se conserva la que ya estuviera marcada (y siga siendo válida) y no se
+ *    elige ninguna por ella. Con una sola actividad no se marca nada: rige esa.
  *  · Idempotente: aplicado una vez, la segunda corrida no tiene nada que cambiar.
  */
 export interface ActividadSegunArca {
@@ -29,6 +33,11 @@ export interface SucursalSegunArca {
     domicilio: string;
     codigoPostal?: string;
     actividades: ActividadSegunArca[];
+    /**
+     * La actividad HABITUAL de esa empresa en esa sucursal, cuando tiene más de una. No viene de ARCA:
+     * la decide la empresa. Sin esto no se marca ninguna y se elige en cada contrato.
+     */
+    actividadHabitual?: string;
 }
 export interface EmpresaSegunArca {
     cuit: string;
@@ -44,6 +53,7 @@ export interface EmpresaEnBase {
         sucursalId: string;
         codigo?: string | null;
         origen?: string | null;
+        actividadHabitual?: string | null;
         actividades: Array<{
             codigo: string;
             descripcion?: string;
@@ -65,6 +75,8 @@ export interface FilaResultante {
         codigo: string;
         descripcion: string;
     }>;
+    /** "" = sin habitual marcada. */
+    actividadHabitual: string;
 }
 export interface PlanDeEmpresa {
     cuit: string;
@@ -109,6 +121,19 @@ export interface PlanSucursalesPorEmpresa {
         sucursal: string;
         codigo: string;
         descripcion: string;
+    }>;
+    /** Habituales pedidas en los datos que NO están entre las actividades de esa sucursal: no se marcan. */
+    habitualesInvalidas: Array<{
+        cuit: string;
+        sucursal: string;
+        codigo: string;
+    }>;
+    /** Sucursales con más de una actividad que quedan SIN habitual: ahí se elige en cada contrato. */
+    sinHabitual: Array<{
+        cuit: string;
+        razonSocial: string;
+        sucursal: string;
+        actividades: string[];
     }>;
 }
 /** Texto de un domicilio para comparar por igualdad exacta: mayúsculas, sin acentos, un solo espacio. */

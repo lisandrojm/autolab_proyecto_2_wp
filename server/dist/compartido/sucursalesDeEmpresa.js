@@ -66,6 +66,26 @@ export function actividadesDeSucursalParaEmpresa(asociaciones, sucursalId) {
     return (filaDeSucursal(asociaciones, sucursalId)?.actividades || []).filter((a) => !!a && !!String(a.codigo || "").trim());
 }
 /**
+ * LA ACTIVIDAD QUE SE PRESELECCIONA cuando el contrato no eligió ninguna. "" = no hay: hay que elegir.
+ *
+ *   · con UNA sola habilitada, es esa: no hay nada que marcar ni que decidir;
+ *   · con varias, la que la empresa marcó como habitual (la ★), siempre que siga habilitada ahí —una
+ *     marca que quedó apuntando a una actividad que ya no tiene no se usa—;
+ *   · con varias y sin marca, ninguna: se elige en cada contrato.
+ *
+ * Es el mismo mecanismo que la ★ del domicilio: se RESUELVE al leer y no se escribe en el contrato.
+ * El contrato sigue diciendo la verdad —«no eligió»— y elegir otra en la fila la pisa.
+ */
+export function actividadHabitualDe(asociaciones, sucursalId) {
+    const habilitadas = actividadesDeSucursalParaEmpresa(asociaciones, sucursalId).map((a) => codigoActividad(a.codigo));
+    if (habilitadas.length === 0)
+        return "";
+    if (habilitadas.length === 1)
+        return habilitadas[0];
+    const marcada = codigoActividad(filaDeSucursal(asociaciones, sucursalId)?.actividadHabitual);
+    return marcada && habilitadas.includes(marcada) ? marcada : "";
+}
+/**
  * ¿Qué tiene de malo la sucursal o la actividad de un contrato, mirado contra SU empresa? `null` = nada.
  *
  * Es la validación previa a generar el archivo: lo que ARCA hoy corrige o vacía en silencio.
@@ -86,8 +106,9 @@ export function problemaDeSucursalYActividad(o) {
     if (habilitadas.length === 0)
         return "sin_actividades";
     const elegida = codigoActividad(o.actividad);
+    // Sin elegir no es problema si hay de dónde heredar: la única, o la habitual de la empresa.
     if (!elegida)
-        return habilitadas.length === 1 ? null : "actividad_sin_elegir";
+        return actividadHabitualDe(o.asociaciones, id) ? null : "actividad_sin_elegir";
     return habilitadas.includes(elegida) ? null : "actividad_no_habilitada";
 }
 /** Cómo se le dice a una persona qué corregir y dónde, para cada problema. */

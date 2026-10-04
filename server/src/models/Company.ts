@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { codigoSucursal } from '../compartido/sucursalesDeEmpresa.js';
+import { codigoActividad, codigoSucursal } from '../compartido/sucursalesDeEmpresa.js';
 
 // Empresa / Productora usada para armar los contratos (datos de "La Empleadora").
 export interface ICompany extends Document {
@@ -122,6 +122,13 @@ export interface ICompany extends Document {
      */
     codigo?: string;
     actividades: Array<{ codigo: string; descripcion?: string }>;
+    /**
+     * LA ACTIVIDAD HABITUAL de esta empresa en esta sucursal (6 dígitos): la que se preselecciona en
+     * el contrato cuando hay más de una habilitada, como la ★ del domicilio. Es una elección de la
+     * empresa, no un dato de ARCA. Vacía = con varias se elige en cada contrato; con una sola no hace
+     * falta. Se resuelve al leer (`actividadHabitualDe`): no se escribe en los contratos.
+     */
+    actividadHabitual?: string;
     /** De dónde salió la fila: leída de ARCA (Domicilios de Explotación) o cargada a mano. */
     origen?: "arca" | "manual";
   }>;
@@ -264,6 +271,7 @@ const companySchema = new Schema<ICompany>(
         // Siempre 5 dígitos o vacío, lo escriba quien lo escriba (ficha, script de carga).
         codigo: { type: String, default: '', set: (v: unknown) => codigoSucursal(v) },
         actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: '' } }],
+        actividadHabitual: { type: String, default: '', set: (v: unknown) => codigoActividad(v) },
         origen: { type: String, enum: ['arca', 'manual'] },
       },
     ],

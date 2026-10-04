@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { codigoSucursal } from '../compartido/sucursalesDeEmpresa.js';
+import { codigoActividad, codigoSucursal } from '../compartido/sucursalesDeEmpresa.js';
 const companySchema = new Schema({
     razonSocial: { type: String, required: true },
     cuit: { type: String },
@@ -37,6 +37,7 @@ const companySchema = new Schema({
             // Siempre 5 dígitos o vacío, lo escriba quien lo escriba (ficha, script de carga).
             codigo: { type: String, default: '', set: (v) => codigoSucursal(v) },
             actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: '' } }],
+            actividadHabitual: { type: String, default: '', set: (v) => codigoActividad(v) },
             origen: { type: String, enum: ['arca', 'manual'] },
         },
     ],

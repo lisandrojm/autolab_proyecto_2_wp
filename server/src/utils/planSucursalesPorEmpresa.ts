@@ -20,6 +20,10 @@ import { codigoActividad, codigoSucursal } from "../compartido/sucursalesDeEmpre
  *  · El domicilio habitual (`defaultsArca.sucursalId`): si queda apuntando a una sucursal que la
  *    empresa ya no tiene, se informa. Sólo se elige otra cuando le queda UNA sola — ahí no hay nada
  *    que decidir—; con varias, no se elige por ella.
+ *  · LA ACTIVIDAD HABITUAL de una sucursal con varias actividades es una decisión de la empresa, no
+ *    un dato de ARCA: se marca la que traigan los datos, si está entre las de esa sucursal. Si los
+ *    datos no dicen nada, se conserva la que ya estuviera marcada (y siga siendo válida) y no se
+ *    elige ninguna por ella. Con una sola actividad no se marca nada: rige esa.
  *  · Idempotente: aplicado una vez, la segunda corrida no tiene nada que cambiar.
  */
 
@@ -32,6 +36,11 @@ export interface SucursalSegunArca {
   domicilio: string;
   codigoPostal?: string;
   actividades: ActividadSegunArca[];
+  /**
+   * La actividad HABITUAL de esa empresa en esa sucursal, cuando tiene más de una. No viene de ARCA:
+   * la decide la empresa. Sin esto no se marca ninguna y se elige en cada contrato.
+   */
+  actividadHabitual?: string;
 }
 export interface EmpresaSegunArca {
   cuit: string;
@@ -44,7 +53,7 @@ export interface EmpresaEnBase {
   cuit: string;
   razonSocial: string;
   sucursalIds: string[];
-  sucursalActividades: Array<{ sucursalId: string; codigo?: string | null; origen?: string | null; actividades: Array<{ codigo: string; descripcion?: string }> }>;
+  sucursalActividades: Array<{ sucursalId: string; codigo?: string | null; origen?: string | null; actividadHabitual?: string | null; actividades: Array<{ codigo: string; descripcion?: string }> }>;
   /** `defaultsArca.sucursalId`: el domicilio habitual. */
   habitualId?: string | null;
 }
@@ -59,6 +68,8 @@ export interface FilaResultante {
   codigo: string;
   origen?: "arca" | "manual";
   actividades: Array<{ codigo: string; descripcion: string }>;
+  /** "" = sin habitual marcada. */
+  actividadHabitual: string;
 }
 
 export interface PlanDeEmpresa {
@@ -85,6 +96,10 @@ export interface PlanSucursalesPorEmpresa {
   domiciliosFaltantes: Array<{ cuit: string; codigo: string; domicilio: string }>;
   /** Actividades de los datos que no están en el nomenclador. Se avisa; no se crean. */
   actividadesFaltantes: Array<{ cuit: string; sucursal: string; codigo: string; descripcion: string }>;
+  /** Habituales pedidas en los datos que NO están entre las actividades de esa sucursal: no se marcan. */
+  habitualesInvalidas: Array<{ cuit: string; sucursal: string; codigo: string }>;
+  /** Sucursales con más de una actividad que quedan SIN habitual: ahí se elige en cada contrato. */
+  sinHabitual: Array<{ cuit: string; razonSocial: string; sucursal: string; actividades: string[] }>;
 }
 
 const soloDigitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
@@ -114,7 +129,7 @@ export function planSucursalesPorEmpresa(o: {
   const porDomicilio = new Map(o.catalogo.map((d) => [normalizarDomicilio(d.domicilio), d]));
   const domicilioDe = new Map(o.catalogo.map((d) => [String(d._id), d.domicilio]));
   const porCuit = new Map(o.empresas.map((e) => [soloDigitos(e.cuit), e]));
-  const plan: PlanSucursalesPorEmpresa = { empresas: [], empresasFaltantes: [], domiciliosFaltantes: [], actividadesFaltantes: [] };
+  const plan: PlanSucursalesPorEmpresa = { empresas: [], empresasFaltantes: [], domiciliosFaltantes: [], actividadesFaltantes: [], habitualesInvalidas: [], sinHabitual: [] };
 
   for (const dato of o.datos) {
     const empresa = porCuit.get(soloDigitos(dato.cuit));
@@ -144,7 +159,17 @@ export function planSucursalesPorEmpresa(o: {
         codigo: codigoSucursal(s.codigo),
         origen: "arca",
         actividades: s.actividades.map((a) => ({ codigo: codigoActividad(a.codigo), descripcion: descripcionPrevia.get(codigoActividad(a.codigo)) || a.descripcion })),
+        actividadHabitual: "",
       };
+      // La habitual: sólo tiene sentido con más de una actividad, y tiene que ser una de ESA sucursal.
+      const codigosDeLaFila = fila.actividades.map((a) => a.codigo);
+      const pedida = codigoActividad(s.actividadHabitual);
+      const marcadaAntes = codigoActividad(previa?.actividadHabitual);
+      if (pedida && !codigosDeLaFila.includes(pedida)) plan.habitualesInvalidas.push({ cuit: dato.cuit, sucursal: `${fila.codigo} ${domicilio.domicilio}`, codigo: pedida });
+      if (codigosDeLaFila.length > 1) {
+        fila.actividadHabitual = pedida && codigosDeLaFila.includes(pedida) ? pedida : marcadaAntes && codigosDeLaFila.includes(marcadaAntes) ? marcadaAntes : "";
+        if (!fila.actividadHabitual) plan.sinHabitual.push({ cuit: dato.cuit, razonSocial: empresa.razonSocial || dato.razonSocial, sucursal: `${fila.codigo} ${domicilio.domicilio}`, actividades: codigosDeLaFila });
+      }
       deArca.push(fila);
 
       const rotulo = `${fila.codigo} ${domicilio.domicilio}`;
@@ -153,6 +178,7 @@ export function planSucursalesPorEmpresa(o: {
       if (codigoPrevio !== fila.codigo) cambios.push(`código de ${domicilio.domicilio}: ${codigoPrevio || `(sin código propio; regía el del catálogo: ${codigoSucursal(domicilio.codigo) || "ninguno"})`} ⇒ ${fila.codigo}`);
       if (!previa || !actividadesIguales(previa.actividades || [], fila.actividades)) cambios.push(`actividades de ${rotulo}: [${(previa?.actividades || []).map((a) => codigoActividad(a.codigo)).join(", ") || "ninguna"}] ⇒ [${fila.actividades.map((a) => a.codigo).join(", ")}]`);
       else if (previa.origen !== "arca") cambios.push(`${rotulo}: se marca como leída de ARCA`);
+      if (codigoActividad(previa?.actividadHabitual) !== fila.actividadHabitual) cambios.push(`actividad habitual de ${rotulo}: ${codigoActividad(previa?.actividadHabitual) || "(ninguna)"} ⇒ ${fila.actividadHabitual || "(ninguna)"}`);
     }
 
     // Lo que la base tiene y ARCA no.
@@ -167,7 +193,7 @@ export function planSucursalesPorEmpresa(o: {
           .filter((s) => previas.has(s.sucursalId))
           .map((s) => {
             const f = previas.get(s.sucursalId)!;
-            return { sucursalId: s.sucursalId, codigo: codigoSucursal(f.codigo), ...(f.origen === "arca" || f.origen === "manual" ? { origen: f.origen } : {}), actividades: (f.actividades || []).map((a) => ({ codigo: a.codigo, descripcion: a.descripcion || "" })) };
+            return { sucursalId: s.sucursalId, codigo: codigoSucursal(f.codigo), ...(f.origen === "arca" || f.origen === "manual" ? { origen: f.origen } : {}), actividades: (f.actividades || []).map((a) => ({ codigo: a.codigo, descripcion: a.descripcion || "" })), actividadHabitual: codigoActividad(f.actividadHabitual) };
           });
     const sucursalActividades = [...deArca, ...conservadas];
     const sucursalIds = [...deArca.map((f) => f.sucursalId), ...(o.quitar ? [] : sobran.filter((s) => idsPrevios.includes(s.sucursalId)).map((s) => s.sucursalId))];
@@ -192,7 +218,7 @@ export function planSucursalesPorEmpresa(o: {
       sucursalActividades.length === (empresa.sucursalActividades || []).length &&
       sucursalActividades.every((f) => {
         const p = previas.get(f.sucursalId);
-        return !!p && codigoSucursal(p.codigo) === f.codigo && (p.origen || undefined) === f.origen && actividadesIguales(p.actividades || [], f.actividades);
+        return !!p && codigoSucursal(p.codigo) === f.codigo && (p.origen || undefined) === f.origen && codigoActividad(p.actividadHabitual) === f.actividadHabitual && actividadesIguales(p.actividades || [], f.actividades);
       });
     plan.empresas.push({
       cuit: dato.cuit,

@@ -57,7 +57,7 @@ async function main() {
       cuit: String(e.cuit || ""),
       razonSocial: String(e.razonSocial || ""),
       sucursalIds: (e.sucursalIds || []).map(String),
-      sucursalActividades: (e.sucursalActividades || []).map((f: any) => ({ sucursalId: String(f.sucursalId), codigo: f.codigo, origen: f.origen, actividades: (f.actividades || []).map((a: any) => ({ codigo: String(a.codigo), descripcion: a.descripcion || "" })) })),
+      sucursalActividades: (e.sucursalActividades || []).map((f: any) => ({ sucursalId: String(f.sucursalId), codigo: f.codigo, origen: f.origen, actividadHabitual: f.actividadHabitual, actividades: (f.actividades || []).map((a: any) => ({ codigo: String(a.codigo), descripcion: a.descripcion || "" })) })),
       habitualId: e.defaultsArca?.sucursalId ? String(e.defaultsArca.sucursalId) : null,
     })),
     catalogo: catalogo.map((d) => ({ _id: String(d._id), domicilio: String(d.domicilio || ""), codigo: d.codigo })),
@@ -72,6 +72,8 @@ async function main() {
   for (const d of plan.domiciliosFaltantes) console.log(`\n✗ ${d.cuit}: el domicilio «${d.domicilio}» (sucursal ${d.codigo}) no está en el catálogo de Sucursales. Esa sucursal NO se carga: dalo de alta en ARCA → Sucursales y volvé a correr.`);
   for (const a of plan.actividadesFaltantes) console.log(`\n! ${a.cuit}: la actividad ${a.codigo} «${a.descripcion}» (${a.sucursal}) no está en el nomenclador de Actividades. Se carga igual en la empresa, porque es lo que ARCA tiene, pero revisá el nomenclador: no se crea desde acá.`);
 
+  for (const h of plan.habitualesInvalidas) console.log(`\n✗ ${h.cuit}: la actividad habitual pedida (${h.codigo}) no está entre las de ${h.sucursal}. No se marca ninguna.`);
+
   let escritas = 0;
   for (const e of plan.empresas) {
     console.log(`\n── ${e.razonSocial} (${e.cuit})`);
@@ -82,7 +84,7 @@ async function main() {
     const original = empresas.find((x) => String(x._id) === e.empresaId);
     const set: Record<string, unknown> = {
       sucursalIds: e.sucursalIds.map((id) => new Types.ObjectId(id)),
-      sucursalActividades: e.sucursalActividades.map((f) => ({ sucursalId: new Types.ObjectId(f.sucursalId), codigo: f.codigo, actividades: f.actividades, ...(f.origen ? { origen: f.origen } : {}) })),
+      sucursalActividades: e.sucursalActividades.map((f) => ({ sucursalId: new Types.ObjectId(f.sucursalId), codigo: f.codigo, actividades: f.actividades, actividadHabitual: f.actividadHabitual || "", ...(f.origen ? { origen: f.origen } : {}) })),
     };
     if (e.habitual.accion === "cambia" && e.habitual.a) set["defaultsArca.sucursalId"] = new Types.ObjectId(e.habitual.a);
     // Sólo si la empresa sigue como se leyó: si alguien la editó mientras tanto, no se pisa su cambio.
@@ -99,6 +101,11 @@ async function main() {
   const sobran = plan.empresas.flatMap((e) => e.sobran.filter((s) => !s.quitada).map((s) => `${e.razonSocial}: ${s.domicilio}`));
   console.log(`\n${enSeco ? `Se modificarían ${conCambios}` : `Modificadas ${escritas} de ${conCambios}`} empresa(s) de ${plan.empresas.length}.`);
   if (sobran.length > 0) console.log(`Asociaciones que ARCA no tiene y siguen cargadas (se quitan con --quitar):\n${sobran.map((s) => `   ${s}`).join("\n")}`);
+  if (plan.sinHabitual.length > 0) {
+    console.log("\nSucursales con más de una actividad y SIN habitual marcada (ahí la actividad se elige en cada contrato):");
+    for (const s of plan.sinHabitual) console.log(`   ${s.razonSocial}: ${s.sucursal} [${s.actividades.join(", ")}]`);
+    console.log("   Para marcar una: actividadHabitual en scripts/datos/sucursalesPorEmpresaArca.ts, o la ★ de la actividad en la ficha de la empresa → ARCA → Domicilios.");
+  }
   await mongoose.disconnect();
 }
 
