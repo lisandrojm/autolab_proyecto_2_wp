@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Convenio } from '../models/Convenio.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createSimpleCatalogRouter } from './_simpleCatalogRouter.js';
+import { puestoParaGuardar } from '../services/arca/puestosDesempenados.js';
 /**
  * Catálogo de Convenios de Trabajo (CCT).
  *
@@ -22,6 +23,10 @@ const router = createSimpleCatalogRouter(Convenio, {
     // La obra social del convenio NO viene en el nomenclador de ARCA: es un dato propio, que se carga a
     // mano. Por eso va como campo numérico extra y no participa del import.
     extraNumberFields: [{ key: 'obraSocialDefaultId' }],
+    // El puesto desempeñado por defecto (registro de 85). Como la obra social, es un dato propio que no
+    // viene del nomenclador, así que no entra en el import; y tiene que ser un código ACTIVO del
+    // catálogo de puestos, por eso va con validación (ver `puestoParaGuardar`).
+    extraValidatedFields: [{ key: 'puestoDesempenadoDefault', resolver: (bruto) => puestoParaGuardar(bruto) }],
     // El sindicato firmante. Como la obra social, es un dato propio y no viene del nomenclador.
     extraRefFields: [{ key: 'sindicatoId' }],
     // Poblado en el listado: la tabla muestra la sigla de cada uno de los 2.669, y resolverlas desde

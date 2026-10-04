@@ -43,6 +43,26 @@ export async function puestoActivo(codigo: string): Promise<boolean> {
   return !!p && p.activo !== false;
 }
 
+/**
+ * Un puesto desempeñado que llega para GUARDARSE como default (de un convenio, de lo que sea).
+ *
+ *   `undefined`        → no vino: no se toca (`{}`).
+ *   vacío / sin dígitos → se quita (`{ valor: "" }`).
+ *   un código           → tiene que existir y estar ACTIVO en el catálogo; si no, `error` con la
+ *                         instrucción. Se devuelve normalizado a 4 dígitos.
+ *
+ * Es la misma regla que aplica el Rol Empresa a su puesto: un default que apunta a un código que no
+ * está en el catálogo terminaría en un registro de 85 que ARCA rechaza, y recién ahí se sabría.
+ * `existe` se inyecta para poder probarla sin base.
+ */
+export async function puestoParaGuardar(bruto: unknown, existe: (codigo: string) => Promise<boolean> = puestoActivo): Promise<{ valor?: string; error?: string }> {
+  if (bruto === undefined) return {};
+  const c = codigoPuesto(bruto);
+  if (!c) return { valor: "" };
+  if (!(await existe(c))) return { error: `El puesto desempeñado ${c} no existe o está desactivado en el catálogo (Configuración → ARCA → Puestos Desempeñados).` };
+  return { valor: c };
+}
+
 /** Aplica la importación (upsert por código) y devuelve el resumen. */
 export async function importarPuestos(filas: FilaPuesto[]) {
   const existentes: any[] = await ArcaPuestoDesempenado.find().select("externalId name origen").lean();

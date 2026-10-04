@@ -17,6 +17,7 @@ import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { getHelp, hasHelp, HelpKey } from '../../data/help/helpContent';
 import { colorTextoBadge, conAlpha } from '../EstadoSelect';
 import { useThemeStore } from '../../stores/themeStore';
+import { SelectorPuestoDesempenado } from '../arca/SelectorPuestoDesempenado';
 
 /** Descriptor de un campo extra propio de un catálogo (además de nombre / ID externo). */
 export interface CatalogExtraField {
@@ -44,7 +45,11 @@ export interface CatalogExtraField {
     `color` es un #rrggbb con paleta sugerida y vista previa, como el de Configuración → Estados. En
     la tabla se ve el resultado (`vistaPrevia`) y no el hex: «#d4af37» no le dice nada a nadie.
   */
-  type?: 'text' | 'select' | 'ref' | 'estado' | 'numero' | 'color';
+  /*
+    `puesto` es un código del catálogo de Puestos Desempeñados de ARCA: se elige con el mismo
+    selector buscable que usan Roles Empresa y Categorías ARCA. Guarda el código de 4 dígitos.
+  */
+  type?: 'text' | 'select' | 'ref' | 'estado' | 'numero' | 'color' | 'puesto';
   /**
    * Sólo `color`: los colores sugeridos, como botones. El valor sigue siendo libre —hay un selector
    * para cualquier otro—; la paleta es para que los de siempre salgan siempre iguales.
@@ -1413,6 +1418,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       </span>
                       <span className="text-sm text-gray-700 dark:text-gray-200">{extraDisplay(f, extraValues[f.key] === 'false' ? false : true)}</span>
                     </button>
+                  ) : f.type === 'puesto' ? (
+                    <SelectorPuestoDesempenado valor={extraValues[f.key] ?? ''} onChange={(codigo) => setExtraValues((prev) => ({ ...prev, [f.key]: codigo }))} />
                   ) : f.type === 'ref' ? (
                     <RefField campo={f} valor={extraValues[f.key] ?? ''} onChange={(v) => setExtraValues((prev) => ({ ...prev, [f.key]: v }))} />
                   ) : f.type === 'color' ? (

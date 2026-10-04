@@ -20,6 +20,8 @@ import { formatRnos } from '../../utils/rnos';
  */
 export interface ConvenioFila extends SimpleCatalogItem {
   obraSocialDefaultId?: number | null;
+  /** Puesto desempeñado por defecto del convenio (registro de 85). Vacío = el convenio no decide. */
+  puestoDesempenadoDefault?: string | null;
   signatario?: string;
 }
 
@@ -86,9 +88,11 @@ interface Props {
    * muestra, porque ahí lo que importa es qué convenios tiene registrados, no quién los firmó.
    */
   renderSindicato?: (c: ConvenioFila) => React.ReactNode;
+  /** El puesto desempeñado por defecto. Sin esta prop la columna no se dibuja. */
+  renderPuesto?: (c: ConvenioFila) => React.ReactNode;
 }
 
-export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, ayudaPorDefecto, accionPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato }) => (
+export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, ayudaPorDefecto, accionPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato, renderPuesto }) => (
   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -101,6 +105,9 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
               si la asignación es correcta. NO es lo mismo que «Fuente de paritarias», que también
               nombra gremios — por eso esta va como chip y aquella queda en texto plano. */}
           {renderSindicato && <th className="px-4 py-2.5 whitespace-nowrap w-px">Sindicato</th>}
+          {/* Va al lado de la obra social porque es el mismo tipo de dato: lo que el CONVENIO define
+              para quien trabaja bajo él, cuando ni el rol ni la categoría dicen otra cosa. */}
+          {renderPuesto && <th className="px-4 py-2.5">Puesto por defecto</th>}
           {/* «por defecto» y no «obra social» a secas: es la que rige cuando ARCA no devuelve una
               propia para la persona, no la que va a tener sí o sí. La diferencia importa: la
               validación contra el padrón puede traer otra. */}
@@ -134,6 +141,7 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
               <td className="px-4 py-3 align-top text-sm text-gray-900 dark:text-gray-100 max-w-[18rem]">{c.name}</td>
               <td className="px-4 py-3 align-top text-xs text-gray-500 dark:text-gray-400 max-w-[18rem]">{c.signatario || '—'}</td>
               {renderSindicato && <td className="px-4 py-3 align-top whitespace-nowrap">{renderSindicato(c)}</td>}
+              {renderPuesto && <td className="px-4 py-3 align-top">{renderPuesto(c)}</td>}
               <td className="px-4 py-3 align-top">
                 {r.sinSindicato && !r.os ? (
                   /* «Excluido de convenio» y no «Sin sindicato»: es lo que este caso realmente
