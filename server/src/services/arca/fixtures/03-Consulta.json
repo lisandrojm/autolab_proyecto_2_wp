@@ -1,0 +1,179 @@
+{
+  "accion": "./Consulta.aspx",
+  "ids": [
+    "ctl00_MasterBody",
+    "ctl00_spanAyuda_ToolTip",
+    "ctl00_spanSitioSeguro_ToolTip",
+    "ctl00_MapaHome",
+    "ctl00_areaHome",
+    "ctl00_imageHeader",
+    "ctl00_Menu1_Menu1",
+    "ctl00_Menu1_Menu1n0",
+    "ctl00_Menu1_Menu1n1",
+    "ctl00_Menu1_Menu1n2",
+    "ctl00_Menu1_Menu1n3",
+    "ctl00_Menu1_Menu1n4",
+    "ctl00_Menu1_Menu1n0Items",
+    "ctl00_Menu1_Menu1n5",
+    "ctl00_Menu1_Menu1n6",
+    "ctl00_Menu1_Menu1n7",
+    "ctl00_Menu1_Menu1n8",
+    "ctl00_Menu1_Menu1n9",
+    "ctl00_Menu1_Menu1n10",
+    "ctl00_Menu1_Menu1n11",
+    "ctl00_Menu1_Menu1n12",
+    "ctl00_Menu1_Menu1n0ItemsUp",
+    "ctl00_Menu1_Menu1n0ItemsDn",
+    "ctl00_Menu1_Menu1n1Items",
+    "ctl00_Menu1_Menu1n13",
+    "ctl00_Menu1_Menu1n14",
+    "ctl00_Menu1_Menu1n15",
+    "ctl00_Menu1_Menu1n16",
+    "ctl00_Menu1_Menu1n17",
+    "ctl00_Menu1_Menu1n18",
+    "ctl00_Menu1_Menu1n19",
+    "ctl00_Menu1_Menu1n20",
+    "ctl00_Menu1_Menu1n1ItemsUp",
+    "ctl00_Menu1_Menu1n1ItemsDn",
+    "ctl00_Menu1_Menu1n2Items",
+    "ctl00_Menu1_Menu1n21",
+    "ctl00_Menu1_Menu1n22",
+    "ctl00_Menu1_Menu1n23",
+    "ctl00_Menu1_Menu1n2ItemsUp",
+    "ctl00_Menu1_Menu1n2ItemsDn",
+    "ctl00_Menu1_Menu1n3Items",
+    "ctl00_Menu1_Menu1n24",
+    "ctl00_Menu1_Menu1n25",
+    "ctl00_Menu1_Menu1n3ItemsUp",
+    "ctl00_Menu1_Menu1n3ItemsDn",
+    "ctl00_Menu1_Menu1_SkipLink",
+    "ctl00_Image5",
+    "ctl00_lblEmpleador",
+    "ctl00_btnCerrarSesion",
+    "ctl00_Image4",
+    "ctl00_lblCuit",
+    "ctl00_Image1",
+    "ctl00_lblInicioEmpleador",
+    "ctl00_Image3",
+    "ctl00_lblART",
+    "ctl00_lblInicioContrato",
+    "ctl00_Image8",
+    "ctl00_lblASeg",
+    "ctl00_lblInicioAseg",
+    "ctl00_Image10",
+    "ctl00_lblJurisdiccion",
+    "ctl00_lblrol",
+    "ctl00_ContentPlaceHolder1_tbSeleccion",
+    "ctl00_ContentPlaceHolder1_rb1",
+    "ctl00_ContentPlaceHolder1_inputCuil_txtCuil",
+    "ctl00_ContentPlaceHolder1_rb5",
+    "ctl00_ContentPlaceHolder1_rb6",
+    "ctl00_ContentPlaceHolder1_txtApellido",
+    "ctl00_ContentPlaceHolder1_rb2",
+    "ctl00_ContentPlaceHolder1_rb8",
+    "ctl00_ContentPlaceHolder1_lblSemanaUltima",
+    "ctl00_ContentPlaceHolder1_rb9",
+    "ctl00_ContentPlaceHolder1_InputPeriodo_txtPeriodo",
+    "ctl00_ContentPlaceHolder1_rb3",
+    "ctl00_ContentPlaceHolder1_rb4",
+    "ctl00_ContentPlaceHolder1_ddlCampoOrden",
+    "ctl00_ContentPlaceHolder1_ddlOrden",
+    "ctl00_ContentPlaceHolder1_lblError",
+    "ctl00_ContentPlaceHolder1_btnContinuar",
+    "ctl00_FechaHoy1_lblFechaHoy",
+    "ctl00_btnAyuda"
+  ],
+  "botones": [
+    {
+      "id": "ctl00_btnCerrarSesion",
+      "tipo": "",
+      "rotulo": "Salir del sistema en forma segura"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_btnContinuar",
+      "tipo": "submit",
+      "rotulo": "Continuar"
+    }
+  ],
+  "campos": [
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb1",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_inputCuil_txtCuil",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "13"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb5",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb6",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_txtApellido",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb2",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb8",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb9",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_InputPeriodo_txtPeriodo",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "7"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb3",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rb4",
+      "tag": "input",
+      "tipo": "radio",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_ddlCampoOrden",
+      "tag": "select",
+      "tipo": "select-one",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_ddlOrden",
+      "tag": "select",
+      "tipo": "select-one",
+      "maxlength": ""
+    }
+  ],
+  "texto": "| Simplificación registral\n\n\n\nDatos del Empleador\n\t\t\nRelaciones Laborales\n\t\t\nVinculos Familiares\n\t\t\nOtros Servicios\n\t\t\n\n\n\n Empleador:\t\n  2030 S. R. L.\n \n\t \t\nSALIR\n\n CUIT:\t  XXXXXXXXXXX\n Inicio como Empleador:\t  01/05/2021\n ART contratada:\t  00027 - PREVENCION ASE DE RIESGOS DEL TRABAJO SA...\tInicio:\t  04/2021\n Seguro colectivo:\t  S224 - SANCOR COOPERATIVA DE SEGUROS LIMITADA\tInicio:\t  05/2026\n Jurisdicción Laboral:\t  CIUDAD AUTONOMA BUENOS AIRES\tCONTRIBUYENTE\n\n\n\n \nCONSULTAS DE RELACIONES LABORALES\n\n \t\nSeleccione alguno de los siguientes criterios de búsqueda\n \n \t \t \tCUIL     \n \t \t \tRelaciones laborales activas\n \t \t \tApellido  \n \n \t \t \tFecha de ingreso de movimientos\t\n\tUltima semana\t28/09/2026 al 04/10/2026\n \n\tMes determinado\t  \n\n \t \t \tFecha de inicio de las relaciones laborales \n \t \t \tFecha de fin de las relaciones laborales\n \n\t \n \t\nSeleccione el criterio de ordenamiento\nOrdenado por\t\nCuil\nFecha de envio\nFecha de inicio (Alta)\nFecha de fin (Baja)\nCodigo de obra social\nModalidad de contratacion\nMarca de trabajador agropecuario\n\t \nOrden\t\nAscendente\nDescendente\n\t \n\t \n\t \t\n\t \t\n\t\t\n\t \t\n\n\n\n\ndomingo, 4 de octubre de 2026\n\nAyuda en línea"
+}

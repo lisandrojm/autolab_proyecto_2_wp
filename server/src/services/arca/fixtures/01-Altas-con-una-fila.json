@@ -1,0 +1,280 @@
+{
+  "accion": "./Altas.aspx",
+  "ids": [
+    "ctl00_MasterBody",
+    "ctl00_spanAyuda_ToolTip",
+    "ctl00_spanSitioSeguro_ToolTip",
+    "ctl00_MapaHome",
+    "ctl00_areaHome",
+    "ctl00_imageHeader",
+    "ctl00_Menu1_Menu1",
+    "ctl00_Menu1_Menu1n0",
+    "ctl00_Menu1_Menu1n1",
+    "ctl00_Menu1_Menu1n2",
+    "ctl00_Menu1_Menu1n3",
+    "ctl00_Menu1_Menu1n4",
+    "ctl00_Menu1_Menu1n0Items",
+    "ctl00_Menu1_Menu1n5",
+    "ctl00_Menu1_Menu1n6",
+    "ctl00_Menu1_Menu1n7",
+    "ctl00_Menu1_Menu1n8",
+    "ctl00_Menu1_Menu1n9",
+    "ctl00_Menu1_Menu1n10",
+    "ctl00_Menu1_Menu1n11",
+    "ctl00_Menu1_Menu1n12",
+    "ctl00_Menu1_Menu1n0ItemsUp",
+    "ctl00_Menu1_Menu1n0ItemsDn",
+    "ctl00_Menu1_Menu1n1Items",
+    "ctl00_Menu1_Menu1n13",
+    "ctl00_Menu1_Menu1n14",
+    "ctl00_Menu1_Menu1n15",
+    "ctl00_Menu1_Menu1n16",
+    "ctl00_Menu1_Menu1n17",
+    "ctl00_Menu1_Menu1n18",
+    "ctl00_Menu1_Menu1n19",
+    "ctl00_Menu1_Menu1n20",
+    "ctl00_Menu1_Menu1n1ItemsUp",
+    "ctl00_Menu1_Menu1n1ItemsDn",
+    "ctl00_Menu1_Menu1n2Items",
+    "ctl00_Menu1_Menu1n21",
+    "ctl00_Menu1_Menu1n22",
+    "ctl00_Menu1_Menu1n23",
+    "ctl00_Menu1_Menu1n2ItemsUp",
+    "ctl00_Menu1_Menu1n2ItemsDn",
+    "ctl00_Menu1_Menu1n3Items",
+    "ctl00_Menu1_Menu1n24",
+    "ctl00_Menu1_Menu1n25",
+    "ctl00_Menu1_Menu1n3ItemsUp",
+    "ctl00_Menu1_Menu1n3ItemsDn",
+    "ctl00_Menu1_Menu1_SkipLink",
+    "ctl00_Image5",
+    "ctl00_lblEmpleador",
+    "ctl00_btnCerrarSesion",
+    "ctl00_Image4",
+    "ctl00_lblCuit",
+    "ctl00_Image1",
+    "ctl00_lblInicioEmpleador",
+    "ctl00_Image3",
+    "ctl00_lblART",
+    "ctl00_lblInicioContrato",
+    "ctl00_Image8",
+    "ctl00_lblASeg",
+    "ctl00_lblInicioAseg",
+    "ctl00_Image10",
+    "ctl00_lblJurisdiccion",
+    "ctl00_lblrol",
+    "ctl00_ContentPlaceHolder1_InputCuil_txtCuil",
+    "ctl00_ContentPlaceHolder1_btnNuevoCuil",
+    "ctl00_ContentPlaceHolder1_btnArchivoAltas",
+    "ctl00_ContentPlaceHolder1_btnReiniciar",
+    "ctl00_ContentPlaceHolder1_lblErrorCuil",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_imgEmpleado",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_lblCuil",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_lblFallecido",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_lblApeNom",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeOS_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeOS_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeOS_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeOS_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSucursal_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSucursal_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSucursal_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSucursal_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeAct_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeAct_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeAct_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeAct_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCCT_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCCT_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCCT_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCCT_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCategoria_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCategoria_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCategoria_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCategoria_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodePuesto_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodePuesto_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodePuesto_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodePuesto_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeGrupoTipoServicio_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeGrupoTipoServicio_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeGrupoTipoServicio_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeGrupoTipoServicio_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeTipoServicio_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeTipoServicio_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeTipoServicio_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeTipoServicio_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeModCont_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeModCont_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeModCont_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeModCont_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSitRevista_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSitRevista_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSitRevista_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSitRevista_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeMLiq_AutocompleteValue",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeMLiq_mainDiv",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeMLiq_AutocompleteText",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeMLiq_imgAuto",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_InputRetribucion_txtRem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_chkAgro",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_InputFechaInicio_txtFecha",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_InputFechaFin_txtFecha",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_imgRegimen",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_TipoCCG",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_Eliminar",
+    "ctl00_ContentPlaceHolder1_trPie",
+    "ctl00_ContentPlaceHolder1_lblErrores",
+    "ctl00_ContentPlaceHolder1_btnAceptar",
+    "ctl00_FechaHoy1_lblFechaHoy",
+    "ctl00_btnAyuda",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeOS_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSucursal_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeAct_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCCT_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCategoria_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodePuesto_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeGrupoTipoServicio_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeTipoServicio_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeModCont_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSitRevista_AutocompleteTextAutoCompleteEx_completionListElem",
+    "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeMLiq_AutocompleteTextAutoCompleteEx_completionListElem"
+  ],
+  "botones": [
+    {
+      "id": "ctl00_btnCerrarSesion",
+      "tipo": "",
+      "rotulo": "Salir del sistema en forma segura"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_btnNuevoCuil",
+      "tipo": "submit",
+      "rotulo": "Agregar"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_btnArchivoAltas",
+      "tipo": "submit",
+      "rotulo": "Altas Masivas"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_btnReiniciar",
+      "tipo": "submit",
+      "rotulo": "Reiniciar"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_Eliminar",
+      "tipo": "image",
+      "rotulo": "Borrar"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_btnAceptar",
+      "tipo": "submit",
+      "rotulo": "Aceptar"
+    }
+  ],
+  "campos": [
+    {
+      "id": "ctl00_ContentPlaceHolder1_InputCuil_txtCuil",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "13"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeOS_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSucursal_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeAct_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCCT_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "17"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeCategoria_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "17"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodePuesto_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "17"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeGrupoTipoServicio_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeTipoServicio_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeModCont_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeSitRevista_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_ExtendCodeMLiq_AutocompleteText",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_InputRetribucion_txtRem",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "11"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_chkAgro",
+      "tag": "input",
+      "tipo": "checkbox",
+      "maxlength": ""
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_InputFechaInicio_txtFecha",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_InputFechaFin_txtFecha",
+      "tag": "input",
+      "tipo": "text",
+      "maxlength": "10"
+    },
+    {
+      "id": "ctl00_ContentPlaceHolder1_rptRegistrosAlta_ctl01_RAR_TipoCCG",
+      "tag": "select",
+      "tipo": "select-one",
+      "maxlength": ""
+    }
+  ],
+  "texto": "| Simplificación registral\n\n\n\nDatos del Empleador\n\t\t\nRelaciones Laborales\n\t\t\nVinculos Familiares\n\t\t\nOtros Servicios\n\t\t\n\n\n\n Empleador:\t\n  2030 S. R. L.\n \n\t \t\nSALIR\n\n CUIT:\t  XXXXXXXXXXX\n Inicio como Empleador:\t  01/05/2021\n ART contratada:\t  00027 - PREVENCION ASE DE RIESGOS DEL TRABAJO SA...\tInicio:\t  04/2021\n Seguro colectivo:\t  S224 - SANCOR COOPERATIVA DE SEGUROS LIMITADA\tInicio:\t  05/2026\n Jurisdicción Laboral:\t  CIUDAD AUTONOMA BUENOS AIRES\tCONTRIBUYENTE\n\n\n\n \nREGISTRAR NUEVAS ALTAS\n\nIngrese un CUIL:                    \n\n \nINGRESE LOS DATOS REQUERIDOS:\n\nEmpleado:  XXXXXXXXXXX - PERSONA 1\nObra Social:\nSucursal:\nActividad:\nConvenio:\nCategoria:\nPuesto Desemp.:\nGrupo Tipo Servicio:\nTipo Servicio:\nModalidad Contrato:\nSituación Revista:\nMod. Liquidación:\nRetribución pactada:\nTrab. agropecuario:\nFecha de Inicio:\nFecha de Fin:\nRégimen:\nLic. COVID Dcto. 322 Art. 3b / Tipo de contrato CCG\n0 - Sin Lic. COVID / No asociado a CCG\n1 - Lic. COVID Dcto. 322 Art. 3b / Tipo de contrato CCG\n2 - Trab. agrario permanente prestación continua a tiempo completo adherido a CCG. (Ley 26.727)\n3 - Trab. agrario permanente prestación continua a tiempo parcial adherido a CCG. (Ley 26.727)\n4 - Trab. agrario permanente discontinuo adherido a CCG. (Ley 26.727)\n5 - Trab. agrario temporario adherido a CCG. (Ley 26.727)\n6 - Plazo indeterminado a tiempo completo adherido a CCG. (Ley 20.744)\n7 - Plazo indeterminado a tiempo parcial adherido a CCG. (Ley 20.744)\n8 - Plazo fijo adherido a CCG. (Ley 20.744)\n9 - Temporada adherido a CCG. (Ley 20.744)\n\n\n\n\n\n\n\n\n\n\ndomingo, 4 de octubre de 2026\n\nAyuda en línea"
+}
