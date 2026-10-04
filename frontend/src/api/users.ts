@@ -213,6 +213,8 @@ export interface ContractOverviewRow {
    * de una actividad declarada; con una sola, el contrato la hereda y este campo queda vacío.
    */
   actividadArca?: string | null;
+  /** Puesto desempeñado elegido en ESTE contrato (registro de 85). Vacío = hereda el que le toca por defecto. */
+  puestoDesempenado?: string | null;
 }
 
 /**

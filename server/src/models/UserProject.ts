@@ -124,6 +124,12 @@ interface IContract {
    */
   actividadArca?: string;
   /**
+   * PUESTO DESEMPEÑADO elegido para ESTE contrato (4 díg., registro de 85). Vacío es lo normal: el
+   * contrato hereda el que le toca (rol → categoría → convenio → empleadora → instalación, ver
+   * `compartido/puestosDesempenados.ts`). Sólo se guarda cuando alguien lo cambió en el formulario.
+   */
+  puestoDesempenado?: string;
+  /**
    * Obra social de ESTE contrato (RNOS, pos. 40-45 del TXT de alta). Guarda el `data.id` del catálogo.
    *
    * Vive en el contrato y no en la persona porque es un dato de la RELACIÓN LABORAL: ARCA lo declara
@@ -370,6 +376,7 @@ const contractSchema = new Schema<IContract>(
     nombre_empresa_release: { type: String },
     sucursalArcaId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal" },
     actividadArca: { type: String },
+    puestoDesempenado: { type: String },
     // Obra social del contrato: ver el comentario del campo en `IContract`.
     obraSocialId: { type: Number, default: null },
     obraSocialOrigen: { type: String, enum: ["constatada", "manual", "heredada-usuario"] },

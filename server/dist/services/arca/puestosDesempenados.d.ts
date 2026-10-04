@@ -1,4 +1,4 @@
-import { FilaPuesto } from "../../compartido/puestosDesempenados.js";
+import { FilaPuesto, OrigenPuesto } from "../../compartido/puestosDesempenados.js";
 /**
  * EL CATÁLOGO DE PUESTOS DESEMPEÑADOS: de dónde se importa y quién lo usa.
  *
@@ -26,6 +26,24 @@ export declare function puestoActivo(codigo: string): Promise<boolean>;
 export declare function puestoParaGuardar(bruto: unknown, existe?: (codigo: string) => Promise<boolean>): Promise<{
     valor?: string;
     error?: string;
+}>;
+/**
+ * EL PUESTO QUE LE TOCA POR DEFECTO a un contrato con ese rol, esa categoría y esa empleadora — sin
+ * mirar lo que el contrato tenga elegido.
+ *
+ * Es para el formulario de «Configurar Miembro», que lo muestra siempre cargado: ahí el contrato
+ * todavía se está armando y la pantalla no tiene a mano los catálogos (los 2.669 convenios, los
+ * defaults de la empleadora). Usa la MISMA `resolverPuesto` que el generador del registro y el cotejo
+ * del lote, así que lo que se ve en el formulario es lo que va a salir en el archivo.
+ */
+export declare function puestoPorDefectoDe(o: {
+    rolFrameId?: unknown;
+    categoriaSatId?: unknown;
+    empresaId?: unknown;
+}): Promise<{
+    codigo: string;
+    origen: OrigenPuesto;
+    descripcion: string;
 }>;
 /** Aplica la importación (upsert por código) y devuelve el resumen. */
 export declare function importarPuestos(filas: FilaPuesto[]): Promise<{

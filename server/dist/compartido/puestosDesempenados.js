@@ -20,8 +20,13 @@ export const codigoPuesto = (v) => {
 /**
  * EL PUESTO DE UN CONTRATO, en este orden:
  *
- *   Rol Empresa del contrato → Categoría → CONVENIO de la categoría → default de la empleadora →
- *   default de la instalación
+ *   el elegido en el CONTRATO → Rol Empresa del contrato → Categoría → CONVENIO de la categoría →
+ *   default de la empleadora → default de la instalación
+ *
+ * EL DEL CONTRATO VA PRIMERO y es una excepción, no lo normal: lo normal es que el contrato no diga
+ * nada y herede. Existe porque el puesto pasó a ser obligatorio para presentar el alta masiva, y el
+ * formulario lo muestra SIEMPRE con el que le toca por defecto; quien lo cambia ahí lo cambia para ese
+ * contrato y nada más. Vacío en el contrato = hereda, exactamente como antes.
  *
  * La función va primero porque ES el puesto («Asistente de Cámara»); la categoría es el encuadre del
  * convenio y varias funciones distintas comparten la misma.
@@ -37,6 +42,7 @@ export const codigoPuesto = (v) => {
  */
 export function resolverPuesto(o) {
     for (const [valor, origen] of [
+        [o.contrato, "contrato"],
         [o.rol, "funcion"],
         [o.categoria, "categoria"],
         [o.convenio, "convenio"],

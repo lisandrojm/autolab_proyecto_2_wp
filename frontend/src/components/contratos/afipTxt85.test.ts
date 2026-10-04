@@ -487,3 +487,59 @@ describe("actividad habitual de la empresa en la sucursal (la ★ de la activida
     assert.match(String(check.detalle), /habitual/i);
   });
 });
+
+describe("puesto desempeñado elegido en el contrato", () => {
+  const conConvenio = catalogos({ convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 7, puestoDesempenadoDefault: "4132" }] } as any);
+  // Categoría 12 (Cadete): sin puesto propio → por defecto le toca el del convenio, 4132.
+  const base = { categoria_sat_id: 12 } as any;
+
+  it("sin elegir nada, el formulario muestra el que le toca por defecto y es el que va al archivo", () => {
+    const v = describirRegistro85(fila(base), conConvenio).valores;
+    assert.equal(v.puestoPorDefecto, "4132");
+    assert.equal(v.puestoPorDefectoOrigen, "convenio");
+    assert.equal(v.puesto, "4132");
+    assert.equal(tramo(buildAltaRecord85(fila(base), conConvenio)!, 29, 32), "4132");
+  });
+
+  it("el elegido en el contrato va en las posiciones 29-32, y el default sigue a la vista", () => {
+    const row = fila({ ...base, puestoDesempenado: "2455" });
+    assert.equal(tramo(buildAltaRecord85(row, conConvenio)!, 29, 32), "2455");
+    const v = describirRegistro85(row, conConvenio).valores;
+    assert.equal(v.puestoOrigen, "contrato");
+    assert.equal(v.puestoPorDefecto, "4132");
+    assert.match(String(resolveAfip85(row, conConvenio).checks.find((c) => c.key === "puesto")?.detalle), /este contrato/i);
+  });
+
+  it("gana también sobre el Rol Empresa y la categoría", () => {
+    const cat = catalogos({ roleFrames: [{ data: { rol: { id: 77 }, puestoDesempenado: "5142" } }] } as any);
+    assert.equal(tramo(buildAltaRecord85(fila({ rol_frame_id: 77, puestoDesempenado: "4132" } as any), cat)!, 29, 32), "4132");
+  });
+
+  it("vacío en el contrato no cambia nada: el registro es idéntico al de antes", () => {
+    assert.equal(buildAltaRecord85(fila({ ...base, puestoDesempenado: "" }), conConvenio), buildAltaRecord85(fila(base), conConvenio));
+    assert.equal(buildAltaRecord85(fila({ puestoDesempenado: null } as any), catalogos()), buildAltaRecord85(fila(), catalogos()));
+  });
+
+  it("sin default en ningún escalón, elegirlo en el contrato alcanza para armar el registro", () => {
+    const row = fila({ ...base, puestoDesempenado: "4132" });
+    assert.equal(buildAltaRecord85(fila(base), catalogos()), null);
+    assert.equal(tramo(buildAltaRecord85(row, catalogos())!, 29, 32), "4132");
+    assert.equal(resolveAfip85(row, catalogos()).completo, true);
+  });
+
+  it("el de 130 no lo lleva: elegirlo no cambia la Carga Masiva", () => {
+    assert.equal(buildAltaRecord(fila({ ...base, puestoDesempenado: "2455" }), conConvenio), buildAltaRecord(fila(base), conConvenio));
+  });
+
+  it("el campo está en las dos pantallas: «Datos ARCA» y «Configurar Miembro»", () => {
+    const aqui = dirname(fileURLToPath(import.meta.url));
+    const datosArca = readFileSync(resolve(aqui, "FormularioArca.tsx"), "utf8");
+    const configurar = readFileSync(resolve(aqui, "../../pages/ProjectTeamPage.tsx"), "utf8");
+    assert.match(datosArca, /<CampoPuestoDesempenado\s+valor=\{row\.puestoDesempenado \|\| ""\}\s+porDefecto=\{\{ codigo: valores\.puestoPorDefecto,/);
+    assert.ok(!/etiqueta: "Puesto desempeñado", valor: "en blanco"/.test(datosArca), "ya no figura «en blanco»");
+    assert.match(configurar, /<CampoPuestoConDefaultDelServer\s+rolFrameId=\{wizardData\.rol_frame_id\}\s+categoriaSatId=\{wizardData\.categoria_sat_id\}\s+empresaId=\{wizardData\.empresaContratoId\}/);
+    assert.match(configurar, /puestoDesempenado: wizardData\.puestoDesempenado \|\| "",|puestoDesempenado: wizardData\.puestoDesempenado \|\| '',/);
+    // Un contrato nuevo no arrastra la excepción del anterior.
+    assert.match(configurar, /puestoDesempenado: esContratoNuevo \? /);
+  });
+});

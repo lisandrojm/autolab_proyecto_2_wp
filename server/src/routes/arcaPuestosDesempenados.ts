@@ -3,7 +3,7 @@ import { Response } from "express";
 import { ArcaPuestoDesempenado } from "../models/ArcaPuestoDesempenado.js";
 import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
-import { filasDesdeArchivo, filasDesdeEspejo, importarPuestos, usosDelPuesto } from "../services/arca/puestosDesempenados.js";
+import { filasDesdeArchivo, filasDesdeEspejo, importarPuestos, puestoPorDefectoDe, usosDelPuesto } from "../services/arca/puestosDesempenados.js";
 
 /*
   Tabla oficial de ARCA: puesto desempeñado (4 díg.). Solo la usa el registro de 85 (Altas Masivas,
@@ -32,6 +32,21 @@ const router = createSimpleCatalogRouter(ArcaPuestoDesempenado, {
  * POST /arca/puestos-desempenados/importar-arca — la tabla oficial desde el espejo de ARCA (lo último
  * leído de la pantalla de altas, o la semilla del CSV). Upsert por código; devuelve el resumen.
  */
+/**
+ * GET /arca/puestos-desempenados/por-defecto?rolFrameId=&categoriaSatId=&empresaId=
+ *
+ * El puesto que le toca por defecto a un contrato con esos datos (ver `puestoPorDefectoDe`). Lo usa
+ * «Configurar Miembro» para mostrar el campo siempre cargado. Sólo lee.
+ */
+router.get("/por-defecto", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    res.json(await puestoPorDefectoDe({ rolFrameId: req.query.rolFrameId, categoriaSatId: req.query.categoriaSatId, empresaId: req.query.empresaId }));
+  } catch (error) {
+    console.error("Puesto por defecto error:", error);
+    res.status(500).json({ error: "No se pudo resolver el puesto por defecto." });
+  }
+});
+
 router.post("/importar-arca", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const filas = await filasDesdeEspejo();

@@ -14,6 +14,8 @@ import { CampoObraSocial } from "./CampoObraSocial";
 import { PickerArca } from "./PickerArca";
 import { Modal } from "../ui/Modal";
 import { SelectorCodigoArca } from "../arca/SelectorCodigoArca";
+import { CampoPuestoDesempenado } from "./CampoPuestoDesempenado";
+import type { OrigenPuesto } from "@compartido/puestosDesempenados";
 
 /**
  * El formulario de Datos ARCA, con la forma de la pantalla del organismo: trece campos en tres
@@ -354,7 +356,8 @@ const CodigosDelTipo: React.FC<{
  * abrir. Pero se contesta una vez, y no ocupa un tercio del formulario mientras tanto.
  */
 const VALORES_FIJOS: Array<{ etiqueta: string; valor: string; nota: string }> = [
-  { etiqueta: "Puesto desempeñado", valor: "en blanco", nota: "el registro de 130 lo deja vacío" },
+  // El puesto desempeñado ya no figura acá «en blanco»: es un campo de verdad, arriba de este bloque.
+  // El de 130 no lo lleva, pero el de 85 lo exige y por eso se muestra siempre con el que le toca.
   { etiqueta: "Situación de revista", valor: "en blanco", nota: "el registro de 130 lo deja vacío" },
   { etiqueta: "Trab. agropecuario", valor: "N", nota: "posición 16, siempre N" },
   // Decía «siempre 0» y era lo que ARCA rechazaba: en un ALTA la marca COVID no se informa, igual
@@ -544,6 +547,19 @@ export const FormularioArca: React.FC<{
     modal. Se fue con los pickers: los códigos se editan en el tipo, no en la ficha de una persona,
     donde una edición alcanzaba a los 143 contratos que comparten ese tipo sin que se viera.
   */
+
+  /** El puesto desempeñado de ESTE contrato. `""` = volver a heredar el que le toca por defecto. */
+  const guardarPuesto = async (codigo: string) => {
+    setGuardando("puesto");
+    try {
+      const res = await projectsAPI.updatePuestoDesempenado(row.projectId, row.userId, row.contractIndex, codigo);
+      onGuardado({ puestoDesempenado: res.puestoDesempenado || "" });
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar el puesto desempeñado.");
+    } finally {
+      setGuardando(null);
+    }
+  };
 
   const guardarEnContrato = async (campo: "sucursal" | "actividad" | "categoria", valor: string) => {
     // `valor` vacío en categoría = limpiarla (ver el picker de convenio).
@@ -1013,6 +1029,20 @@ export const FormularioArca: React.FC<{
 
         <CodigosDelTipo nombreTipo={nombreTipo} modalidadContrato={valores.modalidadContrato} nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)} tipoServicio={valores.tipoServicio} nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)} modalidadLiq={valores.modalidadLiq} nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)} onRefrescar={onCambioNivel} tipo={tipo} catalogos={{ modalidadesContrato, tiposServicio, modalidadesLiq, gruposTipoServicio }} />
 
+        {/*
+          EL PUESTO DESEMPEÑADO, siempre cargado con el que le toca. No es del registro de 130 que
+          describe este formulario —por eso no cuenta en «N de N completos»—, pero el alta masiva
+          URGENTE (registro de 85) lo exige, y antes se descubría que faltaba recién al generarla.
+        */}
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-3">
+          <CampoPuestoDesempenado
+            valor={row.puestoDesempenado || ""}
+            porDefecto={{ codigo: valores.puestoPorDefecto, origen: valores.puestoPorDefectoOrigen as OrigenPuesto }}
+            onCambiar={guardarPuesto}
+            guardando={guardando === "puesto"}
+            claseEtiqueta="block text-sm text-gray-700 dark:text-gray-300"
+          />
+        </div>
         <ValoresFijos />
       </div>
 

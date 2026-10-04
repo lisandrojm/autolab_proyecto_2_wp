@@ -351,6 +351,9 @@ export interface AfipValues {
    */
   puesto: string;
   puestoOrigen: OrigenValorArca;
+  /** El puesto que le toca por defecto, sin mirar lo elegido en el contrato. */
+  puestoPorDefecto: string;
+  puestoPorDefectoOrigen: OrigenValorArca;
   /**
    * Situación de revista (2 díg.). SOLO la informa el registro de 85. Cascada: empleadora →
    * instalación → «01» (Activo), que es lo que es toda alta nueva.
@@ -632,10 +635,14 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const modalidadLiqResuelta = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", defaultsEmpresa, defaultsGlobales);
   // Solo para el registro de 85. El puesto lo define la categoría (cada categoría de un CCT es un
   // puesto); la situación de revista no tiene escalón de contrato: un alta nueva es «Activo».
-  // Rol Empresa → Categoría → convenio de la categoría → empresa → instalación (`compartido/puestosDesempenados.ts`,
+  // Elegido en el contrato → Rol Empresa → Categoría → convenio de la categoría → empresa → instalación (`compartido/puestosDesempenados.ts`,
   // el mismo que usa el server). El convenio es el mismo que ya decide la obra social (`convenioDeLaCategoria`).
   const rolDelContrato = row.rol_frame_id != null ? cat.roleFrames?.find((r) => Number(r.data?.rol?.id) === Number(row.rol_frame_id)) : undefined;
-  const puestoR = resolverPuesto({ rol: rolDelContrato?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, convenio: convenioDeLaCategoria?.puestoDesempenadoDefault, empresa: defaultsEmpresa?.puestoDesempenado, global: defaultsGlobales?.puestoDesempenado });
+  // El que le toca POR DEFECTO, sin mirar el contrato: es lo que el formulario muestra precargado y a
+  // lo que vuelve «Volver al por defecto».
+  const escalonesDelPuesto = { rol: rolDelContrato?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, convenio: convenioDeLaCategoria?.puestoDesempenadoDefault, empresa: defaultsEmpresa?.puestoDesempenado, global: defaultsGlobales?.puestoDesempenado };
+  const puestoPorDefecto = resolverPuesto(escalonesDelPuesto);
+  const puestoR = resolverPuesto({ contrato: row.puestoDesempenado, rol: rolDelContrato?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, convenio: convenioDeLaCategoria?.puestoDesempenadoDefault, empresa: defaultsEmpresa?.puestoDesempenado, global: defaultsGlobales?.puestoDesempenado });
   const puestoResuelto = { valor: puestoR.codigo, origen: puestoR.origen as OrigenValorArca };
   const revistaCascada = conCascada(undefined, "contrato", "situacionRevista", defaultsEmpresa, defaultsGlobales);
   const revistaResuelta = revistaCascada.valor ? revistaCascada : { valor: SITUACION_REVISTA_ALTA, origen: "global" as OrigenValorArca };
@@ -689,6 +696,8 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     nombreCategoria: String(categoria?.data?.nombre || categoria?.name || ""),
     puesto: soloDigitos(puestoResuelto.valor),
     puestoOrigen: puestoResuelto.origen,
+    puestoPorDefecto: soloDigitos(puestoPorDefecto.codigo),
+    puestoPorDefectoOrigen: puestoPorDefecto.origen as OrigenValorArca,
     situacionRevista: soloDigitos(revistaResuelta.valor),
     situacionRevistaOrigen: revistaResuelta.origen,
   };
@@ -1122,9 +1131,9 @@ export function resumenArca(r: AfipRowResult): { tono: TonoArca; texto: string }
 export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base: AfipRowResult = resolveAfip(row, cat)): { checks: AfipFieldCheck[]; completo: boolean } {
   const v = resolveAfipValues(row, cat);
   const de = (origen: OrigenValorArca) =>
-    origen === "funcion" ? "Del Rol Empresa del contrato." : origen === "categoria" ? "De la categoría del contrato." : origen === "convenio" ? "Del default del convenio de la categoría (ni el Rol Empresa ni la categoría tienen el suyo)." : origen === "empresa" ? "Del default de la empleadora." : origen === "global" ? "Del default de la instalación." : undefined;
+    origen === "contrato" ? "Elegido en este contrato." : origen === "funcion" ? "Del Rol Empresa del contrato." : origen === "categoria" ? "De la categoría del contrato." : origen === "convenio" ? "Del default del convenio de la categoría (ni el Rol Empresa ni la categoría tienen el suyo)." : origen === "empresa" ? "Del default de la empleadora." : origen === "global" ? "Del default de la instalación." : undefined;
   const puesto: AfipFieldCheck = v.puesto
-    ? { key: "puesto", label: "Puesto desempeñado (solo Altas Masivas)", origen: v.puestoOrigen === "categoria" || v.puestoOrigen === "convenio" ? "categoria_sat" : "empresa", value: v.puesto, estado: "ok", ok: true, detalle: de(v.puestoOrigen) }
+    ? { key: "puesto", label: "Puesto desempeñado (solo Altas Masivas)", origen: v.puestoOrigen === "contrato" ? "contrato" : v.puestoOrigen === "categoria" || v.puestoOrigen === "convenio" ? "categoria_sat" : "empresa", value: v.puesto, estado: "ok", ok: true, detalle: de(v.puestoOrigen) }
     : {
         key: "puesto",
         label: "Puesto desempeñado (solo Altas Masivas)",
@@ -1132,7 +1141,7 @@ export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base:
         value: "",
         estado: "falta",
         ok: false,
-        detalle: "Ni el Rol Empresa del contrato, ni la categoría, ni su convenio, ni la empleadora tienen cargado el código de puesto desempeñado. Cargalo en el Rol Empresa (Usuarios → Roles Empresa) o, para todos los contratos de ese convenio de una vez, como puesto por defecto del convenio (Convenios → editar el convenio). El registro de 85 lo exige; la Carga Masiva no.",
+        detalle: "Ni el Rol Empresa del contrato, ni la categoría, ni su convenio, ni la empleadora tienen cargado el código de puesto desempeñado. Elegilo para este contrato en «Datos ARCA», cargalo en el Rol Empresa (Usuarios → Roles Empresa) o, para todos los contratos de ese convenio de una vez, como puesto por defecto del convenio (Convenios → editar el convenio). El registro de 85 lo exige; la Carga Masiva no.",
       };
   const revista: AfipFieldCheck = {
     key: "situacionRevista",

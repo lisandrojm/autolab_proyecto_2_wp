@@ -819,7 +819,7 @@ const CAMPOS_FILA_CONTRATO = [
     "empresaContratoId", "empresaReleaseId", "nombre_empresa_contrato", "nombre_empresa_release",
     "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
     "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
-    "sinCuitValidacion",
+    "sinCuitValidacion", "puestoDesempenado",
 ];
 const PROYECCION_FILA_CONTRATO = Object.fromEntries(CAMPOS_FILA_CONTRATO.map((k) => [`c.${k}`, 1]));
 /*
@@ -1258,6 +1258,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 empresaReleaseId: c.empresaReleaseId ? String(c.empresaReleaseId) : "",
                 nombre_empresa_contrato: c.nombre_empresa_contrato || "",
                 nombre_empresa_release: c.nombre_empresa_release || "",
+                // El puesto desempeñado elegido en ESTE contrato (registro de 85). Vacío = hereda el default.
+                puestoDesempenado: c.puestoDesempenado || "",
                 categoria_sat_id: c.categoria_sat_id ?? null,
                 // La función con la que se contrató: con ella, Contratación sabe qué valoración le toca a
                 // cada categoría (la valoración vive en la asociación función ↔ categoría, no en el catálogo).

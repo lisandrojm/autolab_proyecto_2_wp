@@ -174,8 +174,8 @@ export async function validarLoteAltas(o) {
             retribucion: Number(categoria?.data?.sueldoBruto || 0),
             rnos,
             rnosMotivo,
-            // Mismo orden que el generador del registro: Rol Empresa → Categoría → convenio → empresa → instalación.
-            puesto: resolverPuesto({ rol: rolPorId.get(Number(c.rol_frame_id))?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, convenio: convenios.find((x) => String(x.externalId || "").trim() === convenioCodigo)?.puestoDesempenadoDefault, empresa: de.puestoDesempenado, global: dg.puestoDesempenado }).codigo,
+            // Mismo orden que el generador del registro: contrato → Rol Empresa → Categoría → convenio → empresa → instalación.
+            puesto: resolverPuesto({ contrato: c.puestoDesempenado, rol: rolPorId.get(Number(c.rol_frame_id))?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, convenio: convenios.find((x) => String(x.externalId || "").trim() === convenioCodigo)?.puestoDesempenadoDefault, empresa: de.puestoDesempenado, global: dg.puestoDesempenado }).codigo,
             situacionRevista: digitos(de.situacionRevista || dg.situacionRevista || "01"),
         };
         const dif = cotejarRegistro(modo, it.registro, esperado, cat);

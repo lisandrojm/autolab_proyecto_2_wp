@@ -886,6 +886,24 @@ class ProjectsAPI {
    * Elige la actividad del domicilio de desempeño de un contrato puntual. Solo hace falta cuando la
    * sucursal tiene más de una actividad declarada; con una sola se hereda. Pasar "" para desasignarla.
    */
+  /**
+   * Elige el puesto desempeñado (registro de 85) de un contrato puntual. Pasar "" para que vuelva a
+   * heredar el que le toca por defecto.
+   */
+  async updatePuestoDesempenado(projectId: string, userId: string, contractIndex: number, puestoDesempenado: string): Promise<{ puestoDesempenado: string }> {
+    const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/puesto-desempenado`, { puestoDesempenado }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /**
+   * El puesto desempeñado que le toca POR DEFECTO a un contrato con ese rol, esa categoría y esa
+   * empleadora. Lo resuelve el server con la misma cascada que arma el archivo.
+   */
+  async puestoPorDefecto(o: { rolFrameId?: string | number | null; categoriaSatId?: string | number | null; empresaId?: string | null }): Promise<{ codigo: string; origen: "contrato" | "funcion" | "categoria" | "convenio" | "empresa" | "global" | "ninguno"; descripcion: string }> {
+    const { data } = await axios.get(`/arca/puestos-desempenados/por-defecto`, { params: { rolFrameId: o.rolFrameId ?? "", categoriaSatId: o.categoriaSatId ?? "", empresaId: o.empresaId ?? "" }, headers: this.getHeaders() });
+    return data;
+  }
+
   async updateActividadArca(projectId: string, userId: string, contractIndex: number, actividadArca: string): Promise<{ actividadArca: string }> {
     const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/actividad-arca`, { actividadArca }, { headers: this.getHeaders() });
     return data;

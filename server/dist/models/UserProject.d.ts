@@ -120,6 +120,12 @@ interface IContract {
      */
     actividadArca?: string;
     /**
+     * PUESTO DESEMPEÑADO elegido para ESTE contrato (4 díg., registro de 85). Vacío es lo normal: el
+     * contrato hereda el que le toca (rol → categoría → convenio → empleadora → instalación, ver
+     * `compartido/puestosDesempenados.ts`). Sólo se guarda cuando alguien lo cambió en el formulario.
+     */
+    puestoDesempenado?: string;
+    /**
      * Obra social de ESTE contrato (RNOS, pos. 40-45 del TXT de alta). Guarda el `data.id` del catálogo.
      *
      * Vive en el contrato y no en la persona porque es un dato de la RELACIÓN LABORAL: ARCA lo declara

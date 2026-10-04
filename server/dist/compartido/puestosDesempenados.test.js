@@ -102,3 +102,25 @@ describe("planDeImportacionPuestos: upsert por código", () => {
         assert.deepEqual(planDeImportacionPuestos([], [{ codigo: "911", descripcion: "X" }]).nuevos, [{ codigo: "0911", descripcion: "X" }]);
     });
 });
+describe("el puesto elegido en el CONTRATO es el primer escalón", () => {
+    const resto = { rol: "1001", categoria: "1002", convenio: "1003", empresa: "1004", global: "1005" };
+    it("gana sobre todo lo demás", () => {
+        assert.deepEqual(resolverPuesto({ contrato: "5142", ...resto }), { codigo: "5142", origen: "contrato" });
+        assert.deepEqual(resolverPuesto({ contrato: "5142" }), { codigo: "5142", origen: "contrato" });
+    });
+    it("vacío en el contrato = hereda, exactamente como antes de que existiera", () => {
+        for (const vacio of ["", null, undefined, "   "]) {
+            assert.deepEqual(resolverPuesto({ contrato: vacio, ...resto }), resolverPuesto(resto));
+            assert.deepEqual(resolverPuesto({ contrato: vacio, convenio: "4132" }), { codigo: "4132", origen: "convenio" });
+            assert.deepEqual(resolverPuesto({ contrato: vacio }), { codigo: "", origen: "ninguno" });
+        }
+    });
+    it("los dos consumidores le pasan también el del contrato", () => {
+        const front = readFileSync(resolve(AQUI, "../../../frontend/src/components/contratos/afipCompleteness.ts"), "utf8");
+        const server = readFileSync(resolve(AQUI, "../services/arca/validarLoteAltas.ts"), "utf8");
+        assert.match(front, /resolverPuesto\(\{ contrato: row\.puestoDesempenado, rol:/);
+        assert.match(server, /resolverPuesto\(\{ contrato: c\.puestoDesempenado, rol:/);
+        // Y el default que muestra el formulario sale de la misma función, sin el contrato.
+        assert.match(front, /const puestoPorDefecto = resolverPuesto\(escalonesDelPuesto\);/);
+    });
+});

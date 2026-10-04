@@ -25,6 +25,8 @@ import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzad
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
 import { encolarSiCorresponde } from "../services/arca/colaObrasSociales.js";
+import { puestoParaGuardar } from "../services/arca/puestosDesempenados.js";
+import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "../compartido/sucursalesDeEmpresa.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
 import UserProject from "../models/UserProject.js";
@@ -1913,6 +1915,19 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
           con el importe recalculado para abajo. Acá se corrige a la fuerza, y el sueldo en mano se rehace con
           el importe por jornada (que es lo que se pidió). No aplica a los tipos por días sueltos.
         */
+        /*
+          EL PUESTO DESEMPEÑADO ELEGIDO EN EL FORMULARIO. Vacío = el contrato hereda el que le toca, que
+          es lo normal. Si viene uno, tiene que existir y estar activo en el catálogo (misma regla que el
+          Rol Empresa y el convenio): un código inventado terminaría en un registro que ARCA rechaza.
+        */
+        if (contract.puestoDesempenado !== undefined) {
+            const puesto = await puestoParaGuardar(contract.puestoDesempenado);
+            if (puesto.error) {
+                res.status(400).json({ error: puesto.error });
+                return;
+            }
+            contract.puestoDesempenado = puesto.valor || "";
+        }
         if (isValidId(contract.contrato_id)) {
             const tipoContrato = await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas").lean();
             const fijas = Math.trunc(Number(tipoContrato?.data?.cantidadJornadas) || 0);
@@ -2963,7 +2978,7 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
               domicilio es POR CUIT, así que uno global puede no existir para este CUIT y ARCA rechazaría el
               alta. Mejor pedir que se elija a mandar un código que el organismo no reconoce.
             */
-            const empresaDelContrato = contrato.empresaContratoId ? await Company.findById(contrato.empresaContratoId).select("defaultsArca.sucursalId sucursalIds").lean() : null;
+            const empresaDelContrato = contrato.empresaContratoId ? await Company.findById(contrato.empresaContratoId).select("defaultsArca.sucursalId sucursalIds sucursalActividades").lean() : null;
             const globalDefaults = await getArcaDefaults();
             const sucursalGlobal = globalDefaults.sucursalId ? String(globalDefaults.sucursalId) : "";
             const sucursalesDeLaEmpresa = (empresaDelContrato?.sucursalIds || []).map(String);
@@ -2978,9 +2993,16 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
                 res.status(400).json({ error: "La sucursal del contrato ya no existe en el catálogo" });
                 return;
             }
-            const declarada = (sucursal.actividades || []).some((a) => String(a.codigo) === actividadArca);
+            /*
+              CONTRA LAS ACTIVIDADES DE ESTA EMPRESA en esa sucursal, no contra las del catálogo. Las
+              actividades son por CUIT (`compartido/sucursalesDeEmpresa.ts`): validando contra el domicilio,
+              2030 no podía elegir 602900 —que ARCA sí le tiene habilitada en Ruiz Huidobro— porque el
+              catálogo sólo conocía la de otra empresa. Es la misma lista que ofrece el selector del front.
+            */
+            const asociaciones = empresaDelContrato?.sucursalActividades;
+            const declarada = actividadesDeSucursalParaEmpresa(asociaciones, sucursalId).some((a) => String(a.codigo).replace(/\D/g, "") === actividadArca);
             if (!declarada) {
-                res.status(400).json({ error: `Esa actividad no está declarada para la sucursal ${sucursal.codigo}` });
+                res.status(400).json({ error: `Esa actividad no está habilitada para la empresa en la sucursal ${codigoDeSucursalParaEmpresa(asociaciones, sucursalId, sucursal.codigo).codigo}` });
                 return;
             }
         }
@@ -2991,6 +3013,45 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
     }
     catch (error) {
         console.error("Update contract actividad-arca error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * PATCH /projects/:projectId/members/:userId/contracts/:index/puesto-desempenado
+ *   { puestoDesempenado: "4132" }  → este contrato declara ese puesto
+ *   { puestoDesempenado: "" }      → vuelve a heredar el que le toca por defecto
+ *
+ * El puesto desempeñado (registro de 85) elegido para UN contrato, desde «Datos ARCA». Tiene que
+ * existir y estar activo en el catálogo. No toca nada más del contrato.
+ */
+router.patch("/projects/:projectId/members/:userId/contracts/:index/puesto-desempenado", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId, userId, index } = req.params;
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const up = await UserProject.findOne({ projectId, userId });
+        // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
+        const idx = up ? resolverIndiceContrato(up, index) : -1;
+        if (!up || idx < 0) {
+            res.status(404).json({ error: "Contrato no encontrado" });
+            return;
+        }
+        const puesto = await puestoParaGuardar(req.body?.puestoDesempenado ?? "");
+        if (puesto.error) {
+            res.status(400).json({ error: puesto.error });
+            return;
+        }
+        const contrato = up.contracts[idx];
+        up.contracts[idx] = { ...contrato.toObject(), puestoDesempenado: puesto.valor || "" };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ puestoDesempenado: puesto.valor || "" });
+    }
+    catch (error) {
+        console.error("Update contract puesto-desempenado error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

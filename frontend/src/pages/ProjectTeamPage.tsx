@@ -43,6 +43,7 @@ import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
+import { CampoPuestoConDefaultDelServer } from '../components/contratos/CampoPuestoDesempenado';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { Area, areasAPI } from '../api/areas';
 import { userProjectsAPI } from '../api/userProjects';
@@ -357,6 +358,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     sede_id: '',
     reemplazo: false,
     empleado_id_reemplezado: '',
+    // Puesto desempeñado elegido para ESTE contrato (registro de 85). Vacío = hereda el que le toca.
+    puestoDesempenado: '',
     observaciones: '',
     areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
   });
@@ -2242,6 +2245,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       sede_id: initialSedeId,
       reemplazo: lastContract?.reemplazo || false,
       empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
+      // Un contrato NUEVO no arrastra la excepción del anterior: arranca heredando el que le toca.
+      puestoDesempenado: esContratoNuevo ? '' : String((lastContract as any)?.puestoDesempenado || ''),
       observaciones: lastContract?.observaciones || '',
       areaShiftAssignments: areaShiftAssignments,
       // Contrato NUEVO sin solicitud: la semana del tipo de contrato precargado (ver `semanaDelTipoDeContrato`).
@@ -2415,6 +2420,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           */
           valoracionOverride: categoriaElegidaDeOtraValoracion && motivoValoracion.trim() ? { motivo: motivoValoracion.trim() } : undefined,
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
+          // Vacío = hereda. Sólo viaja un código cuando se eligió uno distinto del que le toca.
+          puestoDesempenado: wizardData.puestoDesempenado || '',
           dias_por_semana: wizardData.dias_por_semana,
           dias_semana: wizardData.dias_semana,
           dias_rotativos: wizardData.dias_rotativos,
@@ -3964,6 +3971,20 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     ))}
                   </select>
                 </div>
+
+                {/*
+                  EL PUESTO DESEMPEÑADO, siempre cargado con el que le toca por el rol, la categoría,
+                  el convenio y la empleadora elegidos arriba. El alta masiva URGENTE lo exige, y acá
+                  no existía: se descubría que faltaba recién al generar el archivo. Cambiarlo vale
+                  sólo para este contrato; sin tocarlo, el contrato hereda y no se guarda nada.
+                */}
+                <CampoPuestoConDefaultDelServer
+                  rolFrameId={wizardData.rol_frame_id}
+                  categoriaSatId={wizardData.categoria_sat_id}
+                  empresaId={wizardData.empresaContratoId}
+                  valor={wizardData.puestoDesempenado}
+                  onCambiar={(codigo) => setWizardData((prev) => ({ ...prev, puestoDesempenado: codigo }))}
+                />
 
                 {/* La sede, debajo de la empresa: sale de las del proyecto donde trabaja esa empresa. */}
                 <div className="space-y-1.5">

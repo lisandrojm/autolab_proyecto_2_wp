@@ -43,3 +43,38 @@ describe("Convenios guarda el puesto por defecto con esa validación, y fuera de
         assert.match(router, /if \(r\.valor !== undefined\) item\[f\.key\] = r\.valor;/);
     });
 });
+describe("el puesto desempeñado del contrato: rutas", () => {
+    const rutas = readFileSync(resolve(AQUI, "../../routes/projects.ts"), "utf8");
+    const overview = readFileSync(resolve(AQUI, "../../routes/users.ts"), "utf8");
+    const servicio = readFileSync(resolve(AQUI, "puestosDesempenados.ts"), "utf8");
+    const catalogo = readFileSync(resolve(AQUI, "../../routes/arcaPuestosDesempenados.ts"), "utf8");
+    it("hay una ruta para elegirlo en un contrato, que valida contra el catálogo y acepta vacío para volver al default", () => {
+        const desde = rutas.indexOf('router.patch("/projects/:projectId/members/:userId/contracts/:index/puesto-desempenado"');
+        assert.ok(desde > 0);
+        const cuerpo = rutas.slice(desde, desde + 1800);
+        assert.match(cuerpo, /puestoParaGuardar\(req\.body\?\.puestoDesempenado \?\? ""\)/);
+        assert.match(cuerpo, /puestoDesempenado: puesto\.valor \|\| ""/);
+        assert.match(cuerpo, /tenantId: req\.tenantObjectId/);
+    });
+    it("assign-member valida el que viene del formulario antes de guardar el contrato", () => {
+        assert.match(rutas, /if \(contract\.puestoDesempenado !== undefined\) \{\s+const puesto = await puestoParaGuardar\(contract\.puestoDesempenado\);/);
+    });
+    it("la grilla de Contratos recibe el puesto del contrato", () => {
+        assert.match(overview, /"sinCuitValidacion", "puestoDesempenado",/);
+        assert.match(overview, /puestoDesempenado: c\.puestoDesempenado \|\| "",/);
+    });
+    it("el default que muestra Configurar Miembro sale de resolverPuesto, sin el escalón del contrato", () => {
+        const fn = servicio.slice(servicio.indexOf("export async function puestoPorDefectoDe"));
+        const llamada = fn.slice(fn.indexOf("resolverPuesto({"), fn.indexOf("});", fn.indexOf("resolverPuesto({")));
+        for (const clave of ["rol:", "categoria:", "convenio:", "empresa:", "global:"])
+            assert.ok(llamada.includes(clave), clave);
+        assert.ok(!llamada.includes("contrato:"));
+        assert.match(catalogo, /router\.get\("\/por-defecto", authenticateToken/);
+    });
+    it("elegir la actividad se valida contra las de ESA EMPRESA en la sucursal, no contra el catálogo", () => {
+        const desde = rutas.indexOf('contracts/:index/actividad-arca", requireTenant');
+        const cuerpo = rutas.slice(desde, desde + 4500);
+        assert.match(cuerpo, /actividadesDeSucursalParaEmpresa\(asociaciones, sucursalId\)/);
+        assert.ok(!/\(sucursal as any\)\.actividades \|\| \[\]\)\.some/.test(cuerpo));
+    });
+});

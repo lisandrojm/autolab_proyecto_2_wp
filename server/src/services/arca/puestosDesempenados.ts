@@ -6,7 +6,9 @@ import { Company } from "../../models/Company.js";
 import { RoleFrame } from "../../models/RoleFrame.js";
 import { getArcaDefaults } from "../../models/ArcaDefault.js";
 import { filasCsvArca } from "../../compartido/catalogoArca.js";
-import { codigoPuesto, FilaPuesto, planDeImportacionPuestos } from "../../compartido/puestosDesempenados.js";
+import { codigoPuesto, FilaPuesto, OrigenPuesto, planDeImportacionPuestos, resolverPuesto } from "../../compartido/puestosDesempenados.js";
+import { Convenio } from "../../models/Convenio.js";
+import { buscarCategoriaCompatPorLegacyId } from "../../utils/categoriaCompat.js";
 
 /**
  * EL CATÁLOGO DE PUESTOS DESEMPEÑADOS: de dónde se importa y quién lo usa.
@@ -61,6 +63,39 @@ export async function puestoParaGuardar(bruto: unknown, existe: (codigo: string)
   if (!c) return { valor: "" };
   if (!(await existe(c))) return { error: `El puesto desempeñado ${c} no existe o está desactivado en el catálogo (Configuración → ARCA → Puestos Desempeñados).` };
   return { valor: c };
+}
+
+/**
+ * EL PUESTO QUE LE TOCA POR DEFECTO a un contrato con ese rol, esa categoría y esa empleadora — sin
+ * mirar lo que el contrato tenga elegido.
+ *
+ * Es para el formulario de «Configurar Miembro», que lo muestra siempre cargado: ahí el contrato
+ * todavía se está armando y la pantalla no tiene a mano los catálogos (los 2.669 convenios, los
+ * defaults de la empleadora). Usa la MISMA `resolverPuesto` que el generador del registro y el cotejo
+ * del lote, así que lo que se ve en el formulario es lo que va a salir en el archivo.
+ */
+export async function puestoPorDefectoDe(o: { rolFrameId?: unknown; categoriaSatId?: unknown; empresaId?: unknown }): Promise<{ codigo: string; origen: OrigenPuesto; descripcion: string }> {
+  const numero = (v: unknown) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+  const rolId = numero(o.rolFrameId);
+  const categoriaId = numero(o.categoriaSatId);
+  const empresaId = /^[0-9a-f]{24}$/i.test(String(o.empresaId || "")) ? String(o.empresaId) : "";
+  const [rol, categoria, empresa, globales]: any[] = await Promise.all([
+    rolId !== null ? RoleFrame.findOne({ "data.rol.id": rolId }).select("data.puestoDesempenado").lean() : null,
+    categoriaId !== null ? buscarCategoriaCompatPorLegacyId(categoriaId) : null,
+    empresaId ? Company.findById(empresaId).select("defaultsArca.puestoDesempenado").lean() : null,
+    getArcaDefaults(),
+  ]);
+  const cct = String(categoria?.data?.convenio || "").trim();
+  const convenio: any = cct ? await Convenio.findOne({ externalId: cct }).select("puestoDesempenadoDefault").lean() : null;
+  const r = resolverPuesto({
+    rol: rol?.data?.puestoDesempenado,
+    categoria: categoria?.data?.puestoDesempenado,
+    convenio: convenio?.puestoDesempenadoDefault,
+    empresa: empresa?.defaultsArca?.puestoDesempenado,
+    global: (globales as any)?.puestoDesempenado,
+  });
+  const puesto: any = r.codigo ? await ArcaPuestoDesempenado.findOne({ externalId: r.codigo }).select("name").lean() : null;
+  return { ...r, descripcion: String(puesto?.name || "") };
 }
 
 /** Aplica la importación (upsert por código) y devuelve el resumen. */
