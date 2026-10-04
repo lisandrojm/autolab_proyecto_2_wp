@@ -154,7 +154,9 @@ const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empr
  * «Clientes»: acá el orden es el dato —dice qué va antes y qué después—, y alfabético quedaría
  * Contratos, Documentos, Solicitudes, que es el ciclo contado al revés.
  */
-const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/plantillas-equipo', '/admin/contracts', '/admin/contratos-sin-dias', '/documents'];
+const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'];
+/** «Sin días» no es una etapa del ciclo sino una tarea de limpieza: va última y separada por una raya. */
+const CONTRATACION_APARTE = '/admin/contratos-sin-dias';
 /**
  * Subgrupo «Usuarios» de Configuración, con Roles adentro.
  *
@@ -610,7 +612,10 @@ export const MobileNavbar: React.FC = () => {
       Subgrupo «Contratación». A diferencia de «Usuarios», sus hijos NO se ordenan alfabético: van en
       el orden del ciclo (ver `CONTRATACION_PATHS`), porque ahí el orden dice qué etapa va antes.
     */
-    const contratacionChildren = (CONTRATACION_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems);
+    const contratacionChildren = (CONTRATACION_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).flatMap((item, i) =>
+      // La raya solo si hay algo arriba de «Sin días»: sola no separa nada.
+      item.path === CONTRATACION_APARTE && i > 0 ? [{ path: '#contratacion-separador', separador: true } as any, item] : [item],
+    );
     /*
       El número del grupo es la SUMA de sus hijos, no un tercer contador.
 
