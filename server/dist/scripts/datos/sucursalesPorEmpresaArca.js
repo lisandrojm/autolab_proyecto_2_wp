@@ -1,0 +1,62 @@
+/**
+ * LO QUE ARCA TIENE DECLARADO PARA CADA EMPLEADORA: sucursales, su código y sus actividades.
+ *
+ * Fuente: Simplificación Registral → Datos del Empleador → Domicilios de Explotación, leído a mano
+ * con cada CUIT el 4/10/2026. Es la fuente de verdad: `scripts/cargarSucursalesPorEmpresa.ts` deja a
+ * cada empresa exactamente así.
+ *
+ * ESTE ARCHIVO SON SÓLO DATOS, aparte del script a propósito: cuando una empleadora dé de alta un
+ * domicilio o una actividad en ARCA, se actualiza acá y se vuelve a correr el script (es idempotente).
+ * No se completa nada por inferencia: lo que no esté acá, no se carga.
+ *
+ * OJO: 900030 y 921430 tienen la misma descripción y son DOS códigos distintos. FZERO tiene los dos
+ * en Tronador.
+ */
+export const LEIDO_EL = "2026-10-04";
+export const SUCURSALES_POR_EMPRESA_ARCA = [
+    {
+        cuit: "30-71029583-9",
+        razonSocial: "FZERO S.R.L.",
+        sucursales: [
+            { codigo: "00001", domicilio: "ZAPIOLA 392", codigoPostal: "1426", actividades: [{ codigo: "921430", descripcion: "Servicios conexos a la producción de espectáculos teatrales y musicales" }] },
+            {
+                codigo: "00002",
+                domicilio: "TRONADOR 671",
+                codigoPostal: "1427",
+                actividades: [
+                    { codigo: "900030", descripcion: "Servicios conexos a la producción de espectáculos teatrales y musicales" },
+                    { codigo: "921430", descripcion: "Servicios conexos a la producción de espectáculos teatrales y musicales" },
+                ],
+            },
+            { codigo: "00003", domicilio: "RUIZ HUIDOBRO 4365", codigoPostal: "1430", actividades: [{ codigo: "591110", descripcion: "Producción de filmes y videocintas" }] },
+            { codigo: "00004", domicilio: "VALDENEGRO 4867", codigoPostal: "1430", actividades: [{ codigo: "591120", descripcion: "Postproducción de filmes y videocintas" }] },
+        ],
+    },
+    {
+        cuit: "30-71706837-4",
+        razonSocial: "2030 S.R.L.",
+        sucursales: [
+            {
+                codigo: "00001",
+                domicilio: "RUIZ HUIDOBRO 4365",
+                codigoPostal: "1430",
+                actividades: [
+                    { codigo: "602900", descripcion: "Servicios de televisión n.c.p." },
+                    { codigo: "591110", descripcion: "Producción de filmes y videocintas" },
+                ],
+            },
+        ],
+    },
+    {
+        cuit: "33-71767374-9",
+        razonSocial: "GRINI S.R.L.",
+        sucursales: [
+            {
+                codigo: "00003",
+                domicilio: "RUIZ HUIDOBRO 4365",
+                codigoPostal: "1430",
+                actividades: [{ codigo: "620100", descripcion: "Servicios de consultores en informática y suministros de programas de informática" }],
+            },
+        ],
+    },
+];
