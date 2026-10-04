@@ -806,6 +806,22 @@ router.get("/roles-frame-counts", requireTenant, authenticateToken, requireAnyPe
         res.status(500).json({ error: "Internal server error" });
     }
 });
+/**
+ * Los campos del contrato que arma cada fila de `contracts-overview` (ver `fullRows`). Si la fila
+ * empieza a usar otro, hay que sumarlo acá: lo que no está no viaja.
+ */
+const CAMPOS_FILA_CONTRATO = [
+    "_id", "nombre_contrato", "nombre_estado_empleado", "nombre_sede", "areaShiftAssignments", "reemplazo", "empleado_id_reemplezado",
+    "fecha_alta_contrato", "fecha_baja_contrato", "fecha_carga", "sueldo_mano", "cantidad_jornadas_laborales", "hora_inicio", "hora_fin",
+    "altaDocumentoUrl", "altaDocumentoNombre", "altaArcaPresentada",
+    "constanciaVigenciaDesde", "constanciaVigenciaHasta", "constanciaVerificador", "constanciaAfipEstado", "constanciaAfipConsultadaAt", "constanciaAfipDropboxSubidaAt",
+    "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt",
+    "empresaContratoId", "empresaReleaseId", "nombre_empresa_contrato", "nombre_empresa_release",
+    "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
+    "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
+    "sinCuitValidacion",
+];
+const PROYECCION_FILA_CONTRATO = Object.fromEntries(CAMPOS_FILA_CONTRATO.map((k) => [`c.${k}`, 1]));
 /*
  * GET /users/contracts-overview - Listado global de contratos (Contratos, la página que no está
  * atada a un proyecto). A diferencia de GET /users (que pagina por usuario), acá cada fila es un
@@ -874,8 +890,32 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
             camposContrato.m = "$$x.reemplazo";
         if (necesitaEmpresa)
             camposContrato.q = "$$x.empresaContratoId";
+        /*
+          LAS BANDEJAS FILTRAN EN MONGO, NO EN NODE.
+    
+          Con `estados` (Contratos › Trámite impositivo, Generar Documentos, Para Firmar) una fila sólo
+          puede salir de un vínculo que tenga algún contrato en esos estados; los demás se barrían enteros
+          para descartarlos acá. Medido en el tenant demo: 867 vínculos y 7517 contratos (926 KB, 10,8 s)
+          para quedarse con 64 vínculos (320 KB, 4 s). El peso es lo que tarda contra Atlas.
+    
+          Los estados se piden por su nombre canónico (`estadoCanonico`: alias, mayúsculas, acentos), y
+          Mongo compara texto crudo. Por eso primero se piden los nombres crudos que existen (un `distinct`
+          de seis valores, 70 ms) y se filtra con los que caen en lo pedido: un contrato guardado como
+          «Falta pedido de AFIP» sigue entrando en «Pedido de ARCA», igual que antes.
+        */
+        const estadosPedidos = req.query.estados
+            ? String(req.query.estados)
+                .split(",")
+                .map((e) => estadoCanonico(e.trim()))
+                .filter(Boolean)
+            : [];
+        let nombresCrudosBandeja = null;
+        if (estadosPedidos.length > 0) {
+            const nombres = await UserProject.distinct("contracts.nombre_estado_empleado", { projectId: { $in: projectIds } });
+            nombresCrudosBandeja = nombres.map((n) => String(n ?? "")).filter((n) => estadosPedidos.includes(estadoCanonico(n)));
+        }
         const membershipsRaw = await UserProject.aggregate([
-            { $match: { projectId: { $in: projectIds } } },
+            { $match: { projectId: { $in: projectIds }, ...(nombresCrudosBandeja ? { "contracts.nombre_estado_empleado": { $in: nombresCrudosBandeja } } : {}) } },
             {
                 $project: {
                     p: "$projectId",
@@ -1148,14 +1188,29 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                         c: { $arrayElemAt: [{ $ifNull: ["$contracts", []] }, indiceDelContrato] },
                     },
                 },
+                // Sólo lo que la fila usa: el contrato entero trae textos de sueldo, observaciones y
+                // valoraciones que acá no se miran (medido: 81 KB → 49 KB para 64 filas).
+                { $project: PROYECCION_FILA_CONTRATO },
             ]);
             docs.forEach((d) => contratoPorFila.set(claveFila(String(d._id), indicePrincipal.get(String(d._id)) ?? 0), d.c || {}));
             if (filasExtra.length > 0) {
-                const extras = await UserProject.find({ _id: { $in: [...new Set(filasExtra.map((f) => f.id))].map((id) => new Types.ObjectId(id)) } })
-                    .select("contracts")
-                    .lean();
-                const porId = new Map(extras.map((d) => [String(d._id), d.contracts || []]));
-                filasExtra.forEach((f) => contratoPorFila.set(claveFila(f.id, f.idx), porId.get(f.id)?.[f.idx] || {}));
+                /*
+                  Las filas extra son los OTROS contratos en bandeja de una misma asignación. Se pedía el array
+                  `contracts` entero de esas personas —y una con contratos por jornada tiene más de cien—
+                  para usar dos o tres. Acá Mongo devuelve cada contrato con su posición, se queda con los
+                  que están en los estados pedidos (que es lo único que puede ser fila extra) y recorta los
+                  campos. Sin estados pedidos no hay filas extra, pero por las dudas no se filtra por estado.
+                */
+                const idsExtra = [...new Set(filasExtra.map((f) => f.id))].map((id) => new Types.ObjectId(id));
+                const enumerados = { $map: { input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] }, as: "i", in: { i: "$$i", c: { $arrayElemAt: ["$contracts", "$$i"] } } } };
+                const soloBandeja = nombresCrudosBandeja ? { $filter: { input: enumerados, as: "p", cond: { $in: ["$$p.c.nombre_estado_empleado", nombresCrudosBandeja] } } } : enumerados;
+                const extras = await UserProject.aggregate([
+                    { $match: { _id: { $in: idsExtra } } },
+                    { $project: { cs: soloBandeja } },
+                    { $project: { cs: { $map: { input: "$cs", as: "p", in: { i: "$$p.i", c: Object.fromEntries(CAMPOS_FILA_CONTRATO.map((k) => [k, `$$p.c.${k}`])) } } } } },
+                ]);
+                const porId = new Map(extras.map((d) => [String(d._id), new Map((d.cs || []).map((p) => [Number(p.i), p.c || {}]))]));
+                filasExtra.forEach((f) => contratoPorFila.set(claveFila(f.id, f.idx), porId.get(f.id)?.get(f.idx) || {}));
             }
         }
         const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {

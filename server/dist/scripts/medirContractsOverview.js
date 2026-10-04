@@ -1,107 +1,67 @@
 /**
- * ═══════════════════════════════════════════════════════════════════════
- * QUÉ TARDA EN `GET /users/contracts-overview` — medición, SÓLO LECTURA
- * ═══════════════════════════════════════════════════════════════════════
+ * MEDICIÓN, SÓLO LECTURA: dónde se va el tiempo de `GET /users/contracts-overview` para la pantalla de
+ * Contratos (bandejas impositivas, `limit 5000`). Mide la FASE 1 como está hoy (barre todos los
+ * vínculos del tenant) contra una FASE 1 que filtra en Mongo por los estados pedidos, y la FASE 2 con el
+ * contrato entero contra una proyección de los campos que la fila usa.
  *
- *   npx tsx src/scripts/medirContractsOverview.ts <tenantId> [clientId]
+ *   ./node_modules/.bin/dotenv -e .env.production -- npx tsx src/scripts/medirContractsOverview.ts <tenantId> "Pedido de AFIP,Pedido de Servicios,Envio de documentacion"
  *
- * Repite las consultas del endpoint y dice cuánto tarda y cuánto pesa cada fase. No escribe nada.
+ * No escribe nada.
  */
 import mongoose, { Types } from "mongoose";
 import "../config/env.js";
 import { env } from "../config/env.js";
 import { Project } from "../models/Project.js";
-import { Client } from "../models/Client.js";
-import { Company } from "../models/Company.js";
-import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
-import "../models/Role.js";
-import { Role } from "../models/Role.js";
-const kb = (x) => Buffer.byteLength(JSON.stringify(x ?? null)) / 1024;
+import { claveEstado } from "../utils/estadoClave.js";
+const [tenantId, estadosArg] = process.argv.slice(2);
+if (!tenantId || !Types.ObjectId.isValid(tenantId) || !estadosArg) {
+    console.error("Uso: <tenantId> \"Estado A,Estado B\"");
+    process.exit(1);
+}
+const estadosFiltro = estadosArg.split(",").map((e) => claveEstado(e.trim())).filter(Boolean);
+const kb = (o) => `${(Buffer.byteLength(JSON.stringify(o)) / 1024).toFixed(0)} KB`;
 async function main() {
-    const tenantId = process.argv[2];
-    const clientId = process.argv[3];
-    if (!tenantId) {
-        console.error("Uso: npx tsx src/scripts/medirContractsOverview.ts <tenantId> [clientId]");
-        process.exit(1);
-    }
     await mongoose.connect(env.MONGO_URI, { dbName: env.MONGO_DB_NAME });
-    await Project.findOne({}).select("_id").lean().exec(); // calentar el pool
-    const projectFilter = { tenantId: new Types.ObjectId(tenantId) };
-    if (clientId)
-        projectFilter.clientId = new Types.ObjectId(clientId);
+    const projectIds = (await Project.find({ tenantId: new Types.ObjectId(tenantId) }).select("_id").lean()).map((p) => p._id);
+    console.log(`proyectos: ${projectIds.length} · estados pedidos (clave): ${estadosFiltro.join(" | ")}`);
+    const camposContrato = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", e: "$$x.nombre_estado_empleado" };
+    const proyeccion = { $project: { p: "$projectId", u: "$userId", r: "$nombre_rol_frame", c: { $map: { input: { $ifNull: ["$contracts", []] }, as: "x", in: camposContrato } } } };
+    // FASE 1 como hoy: todos los vínculos.
     let t = Date.now();
-    const projectsList = await Project.find(projectFilter).select("_id name clientId contratoEmpresas releaseEmpresas").lean();
-    console.log(`Project.find                       ${String(Date.now() - t).padStart(6)} ms  ${kb(projectsList).toFixed(1).padStart(8)} KB   ${projectsList.length} proyectos`);
-    const projectIds = projectsList.map((p) => p._id);
-    if (projectIds.length === 0) {
-        console.log("Sin proyectos.");
-        await mongoose.disconnect();
-        return;
-    }
+    const todo = await UserProject.aggregate([{ $match: { projectId: { $in: projectIds } } }, proyeccion]);
+    console.log(`FASE 1 hoy: ${todo.length} vínculos · ${todo.reduce((n, d) => n + d.c.length, 0)} contratos · ${kb(todo)} · ${Date.now() - t} ms`);
+    // FASE 1 filtrada: primero los nombres crudos que caen en los estados pedidos (distinct es chico), después sólo esos vínculos.
     t = Date.now();
-    const companies = await Company.find({}).select("razonSocial").lean();
-    console.log(`Company.find                       ${String(Date.now() - t).padStart(6)} ms  ${kb(companies).toFixed(1).padStart(8)} KB   ${companies.length} empresas`);
-    // FASE 1 — el barrido liviano, SIN filtros (que es como lo pide la pantalla al abrirse).
+    const nombres = await UserProject.distinct("contracts.nombre_estado_empleado", { projectId: { $in: projectIds } });
+    const crudosQueAplican = nombres.filter((n) => estadosFiltro.includes(claveEstado(String(n || ""))));
+    const tDistinct = Date.now() - t;
     t = Date.now();
-    const membershipsRaw = await UserProject.aggregate([
-        { $match: { projectId: { $in: projectIds } } },
-        { $project: { p: "$projectId", u: "$userId", r: "$nombre_rol_frame", c: { $map: { input: { $ifNull: ["$contracts", []] }, as: "x", in: { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" } } } } },
+    const filtrado = await UserProject.aggregate([{ $match: { projectId: { $in: projectIds }, "contracts.nombre_estado_empleado": { $in: crudosQueAplican } } }, proyeccion]);
+    console.log(`FASE 1 filtrada: distinct ${nombres.length} nombres (${tDistinct} ms) → crudos que aplican: ${JSON.stringify(crudosQueAplican)} · ${filtrado.length} vínculos · ${filtrado.reduce((n, d) => n + d.c.length, 0)} contratos · ${kb(filtrado)} · ${Date.now() - t} ms`);
+    // FASE 2: el contrato entero de cada fila vs. sólo los campos que la fila usa. Se toma el primer contrato en estado pedido de cada vínculo filtrado.
+    const filas = filtrado.map((d) => ({ id: d._id, idx: d.c.findIndex((c) => estadosFiltro.includes(claveEstado(String(c.e || "")))) })).filter((f) => f.idx >= 0);
+    const ids = filas.map((f) => f.id);
+    const porIdx = new Map();
+    for (const f of filas)
+        if (f.idx > 0)
+            porIdx.set(f.idx, [...(porIdx.get(f.idx) || []), f.id]);
+    const ramas = [...porIdx.entries()].map(([idx, lista]) => ({ case: { $in: ["$_id", lista] }, then: idx }));
+    const indice = ramas.length ? { $switch: { branches: ramas, default: 0 } } : 0;
+    t = Date.now();
+    const enteros = await UserProject.aggregate([{ $match: { _id: { $in: ids } } }, { $project: { c: { $arrayElemAt: [{ $ifNull: ["$contracts", []] }, indice] } } }]);
+    console.log(`FASE 2 contrato entero: ${enteros.length} filas · ${kb(enteros)} · ${Date.now() - t} ms`);
+    const CAMPOS = ["_id", "nombre_contrato", "nombre_estado_empleado", "nombre_sede", "areaShiftAssignments", "reemplazo", "empleado_id_reemplezado", "fecha_alta_contrato", "fecha_baja_contrato", "fecha_carga", "sueldo_mano", "cantidad_jornadas_laborales", "hora_inicio", "hora_fin", "altaDocumentoUrl", "altaDocumentoNombre", "altaArcaPresentada", "constanciaVigenciaDesde", "constanciaVigenciaHasta", "constanciaVerificador", "constanciaAfipEstado", "constanciaAfipConsultadaAt", "constanciaAfipDropboxSubidaAt", "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt", "empresaContratoId", "empresaReleaseId", "nombre_empresa_contrato", "nombre_empresa_release", "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca", "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada", "sinCuitValidacion"];
+    t = Date.now();
+    const proyectados = await UserProject.aggregate([
+        { $match: { _id: { $in: ids } } },
+        { $project: { c: { $arrayElemAt: [{ $ifNull: ["$contracts", []] }, indice] } } },
+        { $project: Object.fromEntries(CAMPOS.map((k) => [`c.${k}`, 1])) },
     ]);
-    const msF1 = Date.now() - t;
-    const totalContratos = membershipsRaw.reduce((s, m) => s + (m.c?.length || 0), 0);
-    console.log(`FASE 1 · UserProject.aggregate     ${String(msF1).padStart(6)} ms  ${kb(membershipsRaw).toFixed(1).padStart(8)} KB   ${membershipsRaw.length} vínculos, ${totalContratos} contratos barridos`);
-    // Cuánto pesaría el mismo barrido si se pudiera pedir sólo el que rige (una fila por vínculo).
-    t = Date.now();
-    const soloUltimo = await UserProject.aggregate([
-        { $match: { projectId: { $in: projectIds } } },
-        { $project: { p: "$projectId", u: "$userId", n: { $size: { $ifNull: ["$contracts", []] } } } },
-    ]);
-    console.log(`  (comparación: sin los contratos) ${String(Date.now() - t).padStart(6)} ms  ${kb(soloUltimo).toFixed(1).padStart(8)} KB`);
-    const userIds = [...new Set(membershipsRaw.map((m) => String(m.u || "")))].filter((id) => Types.ObjectId.isValid(id));
-    t = Date.now();
-    const [usersList, clientsList] = await Promise.all([
-        User.find({ _id: { $in: userIds } }).select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.sinCuit metadata.nombreValidadoArcaAt").populate({ path: "roles", select: "name permissions", model: Role }).lean(),
-        Client.find({ _id: { $in: [...new Set(projectsList.map((p) => String(p.clientId || "")))].filter((id) => Types.ObjectId.isValid(id)) } }).select("name").lean(),
-    ]);
-    console.log(`User.find + Client.find            ${String(Date.now() - t).padStart(6)} ms  ${kb(usersList).toFixed(1).padStart(8)} KB   ${usersList.length} personas`);
-    // FASE 2 — el contrato completo de las 25 filas de la página.
-    const ids = membershipsRaw.slice(0, 25).map((m) => m._id);
-    t = Date.now();
-    const docs = await UserProject.aggregate([{ $match: { _id: { $in: ids } } }, { $project: { c: { $arrayElemAt: [{ $ifNull: ["$contracts", []] }, 0] } } }]);
-    console.log(`FASE 2 · contrato de 25 filas      ${String(Date.now() - t).padStart(6)} ms  ${kb(docs).toFixed(1).padStart(8)} KB`);
-    // Lo mismo, pero eligiendo el contrato que rige ADENTRO de Mongo (lo que ya hace la tabla de equipo).
-    t = Date.now();
-    const hoy = new Date().toISOString().slice(0, 10);
-    const queRigen = await UserProject.aggregate([
-        { $match: { projectId: { $in: projectIds } } },
-        {
-            $project: {
-                p: "$projectId",
-                u: "$userId",
-                r: "$nombre_rol_frame",
-                total: { $size: { $ifNull: ["$contracts", []] } },
-                claves: {
-                    $map: {
-                        input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] },
-                        as: "i",
-                        in: {
-                            $let: {
-                                vars: { c: { $arrayElemAt: ["$contracts", "$$i"] } },
-                                in: { i: "$$i", alta: { $substrCP: [{ $ifNull: ["$$c.fecha_alta_contrato", ""] }, 0, 10] }, baja: { $substrCP: [{ $ifNull: ["$$c.fecha_baja_contrato", ""] }, 0, 10] }, carga: { $toString: { $ifNull: ["$$c.fecha_carga", ""] } } },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        { $addFields: { vigentes: { $filter: { input: "$claves", as: "k", cond: { $and: [{ $or: [{ $eq: ["$$k.alta", ""] }, { $lte: ["$$k.alta", hoy] }] }, { $or: [{ $eq: ["$$k.baja", ""] }, { $gte: ["$$k.baja", hoy] }] }] } } } } },
-        { $addFields: { elegido: { $reduce: { input: { $cond: [{ $gt: [{ $size: "$vigentes" }, 0] }, "$vigentes", "$claves"] }, initialValue: null, in: { $cond: [{ $or: [{ $eq: ["$$value", null] }, { $gte: [{ $concat: ["$$this.alta", "|", "$$this.carga"] }, { $concat: ["$$value.alta", "|", "$$value.carga"] }] }] }, "$$this", "$$value"] } } } } },
-        { $project: { p: 1, u: 1, r: 1, total: 1, idx: "$elegido.i", alta: "$elegido.alta", baja: "$elegido.baja" } },
-    ]);
-    console.log("ALTERNATIVA - el que rige, en Mongo " + String(Date.now() - t).padStart(6) + " ms  " + kb(queRigen).toFixed(1).padStart(8) + " KB   " + queRigen.length + " filas");
-    console.log(`\nVínculos con más contratos:`);
-    [...membershipsRaw].sort((a, b) => (b.c?.length || 0) - (a.c?.length || 0)).slice(0, 5).forEach((m) => console.log(`  · ${m.c?.length || 0} contratos`));
+    console.log(`FASE 2 proyectada (${CAMPOS.length} campos): ${proyectados.length} filas · ${kb(proyectados)} · ${Date.now() - t} ms`);
     await mongoose.disconnect();
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+});
