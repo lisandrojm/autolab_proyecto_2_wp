@@ -104,7 +104,7 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
   // ── Lo que hace falta para resolver lo esperado ─────────────────────────────────────────────────
   const [categorias, convenios, obrasSociales, estados, defaultsGlobales, sucursales, modalidadesC, modalidadesL, tipos] = await Promise.all([
     listarCategoriasCompat(),
-    Convenio.find().select("externalId obraSocialDefaultId").lean(),
+    Convenio.find().select("externalId obraSocialDefaultId puestoDesempenadoDefault").lean(),
     ObraSocial.find().select("externalId data.id").lean(),
     Info.find({ type: ESTADO_TYPE }).select("name data").lean(),
     getArcaDefaults(),
@@ -206,8 +206,8 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
       retribucion: Number(categoria?.data?.sueldoBruto || 0),
       rnos,
       rnosMotivo,
-      // Mismo orden que el generador del registro: Rol Empresa → Categoría → empresa → instalación.
-      puesto: resolverPuesto({ rol: rolPorId.get(Number(c.rol_frame_id))?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, empresa: de.puestoDesempenado, global: dg.puestoDesempenado }).codigo,
+      // Mismo orden que el generador del registro: Rol Empresa → Categoría → convenio → empresa → instalación.
+      puesto: resolverPuesto({ rol: rolPorId.get(Number(c.rol_frame_id))?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, convenio: (convenios as any[]).find((x) => String(x.externalId || "").trim() === convenioCodigo)?.puestoDesempenadoDefault, empresa: de.puestoDesempenado, global: dg.puestoDesempenado }).codigo,
       situacionRevista: digitos(de.situacionRevista || dg.situacionRevista || "01"),
     };
     const dif = cotejarRegistro(modo, it.registro, esperado, cat);

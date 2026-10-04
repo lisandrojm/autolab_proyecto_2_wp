@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { codigoPuesto } from "../compartido/puestosDesempenados.js";
 
 /**
  * Convenio Colectivo de Trabajo (CCT) del nomenclador de AFIP/ARCA — Simplificación Registral.
@@ -26,6 +27,19 @@ export interface IConvenio extends Document {
    * CONVENIO", que por definición no tiene sindicato: ahí manda la default de la empleadora.
    */
   obraSocialDefaultId?: number;
+  /**
+   * PUESTO DESEMPEÑADO por defecto de quien trabaja bajo este convenio: el código de 4 dígitos del
+   * catálogo `arca-puestos-desempenados` que exige el registro de 85 (Altas Masivas, pos. 29-32).
+   *
+   * Cuelga del convenio por lo mismo que la obra social: el puesto típico lo define el convenio, no
+   * la productora. Es el tercer escalón de `resolverPuesto` (`compartido/puestosDesempenados.ts`):
+   * entra cuando ni el Rol Empresa ni la Categoría del contrato tienen el suyo, y antes que el default
+   * de la empleadora.
+   *
+   * Vacío = el convenio no decide (el 9999/99 «excluido de convenio», o uno que nadie cargó): se
+   * sigue a la empleadora y a la instalación. Se guarda normalizado (`codigoPuesto`).
+   */
+  puestoDesempenadoDefault?: string;
   /**
    * EL SINDICATO QUE FIRMÓ ESTE CONVENIO. Ref al catálogo `Sindicato`.
    *
@@ -87,6 +101,8 @@ const convenioSchema = new Schema<IConvenio>(
     name: { type: String, required: true },
     signatario: { type: String },
     obraSocialDefaultId: { type: Number },
+    // Siempre 4 dígitos o vacío, lo escriba quien lo escriba (ABM, script, importación).
+    puestoDesempenadoDefault: { type: String, default: "", set: (v: unknown) => codigoPuesto(v) },
     // `index` porque se filtra por él (los convenios de un sindicato) sobre 2.669 documentos.
     // `default: null` y no ausente: acá el vacío es una respuesta ("no tiene gremio"), no una falta.
     sindicatoId: { type: Schema.Types.ObjectId, ref: "Sindicato", default: null, index: true },

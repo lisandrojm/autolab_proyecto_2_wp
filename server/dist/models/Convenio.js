@@ -1,9 +1,12 @@
 import mongoose, { Schema } from "mongoose";
+import { codigoPuesto } from "../compartido/puestosDesempenados.js";
 const convenioSchema = new Schema({
     externalId: { type: String },
     name: { type: String, required: true },
     signatario: { type: String },
     obraSocialDefaultId: { type: Number },
+    // Siempre 4 dígitos o vacío, lo escriba quien lo escriba (ABM, script, importación).
+    puestoDesempenadoDefault: { type: String, default: "", set: (v) => codigoPuesto(v) },
     // `index` porque se filtra por él (los convenios de un sindicato) sobre 2.669 documentos.
     // `default: null` y no ausente: acá el vacío es una respuesta ("no tiene gremio"), no una falta.
     sindicatoId: { type: Schema.Types.ObjectId, ref: "Sindicato", default: null, index: true },

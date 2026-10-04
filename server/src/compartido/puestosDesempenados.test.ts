@@ -3,11 +3,66 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { codigoPuesto, planDeImportacionPuestos, resolverPuesto } from "./puestosDesempenados.js";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { codigoPuesto, OrigenPuesto, planDeImportacionPuestos, resolverPuesto } from "./puestosDesempenados.js";
 
-describe("resolverPuesto: Rol Empresa → Categoría → empresa → instalación", () => {
-  it("el rol gana sobre todo", () => assert.deepEqual(resolverPuesto({ rol: "2455", categoria: "5142", empresa: "1111", global: "2222" }), { codigo: "2455", origen: "funcion" }));
-  it("sin rol, la categoría", () => assert.deepEqual(resolverPuesto({ rol: "", categoria: "5142", empresa: "1111" }), { codigo: "5142", origen: "categoria" }));
+const AQUI = dirname(fileURLToPath(import.meta.url));
+
+describe("resolverPuesto: Rol Empresa → Categoría → convenio → empresa → instalación", () => {
+  it("el rol gana sobre todo", () => assert.deepEqual(resolverPuesto({ rol: "2455", categoria: "5142", convenio: "4132", empresa: "1111", global: "2222" }), { codigo: "2455", origen: "funcion" }));
+  it("sin rol, la categoría", () => assert.deepEqual(resolverPuesto({ rol: "", categoria: "5142", convenio: "4132", empresa: "1111" }), { codigo: "5142", origen: "categoria" }));
+  it("sin rol ni categoría, el CONVENIO, antes que la empleadora", () => assert.deepEqual(resolverPuesto({ convenio: "4132", empresa: "1111", global: "2222" }), { codigo: "4132", origen: "convenio" }));
+  it("un convenio sin default (9999/99) deja pasar a la empleadora", () => assert.deepEqual(resolverPuesto({ convenio: "", empresa: "1111", global: "2222" }), { codigo: "1111", origen: "empresa" }));
+
+  /*
+    CADA COMBINACIÓN de vacío/cargado de los cinco escalones (2^5 = 32): gana siempre el primero
+    cargado, en el orden de la cascada. Cada escalón tiene su código para que se vea CUÁL ganó.
+  */
+  it("las 32 combinaciones de vacío/cargado: gana el primer escalón cargado", () => {
+    const escalones: Array<{ clave: "rol" | "categoria" | "convenio" | "empresa" | "global"; codigo: string; origen: OrigenPuesto }> = [
+      { clave: "rol", codigo: "1001", origen: "funcion" },
+      { clave: "categoria", codigo: "1002", origen: "categoria" },
+      { clave: "convenio", codigo: "1003", origen: "convenio" },
+      { clave: "empresa", codigo: "1004", origen: "empresa" },
+      { clave: "global", codigo: "1005", origen: "global" },
+    ];
+    let probadas = 0;
+    for (let mascara = 0; mascara < 32; mascara++) {
+      const entrada: Record<string, string> = {};
+      escalones.forEach((e, i) => (entrada[e.clave] = mascara & (1 << i) ? e.codigo : ""));
+      const primero = escalones.find((_, i) => mascara & (1 << i));
+      assert.deepEqual(resolverPuesto(entrada), primero ? { codigo: primero.codigo, origen: primero.origen } : { codigo: "", origen: "ninguno" }, `combinación ${mascara.toString(2).padStart(5, "0")}`);
+      probadas++;
+    }
+    assert.equal(probadas, 32);
+  });
+
+  it("el convenio NO cambia lo que ya resolvían rol y categoría: con o sin convenio da lo mismo", () => {
+    for (const base of [{ rol: "2455" }, { categoria: "5142" }, { rol: "2455", categoria: "5142" }, { rol: "2455", empresa: "1111" }, { categoria: "5142", global: "2222" }]) {
+      assert.deepEqual(resolverPuesto({ ...base, convenio: "4132" }), resolverPuesto(base));
+    }
+  });
+
+  it("sin convenio en la llamada, la cascada es la de antes", () => {
+    assert.deepEqual(resolverPuesto({ empresa: "1111", global: "2222" }), { codigo: "1111", origen: "empresa" });
+    assert.deepEqual(resolverPuesto({ global: "2222" }), { codigo: "2222", origen: "global" });
+  });
+
+  it("los dos consumidores —generador del registro y cotejo del lote— pasan los CINCO escalones a la misma función", () => {
+    const front = readFileSync(resolve(AQUI, "../../../frontend/src/components/contratos/afipCompleteness.ts"), "utf8");
+    const server = readFileSync(resolve(AQUI, "../services/arca/validarLoteAltas.ts"), "utf8");
+    for (const [quien, fuente] of [["afipCompleteness", front], ["validarLoteAltas", server]] as const) {
+      const llamada = fuente.slice(fuente.indexOf("resolverPuesto({"));
+      const args = llamada.slice(0, llamada.indexOf("})"));
+      for (const clave of ["rol:", "categoria:", "convenio:", "empresa:", "global:"]) assert.ok(args.includes(clave), `${quien} no pasa «${clave}» a resolverPuesto`);
+      assert.ok(args.indexOf("categoria:") < args.indexOf("convenio:") && args.indexOf("convenio:") < args.indexOf("empresa:"), `${quien}: orden de los argumentos`);
+    }
+    // Y ninguno arma su propia cascada: el import es el de `compartido`.
+    assert.match(front, /import \{ resolverPuesto \} from "@compartido\/puestosDesempenados"/);
+    assert.match(server, /import \{ resolverPuesto \} from "\.\.\/\.\.\/compartido\/puestosDesempenados\.js"/);
+  });
   it("sin rol ni categoría, la empresa", () => assert.deepEqual(resolverPuesto({ empresa: "1111", global: "2222" }), { codigo: "1111", origen: "empresa" }));
   it("y al final la instalación", () => assert.deepEqual(resolverPuesto({ global: "2222" }), { codigo: "2222", origen: "global" }));
   it("sin nada, ninguno", () => assert.deepEqual(resolverPuesto({ rol: null, categoria: undefined, empresa: "", global: "  " }), { codigo: "", origen: "ninguno" }));

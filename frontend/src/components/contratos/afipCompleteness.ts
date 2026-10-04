@@ -88,7 +88,7 @@ export interface AfipCatalogs {
    * Catálogo de Convenios: solo para traducir los `convenioIds` de la empresa (que son refs) al
    * código de CCT ("0131/75") con el que se compara el convenio de la categoría.
    */
-  convenios?: Array<SimpleCatalogItem & { obraSocialDefaultId?: number | null }>;
+  convenios?: Array<SimpleCatalogItem & { obraSocialDefaultId?: number | null; puestoDesempenadoDefault?: string | null }>;
   /**
    * Los Roles Empresa (funciones): de la del contrato (`rol_frame_id` = `data.rol.id`) sale PRIMERO el
    * puesto desempeñado del registro de 85. Opcional: sin ellos se resuelve desde la categoría.
@@ -611,9 +611,10 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const modalidadLiqResuelta = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", defaultsEmpresa, defaultsGlobales);
   // Solo para el registro de 85. El puesto lo define la categoría (cada categoría de un CCT es un
   // puesto); la situación de revista no tiene escalón de contrato: un alta nueva es «Activo».
-  // Rol Empresa → Categoría → empresa → instalación (`compartido/puestosDesempenados.ts`, el mismo que usa el server).
+  // Rol Empresa → Categoría → convenio de la categoría → empresa → instalación (`compartido/puestosDesempenados.ts`,
+  // el mismo que usa el server). El convenio es el mismo que ya decide la obra social (`convenioDeLaCategoria`).
   const rolDelContrato = row.rol_frame_id != null ? cat.roleFrames?.find((r) => Number(r.data?.rol?.id) === Number(row.rol_frame_id)) : undefined;
-  const puestoR = resolverPuesto({ rol: rolDelContrato?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, empresa: defaultsEmpresa?.puestoDesempenado, global: defaultsGlobales?.puestoDesempenado });
+  const puestoR = resolverPuesto({ rol: rolDelContrato?.data?.puestoDesempenado, categoria: categoria?.data?.puestoDesempenado, convenio: convenioDeLaCategoria?.puestoDesempenadoDefault, empresa: defaultsEmpresa?.puestoDesempenado, global: defaultsGlobales?.puestoDesempenado });
   const puestoResuelto = { valor: puestoR.codigo, origen: puestoR.origen as OrigenValorArca };
   const revistaCascada = conCascada(undefined, "contrato", "situacionRevista", defaultsEmpresa, defaultsGlobales);
   const revistaResuelta = revistaCascada.valor ? revistaCascada : { valor: SITUACION_REVISTA_ALTA, origen: "global" as OrigenValorArca };
