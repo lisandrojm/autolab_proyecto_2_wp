@@ -220,11 +220,21 @@ interface IContract {
     altaArcaPresentada?: {
         via: "carga_masiva" | "altas_masivas";
         fecha: Date;
-        resultado: "presentada" | "indeterminado" | "fallida";
+        /**
+         * `presentando`: se escribió justo ANTES de apretar «Aceptar» en ARCA y todavía no hay resultado.
+         * Si queda así, la corrida se cortó en el medio: no se vuelve a presentar, se consulta en ARCA.
+         */
+        resultado: "presentada" | "indeterminado" | "fallida" | "presentando";
         codigoNovedad?: string;
         nroTransaccion?: string;
         motivo?: string;
         logId?: Types.ObjectId;
+        /** Altas Masivas por tandas: en qué tanda de la corrida fue. */
+        tanda?: number;
+        /** Clave de alta temprana, si ARCA la mostró. */
+        cat?: string;
+        /** El alta se confirmó leyendo Relaciones Laborales → Consultas, no por el resultado de la presentación. */
+        porConsulta?: boolean;
     };
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;

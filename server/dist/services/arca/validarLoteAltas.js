@@ -112,6 +112,7 @@ export async function validarLoteAltas(o) {
     const de = empresa.defaultsArca || {};
     const errores = [];
     const salida = [];
+    const descartadas = [];
     items.forEach((it, n) => {
         const up = upPorId.get(it.userProjectId);
         const nro = `Registro ${n + 1}`;
@@ -133,6 +134,12 @@ export async function validarLoteAltas(o) {
         }
         if (!clavesAltaTemprana.has(claveEstado(String(c.nombre_estado_empleado || "")))) {
             errores.push(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
+            return;
+        }
+        if (!o.forzar && o.descartarPresentadas && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
+            // Por tandas se RETOMA: lo ya presentado no es un error del lote, se saltea. Así una corrida
+            // cortada se relanza con la misma selección y sigue desde la primera tanda sin resultado.
+            descartadas.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex, cuil: digitos(u?.metadata?.cuit), nombre, registro: it.registro, motivo: c.altaArcaPresentada.resultado === "presentada" ? "presentada" : "incierta" });
             return;
         }
         if (!o.forzar && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
@@ -192,6 +199,7 @@ export async function validarLoteAltas(o) {
         modo,
         empresa: { _id: String(empresa._id), cuit: empresaCuit, razonSocial: String(empresa.razonSocial || "") },
         items: salida,
+        descartadas,
         // El archivo de Carga Masiva cierra con LF; el pegado no (una línea vacía al final puede leerse
         // como un registro más). Ver `buildAltasMasivasTexto` en el frontend.
         texto: modo === "carga_masiva" ? unirRegistros(registros) : registros.join("\n"),

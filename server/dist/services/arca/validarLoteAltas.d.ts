@@ -31,6 +31,19 @@ export interface LoteAltasValidado {
     }>;
     /** El texto tal cual va a ARCA: LF, LF final en el archivo; sin LF final en el pegado. */
     texto: string;
+    /**
+     * Solo con `descartarPresentadas`: lo que venía en la selección y NO se presenta porque ya tiene
+     * marca. `presentada` se saltea; `incierta` (sin resultado: «presentando» o «indeterminado») se
+     * consulta en ARCA antes que nada, y tampoco se presenta.
+     */
+    descartadas: Array<{
+        userProjectId: string;
+        contractIndex: number;
+        cuil: string;
+        nombre: string;
+        registro: string;
+        motivo: "presentada" | "incierta";
+    }>;
 }
 export declare class LoteAltasError extends Error {
     status: number;
@@ -43,4 +56,5 @@ export declare function validarLoteAltas(o: {
     empresaId: string;
     items: ItemLoteAltas[];
     forzar?: boolean;
+    descartarPresentadas?: boolean;
 }): Promise<LoteAltasValidado>;

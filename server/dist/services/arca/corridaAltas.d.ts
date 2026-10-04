@@ -1,8 +1,9 @@
 import { ItemLoteAltas, LoteAltasValidado } from "./validarLoteAltas.js";
+import { EventoTandas } from "./tandasAltas.js";
 import type { ModoAltas } from "./cotejoAltas.js";
 /**
  * PRESENTAR ALTAS EN ARCA DESDE EL SERVIDOR: Carga Masiva (archivo de 130) o Altas Masivas (pegado
- * de 85, máximo 9).
+ * de 85, de a 9 por tanda: cualquier cantidad, en tandas sucesivas — ver `tandasAltas.ts`).
  *
  * Mismo mecanismo que la validación de obras sociales (`corridaServidor.ts`): arranca, vuelve
  * enseguida, y el progreso se sigue por eventos que el modal pide cada ~2 s. Comparte con ella el
@@ -12,6 +13,7 @@ import type { ModoAltas } from "./cotejoAltas.js";
  *
  *   · El lote lo decide el servidor (`validarLoteAltas.ts`): cada registro se coteja contra la base.
  *   · «Detener» funciona hasta el paso ANTERIOR al envío. Desde el evento `irreversible` ya no.
+ *     En Altas Masivas por tandas corta al TERMINAR la tanda en curso: una tanda no se abandona.
  *   · Nunca se reintenta un Enviar ni un Aceptar. Si después del click algo falla o no se puede leer,
  *     el resultado es «indeterminado», y queda así en el contrato para que nadie lo vuelva a presentar
  *     sin mirar ARCA primero.
@@ -58,9 +60,12 @@ export type EventoAltas = {
 } | {
     tipo: "persona";
     cuil: string;
-    estado: "alta" | "rechazada" | "indeterminado";
+    estado: "alta" | "rechazada" | "devuelta" | "indeterminado";
     motivo?: string;
 } | {
+    tipo: "dialogoInesperado";
+    mensaje: string;
+} | EventoTandas | {
     tipo: "seco";
     codigoNovedad?: string;
 } | {
@@ -91,6 +96,17 @@ interface CorridaAltas {
     terminada: boolean;
     /** Se apretó (o se está por apretar) el botón que no se deshace. Desde acá «Detener» no corta. */
     irreversible: boolean;
+    /** Altas Masivas: la corrida va por tandas, y «Detener» corta al terminar la que está en curso. */
+    porTandas: boolean;
+    detenerPedido: boolean;
+    /** ARCA abrió un diálogo que nadie esperaba: la corrida por tandas no arranca otra tanda. */
+    dialogoInesperado?: string;
+    /** Lo que venía en la selección y no se presenta porque ya tenía marca (ver `validarLoteAltas`). */
+    descartadas: Array<{
+        cuil: string;
+        nombre: string;
+        motivo: "presentada" | "incierta";
+    }>;
     señal: {
         cortada: boolean;
     };

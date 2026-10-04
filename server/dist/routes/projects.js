@@ -2814,13 +2814,19 @@ router.get("/contratos/altas-arca/corrida", requireTenant, authenticateToken, re
         total: c.total,
         enSeco: c.enSeco,
         irreversible: c.irreversible,
+        porTandas: c.porTandas,
+        detenerPedido: c.detenerPedido,
+        descartadas: c.descartadas,
         arrancadaEl: c.arrancadaEl,
         eventos: c.eventos,
         enSecoForzado: enSecoPorDefecto,
         ocupadaPor: ocupada?.tipo || null,
     });
 });
-/** POST /contratos/altas-arca/corrida/detener — 409 si ya se apretó el botón que presenta. */
+/**
+ * POST /contratos/altas-arca/corrida/detener — 409 si ya se apretó el botón que presenta. En Altas
+ * Masivas por tandas siempre se acepta: corta al terminar la tanda en curso.
+ */
 router.post("/contratos/altas-arca/corrida/detener", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
     const r = detenerCorridaAltas(String(req.tenantObjectId));
     res.status(r.detenida ? 200 : 409).json(r);

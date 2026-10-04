@@ -82,7 +82,8 @@ describe("cotejarRegistro — 130", () => {
     });
 });
 describe("problemasDeForma", () => {
-    it("Altas Masivas: más de 9 no", () => assert.ok(problemasDeForma("altas_masivas", Array(10).fill(R85)).some((p) => /hasta 9/.test(p))));
+    // Más de 9 ya no es un problema de forma: Altas Masivas se presenta por tandas (`tandasAltas.ts`).
+    it("Altas Masivas: más de 9 sí, van por tandas", () => assert.deepEqual(problemasDeForma("altas_masivas", Array(20).fill(R85)), []));
     it("largo y charset", () => {
         assert.ok(problemasDeForma("altas_masivas", [R85 + " "]).length > 0);
         assert.ok(problemasDeForma("carga_masiva", [R130.replace("N", "ñ")]).length > 0);

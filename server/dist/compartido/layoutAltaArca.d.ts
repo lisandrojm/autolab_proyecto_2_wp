@@ -42,8 +42,13 @@ export declare const LARGO_130 = 130;
 /**
  * Tope de registros del pegado. Lo dice la pantalla: «Ingrese el texto correspondiente a los
  * registros (maximo 9 registros)». La grilla de Altas.aspx corta en 10, pero el pegado en 9.
+ *
+ * Es el tope de UNA TANDA, no de la selección: una selección más grande se presenta en tandas
+ * sucesivas (`partirEnTandas`). La corrida lee además el tope en la pantalla y usa el menor.
  */
 export declare const MAX_ALTAS_MASIVAS = 9;
+/** Parte la selección en tandas de a lo sumo `tope`, en el mismo orden y sin perder a nadie. */
+export declare function partirEnTandas<T>(items: T[], tope?: number): T[][];
 export declare const LAYOUT_85: CampoLayout[];
 /**
  * Las posiciones del registro de 130 que el servidor necesita para cotejar. NO es el generador

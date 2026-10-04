@@ -26,12 +26,30 @@ export interface IArcaAltasLog extends Document {
         nombre: string;
         resultado: string;
         motivo?: string;
+        tanda?: number;
+        cat?: string;
+        porConsulta?: boolean;
     }>;
+    /** Altas Masivas por tandas: cada tanda con sus tiempos y su resultado. */
+    tandas?: Array<{
+        n: number;
+        cuils: string[];
+        inicio: Date;
+        fin: Date;
+        duracionMs: number;
+        resultado: string;
+        error?: string;
+    }>;
+    /** El tope del pegado que decía la pantalla, y el que se usó (el menor entre ese y la constante). */
+    topeEnPantalla?: number;
+    topeUsado?: number;
+    /** Por qué se cortó antes de terminar: `detenida`, `error`, `dialogo`, `rechazos_seguidos`… */
+    motivoCorte?: string;
     codigoNovedad?: string;
     nroTransaccion?: string;
     fechaPresentacion?: string;
     estadoArca?: string;
-    /** `enviada` | `aceptada` | `seco` | `indeterminado` | `fallo` | `detenida`. */
+    /** `enviada` | `aceptada` | `seco` | `indeterminado` | `fallo` | `detenida` | `en_curso` | `cortada`. */
     resultado: string;
     /** Si se llegó a apretar el botón irreversible. */
     irreversible: boolean;

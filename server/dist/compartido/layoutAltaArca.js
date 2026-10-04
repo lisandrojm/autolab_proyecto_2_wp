@@ -31,8 +31,20 @@ export const LARGO_130 = 130;
 /**
  * Tope de registros del pegado. Lo dice la pantalla: «Ingrese el texto correspondiente a los
  * registros (maximo 9 registros)». La grilla de Altas.aspx corta en 10, pero el pegado en 9.
+ *
+ * Es el tope de UNA TANDA, no de la selección: una selección más grande se presenta en tandas
+ * sucesivas (`partirEnTandas`). La corrida lee además el tope en la pantalla y usa el menor.
  */
 export const MAX_ALTAS_MASIVAS = 9;
+/** Parte la selección en tandas de a lo sumo `tope`, en el mismo orden y sin perder a nadie. */
+export function partirEnTandas(items, tope = MAX_ALTAS_MASIVAS) {
+    if (!Number.isInteger(tope) || tope < 1)
+        throw new Error("El tope de una tanda tiene que ser un entero mayor que cero.");
+    const tandas = [];
+    for (let i = 0; i < items.length; i += tope)
+        tandas.push(items.slice(i, i + tope));
+    return tandas;
+}
 export const LAYOUT_85 = [
     { desde: 1, hasta: 11, nombre: "CUIL", clave: "cuil", relleno: "ceros" },
     { desde: 12, hasta: 17, nombre: "Codigo de Obra Social", clave: "rnos", relleno: "ceros" },
