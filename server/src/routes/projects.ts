@@ -2915,6 +2915,13 @@ router.post("/contratos/obras-sociales/validar-servidor", requireTenant, authent
       res.status(error.status).json({ error: error.message });
       return;
     }
+    // ARCA ocupada: 409 y QUIÉN la tiene. Si es otra validación de obras sociales (casi siempre la
+    // automática, que arranca sola al crear el contrato), la pantalla se engancha a esa en vez de
+    // mostrar un error por algo que ya se está haciendo.
+    if (error instanceof CandadoArcaOcupado) {
+      res.status(409).json({ error: error.message, ocupadaPor: error.tipo });
+      return;
+    }
     // Los errores de esta ruta son casi todos «falta configurar algo» y su texto ES la instrucción:
     // 400 con el mensaje, no un 500 que obliga a ir a los logs del VPS.
     res.status(400).json({ error: String(error?.message || "No se pudo arrancar la validación.") });

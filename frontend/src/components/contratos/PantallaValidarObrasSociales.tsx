@@ -409,6 +409,20 @@ export const PantallaValidarObrasSociales: React.FC<{
         return;
       }
     } catch (e: any) {
+      /*
+        YA HAY UNA VALIDACIÓN DE OBRAS SOCIALES CORRIENDO: no es un error, es la misma tarea ya
+        empezada. Al crear un contrato el servidor la lanza solo a los pocos segundos
+        (`colaObrasSociales.ts`), así que la primera vez que se aprieta el botón suele estar en curso
+        y contestaba «ya hay una corrida». Se sigue ESA corrida: sus resultados llegan por CUIL a
+        estas mismas filas, y lo que no haya entrado queda pendiente para volver a apretar.
+      */
+      if (e?.response?.status === 409 && e?.response?.data?.ocupadaPor === 'obras_sociales') {
+        setFaseCorrida('El servidor ya las estaba validando solo. Siguiendo esa corrida…');
+        setMirando(true);
+        setArrancando(false);
+        seguirCorridaDelServidor();
+        return;
+      }
       setFaseCorrida('');
       setArrancando(false);
       sweetAlert.error('No pude arrancar', e?.response?.data?.error || 'El servidor no aceptó la corrida.');
