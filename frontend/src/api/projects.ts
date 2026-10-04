@@ -948,7 +948,7 @@ export interface EstadoCorridaAltas {
   empresaId?: string;
   empresaRazonSocial?: string;
   empresaCuit?: string;
-  personas?: Array<{ cuil: string; nombre: string }>;
+  personas?: Array<{ cuil: string; nombre: string; registro?: string }>;
   total?: number;
   enSeco?: boolean;
   /** Ya se apretó el botón que presenta: «Detener» no corta. */

@@ -7,7 +7,7 @@ const schema = new Schema({
     empresaCuit: String,
     empresaRazonSocial: String,
     enSeco: { type: Boolean, default: true },
-    contratos: [{ _id: false, userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" }, contractIndex: Number, cuil: String, nombre: String, resultado: String, motivo: String, tanda: Number, cat: String, porConsulta: Boolean }],
+    contratos: [{ _id: false, userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" }, contractIndex: Number, cuil: String, nombre: String, registro: String, resultado: String, motivo: String, tanda: Number, cat: String, porConsulta: Boolean }],
     tandas: [{ _id: false, n: Number, cuils: [String], inicio: Date, fin: Date, duracionMs: Number, resultado: String, error: String }],
     topeEnPantalla: Number,
     topeUsado: Number,

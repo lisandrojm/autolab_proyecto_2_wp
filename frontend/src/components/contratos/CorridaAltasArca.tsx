@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faSpinner, faCircle, faTriangleExclamation, faCopy, faFlask, faCircleQuestion, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faCircleCheck, faCircleXmark, faSpinner, faCircle, faTriangleExclamation, faCopy, faFlask, faCircleQuestion, faDownload, faEye } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
 import { projectsAPI, EstadoCorridaAltas, ModoAltasArca } from '../../api/projects';
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
-import { ETIQUETA_ESTADO, EstadoPersonaTanda, progresoPorTandas, resumenCsv } from './progresoTandas';
+import { ETIQUETA_ESTADO, EstadoPersonaTanda, detalleDeLoPresentado, progresoPorTandas, resumenCsv } from './progresoTandas';
 
 /**
  * EL TRÁMITE DE ALTA EN ARCA, EN VIVO: Carga Masiva (archivo) o Altas Masivas (pegado, URGENTE).
@@ -135,6 +135,8 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
   const [enSecoPedido, setEnSecoPedido] = useState(false);
   const [ultimoCambio, setUltimoCambio] = useState(Date.now());
   const [deteniendo, setDeteniendo] = useState(false);
+  /** El modal «Lo presentado»: cada registro tal cual se mandó a ARCA, campo por campo. */
+  const [verPresentado, setVerPresentado] = useState(false);
   const intervalo = useRef<number | null>(null);
   const cantEventos = useRef(0);
   const avisoTerminado = useRef(false);
@@ -259,6 +261,12 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
       {(corriendo || confirmado) && (
         <button type="button" onClick={detener} disabled={!corriendo || (!porTandas && !!estado?.irreversible) || !!estado?.detenerPedido || deteniendo} title={porTandas ? (estado?.detenerPedido ? 'Se detiene al terminar la tanda en curso.' : 'Corta al terminar la tanda en curso: lo ya presentado queda guardado.') : estado?.irreversible ? 'Ya se apretó el botón que presenta: no se puede detener.' : 'Corta antes del próximo paso. No se presenta nada.'} className="px-4 py-2 rounded-lg text-sm font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-40 disabled:cursor-not-allowed">
           {porTandas && estado?.detenerPedido && corriendo ? 'Deteniendo…' : 'Detener'}
+        </button>
+      )}
+      {progreso && (estado?.personas || []).some((p) => p.registro) && (
+        <button type="button" onClick={() => setVerPresentado(true)} title="Cada registro tal cual se mandó a ARCA, campo por campo" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+          <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
+          Ver lo presentado
         </button>
       )}
       {progreso && !corriendo && (
@@ -512,6 +520,47 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
           </>
         )}
       </div>
+      {verPresentado && progreso && (
+        <Modal isOpen={verPresentado} onClose={() => setVerPresentado(false)} title={`Lo presentado en ARCA · ${estado?.empresaRazonSocial || ''}`} size="lg" zIndex={90}>
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+            <p className="text-xs text-gray-500 dark:text-gray-400">El registro de 85 posiciones de cada persona, tal cual se le mandó a ARCA, partido en sus campos. Los códigos se muestran como viajaron.</p>
+            {[...progreso.tandas.flatMap((t) => t.personas)]
+              .sort((a, b) => Number(b.estado === 'registrada') - Number(a.estado === 'registrada'))
+              .map((f, _i, todas) => {
+                const registro = estado?.personas?.find((p) => p.cuil === f.cuil)?.registro || '';
+                const v = VISTA_ESTADO[f.estado];
+                return (
+                  <details key={f.cuil} open={todas.length <= 2} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <summary className="px-3 py-2 cursor-pointer flex items-center gap-2">
+                      <FontAwesomeIcon icon={v.icon} spin={v.spin} className={`h-3.5 w-3.5 shrink-0 ${v.clase}`} />
+                      <span className="flex-1 font-semibold">{f.nombre}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {ETIQUETA_ESTADO[f.estado]}
+                        {f.tanda ? ` · tanda ${f.tanda}` : ''}
+                      </span>
+                    </summary>
+                    <div className="px-3 pb-3 space-y-2">
+                      {f.motivo && <p className={`text-xs ${f.estado === 'rechazada' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>{f.motivo}</p>}
+                      <pre className="font-mono text-[11px] p-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-pre">{registro}</pre>
+                      <table className="w-full text-xs">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                          {detalleDeLoPresentado(registro).map((c) => (
+                            <tr key={c.posiciones}>
+                              <td className="py-1 pr-2 text-gray-400 w-14">{c.posiciones}</td>
+                              <td className="py-1 pr-2 text-gray-600 dark:text-gray-400">{c.nombre}</td>
+                              <td className="py-1 pr-2 font-mono text-gray-900 dark:text-gray-100 whitespace-pre">{c.valor}</td>
+                              <td className="py-1 text-gray-500 dark:text-gray-400">{c.legible || ''}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                );
+              })}
+          </div>
+        </Modal>
+      )}
     </Modal>
   );
 };

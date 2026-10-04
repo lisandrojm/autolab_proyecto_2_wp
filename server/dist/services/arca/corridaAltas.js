@@ -59,7 +59,7 @@ export async function arrancarCorridaAltas(opts) {
             empresaId: lote.empresa._id,
             empresaRazonSocial: lote.empresa.razonSocial,
             empresaCuit: lote.empresa.cuit,
-            personas: lote.items.map((i) => ({ cuil: i.cuil, nombre: i.nombre })),
+            personas: lote.items.map((i) => ({ cuil: i.cuil, nombre: i.nombre, registro: i.registro })),
             total: lote.items.length,
             enSeco,
             eventos: [],
@@ -226,8 +226,8 @@ async function correrPorTandas(o) {
     let resultado = "fallo";
     let error;
     const contratosParaLog = (resultados) => resultados
-        ? resultados.map((x) => ({ userProjectId: x.item.userProjectId, contractIndex: x.item.contractIndex, cuil: x.item.cuil, nombre: x.item.nombre, resultado: NOMBRE_EN_LOG[x.estado] || x.estado, motivo: x.motivo, tanda: x.tanda, cat: x.cat, porConsulta: x.porConsulta }))
-        : lote.items.map((i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, resultado: "pendiente" }));
+        ? resultados.map((x) => ({ userProjectId: x.item.userProjectId, contractIndex: x.item.contractIndex, cuil: x.item.cuil, nombre: x.item.nombre, registro: x.item.registro, resultado: NOMBRE_EN_LOG[x.estado] || x.estado, motivo: x.motivo, tanda: x.tanda, cat: x.cat, porConsulta: x.porConsulta }))
+        : lote.items.map((i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, registro: i.registro, resultado: "pendiente" }));
     // El log se crea ANTES de presentar y se va completando por tanda: si el servidor se cae, queda.
     const log = await ArcaAltasLog.create({
         tenantId: tenantObjectId,

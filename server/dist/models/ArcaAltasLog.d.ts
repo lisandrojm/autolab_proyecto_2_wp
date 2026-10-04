@@ -23,7 +23,8 @@ export interface IArcaAltasLog extends Document {
         userProjectId: Types.ObjectId;
         contractIndex: number;
         cuil: string;
-        nombre: string;
+        nombre: string; /** El registro de 85 tal cual se mandó a ARCA. */
+        registro?: string;
         resultado: string;
         motivo?: string;
         tanda?: number;

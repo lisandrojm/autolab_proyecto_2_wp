@@ -86,9 +86,11 @@ interface CorridaAltas {
     empresaId: string;
     empresaRazonSocial: string;
     empresaCuit: string;
+    /** Con el REGISTRO tal cual se manda a ARCA: la pantalla muestra exactamente lo que se presentó. */
     personas: Array<{
         cuil: string;
         nombre: string;
+        registro?: string;
     }>;
     total: number;
     enSeco: boolean;

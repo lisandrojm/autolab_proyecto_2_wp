@@ -1,4 +1,4 @@
-import { MAX_ALTAS_MASIVAS, partirEnTandas } from '@compartido/layoutAltaArca';
+import { LAYOUT_85, MAX_ALTAS_MASIVAS, partirEnTandas } from '@compartido/layoutAltaArca';
 
 /**
  * EL PROGRESO DE UNA CORRIDA DE ALTAS MASIVAS POR TANDAS, reconstruido desde sus eventos.
@@ -89,6 +89,36 @@ export function progresoPorTandas(o: { eventos: Evento[]; personas: Array<{ cuil
   for (const t of tandas) for (const p of t.personas) cuenta[p.estado]++;
   const corte = ultimo('corte');
   return { tope, topeEnPantalla: evTope?.enPantalla, tandas, consultadas, corte: corte ? { motivo: corte.motivo, mensaje: corte.mensaje } : undefined, cuenta };
+}
+
+/**
+ * LO QUE SE LE MANDÓ A ARCA POR UNA PERSONA, campo por campo: el registro de 85 partido con las
+ * mismas posiciones con las que se arma (`LAYOUT_85`) y con los nombres que publica ARCA.
+ *
+ * `valor` es el tramo TAL CUAL viaja; `legible` solo le da forma a lo que cuesta leer de corrido
+ * (fechas, remuneración). No se traduce ningún código a su nombre: la pantalla muestra lo presentado,
+ * no lo que el catálogo dice hoy.
+ */
+export function detalleDeLoPresentado(registro: string): Array<{ nombre: string; posiciones: string; valor: string; legible?: string }> {
+  const r = String(registro || '');
+  const tramo = (c: { desde: number; hasta: number }) => r.slice(c.desde - 1, c.hasta);
+  const fecha = (v: string) => (/^\d{8}$/.test(v) ? `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}` : v.trim() ? undefined : 'sin fecha');
+  const filas: Array<{ nombre: string; posiciones: string; valor: string; legible?: string }> = [];
+  for (const c of LAYOUT_85) {
+    const valor = tramo(c);
+    if (c.clave === 'retribucionDecimal') continue; // va junto con la parte entera
+    if (c.clave === 'retribucionEntera') {
+      const dec = LAYOUT_85.find((x) => x.clave === 'retribucionDecimal')!;
+      filas.push({ nombre: 'Remuneracion', posiciones: `${c.desde}–${dec.hasta}`, valor: valor + tramo(dec), legible: `$ ${Number(valor).toLocaleString('es-AR')},${tramo(dec)}` });
+      continue;
+    }
+    let legible: string | undefined;
+    if (c.clave === 'fechaInicio' || c.clave === 'fechaFin') legible = fecha(valor);
+    if (c.clave === 'cuil' && /^\d{11}$/.test(valor)) legible = `${valor.slice(0, 2)}-${valor.slice(2, 10)}-${valor.slice(10)}`;
+    if (c.clave === 'agropecuario') legible = valor === '1' ? 'Agropecuario' : 'No agropecuario';
+    filas.push({ nombre: c.nombre, posiciones: c.desde === c.hasta ? String(c.desde) : `${c.desde}–${c.hasta}`, valor, legible });
+  }
+  return filas;
 }
 
 const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;

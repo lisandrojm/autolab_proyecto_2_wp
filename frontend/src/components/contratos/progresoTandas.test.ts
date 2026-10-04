@@ -1,9 +1,34 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { progresoPorTandas, resumenCsv } from './progresoTandas';
+import { detalleDeLoPresentado, progresoPorTandas, resumenCsv } from './progresoTandas';
 
 const personas = Array.from({ length: 20 }, (_, i) => ({ cuil: `20${String(i + 1).padStart(8, '0')}1`, nombre: `Persona ${i + 1}` }));
 const cuils = (desde: number, hasta: number) => personas.slice(desde, hasta).map((p) => p.cuil);
+
+describe('detalleDeLoPresentado', () => {
+  // Un registro como los de la pantalla (CUIL cambiado): 85 posiciones.
+  const R = '20111111112' + '120900' + '00001' + '591110' + '4132' + '022' + '1' + '01239805' + '93' + '0' + '01102026' + '31102026' + '0634/11   ' + '035358' + '000' + '0' + '01';
+  it('parte el registro con las posiciones de ARCA y no pierde ni un carácter', () => {
+    assert.equal(R.length, 85);
+    const d = detalleDeLoPresentado(R);
+    assert.equal(d.map((f) => f.valor).join(''), R, 'lo que se muestra, pegado, es exactamente lo que viajó');
+    const v = (nombre: string) => d.find((f) => f.nombre === nombre)!;
+    assert.equal(v('CUIL').legible, '20-11111111-2');
+    assert.equal(v('Codigo de Obra Social').valor, '120900');
+    assert.equal(v('Codigo de Sucursal').valor, '00001');
+    assert.equal(v('Codigo de Actividad').valor, '591110');
+    assert.equal(v('Codigo de Puesto Desempeñado').valor, '4132');
+    assert.equal(v('Remuneracion').valor, '0123980593');
+    assert.match(v('Remuneracion').legible || '', /1\.239\.805,93/);
+    assert.equal(v('Fecha de inicio de la relacion laboral').legible, '01/10/2026');
+    assert.equal(v('Fecha de fin de la relacion laboral').legible, '31/10/2026');
+    assert.equal(v('Codigo de Convenio Colectivo').valor, '0634/11   ');
+  });
+  it('sin fecha de fin lo dice, en vez de mostrar ocho espacios', () => {
+    const sinFin = R.slice(0, 55) + ' '.repeat(8) + R.slice(63);
+    assert.equal(detalleDeLoPresentado(sinFin).find((f) => f.nombre.startsWith('Fecha de fin'))!.legible, 'sin fecha');
+  });
+});
 
 describe('progresoPorTandas', () => {
   it('antes de empezar muestra las tandas como van a salir: 9, 9 y 2, todas pendientes', () => {
