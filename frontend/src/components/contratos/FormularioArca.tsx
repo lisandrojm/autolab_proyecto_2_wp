@@ -303,10 +303,12 @@ const CodigosDelTipo: React.FC<{
             type="button"
             onClick={() => setEditando(true)}
             title={`Editar los códigos ARCA del tipo de contrato «${nombreTipo}»`}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+            aria-label={`Editar los códigos ARCA del tipo de contrato «${nombreTipo}»`}
+            /* Sólo el ícono, en azul: igual que el de «Puesto desempeñado» (`CampoPuestoDesempenado`).
+               Uno decía «Editar códigos» en azul y el otro «Cambiar» en blanco, para la misma acción. */
+            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-50"
           >
-            <FontAwesomeIcon icon={faPenToSquare} className="h-3 w-3" />
-            Editar códigos
+            <FontAwesomeIcon icon={faPenToSquare} className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

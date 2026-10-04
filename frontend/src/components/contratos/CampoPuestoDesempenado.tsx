@@ -112,9 +112,16 @@ export const CampoPuestoDesempenado: React.FC<{
               Volver al por defecto
             </button>
           )}
-          <button type="button" disabled={guardando} onClick={() => setEligiendo(true)} title="Elegir otro puesto para este contrato" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-            <FontAwesomeIcon icon={guardando ? faSpinner : faPenToSquare} spin={guardando} className="h-3 w-3" />
-            {efectivo ? 'Cambiar' : 'Elegir'}
+          {/* Sólo el ícono, en azul: el mismo botón de editar que el de los códigos del tipo de contrato. */}
+          <button
+            type="button"
+            disabled={guardando}
+            onClick={() => setEligiendo(true)}
+            title={efectivo ? 'Cambiar el puesto desempeñado de este contrato' : 'Elegir el puesto desempeñado de este contrato'}
+            aria-label={efectivo ? 'Cambiar el puesto desempeñado de este contrato' : 'Elegir el puesto desempeñado de este contrato'}
+            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-50"
+          >
+            <FontAwesomeIcon icon={guardando ? faSpinner : faPenToSquare} spin={guardando} className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
