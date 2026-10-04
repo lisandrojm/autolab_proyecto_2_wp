@@ -24,6 +24,7 @@ import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/cor
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
+import { encolarSiCorresponde } from "../services/arca/colaObrasSociales.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
 import UserProject from "../models/UserProject.js";
@@ -2024,6 +2025,13 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 userProject.nombre_rol_frame = rolFrameName;
         }
         await userProject.save();
+        /*
+          La obra social se valida contra ARCA EN SEGUNDO PLANO, ahora que el contrato existe (ver
+          `colaObrasSociales.ts`): cuando alguien abra Contratos, el dato ya está. No espera ni tira —la
+          cola junta lo que llegue en los próximos segundos en una sola corrida—, así que crear el contrato
+          tarda lo mismo que antes. El botón «Validar obra social» queda como reintento.
+        */
+        encolarSiCorresponde({ tenantObjectId: req.tenantObjectId, usuarioId: req.user?.userId, cuit: user.metadata?.cuit, contrato: enrichedContract });
         // 3. Sync internal arrays in Project and User
         // Update assignedUsers
         if (!project.assignedUsers.some(id => id.toString() === user._id.toString())) {
@@ -2273,6 +2281,16 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
         };
         up.markModified("contracts");
         await up.save();
+        // Con empleadora recién asignada, la obra social se valida en segundo plano (ver `colaObrasSociales.ts`).
+        // El CUIL es de la persona y esta ruta no la tenía cargada: se busca sin frenar la respuesta.
+        if (!quitandoEmpleadora) {
+            const contratoGuardado = { ...contratoPrevio, empresaContratoId };
+            void User.findOne({ _id: userId, tenantId: req.tenantObjectId })
+                .select("metadata.cuit")
+                .lean()
+                .then((persona) => encolarSiCorresponde({ tenantObjectId: req.tenantObjectId, usuarioId: req.user?.userId, cuit: persona?.metadata?.cuit, contrato: contratoGuardado }))
+                .catch(() => { });
+        }
         // Se informa que se borró: es un efecto sobre OTRO campo, y en silencio se lee como que la
         // validación se perdió sola.
         const obraSocialLimpiada = quitandoEmpleadora && (contratoPrevio.obraSocialBloqueada === true || contratoPrevio.obraSocialId != null || contratoPrevio.obraSocialNoFigura === true);
