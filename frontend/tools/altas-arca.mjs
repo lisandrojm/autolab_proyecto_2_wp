@@ -6,6 +6,9 @@
  *    «Enviar» de Carga Masiva (Button_envio)     presenta la novedad con todas sus altas.
  *    «Aceptar» de la grilla de Altas.aspx        registra las altas que haya en la grilla.
  *
+ * Altas Masivas se presenta POR TANDAS (el pegado admite pocos registros): este motor presenta UNA
+ * tanda por llamada y el servidor las encadena (`server/src/services/arca/tandasAltas.ts`).
+ *
  * Cada uno vive en SU función (`enviarNovedad`, `aceptarGrilla`), con UN click, sin reintento. Si
  * después del click no se puede leer qué pasó, el resultado es «indeterminado» y se resuelve LEYENDO
  * (el listado de novedades, Relaciones Laborales → Consultas), nunca volviendo a apretar.
@@ -48,6 +51,10 @@ export const BOTONES = {
   volver_a_novedad: { id: "Button3", pantalla: "carga_masiva_rel_abm" },
   altas_masivas: { id: "btnArchivoAltas", pantalla: "altas" },
   aceptar_pegado: { id: "btnAceptar", pantalla: "archivo_altas" },
+  // «Volver» del pegado: sale sin pegar nada. Se usa al leer el tope antes de armar las tandas.
+  volver_del_pegado: { id: "btnvolver", pantalla: "archivo_altas" },
+  // «Continuar» de Consultas: busca. No modifica nada en ARCA.
+  consulta_continuar: { id: "btnContinuar", pantalla: "consulta" },
 };
 
 /** Los dos que presentan altas. Fuera de `BOTONES` a propósito: `apretar()` no los alcanza. */
@@ -71,6 +78,8 @@ export function pantallaAltas({ accion = "", ids = [], texto = "" } = {}) {
   if (/IndexContribuyente\.aspx/i.test(a)) return "selector_cuit";
   if (/ArchivoAltas\.aspx/i.test(a) && tiene("txtRegistrosAltas")) return "archivo_altas";
   if (/(^|\/)Altas\.aspx/i.test(a) && tiene("btnArchivoAltas")) return "altas";
+  // El FORMULARIO de Consultas (criterio por CUIL). Su resultado, sin el criterio, es «otra».
+  if (/(^|\/)Consulta\.aspx/i.test(a) && tiene("rb1") && tiene("btnContinuar")) return "consulta";
   if (/CargaMasiva_rel_abm\.aspx/i.test(a)) return "carga_masiva_rel_abm";
   if (/CargaMasiva_principal\.aspx/i.test(a) && tiene("lblEstado")) return "carga_masiva_principal";
   if (/(^|\/)CargaMasiva\.aspx/i.test(a) && ids.some((id) => /listaNovedades_ctl\d+_/.test(id))) return "carga_masiva_listado";
@@ -339,20 +348,164 @@ export async function cargaMasiva({ page, empresaCuit, txt, registros, enSeco = 
 }
 
 // ------------------------------------------------------------------ ALTAS MASIVAS
+
+/**
+ * El tope del pegado según la constante de siempre. El que manda es el MENOR entre este y el que
+ * dice la pantalla («Ingrese el texto correspondiente a los registros (maximo 9 registros)»): si
+ * ARCA lo baja, se respeta; si lo sube, no se estira sin que alguien lo decida.
+ */
+export const TOPE_PEGADO = 9;
+
+/** El tope que dice la pantalla del pegado. `null` si no lo dice (la pantalla cambió). Puro. */
+export function topeDelPegado(texto) {
+  const m = String(texto || "").match(/m[aá]ximo\s+(\d{1,3})\s+registros?/i);
+  const n = m ? Number(m[1]) : NaN;
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/**
+ * Qué registro rechazó el pegado, a partir del mensaje de ARCA. Devuelve su índice, o -1 si el
+ * mensaje no lo dice. Puro.
+ *
+ * Solo dos formas de saberlo, las dos explícitas: el mensaje trae el CUIL de UN registro del lote, o
+ * nombra «registro / línea / fila N». Sin eso no se elige ninguno: se rechaza la tanda entera con el
+ * texto de ARCA, que es lo único que se sabe.
+ */
+export function registroRechazadoDelPegado(mensaje, registros) {
+  const t = String(mensaje || "");
+  const sinGuiones = t.replace(/(\d)[-.](?=\d)/g, "$1");
+  const porCuil = registros.map((r, i) => (sinGuiones.includes(String(r).slice(0, 11)) ? i : -1)).filter((i) => i >= 0);
+  if (porCuil.length === 1) return porCuil[0];
+  const m = t.match(/(?:registro|l[ií]nea|fila|rengl[oó]n)\s*(?:n(?:ro)?[°º.]?\s*)?(\d{1,3})/i);
+  const n = m ? Number(m[1]) : 0;
+  return n >= 1 && n <= registros.length ? n - 1 : -1;
+}
+
+/**
+ * Si la pantalla de resultado de Relaciones Laborales → Consultas muestra el alta de esa persona.
+ * Devuelve `true` o `null`: NUNCA `false`. Puro.
+ *
+ * Que no la veamos no prueba que no esté (la consulta puede tardar en mostrarla, o la pantalla puede
+ * tener una forma que este lector no conoce), y con un «no está» alguien la volvería a presentar. Por
+ * eso solo se afirma lo positivo: el texto trae el CUIL y la fecha de inicio del alta.
+ *
+ * ⚠ La pantalla de resultado todavía no se relevó con un fixture (el reconocimiento llegó hasta el
+ * formulario). Cuando se releve, acá se suma leer la clave de alta (C.A.T.) si la consulta la trae.
+ */
+export function altaEnConsulta(texto, cuil, fechaInicio) {
+  const t = String(texto || "");
+  const c = soloDigitos(cuil);
+  const f = soloDigitos(fechaInicio);
+  if (c.length !== 11 || f.length !== 8) return null;
+  const fecha = `${f.slice(0, 2)}/${f.slice(2, 4)}/${f.slice(4)}`;
+  const tieneCuil = t.replace(/(\d)-(?=\d)/g, "$1").includes(c);
+  return tieneCuil && t.includes(fecha) ? true : null;
+}
+
+/**
+ * SACA DE LA GRILLA UNA FILA NUESTRA que ARCA rechazó, para que la tanda siguiente la encuentre vacía.
+ *
+ * Es el «Borrar» de ESA fila (`rptRegistrosAlta_ctlNN_RAR_Eliminar`), buscado por el CUIL de su
+ * `RAR_lblCuil` y nunca por posición. Tira si el CUIL no es del lote: las filas que cargó otra persona
+ * no se tocan, y «Reiniciar» —que las borra todas— sigue sin existir para este motor.
+ */
+async function quitarFila(page, cuil, delLote, estado) {
+  if (!delLote.includes(cuil)) throw new Error("Esa fila no es de este lote: no se borra.");
+  if ((await pantallaActual(page)) !== "altas") throw new Error("La pantalla ya no es Registrar Nuevas Altas: no se borra nada.");
+  const idsCuil = await page.evaluate((c) => Array.from(document.querySelectorAll("[id*='rptRegistrosAlta_ctl'][id$='_RAR_lblCuil']")).filter((el) => (el.textContent || "").replace(/\D/g, "") === c).map((el) => el.id), cuil);
+  if (idsCuil.length !== 1) throw new Error(`Esperaba UNA fila con ese CUIL en la grilla y hay ${idsCuil.length}.`);
+  const btn = page.locator(`[id="${idsCuil[0].replace(/_RAR_lblCuil$/, "_RAR_Eliminar")}"]`);
+  if ((await btn.count()) !== 1) throw new Error("No encuentro el «Borrar» de esa fila.");
+  // Si ARCA pregunta «¿está seguro?», es la confirmación de este mismo borrado.
+  estado.aceptarDialogo = true;
+  await btn.click();
+  const salio = await esperarEstado(async () => !(await cuilsEnGrilla(page)).includes(cuil), { que: "que la fila salga de la grilla", log });
+  estado.aceptarDialogo = false;
+  if (!salio) throw new Error("Apreté «Borrar» y la fila sigue en la grilla.");
+}
+
+/**
+ * Lee de la pantalla del pegado cuántos registros admite ARCA, sin pegar nada, y vuelve.
+ *
+ * Se llama UNA vez, antes de partir la selección en tandas: el tamaño de la tanda sale de acá. Exige
+ * lo mismo que una tanda —empleadora verificada, grilla vacía—, así una corrida que no va a poder
+ * presentar se entera antes de empezar.
+ */
+export async function leerTopeAltasMasivas({ page, empresaCuit, onProgreso = () => {} }) {
+  const estado = { aceptarDialogo: false, dialogos: [] };
+  const soltar = manejarDialogos(page, estado, onProgreso);
+  try {
+    const base = await entrarComo(page, empresaCuit);
+    await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
+    if (!(await esperarPantalla(page, ["altas"], "Registrar Nuevas Altas"))) throw new Error(`No llegué a Registrar Nuevas Altas (estoy en ${await pantallaActual(page)}).`);
+    await verificarEmpleadora(page, empresaCuit, onProgreso);
+    const previas = await cuilsEnGrilla(page);
+    if (previas.length > 0) throw new Error(`La grilla de Registrar Nuevas Altas ya tiene ${previas.length} persona(s) cargada(s) sin confirmar. Su «Aceptar» las registraría junto con las nuestras: revisala en ARCA y dejala vacía antes de presentar.`);
+    await apretar(page, "altas_masivas");
+    if (!(await esperarPantalla(page, ["archivo_altas"], "Ingreso masivo de datos"))) throw new Error("ARCA no abrió «Ingreso masivo de datos».");
+    const enPantalla = topeDelPegado((await leerPantalla(page)).texto);
+    await apretar(page, "volver_del_pegado");
+    await esperarPantalla(page, ["altas"], "volver a Registrar Nuevas Altas");
+    onProgreso({ tipo: "tope", enPantalla });
+    return enPantalla;
+  } finally {
+    soltar();
+  }
+}
+
+/**
+ * Relaciones Laborales → Consultas, por CUIL. SOLO LEE: es una búsqueda.
+ *
+ * Es cómo se resuelve una tanda incierta sin volver a presentarla. Devuelve `{ encontrada, html }`
+ * con `encontrada` en `true` o `null` (ver `altaEnConsulta`: nunca `false`).
+ */
+export async function consultarAltaPorCuil({ page, cuil, fechaInicio }) {
+  const c = soloDigitos(cuil);
+  if (c.length !== 11) throw new Error("La consulta necesita un CUIL de 11 dígitos.");
+  await page.goto(`${page.url().split("/app/")[0]}/app/Contribuyente/RelacionLaboral/Consulta.aspx`, { waitUntil: "domcontentloaded" });
+  if (!(await esperarPantalla(page, ["consulta"], "Consultas de Relaciones Laborales"))) throw new Error(`No llegué a Consultas (estoy en ${await pantallaActual(page)}).`);
+  const radio = page.locator(`[id="${PREFIJO}rb1"]`);
+  const campo = page.locator(`[id="${PREFIJO}inputCuil_txtCuil"]`);
+  if ((await radio.count()) !== 1 || (await campo.count()) !== 1) throw new Error("La pantalla de Consultas no tiene el criterio por CUIL donde se esperaba.");
+  await radio.check();
+  await campo.fill(c);
+  await apretar(page, "consulta_continuar");
+  // El resultado reemplaza al formulario: se espera a que el criterio por CUIL deje de estar.
+  await esperarEstado(async () => (await pantallaActual(page)) !== "consulta", { ms: 15_000, que: "el resultado de la consulta", log });
+  const texto = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
+  return { encontrada: altaEnConsulta(texto, c, fechaInicio), html: await htmlAnonimo(page) };
+}
+
 /**
  * Relaciones Laborales → Registrar Nuevas Altas → Altas Masivas: pegar → Aceptar → grilla → Aceptar.
+ * UNA TANDA por llamada; quien arma las tandas es el servidor (`tandasAltas.ts`).
  *
  * EN SECO SE CORTA ANTES DEL «ACEPTAR» DEL PEGADO, no antes del de la grilla. La grilla queda
  * guardada en ARCA entre sesiones: dejarla cargada «para probar» deja altas a medio dar que
- * cualquiera puede confirmar después, y la próxima corrida real la encontraría ocupada. El paso del
- * pegado a la grilla se verifica con el reconocimiento, con alguien mirando.
+ * cualquiera puede confirmar después, y la próxima corrida real la encontraría ocupada.
+ *
+ * QUÉ PASA CON UNA FILA QUE ARCA NO QUIERE:
+ *   · la rechaza al pegar y dice cuál → se saca ese registro del texto y se pega el resto;
+ *   · la rechaza al pegar y no dice cuál → la tanda entera vuelve «rechazada» con el texto de ARCA
+ *     (no se presentó nada);
+ *   · no la pasa a la grilla → rechazada, y se registran las que sí pasaron;
+ *   · la marca con error después del «Aceptar» → rechazada con su motivo, y se saca de la grilla.
+ *     Si además TODAS siguen en la grilla, ese error bloqueó la tanda: las demás vuelven «devuelta»
+ *     (no registradas) y se sacan también, para que el servidor las presente en otra tanda.
+ *
+ * `antesDeAceptar(cuils)` se espera justo antes del click que no se deshace: ahí el servidor deja
+ * escrito en cada contrato que se está presentando, para que un corte no deje altas sin rastro.
+ *
+ * Devuelve `{ resultado, porPersona }` con `resultado` en `aceptada` | `rechazada` | `seco` |
+ * `indeterminado`, y cada persona en `alta` | `rechazada` | `devuelta` | `indeterminado`.
  */
-export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = true, onProgreso = () => {}, señal = { cortada: false } }) {
+export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = true, tope = TOPE_PEGADO, onProgreso = () => {}, antesDeAceptar = async () => {}, señal = { cortada: false } }) {
   const estado = { aceptarDialogo: false, dialogos: [] };
   const soltar = manejarDialogos(page, estado, onProgreso);
   const pedidos = [...new Set((cuils || []).map(soloDigitos))];
+  const limite = Math.min(Number(tope) || TOPE_PEGADO, TOPE_PEGADO);
   try {
-    if (pedidos.length === 0 || pedidos.length > 9) throw new Error(`Altas Masivas admite de 1 a 9 registros y el lote tiene ${pedidos.length}.`);
+    if (pedidos.length === 0 || pedidos.length > limite) throw new Error(`Altas Masivas admite de 1 a ${limite} registros por tanda y esta tiene ${pedidos.length}.`);
     const base = await entrarComo(page, empresaCuit);
     cortar(señal, "abrir Registrar Nuevas Altas");
     await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
@@ -363,12 +516,16 @@ export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = t
     // LA GRILLA TIENE QUE ESTAR VACÍA: su «Aceptar» registra TODO lo que haya, también lo que cargó
     // otra persona. No se toca «Reiniciar»: esas filas no son nuestras.
     const previas = await cuilsEnGrilla(page);
-    if (previas.length > 0) throw new Error(`La grilla de Registrar Nuevas Altas ya tiene ${previas.length} persona(s) cargada(s) sin confirmar. Su «Aceptar» las registraría junto con las nuestras: revisala en ARCA y dejala vacía antes de volver a correr. No se escribió nada.`);
+    if (previas.length > 0) throw new Error(`La grilla de Registrar Nuevas Altas ya tiene ${previas.length} persona(s) cargada(s) sin confirmar. Su «Aceptar» las registraría junto con las nuestras: revisala en ARCA y dejala vacía antes de presentar.`);
     onProgreso({ tipo: "grillaVacia" });
 
     cortar(señal, "abrir Altas Masivas");
     await apretar(page, "altas_masivas");
     if (!(await esperarPantalla(page, ["archivo_altas"], "Ingreso masivo de datos"))) throw new Error("ARCA no abrió «Ingreso masivo de datos».");
+    // El tope se vuelve a leer en CADA tanda: es lo que la pantalla dice ahora, no lo que dijo antes.
+    const enPantalla = topeDelPegado((await leerPantalla(page)).texto);
+    if (enPantalla === null) throw new Error("La pantalla del pegado no dice cuántos registros admite: cambió, y no se pega sin saberlo.");
+    if (pedidos.length > enPantalla) throw new Error(`ARCA admite ahora ${enPantalla} registros por pegado y la tanda tiene ${pedidos.length}. No se pegó nada.`);
     const area = page.locator(`[id="${PREFIJO}txtRegistrosAltas"]`);
     if ((await area.count()) !== 1) throw new Error("No encuentro el cuadro de texto de Altas Masivas.");
     await area.fill(texto);
@@ -380,38 +537,74 @@ export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = t
     }
 
     cortar(señal, "pasar el texto a la grilla");
-    await apretar(page, "aceptar_pegado");
-    await esperarPantalla(page, ["altas", "archivo_altas"], "resultado del pegado");
-    if ((await pantallaActual(page)) === "archivo_altas") {
-      const msg = (await leerPantalla(page)).texto.split("\n").find((l) => /error|inv[aá]lid|incorrect|debe/i.test(l)) || "ARCA no aceptó el texto pegado.";
-      throw Object.assign(new Error(`ARCA rechazó el texto: ${msg.trim()}`), { textoArca: msg.trim() });
+    // El pegado se repite solo para SACAR un registro que ARCA rechazó y dijo cuál: cada vuelta lleva
+    // un registro menos, así que termina. Pegar no presenta nada; el que no se repite es el Aceptar de la grilla.
+    const rechazadas = [];
+    let registros = String(texto).split("\n").filter(Boolean);
+    for (;;) {
+      await apretar(page, "aceptar_pegado");
+      await esperarPantalla(page, ["altas", "archivo_altas"], "resultado del pegado");
+      if ((await pantallaActual(page)) !== "archivo_altas") break;
+      const msg = ((await leerPantalla(page)).texto.split("\n").find((l) => /error|inv[aá]lid|incorrect|debe/i.test(l)) || "ARCA no aceptó el texto pegado.").trim();
+      const i = registroRechazadoDelPegado(msg, registros);
+      const fuera = i >= 0 ? [registros[i]] : registros;
+      for (const r of fuera) rechazadas.push({ cuil: r.slice(0, 11), estado: "rechazada", motivo: msg });
+      registros = i >= 0 ? registros.filter((_, j) => j !== i) : [];
+      if (registros.length === 0) {
+        for (const p of rechazadas) onProgreso({ tipo: "persona", ...p });
+        return { resultado: "rechazada", porPersona: rechazadas, textoArca: msg, dialogos: estado.dialogos };
+      }
+      await area.fill(registros.join("\n"));
     }
+
+    const quedan = registros.map((r) => r.slice(0, 11));
     const enGrilla = await cuilsEnGrilla(page);
     const sobran = enGrilla.filter((c) => !pedidos.includes(c));
-    const faltan = pedidos.filter((c) => !enGrilla.includes(c));
     onProgreso({ tipo: "grillaCargada", cuils: enGrilla });
-    if (sobran.length > 0 || faltan.length > 0) {
-      throw new Error(`La grilla no tiene exactamente las ${pedidos.length} personas del lote (${faltan.length} faltan, ${sobran.length} sobran). No se confirmó nada: las filas quedaron en la grilla de ARCA SIN registrar; revisalas allá.`);
+    if (sobran.length > 0) {
+      throw new Error(`La grilla tiene ${sobran.length} persona(s) que no son de esta tanda. No se confirmó nada: las filas quedaron en la grilla de ARCA SIN registrar. Entrá a Registrar Nuevas Altas y revisala.`);
+    }
+    // Lo que el pegado no pasó a la grilla, ARCA no lo quiso: rechazada, y se sigue con las que pasaron.
+    const pantallaPegado = (await leerPantalla(page)).texto.split("\n");
+    for (const c of quedan.filter((x) => !enGrilla.includes(x))) {
+      rechazadas.push({ cuil: c, estado: "rechazada", motivo: (pantallaPegado.find((l) => soloDigitos(l).includes(c)) || "ARCA no pasó este registro a la grilla.").trim() });
+    }
+    const aPresentar = quedan.filter((c) => enGrilla.includes(c));
+    if (aPresentar.length === 0) {
+      for (const p of rechazadas) onProgreso({ tipo: "persona", ...p });
+      return { resultado: "rechazada", porPersona: rechazadas, dialogos: estado.dialogos };
     }
 
     cortar(señal, "registrar las altas");
     onProgreso({ tipo: "irreversible", que: "aceptar" });
+    await antesDeAceptar(aPresentar);
     // ⚠ Desde acá no hay vuelta atrás ni reintento.
     await aceptarGrilla(page, estado);
     await esperarEstado(async () => (await cuilsEnGrilla(page)).length === 0 || (await pantallaActual(page)) !== "altas", { que: "después de Aceptar", log });
+
     const html = await htmlAnonimo(page);
     const { texto: textoFinal } = await leerPantalla(page);
-    const grillaDespues = await cuilsEnGrilla(page).catch(() => pedidos);
-
+    const grillaDespues = await cuilsEnGrilla(page).catch(() => null);
     // Resultado por persona: rechazada si su CUIL aparece en una línea de error, alta si la grilla
     // quedó vacía y no hay errores. Cualquier otra cosa no se adivina.
     const lineas = textoFinal.split("\n");
-    const porPersona = pedidos.map((cuil) => {
-      const conCuil = lineas.find((l) => soloDigitos(l).includes(cuil) && /error|rechaz|no se|inv[aá]lid/i.test(l));
+    const errorDe = (cuil) => lineas.find((l) => soloDigitos(l).includes(cuil) && /error|rechaz|no se|inv[aá]lid/i.test(l));
+    // Bloqueada: ARCA marcó un error y NINGUNA fila salió de la grilla, o sea que no registró ninguna.
+    const bloqueada = !!grillaDespues && aPresentar.every((c) => grillaDespues.includes(c)) && aPresentar.some((c) => errorDe(c));
+    const presentadas = aPresentar.map((cuil) => {
+      const conCuil = errorDe(cuil);
       if (conCuil) return { cuil, estado: "rechazada", motivo: conCuil.trim() };
-      if (grillaDespues.length === 0 && !/error/i.test(textoFinal)) return { cuil, estado: "alta" };
+      if (bloqueada) return { cuil, estado: "devuelta" };
+      if (grillaDespues && grillaDespues.length === 0 && !/error/i.test(textoFinal)) return { cuil, estado: "alta" };
       return { cuil, estado: "indeterminado" };
     });
+    // Las nuestras que ARCA rechazó o devolvió se sacan de la grilla, de a una y por su CUIL. Si no se
+    // puede, queda dicho: la próxima tanda va a encontrar la grilla ocupada y no va a presentar.
+    for (const p of presentadas) {
+      if ((p.estado !== "rechazada" && p.estado !== "devuelta") || !grillaDespues?.includes(p.cuil)) continue;
+      await quitarFila(page, p.cuil, pedidos, estado).catch((e) => onProgreso({ tipo: "pantalla", que: `no pude sacar una fila rechazada de la grilla (${e?.message || e})` }));
+    }
+    const porPersona = [...rechazadas, ...presentadas];
     for (const p of porPersona) onProgreso({ tipo: "persona", ...p });
     if (porPersona.some((p) => p.estado === "indeterminado")) {
       onProgreso({ tipo: "indeterminado", comoVerificar: "Revisá en ARCA → Relaciones Laborales → Consultas si las altas figuran. NO las vuelvas a presentar desde acá." });
