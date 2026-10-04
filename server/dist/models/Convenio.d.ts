@@ -26,6 +26,19 @@ export interface IConvenio extends Document {
      */
     obraSocialDefaultId?: number;
     /**
+     * PUESTO DESEMPEÑADO por defecto de quien trabaja bajo este convenio: el código de 4 dígitos del
+     * catálogo `arca-puestos-desempenados` que exige el registro de 85 (Altas Masivas, pos. 29-32).
+     *
+     * Cuelga del convenio por lo mismo que la obra social: el puesto típico lo define el convenio, no
+     * la productora. Es el tercer escalón de `resolverPuesto` (`compartido/puestosDesempenados.ts`):
+     * entra cuando ni el Rol Empresa ni la Categoría del contrato tienen el suyo, y antes que el default
+     * de la empleadora.
+     *
+     * Vacío = el convenio no decide (el 9999/99 «excluido de convenio», o uno que nadie cargó): se
+     * sigue a la empleadora y a la instalación. Se guarda normalizado (`codigoPuesto`).
+     */
+    puestoDesempenadoDefault?: string;
+    /**
      * EL SINDICATO QUE FIRMÓ ESTE CONVENIO. Ref al catálogo `Sindicato`.
      *
      * La relación se guarda ACÁ y no como una lista de convenios en el sindicato: es N:1 —SATSAID

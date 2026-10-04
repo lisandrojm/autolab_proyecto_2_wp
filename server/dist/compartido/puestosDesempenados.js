@@ -20,16 +20,26 @@ export const codigoPuesto = (v) => {
 /**
  * EL PUESTO DE UN CONTRATO, en este orden:
  *
- *   Rol Empresa del contrato → Categoría → default de la empleadora → default de la instalación
+ *   Rol Empresa del contrato → Categoría → CONVENIO de la categoría → default de la empleadora →
+ *   default de la instalación
  *
  * La función va primero porque ES el puesto («Asistente de Cámara»); la categoría es el encuadre del
- * convenio y varias funciones distintas comparten la misma. Lo usan el generador del registro
- * (frontend) y el cotejo del lote (servidor): si cada uno resolviera por su cuenta, podrían discrepar.
+ * convenio y varias funciones distintas comparten la misma.
+ *
+ * EL CONVENIO VA ANTES QUE LA EMPLEADORA, por lo mismo que la obra social (`Convenio.obraSocialDefaultId`):
+ * el puesto típico lo define el convenio —quien trabaja bajo el de televisión es personal de apoyo a
+ * la producción, lo contrate la productora que lo contrate—, y el default de la empleadora queda para
+ * lo que el convenio no decide (el 9999/99 «excluido de convenio», o un convenio sin default). Entra
+ * SOLO cuando rol y categoría están vacíos: lo que ya resolvían esos dos no cambia.
+ *
+ * Lo usan el generador del registro (frontend) y el cotejo del lote (servidor): si cada uno
+ * resolviera por su cuenta, podrían discrepar. Por eso es UNA función, y los dos le pasan los cinco.
  */
 export function resolverPuesto(o) {
     for (const [valor, origen] of [
         [o.rol, "funcion"],
         [o.categoria, "categoria"],
+        [o.convenio, "convenio"],
         [o.empresa, "empresa"],
         [o.global, "global"],
     ]) {

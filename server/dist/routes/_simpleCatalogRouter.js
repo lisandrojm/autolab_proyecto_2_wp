@@ -69,6 +69,7 @@ model, config) {
         ...(config.extraNumberFields || []).map((f) => f.key),
         ...(config.extraRefFields || []).map((f) => f.key),
         ...(config.extraBooleanFields || []).map((f) => f.key),
+        ...(config.extraValidatedFields || []).map((f) => f.key),
     ]);
     /** Las claves del body que este catálogo no sabe guardar. Vacío = todo bien. */
     const clavesDeMas = (body) => (body && typeof body === "object" ? Object.keys(body).filter((k) => !CLAVES_ACEPTADAS.has(k)) : []);
@@ -346,6 +347,15 @@ model, config) {
                 if (ref.valor !== undefined)
                     newItem[f.key] = ref.valor;
             }
+            for (const f of config.extraValidatedFields || []) {
+                const r = await f.resolver(req.body[f.key]);
+                if (r.error) {
+                    res.status(400).json({ error: r.error });
+                    return;
+                }
+                if (r.valor !== undefined)
+                    newItem[f.key] = r.valor;
+            }
             for (const f of config.extraBooleanFields || []) {
                 const b = aBooleanoOpcional(req.body[f.key]);
                 if (b !== undefined)
@@ -408,6 +418,15 @@ model, config) {
                 }
                 if (ref.valor !== undefined)
                     item[f.key] = ref.valor;
+            }
+            for (const f of config.extraValidatedFields || []) {
+                const r = await f.resolver(req.body[f.key]);
+                if (r.error) {
+                    res.status(400).json({ error: r.error });
+                    return;
+                }
+                if (r.valor !== undefined)
+                    item[f.key] = r.valor;
             }
             for (const f of config.extraBooleanFields || []) {
                 const b = aBooleanoOpcional(req.body[f.key]);

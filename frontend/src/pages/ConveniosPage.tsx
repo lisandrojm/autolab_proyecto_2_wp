@@ -12,6 +12,7 @@ import { formatRnos } from '../utils/rnos';
 import { InfoModal } from '../components/ui/InfoModal';
 import { Modal } from '../components/ui/Modal';
 import { ConveniosTable } from '../components/convenios/ConveniosTable';
+import { CeldaPuestoConvenio } from '../components/convenios/CeldaPuestoConvenio';
 import type { ConvenioFila } from '../components/convenios/ConveniosTable';
 import { paritariasAPI, EstadoParitarias, FuenteParitaria } from '../api/paritarias';
 import { BannerParitarias } from '../components/paritarias/BannerParitarias';
@@ -287,6 +288,7 @@ export const ConveniosPage: React.FC = () => {
             renderPorDefecto={(c) => <DefaultArcaStar campo="convenioId" valor={String(c._id)} nombre={`${c.externalId || ""} ${c.name}`.trim()} queEs="el convenio" />}
             accionPorDefecto={<LimpiarDefaultArca campo="convenioId" queEs="el convenio" />}
             obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
+            renderPuesto={(c) => <CeldaPuestoConvenio codigo={c.puestoDesempenadoDefault} />}
             renderSindicato={renderSindicato}
             renderEmpresas={(c) => {
               const lista = empresasPorConvenio.get(c._id) || [];
@@ -309,6 +311,12 @@ export const ConveniosPage: React.FC = () => {
         extraFields={[
           { key: 'signatario', label: 'Signatario', placeholder: 'Ej: FAECYS' },
           { key: 'obraSocialDefaultId', label: 'Obra social del convenio', type: 'select', options: opcionesObraSocial },
+          /*
+            El puesto desempeñado que exige el registro de 85 (Altas Masivas, URGENTE). Como la obra
+            social, lo define el convenio: rige cuando ni el Rol Empresa ni la Categoría del contrato
+            tienen el suyo, y antes que el default de la empleadora. Vacío = el convenio no decide.
+          */
+          { key: 'puestoDesempenadoDefault', label: 'Puesto desempeñado por defecto (alta URGENTE)', type: 'puesto' },
           /*
             El gremio firmante. NO se sugiere ni se autocompleta a partir del signatario: ese texto es
             inconsistente —el orden de las partes varía, los nombres no coinciden con el maestro, y la

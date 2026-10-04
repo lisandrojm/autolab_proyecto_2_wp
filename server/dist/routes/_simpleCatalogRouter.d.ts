@@ -66,6 +66,22 @@ export interface SimpleCatalogConfig {
         key: string;
     }>;
     /**
+     * Campos de texto con VALIDACIÓN PROPIA a persistir en create/update (ej. Convenios →
+     * `puestoDesempenadoDefault`, que tiene que ser un código activo del catálogo de puestos).
+     *
+     * `resolver` recibe lo que vino en el body y devuelve `{}` (no vino: no se toca), `{ valor }` (se
+     * guarda, ya normalizado; `""` lo quita) o `{ error }` (400 con ese texto). Aparte de
+     * `extraStringFields` porque esos se guardan tal cual y entran en el import de Excel; éstos NO
+     * participan del import: son datos propios, que el nomenclador de ARCA no trae.
+     */
+    extraValidatedFields?: Array<{
+        key: string;
+        resolver: (bruto: unknown) => Promise<{
+            valor?: string;
+            error?: string;
+        }>;
+    }>;
+    /**
      * Qué popular en el listado, para que el front no resuelva las refs con un pedido por fila.
      * Ej. Convenios → `{ path: "sindicatoId", select: "_id name sigla" }`.
      */

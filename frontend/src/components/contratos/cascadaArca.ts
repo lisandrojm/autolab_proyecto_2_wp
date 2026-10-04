@@ -25,7 +25,7 @@
  * herencia.
  */
 
-export type OrigenValorArca = "contrato" | "tipo_contrato" | "funcion" | "categoria" | "empresa" | "global" | "ninguno";
+export type OrigenValorArca = "contrato" | "tipo_contrato" | "funcion" | "categoria" | "convenio" | "empresa" | "global" | "ninguno";
 
 export interface ValorConOrigen {
   valor: string;
@@ -111,6 +111,7 @@ export const ETIQUETA_ORIGEN: Record<OrigenValorArca, string> = {
   tipo_contrato: "del tipo de contrato",
   funcion: "del Rol Empresa",
   categoria: "de la categoría",
+  convenio: "por defecto del convenio",
   empresa: "por defecto de la empleadora",
   global: "por defecto de la instalación",
   ninguno: "sin definir",

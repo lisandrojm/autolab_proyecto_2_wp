@@ -61,6 +61,16 @@ export interface SimpleCatalogConfig {
    */
   extraBooleanFields?: Array<{ key: string }>;
   /**
+   * Campos de texto con VALIDACIÓN PROPIA a persistir en create/update (ej. Convenios →
+   * `puestoDesempenadoDefault`, que tiene que ser un código activo del catálogo de puestos).
+   *
+   * `resolver` recibe lo que vino en el body y devuelve `{}` (no vino: no se toca), `{ valor }` (se
+   * guarda, ya normalizado; `""` lo quita) o `{ error }` (400 con ese texto). Aparte de
+   * `extraStringFields` porque esos se guardan tal cual y entran en el import de Excel; éstos NO
+   * participan del import: son datos propios, que el nomenclador de ARCA no trae.
+   */
+  extraValidatedFields?: Array<{ key: string; resolver: (bruto: unknown) => Promise<{ valor?: string; error?: string }> }>;
+  /**
    * Qué popular en el listado, para que el front no resuelva las refs con un pedido por fila.
    * Ej. Convenios → `{ path: "sindicatoId", select: "_id name sigla" }`.
    */
@@ -209,6 +219,7 @@ export function createSimpleCatalogRouter(
     ...(config.extraNumberFields || []).map((f) => f.key),
     ...(config.extraRefFields || []).map((f) => f.key),
     ...(config.extraBooleanFields || []).map((f) => f.key),
+    ...(config.extraValidatedFields || []).map((f) => f.key),
   ]);
 
   /** Las claves del body que este catálogo no sabe guardar. Vacío = todo bien. */
@@ -498,6 +509,14 @@ export function createSimpleCatalogRouter(
         }
         if (ref.valor !== undefined) newItem[f.key] = ref.valor;
       }
+      for (const f of config.extraValidatedFields || []) {
+        const r = await f.resolver((req.body as Record<string, unknown>)[f.key]);
+        if (r.error) {
+          res.status(400).json({ error: r.error });
+          return;
+        }
+        if (r.valor !== undefined) newItem[f.key] = r.valor;
+      }
       for (const f of config.extraBooleanFields || []) {
         const b = aBooleanoOpcional((req.body as Record<string, unknown>)[f.key]);
         if (b !== undefined) newItem[f.key] = b;
@@ -558,6 +577,14 @@ export function createSimpleCatalogRouter(
           return;
         }
         if (ref.valor !== undefined) item[f.key] = ref.valor;
+      }
+      for (const f of config.extraValidatedFields || []) {
+        const r = await f.resolver((req.body as Record<string, unknown>)[f.key]);
+        if (r.error) {
+          res.status(400).json({ error: r.error });
+          return;
+        }
+        if (r.valor !== undefined) item[f.key] = r.valor;
       }
       for (const f of config.extraBooleanFields || []) {
         const b = aBooleanoOpcional((req.body as Record<string, unknown>)[f.key]);
