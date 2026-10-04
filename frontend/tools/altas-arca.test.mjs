@@ -9,7 +9,9 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { BOTONES, POR_RELEVAR, PREFIJO, boton, pantallaAltas } from "./altas-arca.mjs";
 
-const FUENTE = readFileSync("tools/altas-arca.mjs", "utf8");
+// Con fin de línea normalizado: en un checkout de Windows (autocrlf) el archivo llega con CRLF, y los
+// tests que recortan la fuente por un marcador con salto de línea no lo encontraban.
+const FUENTE = readFileSync("tools/altas-arca.mjs", "utf8").replace(/\r\n/g, "\n");
 // Sin comentarios: un `/* … */` que no empieza cada línea con `*` engañaba al filtro por línea.
 const CODIGO = FUENTE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const cuerpo = (nombre) => {

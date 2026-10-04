@@ -17,7 +17,9 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { boton, parsearArgs, conGuiones, ROTULOS_PERMITIDOS, TOPE_ARCA, agregarCuil, vaciarPantalla, mensajeNuevo } from "./validar-obras-sociales.mjs";
 
-const FUENTE = fs.readFileSync(path.resolve("tools/validar-obras-sociales.mjs"), "utf8");
+// Con fin de línea normalizado: en un checkout de Windows (autocrlf) el archivo llega con CRLF, y los
+// tests que recortan la fuente por un marcador con salto de línea no lo encontraban.
+const FUENTE = fs.readFileSync(path.resolve("tools/validar-obras-sociales.mjs"), "utf8").replace(/\r\n/g, "\n");
 
 /** Una página de mentira: registra los selectores pedidos, sin tocar ningún navegador. */
 const paginaFalsa = () => {

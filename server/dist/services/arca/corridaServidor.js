@@ -1,7 +1,8 @@
 import { Company } from "../../models/Company.js";
 import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
-import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
+import { abrirSesionArca, credencialesDe, guardarSesion, revalidarSesionArca } from "./navegador.js";
+import { dejarSesionTibia, tomarSesionTibia } from "./sesionTibia.js";
 import { MOTOR } from "./motor.js";
 import { soltarCandado, tomarCandado } from "./candadoArca.js";
 /**
@@ -114,6 +115,24 @@ async function correr(o) {
     const aplicados = [];
     const porGrupo = [];
     const abrir = async (motivo) => {
+        /*
+          LA SESIÓN TIBIA DE LA CORRIDA ANTERIOR, si quedó una y ARCA todavía la reconoce (ver
+          `sesionTibia.ts`). Abrir una sesión es ~11 s de los ~15 que tarda validar a una persona; con
+          la tibia es una navegación de ~1 s. Sólo al inicio: un reintento llega acá justamente porque
+          la sesión en uso no sirvió, y ahí se abre una nueva.
+    
+          Queda en `aperturas` con `sesionGuardadaMs` = lo que costó revalidar y `loginMs` 0, para que el
+          resumen de tiempos muestre la diferencia sin inventar una fase nueva.
+        */
+        if (motivo === "inicio") {
+            const t = Date.now();
+            const tibia = await tomarSesionTibia(tenantId, revalidarSesionArca);
+            if (tibia) {
+                sesion = tibia;
+                tiempos.aperturas.push({ lanzarMs: 0, sesionGuardadaMs: Date.now() - t, loginMs: 0, seLogueo: false, motivo: "inicio (sesión tibia)" });
+                return;
+            }
+        }
         sesion = await abrirSesionArca(tenantId, cred);
         seLogueo = seLogueo || sesion.seLogueo;
         tiempos.aperturas.push({ ...sesion.tiempos, seLogueo: sesion.seLogueo, motivo });
@@ -343,10 +362,19 @@ async function correr(o) {
         // guardada para la próxima (ver `abrirSesionArca`). Con la sesión caída no hay nada que guardar.
         if (s && !sinSesion && !error)
             await guardarSesion(tenantId, s.ctx).catch(() => { });
-        // El navegador lo abrió esta función, así que lo cierra esta función. Cada corrida que se
-        // olvide de cerrarlo deja un Chromium vivo comiéndose la memoria del VPS.
-        await s?.browser.close().catch(() => { });
-        // Recién con el navegador cerrado se libera la sesión de ARCA para otra corrida.
+        /*
+          El navegador lo abrió esta función, así que lo cierra esta función… salvo que la sesión haya
+          quedado SANA: ahí se deja tibia unos minutos para la corrida siguiente (`sesionTibia.ts`), que
+          es quien la cierra —al vencer por inactividad, o al no reconocerla ARCA—. Con error, sin sesión
+          o cortada a mano no se deja: pudo quedar a mitad de un bloque, y una sesión dudosa no se reusa.
+          Apagada (`ARCA_SESION_TIBIA_MIN=0`) `dejarSesionTibia` devuelve false y se cierra como siempre.
+          Cada corrida que se olvide de cerrarlo deja un Chromium vivo comiéndose la memoria del VPS.
+        */
+        const sana = !!s && !sinSesion && !error && !corrida.señal.cortada;
+        if (!(sana && dejarSesionTibia(tenantId, s)))
+            await s?.browser.close().catch(() => { });
+        // Recién con el navegador cerrado —o guardado tibio, que nadie más puede tomar sin el candado—
+        // se libera la sesión de ARCA para otra corrida.
         soltarCandado(tenantId, "obras_sociales");
         tiempos.totalMs = Date.now() - inicio;
         tiempos.resumen = resumirTiempos(tiempos);
