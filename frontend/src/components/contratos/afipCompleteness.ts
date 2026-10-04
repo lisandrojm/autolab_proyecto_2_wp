@@ -11,7 +11,8 @@ import { estadoGeneraAltaTemprana } from "./altaTemprana";
 import { claveEstado } from "../../utils/estadoClave";
 import { TEXTO_ESTADO_CATEGORIA, type EstadoCategoriaArca } from "@compartido/catalogoArca";
 import { resolverPuesto } from "@compartido/puestosDesempenados";
-import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "@compartido/sucursalesDeEmpresa";
+import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa, TEXTO_PROBLEMA_SUCURSAL } from "@compartido/sucursalesDeEmpresa";
+import type { ProblemaDeSucursal } from "@compartido/sucursalesDeEmpresa";
 
 /**
  * Chequeo de completitud de datos para la generación del TXT de Alta masiva de ARCA.
@@ -1125,4 +1126,44 @@ export function resolveAfip85(row: ContractOverviewRow, cat: AfipCatalogs, base:
   };
   const checks = [puesto, revista];
   return { checks, completo: base.completo && checks.every((c) => c.ok) };
+}
+
+/**
+ * VALIDACIÓN PREVIA A GENERAR LOS TXT: sucursal y actividad contra la empresa del contrato.
+ *
+ * Qué contratos de los que se van a mandar tienen una sucursal que NO es de su empresa, o una
+ * actividad que esa empresa no tiene habilitada en esa sucursal. Con eso ARCA no rechaza: cambia la
+ * sucursal por otra y deja la actividad vacía, sin decir nada, y uno se entera recién mirando la
+ * grilla. Por eso los dos botones («Generar TXT Masivo» y el URGENTE) FRENAN en vez de omitir la
+ * fila: omitirla es otra forma de que pase desapercibido.
+ *
+ * Sale de `resolveAfipValues`, que ya resuelve por empresa (`compartido/sucursalesDeEmpresa.ts`):
+ *
+ *   · `sucursal_invalida`                       → la sucursal no es de la empresa
+ *   · `sin_actividades`                         → la empresa no tiene ninguna habilitada ahí
+ *   · `ambigua` con una actividad ESCRITA       → la escrita no está habilitada ahí para esa empresa
+ *
+ * «Varias y todavía no eligió» NO entra acá: es un dato que falta, y eso lo dice el checklist como
+ * siempre (la fila queda incompleta y no entra al archivo). Tampoco una actividad escrita que no vale
+ * cuando la sucursal tiene UNA sola: ahí rige la única, que es la correcta.
+ */
+export function problemasDeSucursalParaTxt(rows: ContractOverviewRow[], cat: AfipCatalogs): Array<{ row: ContractOverviewRow; problema: ProblemaDeSucursal; sucursal: string }> {
+  const out: Array<{ row: ContractOverviewRow; problema: ProblemaDeSucursal; sucursal: string }> = [];
+  for (const row of rows) {
+    if (!row.empresaContratoId) continue;
+    const v = resolveAfipValues(row, cat);
+    const problema: ProblemaDeSucursal | null =
+      v.actividadOrigen === "sucursal_invalida" ? "sucursal_ajena" : v.actividadOrigen === "sin_actividades" ? "sin_actividades" : v.actividadOrigen === "ambigua" && String(row.actividadArca || "").trim() ? "actividad_no_habilitada" : null;
+    if (problema) out.push({ row, problema, sucursal: v.nombreSucursal || "" });
+  }
+  return out;
+}
+
+/** El cartel con el que frenan los dos TXT: quiénes, por qué y dónde se corrige. */
+export function mensajeDeSucursalParaTxt(problemas: ReturnType<typeof problemasDeSucursalParaTxt>, razonSocial: string): string {
+  const muestra = problemas
+    .slice(0, 5)
+    .map((p) => `${p.row.userName || "?"}${p.sucursal ? ` (${p.sucursal})` : ""}: ${TEXTO_PROBLEMA_SUCURSAL[p.problema]}`)
+    .join(" · ");
+  return `${problemas.length === 1 ? "Un contrato tiene" : `${problemas.length} contratos tienen`} una sucursal o una actividad que ${razonSocial || "la empresa"} no tiene en ARCA. ${muestra}${problemas.length > 5 ? " …" : ""}. Si se manda así, ARCA cambia la sucursal y deja la actividad vacía sin avisar. Corregilo en la fila del contrato (Sucursal y actividad) o, si la empresa sí lo tiene declarado, cargalo en su ficha → ARCA → Domicilios.`;
 }

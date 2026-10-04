@@ -26,7 +26,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
-import { resolveAfip, resolveAfip85, resolveAfipValues, esResuelto, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
+import { resolveAfip, resolveAfip85, resolveAfipValues, esResuelto, problemasDeSucursalParaTxt, mensajeDeSucursalParaTxt, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
 import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
 import { useValoraciones } from '../proyectos/ChipValoracion';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
@@ -1519,7 +1519,19 @@ export const ContractBulkAfipTab: React.FC<{
   // omite los incompletos (no se puede armar una línea válida) e informa cuántos quedaron afuera.
   // `max`: tope de altas del archivo (TXT URGENTE). Si se pasa, no se baja nada: recortar en
   // silencio dejaría afuera altas sin que nadie se entere de cuáles.
+  /**
+   * FRENA los dos TXT si algún contrato lleva una sucursal que no es de su empresa o una actividad
+   * que esa empresa no tiene habilitada ahí (ver `problemasDeSucursalParaTxt`). Devuelve true si frenó.
+   */
+  const frenaPorSucursal = (items: { row: ImpositivoRow }[]): boolean => {
+    const problemas = problemasDeSucursalParaTxt(items.map((x) => x.row), afipCat);
+    if (problemas.length === 0) return false;
+    sweetAlert.error('Sucursal o actividad que la empresa no tiene', mensajeDeSucursalParaTxt(problemas, empresaDeLaPestana?.razonSocial || ''));
+    return true;
+  };
+
   const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string, max?: number): boolean => {
+    if (frenaPorSucursal(items)) return false;
     // Un TXT es de UNA empleadora: se sube logueado con su CUIT. Mezclar produce un archivo
     // rechazado o, peor, altas cargadas bajo la empresa equivocada — que ARCA acepta sin chistar y
     // recién se descubre después. Se corta ANTES de bajar el archivo.
@@ -2193,6 +2205,8 @@ export const ContractBulkAfipTab: React.FC<{
   /** URGENTE: registros de 85, al portapapeles, y la corrida que los pega en Altas Masivas. */
   const presentarAltasMasivas = async () => {
     if (!empresaDeLaPestana) return;
+    // Antes que nada: una sucursal o actividad que la empresa no tiene frena también el URGENTE.
+    if (frenaPorSucursal(fuenteTxt)) return;
     /*
       SIN PUESTO NO HAY REGISTRO DE 85, y se dice acá en vez de dejar el botón apagado: un botón gris
       no explica nada. Lo que falta es configuración (rol, categoría, convenio o default de la empleadora), no un

@@ -16,7 +16,10 @@ import assert from "node:assert/strict";
 
 import { buildAltaRecord85, buildAltasMasivasTexto, describirRegistro85 } from "./afipTxt85";
 import { buildAltaRecord, describirRegistro } from "./afipTxt";
-import { resolveAfip, resolveAfip85 } from "./afipCompleteness";
+import { resolveAfip, resolveAfip85, problemasDeSucursalParaTxt, mensajeDeSucursalParaTxt } from "./afipCompleteness";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AfipCatalogs } from "./afipCompleteness";
 import type { ContractOverviewRow } from "../../api/users";
 import { LAYOUT_85, POSICIONES_130, partirRegistro85, partirRegistro130, remuneracion85, fecha85 } from "@compartido/layoutAltaArca";
@@ -368,5 +371,64 @@ describe("sucursal y actividad POR EMPRESA (el código de sucursal es de cada CU
     assert.equal(tramo(r, 23, 28), "591110");
     // Y el fixture de siempre (sin `codigo` en la asociación) da exactamente el mismo registro que antes.
     assert.equal(tramo(buildAltaRecord85(fila(), catalogos())!, 18, 22), "00001");
+  });
+});
+
+describe("validación previa a generar los TXT: sucursal y actividad contra la empresa", () => {
+  const RUIZ = "6a7f000000000000000000s3";
+  const ZAPIOLA = "6a7f000000000000000000s9";
+  const cat = (sucursalActividades: unknown[]) =>
+    catalogos({
+      sucursales: [
+        { _id: RUIZ, codigo: "00003", domicilio: "RUIZ HUIDOBRO 4365", actividades: [] },
+        { _id: ZAPIOLA, codigo: "00001", domicilio: "ZAPIOLA 392", actividades: [] },
+      ],
+      empresas: [{ _id: EMPRESA_ID, razonSocial: "2030 S.R.L.", sucursalIds: [RUIZ], convenioIds: ["cv1"], sucursalActividades }],
+    } as any);
+  const dosActividades = [{ sucursalId: RUIZ, codigo: "00001", actividades: [{ codigo: "602900" }, { codigo: "591110" }] }];
+
+  it("frena si la sucursal del contrato no es de su empresa", () => {
+    // Zapiola es de FZERO: 2030 no la tiene.
+    const p = problemasDeSucursalParaTxt([fila({ sucursalArcaId: ZAPIOLA, actividadArca: "921430" } as any)], cat(dosActividades));
+    assert.equal(p.length, 1);
+    assert.equal(p[0].problema, "sucursal_ajena");
+  });
+
+  it("frena si la actividad escrita no está habilitada en esa sucursal para esa empresa", () => {
+    // 620100 es la de GRINI en ese mismo domicilio.
+    const p = problemasDeSucursalParaTxt([fila({ sucursalArcaId: RUIZ, actividadArca: "620100" } as any)], cat(dosActividades));
+    assert.deepEqual(p.map((x) => x.problema), ["actividad_no_habilitada"]);
+  });
+
+  it("frena si la empresa no tiene ninguna actividad habilitada ahí", () => {
+    const p = problemasDeSucursalParaTxt([fila({ sucursalArcaId: RUIZ } as any)], cat([{ sucursalId: RUIZ, codigo: "00001", actividades: [] }]));
+    assert.deepEqual(p.map((x) => x.problema), ["sin_actividades"]);
+  });
+
+  it("no frena lo que está bien, ni lo que simplemente falta elegir (eso lo dice el checklist)", () => {
+    const c = cat(dosActividades);
+    assert.deepEqual(problemasDeSucursalParaTxt([fila({ sucursalArcaId: RUIZ, actividadArca: "591110" } as any)], c), []);
+    assert.deepEqual(problemasDeSucursalParaTxt([fila({ sucursalArcaId: RUIZ, actividadArca: "602900" } as any)], c), []);
+    // Varias habilitadas y ninguna elegida: incompleto, no «mal cargado».
+    assert.deepEqual(problemasDeSucursalParaTxt([fila({ sucursalArcaId: RUIZ, actividadArca: "" } as any)], c), []);
+    // Una sola habilitada: rige esa aunque el contrato tenga escrita otra.
+    const unaSola = cat([{ sucursalId: RUIZ, codigo: "00001", actividades: [{ codigo: "591110" }] }]);
+    assert.deepEqual(problemasDeSucursalParaTxt([fila({ sucursalArcaId: RUIZ, actividadArca: "999999" } as any)], unaSola), []);
+    assert.equal(tramo(buildAltaRecord85(fila({ sucursalArcaId: RUIZ, actividadArca: "999999" } as any), unaSola)!, 23, 28), "591110");
+  });
+
+  it("el cartel dice quién, por qué y dónde se corrige", () => {
+    const p = problemasDeSucursalParaTxt([fila({ sucursalArcaId: RUIZ, actividadArca: "620100" } as any)], cat(dosActividades));
+    const m = mensajeDeSucursalParaTxt(p, "2030 S.R.L.");
+    assert.match(m, /MARTINEZ LISANDRO JAVIER/);
+    assert.match(m, /2030 S\.R\.L\./);
+    assert.match(m, /no está habilitada/);
+    assert.match(m, /ARCA → Domicilios/);
+  });
+
+  it("los dos botones pasan por el freno: el de 130 (generarTxt) y el URGENTE", () => {
+    const fuente = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "ContractBulkTabs.tsx"), "utf8");
+    assert.match(fuente, /const generarTxt = [^\n]+\n\s+if \(frenaPorSucursal\(items\)\) return false;/);
+    assert.match(fuente, /const presentarAltasMasivas = async \(\) => \{\s+if \(!empresaDeLaPestana\) return;[\s\S]{0,200}if \(frenaPorSucursal\(fuenteTxt\)\) return;/);
   });
 });
