@@ -278,6 +278,11 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                             <span title={f.constancia.archivadaEn || 'La constancia quedó cargada en el contrato, pero no se pudo subir a Dropbox.'} className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold whitespace-nowrap ${DESTINO[f.constancia.destino]?.clase || ''}`}>
                               {DESTINO[f.constancia.destino]?.texto || f.constancia.destino}
                             </span>
+                          ) : f.constancia === undefined ? (
+                            // El servidor no mandó el dato (versión anterior): no se afirma que falte.
+                            <span className="text-[11px] text-gray-400" title="El servidor todavía no informa el destino de la constancia: hay que actualizarlo (git pull) y reiniciarlo.">
+                              sin dato
+                            </span>
                           ) : f.resultado === 'presentada' && !f.enSeco ? (
                             <span className="text-[11px] text-amber-700 dark:text-amber-400">Falta bajarla</span>
                           ) : (

@@ -3063,6 +3063,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
     const upPorId = new Map(ups.map((u) => [String(u._id), u]));
     const constanciaDe = (c: any) => {
       const k = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex]?.altaConstancia;
+      // `null` (y no ausente) = se miró y todavía no está: la pantalla distingue eso de un servidor viejo que no lo informa.
       if (!k?.validadaEl) return undefined;
       return { destino: !k.archivadaEn ? "sin_subir" : k.vaAFirma ? "outbox" : "no_firmar", archivadaEn: k.archivadaEn, validadaEl: k.validadaEl, clave: k.clave };
     };
@@ -3080,7 +3081,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
         error: l.error,
         duracionMs: l.duracionMs,
         tandas: (l.tandas || []).length,
-        contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) })),
+        contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null })),
       })),
     );
   } catch (error: any) {

@@ -999,8 +999,11 @@ export interface CorridaAltasGuardada {
     cat?: string;
     porConsulta?: boolean;
     registro?: string;
-    /** La constancia de alta ya validada y por dónde siguió. Sin esto, todavía no se bajó. */
-    constancia?: { destino: "outbox" | "no_firmar" | "sin_subir"; archivadaEn?: string; validadaEl?: string; clave?: string };
+    /**
+     * La constancia de alta ya validada y por dónde siguió. `null` = todavía no se bajó. Ausente = el
+     * servidor que contestó es anterior a este dato y no lo informa (no significa que falte).
+     */
+    constancia?: { destino: "outbox" | "no_firmar" | "sin_subir"; archivadaEn?: string; validadaEl?: string; clave?: string } | null;
   }>;
 }
 
