@@ -487,7 +487,7 @@ export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fec
     el mismo día no la confunda. Sin el rótulo (otra forma de pantalla) vale cualquier fecha.
   */
   const esDeEsaFecha = (fila) => {
-    const inicio = /Fecha de Inicio:?s*(d{1,2}[/.-]d{1,2}[/.-]d{4})/i.exec(String(fila || ""));
+    const inicio = /Fecha de Inicio:?\s*(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})/i.exec(String(fila || ""));
     return fechaEnTexto(inicio ? inicio[1] : fila, fecha);
   };
   const deLaRelacion = casillas.filter((c) => c.id && esDeEsaFecha(c.fila));
