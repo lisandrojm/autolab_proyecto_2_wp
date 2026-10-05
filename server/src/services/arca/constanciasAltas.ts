@@ -292,6 +292,9 @@ async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit
           const mensaje = String(e?.message || e);
           // ARCA no entregó el archivo: no es un error de la persona. Queda para la vuelta siguiente.
           if (/Timeout.*download|waiting for event "download"/is.test(mensaje)) {
+            // Lo que pasó después del click (ver `imprimirConstancia`): es con lo que se arregla si vuelve a pasar.
+            console.warn(`[CONSTANCIAS-ARCA] ${p.cuil} (vuelta ${vuelta}): ${mensaje}`);
+            const queVio = mensaje.split("Después del click: ")[1] || "";
             const quedanVueltas = vuelta < VUELTAS;
             if (quedanVueltas) paraDespues.push(p);
             emitir({
@@ -299,7 +302,7 @@ async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit
               cuil: p.cuil,
               nombre: p.nombre,
               estado: "sin_constancia",
-              detalle: quedanVueltas ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final." : `ARCA no entregó el PDF en ${VUELTAS} intentos. Probá de nuevo en unos minutos: el alta sigue registrada.`,
+              detalle: quedanVueltas ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final." : `ARCA no entregó el PDF en ${VUELTAS} intentos. Probá de nuevo en unos minutos: el alta sigue registrada.${queVio ? ` Después del click: ${queVio}` : ""}`,
             });
             continue;
           }

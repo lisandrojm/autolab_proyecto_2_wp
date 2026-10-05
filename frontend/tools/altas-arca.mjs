@@ -519,24 +519,85 @@ export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fec
   return { ok: true, casilla: deLaRelacion[0].id, impresora: impresoras[0].id };
 }
 
+/** ¿Esta respuesta de ARCA es la constancia? Por el tipo o por el nombre del adjunto. */
+const esRespuestaPdf = (headers = {}) => /pdf/i.test(String(headers["content-type"] || "")) || /\.pdf/i.test(String(headers["content-disposition"] || ""));
+
+/** Todas las URL. Es una función y no el glob de siempre para no escribir una apertura de comentario. */
+const cualquierUrl = () => true;
+
+/** La ruta de una URL de ARCA sin el dominio ni la consulta: alcanza para el diagnóstico. */
+const rutaCorta = (url) => String(url || "").replace(/^https?:\/\/[^/]+/, "").split("?")[0];
+
 /**
  * EL ÍCONO DE IMPRESORA DE CONSULTAS: baja la constancia en PDF. No modifica nada en ARCA.
  *
  * Tiene su función, con sus guardas, por lo mismo que los demás clicks: solo en el RESULTADO de
  * Consultas (nunca en la grilla de altas, donde un click equivocado registra), y sobre un control
- * único. Devuelve la descarga.
+ * único. Devuelve el PDF.
+ *
+ * EL PDF SE TOMA DE LA RESPUESTA DE ARCA, no solo del evento de descarga. Con el evento solo, la
+ * primera persona bajaba y la segunda se colgaba siempre, también con una pestaña por persona: el
+ * evento depende de que el navegador decida tratar la respuesta como descarga (y lo frena o lo manda
+ * a una ventana emergente según su criterio). Interceptando los documentos que pide la pestaña —y
+ * las ventanas que abra— el PDF se levanta igual, venga como venga. Se queda con lo que llegue
+ * primero.
+ *
+ * Si no llega nada, el error dice qué pasó después del click (qué pidió el navegador, qué contestó
+ * ARCA, si abrió ventanas o preguntó algo): sin eso, un timeout no deja nada con qué arreglarlo.
+ * El mensaje sigue diciendo `waiting for event "download"`, que es lo que el servidor reconoce para
+ * volver a pedirla al final.
  */
-async function imprimirConstancia(page, id) {
+async function imprimirConstancia(page, id, estado = { dialogos: [] }) {
   const { accion } = await leerPantalla(page);
   if (!/(^|\/)Consulta[^/]*\.aspx/i.test(String(accion).split("?")[0])) throw new Error("La pantalla ya no es la de Consultas: no se aprieta la impresora.");
   if ((await pantallaActual(page)) === "altas") throw new Error("Estoy en Registrar Nuevas Altas: acá no se aprieta nada.");
   const btn = page.locator(`[id="${id}"]`);
   if ((await btn.count()) !== 1) throw new Error("No encuentro un único ícono de impresora.");
-  // Generoso: ARCA arma el PDF del lado del servidor y a veces tarda más de un minuto en entregarlo.
-  const espera = page.waitForEvent("download", { timeout: 90_000 });
-  espera.catch(() => {});
-  await btn.click();
-  return espera;
+
+  const ctx = page.context();
+  const visto = [];
+  const dialogosAntes = estado.dialogos.length;
+  let pdf = null;
+  // Solo documentos (el postback y las ventanas que abra): imágenes y scripts siguen de largo.
+  const interceptar = async (route) => {
+    const req = route.request();
+    if (req.resourceType() !== "document") return route.fallback();
+    let resp;
+    try {
+      resp = await route.fetch();
+    } catch (e) {
+      visto.push(`${req.method()} ${rutaCorta(req.url())} → sin respuesta (${String(e?.message || e).slice(0, 80)})`);
+      return route.abort().catch(() => {});
+    }
+    const h = resp.headers();
+    visto.push(`${req.method()} ${rutaCorta(req.url())} → ${resp.status()} ${h["content-type"] || "?"}`);
+    if (!pdf && esRespuestaPdf(h)) {
+      const cuerpo = await resp.body().catch(() => null);
+      if (cuerpo && cuerpo.subarray(0, 4).toString() === "%PDF") pdf = cuerpo;
+    }
+    await route.fulfill({ response: resp }).catch(() => {});
+  };
+  const alAbrirVentana = (p) => visto.push(`abrió una ventana: ${rutaCorta(p.url()) || "(en blanco)"}`);
+  await ctx.route(cualquierUrl, interceptar);
+  ctx.on("page", alAbrirVentana);
+  try {
+    // Generoso: ARCA arma el PDF del lado del servidor y a veces tarda más de un minuto en entregarlo.
+    const ESPERA = 90_000;
+    const descarga = page.waitForEvent("download", { timeout: ESPERA }).then((d) => d.path()).then((ruta) => (ruta ? readFile(ruta) : null));
+    descarga.catch(() => {});
+    await btn.click();
+    const hasta = Date.now() + ESPERA;
+    let porDescarga = null;
+    descarga.then((b) => (porDescarga = b), () => {});
+    while (!pdf && !porDescarga && Date.now() < hasta) await new Promise((r) => setTimeout(r, 250));
+    if (pdf || porDescarga) return pdf || porDescarga;
+    const dialogos = estado.dialogos.slice(dialogosAntes);
+    const que = [...visto, ...dialogos.map((d) => `ARCA preguntó «${d}» y se respondió que no`)];
+    throw new Error(`Timeout ${ESPERA}ms exceeded while waiting for event "download". Después del click: ${que.length ? que.join(" · ") : "el navegador no pidió nada"}.`);
+  } finally {
+    ctx.off("page", alAbrirVentana);
+    await ctx.unroute(cualquierUrl, interceptar).catch(() => {});
+  }
 }
 
 /**
@@ -639,10 +700,9 @@ export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onPro
     const casilla = page.locator(`[id="${eleccion.casilla}"]`);
     if ((await casilla.count()) !== 1) return { resultado: "sin_relacion", detalle: "La casilla de la relación dejó de estar en pantalla.", html: await htmlAnonimo(page) };
     await casilla.check();
-    const descarga = await imprimirConstancia(page, eleccion.impresora);
-    const ruta = await descarga.path();
-    if (!ruta) return { resultado: "sin_impresora", detalle: "ARCA no entregó ningún archivo al apretar la impresora." };
-    return { resultado: "descargada", pdf: await readFile(ruta) };
+    const pdf = await imprimirConstancia(page, eleccion.impresora, estado);
+    if (!pdf) return { resultado: "sin_impresora", detalle: "ARCA no entregó ningún archivo al apretar la impresora." };
+    return { resultado: "descargada", pdf };
   } finally {
     soltar();
   }

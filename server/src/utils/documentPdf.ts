@@ -40,7 +40,16 @@ export const CLASE_VARIABLE_SIMULADA = "wp-var-sim";
  * documentos reales va apagado — un contrato que se firma no puede salir con medias frases en color.
  */
 export function replaceDocVariables(html: string, data: Record<string, any>, opciones?: { resaltar?: boolean }): string {
-  let result = html || "";
+  /*
+    DOS PASADAS: primero cada variable se cambia por una MARCA, y recién al final las marcas por su
+    valor. Reemplazando directo, el texto ya insertado quedaba expuesto a los reemplazos siguientes:
+    el `title="{{empresa}}"` del resaltado contenía `{empresa}`, la sintaxis simple lo volvía a
+    reemplazar ADENTRO del atributo, y el preview salía con `}">2030 S.R.L.` y el valor repetido.
+    Con marcas que ninguna clave puede contener, lo insertado no se vuelve a tocar.
+  */
+  const valores: string[] = [];
+  const marca = (i: number) => `\u0000${i}\u0000`;
+  let result = (html || "").replace(/\u0000/g, "");
   for (const [key, rawValue] of Object.entries(data || {})) {
     // Una variable conocida pero SIN valor (ej. una persona sin piso/depto) se reemplaza por vacío.
     // Solo quedan visibles las que no existen en `data`, que son las que hay que corregir.
@@ -48,17 +57,14 @@ export function replaceDocVariables(html: string, data: Record<string, any>, opc
     // Escapamos la clave por si tuviera caracteres especiales de regex.
     const safeKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const escaped = escapeHtml(value);
-    /*
-      El envoltorio se arma con el valor YA escapado, y el nombre de la variable va en un `title`
-      —también escapado— para poder saber cuál era sin ensuciar el texto. Un valor vacío igual se
-      envuelve: así una variable que resolvió a nada se distingue de una que nadie escribió.
-    */
-    const reemplazo = opciones?.resaltar ? `<span class="${CLASE_VARIABLE_SIMULADA}" title="{{${escapeHtml(key)}}}">${escaped}</span>` : escaped;
+    // El nombre de la variable va en un `title` (sin llaves) para poder saber cuál era al pasar el mouse.
+    valores.push(opciones?.resaltar ? `<span class="${CLASE_VARIABLE_SIMULADA}" title="${escapeHtml(key)}">${escaped}</span>` : escaped);
+    const m = marca(valores.length - 1);
     // Primero la llave doble (sintaxis oficial) y después la simple (compatibilidad con los Word).
-    result = result.replace(new RegExp(`\\{\\{${safeKey}\\}\\}`, "g"), reemplazo);
-    result = result.replace(new RegExp(`\\{${safeKey}\\}`, "g"), reemplazo);
+    result = result.replace(new RegExp(`\\{\\{${safeKey}\\}\\}`, "g"), m);
+    result = result.replace(new RegExp(`\\{${safeKey}\\}`, "g"), m);
   }
-  return result;
+  return result.replace(/\u0000(\d+)\u0000/g, (_t, i) => valores[Number(i)] ?? "");
 }
 
 /**
@@ -204,11 +210,11 @@ function wrapHtml(bodyHtml: string, membrete?: MembreteInput, resaltarVariables?
     ${
       resaltarVariables
         ? /*
-            NARANJA ROJIZO, y no un fondo ni un subrayado: el PDF de preview se lee como un contrato,
-            así que la marca tiene que distinguirse sin romper el párrafo. El color aguanta la
-            impresión en escala de grises como un gris más oscuro, que sigue leyéndose.
+            AZUL, y no un fondo ni un subrayado: el PDF de preview se lee como un contrato, así que la
+            marca tiene que distinguirse sin romper el párrafo. El color aguanta la impresión en
+            escala de grises como un gris más oscuro, que sigue leyéndose.
           */
-          `.${CLASE_VARIABLE_SIMULADA} { color: #c2410c; font-weight: 600; }`
+          `.${CLASE_VARIABLE_SIMULADA} { color: #1d4ed8; font-weight: 600; }`
         : ""
     }
   </style></head><body>${header}${bodyHtml || ""}${footer}</body></html>`;
