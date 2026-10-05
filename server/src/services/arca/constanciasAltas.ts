@@ -120,6 +120,8 @@ async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit
     const page = sesion.page;
     // Por el selector se entra UNA vez: volver a él estando adentro cierra la sesión de ARCA.
     if (!(await aceptarSelectorDeCuit(page, o.cuit))) throw new Error(`No pude elegir la empleadora ${o.cuit} en ARCA (¿el usuario delegado la tiene?).`);
+    // Primero Registrar Nuevas Altas: ir derecho a Consultas desde la pantalla del selector tira la pestaña.
+    await motor.entrarARelacionesLaborales({ page });
 
     for (const [i, p] of pendientes.entries()) {
       if (i > 0) await pausa();
@@ -149,7 +151,7 @@ async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit
         const mensaje = String(e?.message || e);
         emitir({ tipo: "persona", cuil: p.cuil, nombre: p.nombre, estado: "error", detalle: mensaje });
         // Sesión caída o pantalla que no es: no tiene sentido seguir con los demás.
-        if (/sesi[oó]n|No llegu[eé]|Target closed|browser has been closed/i.test(mensaje)) throw e;
+        if (/sesi[oó]n|No llegu[eé]|Target closed|browser has been closed|crash/i.test(mensaje)) throw e;
       }
     }
     emitir({ tipo: "fin", listas, total: pendientes.length });

@@ -107,7 +107,7 @@ test("CUIT verificado antes de la primera escritura, y el modo en seco antes del
 });
 
 test("leer el tope y consultar no presentan nada: ni Aceptar de la grilla, ni Enviar, ni pegado", () => {
-  for (const f of ["leerTopeAltasMasivas", "consultarAltaPorCuil", "buscarEnConsultas", "descargarConstanciaDeAlta", "imprimirConstancia"]) {
+  for (const f of ["leerTopeAltasMasivas", "consultarAltaPorCuil", "buscarEnConsultas", "descargarConstanciaDeAlta", "imprimirConstancia", "entrarARelacionesLaborales"]) {
     const c = cuerpo(f);
     assert.doesNotMatch(c, /aceptarGrilla\(|enviarNovedad\(|aceptar_pegado|quitarFila\(/, `${f} solo lee`);
   }

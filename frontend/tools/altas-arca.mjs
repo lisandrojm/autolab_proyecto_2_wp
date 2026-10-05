@@ -500,6 +500,19 @@ async function imprimirConstancia(page, id) {
   return espera;
 }
 
+/**
+ * Deja la sesión parada en Registrar Nuevas Altas, recién elegida la empleadora. Solo navega.
+ *
+ * HACE FALTA ANTES DE IR A CONSULTAS. La pantalla en blanco que queda después del selector de CUIT no
+ * aguanta ir derecho a `Consulta.aspx`: la pestaña se cae («Page crashed»), reproducido el 4/10/2026
+ * en el VPS y en local. Pasando primero por Registrar Nuevas Altas —el recorrido que ya hacían las
+ * altas y el reconocimiento— carga bien.
+ */
+export async function entrarARelacionesLaborales({ page }) {
+  await page.goto(`${page.url().split("/app/")[0]}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
+  if (!(await esperarPantalla(page, ["altas"], "Registrar Nuevas Altas"))) throw new Error(`No llegué a Registrar Nuevas Altas (estoy en ${await pantallaActual(page)}).`);
+}
+
 /** Abre Consultas y busca por CUIL. Deja la pantalla en el resultado. */
 async function buscarEnConsultas(page, cuil) {
   await page.goto(`${page.url().split("/app/")[0]}/app/Contribuyente/RelacionLaboral/Consulta.aspx`, { waitUntil: "domcontentloaded" });

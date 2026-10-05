@@ -89,11 +89,16 @@ async function main() {
     const base = page.url().split("/app/")[0];
     await foto(page, motor, "inicio");
 
-    await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(1500);
-    await foto(page, motor, "altas");
-    const enGrilla: string[] = await motor.cuilsEnGrilla(page);
-    console.log(`  grilla: ${enGrilla.length} CUIL`);
+    // SIN_ALTAS=1: va derecho a lo que se pida en VISITAR, sin pasar antes por Registrar Nuevas Altas
+    // (para reproducir el recorrido de la descarga de constancias, que entra directo a Consultas).
+    let enGrilla: string[] = [];
+    if (process.env.SIN_ALTAS !== "1") {
+      await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(1500);
+      await foto(page, motor, "altas");
+      enGrilla = await motor.cuilsEnGrilla(page);
+      console.log(`  grilla: ${enGrilla.length} CUIL`);
+    }
 
     if (process.env.PEGADO === "1" && (await motor.pantallaActual(page)) === "altas") {
       await (await motor.boton(page, "altas_masivas")).click();
