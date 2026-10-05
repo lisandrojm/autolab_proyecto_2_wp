@@ -117,17 +117,54 @@ async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit
     emitir({ tipo: "sesion", seLogueo: sesion.seLogueo });
     const { aceptarSelectorDeCuit } = (await import(pathToFileURL(MOTOR).href)) as any;
     const motor = (await import(pathToFileURL(MOTOR_ALTAS).href)) as any;
-    const page = sesion.page;
+    let page = sesion.page;
     // Por el selector se entra UNA vez: volver a él estando adentro cierra la sesión de ARCA.
     if (!(await aceptarSelectorDeCuit(page, o.cuit))) throw new Error(`No pude elegir la empleadora ${o.cuit} en ARCA (¿el usuario delegado la tiene?).`);
-    // Primero Registrar Nuevas Altas: ir derecho a Consultas desde la pantalla del selector tira la pestaña.
-    await motor.entrarARelacionesLaborales({ page });
+    const base = page.url().split("/app/")[0];
+    /*
+      LA PESTAÑA SE CAE A VECES AL SALIR DE LA PANTALLA DEL SELECTOR («Page crashed»), vaya a donde
+      vaya: pasó yendo a Consultas y pasó yendo a Registrar Nuevas Altas. La sesión y la empleadora
+      elegida viven en el navegador (cookies) y en ARCA, no en la pestaña: se abre OTRA pestaña del
+      mismo navegador y se sigue desde ahí. No se vuelve a loguear ni se toca el selector.
+
+      Es solo lectura, así que reintentar acá no repite nada en el organismo. Hasta 3 pestañas.
+    */
+    const seCayo = (e: any) => /crash|Target (page|closed)|page has been closed/i.test(String(e?.message || e));
+    let pestañasNuevas = 0;
+    const otraPestaña = async () => {
+      if (++pestañasNuevas > 3) throw new Error("La pestaña de ARCA se cayó cuatro veces seguidas. Probá de nuevo en unos minutos.");
+      await page.close().catch(() => {});
+      page = await sesion!.ctx.newPage();
+      await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, { waitUntil: "domcontentloaded" });
+    };
+    const conPestañaViva = async <T>(hacer: () => Promise<T>): Promise<T> => {
+      for (;;) {
+        try {
+          return await hacer();
+        } catch (e) {
+          if (!seCayo(e)) throw e;
+          // Si la pestaña nueva también se cae al abrir, se vuelve a intentar (hasta el tope).
+          for (;;) {
+            try {
+              await otraPestaña();
+              break;
+            } catch (e2) {
+              if (!seCayo(e2)) throw e2;
+            }
+          }
+        }
+      }
+    };
+    // Se le da un respiro a la pantalla del selector antes de salir de ella, y recién después se navega.
+    await page.waitForLoadState("load", { timeout: 10_000 }).catch(() => {});
+    await page.waitForTimeout(1500).catch(() => {});
+    await conPestañaViva(() => motor.entrarARelacionesLaborales({ page }));
 
     for (const [i, p] of pendientes.entries()) {
       if (i > 0) await pausa();
       emitir({ tipo: "persona", cuil: p.cuil, nombre: p.nombre, estado: "descargando" });
       try {
-        const r = await motor.descargarConstanciaDeAlta({ page, cuil: p.cuil, fechaInicio: p.fechaInicio });
+        const r = await conPestañaViva<any>(() => motor.descargarConstanciaDeAlta({ page, cuil: p.cuil, fechaInicio: p.fechaInicio }));
         if (r.resultado !== "descargada" || !r.pdf) {
           // Lo que la pantalla tenía queda en el log del servidor: con eso se ajusta el lector.
           console.warn(`[CONSTANCIAS-ARCA] ${p.cuil}: ${r.resultado} — ${r.detalle || ""}`);

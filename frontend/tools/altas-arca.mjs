@@ -255,6 +255,10 @@ async function entrarComo(page, empresaCuit) {
   }
   const ok = await aceptarSelectorDeCuit(page, cuit);
   if (!ok) throw new Error(`No pude elegir la empleadora ${cuit} en el selector de ARCA (¿el usuario delegado la tiene?). No se escribió nada.`);
+  // Un respiro antes de salir de la pantalla que deja el selector: navegar apenas elegida la
+  // empleadora tira a veces la pestaña («Page crashed»), visto en la descarga de constancias.
+  await page.waitForLoadState("load", { timeout: 10_000 }).catch(() => {});
+  await page.waitForTimeout(1500).catch(() => {});
   return page.url().split("/app/")[0];
 }
 
