@@ -1,0 +1,155 @@
+import { Router } from "express";
+import { Types } from "mongoose";
+import { authenticateToken } from "../middleware/auth.js";
+import { requireTenant } from "../middleware/tenant.js";
+import { User } from "../models/User.js";
+import { RenovacionContrato } from "../models/RenovacionContrato.js";
+import { calificarFinDeContrato, leerCalificacion } from "../services/calificaciones.js";
+import { DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
+/*
+  «Por vencer» de Contratación (móvil). Qué contratos entran y quién los ve está en
+  `services/contratosPorVencer.ts`; acá sólo se lista y se decide.
+
+  La renovación NO pasa por acá: se pide creando la solicitud de contratación, y el alta anota la
+  decisión (ver `POST /users` en `routes/users.ts`), así solicitud y decisión no pueden quedar a medias.
+
+  CALIFICACIÓN: al decidir, se califica la actuación de la persona en ese contrato (ver
+  `models/Calificacion.ts`). «Dejar vencer» la trae en el mismo pedido; «Renovar» la manda antes de abrir
+  el formulario, por `/calificar`.
+*/
+const router = Router();
+/**
+ * Dónde se busca el contrato sobre el que se decide: lo que vence en la ventana más amplia y lo que ya
+ * venció. Con la lista de 7 días, decidir sobre uno que se vio con el filtro de 30 —o sobre uno
+ * vencido— daba 404.
+ */
+const listaParaDecidir = async (tenantId, userId) => {
+    const [porVencer, vencidos] = await Promise.all([listarContratosPorVencer(tenantId, userId, undefined, DIAS_DE_AVISO_MAX), listarContratosPorVencer(tenantId, userId, undefined, DIAS_DE_AVISO_MAX, true)]);
+    return [...porVencer, ...vencidos];
+};
+router.get("/", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        // `dias`: con cuánta anticipación se quieren ver (el filtro del móvil). Fuera de rango, la de siempre.
+        const pedidos = Number(req.query.dias);
+        const dias = Number.isInteger(pedidos) && pedidos >= 1 && pedidos <= DIAS_DE_AVISO_MAX ? pedidos : DIAS_DE_AVISO;
+        // `vencidos=1`: los que ya terminaron en los últimos `dias` días sin que nadie decidiera.
+        const vencidos = req.query.vencidos === "1" || req.query.vencidos === "true";
+        const contratos = await listarContratosPorVencer(req.tenantObjectId, req.user.userId, undefined, dias, vencidos);
+        res.json({ contratos, dias, vencidos });
+    }
+    catch (error) {
+        console.error("Contratos por vencer error:", error);
+        res.status(500).json({ error: "No se pudieron cargar los contratos por vencer." });
+    }
+});
+// Sólo el número: es el aviso de la tarjeta Contratación del inicio.
+router.get("/count", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const contratos = await listarContratosPorVencer(req.tenantObjectId, req.user.userId);
+        res.json({ count: contratos.length });
+    }
+    catch (error) {
+        console.error("Contratos por vencer (count) error:", error);
+        res.status(500).json({ error: "No se pudieron contar los contratos por vencer." });
+    }
+});
+/**
+ * DE LO QUE MANDA LA PANTALLA AL CONTRATO, en la lista que esa persona puede ver.
+ *
+ * `indiceContrato` es la posición en `UserProject.contracts` y es lo que lo identifica: dentro de una
+ * misma asignación puede haber DOS contratos que terminan el mismo día (515 pares en la base), y
+ * buscando sólo por la fecha se resolvía el primero que apareciera, no el que se tocó.
+ *
+ * Sin `indiceContrato` se cae al criterio viejo —la fecha sola— para no romper a una app que todavía
+ * no lo manda, pero SÓLO si esa fecha identifica a uno solo. Si hay dos, se pide que lo aclare: elegir
+ * uno de los dos por orden de aparición es decidir sobre un contrato que nadie eligió.
+ */
+const contratoPedido = (lista, body) => {
+    const userProjectId = String(body?.userProjectId || "");
+    const fechaBaja = String(body?.fechaBajaContrato || "");
+    const suyos = lista.filter((c) => c.userProjectId === userProjectId && c.fechaBaja === fechaBaja);
+    if (suyos.length === 0)
+        return { error: "Ese contrato ya no está por vencer o no está a tu cargo.", codigo: 404 };
+    const indice = Number(body?.indiceContrato);
+    if (Number.isInteger(indice)) {
+        const exacto = suyos.find((c) => c.indice === indice);
+        return exacto ? { contrato: exacto } : { error: "Ese contrato ya no está por vencer o no está a tu cargo.", codigo: 404 };
+    }
+    if (suyos.length > 1)
+        return { error: "Hay más de un contrato que termina ese día en esta asignación. Actualizá la app para poder elegir cuál.", codigo: 409 };
+    return { contrato: suyos[0] };
+};
+// No se renueva: el contrato termina en su fecha y sale de la lista.
+router.post("/dejar-vencer", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const { userProjectId, fechaBajaContrato } = req.body || {};
+        if (!userProjectId || !Types.ObjectId.isValid(String(userProjectId)) || !fechaBajaContrato) {
+            res.status(400).json({ error: "Falta indicar qué contrato." });
+            return;
+        }
+        // La calificación es obligatoria: se decide Y se califica.
+        const calificacion = leerCalificacion(req.body);
+        if ("error" in calificacion) {
+            res.status(400).json({ error: calificacion.error });
+            return;
+        }
+        // El permiso ES la lista: sólo se decide sobre un contrato que hoy le aparece a quien decide.
+        const lista = await listaParaDecidir(req.tenantObjectId, req.user.userId);
+        const elegido = contratoPedido(lista, req.body);
+        if ("error" in elegido) {
+            res.status(elegido.codigo).json({ error: elegido.error });
+            return;
+        }
+        const contrato = elegido.contrato;
+        const quien = await User.findById(req.user.userId).select("firstName lastName").lean();
+        await RenovacionContrato.updateOne({ tenantId: req.tenantObjectId, userProjectId: new Types.ObjectId(contrato.userProjectId), fechaBajaContrato: contrato.fechaBaja, indiceContrato: contrato.indice }, {
+            $set: {
+                userId: new Types.ObjectId(contrato.userId),
+                projectId: new Types.ObjectId(contrato.projectId),
+                decision: "dejar_vencer",
+                decididoPor: new Types.ObjectId(req.user.userId),
+                decididoPorNombre: `${quien?.firstName || ""} ${quien?.lastName || ""}`.trim(),
+                decididoEl: new Date(),
+            },
+            $unset: { solicitudId: "" },
+        }, { upsert: true });
+        await calificarFinDeContrato({ tenantId: req.tenantObjectId, contrato, ...calificacion, decision: "dejar_vencer", calificadoPor: req.user.userId });
+        // La decisión cambia la lista de todos los que ven ese contrato, no sólo la de quien decidió.
+        olvidarContratosPorVencer();
+        res.json({ ok: true });
+    }
+    catch (error) {
+        console.error("Dejar vencer contrato error:", error);
+        res.status(500).json({ error: "No se pudo guardar la decisión." });
+    }
+});
+/*
+  Calificar al RENOVAR. Va antes de abrir el formulario de renovación, que es otro pedido (`POST /users`).
+  Si el formulario se cierra sin mandar, el contrato sigue en la lista y la próxima vez se corrige esta
+  misma calificación en lugar de sumar otra (una por contrato).
+*/
+router.post("/calificar", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const { userProjectId, fechaBajaContrato } = req.body || {};
+        const calificacion = leerCalificacion(req.body);
+        if ("error" in calificacion) {
+            res.status(400).json({ error: calificacion.error });
+            return;
+        }
+        // Mismo control que al dejar vencer: sólo sobre un contrato que hoy le aparece a quien califica.
+        const lista = await listaParaDecidir(req.tenantObjectId, req.user.userId);
+        const elegido = contratoPedido(lista, req.body);
+        if ("error" in elegido) {
+            res.status(elegido.codigo).json({ error: elegido.error });
+            return;
+        }
+        const contrato = elegido.contrato;
+        await calificarFinDeContrato({ tenantId: req.tenantObjectId, contrato, ...calificacion, decision: "renovar", calificadoPor: req.user.userId });
+        res.json({ ok: true });
+    }
+    catch (error) {
+        console.error("Calificar contrato por vencer error:", error);
+        res.status(500).json({ error: "No se pudo guardar la calificación." });
+    }
+});
+export { router as contratosPorVencerRoutes };

@@ -1,0 +1,252 @@
+import { Router } from "express";
+import { z } from "zod";
+import { Area } from "../models/Area.js";
+import { User } from "../models/User.js";
+import { Project } from "../models/Project.js";
+import UserProject from "../models/UserProject.js";
+import { authenticateToken } from "../middleware/auth.js";
+import { requireTenant } from "../middleware/tenant.js";
+import { requirePermission } from "../middleware/permissions.js";
+import { toObjectIdOrNull } from "../utils/mongoIds.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+const router = Router();
+const createAreaSchema = z.object({
+    name: z.string().min(1).max(100),
+    description: z.string().optional(),
+    vacationConfig: z
+        .object({
+        useGlobalConfig: z.boolean(),
+        permiteFraccionadas: z.boolean(),
+        minDiasFraccion: z.number().min(1).nullable().optional(),
+        diasCorridos: z.boolean().optional(),
+    })
+        .optional(),
+});
+const updateAreaSchema = createAreaSchema.partial();
+// GET /areas/count - Contar areas
+// Lectura abierta a cualquier usuario autenticado del tenant (igual que el resto de los catálogos
+// de referencia): mobile la necesita para coordinadores sin admin_areas:view. Solo crear/editar/
+// eliminar sigue exigiendo el permiso admin.
+router.get("/count", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+        let filter = {};
+        if (!isSuperAdmin) {
+            const tenantId = toObjectIdOrNull(req.tenantObjectId);
+            if (!tenantId) {
+                res.status(400).json({ error: "Invalid tenant ID" });
+                return;
+            }
+            filter.tenantId = tenantId;
+        }
+        const count = await Area.countDocuments(filter);
+        res.json({ count });
+    }
+    catch (error) {
+        console.error("Count areas error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /areas - Listar areas (lectura abierta, ver nota en /count)
+router.get("/", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const { page = 1, limit = 100, name } = req.query;
+        const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+        let filter = {};
+        if (!isSuperAdmin) {
+            const tenantId = toObjectIdOrNull(req.tenantObjectId);
+            if (!tenantId) {
+                /* console.warn("[areas GET] Invalid tenantId:", req.tenantObjectId); */
+                res.status(400).json({ error: "Invalid tenant ID" });
+                return;
+            }
+            filter.tenantId = tenantId;
+        }
+        if (name) {
+            filter.name = { $regex: createFuzzySearchRegex(String(name)), $options: "i" };
+        }
+        const skip = (Number(page) - 1) * Number(limit);
+        const [areas, total] = await Promise.all([Area.find(filter).populate("tenantId", "name slug").sort({ name: 1 }).skip(skip).limit(Number(limit)), Area.countDocuments(filter)]);
+        res.json({
+            areas,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit)),
+            },
+        });
+    }
+    catch (error) {
+        console.error("Get areas error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// POST /areas - Crear area
+router.post("/", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req, res) => {
+    try {
+        const data = createAreaSchema.parse(req.body);
+        // Verificar que no existe un area con el mismo nombre en el tenant
+        const existingArea = await Area.findOne({
+            name: data.name,
+            tenantId: req.tenantObjectId,
+        });
+        if (existingArea) {
+            res.status(409).json({ error: "Ya existe un área con este nombre en esta organización" });
+            return;
+        }
+        const area = new Area({
+            ...data,
+            tenantId: req.tenantObjectId,
+        });
+        await area.save();
+        res.status(201).json(area);
+    }
+    catch (error) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Datos inválidos", details: error.errors });
+            return;
+        }
+        // Manejar error de duplicado de MongoDB
+        if (error.code === 11000) {
+            res.status(409).json({ error: "Ya existe un área con este nombre en esta organización" });
+            return;
+        }
+        console.error("Create area error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /areas/:id - Obtener area específica (lectura abierta, ver nota en /count)
+router.get("/:id", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const areaId = toObjectIdOrNull(req.params.id);
+        const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+        const tenantId = toObjectIdOrNull(req.tenantObjectId);
+        if (!areaId) {
+            /* console.warn("[areas GET :id] Invalid areaId:", req.params.id); */
+            res.status(400).json({ error: "Invalid area ID" });
+            return;
+        }
+        const query = { _id: areaId };
+        if (!isSuperAdmin) {
+            if (!tenantId) {
+                /* console.warn("[areas GET :id] Invalid tenantId:", req.tenantObjectId); */
+                res.status(400).json({ error: "Invalid tenant ID" });
+                return;
+            }
+            query.tenantId = tenantId;
+        }
+        const area = await Area.findOne(query);
+        if (!area) {
+            res.status(404).json({ error: "Área no encontrada" });
+            return;
+        }
+        res.json(area);
+    }
+    catch (error) {
+        console.error("Get area error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PATCH /areas/:id - Actualizar area
+router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req, res) => {
+    try {
+        const data = updateAreaSchema.parse(req.body);
+        const areaId = toObjectIdOrNull(req.params.id);
+        if (!areaId) {
+            res.status(400).json({ error: "Invalid area ID" });
+            return;
+        }
+        // Si se está cambiando el nombre, verificar unicidad
+        if (data.name) {
+            const existingArea = await Area.findOne({
+                name: data.name,
+                tenantId: req.tenantObjectId,
+                _id: { $ne: areaId },
+            });
+            if (existingArea) {
+                res.status(409).json({ error: "Ya existe un área con este nombre en esta organización" });
+                return;
+            }
+        }
+        const area = await Area.findOneAndUpdate({ _id: areaId, tenantId: req.tenantObjectId }, data, { new: true, runValidators: true });
+        if (!area) {
+            res.status(404).json({ error: "Área no encontrada" });
+            return;
+        }
+        res.json(area);
+    }
+    catch (error) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Datos inválidos", details: error.errors });
+            return;
+        }
+        // Manejar error de duplicado de MongoDB
+        if (error.code === 11000) {
+            res.status(409).json({ error: "Ya existe un área con este nombre en esta organización" });
+            return;
+        }
+        console.error("Update area error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// DELETE /areas/:id - Eliminar area
+router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req, res) => {
+    try {
+        const areaId = toObjectIdOrNull(req.params.id);
+        if (!areaId) {
+            res.status(400).json({ error: "Invalid area ID" });
+            return;
+        }
+        // Verificar si el area está asignada a proyectos o configuraciones de proyecto
+        const [projectsWithArea, userProjectsWithArea] = await Promise.all([
+            Project.countDocuments({
+                $or: [
+                    { "areasConfig.areaId": areaId },
+                    { "teamConfig.areaId": areaId },
+                    { "teamConfig.areaShiftAssignments.areaId": areaId },
+                    { "coordinatorAssignments.areaId": areaId }
+                ],
+                tenantId: req.tenantObjectId,
+            }),
+            UserProject.countDocuments({
+                $or: [
+                    { areaId: areaId },
+                    { "contracts.areaId": areaId },
+                    { "contracts.areaShiftAssignments.areaId": areaId }
+                ]
+                // tenantId doesn't exist on UserProject, but it's linked to users who are in tenants. 
+                // For simplicity we check global as areaId is unique enough, but better to filter by projectId if possible.
+                // However, UserProject is a cross-tenant collection in this schema (no tenantId field).
+            })
+        ]);
+        const totalProjectAssignments = projectsWithArea + userProjectsWithArea;
+        if (totalProjectAssignments > 0) {
+            res.status(409).json({
+                error: `No se puede eliminar esta área porque está siendo usada en ${totalProjectAssignments} proyecto(s) o asignación(es) activa(s)`,
+                projectsCount: projectsWithArea,
+                userProjectsCount: userProjectsWithArea
+            });
+            return;
+        }
+        const areaToDelete = await Area.findOne({ _id: areaId, tenantId: req.tenantObjectId });
+        if (!areaToDelete) {
+            res.status(404).json({ error: "Área no encontrada" });
+            return;
+        }
+        if (areaToDelete.isSystem) {
+            res.status(403).json({ error: "No se puede eliminar un área de sistema" });
+            return;
+        }
+        // 3. Proceder a la eliminación
+        await Area.deleteOne({ _id: areaId, tenantId: req.tenantObjectId });
+        // 4. Limpiar referencias en usuarios (nulificar areaId si existe)
+        await User.updateMany({ areaId: areaId, tenantId: req.tenantObjectId }, { $unset: { areaId: "" } });
+        res.json({ message: "Área eliminada correctamente" });
+    }
+    catch (error) {
+        console.error("Delete area error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+export { router as areaRoutes };

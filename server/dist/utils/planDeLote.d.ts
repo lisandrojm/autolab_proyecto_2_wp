@@ -1,0 +1,195 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * EL PLAN DE UN LOTE: qué solicitud sale de cada integrante de una plantilla de equipo
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Es el corazón del alta masiva y es PURO: recibe la plantilla, las fechas de esta contratación, lo que
+ * se pisó sólo esta vez y todo lo que hace falta saber de la base (el `Contexto`), y devuelve por
+ * integrante sus jornadas, sus cuatro importes, sus errores y sus advertencias, más los `DatosSolicitud`
+ * con los que se arma el payload. Lo usan igual `preview` (no escribe) y `contratar` (escribe si no hay
+ * errores): por eso los dos no pueden diferir.
+ *
+ * LAS REGLAS SON LAS DEL FORMULARIO INDIVIDUAL (`UserRegistrationModal.handleSubmit`), una por una:
+ * persona, roles, categoría (salvo servicios), área y turno, tipo de contrato (por puesto), tope de horas del
+ * contrato, importe de servicios, convenio, categoría del convenio, reemplazo con reemplazado y motivo,
+ * errores de jornadas. Y el cálculo es el mismo módulo (`compartido/jornadas.ts`). Lo único nuevo:
+ *  - la persona tiene que existir y estar activa (en el individual se elige de una lista que ya filtra),
+ *  - la persona reemplazada tiene que ser del equipo del proyecto (el individual sólo ofrece esos),
+ *  - el aviso de que la escala cambió desde que se fijó a mano el importe de alguien.
+ *
+ * ERRORES frenan la contratación entera (el lote es todo o nada). ADVERTENCIAS se muestran y no frenan.
+ */
+import { Importes } from "../compartido/jornadas.js";
+import { DatosSolicitud } from "../compartido/solicitudDeContratacion.js";
+export interface PlantillaParaPlan {
+    projectId: string;
+    empresaContratoId?: string;
+    convenioId?: string;
+    /** El tipo de contrato va POR PUESTO; éste es el de las plantillas viejas, que se usa si el puesto no tiene. */
+    contratoId?: string;
+    nombreContrato?: string;
+    tipoImpositivo?: string;
+    comentarios?: string;
+}
+/**
+ * Un PUESTO: su rol, su área y turno, su horario y sus días (todo por puesto: una plantilla cubre varias
+ * áreas y turnos), y la persona que lo ocupa en el equipo elegido (`userId` vacío = sin asignar).
+ */
+export interface IntegranteParaPlan {
+    _id: string;
+    userId: string;
+    rolesFrame: string[];
+    areaId?: string | null;
+    shiftId?: string | null;
+    diasSemana?: number[];
+    diasPorSemana?: number | null;
+    diasRotativos?: boolean;
+    categoriaSatId?: string | null;
+    inTime?: string | null;
+    outTime?: string | null;
+    dailyRateManual?: number | null;
+    escalaAlFijar?: number | null;
+    comentarios?: string | null;
+    /** El tipo de contrato de este puesto (cada persona contratada puede ir con uno distinto). */
+    contratoId?: string | null;
+    nombreContrato?: string | null;
+    /** El trámite del tipo de contrato («constancia_cuit» = servicios). */
+    tipoImpositivo?: string | null;
+    reemplazadoDePersonaId?: string | null;
+}
+/**
+ * Lo de ESTA contratación, igual para todo el equipo: el tipo de contrato y las fechas.
+ *
+ * EL TIPO DE CONTRATO SE ELIGE AL CONTRATAR, no al armar el equipo. Medido en producción: de 867
+ * vínculos persona-proyecto, 227 tuvieron más de un tipo a lo largo de su historia; era el campo que
+ * más cambia entre una contratación y la siguiente, y el único que la plantilla congelaba. Acá viene
+ * uno general para todos los puestos —lo normal: un fin de semana de jornaleros va entero por
+ * «Jornada»— y quien necesite otro lo trae en su `Puntual`.
+ *
+ * Como puede haber de los dos modos en el mismo lote, viajan las dos formas de fecha: los puestos por
+ * días sueltos usan `fechas`, los demás `desde`/`hasta`.
+ */
+export interface FechasDeContratacion {
+    /**
+     * El tipo de contrato general de esta contratación, con su nombre y su trámite: los tres viajan
+     * juntos siempre, como en el puesto y en el equipo. Sin él, vale el del puesto o el de la plantilla.
+     */
+    contratoId?: string;
+    nombreContrato?: string;
+    tipoImpositivo?: string;
+    /** Tipo de contrato por días sueltos («Jornada»): los días. */
+    fechas?: string[];
+    desde?: string;
+    hasta?: string;
+    /** Días rotativos: las jornadas se cargan a mano (no hay patrón del cual contarlas). */
+    jornadasRotativos?: number;
+}
+/** Lo que se pisa SÓLO en esta contratación, sin tocar la plantilla. */
+export interface Puntual {
+    excluido?: boolean;
+    /** Quién ocupa el puesto en ESTA contratación, en vez de la persona del equipo (o si está sin asignar). */
+    userId?: string;
+    /** Días rotativos: las jornadas de este puesto en esta contratación. */
+    jornadas?: number;
+    categoriaSatId?: string;
+    inTime?: string;
+    outTime?: string;
+    dailyRate?: number;
+    /** Jornada: otros días para esta persona. */
+    fechas?: string[];
+    /**
+     * Período: otro desde/hasta para esta persona. Como en el alta individual, cada persona puede tener
+     * sus fechas; lo normal es que valgan las del equipo, y esto es la excepción de una.
+     */
+    desde?: string;
+    hasta?: string;
+    isReplacement?: boolean;
+    motivoReemplazoId?: string;
+    replacedUserId?: string;
+    empleado_id_reemplezado?: string | number;
+    /** El comentario de ESTA solicitud (en la revisión). Sin él, el del puesto o el de la plantilla. */
+    comentarios?: string;
+    /** Otro tipo de contrato para esta persona, sólo esta vez (un Servicios entre Jornadas). Con nombre y trámite. */
+    contratoId?: string;
+    nombreContrato?: string;
+    tipoImpositivo?: string;
+}
+export interface AvisoDeSuperposicionPlan {
+    tipo: "horario" | "fechas";
+    mensaje: string;
+}
+/** Lo que el plan necesita saber de la base. Lo arma `services/plantillasEquipo.ts`. */
+export interface ContratoDelPlan {
+    modoFechas?: string;
+    esTiempoIndeterminado?: boolean;
+    multiplicadorDiario?: number | null;
+    horasPorJornada?: number | null;
+    /** «Cantidad de jornadas» del tipo: si está, son ésas (ver `jornadasFijadasPorElTipo`). */
+    cantidadJornadas?: number | null;
+    /** «Días por semana» del tipo: precargan la semana de cada puesto (ver `semanaDelTipoDeContrato`). */
+    diasPorSemana?: number | null;
+}
+export interface Contexto {
+    /** Los tipos de contrato de los puestos, por `_id`. */
+    contratos: Map<string, ContratoDelPlan>;
+    /** Hay tipos de contrato cargados: sin ninguno, el individual no lo exige. */
+    hayContratos: boolean;
+    /** Código del CCT del convenio de la plantilla (`Convenio.externalId`). */
+    convenioCct: string;
+    /** Hay convenios que ofrecer: sin ninguno, el individual no exige convenio. */
+    hayConvenios: boolean;
+    categorias: Map<string, {
+        neto: number;
+        convenio: string;
+        nombre: string;
+    }>;
+    personas: Map<string, {
+        nombre: string;
+        activo: boolean;
+        esSolicitud: boolean;
+    }>;
+    /** Los `_id` de las personas del equipo del proyecto: a quién se puede reemplazar. */
+    equipo: Set<string>;
+    /** Motivos de reemplazo válidos (los de Novedades). Vacío = el individual no lo exige. */
+    motivos: Set<string>;
+    /**
+     * Superposiciones de cada PUESTO (`_id` del integrante, no de la persona: la misma puede ocupar dos)
+     * con lo que la persona ya tiene y con sus otros puestos del lote, para ESTAS fechas.
+     */
+    superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
+    /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
+    sedePrincipal?: number | null;
+}
+export interface FilaDelPlan {
+    integranteId: string;
+    userId: string;
+    nombre: string;
+    excluido: boolean;
+    categoriaSatId: string;
+    categoriaNombre: string;
+    inTime: string;
+    outTime: string;
+    jornadas: number;
+    importes: Importes;
+    /** Lo que se paga por jornada: pisado esta vez, fijado en la plantilla, o el de la escala. */
+    origenImporte: "puntual" | "plantilla" | "escala" | "servicios";
+    errores: string[];
+    advertencias: string[];
+    /** Las que son de horario (la persona ya tiene algo a esa hora): se resaltan. */
+    superposicionHorario: boolean;
+    datos: DatosSolicitud | null;
+}
+export interface PlanDeLote {
+    filas: FilaDelPlan[];
+    totales: {
+        personas: number;
+        jornadas: number;
+        importe: number;
+        conErrores: number;
+        conAdvertencias: number;
+    };
+}
+export declare const MAX_INTEGRANTES_POR_LOTE = 50;
+export declare function planDeLote(plantilla: PlantillaParaPlan, integrantes: IntegranteParaPlan[], contratacion: FechasDeContratacion, puntuales: Record<string, Puntual>, ctx: Contexto): PlanDeLote;
+/** Qué impide contratar el lote entero (además de los errores de cada fila). */
+export declare function erroresDelLote(plan: PlanDeLote): string[];
