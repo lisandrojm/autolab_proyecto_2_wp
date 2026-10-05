@@ -856,6 +856,21 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         };
         const empresasPorProyecto = new Map();
         projectsList.forEach((p) => empresasPorProyecto.set(String(p._id), { contratoEmpresas: toEmpresas(p.contratoEmpresas), releaseEmpresas: toEmpresas(p.releaseEmpresas) }));
+        /*
+          LA EMPRESA DEL RELEASE, CUANDO EL PROYECTO TIENE UNA SOLA, YA VIENE ELEGIDA. No hay nada que
+          decidir, y pedir que se elija fila por fila era trabajo de más. Es la misma que usa la
+          generación cuando no hay ninguna guardada (`generarReleasePdf` toma la primera del proyecto),
+          así que lo que se ve es lo que va a salir.
+    
+          Solo con UNA configurada EN EL PROYECTO: `toEmpresas` cae a todas las del tenant cuando el
+          proyecto no tiene ninguna, y una sola por ese camino no es una elección del proyecto.
+        */
+        const releaseUnicaPorProyecto = new Map();
+        projectsList.forEach((p) => {
+            const propias = toEmpresas(p.releaseEmpresas);
+            if ((p.releaseEmpresas || []).length === 1 && propias.length === 1)
+                releaseUnicaPorProyecto.set(String(p._id), propias[0]);
+        });
         const tFase1 = Date.now();
         // FASE 1 — barrido liviano. Hay que recorrer TODOS los contratos de todas las personas para
         // elegir el activo y aplicar los filtros, pero de cada contrato alcanzan seis campos: traer el
@@ -1255,9 +1270,11 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 firmaReleasesGeneradoAt: c.firmaReleasesGeneradoAt || "",
                 firmaEnviadaAt: c.firmaEnviadaAt || "",
                 empresaContratoId: c.empresaContratoId ? String(c.empresaContratoId) : "",
-                empresaReleaseId: c.empresaReleaseId ? String(c.empresaReleaseId) : "",
+                empresaReleaseId: c.empresaReleaseId ? String(c.empresaReleaseId) : releaseUnicaPorProyecto.get(String(r.projectId))?.id || "",
                 nombre_empresa_contrato: c.nombre_empresa_contrato || "",
-                nombre_empresa_release: c.nombre_empresa_release || "",
+                nombre_empresa_release: c.nombre_empresa_release || (!c.empresaReleaseId && releaseUnicaPorProyecto.get(String(r.projectId))?.label) || "",
+                // La empresa del release salió del proyecto (tiene una sola), no la eligió nadie: no hay nada que quitar.
+                empresaReleaseDelProyecto: !c.empresaReleaseId && releaseUnicaPorProyecto.has(String(r.projectId)),
                 // El puesto desempeñado elegido en ESTE contrato (registro de 85). Vacío = hereda el default.
                 puestoDesempenado: c.puestoDesempenado || "",
                 categoria_sat_id: c.categoria_sat_id ?? null,

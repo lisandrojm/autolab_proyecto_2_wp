@@ -677,6 +677,15 @@ const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrat
     );
   }
 
+  // El proyecto tiene una sola empresa de release y ya viene puesta: no hay nada que elegir.
+  if (campo === 'release' && record.empresaReleaseDelProyecto && empresaIdActual) {
+    return (
+      <span className="text-xs font-medium text-gray-700 dark:text-gray-200" title="Es la única empresa de release del proyecto">
+        {record.nombre_empresa_release || empresas.find((e) => e.id === empresaIdActual)?.label}
+      </span>
+    );
+  }
+
   const faltaYEsRequerido = requerido && !empresaIdActual;
 
   // Un <select> nativo no puede tener un ícono adentro del control: el spinner se superpone
@@ -3232,7 +3241,7 @@ const FirmaReleaseCell: React.FC<{
         ) : (
           <div className="flex items-center gap-1">
             <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label={savedReleaseEmpresaId ? `Generar Release · ${empresasParaGenerar[0]?.label || ''}` : 'Generar Release'} />
-            {savedReleaseEmpresaId && <QuitarEmpresaBtn record={record} campo="release" onQuitado={onGenerado} />}
+            {savedReleaseEmpresaId && !record.empresaReleaseDelProyecto && <QuitarEmpresaBtn record={record} campo="release" onQuitado={onGenerado} />}
           </div>
         )}
       </div>

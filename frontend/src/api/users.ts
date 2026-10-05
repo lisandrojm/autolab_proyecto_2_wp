@@ -162,6 +162,8 @@ export interface ContractOverviewRow {
   empresaReleaseId?: string;
   nombre_empresa_contrato?: string;
   nombre_empresa_release?: string;
+  /** La empresa del release no la eligió nadie: el proyecto tiene una sola y viene puesta. No se puede quitar. */
+  empresaReleaseDelProyecto?: boolean;
   /** Empresas del proyecto (con fallback a las del ABM) para el menú "Descargar con:". */
   contratoEmpresas?: { id: string; label: string }[];
   releaseEmpresas?: { id: string; label: string }[];
