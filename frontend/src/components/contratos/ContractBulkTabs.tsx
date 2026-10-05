@@ -2025,7 +2025,8 @@ export const ContractBulkAfipTab: React.FC<{
     proyecto: ({ row }) => row.projectName,
     contrato: ({ row }) => row.nombre_contrato,
     estado: ({ row }) => row._estadoName,
-  });
+    // Por defecto, lo último que se cargó arriba: es lo que se viene a buscar a esta pantalla.
+  }, { columna: 'fechaCarga', direccion: 'desc' });
   const ordenProps = { orden, onAlternar: alternar };
 
   // Ojo: esto NO acota `filtered`. Solo dice qué filas se dibujan. Ver `usePaginado`.
