@@ -990,7 +990,18 @@ export interface CorridaAltasGuardada {
   error?: string;
   duracionMs?: number;
   tandas: number;
-  contratos: Array<{ cuil: string; nombre: string; resultado: string; motivo?: string; tanda?: number; cat?: string; porConsulta?: boolean; registro?: string }>;
+  contratos: Array<{
+    cuil: string;
+    nombre: string;
+    resultado: string;
+    motivo?: string;
+    tanda?: number;
+    cat?: string;
+    porConsulta?: boolean;
+    registro?: string;
+    /** La constancia de alta ya validada y por dónde siguió. Sin esto, todavía no se bajó. */
+    constancia?: { destino: "outbox" | "no_firmar" | "sin_subir"; archivadaEn?: string; validadaEl?: string; clave?: string };
+  }>;
 }
 
 export interface EstadoCorridaAltas {

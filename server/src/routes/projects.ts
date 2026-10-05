@@ -3053,6 +3053,19 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
       .select("createdAt usuarioId empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos tandas duracionMs")
       .populate("usuarioId", "firstName lastName")
       .lean();
+    /*
+      DÓNDE QUEDÓ LA CONSTANCIA DE CADA ALTA. No está en el log —la corrida presenta, la constancia
+      se baja después—: se lee del contrato (`altaConstancia`), que es donde queda al validarla.
+      Se piden solo esos dos campos; el orden de `contracts` se conserva, así el índice sigue valiendo.
+    */
+    const idsUp = [...new Set(logs.flatMap((l) => (l.contratos || []).map((c: any) => String(c.userProjectId || ""))).filter((id) => Types.ObjectId.isValid(id)))];
+    const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl").lean() : [];
+    const upPorId = new Map(ups.map((u) => [String(u._id), u]));
+    const constanciaDe = (c: any) => {
+      const k = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex]?.altaConstancia;
+      if (!k?.validadaEl) return undefined;
+      return { destino: !k.archivadaEn ? "sin_subir" : k.vaAFirma ? "outbox" : "no_firmar", archivadaEn: k.archivadaEn, validadaEl: k.validadaEl, clave: k.clave };
+    };
     res.json(
       logs.map((l) => ({
         _id: String(l._id),
@@ -3067,7 +3080,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
         error: l.error,
         duracionMs: l.duracionMs,
         tandas: (l.tandas || []).length,
-        contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro })),
+        contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) })),
       })),
     );
   } catch (error: any) {

@@ -37,7 +37,15 @@ interface Fila {
   cat?: string;
   porConsulta?: boolean;
   registro?: string;
+  constancia?: CorridaAltasGuardada['contratos'][number]['constancia'];
 }
+
+/** Dónde quedó la constancia de alta de una persona: es lo que dice la columna «Constancia». */
+const DESTINO: Record<string, { texto: string; clase: string }> = {
+  outbox: { texto: 'Outbox · para firmar', clase: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800' },
+  no_firmar: { texto: 'Alta temprana de Arca / No firmar', clase: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' },
+  sin_subir: { texto: 'Validada, sin subir a Dropbox', clase: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800' },
+};
 
 const VISTA: Record<string, { texto: string; icon: typeof faCircle; clase: string }> = {
   presentada: { texto: 'Registrada', icon: faCircleCheck, clase: 'text-green-600 dark:text-green-400' },
@@ -67,6 +75,7 @@ export function filasDelHistorial(corridas: CorridaAltasGuardada[]): Fila[] {
       cat: p.cat,
       porConsulta: p.porConsulta,
       registro: p.registro,
+      constancia: p.constancia,
     })),
   );
 }
@@ -134,9 +143,10 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
   }, [constancias]);
   const falloConstancias = (constancias?.eventos || []).find((e) => e.tipo === 'fallo');
 
+  // Se vuelve a leer cuando termina una descarga: la columna «Constancia» sale del contrato.
+  const descargando = !!constancias?.corriendo;
   useEffect(() => {
-    if (!isOpen) return;
-    setCorridas(null);
+    if (!isOpen || descargando) return;
     setError('');
     projectsAPI
       .historialAltasArca(empresaId)
@@ -144,7 +154,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
       // 404 = el servidor que contesta es anterior a este registro (falta actualizarlo y reiniciarlo):
       // un «Not Found» pelado no le dice eso a nadie.
       .catch((e: any) => setError(e?.response?.status === 404 ? 'El servidor todavía no tiene el registro de altas: hay que actualizarlo (git pull) y reiniciarlo. Las corridas ya están guardadas y van a aparecer acá.' : e?.response?.data?.error || 'No se pudo leer el registro de altas.'));
-  }, [isOpen, empresaId]);
+  }, [isOpen, empresaId, descargando]);
 
   const filas = useMemo(() => {
     const q = buscar.trim().toLowerCase();
@@ -155,8 +165,8 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
 
   const bajar = () => {
     const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const lineas = [['Fecha', 'Empleadora', 'Presentó', 'Tanda', 'CUIL', 'Nombre', 'Resultado', 'C.A.T.', 'Motivo', 'Registro enviado']].concat(
-      filas.map((f) => [fmtFecha(f.fecha), f.empresa, f.usuario, f.tanda ? String(f.tanda) : '', f.cuil, f.nombre, vista(f.resultado).texto, f.cat || '', f.motivo || '', f.registro || '']),
+    const lineas = [['Fecha', 'Empleadora', 'Presentó', 'Tanda', 'CUIL', 'Nombre', 'Resultado', 'Constancia', 'C.A.T.', 'Motivo', 'Registro enviado']].concat(
+      filas.map((f) => [fmtFecha(f.fecha), f.empresa, f.usuario, f.tanda ? String(f.tanda) : '', f.cuil, f.nombre, vista(f.resultado).texto, f.constancia ? DESTINO[f.constancia.destino]?.texto || f.constancia.destino : '', f.constancia?.clave || f.cat || '', f.motivo || '', f.registro || '']),
     );
     // Con BOM: sin él Excel abre los acentos rotos.
     const url = URL.createObjectURL(new Blob(['﻿' + lineas.map((l) => l.map(celda).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
@@ -240,6 +250,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                   <th className="px-3 py-2 text-left">CUIL</th>
                   <th className="px-3 py-2 text-left">Empleadora</th>
                   <th className="px-3 py-2 text-left">Resultado</th>
+                  <th className="px-3 py-2 text-left">Constancia</th>
                   <th className="px-3 py-2 text-left">Presentó</th>
                 </tr>
               </thead>
@@ -262,11 +273,22 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                           {f.porConsulta ? ' · por consulta' : ''}
                           {f.motivo && <span className="block text-[11px] text-red-700 dark:text-red-400">{f.motivo}</span>}
                         </td>
+                        <td className="px-3 py-1.5">
+                          {f.constancia ? (
+                            <span title={f.constancia.archivadaEn || 'La constancia quedó cargada en el contrato, pero no se pudo subir a Dropbox.'} className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold whitespace-nowrap ${DESTINO[f.constancia.destino]?.clase || ''}`}>
+                              {DESTINO[f.constancia.destino]?.texto || f.constancia.destino}
+                            </span>
+                          ) : f.resultado === 'presentada' && !f.enSeco ? (
+                            <span className="text-[11px] text-amber-700 dark:text-amber-400">Falta bajarla</span>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600">—</span>
+                          )}
+                        </td>
                         <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.usuario || '—'}</td>
                       </tr>
                       {abierta === f.clave && (
                         <tr>
-                          <td colSpan={6} className="px-3 py-2 bg-gray-50 dark:bg-gray-900/40">
+                          <td colSpan={7} className="px-3 py-2 bg-gray-50 dark:bg-gray-900/40">
                             {f.registro ? (
                               <>
                                 <pre className="font-mono text-[11px] p-2 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-pre">{f.registro}</pre>
