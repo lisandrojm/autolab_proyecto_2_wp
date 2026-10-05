@@ -8,7 +8,7 @@ import { Company } from "../../models/Company.js";
 import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR, MOTOR_ALTAS } from "./motor.js";
 import { soltarCandado, tomarCandado } from "./candadoArca.js";
-import { guardarPdfDeAlta, registrarAltaDeContrato, } from "../altaTempranaService.js";
+import { guardarPdfDeAlta, registrarAltaDeContrato } from "../altaTempranaService.js";
 /** Una por tenant, en memoria, como las demás corridas de ARCA. */
 const descargas = new Map();
 export const descargaConstanciasDe = (tenantId) => descargas.get(tenantId);
@@ -18,9 +18,7 @@ const pausa = () => new Promise((r) => setTimeout(r, 1500 + Math.floor(Math.rand
 export async function pendientesDeConstancia(tenantObjectId, empresaId) {
     if (!Types.ObjectId.isValid(empresaId))
         return [];
-    const proyectos = await Project.find({ tenantId: tenantObjectId })
-        .select("_id")
-        .lean();
+    const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id").lean();
     const ups = await UserProject.find({
         projectId: { $in: proyectos.map((p) => p._id) },
         contracts: {
@@ -42,9 +40,7 @@ export async function pendientesDeConstancia(tenantObjectId, empresaId) {
     const out = [];
     for (const up of ups) {
         (up.contracts || []).forEach((c, i) => {
-            if (String(c.empresaContratoId || "") !== empresaId ||
-                c.altaArcaPresentada?.resultado !== "presentada" ||
-                c.altaConstancia?.validadaEl)
+            if (String(c.empresaContratoId || "") !== empresaId || c.altaArcaPresentada?.resultado !== "presentada" || c.altaConstancia?.validadaEl)
                 return;
             const u = porId.get(String(up.userId));
             const cuil = digitos(u?.metadata?.cuit);
@@ -68,9 +64,7 @@ export async function arrancarDescargaConstancias(o) {
     // El candado ANTES de cualquier await, como en las altas: dos clicks no arrancan dos corridas.
     tomarCandado(tenantId, "constancias");
     try {
-        const empresa = Types.ObjectId.isValid(o.empresaId)
-            ? await Company.findById(o.empresaId).select("cuit razonSocial").lean()
-            : null;
+        const empresa = Types.ObjectId.isValid(o.empresaId) ? await Company.findById(o.empresaId).select("cuit razonSocial").lean() : null;
         const cuit = digitos(empresa?.cuit);
         if (!empresa || cuit.length !== 11)
             throw new Error("Elegí la pestaña de UNA empresa con CUIT: las constancias se bajan logueado como esa empleadora.");
@@ -167,6 +161,7 @@ async function correr(o) {
           solo lectura: repetir la consulta no repite nada en el organismo.
         */
         const VUELTAS = 3;
+        let yaSeDescargoEnEstaPestaña = false;
         let cola = pendientes;
         for (let vuelta = 1; cola.length > 0 && vuelta <= VUELTAS; vuelta++) {
             const paraDespues = [];
@@ -179,6 +174,18 @@ async function correr(o) {
             for (const [i, p] of cola.entries()) {
                 if (i > 0)
                     await pausa();
+                /*
+                  UNA PESTAÑA POR PERSONA. En una misma pestaña la PRIMERA descarga sale enseguida y la segunda
+                  se queda colgada hasta agotar la espera (visto dos corridas seguidas: baja la primera, cuelga
+                  la siguiente). El navegador frena las descargas automáticas repetidas de un mismo sitio en la
+                  misma pestaña; en una pestaña nueva la cuenta arranca de cero. La sesión y la empleadora son
+                  del navegador, no de la pestaña, así que no hay que volver a entrar.
+                */
+                if (yaSeDescargoEnEstaPestaña) {
+                    pestañasNuevas = 0;
+                    await conPestañaViva(() => otraPestaña());
+                }
+                yaSeDescargoEnEstaPestaña = true;
                 emitir({
                     tipo: "persona",
                     cuil: p.cuil,
@@ -234,11 +241,7 @@ async function correr(o) {
                         continue;
                     }
                     listas++;
-                    const destino = !res.ruteo?.archivadaEn
-                        ? res.ruteo?.aviso || "Quedó cargada en el contrato."
-                        : res.ruteo.vaAFirma
-                            ? "En el Outbox, lista para enviar a firmar."
-                            : "Archivada en «Alta temprana de Arca / No firmar».";
+                    const destino = !res.ruteo?.archivadaEn ? res.ruteo?.aviso || "Quedó cargada en el contrato." : res.ruteo.vaAFirma ? "En el Outbox, lista para enviar a firmar." : "Archivada en «Alta temprana de Arca / No firmar».";
                     emitir({
                         tipo: "persona",
                         cuil: p.cuil,
@@ -259,9 +262,7 @@ async function correr(o) {
                             cuil: p.cuil,
                             nombre: p.nombre,
                             estado: "sin_constancia",
-                            detalle: quedanVueltas
-                                ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final."
-                                : `ARCA no entregó el PDF en ${VUELTAS} intentos. Probá de nuevo en unos minutos: el alta sigue registrada.`,
+                            detalle: quedanVueltas ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final." : `ARCA no entregó el PDF en ${VUELTAS} intentos. Probá de nuevo en unos minutos: el alta sigue registrada.`,
                         });
                         continue;
                     }

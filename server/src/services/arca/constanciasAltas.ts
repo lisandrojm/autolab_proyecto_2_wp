@@ -8,10 +8,7 @@ import { Company } from "../../models/Company.js";
 import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR, MOTOR_ALTAS } from "./motor.js";
 import { soltarCandado, tomarCandado } from "./candadoArca.js";
-import {
-  guardarPdfDeAlta,
-  registrarAltaDeContrato,
-} from "../altaTempranaService.js";
+import { guardarPdfDeAlta, registrarAltaDeContrato } from "../altaTempranaService.js";
 
 /**
  * BAJAR DE ARCA LAS CONSTANCIAS DE ALTA TEMPRANA de lo ya presentado, y mandarlas a donde va cada
@@ -34,12 +31,7 @@ export type EventoConstancias =
       tipo: "persona";
       cuil: string;
       nombre: string;
-      estado:
-        | "descargando"
-        | "lista"
-        | "rechazada"
-        | "sin_constancia"
-        | "error";
+      estado: "descargando" | "lista" | "rechazada" | "sin_constancia" | "error";
       detalle?: string;
     }
   | { tipo: "fin"; listas: number; total: number }
@@ -66,25 +58,15 @@ interface Pendiente {
 
 /** Una por tenant, en memoria, como las demás corridas de ARCA. */
 const descargas = new Map<string, DescargaConstancias>();
-export const descargaConstanciasDe = (
-  tenantId: string,
-): DescargaConstancias | undefined => descargas.get(tenantId);
+export const descargaConstanciasDe = (tenantId: string): DescargaConstancias | undefined => descargas.get(tenantId);
 
 const digitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
-const pausa = () =>
-  new Promise<void>((r) =>
-    setTimeout(r, 1500 + Math.floor(Math.random() * 1500)),
-  );
+const pausa = () => new Promise<void>((r) => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)));
 
 /** Los contratos de esa empleadora presentados en ARCA que todavía no tienen su constancia validada. */
-export async function pendientesDeConstancia(
-  tenantObjectId: any,
-  empresaId: string,
-): Promise<Pendiente[]> {
+export async function pendientesDeConstancia(tenantObjectId: any, empresaId: string): Promise<Pendiente[]> {
   if (!Types.ObjectId.isValid(empresaId)) return [];
-  const proyectos = await Project.find({ tenantId: tenantObjectId })
-    .select("_id")
-    .lean();
+  const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id").lean();
   const ups: any[] = await UserProject.find({
     projectId: { $in: proyectos.map((p: any) => p._id) },
     contracts: {
@@ -94,9 +76,7 @@ export async function pendientesDeConstancia(
       },
     },
   })
-    .select(
-      "userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato",
-    )
+    .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato")
     .lean();
   const usuarios: any[] = await User.find({
     _id: { $in: ups.map((u) => u.userId) },
@@ -108,17 +88,10 @@ export async function pendientesDeConstancia(
   const out: Pendiente[] = [];
   for (const up of ups) {
     (up.contracts || []).forEach((c: any, i: number) => {
-      if (
-        String(c.empresaContratoId || "") !== empresaId ||
-        c.altaArcaPresentada?.resultado !== "presentada" ||
-        c.altaConstancia?.validadaEl
-      )
-        return;
+      if (String(c.empresaContratoId || "") !== empresaId || c.altaArcaPresentada?.resultado !== "presentada" || c.altaConstancia?.validadaEl) return;
       const u = porId.get(String(up.userId));
       const cuil = digitos(u?.metadata?.cuit);
-      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(
-        String(c.fecha_alta_contrato || ""),
-      );
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(c.fecha_alta_contrato || ""));
       if (cuil.length !== 11 || !m) return;
       out.push({
         userProjectId: String(up._id),
@@ -133,37 +106,18 @@ export async function pendientesDeConstancia(
   return out;
 }
 
-export async function arrancarDescargaConstancias(o: {
-  tenantId: string;
-  tenantObjectId: any;
-  tenantCarpeta: string;
-  empresaId: string;
-}): Promise<{ total: number }> {
+export async function arrancarDescargaConstancias(o: { tenantId: string; tenantObjectId: any; tenantCarpeta: string; empresaId: string }): Promise<{ total: number }> {
   const { tenantId, tenantObjectId } = o;
   // El candado ANTES de cualquier await, como en las altas: dos clicks no arrancan dos corridas.
   tomarCandado(tenantId, "constancias");
   try {
-    const empresa: any = Types.ObjectId.isValid(o.empresaId)
-      ? await Company.findById(o.empresaId).select("cuit razonSocial").lean()
-      : null;
+    const empresa: any = Types.ObjectId.isValid(o.empresaId) ? await Company.findById(o.empresaId).select("cuit razonSocial").lean() : null;
     const cuit = digitos(empresa?.cuit);
-    if (!empresa || cuit.length !== 11)
-      throw new Error(
-        "Elegí la pestaña de UNA empresa con CUIT: las constancias se bajan logueado como esa empleadora.",
-      );
-    const pendientes = await pendientesDeConstancia(
-      tenantObjectId,
-      o.empresaId,
-    );
-    if (pendientes.length === 0)
-      throw new Error(
-        "No hay altas presentadas de esa empleadora esperando su constancia.",
-      );
+    if (!empresa || cuit.length !== 11) throw new Error("Elegí la pestaña de UNA empresa con CUIT: las constancias se bajan logueado como esa empleadora.");
+    const pendientes = await pendientesDeConstancia(tenantObjectId, o.empresaId);
+    if (pendientes.length === 0) throw new Error("No hay altas presentadas de esa empleadora esperando su constancia.");
     const cred = await credencialesDe(tenantId);
-    if (!cred)
-      throw new Error(
-        "Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.",
-      );
+    if (!cred) throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
     const d: DescargaConstancias = {
       empresaId: o.empresaId,
       empresaRazonSocial: String(empresa.razonSocial || ""),
@@ -181,15 +135,7 @@ export async function arrancarDescargaConstancias(o: {
   }
 }
 
-async function correr(o: {
-  d: DescargaConstancias;
-  pendientes: Pendiente[];
-  cuit: string;
-  cred: NonNullable<Awaited<ReturnType<typeof credencialesDe>>>;
-  tenantId: string;
-  tenantObjectId: any;
-  tenantCarpeta: string;
-}) {
+async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit: string; cred: NonNullable<Awaited<ReturnType<typeof credencialesDe>>>; tenantId: string; tenantObjectId: any; tenantCarpeta: string }) {
   const { d, pendientes, tenantId, tenantObjectId } = o;
   const emitir = (e: EventoConstancias) => d.eventos.push(e);
   let sesion: Awaited<ReturnType<typeof abrirSesionArca>> | null = null;
@@ -199,16 +145,11 @@ async function correr(o: {
     emitir({ tipo: "abriendo" });
     sesion = await abrirSesionArca(tenantId, o.cred);
     emitir({ tipo: "sesion", seLogueo: sesion.seLogueo });
-    const { aceptarSelectorDeCuit } = (await import(
-      pathToFileURL(MOTOR).href
-    )) as any;
+    const { aceptarSelectorDeCuit } = (await import(pathToFileURL(MOTOR).href)) as any;
     const motor = (await import(pathToFileURL(MOTOR_ALTAS).href)) as any;
     let page = sesion.page;
     // Por el selector se entra UNA vez: volver a él estando adentro cierra la sesión de ARCA.
-    if (!(await aceptarSelectorDeCuit(page, o.cuit)))
-      throw new Error(
-        `No pude elegir la empleadora ${o.cuit} en ARCA (¿el usuario delegado la tiene?).`,
-      );
+    if (!(await aceptarSelectorDeCuit(page, o.cuit))) throw new Error(`No pude elegir la empleadora ${o.cuit} en ARCA (¿el usuario delegado la tiene?).`);
     const base = page.url().split("/app/")[0];
     /*
       LA PESTAÑA SE CAE A VECES AL SALIR DE LA PANTALLA DEL SELECTOR («Page crashed»), vaya a donde
@@ -218,16 +159,10 @@ async function correr(o: {
 
       Es solo lectura, así que reintentar acá no repite nada en el organismo. Hasta 3 pestañas.
     */
-    const seCayo = (e: any) =>
-      /crash|Target (page|closed)|page has been closed/i.test(
-        String(e?.message || e),
-      );
+    const seCayo = (e: any) => /crash|Target (page|closed)|page has been closed/i.test(String(e?.message || e));
     let pestañasNuevas = 0;
     const otraPestaña = async () => {
-      if (++pestañasNuevas > 3)
-        throw new Error(
-          "La pestaña de ARCA se cayó cuatro veces seguidas. Probá de nuevo en unos minutos.",
-        );
+      if (++pestañasNuevas > 3) throw new Error("La pestaña de ARCA se cayó cuatro veces seguidas. Probá de nuevo en unos minutos.");
       await page.close().catch(() => {});
       page = await sesion!.ctx.newPage();
       await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`, {
@@ -265,6 +200,7 @@ async function correr(o: {
       solo lectura: repetir la consulta no repite nada en el organismo.
     */
     const VUELTAS = 3;
+    let yaSeDescargoEnEstaPestaña = false;
     let cola = pendientes;
     for (let vuelta = 1; cola.length > 0 && vuelta <= VUELTAS; vuelta++) {
       const paraDespues: Pendiente[] = [];
@@ -276,6 +212,18 @@ async function correr(o: {
       }
       for (const [i, p] of cola.entries()) {
         if (i > 0) await pausa();
+        /*
+          UNA PESTAÑA POR PERSONA. En una misma pestaña la PRIMERA descarga sale enseguida y la segunda
+          se queda colgada hasta agotar la espera (visto dos corridas seguidas: baja la primera, cuelga
+          la siguiente). El navegador frena las descargas automáticas repetidas de un mismo sitio en la
+          misma pestaña; en una pestaña nueva la cuenta arranca de cero. La sesión y la empleadora son
+          del navegador, no de la pestaña, así que no hay que volver a entrar.
+        */
+        if (yaSeDescargoEnEstaPestaña) {
+          pestañasNuevas = 0;
+          await conPestañaViva(() => otraPestaña());
+        }
+        yaSeDescargoEnEstaPestaña = true;
         emitir({
           tipo: "persona",
           cuil: p.cuil,
@@ -292,23 +240,19 @@ async function correr(o: {
           );
           if (r.resultado !== "descargada" || !r.pdf) {
             // Lo que la pantalla tenía queda en el log del servidor: con eso se ajusta el lector.
-            console.warn(
-              `[CONSTANCIAS-ARCA] ${p.cuil}: ${r.resultado} — ${r.detalle || ""}`,
-            );
+            console.warn(`[CONSTANCIAS-ARCA] ${p.cuil}: ${r.resultado} — ${r.detalle || ""}`);
             emitir({
               tipo: "persona",
               cuil: p.cuil,
               nombre: p.nombre,
               estado: "sin_constancia",
-              detalle:
-                r.detalle || "ARCA no mostró la constancia de esa relación.",
+              detalle: r.detalle || "ARCA no mostró la constancia de esa relación.",
             });
             continue;
           }
           const buffer: Buffer = Buffer.from(r.pdf);
           const up = await UserProject.findById(p.userProjectId);
-          if (!up || !up.contracts[p.contractIndex])
-            throw new Error("El contrato ya no existe.");
+          if (!up || !up.contracts[p.contractIndex]) throw new Error("El contrato ya no existe.");
           const guardado = await guardarPdfDeAlta({
             tenantCarpeta: o.tenantCarpeta,
             userId: p.userId,
@@ -336,11 +280,7 @@ async function correr(o: {
             continue;
           }
           listas++;
-          const destino = !res.ruteo?.archivadaEn
-            ? res.ruteo?.aviso || "Quedó cargada en el contrato."
-            : res.ruteo.vaAFirma
-              ? "En el Outbox, lista para enviar a firmar."
-              : "Archivada en «Alta temprana de Arca / No firmar».";
+          const destino = !res.ruteo?.archivadaEn ? res.ruteo?.aviso || "Quedó cargada en el contrato." : res.ruteo.vaAFirma ? "En el Outbox, lista para enviar a firmar." : "Archivada en «Alta temprana de Arca / No firmar».";
           emitir({
             tipo: "persona",
             cuil: p.cuil,
@@ -351,9 +291,7 @@ async function correr(o: {
         } catch (e: any) {
           const mensaje = String(e?.message || e);
           // ARCA no entregó el archivo: no es un error de la persona. Queda para la vuelta siguiente.
-          if (
-            /Timeout.*download|waiting for event "download"/is.test(mensaje)
-          ) {
+          if (/Timeout.*download|waiting for event "download"/is.test(mensaje)) {
             const quedanVueltas = vuelta < VUELTAS;
             if (quedanVueltas) paraDespues.push(p);
             emitir({
@@ -361,9 +299,7 @@ async function correr(o: {
               cuil: p.cuil,
               nombre: p.nombre,
               estado: "sin_constancia",
-              detalle: quedanVueltas
-                ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final."
-                : `ARCA no entregó el PDF en ${VUELTAS} intentos. Probá de nuevo en unos minutos: el alta sigue registrada.`,
+              detalle: quedanVueltas ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final." : `ARCA no entregó el PDF en ${VUELTAS} intentos. Probá de nuevo en unos minutos: el alta sigue registrada.`,
             });
             continue;
           }
@@ -375,12 +311,7 @@ async function correr(o: {
             detalle: mensaje,
           });
           // Sesión caída o pantalla que no es: no tiene sentido seguir con los demás.
-          if (
-            /sesi[oó]n|No llegu[eé]|Target closed|browser has been closed|crash/i.test(
-              mensaje,
-            )
-          )
-            throw e;
+          if (/sesi[oó]n|No llegu[eé]|Target closed|browser has been closed|crash/i.test(mensaje)) throw e;
         }
       }
       cola = paraDespues;
