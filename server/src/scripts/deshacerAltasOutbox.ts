@@ -67,7 +67,8 @@ async function main() {
     const ups: any[] = await UserProject.find({ userId: p._id }).lean();
     for (const up of ups) {
       (up.contracts || []).forEach((k: any, i: number) => {
-        if (!k?.altaConstancia?.archivadaEn) return;
+        // Solo las que fueron al Outbox: las de «No firmar» no son parte del problema.
+        if (!k?.altaConstancia?.archivadaEn || !k.altaConstancia.vaAFirma) return;
         objetivos.push({ p, up, i, k });
         console.log(`\n· ${p.firstName} ${p.lastName} — ${up.nombre_proyecto || up.projectId} · contrato #${i} (${k.fecha_alta_contrato} → ${k.fecha_baja_contrato}) · estado «${k.nombre_estado_empleado ?? k.estado_id}»`);
         console.log(`    Dropbox: ${k.altaConstancia.archivadaEn}`);
