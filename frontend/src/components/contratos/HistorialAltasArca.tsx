@@ -85,7 +85,9 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
     projectsAPI
       .historialAltasArca(empresaId)
       .then(setCorridas)
-      .catch((e: any) => setError(e?.response?.data?.error || 'No se pudo leer el registro de altas.'));
+      // 404 = el servidor que contesta es anterior a este registro (falta actualizarlo y reiniciarlo):
+      // un «Not Found» pelado no le dice eso a nadie.
+      .catch((e: any) => setError(e?.response?.status === 404 ? 'El servidor todavía no tiene el registro de altas: hay que actualizarlo (git pull) y reiniciarlo. Las corridas ya están guardadas y van a aparecer acá.' : e?.response?.data?.error || 'No se pudo leer el registro de altas.'));
   }, [isOpen, empresaId]);
 
   const filas = useMemo(() => {
