@@ -370,7 +370,10 @@ router.post("/enviar", async (req: AuthenticatedRequest & TenantRequest, res) =>
         // Alta temprana de ARCA: el documento ya cargado (altaDocumentoUrl) se suma, pero renombrado
         // con la nomenclatura del sistema — el nombre original que le puso quien lo subió a mano no
         // necesariamente lo trae, y el cron de estadoDropboxCronService.ts matchea por CUIT en el nombre.
-        if (t.incluirAlta && t.tipoImpositivo === "alta_temprana_afip" && contract.altaDocumentoUrl) {
+        // UNA SOLA VEZ: si el alta ya salió a firmar (`altaEnviadaAFirmarEl`), un reenvío del contrato
+        // no la vuelve a mandar.
+        const mandaAlta = !!(t.incluirAlta && t.tipoImpositivo === "alta_temprana_afip" && contract.altaDocumentoUrl && !contract.altaEnviadaAFirmarEl);
+        if (mandaAlta) {
           const ext = (contract.altaDocumentoNombre || "").match(/\.[a-z0-9]+$/i)?.[0] || ".pdf";
           const nombreAlta = `${await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "AltaAFIP", user, up, contract, docName: "AltaAFIP" })}${ext}`;
           archivos.push({ nombre: nombreAlta, buffer: leerArchivoStorage(contract.altaDocumentoUrl) });
@@ -387,6 +390,7 @@ router.post("/enviar", async (req: AuthenticatedRequest & TenantRequest, res) =>
         }
 
         contract.firmaEnviadaAt = new Date();
+        if (mandaAlta) contract.altaEnviadaAFirmarEl = new Date();
         up.markModified("contracts");
         await up.save();
 

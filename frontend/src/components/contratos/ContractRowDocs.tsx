@@ -39,7 +39,14 @@ export const downloadReleaseRow = async (record: ContractOverviewRow, release: R
 
 /** Sube el PDF de "Alta". El refetch de la lista queda a cargo del que llama (varía por pantalla). */
 export const uploadAltaRow = async (record: ContractOverviewRow, file: File) => {
-  await projectsAPI.uploadAltaDocumento(record.projectId, record.userId, record.contractIndex, file);
+  const { ruteo } = await projectsAPI.uploadAltaDocumento(record.projectId, record.userId, record.contractIndex, file);
+  // Si era la constancia de alta temprana, se dice por dónde siguió: es lo que antes había que suponer.
+  if (ruteo) {
+    const destino = ruteo.vaAFirma ? 'Va a firmar junto con el contrato, cuando lo envíes.' : ruteo.archivadaEn ? 'Este tipo de contrato no la firma: quedó archivada en Dropbox, en «Alta temprana de Arca».' : '';
+    const texto = [destino, ruteo.estado ? `El contrato pasó a «${ruteo.estado}».` : '', ruteo.aviso || ''].filter(Boolean).join(' ');
+    if (ruteo.aviso) sweetAlert.info('Alta validada, con un aviso', texto);
+    else sweetAlert.success('Alta validada', texto);
+  }
 };
 
 /* --------- UI: cabeceras y celdas --------- */
@@ -152,8 +159,11 @@ export const ContractDocsColumns: React.FC<{
     try {
       setUploading(true);
       await onUploadAlta(record, file);
-    } catch {
-      sweetAlert.error("Error", "No se pudo subir el documento.");
+    } catch (e: any) {
+      // 422: el PDF no es la constancia de alta de este contrato. Se muestra POR QUÉ, que es lo que
+      // permite corregirlo (bajaron la de baja, la de otra persona, la de otra empleadora).
+      const problemas: string[] = e?.response?.data?.problemas || [];
+      sweetAlert.error(problemas.length > 0 ? "El PDF no corresponde a este contrato" : "Error", problemas.length > 0 ? `${problemas.join(" ")} No se guardó ni se envió.` : e?.response?.data?.error || "No se pudo subir el documento.");
     } finally {
       setUploading(false);
     }

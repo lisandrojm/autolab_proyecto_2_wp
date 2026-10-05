@@ -243,6 +243,14 @@ interface IContract {
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
+  /**
+   * Lo que se leyó de la «Constancia del trabajador» de ARCA al cargar el PDF del alta temprana, y
+   * por dónde siguió: `vaAFirma` = viaja a firmar junto con el contrato; si no, `archivadaEn` es
+   * el path de Dropbox donde quedó. Solo existe si la constancia pasó la validación contra el contrato.
+   */
+  altaConstancia?: { clave?: string; nroTramite?: string; validadaEl?: Date; vaAFirma?: boolean; archivadaEn?: string };
+  /** Cuándo salió el alta a firmar. Con esto puesto ningún envío la vuelve a mandar. */
+  altaEnviadaAFirmarEl?: Date;
   // Datos leídos del PDF de la Constancia de CUIT de ARCA al subirlo (el PDF en sí va en
   // altaDocumentoUrl). La constancia vale un mes, así que la vigencia es la que marca cuándo
   // hay que volver a pedirla.
@@ -416,6 +424,8 @@ const contractSchema = new Schema<IContract>(
     },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
+    altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String }, { _id: false }) },
+    altaEnviadaAFirmarEl: { type: Date },
     constanciaVigenciaDesde: { type: String },
     constanciaVigenciaHasta: { type: String },
     constanciaVerificador: { type: String },

@@ -238,6 +238,20 @@ interface IContract {
     };
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;
+    /**
+     * Lo que se leyó de la «Constancia del trabajador» de ARCA al cargar el PDF del alta temprana, y
+     * por dónde siguió: `vaAFirma` = viaja a firmar junto con el contrato; si no, `archivadaEn` es
+     * el path de Dropbox donde quedó. Solo existe si la constancia pasó la validación contra el contrato.
+     */
+    altaConstancia?: {
+        clave?: string;
+        nroTramite?: string;
+        validadaEl?: Date;
+        vaAFirma?: boolean;
+        archivadaEn?: string;
+    };
+    /** Cuándo salió el alta a firmar. Con esto puesto ningún envío la vuelve a mandar. */
+    altaEnviadaAFirmarEl?: Date;
     constanciaVigenciaDesde?: string;
     constanciaVigenciaHasta?: string;
     constanciaVerificador?: string;
