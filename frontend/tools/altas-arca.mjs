@@ -532,7 +532,8 @@ async function imprimirConstancia(page, id) {
   if ((await pantallaActual(page)) === "altas") throw new Error("Estoy en Registrar Nuevas Altas: acá no se aprieta nada.");
   const btn = page.locator(`[id="${id}"]`);
   if ((await btn.count()) !== 1) throw new Error("No encuentro un único ícono de impresora.");
-  const espera = page.waitForEvent("download", { timeout: 45_000 });
+  // Generoso: ARCA arma el PDF del lado del servidor y a veces tarda más de un minuto en entregarlo.
+  const espera = page.waitForEvent("download", { timeout: 90_000 });
   espera.catch(() => {});
   await btn.click();
   return espera;
