@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, pantallaAltas, registroRechazadoDelPegado, topeDelPegado } from "./altas-arca.mjs";
+import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, fechaEnTexto, pantallaAltas, registroRechazadoDelPegado, topeDelPegado } from "./altas-arca.mjs";
 
 // Con fin de línea normalizado: en un checkout de Windows (autocrlf) el archivo llega con CRLF, y los
 // tests que recortan la fuente por un marcador con salto de línea no lo encontraban.
@@ -261,4 +261,30 @@ test("elegirEnResultadoDeConsulta: la casilla de la relación por su fecha, y UN
   assert.equal(elegirEnResultadoDeConsulta({ casillas, controles: [...controles, { id: "lnkImprimirTodo", tag: "a", pista: "lnkImprimirTodo Imprimir" }], fecha: "01/10/2026" }).motivo, "sin_impresora");
   // La imagen dentro de su botón: vale el botón.
   assert.equal(elegirEnResultadoDeConsulta({ casillas, controles: [...controles, { id: "imgAdentro", tag: "img", pista: "ico_imprimir.gif" }], fecha: "01/10/2026" }).impresora, "imgPrint");
+});
+
+test("fechaEnTexto tolera cómo escriba la fecha la grilla, y no confunde otra", () => {
+  for (const fila of ["Inicio 01/10/2026 Cese 31/10/2026", "1/10/2026", "01-10-2026", "01.10.2026", "2026-10-01 00:00"]) assert.equal(fechaEnTexto(fila, "01/10/2026"), true, fila);
+  for (const fila of ["11/10/2026", "01/10/20261", "31/10/2026", "21/10/2026", "01/11/2026", ""]) assert.equal(fechaEnTexto(fila, "01/10/2026"), false, fila);
+  assert.equal(fechaEnTexto("01/10/2026", "no es fecha"), false);
+});
+
+test("cuando no hay una sola relación, el detalle dice qué traía cada fila", () => {
+  const r = elegirEnResultadoDeConsulta({ casillas: [{ id: "a", fila: "PEREZ 19/04/2026 19/04/2026" }, { id: "todos", fila: "" }], controles: [], fecha: "01/10/2026" });
+  assert.equal(r.motivo, "sin_relacion");
+  assert.match(r.detalle, /Filas: \[PEREZ 19\/04\/2026 19\/04\/2026\] \[fila sin texto\]/);
+});
+
+test("la tarjeta de la relación se reconoce por su «Fecha de Inicio», no por el fin ni por la fecha del C.A.T.", () => {
+  // Como la pantalla real: una tarjeta por relación, con las tres fechas.
+  const tarjeta = (inicio, cat, fin) => `Empleado: 20-11111111-2 - PEREZ JUAN Retr. pactada: 1239805,93 Fecha de Inicio: ${inicio} C.A.T.: 26391939579227495223 ${cat} 21:15:14hs: Fecha de Fin: ${fin} Sit.Revista: 01 - ACTIVO`;
+  const controles = [{ id: "imgPrint", tag: "input", pista: "imgPrint Imprimir" }];
+  const casillas = [
+    { id: "todos", fila: "" },
+    { id: "r1", fila: tarjeta("01/10/2026", "04/10/2026", "31/10/2026") },
+    // Otra relación que TERMINA el 01/10/2026 y otra enviada ese día: no son la del alta.
+    { id: "r2", fila: tarjeta("15/09/2026", "14/09/2026", "01/10/2026") },
+    { id: "r3", fila: tarjeta("19/04/2026", "01/10/2026", "19/04/2026") },
+  ];
+  assert.deepEqual(elegirEnResultadoDeConsulta({ casillas, controles, fecha: "01/10/2026" }), { ok: true, casilla: "r1", impresora: "imgPrint" });
 });

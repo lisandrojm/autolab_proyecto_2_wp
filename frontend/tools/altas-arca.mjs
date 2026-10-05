@@ -456,6 +456,19 @@ export async function leerTopeAltasMasivas({ page, empresaCuit, onProgreso = () 
 }
 
 /**
+ * ¿El texto trae esa fecha (dd/mm/aaaa)? Tolera cómo la escriba la grilla: con o sin ceros a la
+ * izquierda, con barras o guiones, o como aaaa-mm-dd. Puro.
+ */
+export function fechaEnTexto(texto, fecha) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(fecha || ""));
+  if (!m) return false;
+  const [, d, mes, a] = m;
+  const t = String(texto || "");
+  const flexible = new RegExp(`(?<!\\d)0?${Number(d)}[/.-]0?${Number(mes)}[/.-]${a}(?!\\d)`);
+  return flexible.test(t) || t.includes(`${a}-${mes}-${d}`) || t.includes(`${a}/${mes}/${d}`);
+}
+
+/**
  * De lo que hay en la pantalla de resultado de Consultas, cuál es la casilla de ESA relación y cuál
  * es la impresora. Puro.
  *
@@ -467,9 +480,21 @@ export async function leerTopeAltasMasivas({ page, empresaCuit, onProgreso = () 
  * Con cero o con más de uno no se elige: se devuelve qué había, y con eso se ajusta.
  */
 export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fecha = "" }) {
-  const deLaRelacion = casillas.filter((c) => c.id && String(c.fila || "").includes(fecha));
+  /*
+    Cada relación es una TARJETA con varias fechas: «Fecha de Inicio», la del C.A.T. y «Fecha de Fin»
+    (relevado de la pantalla real, 4/10/2026). La que identifica la relación es la de INICIO: si la
+    tarjeta trae ese rótulo se compara solo esa, para que el fin o el envío de OTRA relación que caiga
+    el mismo día no la confunda. Sin el rótulo (otra forma de pantalla) vale cualquier fecha.
+  */
+  const esDeEsaFecha = (fila) => {
+    const inicio = /Fecha de Inicio:?s*(d{1,2}[/.-]d{1,2}[/.-]d{4})/i.exec(String(fila || ""));
+    return fechaEnTexto(inicio ? inicio[1] : fila, fecha);
+  };
+  const deLaRelacion = casillas.filter((c) => c.id && esDeEsaFecha(c.fila));
   if (deLaRelacion.length !== 1) {
-    return { ok: false, motivo: deLaRelacion.length === 0 ? "sin_relacion" : "ambigua", detalle: `Esperaba UNA relación con inicio ${fecha} y hay ${deLaRelacion.length} (casillas en pantalla: ${casillas.length}).` };
+    // Se dice QUÉ había en cada fila: es con lo que se ajusta el lector cuando la pantalla no es la esperada.
+    const visto = casillas.map((c) => `[${String(c.fila || "").slice(0, 140) || "fila sin texto"}]`).join(" ");
+    return { ok: false, motivo: deLaRelacion.length === 0 ? "sin_relacion" : "ambigua", detalle: `Esperaba UNA relación con inicio ${fecha} y hay ${deLaRelacion.length} (casillas en pantalla: ${casillas.length}).${visto ? ` Filas: ${visto}` : ""}` };
   }
   const nombrados = controles.filter((c) => c.id && /imprim|impres|print/i.test(String(c.pista || "")));
   // Si la imagen y su botón se nombran igual, vale el botón.
@@ -544,11 +569,31 @@ export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onPro
   const soltar = manejarDialogos(page, estado, onProgreso);
   try {
     await buscarEnConsultas(page, c);
+    // El resultado se dibuja por partes: se espera a que aparezcan las casillas antes de leer. Si no
+    // aparecen (la persona no tiene relaciones con esta empleadora) se sigue, y se informa.
+    await esperarEstado(async () => (await page.locator("input[type=checkbox]").count()) > 0, { ms: 8_000, que: "las relaciones del resultado", log });
     const enPantalla = await page.evaluate(() => {
       const visible = (el) => el.offsetParent !== null;
-      const txt = (el) => (el?.innerText || "").replace(/\s+/g, " ").slice(0, 400);
+      const txt = (el) => (el?.innerText || el?.textContent || "").replace(/\s+/g, " ").trim();
+      const CON_FECHA = /\d{1,2}[/.-]\d{1,2}[/.-]\d{4}|\d{4}-\d{2}-\d{2}/;
+      /*
+        LA FILA DE UNA CASILLA es el contenedor más chico que la rodea, trae una fecha y no tiene otra
+        casilla adentro. No alcanza con el `tr` más cercano: la casilla puede estar en una tabla
+        chica anidada, con las fechas en la celda de al lado. Y no se sube más allá de donde aparece
+        otra casilla: eso ya es la grilla entera (es lo que le pasa a la casilla «general» de arriba,
+        que por eso queda sin fila).
+      */
+      const filaDe = (el) => {
+        let nodo = el.parentElement;
+        for (let nivel = 0; nodo && nivel < 10; nivel++, nodo = nodo.parentElement) {
+          if (nodo.querySelectorAll("input[type=checkbox]").length > 1) return "";
+          const t = txt(nodo);
+          if (CON_FECHA.test(t)) return t.slice(0, 400);
+        }
+        return "";
+      };
       return {
-        casillas: Array.from(document.querySelectorAll("input[type=checkbox]")).filter(visible).map((el) => ({ id: el.id, fila: txt(el.closest("tr")) })),
+        casillas: Array.from(document.querySelectorAll("input[type=checkbox]")).filter(visible).map((el) => ({ id: el.id, fila: filaDe(el) })),
         controles: Array.from(document.querySelectorAll("input[type=image], input[type=submit], input[type=button], button, a, img"))
           .filter(visible)
           .map((el) => ({ id: el.id, tag: el.tagName.toLowerCase(), pista: [el.id, el.getAttribute("src"), el.getAttribute("title"), el.getAttribute("alt"), el.value, el.getAttribute("onclick"), el.getAttribute("href")].filter(Boolean).join(" ") })),
