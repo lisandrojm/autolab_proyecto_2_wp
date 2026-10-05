@@ -1,7 +1,8 @@
 import htmlPdf from "html-pdf-node";
 import path from "path";
 import fs from "fs";
-import { MARCA_FIRMA } from "./employeeDocData.js";
+import { MARCA_FIRMA, brutoDeEscalaEnDocumento } from "./employeeDocData.js";
+import { numeroALetras } from "./numeroALetras.js";
 
 /**
  * Generación del PDF de un documento (Release / Contrato) a partir del contenido redactado en la plataforma.
@@ -239,6 +240,28 @@ export async function buildDocPdf(content: string, data: Record<string, any>, me
  * Valores de ejemplo para la previsualización del documento desde el editor
  * (equivalente a getDummyVariables de las plantillas PDF).
  */
+/** Los sueldos de la previsualización, con el formato de un contrato real (`num` + `numeroALetras`). */
+function sueldosDeEjemplo(): Record<string, string> {
+  const n = (v: number) => v.toLocaleString("es-AR");
+  const jornada = 85000;
+  const mano = 2550000;
+  return {
+    sueldoJornada: n(jornada),
+    SueldoJornada: n(jornada),
+    sueldoJornadaLetras: numeroALetras(jornada),
+    SueldoJornadaLetras: numeroALetras(jornada),
+    sueldoMano: n(mano),
+    SueldoMano: n(mano),
+    sueldoManoLetras: numeroALetras(mano),
+    SueldoManoLetras: numeroALetras(mano),
+    sueldoBruto: n(2185346.12),
+    sueldoNeto: n(1770130.36),
+    sueldoDiarioNeto: n(59004.35),
+    // El bruto de la ESCALA de la categoría (en un contrato real puede diferir de {{sueldoBruto}}).
+    ...brutoDeEscalaEnDocumento(2185346.12),
+  };
+}
+
 export function getDummyDocVariables(): Record<string, string> {
   return {
     // Persona
@@ -268,6 +291,7 @@ export function getDummyDocVariables(): Record<string, string> {
     catSatNumero: "3",
     categoriaSat: "Operador de Cámaras",
     nombreCategoriaSat: "Operador de Cámaras",
+    catSatNombre: "Operador de Cámaras",
     convenio: "0634/11",
     codigoArca: "035313",
     rolFrame: "Musicalizador",
@@ -284,6 +308,22 @@ export function getDummyDocVariables(): Record<string, string> {
     fechaAltaContrato: "16/03/2026",
     fechaBajaContrato: "16/03/2026",
     cantidadJornadas: "30",
+    horaInicio: "09:00",
+    horaFin: "18:00",
+    // Cargos y Niveles salieron de la aplicación: en un contrato real resuelven vacío (ver `buildEmployeeDocData`).
+    nombreNivel: "",
+    nivel: "",
+    /*
+      SUELDOS Y DATOS BANCARIOS: sin valores de ejemplo, la previsualización dejaba {{sueldoMano}},
+      {{cbu}} y compañía impresos tal cual, y no se distinguía una variable sin ejemplo de una mal
+      escrita. Los números y las letras salen de las mismas funciones que en un contrato real, así el
+      ejemplo muestra el formato que va a tener el PDF.
+    */
+    ...sueldosDeEjemplo(),
+    cbu: "0170099220000067797370",
+    aliasBancario: "JUAN.PEREZ.CUENTA",
+    nroDeCuentaBancaria: "4099-2 999-7",
+    tipoDeCuentaBancaria: "Caja de ahorro",
     // Empresa (se resuelve desde la empresa seteada en el proyecto)
     empresa: "2030 S.R.L.",
     razonSocial: "2030 S.R.L.",

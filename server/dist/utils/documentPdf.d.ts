@@ -39,8 +39,4 @@ export declare function empresaToMembrete(empresa: any): MembreteInput;
 export declare function buildDocPdf(content: string, data: Record<string, any>, membrete?: MembreteInput, opciones?: {
     resaltarVariables?: boolean;
 }): Promise<Buffer>;
-/**
- * Valores de ejemplo para la previsualización del documento desde el editor
- * (equivalente a getDummyVariables de las plantillas PDF).
- */
 export declare function getDummyDocVariables(): Record<string, string>;

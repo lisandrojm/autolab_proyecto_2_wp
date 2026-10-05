@@ -75,12 +75,13 @@ export const contratoVariables: GrupoVariables[] = [
     vars: ["{{nombreProyecto}}", "{{nombreCliente}}", "{{rolFrame}}", "{{nombreContrato}}", "{{nombreSede}}", "{{nombreCargo}}", "{{nombreNivel}}", "{{nombreArea}}", "{{nombreTurno}}", "{{fechaAltaContrato}}", "{{fechaBajaContrato}}", "{{horaInicio}}", "{{horaFin}}", "{{cantidadJornadas}}"],
   },
   {
+    nota: "«{{sueldoBruto}}» es el del contrato (se copió de la escala al asignar la categoría y no se actualiza); «{{sueldoBrutoCatSatNumero}}» y «{{sueldoBrutoCatSatLetras}}» son el bruto de la escala VIGENTE de la categoría.",
     grupo: "Sueldos",
-    vars: ["{{sueldoJornada}}", "{{sueldoJornadaLetras}}", "{{sueldoMano}}", "{{sueldoManoLetras}}", "{{sueldoNeto}}", "{{sueldoBruto}}", "{{sueldoDiarioNeto}}"],
+    vars: ["{{sueldoJornada}}", "{{sueldoJornadaLetras}}", "{{sueldoMano}}", "{{sueldoManoLetras}}", "{{sueldoNeto}}", "{{sueldoBruto}}", "{{sueldoDiarioNeto}}", "{{sueldoBrutoCatSatNumero}}", "{{sueldoBrutoCatSatLetras}}"],
   },
   {
     grupo: "Categoría",
-    vars: ["{{catSatNumero}}", "{{categoriaSat}}", "{{convenio}}", "{{codigoArca}}"],
+    vars: ["{{catSatNumero}}", "{{categoriaSat}}", "{{catSatNombre}}", "{{convenio}}", "{{codigoArca}}"],
   },
   {
     grupo: "Empresa (se toma del proyecto)",

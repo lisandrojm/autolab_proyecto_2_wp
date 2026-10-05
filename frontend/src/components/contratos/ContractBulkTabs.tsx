@@ -828,6 +828,22 @@ const COLUMNAS_FIJAS = 4;
  */
 const ANCHO_COL_CHECK = 'w-12 min-w-[3rem] max-w-[3rem]';
 /**
+ * LAS FIJAS DE «GENERAR DOCUMENTOS»: check, Acciones, Fecha de creación y Usuario.
+ *
+ * Mismo criterio que las de Trámite impositivo (`anchoColFija`): `sticky` pide un `left` exacto, así
+ * que cada fija tiene ancho cerrado (`min-w` = `max-w`) y la siguiente arranca donde termina esa.
+ * Acciones mide 10rem porque es el botón «Enviar a firmar»; Fecha, 8rem.
+ *
+ *   check 0 → 3rem · Acciones 3 → 13rem · Fecha 13 → 21rem · Usuario desde 21rem
+ *
+ * Usuario es la última: no necesita ancho fijo, y lleva el borde y la sombra que marcan el corte.
+ */
+const FIRMA_ANCHO_ACCIONES = 'w-40 min-w-[10rem] max-w-[10rem]';
+const FIRMA_IZQ_FECHA = 'left-[13rem]';
+const FIRMA_ANCHO_FECHA = 'w-32 min-w-[8rem] max-w-[8rem]';
+const FIRMA_IZQ_USUARIO = 'left-[21rem]';
+const FIRMA_FIN_DE_FIJAS = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
+/**
  * Cuántas columnas quedan DESPUÉS de la banda, para taparlas con el mismo fondo.
  *
  * La fila que rotula el grupo terminaba en el rótulo y no completaba las de la derecha: una fila
@@ -3620,11 +3636,16 @@ export const ContractBulkFirmaTab: React.FC<{
                   <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
-                  <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
-                  {/* «Fecha de creación»: la misma columna del trámite impositivo, antes de las que ya estaban. */}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES}`}>Acciones</th>
+                  {/* «Fecha de creación» y «Usuario», fijas con Acciones: ver `FIRMA_ANCHO_ACCIONES`. */}
+                  <th className={`sticky ${FIRMA_IZQ_FECHA} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA}`}>
                     <BotonOrden columna="fechaCarga" {...ordenProps}>
                       Fecha de creación
+                    </BotonOrden>
+                  </th>
+                  <th className={`sticky ${FIRMA_IZQ_USUARIO} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${FIRMA_FIN_DE_FIJAS}`}>
+                    <BotonOrden columna="usuario" {...ordenProps}>
+                      Usuario
                     </BotonOrden>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
@@ -3639,11 +3660,6 @@ export const ContractBulkFirmaTab: React.FC<{
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="usuario" {...ordenProps}>
-                      Usuario
-                    </BotonOrden>
-                  </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                     <BotonOrden columna="cuit" {...ordenProps}>
                       CUIT
@@ -3685,11 +3701,18 @@ export const ContractBulkFirmaTab: React.FC<{
                       <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!enviable} onChange={() => toggleSel(rowKey(r))} title={enviable ? 'Incluir en el envío a firmar' : r.firmaEnviadaAt ? 'Ya se envió a firmar' : 'Generá primero el Contrato y el/los Release(s) ("Generar")'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                       </td>
-                      <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
+                      <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      <td className={`sticky ${FIRMA_IZQ_FECHA} z-[5] px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         {fechaDeCarga(r.fecha_carga) || <span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>}
+                      </td>
+                      <td className={`sticky ${FIRMA_IZQ_USUARIO} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${FIRMA_FIN_DE_FIJAS} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
+                        <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
+                          {r.userName}
+                          <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                         {(() => {
@@ -3724,13 +3747,6 @@ export const ContractBulkFirmaTab: React.FC<{
                       </td>
                       <td className="px-4 py-3">
                         <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} onGenerado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                        {r.userName}
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
-                      </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>

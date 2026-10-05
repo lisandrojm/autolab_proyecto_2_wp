@@ -289,6 +289,25 @@ export function buildEmpresaDocData(empresa: any): Record<string, any> {
   };
 }
 
+/**
+ * El bruto de ESCALA de la categoría, para `{{sueldoBrutoCatSatNumero}}` y `{{sueldoBrutoCatSatLetras}}`.
+ *
+ * NO es `{{sueldoBruto}}`. Ese es `contract.sueldo_bruto`: una COPIA del bruto de escala tomada el
+ * día que se le asignó la categoría al contrato (`PUT …/categoria-sat` en `routes/projects.ts`), que
+ * después no se actualiza con las paritarias. Esto lee la escala VIGENTE de la categoría, con la
+ * misma regla que el resto de la plataforma (`escalaDeCategoria`: la propia de la categoría → la de
+ * su grupo del convenio).
+ *
+ * Mismo formato que `{{sueldoJornada}}` / `{{sueldoJornadaLetras}}` (`num` y `numeroALetras`). Sin
+ * categoría o con la escala en cero, las dos quedan vacías —como `{{sueldoBruto}}` cuando falta el
+ * dato—, y no «0» / «CERO 00/100», que en un contrato se leería como un sueldo de cero pesos.
+ */
+export function brutoDeEscalaEnDocumento(sueldoBrutoEscala: unknown): { sueldoBrutoCatSatNumero: string; sueldoBrutoCatSatLetras: string } {
+  const n = Number(sueldoBrutoEscala);
+  if (!Number.isFinite(n) || n <= 0) return { sueldoBrutoCatSatNumero: "", sueldoBrutoCatSatLetras: "" };
+  return { sueldoBrutoCatSatNumero: num(n), sueldoBrutoCatSatLetras: numeroALetras(n) };
+}
+
 export async function buildEmployeeDocData(user: any, up: any, contract: any, empresa?: any): Promise<Record<string, any>> {
   const meta: any = user?.metadata || {};
   const c: any = contract || {};
@@ -322,6 +341,7 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
   */
   let catSatConvenio = "";
   let catSatCodigoArca = "";
+  let catSatBrutoEscala: unknown = 0;
   if (c.categoria_sat_id != null) {
     try {
       // Resuelve contra el modelo nuevo (Categoria + su grupo) con fallback a la tabla vieja.
@@ -333,6 +353,7 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
         catSatNombre = catSatNombre || (cat as any).name || (cat as any).data?.nombre || "";
         catSatConvenio = String((cat as any).data?.convenio || "").trim();
         catSatCodigoArca = String((cat as any).data?.codigoArca || "").trim();
+        catSatBrutoEscala = (cat as any).data?.sueldoBruto;
       }
     } catch {
       /* sin categoría → queda vacío */
@@ -430,6 +451,8 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
     catSatNumero,
     categoriaSat: catSatNombre,
     nombreCategoriaSat: catSatNombre,
+    // El mismo valor que `{{categoriaSat}}`, con el nombre que usan las plantillas que vienen del Word.
+    catSatNombre,
     convenio: catSatConvenio,
     codigoArca: catSatCodigoArca,
 
@@ -445,6 +468,8 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
     sueldoNeto: num(c.sueldo_neto),
     sueldoBruto: num(c.sueldo_bruto),
     sueldoDiarioNeto: num(c.sueldo_diario_neto),
+    // El bruto de la ESCALA vigente de la categoría, no el del contrato: ver `brutoDeEscalaEnDocumento`.
+    ...brutoDeEscalaEnDocumento(catSatBrutoEscala),
 
     // ── Otros ──
     fecha: formatDateAr(new Date()),

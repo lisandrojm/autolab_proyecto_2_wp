@@ -142,4 +142,21 @@ export declare function buildDocFileName(opts: {
  * (que ya usan cuit, localidad, codigoPostal).
  */
 export declare function buildEmpresaDocData(empresa: any): Record<string, any>;
+/**
+ * El bruto de ESCALA de la categoría, para `{{sueldoBrutoCatSatNumero}}` y `{{sueldoBrutoCatSatLetras}}`.
+ *
+ * NO es `{{sueldoBruto}}`. Ese es `contract.sueldo_bruto`: una COPIA del bruto de escala tomada el
+ * día que se le asignó la categoría al contrato (`PUT …/categoria-sat` en `routes/projects.ts`), que
+ * después no se actualiza con las paritarias. Esto lee la escala VIGENTE de la categoría, con la
+ * misma regla que el resto de la plataforma (`escalaDeCategoria`: la propia de la categoría → la de
+ * su grupo del convenio).
+ *
+ * Mismo formato que `{{sueldoJornada}}` / `{{sueldoJornadaLetras}}` (`num` y `numeroALetras`). Sin
+ * categoría o con la escala en cero, las dos quedan vacías —como `{{sueldoBruto}}` cuando falta el
+ * dato—, y no «0» / «CERO 00/100», que en un contrato se leería como un sueldo de cero pesos.
+ */
+export declare function brutoDeEscalaEnDocumento(sueldoBrutoEscala: unknown): {
+    sueldoBrutoCatSatNumero: string;
+    sueldoBrutoCatSatLetras: string;
+};
 export declare function buildEmployeeDocData(user: any, up: any, contract: any, empresa?: any): Promise<Record<string, any>>;

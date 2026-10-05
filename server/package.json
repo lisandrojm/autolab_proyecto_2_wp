@@ -110,6 +110,7 @@
     "test:constancia": "tsx --test src/utils/constanciaPdf.test.ts",
     "test:obras-sociales": "tsx --test src/services/obrasSocialesLoteService.test.ts",
     "test:nomenclatura": "tsx --test src/utils/nomenclatura.test.ts",
+    "test:variables-documento": "tsx --test src/utils/variablesDocumento.test.ts",
     "test:anclas": "tsx --test src/utils/anclasNombre.test.ts",
     "test:grupo-tipo-servicio": "tsx --test src/utils/grupoTipoServicio.test.ts",
     "test:escalas": "tsx --test src/utils/auditoriaEscalas.test.ts",
