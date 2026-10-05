@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt } from '@fortawesome/free-solid-svg-icons';
+import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt } from '@fortawesome/free-solid-svg-icons';
 import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
 import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
@@ -892,347 +892,6 @@ const ObraSocialCell: React.FC<{
 };
 
 /**
- * Asignación MASIVA de la empresa (Contrato o Release) a los contratos tildados.
- *
- * Las empresas disponibles salen de cada PROYECTO (`contratoEmpresas`/`releaseEmpresas`), así que al
- * mezclar filas de proyectos distintos no todas admiten la misma: el select ofrece la unión, y al
- * aplicar se saltean las filas donde esa empresa no está habilitada (se informa cuántas quedaron
- * afuera en vez de fallar en silencio).
- */
-/** Valor del select para DESASIGNAR: no es el id de ninguna empresa, es la ausencia de una. */
-const SIN_EMPRESA_MASIVO = '__sin_empresa__';
-
-/**
- * Convenio y categoría, en masa. Mismo control que «Empresa Contrato…  Aplicar».
- *
- * DOS COSAS DISTINTAS EN UN MISMO CONTROL, y conviene tenerlo presente:
- *
- *   - El CONVENIO no se guarda. Aplicarlo solo filtra la lista de categorías de las filas tildadas,
- *     que es el paso previo para poder elegir una categoría igual para todas.
- *   - La CATEGORÍA sí se guarda, de a un PATCH por contrato, y arrastra el sueldo de su escala.
- *
- * SE SALTEAN las filas cuya empleadora no tiene ese convenio registrado, y se informa cuántas. ARCA
- * solo acepta categorías de los convenios que ESE CUIT registró: escribirlas igual dejaría altas que
- * el organismo rechaza, con el error apareciendo recién al subir el archivo.
- */
-/*
-  EL ⓘ DE CADA CONTROL MASIVO.
-
-  Los tres botones de acción de la fila de abajo abren un modal con la explicación; los cuatro
-  selects de arriba tenían, a lo sumo, un `title` que solo aparece si la persona deja el mouse
-  quieto encima y no entra más que una frase. Convenio y Categoría directamente no tenían nada, que
-  es justo donde más falta: son los dos que se comportan distinto entre sí —uno filtra y no guarda,
-  el otro escribe y recalcula sueldos— y por fuera se ven idénticos.
-*/
-const InfoMasivo: React.FC<{ titulo: string; ayuda: string; children: React.ReactNode }> = ({ titulo, ayuda, children }) => {
-  const [abierto, setAbierto] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        title={ayuda}
-        aria-label={ayuda}
-        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
-      >
-        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-      </button>
-      {abierto && (
-        <Modal isOpen={abierto} onClose={() => setAbierto(false)} title={titulo} size="sm" zIndex={80}>
-          <div className="space-y-3">{children}</div>
-        </Modal>
-      )}
-    </>
-  );
-};
-
-/*
-  LOS CONTROLES MASIVOS SE VEN COMO UNA SOLA PIEZA, no como dos pastillas sueltas.
-
-  Eran cuatro pares «select + Aplicar» de 12px pegados entre sí, y la fila se leía como ocho controles
-  en vez de cuatro: no se veía qué botón aplicaba qué select. Unidos —el select con las esquinas
-  izquierdas redondeadas y el botón con las derechas, compartiendo el borde— cada par se lee como un
-  control con su acción, que es lo que es.
-
-  El tamaño y el redondeo son los mismos de «Validar obras sociales» y «Cargar en ARCA», que están en
-  la fila de abajo: es la misma barra y no hay razón para que la mitad de arriba parezca otra cosa.
-*/
-const SELECT_MASIVO =
-  "text-sm rounded-l-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 pl-3 pr-2 py-2 max-w-[13rem] focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:z-10 disabled:opacity-40 disabled:cursor-not-allowed";
-const BOTON_MASIVO =
-  "inline-flex items-center gap-1.5 px-3 py-2 rounded-r-lg text-sm font-semibold border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap";
-
-const AsignarEncuadreMasivo: React.FC<{
-  filas: ImpositivoRow[];
-  cat: AfipCatalogs;
-  bloqueado?: string;
-  onConvenio: (cct: string, filas: ImpositivoRow[]) => void;
-  onAplicado: (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => void;
-}> = ({ filas, cat, bloqueado, onConvenio, onAplicado }) => {
-  const [convenio, setConvenio] = useState('');
-  const [categoriaId, setCategoriaId] = useState('');
-  const [aplicando, setAplicando] = useState(false);
-
-  const sinSeleccion = filas.length === 0;
-  const inhabilitado = sinSeleccion || !!bloqueado;
-
-  /** Los convenios que TODAS las tildadas podrían usar salen de la unión: acotar de más escondería opciones. */
-  const convenios = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of filas) {
-      for (const cct of resolveAfipValues(r, cat).conveniosEmpresa || []) {
-        if (!m.has(cct)) m.set(cct, cat.convenios?.find((c) => String(c.externalId || '').trim() === cct)?.name || '');
-      }
-    }
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filas, cat]);
-
-  const categorias = useMemo(() => (convenio ? cat.categorias.filter((c: any) => c.isActive !== false && String(c.data?.convenio || '').trim() === convenio) : []), [cat.categorias, convenio]);
-
-  const aplicarCategoria = async () => {
-    if (!categoriaId) return;
-    setAplicando(true);
-    try {
-      // Solo a quienes ARCA se lo aceptaría: el resto se informa, no se escribe.
-      const aptas = filas.filter((r) => (resolveAfipValues(r, cat).conveniosEmpresa || []).includes(convenio));
-      const salteadas = filas.length - aptas.length;
-      const patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[] = [];
-      for (const r of aptas) {
-        const res = await projectsAPI.updateCategoriaSat(r.projectId, r.userId, r.contractIndex, Number(categoriaId));
-        patches.push({ row: r, patch: { categoria_sat_id: res.categoria_sat_id, nombre_categoria_sat: res.nombre_categoria_sat, sueldo_neto: res.sueldo_neto, sueldo_bruto: res.sueldo_bruto } as any });
-      }
-      onAplicado(patches);
-      const nombre = categorias.find((c: any) => String(c.data?.id) === categoriaId)?.name || 'la categoría';
-      sweetAlert.success('Categoría asignada', `${patches.length} contrato(s) con «${nombre}».${salteadas > 0 ? ` ${salteadas} se saltearon: su empleadora no tiene registrado el convenio ${convenio}.` : ''}`);
-    } catch (e: any) {
-      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo asignar la categoría.');
-    } finally {
-      setAplicando(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center flex-wrap gap-2">
-      <div className="flex items-stretch">
-        <select
-          value={convenio}
-          onChange={(e) => {
-            setConvenio(e.target.value);
-            setCategoriaId('');
-          }}
-          disabled={inhabilitado}
-          title={bloqueado || (sinSeleccion ? 'Tildá contratos para filtrarles el convenio' : 'Filtra las categorías de los contratos tildados. No se guarda.')}
-          className={SELECT_MASIVO}
-        >
-          <option value="">Convenio…</option>
-          {convenios.map(([cct, nombre]) => (
-            <option key={cct} value={cct}>
-              {cct}
-              {nombre ? ` — ${nombre}` : ''}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={() => onConvenio(convenio, filas)} disabled={inhabilitado || !convenio} title={`Filtrar las categorías de ${filas.length} contrato(s) por el convenio ${convenio || ''}`} className={BOTON_MASIVO}>
-          <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
-          Filtrar
-        </button>
-      </div>
-      <InfoMasivo titulo="Convenio en masa" ayuda="Qué hace «Filtrar» en Convenio">
-        <p className="text-sm text-gray-700 dark:text-gray-200">
-          {/* Lo primero, porque es lo único que lo distingue de los otros tres controles de la fila. */}
-          El convenio <strong>no se guarda en el contrato</strong>: acá es un filtro. Tocar «Filtrar» no modifica ninguna fila — solo hace que el select de <strong>Categoría</strong>, al lado, ofrezca únicamente las categorías de ese convenio.
-        </p>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Hace falta porque las categorías de todos los convenios juntas son cientos, y hay códigos que se repiten entre convenios. El convenio de un contrato queda determinado por la categoría que se le asigna, no al revés.
-        </p>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Además <strong>condiciona la obra social por defecto</strong>: la que se propone al validar sale del convenio de la categoría asignada.
-        </p>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">La lista muestra los convenios registrados en las empleadoras de los contratos tildados.</p>
-      </InfoMasivo>
-      <div className="flex items-stretch">
-        <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} disabled={inhabilitado || !convenio} title={convenio ? 'Asignar esta categoría a los contratos tildados' : 'Elegí primero el convenio'} className={SELECT_MASIVO}>
-          <option value="">Categoría…</option>
-          {categorias.map((c: any) => (
-            <option key={String(c.data?.id)} value={String(c.data?.id ?? '')}>
-              {c.data?.codigoArca || c.data?.codigoAfip} — {c.name}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={aplicarCategoria} disabled={inhabilitado || !categoriaId || aplicando} title={categoriaId ? `Asignar a ${filas.length} contrato(s) · cambia el sueldo de cada uno` : 'Elegí una categoría'} className={BOTON_MASIVO}>
-          <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3.5 w-3.5" />
-          Aplicar
-        </button>
-      </div>
-      <InfoMasivo titulo="Categoría en masa" ayuda="Qué hace «Aplicar» en Categoría">
-        <p className="text-sm text-gray-700 dark:text-gray-200">
-          Le asigna esa categoría a todos los contratos tildados. A diferencia de Convenio, <strong>esto sí escribe</strong> en cada contrato.
-        </p>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          {/* Se avisa antes y no después: es un cambio de plata en muchos contratos a la vez. */}
-          Al aplicarla se <strong>recalculan los sueldos</strong> de cada contrato con la escala de la categoría elegida — básico, bruto, neto y el diario. Si la categoría no tiene escala cargada, los importes quedan en cero.
-        </p>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Se saltean los contratos cuya <strong>empleadora no tenga registrado ese convenio</strong>; el aviso final dice cuántos fueron y por qué. Elegí primero el convenio: hasta entonces el select está bloqueado.
-        </p>
-      </InfoMasivo>
-    </div>
-  );
-};
-
-const AsignarEmpresaMasivo: React.FC<{
-  campo: 'contrato' | 'release';
-  /** Filas sobre las que se aplica (las tildadas). Vacío = control visible pero inactivo. */
-  filas: ContractOverviewRow[];
-  /** De dónde salen las empresas del select: todo el listado, para que se vea aunque no haya selección. */
-  filasParaOpciones: ContractOverviewRow[];
-  /** Motivo por el que el control está inhabilitado (ej.: hay una validación en ARCA en curso). */
-  bloqueado?: string;
-  onAplicado: (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => void;
-}> = ({ campo, filas, filasParaOpciones, bloqueado, onAplicado }) => {
-  const [empresaId, setEmpresaId] = useState('');
-  const [aplicando, setAplicando] = useState(false);
-
-  const label = campo === 'contrato' ? 'Empresa Contrato' : 'Empresa Release';
-  // Unión de las empresas habilitadas en los proyectos de las filas elegidas.
-  const opciones = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of filasParaOpciones) {
-      for (const e of (campo === 'contrato' ? r.contratoEmpresas : r.releaseEmpresas) || []) m.set(e.id, e.label);
-    }
-    return [...m.entries()].map(([id, lbl]) => ({ id, label: lbl })).sort((a, b) => a.label.localeCompare(b.label));
-  }, [filasParaOpciones, campo]);
-
-  const sinSeleccion = filas.length === 0;
-  const inhabilitado = sinSeleccion || !!bloqueado;
-
-  const aplicar = async () => {
-    if (!empresaId) return;
-    const quitando = empresaId === SIN_EMPRESA_MASIVO;
-    const nombre = quitando ? '' : opciones.find((o) => o.id === empresaId)?.label || '';
-    // Quitar aplica a las filas que HOY tienen una asignada; asignar, a las que tengan esa empresa
-    // habilitada en su proyecto. En los dos casos el resto se saltea y se dice cuántas fueron.
-    const aplicables = quitando
-      ? filas.filter((r) => !!(campo === 'contrato' ? r.empresaContratoId : r.empresaReleaseId))
-      : filas.filter((r) => ((campo === 'contrato' ? r.contratoEmpresas : r.releaseEmpresas) || []).some((e) => e.id === empresaId));
-    const salteadas = filas.length - aplicables.length;
-    if (aplicables.length === 0) {
-      if (quitando) sweetAlert.error('No hay nada que quitar', `Ninguno de los contratos elegidos tiene ${label} asignada.`);
-      else sweetAlert.error('No se puede aplicar', `Ninguno de los contratos elegidos tiene habilitada "${nombre}" en su proyecto.`);
-      return;
-    }
-    const conf = quitando
-      ? await sweetAlert.confirm(
-          `¿Quitar la ${label}?`,
-          `Se va a dejar SIN ${label} a ${aplicables.length} contrato(s).${salteadas > 0 ? ` Se saltean ${salteadas} que no tienen ninguna asignada.` : ''}${
-            campo === 'contrato'
-              ? ' Ojo: eso borra también lo que sale del padrón de esa empleadora — Sucursal, Actividad y la validación de la Obra Social, que vuelve a quedar SIN VALIDAR—, y esos contratos dejan de poder entrar en el TXT.'
-              : ''
-          }`,
-          'Sí, quitar',
-        )
-      : await sweetAlert.confirm(
-          `¿Asignar ${label}?`,
-          `Se va a poner "${nombre}" como ${label} en ${aplicables.length} contrato(s).${salteadas > 0 ? ` Se saltean ${salteadas} porque su proyecto no tiene esa empresa habilitada.` : ''}`,
-          'Sí, asignar',
-        );
-    if (!conf.isConfirmed) return;
-
-    setAplicando(true);
-    const patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[] = [];
-    let fallidas = 0;
-    // Por qué falló la PRIMERA: sin esto el error del server se perdía y la barra decía "20 fallaron"
-    // sin decir de qué, que se lee como que el botón no anda.
-    let motivo = '';
-    // El server borra la asignación con string vacío: es el mismo valor que manda el select de la fila.
-    const valor = quitando ? '' : empresaId;
-    for (const r of aplicables) {
-      try {
-        if (campo === 'contrato') await projectsAPI.updateContratoEmpresa(r.projectId, r.userId, r.contractIndex, valor);
-        else await projectsAPI.updateReleaseEmpresa(r.projectId, r.userId, r.contractIndex, valor);
-        patches.push({ row: r, patch: parcheEmpresa(campo, valor, nombre) });
-      } catch (e: any) {
-        fallidas++;
-        if (!motivo) motivo = e?.response?.data?.error || e?.message || '';
-      }
-    }
-    setAplicando(false);
-    onAplicado(patches);
-    setEmpresaId('');
-    if (fallidas > 0) sweetAlert.error('Se actualizaron con errores', `${patches.length} actualizados, ${fallidas} fallaron.${motivo ? ` El primero falló por: ${motivo}` : ''}`);
-    else if (quitando) sweetAlert.success('Listo', `${patches.length} contrato(s) quedaron sin ${label}.`);
-    else sweetAlert.success('Listo', `${patches.length} contrato(s) actualizados con "${nombre}".`);
-  };
-
-  if (opciones.length === 0) return null;
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-stretch">
-        <select
-          value={empresaId}
-          onChange={(e) => setEmpresaId(e.target.value)}
-          disabled={inhabilitado}
-          title={bloqueado || (sinSeleccion ? `Tildá contratos para asignarles la ${label}` : `Asignar ${label} a los contratos tildados`)}
-          className={SELECT_MASIVO}
-        >
-          <option value="">{label}…</option>
-          {/* Quitar en masa, la contracara de asignar: el select de cada fila ya ofrece «Sin empresa»
-              y hacerlo de a una para corregir una asignación equivocada era el mismo trabajo que la
-              barra existe para evitar. Va primero y separado por eso: no es una empresa más. */}
-          <option value={SIN_EMPRESA_MASIVO}>Sin {label}</option>
-          {opciones.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={aplicar}
-          disabled={inhabilitado || !empresaId || aplicando}
-          title={
-            bloqueado ||
-            (sinSeleccion
-              ? `Tildá contratos para asignarles la ${label}`
-              : empresaId === SIN_EMPRESA_MASIVO
-                ? `Dejar sin ${label} a ${filas.length} contrato(s)`
-                : empresaId
-                  ? `Asignar a ${filas.length} contrato(s)`
-                  : 'Elegí una empresa')
-          }
-          className={BOTON_MASIVO}
-        >
-          <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3.5 w-3.5" />
-          Aplicar
-        </button>
-      </div>
-      <InfoMasivo titulo={`${label} en masa`} ayuda={`Qué hace «Aplicar» en ${label}`}>
-        <p className="text-sm text-gray-700 dark:text-gray-200">
-          Tildá contratos en la lista, elegí una empresa acá y tocá <strong>Aplicar</strong>: se le pone esa <strong>{label}</strong> a todos los tildados de una, igual que si abrieras el select de cada fila. Es la misma escritura, hecha de a muchas.
-        </p>
-        {campo === 'contrato' ? (
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            La <strong>Empresa Contrato</strong> es la empleadora: su CUIT es contra el que se consulta la obra social y con el que se registra el alta. Un contrato sin ella no se puede validar ni entra en el TXT.
-          </p>
-        ) : (
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            La <strong>Empresa Release</strong> es la que sale impresa en el PDF del release, y puede ser distinta de la empleadora del contrato. No interviene en ARCA: no afecta al TXT, ni al alta, ni a la obra social.
-          </p>
-        )}
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          {/* Es la pregunta que aparece sola cuando el select ofrece menos empresas de las esperadas. */}
-          El select ofrece solo las empresas <strong>del proyecto</strong> de los contratos tildados. Si tildás contratos de proyectos distintos, aparecen las de todos, y al aplicar se saltean las filas cuyo proyecto no tenga la empresa elegida.
-        </p>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Con <strong>«Sin {label}»</strong> —la primera opción de la lista— se los deja sin ella, que es la forma de corregir una asignación equivocada sin ir fila por fila.
-        </p>
-      </InfoMasivo>
-    </div>
-  );
-};
-
-/**
  * Sub-pestaña "Altas de ARCA | Constancia de CUIT": lista SOLO lectura de los contratos cuyo estado
  * actual es un estado impositivo, con su trámite (Alta temprana de ARCA / Constancia de CUIT),
  * filtros y exportación a CSV.
@@ -1368,14 +1027,8 @@ export const ContractBulkAfipTab: React.FC<{
   const [detalleRef, setDetalleRef] = useState<{ _id: string; contractIndex: number } | null>(null);
   // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
   const [constancia, setConstancia] = useState<{ row: ImpositivoRow; cuil: string } | null>(null);
-  // Explicación de qué hacer en ARCA con el TXT ya generado (modal informativo).
-  const [cargarArcaInfoOpen, setCargarArcaInfoOpen] = useState(false);
-  // Explicación del flujo completo: Generar TXT → Cargar en ARCA → sincronización automática.
-  const [flujoTxtInfoOpen, setFlujoTxtInfoOpen] = useState(false);
-  const [urgenteInfoOpen, setUrgenteInfoOpen] = useState(false);
   /** El registro de lo ya presentado por Altas Masivas (URGENTE). */
   const [historialAltasOpen, setHistorialAltasOpen] = useState(false);
-  const [validarObrasSocialesInfoOpen, setValidarObrasSocialesInfoOpen] = useState(false);
   /** Fila cuyo ⓘ de Obra Social se tocó: no se puede validar porque todavía no tiene empleadora. */
   const [obraSocialSinEmpresa, setObraSocialSinEmpresa] = useState<ContractOverviewRow | null>(null);
   // Explicación de qué son y de dónde salen los datos que exige la columna "Datos ARCA".
@@ -1583,9 +1236,6 @@ export const ContractBulkAfipTab: React.FC<{
     // parecidos, y un TXT subido a la sesión equivocada ARCA lo acepta sin chistar.
     const cuitLote = String(companies.find((c) => c._id === empresasDelLote[0])?.cuit ?? '').replace(/\D/g, '');
     downloadTxt(buildAltaTxt(registros), `${filenameBase}${cuitLote ? `_${cuitLote}` : ''}_${hoyStamp()}.txt`);
-    // "Cargar en ARCA" se habilita recién ahora: sin archivo generado, ese botón lleva al portal a
-    // subir algo que no existe. Se recuerda de qué empleadora era, porque el TXT es de UN CUIT.
-    setTxtGeneradoPara(cuitLote || 'sin-cuit');
     if (omitidos > 0) {
       sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos o mal cargados.${detalleOmitidos}`);
     } else {
@@ -1635,21 +1285,6 @@ export const ContractBulkAfipTab: React.FC<{
    * por `rowKey`, que es lo único estable entre renders cuando el listado se reordena.
    */
   const [convenioFila, setConvenioFila] = useState<Record<string, string>>({});
-  /**
-   * CUIT del último TXT generado en esta sesión, o `''`.
-   *
-   * "Cargar en ARCA" solo tiene sentido con un archivo en la mano: antes de generarlo manda al portal
-   * a subir algo que no existe. Se guarda el CUIT y no un booleano porque el TXT es de UNA
-   * empleadora: cambiando de pestaña de empresa, el archivo que se bajó ya no es el que corresponde.
-   */
-  const [txtGeneradoPara, setTxtGeneradoPara] = useState('');
-  /*
-   * Cambiar de empleadora invalida el archivo bajado: el TXT se sube logueado con UN CUIT, así que el
-   * de la empresa anterior no sirve para esta. Sin esto, "Cargar en ARCA" quedaba habilitado y
-   * llevaba al portal a subir el archivo equivocado — que ARCA acepta sin chistar, dando de alta a
-   * gente bajo la empresa que no es.
-   */
-  useEffect(() => setTxtGeneradoPara(''), [filterEmpresaId]);
   /** Progreso de la corrida automática, para no dejar la pantalla muda mientras guarda. */
 
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
@@ -2128,13 +1763,6 @@ export const ContractBulkAfipTab: React.FC<{
     }
   }, [objetivoBorrado, load]);
 
-  /** Aplica en la tabla (y en la caché) los cambios de una asignación masiva de empresa. */
-  const aplicarPatchesEmpresa = useCallback(
-    (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => {
-      for (const { row, patch } of patches) aplicarCambio(row, patch);
-    },
-    [aplicarCambio],
-  );
   // El TXT se arma con lo seleccionado; si no hay selección, con todo lo filtrado (comodidad).
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
   // `generarTxt` le agrega el CUIT de la empleadora y la fecha: queda `altas_30710295839_20260817.txt`.
@@ -2261,33 +1889,6 @@ export const ContractBulkAfipTab: React.FC<{
     vuelve es un pegado de `CUIL,RNOS` — no hay corrida en curso con la que competir.
   */
   const bloqueoPorValidacion = undefined;
-  const asignacionMasivaEmpresa = (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* Solo el dato que cambia. El "tildá contratos para asignar Empresa" pasó al ⓘ de cada
-          control: era una instrucción fija ocupando lugar en una barra que ya va apretada. */}
-      {seleccionados.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>}
-      <AsignarEmpresaMasivo campo="contrato" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} bloqueado={bloqueoPorValidacion} onAplicado={aplicarPatchesEmpresa} />
-      <AsignarEmpresaMasivo campo="release" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} bloqueado={bloqueoPorValidacion} onAplicado={aplicarPatchesEmpresa} />
-      {/* El encuadre solo existe en Alta temprana: ni «Constancia de CUIT» ni «Sin CUIT» lo tienen. */}
-      {hayEncuadre && (
-        <AsignarEncuadreMasivo
-          filas={seleccionados.map((x) => x.row)}
-          cat={afipCat}
-          bloqueado={bloqueoPorValidacion}
-          onConvenio={(cct, filas) => {
-            // El convenio no se guarda: se escribe en el filtro de cada fila tildada, que es lo que
-            // deja sus selects de categoría mostrando solo las de ese CCT.
-            setConvenioFila((prev) => {
-              const n = { ...prev };
-              for (const r of filas) n[rowKey(r)] = cct;
-              return n;
-            });
-          }}
-          onAplicado={aplicarPatchesEmpresa}
-        />
-      )}
-    </div>
-  );
 
   return (
     <div className="space-y-4">
@@ -2398,7 +1999,7 @@ export const ContractBulkAfipTab: React.FC<{
               </LinkSiPuede>
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Contratos con todos los datos ARCA cargados">
               <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
               {countCompletos} completos
@@ -2431,10 +2032,8 @@ export const ContractBulkAfipTab: React.FC<{
             )}
           </div>
 
-          {/* Línea 1 — asignación masiva de Empresa (Contrato y Release). */}
-          <div className="flex flex-wrap items-center justify-end gap-3">{asignacionMasivaEmpresa}</div>
-
-          {/* Línea 2 — el circuito ARCA, en el orden en que se hace: validar → TXT → subirlo. */}
+          {/* El circuito ARCA, en el orden en que se hace: validar → TXT. La asignación masiva de
+              Empresa, Convenio y Categoría y los ⓘ de cada botón se sacaron: cargaban la pantalla. */}
           <div className="flex flex-wrap items-center justify-end gap-3">
 
             <button
@@ -2484,11 +2083,6 @@ export const ContractBulkAfipTab: React.FC<{
                 Quitar {objetivoBorrado.length} obra{objetivoBorrado.length === 1 ? '' : 's'} social{objetivoBorrado.length === 1 ? '' : 'es'}
               </button>
             )}
-            {/* Mismo tono que el texto del botón al que acompaña: en azul se leía como otra acción,
-                independiente de «Validar obras sociales», y no como su explicación. */}
-            <button type="button" onClick={() => setValidarObrasSocialesInfoOpen(true)} title="Cómo se validan las obras sociales" className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white shrink-0">
-              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-            </button>
 
             <button
               onClick={presentarCargaMasiva}
@@ -2498,9 +2092,6 @@ export const ContractBulkAfipTab: React.FC<{
             >
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
               Generar TXT Masivo (ARCA){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
-            </button>
-            <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
-              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
             <button
               onClick={presentarAltasMasivas}
@@ -2519,39 +2110,16 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
               Generar TXT Masivo URGENTE{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
-            {/* Su propio ⓘ, en ámbar como el botón: es otro trámite (otro formato, otra pantalla de ARCA). */}
-            <button type="button" onClick={() => setUrgenteInfoOpen(true)} title="Cómo funciona el TXT URGENTE" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 shrink-0">
-              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-            </button>
             {/* Lo que ya se presentó por URGENTE: una fila por persona, con lo que contestó ARCA. */}
             <button type="button" onClick={() => setHistorialAltasOpen(true)} title="Registro de lo ya presentado por Altas Masivas (URGENTE)" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors shrink-0">
               <FontAwesomeIcon icon={faFileLines} className="h-3.5 w-3.5" />
               Presentadas
-            </button>
-            <button
-              onClick={() => window.open('https://www.arca.gob.ar', '_blank', 'noopener,noreferrer')}
-              disabled={!txtGeneradoPara}
-              title={bloqueoPorValidacion || (txtGeneradoPara ? 'Camino manual: abrir ARCA para subir a mano el TXT que se descargó (si la presentación automática falló)' : 'Primero generá el TXT: este botón abre ARCA para subir ese archivo a mano')}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-            >
-              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-4 w-4" />
-              Cargar en ARCA
-            </button>
-            <button
-              type="button"
-              onClick={() => setCargarArcaInfoOpen(true)}
-              title={txtGeneradoPara ? 'Qué hacer en ARCA' : 'Qué hacer en ARCA (se habilita al generar el TXT)'}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
-            >
-              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
         </div>
       )}
 
       {/* Constancia de CUIT: worklist (qué falta pedirle a ARCA). */}
-      {/* "Sin CUIT" no tenía barra de acciones masivas: se agrega solo la asignación de Empresa. */}
-      {filterTipo === 'sin_cuit' && !loading && filtered.length > 0 && <div className="flex flex-wrap items-center justify-end gap-3">{asignacionMasivaEmpresa}</div>}
 
       {filterTipo === 'constancia_cuit' && !loading && (
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2566,8 +2134,6 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {asignacionMasivaEmpresa}
-            <span className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
             <BotonConsultarAfipBulk rows={seleccionados.map((x) => x.row)} onConsultado={() => load(true)} />
           </div>
         </div>
@@ -3232,27 +2798,6 @@ export const ContractBulkAfipTab: React.FC<{
         />
       )}
 
-      {cargarArcaInfoOpen && (
-        <Modal isOpen={cargarArcaInfoOpen} onClose={() => setCargarArcaInfoOpen(false)} title="Cargar en ARCA" size="sm" zIndex={80}>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              Normalmente no hace falta: <strong>Generar TXT Masivo</strong> ya presenta el archivo en ARCA solo. Este botón es el camino manual, para cuando la presentación automática falló. Redirige a la página de ARCA; una vez ahí:
-            </p>
-            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
-              <li>
-                Iniciar sesión con Clave Fiscal en <span className="font-mono text-xs">https://www.arca.gob.ar</span> (dominio oficial actual — es el portal <span className="font-mono text-xs">afip.gob.ar</span> renombrado; si ya tenés abierto <span className="font-mono text-xs">portalcf.cloud.afip.gob.ar/portal/app/</span>, es el mismo portal de acceso).
-              </li>
-              <li>
-                Una vez dentro, abrir el servicio <strong>"Simplificación Registral - Empleadores"</strong>.
-              </li>
-              <li>
-                Ir a <strong>Relaciones Laborales → Carga masiva</strong>, donde se sube el archivo TXT con el formato de campos requerido.
-              </li>
-            </ol>
-          </div>
-        </Modal>
-      )}
-
       {obraSocialSinEmpresa && (
         <Modal isOpen={!!obraSocialSinEmpresa} onClose={() => setObraSocialSinEmpresa(null)} title="Todavía no se puede validar la obra social" size="sm" zIndex={80}>
           <div className="space-y-3">
@@ -3267,95 +2812,9 @@ export const ContractBulkAfipTab: React.FC<{
         </Modal>
       )}
 
-      {validarObrasSocialesInfoOpen && (
-        <Modal isOpen={validarObrasSocialesInfoOpen} onClose={() => setValidarObrasSocialesInfoOpen(false)} title="Validar obras sociales" size="sm" zIndex={80}>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              La obra social no se carga a mano: la devuelve ARCA. La consulta se hace con el CUIL de la persona <strong>contra el CUIT de la empleadora</strong> — por eso el contrato necesita tener asignada una <strong>Empresa Contrato</strong> antes de poder validarse.
-            </p>
-            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
-              <li>
-                Asigná la <strong>Empresa Contrato</strong>: en la columna de cada fila, o en masa tildando filas y usando el selector «Empresa Contrato…» + <strong>Aplicar</strong>.
-              </li>
-              <li>
-                Tildá los contratos y usá <strong>Validar obras sociales</strong>. El número del botón cuenta solo los que ya tienen empresa: los tildados sin empresa se omiten.
-              </li>
-              <li>
-                Se abre el panel de validación: copiás los CUIL y los corrés contra ARCA. Podés hacerlo a mano —cargando uno por uno en <strong>Registrar Nuevas Altas</strong>— o con el script{" "}
-                <code className="font-mono text-[12.5px]">npm run validar-obras-sociales</code>, que se conecta a tu propio Chrome ya logueado y los procesa de a 10. Los pasos están en{" "}
-                <LinkSiPuede sinPermiso="texto" to="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  ARCA → Validar obras sociales
-                </LinkSiPuede>
-                .
-              </li>
-            </ol>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {/* Se dice explícitamente porque es la pregunta que aparece sola: "¿entonces el script
-                  puede dar de alta gente?". No: el único botón que aprieta es el del selector. */}
-              El script <strong>nunca registra un alta</strong>: en la pantalla de altas aprieta únicamente «Agregar» y «Reiniciar». El «Aceptar», que es el que registra ante el organismo, no lo toca
-              nunca. Las altas salen del TXT, no de ahí.
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              En la columna <strong>Obra Social</strong> —al lado de Empresa Contrato—, las filas que todavía no tienen empresa muestran un <span className="text-amber-600 dark:text-amber-400 font-semibold">ⓘ ámbar</span> en vez del botón «Validar»: tocalo y explica qué falta. Con la empresa asignada, ese ⓘ pasa a ser el botón <strong>Validar</strong>. Lo ya validado se puede quitar con el <strong>tacho</strong> de la misma celda.
-            </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">Una vez validada, la obra social queda fija (no editable) y el contrato puede entrar en el TXT.</p>
-          </div>
-        </Modal>
-      )}
-
       {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => load(true)} />}
 
       {historialAltasOpen && <HistorialAltasArca isOpen={historialAltasOpen} onClose={() => setHistorialAltasOpen(false)} empresaId={empresaDeLaPestana?._id} />}
-
-      {urgenteInfoOpen && (
-        <Modal isOpen={urgenteInfoOpen} onClose={() => setUrgenteInfoOpen(false)} title="TXT Masivo URGENTE (Altas Masivas)" size="sm" zIndex={80}>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              Es el camino rápido para pocas altas: en vez de subir un archivo por Carga Masiva, los registros se pegan en <strong>Relaciones Laborales → Registrar Nuevas Altas → Altas Masivas</strong> y quedan dadas en el momento.
-            </p>
-            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
-              <li>
-                Tildá los contratos completos que quieras presentar (o dejá el filtro). ARCA admite <strong>{MAX_ALTAS_MASIVAS} registros por pegado</strong>: si son más, WeProdu los presenta en <strong>tandas sucesivas</strong>, una después de la otra.
-              </li>
-              <li>
-                Al apretar el botón se arman los registros de <strong>85 posiciones</strong> —un formato distinto del TXT Masivo— y se <strong>copian al portapapeles</strong>, por si hay que pegarlos a mano.
-              </li>
-              <li>
-                Se abre el panel: confirmás empleadora y personas, y WeProdu los presenta en ARCA solo. Verifica que la grilla de altas esté vacía antes de pegar y que queden exactamente las personas pedidas antes de aceptar.
-              </li>
-              <li>Muestra el avance por tanda y por persona: registrada, rechazada (con el motivo de ARCA) o incierta. Cada alta se guarda en su contrato antes de pasar a la tanda siguiente, y al final se puede bajar el resumen.</li>
-              <li>Si la corrida se corta, se vuelve a lanzar con la misma selección: lo ya presentado se saltea y sigue desde donde quedó.</li>
-            </ol>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Además de los datos del TXT Masivo, este formato informa <strong>puesto desempeñado</strong> (de la categoría o el default de la empleadora), <strong>convenio</strong> (de la categoría) y <strong>situación de revista</strong> («01 — Activo» si no se configuró otra). Un contrato sin puesto queda afuera y el botón lo dice.
-            </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              Solo se habilita en la pestaña de una empresa. Lo presentado no se deshace y nunca se reintenta: si no se puede leer el resultado, se consulta en ARCA por CUIL; si aun así no se confirma, queda «sin confirmar» y hay que mirarlo en ARCA. «Detener» corta al terminar la tanda en curso.
-            </p>
-          </div>
-        </Modal>
-      )}
-
-      {flujoTxtInfoOpen && (
-        <Modal isOpen={flujoTxtInfoOpen} onClose={() => setFlujoTxtInfoOpen(false)} title="TXT Masivo (Carga Masiva)" size="sm" zIndex={80}>
-          <div className="space-y-3">
-            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
-              <li>
-                <strong>Generar TXT Masivo (ARCA)</strong>: descarga el TXT con las altas completas (de respaldo) y lo <strong>presenta en ARCA solo</strong>, por Relaciones Laborales → Carga Masiva: crea la novedad, sube el archivo, espera la validación y la envía. Antes de empezar pide confirmación.
-              </li>
-              <li>
-                Solo se habilita en la pestaña de <strong>una empresa</strong>, y nunca reintentan un envío: si no se puede leer el resultado, el contrato queda «indeterminado» y hay que mirarlo en ARCA.
-              </li>
-              <li>
-                <strong>Cargar en ARCA</strong>: el camino manual de siempre, por si la presentación automática falla. Abre el portal para subir a mano el TXT descargado.
-              </li>
-              <li>
-                Cuando ARCA sincronice las altas, se guardarán automáticamente en la carpeta de Dropbox <span className="font-mono text-xs">WEPRODU/ARCA/Alta temprana de Arca</span> y los contratos van a aparecer en la bandeja <strong>Firma Digital</strong>.
-              </li>
-            </ol>
-          </div>
-        </Modal>
-      )}
 
       {datosAfipInfoOpen && (
         <Modal isOpen={datosAfipInfoOpen} onClose={() => setDatosAfipInfoOpen(false)} title="Datos ARCA" size="sm" zIndex={80}>
