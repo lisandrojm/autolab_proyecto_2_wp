@@ -857,6 +857,12 @@ class ProjectsAPI {
     return data;
   }
 
+  /** El registro de lo presentado por Altas Masivas (URGENTE): las últimas corridas guardadas. */
+  async historialAltasArca(empresaId?: string): Promise<CorridaAltasGuardada[]> {
+    const { data } = await axios.get(`/contratos/altas-arca/historial`, { headers: this.getHeaders(), params: empresaId ? { empresaId } : undefined });
+    return data;
+  }
+
   /** Corta la corrida, solo hasta el paso anterior al envío. Después el servidor contesta 409. */
   async detenerAltasArca(): Promise<{ detenida: boolean; motivo?: string }> {
     const { data } = await axios.post(`/contratos/altas-arca/corrida/detener`, {}, { headers: this.getHeaders(), validateStatus: (s) => s === 200 || s === 409 });
@@ -940,6 +946,24 @@ class ProjectsAPI {
 export const projectsAPI = new ProjectsAPI();
 
 export type ModoAltasArca = "carga_masiva" | "altas_masivas";
+
+/** Una corrida de Altas Masivas como quedó en `arca_altas_logs`. */
+export interface CorridaAltasGuardada {
+  _id: string;
+  createdAt: string;
+  /** Quién la lanzó. */
+  usuario: string;
+  empresaId: string;
+  empresaCuit: string;
+  empresaRazonSocial: string;
+  enSeco: boolean;
+  resultado: string;
+  motivoCorte?: string;
+  error?: string;
+  duracionMs?: number;
+  tandas: number;
+  contratos: Array<{ cuil: string; nombre: string; resultado: string; motivo?: string; tanda?: number; cat?: string; porConsulta?: boolean; registro?: string }>;
+}
 
 export interface EstadoCorridaAltas {
   hay: boolean;

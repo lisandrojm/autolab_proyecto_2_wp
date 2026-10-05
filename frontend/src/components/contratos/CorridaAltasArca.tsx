@@ -146,6 +146,11 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
     intervalo.current = null;
   };
 
+  // Por ref: quien abre el modal pasa `onTerminado` como función nueva en cada render, y con ella en
+  // las dependencias el efecto de «al abrir» se volvía a correr —y volvía a la confirmación— cada vez
+  // que la pantalla de atrás se redibujaba, incluida la recarga que dispara el final de la corrida.
+  const alTerminar = useRef(onTerminado);
+  alTerminar.current = onTerminado;
   const consultar = useCallback(async () => {
     try {
       const r = await projectsAPI.estadoAltasArca();
@@ -158,14 +163,14 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
         parar();
         if (r.hay && !avisoTerminado.current) {
           avisoTerminado.current = true;
-          onTerminado?.();
+          alTerminar.current?.();
         }
       }
       return r;
     } catch {
       return null; // un tick perdido no corta nada: el próximo vuelve a preguntar
     }
-  }, [onTerminado]);
+  }, []);
 
   const seguir = useCallback(() => {
     parar();

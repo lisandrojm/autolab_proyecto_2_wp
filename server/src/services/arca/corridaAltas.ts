@@ -199,11 +199,14 @@ async function correr(o: { corrida: CorridaAltas; lote: LoteAltasValidado; tenan
       emitir({ tipo: "fallo", mensaje: error, textoArca, codigoNovedad });
     }
   } finally {
-    corrida.terminada = true;
     const s: any = sesion;
     if (s && !error) await guardarSesion(corrida.tenantId, s.ctx).catch(() => {});
     await s?.browser.close().catch(() => {});
     soltarCandado(corrida.tenantId, lote.modo);
+    // «Terminada» DESPUÉS de soltar el candado: cerrar el navegador tarda, y en ese rato la pantalla
+    // veía una corrida terminada con la sesión todavía tomada y avisaba «hay otra corrida de ARCA en
+    // curso» justo cuando la propia acababa de salir bien.
+    corrida.terminada = true;
 
     // Resultado por contrato. Solo se escribe en el contrato lo que se PRESENTÓ (o puede haberse
     // presentado): un seco, un fallo antes del envío o un «Detener» no dejan marca.
@@ -384,11 +387,12 @@ async function correrPorTandas(o: { corrida: CorridaAltas; lote: LoteAltasValida
     error = String(e?.message || e);
     emitir({ tipo: "fallo", mensaje: error, textoArca: e?.textoArca });
   } finally {
-    corrida.terminada = true;
     const s: any = sesion;
     if (s && !error) await guardarSesion(corrida.tenantId, s.ctx).catch(() => {});
     await s?.browser.close().catch(() => {});
     soltarCandado(corrida.tenantId, "altas_masivas");
+    // «Terminada» después de soltar el candado (ver `correr`).
+    corrida.terminada = true;
     if (log) {
       await ArcaAltasLog.updateOne(
         { _id: log._id },

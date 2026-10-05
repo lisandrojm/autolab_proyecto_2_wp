@@ -33,6 +33,7 @@ import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { buildAltaRecord85, buildAltasMasivasTexto } from './afipTxt85';
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
 import { CorridaAltasArca, LoteParaPresentar } from './CorridaAltasArca';
+import { HistorialAltasArca } from './HistorialAltasArca';
 import { arcaCatalogoAPI, DIAS_CATALOGO_VIEJO } from '../../api/arcaCatalogo';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { CeldaObraSocial, EstadoObraSocial, VistaObraSocial } from './CeldaObraSocial';
@@ -1372,6 +1373,8 @@ export const ContractBulkAfipTab: React.FC<{
   // Explicación del flujo completo: Generar TXT → Cargar en ARCA → sincronización automática.
   const [flujoTxtInfoOpen, setFlujoTxtInfoOpen] = useState(false);
   const [urgenteInfoOpen, setUrgenteInfoOpen] = useState(false);
+  /** El registro de lo ya presentado por Altas Masivas (URGENTE). */
+  const [historialAltasOpen, setHistorialAltasOpen] = useState(false);
   const [validarObrasSocialesInfoOpen, setValidarObrasSocialesInfoOpen] = useState(false);
   /** Fila cuyo ⓘ de Obra Social se tocó: no se puede validar porque todavía no tiene empleadora. */
   const [obraSocialSinEmpresa, setObraSocialSinEmpresa] = useState<ContractOverviewRow | null>(null);
@@ -2520,6 +2523,11 @@ export const ContractBulkAfipTab: React.FC<{
             <button type="button" onClick={() => setUrgenteInfoOpen(true)} title="Cómo funciona el TXT URGENTE" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
+            {/* Lo que ya se presentó por URGENTE: una fila por persona, con lo que contestó ARCA. */}
+            <button type="button" onClick={() => setHistorialAltasOpen(true)} title="Registro de lo ya presentado por Altas Masivas (URGENTE)" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors shrink-0">
+              <FontAwesomeIcon icon={faFileLines} className="h-3.5 w-3.5" />
+              Presentadas
+            </button>
             <button
               onClick={() => window.open('https://www.arca.gob.ar', '_blank', 'noopener,noreferrer')}
               disabled={!txtGeneradoPara}
@@ -3296,6 +3304,8 @@ export const ContractBulkAfipTab: React.FC<{
       )}
 
       {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => load(true)} />}
+
+      {historialAltasOpen && <HistorialAltasArca isOpen={historialAltasOpen} onClose={() => setHistorialAltasOpen(false)} empresaId={empresaDeLaPestana?._id} />}
 
       {urgenteInfoOpen && (
         <Modal isOpen={urgenteInfoOpen} onClose={() => setUrgenteInfoOpen(false)} title="TXT Masivo URGENTE (Altas Masivas)" size="sm" zIndex={80}>

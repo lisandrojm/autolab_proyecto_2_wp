@@ -34,6 +34,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
 import { Types } from "mongoose";
+import { ArcaAltasLog } from "../models/ArcaAltasLog.js";
 import { aplicarLoteObrasSociales, pendientesObraSocial, LoteObrasSocialesError } from "../services/obrasSocialesLoteService.js";
 import { confirmarNombresConElPadron, usuariosDeCuils, mismoNombre } from "../services/arca/nombreArca.js";
 import { Area } from "../models/Area.js";
@@ -2837,6 +2838,44 @@ router.get("/contratos/altas-arca/corrida", requireTenant, authenticateToken, re
 router.post("/contratos/altas-arca/corrida/detener", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
     const r = detenerCorridaAltas(String(req.tenantObjectId));
     res.status(r.detenida ? 200 : 409).json(r);
+});
+/**
+ * GET /contratos/altas-arca/historial?empresaId=… — el registro de lo presentado por Altas Masivas:
+ * las últimas 200 corridas del tenant (de una empleadora, si se pide), con el resultado de cada
+ * contrato y el registro que se mandó. Solo lee `arca_altas_logs`; el HTML de ARCA no viaja.
+ */
+router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const empresaId = String(req.query?.empresaId || "");
+        const filtro = { tenantId: req.tenantObjectId, tipo: "altas_masivas" };
+        if (Types.ObjectId.isValid(empresaId))
+            filtro.empresaId = new Types.ObjectId(empresaId);
+        const logs = await ArcaAltasLog.find(filtro)
+            .sort({ createdAt: -1 })
+            .limit(200)
+            .select("createdAt usuarioId empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos tandas duracionMs")
+            .populate("usuarioId", "firstName lastName")
+            .lean();
+        res.json(logs.map((l) => ({
+            _id: String(l._id),
+            createdAt: l.createdAt,
+            usuario: l.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "",
+            empresaId: l.empresaId ? String(l.empresaId) : "",
+            empresaCuit: l.empresaCuit || "",
+            empresaRazonSocial: l.empresaRazonSocial || "",
+            enSeco: !!l.enSeco,
+            resultado: l.resultado,
+            motivoCorte: l.motivoCorte,
+            error: l.error,
+            duracionMs: l.duracionMs,
+            tandas: (l.tandas || []).length,
+            contratos: (l.contratos || []).map((c) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro })),
+        })));
+    }
+    catch (error) {
+        console.error("Historial de altas ARCA error:", error);
+        res.status(500).json({ error: "No se pudo leer el registro de altas." });
+    }
 });
 router.get("/contratos/obras-sociales/pendientes", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
