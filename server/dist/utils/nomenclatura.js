@@ -48,7 +48,11 @@ const G = {
     otros: "Otros",
 };
 const V = {
-    proyecto: { variable: "{{proyecto}}", descripcion: "Nombre del proyecto, como se ve en la grilla (ej. 426_LN+)", grupo: G.proyecto },
+    // El número con el que producción nombra al proyecto («426»). Antes venía pegado adelante del
+    // nombre del proyecto («426_LN+»); desde que el número vive en el centro de costo y el proyecto se
+    // llama solo «LN+», sin esta variable el archivo perdía el dato por el que se lo busca.
+    centroDeCosto: { variable: "{{centroDeCosto}}", descripcion: "Código del centro de costo del proyecto (ej. 426)", grupo: G.proyecto },
+    proyecto: { variable: "{{proyecto}}", descripcion: "Nombre del proyecto, como se ve en la grilla (ej. LN+)", grupo: G.proyecto },
     proyectoId: { variable: "{{proyectoId}}", descripcion: "Id externo del proyecto (ej. 705)", grupo: G.proyecto },
     apellido: { variable: "{{apellido}}", descripcion: "Apellido de la persona", grupo: G.persona },
     nombres: { variable: "{{nombres}}", descripcion: "Nombres de la persona", grupo: G.persona },
@@ -93,6 +97,7 @@ export const VARIABLES_POR_TIPO = (() => {
     // persona en un proyecto, con distinto propósito. Repetir la lista cinco veces era garantizar que
     // se desincronizaran.
     const deContrato = [
+        V.centroDeCosto,
         V.proyecto,
         V.proyectoId,
         V.apellido,
@@ -119,8 +124,8 @@ export const VARIABLES_POR_TIPO = (() => {
         // Pedidos y Vacaciones también se firman y vuelven. No tienen período —no son un contrato— así que
         // lo que los ancla es su NÚMERO: es lo que permite decir "este PDF firmado es el pedido 1042 de
         // esta persona" y no solo "es un pedido de esta persona".
-        Pedido: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
-        Vacacion: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
+        Pedido: [V.centroDeCosto, V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
+        Vacacion: [V.centroDeCosto, V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
     };
 })();
 /**
@@ -134,9 +139,9 @@ export const PATRON_POR_DEFECTO = (() => {
     /*
       Un solo esqueleto para todos, leído de izquierda a derecha como una frase:
   
-        DÓNDE (proyecto) · QUIÉN (persona) · QUÉ (documento) · CUÁNDO · IDENTIFICADORES · PARA QUIÉN (empleadora)
+        DÓNDE (centro de costo + proyecto) · QUIÉN (persona) · QUÉ (documento) · CUÁNDO · IDENTIFICADORES · PARA QUIÉN (empleadora)
   
-      El PROYECTO va primero porque es cómo se agrupan las carpetas: al mirar un directorio ordenado
+      El CENTRO DE COSTO va primero, y el PROYECTO enseguida, porque es cómo se agrupan las carpetas: al mirar un directorio ordenado
       por nombre, todo lo del mismo proyecto queda junto. La EMPLEADORA va al final porque es el dato
       que menos se busca y el más largo — adelante empujaría el nombre de la persona fuera de la vista
       en cualquier listado angosto.
@@ -145,15 +150,15 @@ export const PATRON_POR_DEFECTO = (() => {
       vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
       que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
     */
-    const deContrato = "{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}";
+    const deContrato = "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}";
     return {
         Contrato: deContrato,
         Release: deContrato,
         AltaAFIP: deContrato,
         ConstanciaCUIT: deContrato,
         Documentacion: deContrato,
-        Pedido: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
-        Vacacion: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
+        Pedido: "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
+        Vacacion: "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
     };
 })();
 /**
@@ -375,6 +380,7 @@ export function validarPatron(tipo, patron) {
  *  - `tipo`, `fecha`, `anio`, `timestamp`: los define la plataforma y ya son cortos.
  */
 export const TOPES_CAMPO = {
+    centroDeCosto: 16,
     proyecto: 32,
     proyectoId: 12,
     apellido: 20,

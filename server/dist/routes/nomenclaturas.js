@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
+import { CentroCosto } from "../models/CentroCosto.js";
 import { TIPOS_NOMENCLATURA, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura, campoNomenclatura, MAX_NOMBRE, largoEnBytes } from "../utils/nomenclatura.js";
 import { emailNomenclatura } from "../utils/employeeDocData.js";
 const router = Router();
@@ -16,26 +17,33 @@ const esTipo = (t) => TIPOS_NOMENCLATURA.includes(t);
  * quedó un archivo con el nombre equivocado.
  */
 const EJEMPLO = {
-    apellido: "gonzalez-rotstein",
-    nombres: "juan-manuel",
-    proyecto: "426_LN+",
+    /*
+      UN CASO REAL, no uno armado: el alta de Enzo Aquino en LN+ (centro 426, 2030 S.R.L.), tal cual
+      salió en el Outbox. El ejemplo anterior mezclaba datos que no conviven —un proyecto «426_LN+»
+      que ya no se llama así, un contrato de 2030 con el CUIT de FZERO— y quien lo miraba no podía
+      reconocer en él ningún archivo de verdad.
+    */
+    centroDeCosto: "426",
+    apellido: "AQUINO",
+    nombres: "ENZO-GABRIEL",
+    proyecto: "LN+",
     proyectoId: "705",
-    tipo: "Contrato",
-    contrato: "Jornada-2030-SRL",
-    docName: "Acuerdo-de-titularidad-de-la-obra",
-    fechaAlta: "20260810",
+    tipo: "AltaAFIP",
+    contrato: "Plazo-fijo-6x6",
+    docName: "AltaAFIP",
+    fechaAlta: "20261001",
     // Con fecha de baja REAL y no el «-»: el ejemplo tiene que mostrar cómo se ve el caso normal.
-    // Un contrato sin baja rinde `H--`, que sin haber visto antes un `H-20270810` no se entiende.
-    fechaBaja: "20270810",
-    cuit: "20331501027",
-    email: "juanmanuel.gonzalezrotstein-ARROBA-gmail.com",
+    // Un contrato sin baja rinde `H--`, que sin haber visto antes un `H-20261031` no se entiende.
+    fechaBaja: "20261031",
+    cuit: "20442166987",
+    email: "enzogabrielaquino01-ARROBA-gmail.com",
     extra: "Alta-Temprana-de-ARCA",
     numero: "1042",
-    timestamp: "20260821-143012",
+    timestamp: "20261005-143012",
     anio: "2026",
-    fecha: "20260821",
-    empresa: "FZERO S.R.L",
-    empresaCuit: "30710295839",
+    fecha: "20261005",
+    empresa: "2030 S.R.L.",
+    empresaCuit: "30717068374",
 };
 /** Solo los valores de las variables que ESE tipo ofrece: mostrar el resto confunde más que ayuda. */
 const valoresDe = (tipo) => Object.fromEntries(VARIABLES_POR_TIPO[tipo].map((v) => [v.variable, EJEMPLO[v.variable.replace(/[{}]/g, "")] ?? ""]));
@@ -60,12 +68,13 @@ async function valoresMasLargos() {
     const db = mongoose.connection.db;
     const vacio = () => [];
     const col = (n, f) => (db ? db.collection(n).find({ [f]: { $type: "string" } }).project({ [f]: 1 }).toArray().catch(vacio) : Promise.resolve([]));
-    const [proyectos, contratos, plantillas, empresas, usuarios] = await Promise.all([
+    const [proyectos, contratos, plantillas, empresas, usuarios, centros] = await Promise.all([
         col("projects", "name"),
         col("contratos", "name"),
         col("contratos-frame", "name"),
         col("companies", "razonSocial"),
         db ? db.collection("users").find({}).project({ lastName: 1, firstName: 1, email: 1 }).toArray().catch(vacio) : Promise.resolve([]),
+        col(CentroCosto.collection.collectionName, "codAuxiliar"),
     ]);
     // La persona se mide como BLOQUE: apellido, nombres y email salen del mismo registro, así que el
     // peor caso es el de UNA persona y no la suma de tres máximos de personas distintas.
@@ -74,6 +83,7 @@ async function valoresMasLargos() {
         .sort((a, b) => b.apellido.length + b.nombres.length + b.email.length - (a.apellido.length + a.nombres.length + a.email.length))[0];
     const valores = {
         ...EJEMPLO,
+        centroDeCosto: masLargo(centros.map((c) => c.codAuxiliar)) || EJEMPLO.centroDeCosto,
         proyecto: masLargo(proyectos.map((p) => p.name)) || EJEMPLO.proyecto,
         contrato: masLargo(contratos.map((c) => c.name)) || EJEMPLO.contrato,
         docName: masLargo(plantillas.map((p) => p.name)) || EJEMPLO.docName,

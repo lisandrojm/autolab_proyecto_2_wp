@@ -14,6 +14,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE, TOPES_CAMPO } from "./nomenclatura.js";
 import { emailNomenclatura, MARCA_ARROBA, buildIdentidadTag } from "./employeeDocData.js";
+import { leerAnclas } from "./anclasNombre.js";
 /**
  * Cómo encuentra el CUIL el servicio de vuelta, hoy.
  *
@@ -131,10 +132,10 @@ describe("el default rinde el nombre de siempre", () => {
      * vacaciones mezclados lee siempre los mismos campos en el mismo lugar; cada tipo cambia solo en lo
      * que de verdad tiene distinto (un período contra un número).
      */
-    it("todos empiezan por proyecto y terminan en la empleadora", () => {
+    it("todos empiezan por centro de costo y proyecto, y terminan en la empleadora", () => {
         for (const tipo of TIPOS_NOMENCLATURA) {
             const p = PATRON_POR_DEFECTO[tipo];
-            assert.ok(p.startsWith("{{proyecto}}_"), `${tipo} no arranca con el proyecto: ${p}`);
+            assert.ok(p.startsWith("{{centroDeCosto}}_{{proyecto}}_"), `${tipo} no arranca con el centro de costo y el proyecto: ${p}`);
             // Sin el «_» delante: la etiqueta `EMPRESA-` vive en el patrón desde que el CUIT sale pelado.
             assert.ok(p.endsWith("{{empresaCuit}}"), `${tipo} no termina con el CUIT de la empleadora: ${p}`);
             // `{{nombres}}` salió del default: con el apellido y el CUIL alcanza para saber de quién es, y
@@ -603,5 +604,34 @@ describe("topes por campo: un valor siempre se escribe igual", () => {
         });
         const bytes = new TextEncoder().encode(enElTope + ".pdf").length;
         assert.ok(bytes <= MAX_NOMBRE, `${bytes} bytes: ${enElTope}`);
+    });
+});
+describe("{{centroDeCosto}}", () => {
+    it("se ofrece en todos los tipos y va antes del proyecto", () => {
+        for (const tipo of TIPOS_NOMENCLATURA) {
+            assert.ok(VARIABLES_POR_TIPO[tipo].some((v) => v.variable === "{{centroDeCosto}}"), `${tipo} no ofrece {{centroDeCosto}}`);
+            assert.deepEqual(validarPatron(tipo, PATRON_POR_DEFECTO[tipo]), [], `${tipo}: el default no valida`);
+        }
+    });
+    it("rinde el caso real del Outbox con el 426 adelante", () => {
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.AltaAFIP, {
+            centroDeCosto: "426",
+            proyecto: "LN+",
+            apellido: "AQUINO",
+            tipo: "AltaAFIP",
+            contrato: "Plazo fijo 6x6",
+            fechaAlta: "20261001",
+            fechaBaja: "20261031",
+            cuit: "20442166987",
+            email: "enzogabrielaquino01-ARROBA-gmail.com",
+            empresaCuit: "30717068374",
+        });
+        assert.equal(nombre, "426_LN+_AQUINO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20442166987_enzogabrielaquino01-ARROBA-gmail.com_Empresa-30717068374");
+        const a = leerAnclas(nombre);
+        assert.equal(a.cuit, "20442166987");
+    });
+    it("sin centro de costo el campo se cae y el nombre sigue siendo válido", () => {
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.AltaAFIP, { proyecto: "LN+", apellido: "AQUINO", tipo: "AltaAFIP", fechaAlta: "20261001", fechaBaja: "20261031", cuit: "20442166987" });
+        assert.ok(nombre.startsWith("LN+_AQUINO_"), nombre);
     });
 });

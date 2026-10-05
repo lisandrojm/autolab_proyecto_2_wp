@@ -1,5 +1,8 @@
+import { Types } from "mongoose";
 import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
 import { Company } from "../models/Company.js";
+import { Project } from "../models/Project.js";
+import { CentroCosto } from "../models/CentroCosto.js";
 import { PATRON_POR_DEFECTO, TipoNomenclatura, renderNomenclatura, recortarNombre } from "../utils/nomenclatura.js";
 import { datosNombreArchivo } from "../utils/employeeDocData.js";
 
@@ -28,6 +31,37 @@ export async function datosEmpresa(empresaId: unknown, nombreCache?: string): Pr
   } catch {
     // Sin la empresa el nombre pierde un campo, no se rompe: el resto de los datos sigue estando.
     return { empresa: nombreCache || "", empresaCuit: "" };
+  }
+}
+
+/**
+ * El código del centro de costo de un proyecto («426»), para `{{centroDeCosto}}`.
+ *
+ * Es `codAuxiliar` —el número con el que producción nombra al proyecto—, no el `centroCostoId` que
+ * guarda el proyecto: ese es el id de Tango, y el mismo id es otro código en cada empresa. Por eso se
+ * busca primero el par (empresa de Tango, id), igual que la ficha del proyecto.
+ *
+ * Se acepta el `_id` del proyecto o su id externo de FRAME, porque los contratos viejos solo tienen
+ * el segundo. Sin proyecto o sin centro devuelve "": el campo se cae del nombre y el resto sigue.
+ */
+export async function centroDeCostoDelProyecto(o: { projectId?: unknown; externalProjectId?: unknown }): Promise<string> {
+  try {
+    const id = String(o.projectId || "");
+    const externo = Number(o.externalProjectId);
+    const project: any = Types.ObjectId.isValid(id)
+      ? await Project.findById(id).select("metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean()
+      : Number.isFinite(externo) && externo > 0
+        ? await Project.findOne({ externalId: externo }).select("metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean()
+        : null;
+    const ccId = Number(project?.metadata?.centroCostoId);
+    if (!Number.isFinite(ccId) || ccId <= 0) return "";
+    const porId = { $or: [{ idAuxiliar: ccId }, { "data.id": ccId }] };
+    const empresaTango = project.metadata.centroCostoEmpresaTangoId;
+    const cc: any = (empresaTango ? await CentroCosto.findOne({ empresaTangoId: empresaTango, ...porId }).select("codAuxiliar name").lean() : null) || (await CentroCosto.findOne(porId).select("codAuxiliar name").lean());
+    return String(cc?.codAuxiliar ?? cc?.name ?? "").trim();
+  } catch (e) {
+    console.warn("[NOMENCLATURA] No pude resolver el centro de costo:", (e as any)?.message || e);
+    return "";
   }
 }
 
@@ -84,5 +118,6 @@ export async function nombreArchivoDocumento(opts: {
 }): Promise<string> {
   const { tenantId, tipo, empresa, ...resto } = opts;
   const valoresEmpresa = empresa ? empresaAValores(empresa) : await datosEmpresa(resto.contract?.empresaContratoId, resto.contract?.nombre_empresa_contrato);
-  return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...valoresEmpresa });
+  const centroDeCosto = await centroDeCostoDelProyecto({ projectId: resto.up?.projectId, externalProjectId: resto.up?.externalProjectId ?? resto.contract?.proyecto_id });
+  return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...valoresEmpresa, centroDeCosto });
 }

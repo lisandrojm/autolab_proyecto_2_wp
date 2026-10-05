@@ -19,6 +19,20 @@ export declare function datosEmpresa(empresaId: unknown, nombreCache?: string): 
     empresaCuit: string;
 }>;
 /**
+ * El código del centro de costo de un proyecto («426»), para `{{centroDeCosto}}`.
+ *
+ * Es `codAuxiliar` —el número con el que producción nombra al proyecto—, no el `centroCostoId` que
+ * guarda el proyecto: ese es el id de Tango, y el mismo id es otro código en cada empresa. Por eso se
+ * busca primero el par (empresa de Tango, id), igual que la ficha del proyecto.
+ *
+ * Se acepta el `_id` del proyecto o su id externo de FRAME, porque los contratos viejos solo tienen
+ * el segundo. Sin proyecto o sin centro devuelve "": el campo se cae del nombre y el resto sigue.
+ */
+export declare function centroDeCostoDelProyecto(o: {
+    projectId?: unknown;
+    externalProjectId?: unknown;
+}): Promise<string>;
+/**
  * El nombre de un archivo, según lo que el tenant configuró.
  *
  * Si no configuró nada rige `PATRON_POR_DEFECTO`. Los archivos ya generados NO se renombran nunca:

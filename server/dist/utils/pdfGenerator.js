@@ -6,6 +6,7 @@ import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
 import { buildIdentidadTag, emailNomenclatura } from "./employeeDocData.js";
 import { Company } from "../models/Company.js";
 import { resolveContractEmpresa } from "./contractEmpresa.js";
+import { centroDeCostoDelProyecto } from "../services/nomenclaturaService.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
 /**
  * Bloque `CUIL-...[_DNI-...]` para el nombre del archivo. Si el `user` que llegó no trae `metadata`
@@ -36,9 +37,10 @@ async function resolverIdentidadTag(user) {
  * patrón es configurable —y por pedido explícito, arranca con el proyecto y termina con la
  * empleadora— hay que juntar esos datos acá y pasarlos al guardado.
  */
-function datosNombrePdf(user, company, resolucion) {
+async function datosNombrePdf(user, company, resolucion) {
     const cuit = String(company?.cuit || "").replace(/\D/g, "");
     return {
+        centroDeCosto: await centroDeCostoDelProyecto({ projectId: resolucion?.projectId }),
         apellido: String(user?.lastName || ""),
         nombres: String(user?.firstName || ""),
         email: emailNomenclatura(user?.email),
@@ -322,7 +324,7 @@ export async function generateOrderPDF(order, category, template, user, tenantId
         console.log("[PDF GENERATOR] Saving PDF to storage...");
         console.log("[PDF GENERATOR] Tenant ID:", tenantId);
         console.log("[PDF GENERATOR] User ID:", userId);
-        const pdfUrl = await savePdfToStorage(tenantId, userId, order.orderNumber, pdfBuffer, await resolverIdentidadTag(user), datosNombrePdf(user, company, resolucion));
+        const pdfUrl = await savePdfToStorage(tenantId, userId, order.orderNumber, pdfBuffer, await resolverIdentidadTag(user), await datosNombrePdf(user, company, resolucion));
         console.log("[PDF GENERATOR] PDF saved successfully!");
         console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
         return {
@@ -399,7 +401,7 @@ export async function generateVacationPDF(vacation, template, user, tenantId, te
         console.log("[PDF GENERATOR] Saving vacation PDF to storage...");
         console.log("[PDF GENERATOR] Tenant ID:", tenantId);
         console.log("[PDF GENERATOR] User ID:", userId);
-        const pdfUrl = await savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, await resolverIdentidadTag(user), datosNombrePdf(user, company, resolucion));
+        const pdfUrl = await savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, await resolverIdentidadTag(user), await datosNombrePdf(user, company, resolucion));
         console.log("[PDF GENERATOR] Vacation PDF saved successfully!");
         console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
         return {
