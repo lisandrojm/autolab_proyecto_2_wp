@@ -3469,6 +3469,7 @@ export const ContractBulkFirmaTab: React.FC<{
   // Igual que en la otra pestaña: acota el render, no el conjunto. Ver `usePaginado`.
   // Mismo orden por columna que Trámite impositivo: se ordena todo lo filtrado y después se pagina.
   const { ordenados: ordenadosFirma, orden, alternar } = useOrdenTabla(filtered, {
+    fechaCarga: (r) => r.fecha_carga || '', // ISO o YYYY-MM-DD: los dos ordenan bien como texto
     altaBaja: (r) => fechaISO(r.fecha_alta_contrato),
     tramite: (r) => (tipoDelRow(r) ? TIPO_LABEL[tipoDelRow(r)!] : ''),
     usuario: (r) => r.userName,
@@ -3477,7 +3478,8 @@ export const ContractBulkFirmaTab: React.FC<{
     proyecto: (r) => r.projectName,
     tipoContrato: (r) => r.nombre_contrato,
     estado: (r) => estadoLabel(r.nombre_estado_empleado || ''),
-  });
+    // Igual que en el trámite impositivo: por defecto, lo último que se cargó arriba.
+  }, { columna: 'fechaCarga', direccion: 'desc' });
   const ordenProps = { orden, onAlternar: alternar };
   const pag = usePaginado(ordenadosFirma);
   const allSel = enviables.length > 0 && enviables.every((r) => selected.has(rowKey(r)));
@@ -3610,6 +3612,12 @@ export const ContractBulkFirmaTab: React.FC<{
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className="sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
+                  {/* «Fecha de creación»: la misma columna del trámite impositivo, antes de las que ya estaban. */}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="fechaCarga" {...ordenProps}>
+                      Fecha de creación
+                    </BotonOrden>
+                  </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                     <BotonOrden columna="altaBaja" {...ordenProps}>
                       Alta / Baja
@@ -3670,6 +3678,9 @@ export const ContractBulkFirmaTab: React.FC<{
                       </td>
                       <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {fechaDeCarga(r.fecha_carga) || <span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                         {(() => {
