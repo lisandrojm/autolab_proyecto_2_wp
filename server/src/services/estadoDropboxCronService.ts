@@ -7,7 +7,7 @@ import { getTenantDropboxConfig, listFolder, downloadFileContent, verifyAccount,
 import { cargarEstadosPorEvento, aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
 import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
-import { momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
+import { esElAltaEnviada, momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
 
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
@@ -312,8 +312,9 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
   if (disponibles.length === 0) return 0;
 
   let transicionesAplicadas = 0;
-  for (const { dropboxCarpeta: carpeta } of carpetas) {
+  for (const { dropboxCarpeta: carpeta, proposito } of carpetas as Array<{ dropboxCarpeta: string; proposito?: string | string[] }>) {
     if (disponibles.length === 0) break;
+    const esCarpetaDeAlta = ([] as string[]).concat(proposito || []).includes("alta_temprana");
     const ruta = carpeta.startsWith("/") ? carpeta : `/${carpeta}`;
     let entries: DropboxEntry[];
     try {
@@ -408,6 +409,13 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
       }
 
       const candidato = matches[0];
+      // EL ALTA NO ES EL CONTRATO. La constancia de alta que este contrato mandó a firmar pasa por
+      // Outbox, Pendbox y Firmados igual que el contrato, pero no lo mueve por esos pasos: los mueve
+      // el contrato. (En la carpeta de altas sí cuenta: ahí es justamente lo que se espera.)
+      if (!esCarpetaDeAlta && esElAltaEnviada(file.name, (candidato.up.contracts[candidato.idx] as any)?.altaConstancia?.enviadaComo)) {
+        logSiCambio(key, "es_el_alta", `[ESTADO-DROPBOX-CRON] ${file.path}: es el alta temprana del contrato, no mueve su estado (${candidato.userId} [${candidato.idx}]) — se omite (destino: ${estadoDestino.name})`);
+        continue;
+      }
 
       /*
         ES LA PERSONA, PERO ¿ES ESTE CONTRATO? Identificar a la persona no alcanza: en las carpetas quedan

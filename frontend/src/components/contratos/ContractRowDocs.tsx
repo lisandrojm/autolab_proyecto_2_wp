@@ -42,7 +42,7 @@ export const uploadAltaRow = async (record: ContractOverviewRow, file: File) => 
   const { ruteo } = await projectsAPI.uploadAltaDocumento(record.projectId, record.userId, record.contractIndex, file);
   // Si era la constancia de alta temprana, se dice por dónde siguió: es lo que antes había que suponer.
   if (ruteo) {
-    const destino = ruteo.vaAFirma ? 'Va a firmar junto con el contrato, cuando lo envíes.' : ruteo.archivadaEn ? 'Este tipo de contrato no la firma: quedó archivada en Dropbox, en «Alta temprana de Arca».' : '';
+    const destino = !ruteo.archivadaEn ? '' : ruteo.vaAFirma ? 'Quedó en el Outbox de HelloSign, lista para enviarla a firmar.' : 'Este tipo de contrato no la firma: quedó archivada en Dropbox, en «Alta temprana de Arca / No firmar».';
     const texto = [destino, ruteo.estado ? `El contrato pasó a «${ruteo.estado}».` : '', ruteo.aviso || ''].filter(Boolean).join(' ');
     if (ruteo.aviso) sweetAlert.info('Alta validada, con un aviso', texto);
     else sweetAlert.success('Alta validada', texto);

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { momentoDeCarga, motivoParaDescartarArchivo } from "./archivoDeContrato.js";
+import { momentoDeCarga, motivoParaDescartarArchivo, esElAltaEnviada } from "./archivoDeContrato.js";
 /* El caso real: contrato nuevo del 01/10 (Pedido de AFIP), recibo de sueldo de julio en «Requested
    signatures» modificado el 30/08, sin fechas en el nombre. Antes lo avanzaba a «Disponible». */
 test("un archivo anterior a la carga del contrato se descarta", () => {
@@ -32,4 +32,20 @@ test("la regla 1 se aplica a cualquier vía de identificación: también con CUI
     // Un contrato firmado viejo de la misma persona, con su CUIT y SIN fechas, tampoco puede avanzar al nuevo.
     const contrato = { creadoEl: momentoDeCarga("2026-10-01T20:02:02.933Z"), fechaAlta: "20261001", fechaBaja: "20261031" };
     assert.equal(motivoParaDescartarArchivo({ modificadoEl: "2026-07-20T13:55:02Z" }, contrato, []), "anterior_al_contrato");
+});
+// ------------------------------------------------------------------ esElAltaEnviada
+const ENVIADA = "426-LN+_aquino_AltaAFIP_Plazo-fijo_D-20261001_H-20261031_20442166987_enzo-ARROBA-gmail.com_Empresa-30717068374.pdf";
+test("reconoce el alta por el nombre con el que se subió, aunque vuelva firmada con un agregado", () => {
+    assert.equal(esElAltaEnviada(ENVIADA, ENVIADA), true);
+    assert.equal(esElAltaEnviada(ENVIADA.replace(".pdf", " (firmado).pdf"), ENVIADA), true);
+    assert.equal(esElAltaEnviada(ENVIADA.replace("+", " ").replace(/_/g, " "), ENVIADA), true);
+});
+test("el contrato de la misma persona y período NO es el alta", () => {
+    assert.equal(esElAltaEnviada(ENVIADA.replace("AltaAFIP", "Contrato"), ENVIADA), false);
+    assert.equal(esElAltaEnviada(ENVIADA.replace("AltaAFIP", "Release"), ENVIADA), false);
+});
+test("sin alta enviada (o con un nombre que no dice nada) no reconoce ninguna", () => {
+    assert.equal(esElAltaEnviada(ENVIADA, undefined), false);
+    assert.equal(esElAltaEnviada(ENVIADA, ""), false);
+    assert.equal(esElAltaEnviada("alta.pdf", "alta.pdf"), false);
 });

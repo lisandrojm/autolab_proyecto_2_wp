@@ -28,6 +28,21 @@
  * no se descartan por la regla 1; un nombre sin fechas, o un contrato sin fechas, no se descartan por
  * la regla 2.
  */
+/**
+ * ¿Ese archivo es el ALTA TEMPRANA que este contrato mandó a firmar?
+ *
+ * El alta viaja sola al Outbox, con el CUIL y las fechas del contrato en el nombre. El proceso que
+ * mueve estados no distingue documentos: la tomaría por el contrato y lo pasaría a «Firma pendiente»
+ * —y después a «Disponible»— sin que el contrato se haya generado. Se la reconoce por el nombre con
+ * el que se la subió (`altaConstancia.enviadaComo`), que es exacto y no depende de cómo esté armada
+ * la nomenclatura. Se compara sin extensión ni símbolos y por inclusión: Dropbox Sign devuelve el
+ * firmado con el mismo nombre más algún agregado.
+ */
+export function esElAltaEnviada(nombreArchivo, enviadaComo) {
+    const limpio = (s) => s.replace(/\.[a-z0-9]{2,5}$/i, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const enviada = limpio(String(enviadaComo || ""));
+    return enviada.length >= 12 && limpio(String(nombreArchivo || "")).includes(enviada);
+}
 export const TEXTO_DESCARTE = {
     anterior_al_contrato: "el archivo es anterior a la carga del contrato: no puede ser su documento",
     fechas_de_otro_contrato: "las fechas del nombre no son las de este contrato",

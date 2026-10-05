@@ -3346,14 +3346,15 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/alta-documen
         /*
           POR DÓNDE SIGUE EL ALTA YA VALIDADA. Un archivo, un lugar:
   
-            · el tipo de contrato la manda a firmar → NO se sube a Dropbox ahora: viaja al Outbox junto con
-              el contrato cuando se lo envía a firmar (`firmaDigital.ts`), una sola vez;
-            · el tipo de contrato no la firma → se archiva ya en «Alta temprana de Arca», con la
-              nomenclatura de Altas de ARCA. En la RAÍZ de esa carpeta, que es la que mira el proceso de
-              estados (no lee subcarpetas).
+            · el tipo de contrato la manda a firmar → va YA al Outbox de HelloSign, sola, y queda marcada
+              como enviada (`altaEnviadaAFirmarEl`): el envío del contrato no la vuelve a mandar;
+            · el tipo de contrato no la firma → se archiva en «Alta temprana de Arca/No firmar».
   
-          En los dos casos el alta ya está: el contrato pasa al estado que esa carpeta alimenta («Envío
-          de documentación»), sin esperar ninguna firma.
+          Las dos con la nomenclatura de Altas de ARCA. Y en los dos casos el alta ya está: el contrato
+          pasa al estado que la carpeta de altas alimenta («Envío de documentación»), sin esperar
+          ninguna firma. Se avanza acá y no por el proceso de carpetas porque ese solo lee la raíz de
+          cada una, y porque la que va al Outbox no pasa por la de altas. El proceso, a su vez, sabe
+          que el alta en el Outbox no es el contrato (`esElAltaEnviada`).
         */
         let ruteo;
         let altaConstancia;
@@ -3361,32 +3362,35 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/alta-documen
             const tipoContrato = Types.ObjectId.isValid(String(contratoActual.contrato_id || "")) ? await Contrato.findById(contratoActual.contrato_id).select("data.requiereFirmaAlta").lean() : null;
             // Sin el dato, sí: el mismo criterio que la pantalla (`contratoRequiereFirmaAlta`).
             ruteo = { vaAFirma: tipoContrato?.data?.requiereFirmaAlta !== false };
-            if (!ruteo.vaAFirma) {
-                try {
-                    const tenant = await Tenant.findById(req.tenantObjectId).lean();
-                    const cfg = getTenantDropboxConfig(tenant);
-                    const carpeta = await resolverCarpetaPorProposito("alta_temprana");
-                    if (!cfg || !carpeta)
-                        ruteo.aviso = !cfg ? "Dropbox no está conectado: el alta quedó cargada en el contrato pero no se archivó." : "No hay una carpeta de «Alta temprana de ARCA» configurada: el alta quedó cargada en el contrato pero no se archivó.";
-                    else {
-                        const nombre = `${await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "AltaAFIP", user: persona, up, contract: contratoActual, docName: "AltaAFIP" })}.pdf`;
-                        const destino = `${carpeta.replace(/\/$/, "")}/${nombre}`;
-                        await uploadFile(String(req.tenantObjectId), cfg, destino, bufferAlta, true);
-                        ruteo.archivadaEn = destino;
-                    }
+            let enviadaComo;
+            try {
+                const tenant = await Tenant.findById(req.tenantObjectId).lean();
+                const cfg = getTenantDropboxConfig(tenant);
+                const carpeta = await resolverCarpetaPorProposito(ruteo.vaAFirma ? "outbox" : "alta_temprana");
+                if (!cfg || !carpeta) {
+                    ruteo.aviso = !cfg ? "Dropbox no está conectado: el alta quedó cargada en el contrato pero no se subió." : `No hay una carpeta de «${ruteo.vaAFirma ? "Outbox" : "Alta temprana de ARCA"}» configurada: el alta quedó cargada en el contrato pero no se subió.`;
                 }
-                catch (e) {
-                    console.error("Alta temprana: no se pudo archivar en Dropbox:", e?.message || e);
-                    ruteo.aviso = "No se pudo archivar el alta en Dropbox. Quedó cargada en el contrato: volvé a subirla para reintentar.";
+                else {
+                    const nombre = `${await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "AltaAFIP", user: persona, up, contract: contratoActual, docName: "AltaAFIP" })}.pdf`;
+                    // Dropbox crea «No firmar» sola la primera vez: subir a un path arma las carpetas que falten.
+                    const destino = `${carpeta.replace(/\/$/, "")}${ruteo.vaAFirma ? "" : "/No firmar"}/${nombre}`;
+                    await uploadFile(String(req.tenantObjectId), cfg, destino, bufferAlta, true);
+                    ruteo.archivadaEn = destino;
+                    enviadaComo = nombre;
                 }
             }
-            altaConstancia = { clave: constancia.clave || undefined, nroTramite: constancia.nroTramite || undefined, validadaEl: new Date(), vaAFirma: ruteo.vaAFirma, archivadaEn: ruteo.archivadaEn };
+            catch (e) {
+                console.error("Alta temprana: no se pudo subir a Dropbox:", e?.message || e);
+                ruteo.aviso = "No se pudo subir el alta a Dropbox. Quedó cargada en el contrato: volvé a subirla para reintentar.";
+            }
+            altaConstancia = { clave: constancia.clave || undefined, nroTramite: constancia.nroTramite || undefined, validadaEl: new Date(), vaAFirma: ruteo.vaAFirma, archivadaEn: ruteo.archivadaEn, enviadaComo };
         }
         const conAlta = { ...up.contracts[idx].toObject(), altaDocumentoUrl, altaDocumentoNombre };
         if (altaConstancia) {
             conAlta.altaConstancia = altaConstancia;
-            // Un PDF nuevo es un alta nueva para la firma: si se reemplaza, puede volver a salir (una vez).
-            conAlta.altaEnviadaAFirmarEl = undefined;
+            // Enviada = quedó en el Outbox. Si no se pudo subir, no se marca: viaja con el contrato cuando
+            // se lo envíe a firmar, que es el camino de antes, y tampoco sale dos veces.
+            conAlta.altaEnviadaAFirmarEl = ruteo?.vaAFirma && ruteo.archivadaEn ? new Date() : undefined;
             // La clave de alta que da ARCA: es la que la presentación no pudo leer de la pantalla.
             if (conAlta.altaArcaPresentada && constancia.clave)
                 conAlta.altaArcaPresentada = { ...conAlta.altaArcaPresentada, cat: constancia.clave };

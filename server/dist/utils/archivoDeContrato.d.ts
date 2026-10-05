@@ -40,6 +40,17 @@ export interface ContratoParaCotejar {
     fechaBaja: string;
 }
 export type MotivoDescarte = "anterior_al_contrato" | "fechas_de_otro_contrato";
+/**
+ * ¿Ese archivo es el ALTA TEMPRANA que este contrato mandó a firmar?
+ *
+ * El alta viaja sola al Outbox, con el CUIL y las fechas del contrato en el nombre. El proceso que
+ * mueve estados no distingue documentos: la tomaría por el contrato y lo pasaría a «Firma pendiente»
+ * —y después a «Disponible»— sin que el contrato se haya generado. Se la reconoce por el nombre con
+ * el que se la subió (`altaConstancia.enviadaComo`), que es exacto y no depende de cómo esté armada
+ * la nomenclatura. Se compara sin extensión ni símbolos y por inclusión: Dropbox Sign devuelve el
+ * firmado con el mismo nombre más algún agregado.
+ */
+export declare function esElAltaEnviada(nombreArchivo: string, enviadaComo: unknown): boolean;
 export declare const TEXTO_DESCARTE: Record<MotivoDescarte, string>;
 /** `fecha_carga` (ISO) → ms. null si falta o no se puede leer. */
 export declare function momentoDeCarga(fechaCarga: unknown): number | null;
