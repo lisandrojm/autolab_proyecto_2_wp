@@ -32,6 +32,7 @@
  * No importa `playwright-core`: recibe la página ya abierta por el servidor (`navegador.ts`), así no
  * depende de `frontend/node_modules`, que no está en el VPS.
  */
+import { readFile } from "node:fs/promises";
 import { esperarEstado } from "./arca-postback.mjs";
 import { aceptarSelectorDeCuit } from "./validar-obras-sociales.mjs";
 
@@ -455,6 +456,106 @@ export async function leerTopeAltasMasivas({ page, empresaCuit, onProgreso = () 
 }
 
 /**
+ * De lo que hay en la pantalla de resultado de Consultas, cuál es la casilla de ESA relación y cuál
+ * es la impresora. Puro.
+ *
+ * ⚠ La pantalla de resultado no está relevada con un fixture: no se conocen sus ids. Por eso no se
+ * busca un id fijo sino que se EXIGE que haya una sola respuesta posible:
+ *   · la casilla es la única cuya fila trae la fecha de inicio del alta (la «general» de arriba no
+ *     tiene fecha en su fila);
+ *   · la impresora es el único control clickeable que se nombra como tal (id, título, imagen).
+ * Con cero o con más de uno no se elige: se devuelve qué había, y con eso se ajusta.
+ */
+export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fecha = "" }) {
+  const deLaRelacion = casillas.filter((c) => c.id && String(c.fila || "").includes(fecha));
+  if (deLaRelacion.length !== 1) {
+    return { ok: false, motivo: deLaRelacion.length === 0 ? "sin_relacion" : "ambigua", detalle: `Esperaba UNA relación con inicio ${fecha} y hay ${deLaRelacion.length} (casillas en pantalla: ${casillas.length}).` };
+  }
+  const nombrados = controles.filter((c) => c.id && /imprim|impres|print/i.test(String(c.pista || "")));
+  // Si la imagen y su botón se nombran igual, vale el botón.
+  const clickeables = nombrados.filter((c) => c.tag !== "img");
+  const impresoras = clickeables.length > 0 ? clickeables : nombrados;
+  if (impresoras.length !== 1) {
+    return { ok: false, motivo: "sin_impresora", detalle: `Esperaba UN ícono de impresora y hay ${impresoras.length}: ${nombrados.map((c) => c.id).join(", ") || "ninguno se nombra como impresora"}.` };
+  }
+  return { ok: true, casilla: deLaRelacion[0].id, impresora: impresoras[0].id };
+}
+
+/**
+ * EL ÍCONO DE IMPRESORA DE CONSULTAS: baja la constancia en PDF. No modifica nada en ARCA.
+ *
+ * Tiene su función, con sus guardas, por lo mismo que los demás clicks: solo en el RESULTADO de
+ * Consultas (nunca en la grilla de altas, donde un click equivocado registra), y sobre un control
+ * único. Devuelve la descarga.
+ */
+async function imprimirConstancia(page, id) {
+  const { accion } = await leerPantalla(page);
+  if (!/(^|\/)Consulta[^/]*\.aspx/i.test(String(accion).split("?")[0])) throw new Error("La pantalla ya no es la de Consultas: no se aprieta la impresora.");
+  if ((await pantallaActual(page)) === "altas") throw new Error("Estoy en Registrar Nuevas Altas: acá no se aprieta nada.");
+  const btn = page.locator(`[id="${id}"]`);
+  if ((await btn.count()) !== 1) throw new Error("No encuentro un único ícono de impresora.");
+  const espera = page.waitForEvent("download", { timeout: 45_000 });
+  espera.catch(() => {});
+  await btn.click();
+  return espera;
+}
+
+/** Abre Consultas y busca por CUIL. Deja la pantalla en el resultado. */
+async function buscarEnConsultas(page, cuil) {
+  await page.goto(`${page.url().split("/app/")[0]}/app/Contribuyente/RelacionLaboral/Consulta.aspx`, { waitUntil: "domcontentloaded" });
+  if (!(await esperarPantalla(page, ["consulta"], "Consultas de Relaciones Laborales"))) throw new Error(`No llegué a Consultas (estoy en ${await pantallaActual(page)}).`);
+  const radio = page.locator(`[id="${PREFIJO}rb1"]`);
+  const campo = page.locator(`[id="${PREFIJO}inputCuil_txtCuil"]`);
+  if ((await radio.count()) !== 1 || (await campo.count()) !== 1) throw new Error("La pantalla de Consultas no tiene el criterio por CUIL donde se esperaba.");
+  await radio.check();
+  await campo.fill(cuil);
+  await apretar(page, "consulta_continuar");
+  // El resultado reemplaza al formulario: se espera a que el criterio por CUIL deje de estar.
+  await esperarEstado(async () => (await pantallaActual(page)) !== "consulta", { ms: 15_000, que: "el resultado de la consulta", log });
+}
+
+/**
+ * Baja de ARCA la constancia del trabajador de UNA relación: Consultas → por CUIL → tildar la
+ * relación que empieza en `fechaInicio` (ddmmaaaa) → impresora. SOLO LEE.
+ *
+ * Devuelve `{ resultado: "descargada", pdf }`, o `{ resultado: "sin_relacion" | "ambigua" |
+ * "sin_impresora", detalle }` si la pantalla no dejó una sola respuesta posible. Qué constancia
+ * entrega ARCA (alta o baja) no se decide acá: el PDF se valida después, igual que el subido a mano.
+ */
+export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onProgreso = () => {} }) {
+  const c = soloDigitos(cuil);
+  const f = soloDigitos(fechaInicio);
+  if (c.length !== 11 || f.length !== 8) throw new Error("La descarga necesita el CUIL (11 dígitos) y la fecha de inicio (ddmmaaaa).");
+  const fecha = `${f.slice(0, 2)}/${f.slice(2, 4)}/${f.slice(4)}`;
+  const estado = { aceptarDialogo: false, dialogos: [] };
+  const soltar = manejarDialogos(page, estado, onProgreso);
+  try {
+    await buscarEnConsultas(page, c);
+    const enPantalla = await page.evaluate(() => {
+      const visible = (el) => el.offsetParent !== null;
+      const txt = (el) => (el?.innerText || "").replace(/\s+/g, " ").slice(0, 400);
+      return {
+        casillas: Array.from(document.querySelectorAll("input[type=checkbox]")).filter(visible).map((el) => ({ id: el.id, fila: txt(el.closest("tr")) })),
+        controles: Array.from(document.querySelectorAll("input[type=image], input[type=submit], input[type=button], button, a, img"))
+          .filter(visible)
+          .map((el) => ({ id: el.id, tag: el.tagName.toLowerCase(), pista: [el.id, el.getAttribute("src"), el.getAttribute("title"), el.getAttribute("alt"), el.value, el.getAttribute("onclick"), el.getAttribute("href")].filter(Boolean).join(" ") })),
+      };
+    });
+    const eleccion = elegirEnResultadoDeConsulta({ ...enPantalla, fecha });
+    if (!eleccion.ok) return { resultado: eleccion.motivo, detalle: eleccion.detalle, html: await htmlAnonimo(page) };
+    const casilla = page.locator(`[id="${eleccion.casilla}"]`);
+    if ((await casilla.count()) !== 1) return { resultado: "sin_relacion", detalle: "La casilla de la relación dejó de estar en pantalla.", html: await htmlAnonimo(page) };
+    await casilla.check();
+    const descarga = await imprimirConstancia(page, eleccion.impresora);
+    const ruta = await descarga.path();
+    if (!ruta) return { resultado: "sin_impresora", detalle: "ARCA no entregó ningún archivo al apretar la impresora." };
+    return { resultado: "descargada", pdf: await readFile(ruta) };
+  } finally {
+    soltar();
+  }
+}
+
+/**
  * Relaciones Laborales → Consultas, por CUIL. SOLO LEE: es una búsqueda.
  *
  * Es cómo se resuelve una tanda incierta sin volver a presentarla. Devuelve `{ encontrada, html }`
@@ -463,16 +564,7 @@ export async function leerTopeAltasMasivas({ page, empresaCuit, onProgreso = () 
 export async function consultarAltaPorCuil({ page, cuil, fechaInicio }) {
   const c = soloDigitos(cuil);
   if (c.length !== 11) throw new Error("La consulta necesita un CUIL de 11 dígitos.");
-  await page.goto(`${page.url().split("/app/")[0]}/app/Contribuyente/RelacionLaboral/Consulta.aspx`, { waitUntil: "domcontentloaded" });
-  if (!(await esperarPantalla(page, ["consulta"], "Consultas de Relaciones Laborales"))) throw new Error(`No llegué a Consultas (estoy en ${await pantallaActual(page)}).`);
-  const radio = page.locator(`[id="${PREFIJO}rb1"]`);
-  const campo = page.locator(`[id="${PREFIJO}inputCuil_txtCuil"]`);
-  if ((await radio.count()) !== 1 || (await campo.count()) !== 1) throw new Error("La pantalla de Consultas no tiene el criterio por CUIL donde se esperaba.");
-  await radio.check();
-  await campo.fill(c);
-  await apretar(page, "consulta_continuar");
-  // El resultado reemplaza al formulario: se espera a que el criterio por CUIL deje de estar.
-  await esperarEstado(async () => (await pantallaActual(page)) !== "consulta", { ms: 15_000, que: "el resultado de la consulta", log });
+  await buscarEnConsultas(page, c);
   const texto = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
   return { encontrada: altaEnConsulta(texto, c, fechaInicio), html: await htmlAnonimo(page) };
 }

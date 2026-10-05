@@ -857,6 +857,19 @@ class ProjectsAPI {
     return data;
   }
 
+  /** Baja de ARCA las constancias de las altas ya presentadas de esa empleadora y las rutea. Arranca y vuelve. */
+  async descargarConstanciasAlta(empresaId: string): Promise<{ arrancada: boolean; total: number }> {
+    const { data } = await axios.post(`/contratos/altas-arca/constancias`, { empresaId }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Cuántas altas esperan su constancia, y el avance de la descarga en curso (o de la última). */
+  async estadoConstanciasAlta(empresaId?: string): Promise<EstadoConstanciasAlta> {
+    const { data } = await axios.get(`/contratos/altas-arca/constancias`, { headers: this.getHeaders(), params: empresaId ? { empresaId } : undefined });
+    if (data?.hay && !data?.corriendo) invalidateRefCache("contracts-overview:");
+    return data;
+  }
+
   /** El registro de lo presentado por Altas Masivas (URGENTE): las últimas corridas guardadas. */
   async historialAltasArca(empresaId?: string): Promise<CorridaAltasGuardada[]> {
     const { data } = await axios.get(`/contratos/altas-arca/historial`, { headers: this.getHeaders(), params: empresaId ? { empresaId } : undefined });
@@ -951,6 +964,16 @@ class ProjectsAPI {
 export const projectsAPI = new ProjectsAPI();
 
 export type ModoAltasArca = "carga_masiva" | "altas_masivas";
+
+export interface EstadoConstanciasAlta {
+  /** Altas presentadas de esa empleadora que todavía no tienen su constancia validada. */
+  pendientes: number;
+  hay: boolean;
+  corriendo: boolean;
+  empresaId?: string;
+  total: number;
+  eventos: Array<Record<string, any> & { tipo: string }>;
+}
 
 /** Una corrida de Altas Masivas como quedó en `arca_altas_logs`. */
 export interface CorridaAltasGuardada {

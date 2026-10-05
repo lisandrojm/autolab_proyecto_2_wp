@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, pantallaAltas, registroRechazadoDelPegado, topeDelPegado } from "./altas-arca.mjs";
+import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, pantallaAltas, registroRechazadoDelPegado, topeDelPegado } from "./altas-arca.mjs";
 
 // Con fin de línea normalizado: en un checkout de Windows (autocrlf) el archivo llega con CRLF, y los
 // tests que recortan la fuente por un marcador con salto de línea no lo encontraban.
@@ -22,10 +22,11 @@ const cuerpo = (nombre) => {
 };
 
 // ------------------------------------------------------------------ los clicks
-test("hay EXACTAMENTE cuatro clicks y son `btn.click()`: apretar, enviarNovedad, aceptarGrilla, quitarFila", () => {
+test("hay EXACTAMENTE cinco clicks y son `btn.click()`: apretar, enviarNovedad, aceptarGrilla, quitarFila, imprimirConstancia", () => {
   const sospechosas = CODIGO.split("\n").filter((l) => /\.click\(/.test(l));
   for (const l of sospechosas) assert.match(l, /^\s*await btn\.click\(\);\s*$/, `click fuera de las guardas:\n  ${l.trim()}`);
-  assert.equal(sospechosas.length, 4);
+  assert.equal(sospechosas.length, 5);
+  assert.match(cuerpo("imprimirConstancia"), /btn\.click\(\)/);
   assert.match(cuerpo("apretar"), /btn\.click\(\)/);
   assert.match(cuerpo("enviarNovedad"), /btn\.click\(\)/);
   assert.match(cuerpo("aceptarGrilla"), /btn\.click\(\)/);
@@ -99,14 +100,14 @@ test("CUIT verificado antes de la primera escritura, y el modo en seco antes del
   assert.ok(am.indexOf("await antesDeAceptar(aPresentar)") >= 0 && am.indexOf("await antesDeAceptar(aPresentar)") < am.indexOf("aceptarGrilla("));
   // Por el selector de CUIT se entra una sola vez por sesión: volver a él desde adentro la cierra (FinSession).
   assert.ok(am.includes('yaAdentro ? page.url().split("/app/")[0] : await entrarComo(page, empresaCuit)'));
-  assert.equal(cuerpo("consultarAltaPorCuil").includes("entrarComo("), false, "la consulta no vuelve al selector");
+  for (const f of ["consultarAltaPorCuil", "buscarEnConsultas", "descargarConstanciaDeAlta"]) assert.equal(cuerpo(f).includes("entrarComo("), false, `${f} no vuelve al selector`);
   // UN solo Aceptar de la grilla por tanda: el bucle del pegado no lo alcanza.
   assert.equal(am.split("aceptarGrilla(").length - 1, 1);
   assert.ok(am.indexOf("for (;;)") < am.indexOf("aceptarGrilla(") && am.indexOf("break;") < am.indexOf("aceptarGrilla("));
 });
 
 test("leer el tope y consultar no presentan nada: ni Aceptar de la grilla, ni Enviar, ni pegado", () => {
-  for (const f of ["leerTopeAltasMasivas", "consultarAltaPorCuil"]) {
+  for (const f of ["leerTopeAltasMasivas", "consultarAltaPorCuil", "buscarEnConsultas", "descargarConstanciaDeAlta", "imprimirConstancia"]) {
     const c = cuerpo(f);
     assert.doesNotMatch(c, /aceptarGrilla\(|enviarNovedad\(|aceptar_pegado|quitarFila\(/, `${f} solo lee`);
   }
@@ -227,4 +228,37 @@ test("las pantallas relevadas: grilla con una fila, pegado y formulario de Consu
   assert.ok(consulta.ids.includes(PREFIJO + "rb1") && consulta.ids.includes(PREFIJO + "inputCuil_txtCuil"));
   // Sin el criterio por CUIL (la pantalla de resultado) ya no es el formulario.
   assert.equal(pantallaAltas({ accion: "./Consulta.aspx", ids: [PREFIJO + "btnVolver"] }), "otra");
+});
+
+// ------------------------------------------------------------------ la constancia (puro)
+
+test("la impresora solo se aprieta en Consultas, nunca en la grilla de altas, y sobre un control único", () => {
+  const c = cuerpo("imprimirConstancia");
+  const iClick = c.indexOf("btn.click()");
+  assert.ok(c.indexOf("Consulta") >= 0 && c.indexOf("no se aprieta la impresora") < iClick);
+  assert.ok(c.indexOf('=== "altas") throw') >= 0 && c.indexOf('=== "altas") throw') < iClick);
+  assert.ok(c.indexOf("!== 1) throw") >= 0 && c.indexOf("!== 1) throw") < iClick);
+});
+
+test("elegirEnResultadoDeConsulta: la casilla de la relación por su fecha, y UNA impresora; si no, no elige", () => {
+  const casillas = [
+    { id: "chkTodos", fila: "CUIL Apellido y nombre Inicio Cese" },
+    { id: "grid_ctl02_chk", fila: "20-11111111-2 PEREZ JUAN 01/10/2026 31/10/2026" },
+    { id: "grid_ctl03_chk", fila: "20-11111111-2 PEREZ JUAN 19/04/2026 19/04/2026" },
+  ];
+  const controles = [
+    { id: "btnVolver", tag: "input", pista: "btnVolver Volver" },
+    { id: "btnBajar", tag: "input", pista: "btnBajar Bajar archivo" },
+    { id: "imgPrint", tag: "input", pista: "imgPrint ../images/ico_imprimir.gif Imprimir" },
+  ];
+  assert.deepEqual(elegirEnResultadoDeConsulta({ casillas, controles, fecha: "01/10/2026" }), { ok: true, casilla: "grid_ctl02_chk", impresora: "imgPrint" });
+  // «Bajar archivo» es el TXT: no se nombra como impresora y no se elige.
+  assert.equal(elegirEnResultadoDeConsulta({ casillas, controles: controles.slice(0, 2), fecha: "01/10/2026" }).motivo, "sin_impresora");
+  // Sin relación con esa fecha, o con dos, no se tilda ninguna.
+  assert.equal(elegirEnResultadoDeConsulta({ casillas, controles, fecha: "05/10/2026" }).motivo, "sin_relacion");
+  assert.equal(elegirEnResultadoDeConsulta({ casillas: [...casillas, { id: "grid_ctl04_chk", fila: "otra 01/10/2026" }], controles, fecha: "01/10/2026" }).motivo, "ambigua");
+  // Dos controles que se nombran impresora: no se adivina cuál.
+  assert.equal(elegirEnResultadoDeConsulta({ casillas, controles: [...controles, { id: "lnkImprimirTodo", tag: "a", pista: "lnkImprimirTodo Imprimir" }], fecha: "01/10/2026" }).motivo, "sin_impresora");
+  // La imagen dentro de su botón: vale el botón.
+  assert.equal(elegirEnResultadoDeConsulta({ casillas, controles: [...controles, { id: "imgAdentro", tag: "img", pista: "ico_imprimir.gif" }], fecha: "01/10/2026" }).impresora, "imgPrint");
 });

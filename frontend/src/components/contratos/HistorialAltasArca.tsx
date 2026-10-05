@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
-import { projectsAPI, CorridaAltasGuardada } from '../../api/projects';
+import { projectsAPI, CorridaAltasGuardada, EstadoConstanciasAlta } from '../../api/projects';
 import { detalleDeLoPresentado } from './progresoTandas';
 
 /**
@@ -78,6 +78,62 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
   const [todo, setTodo] = useState(false);
   const [abierta, setAbierta] = useState<string | null>(null);
 
+  /*
+    DESCARGAR LAS ALTAS TEMPRANAS: baja de ARCA la constancia de cada alta ya presentada de la
+    empleadora y la manda a donde va (Outbox si el tipo de contrato la firma; si no, «Alta temprana
+    de Arca / No firmar»). Corre en el servidor; acá se mira por polling, como las otras corridas.
+  */
+  const [constancias, setConstancias] = useState<EstadoConstanciasAlta | null>(null);
+  const [errorConstancias, setErrorConstancias] = useState('');
+  const [arrancando, setArrancando] = useState(false);
+  const reloj = useRef<number | null>(null);
+  const mirar = useCallback(async () => {
+    try {
+      const r = await projectsAPI.estadoConstanciasAlta(empresaId);
+      setConstancias(r);
+      if (!r.corriendo && reloj.current) {
+        window.clearInterval(reloj.current);
+        reloj.current = null;
+      }
+      return r;
+    } catch {
+      return null;
+    }
+  }, [empresaId]);
+  const seguir = useCallback(() => {
+    if (reloj.current) window.clearInterval(reloj.current);
+    reloj.current = window.setInterval(mirar, 2000);
+  }, [mirar]);
+  useEffect(() => {
+    if (!isOpen) return;
+    mirar().then((r) => r?.corriendo && seguir());
+    return () => {
+      if (reloj.current) window.clearInterval(reloj.current);
+      reloj.current = null;
+    };
+  }, [isOpen, mirar, seguir]);
+  const descargar = async () => {
+    if (!empresaId) return;
+    setArrancando(true);
+    setErrorConstancias('');
+    try {
+      await projectsAPI.descargarConstanciasAlta(empresaId);
+      await mirar();
+      seguir();
+    } catch (e: any) {
+      setErrorConstancias(e?.response?.data?.error || 'No se pudo arrancar la descarga.');
+    } finally {
+      setArrancando(false);
+    }
+  };
+  // El último estado de cada persona de la descarga en curso (o de la última).
+  const personasConstancia = useMemo(() => {
+    const porCuil = new Map<string, Record<string, any>>();
+    for (const e of constancias?.eventos || []) if (e.tipo === 'persona') porCuil.set(e.cuil, e);
+    return [...porCuil.values()];
+  }, [constancias]);
+  const falloConstancias = (constancias?.eventos || []).find((e) => e.tipo === 'fallo');
+
   useEffect(() => {
     if (!isOpen) return;
     setCorridas(null);
@@ -124,6 +180,45 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
             <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
             Bajar
           </button>
+        </div>
+
+        {/* ── Descargar altas tempranas ── */}
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              {!empresaId
+                ? 'Para bajar las constancias de alta, abrí este registro desde la pestaña de UNA empresa.'
+                : constancias?.corriendo
+                  ? 'Bajando de ARCA las constancias de alta…'
+                  : `${constancias?.pendientes ?? '…'} alta(s) presentada(s) esperan su constancia. Se bajan de ARCA, se validan contra el contrato y van al Outbox (si el tipo de contrato la firma) o a «Alta temprana de Arca / No firmar».`}
+            </p>
+            <button
+              type="button"
+              onClick={descargar}
+              disabled={!empresaId || arrancando || !!constancias?.corriendo || !constancias?.pendientes}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FontAwesomeIcon icon={arrancando || constancias?.corriendo ? faSpinner : faDownload} spin={arrancando || !!constancias?.corriendo} className="h-3 w-3" />
+              Descargar altas tempranas
+            </button>
+          </div>
+          {errorConstancias && <p className="text-xs text-red-700 dark:text-red-400">{errorConstancias}</p>}
+          {falloConstancias && <p className="text-xs text-red-700 dark:text-red-400">La descarga se cortó: {falloConstancias.mensaje}</p>}
+          {personasConstancia.length > 0 && (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
+              {personasConstancia.map((p) => {
+                const bien = p.estado === 'lista';
+                const enCurso = p.estado === 'descargando';
+                return (
+                  <li key={p.cuil} className="py-1 flex items-start gap-2">
+                    <FontAwesomeIcon icon={enCurso ? faSpinner : bien ? faCircleCheck : p.estado === 'sin_constancia' ? faCircleQuestion : faCircleXmark} spin={enCurso} className={`h-3 w-3 mt-0.5 shrink-0 ${enCurso ? 'text-blue-500' : bien ? 'text-green-600 dark:text-green-400' : p.estado === 'sin_constancia' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`} />
+                    <span className="font-semibold text-gray-900 dark:text-gray-100 shrink-0">{p.nombre}</span>
+                    <span className={bien || enCurso ? 'text-gray-600 dark:text-gray-400' : 'text-red-700 dark:text-red-400'}>{enCurso ? 'bajando…' : p.detalle}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
 
         {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
