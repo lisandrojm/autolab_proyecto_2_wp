@@ -272,7 +272,7 @@ test("fechaEnTexto tolera cómo escriba la fecha la grilla, y no confunde otra",
 test("cuando no hay una sola relación, el detalle dice qué traía cada fila", () => {
   const r = elegirEnResultadoDeConsulta({ casillas: [{ id: "a", fila: "PEREZ 19/04/2026 19/04/2026" }, { id: "todos", fila: "" }], controles: [], fecha: "01/10/2026" });
   assert.equal(r.motivo, "sin_relacion");
-  assert.match(r.detalle, /Filas: \[PEREZ 19\/04\/2026 19\/04\/2026\] \[fila sin texto\]/);
+  assert.match(r.detalle, /Filas: \[PEREZ 19\/04\/2026 19\/04\/2026\] \[sin texto\]/);
 });
 
 test("la tarjeta de la relación se reconoce por su «Fecha de Inicio», no por el fin ni por la fecha del C.A.T.", () => {
@@ -287,4 +287,28 @@ test("la tarjeta de la relación se reconoce por su «Fecha de Inicio», no por 
     { id: "r3", fila: tarjeta("19/04/2026", "01/10/2026", "19/04/2026") },
   ];
   assert.deepEqual(elegirEnResultadoDeConsulta({ casillas, controles, fecha: "01/10/2026" }), { ok: true, casilla: "r1", impresora: "imgPrint" });
+});
+
+test("la tarjeta real trae la fecha de inicio pasados los 400 caracteres: se lee entera y el aviso muestra las fechas", () => {
+  // El texto de una tarjeta como sale de la pantalla: toda la columna izquierda y después la derecha.
+  const tarjeta = (inicio, fin) =>
+    "Empleado: 20-11111111-2 - PEREZ JUAN Obra Social: 120900 - O.S.DEL PERSONAL DE TELEVISION Mod. Contrato: 022 - A TIEMPO COMPLETO DETERMINADO (CONTRATO A PLAZO FIJO) " +
+    "Sucursal: 00001 - RUIZ HUIDOBRO 4365 COD. POSTAL 1430, CIUDAD AUTONOMA BUENOS AIRES Actividad: 591110 - PRODUCCIÓN DE FILMES Y VIDEOCINTAS " +
+    "Convenio: 0634/11 - TELEVISIÔN - SINDICATO ARGENTINO DE TELEVISION C/ CAMARA ARGENTINA DE PRODUCTORAS INDEPENDIENTES DE TELEVISION (C.A.P.I.T) " +
+    "Categoria: 035358 - ASISTENTE DE CAMARA ESPECIALIZADO / GRIP - GRUPO 7 Puesto: 4132 - EMPLEADOS DE SERVICIOS DE APOYO A LA PRODUCCIÓN Tipo Servicio: 000 - SERVICIOS COMUNES CONTINUOS " +
+    `Retr. pactada: 1239805,93 Mod. Liq: 1 - MES Trab. agrop.: NO Fecha de Inicio: ${inicio} C.A.T.: 26391939579227495223 04/10/2026 21:15:14hs: Fecha de Fin: ${fin} Sit.Revista: 01 - ACTIVO`;
+  assert.ok(tarjeta("01/10/2026", "31/10/2026").indexOf("Fecha de Inicio") > 400, "en la pantalla real la fecha queda después del carácter 400");
+  const controles = [{ id: "imgPrint", tag: "input", pista: "imgPrint Imprimir" }];
+  const casillas = [{ id: "todos", fila: "" }, { id: "r1", fila: tarjeta("19/04/2026", "19/04/2026") }, { id: "r2", fila: tarjeta("01/10/2026", "31/10/2026") }];
+  assert.deepEqual(elegirEnResultadoDeConsulta({ casillas, controles, fecha: "01/10/2026" }), { ok: true, casilla: "r2", impresora: "imgPrint" });
+  // Y si no está, el aviso dice las fechas de lo que sí había, no el principio de la tarjeta.
+  const r = elegirEnResultadoDeConsulta({ casillas, controles, fecha: "05/10/2026" });
+  assert.match(r.detalle, /Filas: \[sin texto\] \[inicio 19\/04\/2026, fin 19\/04\/2026\] \[inicio 01\/10\/2026, fin 31\/10\/2026\]/);
+});
+
+test("la búsqueda pide lo más nuevo primero, sin presentar nada", () => {
+  const c = cuerpo("buscarEnConsultas");
+  assert.match(c, /ddlCampoOrden/);
+  assert.match(c, /ddlOrden/);
+  assert.ok(c.indexOf("selectOption") < c.indexOf('apretar(page, "consulta_continuar")'));
 });

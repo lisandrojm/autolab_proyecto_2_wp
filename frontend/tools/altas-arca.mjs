@@ -468,6 +468,15 @@ export function fechaEnTexto(texto, fecha) {
   return flexible.test(t) || t.includes(`${a}-${mes}-${d}`) || t.includes(`${a}/${mes}/${d}`);
 }
 
+/** Lo que identifica a una tarjeta del resultado, para decirlo en un aviso: sus fechas. Puro. */
+function resumenDeTarjeta(fila) {
+  const t = String(fila || "");
+  if (!t) return "sin texto";
+  const inicio = /Fecha de Inicio:?\s*([\d/.-]{8,10})/i.exec(t)?.[1];
+  const fin = /Fecha de Fin:?\s*([\d/.-]{8,10})/i.exec(t)?.[1];
+  return inicio ? `inicio ${inicio}${fin ? `, fin ${fin}` : ""}` : t.slice(0, 80);
+}
+
 /**
  * De lo que hay en la pantalla de resultado de Consultas, cuál es la casilla de ESA relación y cuál
  * es la impresora. Puro.
@@ -493,7 +502,7 @@ export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fec
   const deLaRelacion = casillas.filter((c) => c.id && esDeEsaFecha(c.fila));
   if (deLaRelacion.length !== 1) {
     // Se dice QUÉ había en cada fila: es con lo que se ajusta el lector cuando la pantalla no es la esperada.
-    const visto = casillas.map((c) => `[${String(c.fila || "").slice(0, 140) || "fila sin texto"}]`).join(" ");
+    const visto = casillas.map((c) => `[${resumenDeTarjeta(c.fila)}]`).join(" ");
     return { ok: false, motivo: deLaRelacion.length === 0 ? "sin_relacion" : "ambigua", detalle: `Esperaba UNA relación con inicio ${fecha} y hay ${deLaRelacion.length} (casillas en pantalla: ${casillas.length}).${visto ? ` Filas: ${visto}` : ""}` };
   }
   const nombrados = controles.filter((c) => c.id && /imprim|impres|print/i.test(String(c.pista || "")));
@@ -546,6 +555,25 @@ async function buscarEnConsultas(page, cuil) {
   const campo = page.locator(`[id="${PREFIJO}inputCuil_txtCuil"]`);
   if ((await radio.count()) !== 1 || (await campo.count()) !== 1) throw new Error("La pantalla de Consultas no tiene el criterio por CUIL donde se esperaba.");
   await radio.check();
+  /*
+    LO MÁS NUEVO PRIMERO. El resultado se pagina, y con el orden por defecto el alta recién presentada
+    puede quedar en otra página (hay personas con veinte relaciones con la misma empleadora). Se pide
+    ordenado por fecha de inicio, descendente: la que se busca queda arriba. Es un criterio de la
+    búsqueda; si los selectores no están, se busca igual con el orden que venga.
+  */
+  for (const [sufijo, patron] of [
+    ["ddlCampoOrden", /fecha de inicio/i],
+    ["ddlOrden", /descendente/i],
+  ]) {
+    const lista = page.locator(`[id="${PREFIJO}${sufijo}"]`);
+    if ((await lista.count()) !== 1) continue;
+    const opciones = await lista.locator("option").evaluateAll((os) => os.map((o) => ({ value: o.value, texto: o.textContent || "" })));
+    const elegidas = opciones.filter((o) => patron.test(o.texto));
+    if (elegidas.length === 1) await lista.selectOption(elegidas[0].value);
+  }
+  // Por si elegir el orden redibujó el formulario: el criterio y el campo se vuelven a mirar.
+  await esperarPantalla(page, ["consulta"], "el formulario de Consultas");
+  if (!(await radio.isChecked().catch(() => false))) await radio.check();
   await campo.fill(cuil);
   await apretar(page, "consulta_continuar");
   // El resultado reemplaza al formulario: se espera a que el criterio por CUIL deje de estar.
@@ -588,7 +616,9 @@ export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onPro
         for (let nivel = 0; nodo && nivel < 10; nivel++, nodo = nodo.parentElement) {
           if (nodo.querySelectorAll("input[type=checkbox]").length > 1) return "";
           const t = txt(nodo);
-          if (CON_FECHA.test(t)) return t.slice(0, 400);
+          // Entera: la «Fecha de Inicio» va en la columna derecha, que en el texto viene DESPUÉS de toda
+          // la izquierda (sucursal, convenio, categoría…). Cortada a 400 se quedaba sin la fecha.
+          if (CON_FECHA.test(t)) return t.slice(0, 4000);
         }
         return "";
       };
