@@ -17,6 +17,7 @@ export const NOMBRE_CORRIDA = {
     carga_masiva: "la Carga Masiva de altas",
     altas_masivas: "las Altas Masivas (URGENTE)",
     catalogo: "la lectura del catálogo de ARCA",
+    constancias: "la descarga de constancias de alta",
 };
 const tomados = new Map();
 /** Quién tiene la sesión de ARCA de este tenant ahora, o `null`. */

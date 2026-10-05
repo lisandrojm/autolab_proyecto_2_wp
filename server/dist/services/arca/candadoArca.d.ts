@@ -11,7 +11,7 @@
  * las tres pasan por acá. Sigue siendo en memoria, por las mismas razones que la corrida (ver
  * `corridaServidor.ts`): un proceso, una corrida por vez, sin Redis.
  */
-export type TipoCorridaArca = "obras_sociales" | "nombres" | "carga_masiva" | "altas_masivas" | "catalogo";
+export type TipoCorridaArca = "obras_sociales" | "nombres" | "carga_masiva" | "altas_masivas" | "catalogo" | "constancias";
 export declare const NOMBRE_CORRIDA: Record<TipoCorridaArca, string>;
 /** Quién tiene la sesión de ARCA de este tenant ahora, o `null`. */
 export declare const quienTiene: (tenantId: string) => {

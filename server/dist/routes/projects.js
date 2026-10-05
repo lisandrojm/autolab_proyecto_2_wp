@@ -92,12 +92,8 @@ import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
 import { Contrato } from "../models/Contrato.js";
-import { Tenant } from "../models/Tenant.js";
-import { leerConstanciaTrabajador, leerConstanciaTrabajadorPdf, problemasDeConstancia } from "../utils/constanciaTrabajadorPdf.js";
-import { getTenantDropboxConfig, uploadFile } from "../services/dropboxService.js";
-import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
-import { aplicarTransicion, cargarEstadosPorEvento } from "../services/estadoTransicionAutomaticaService.js";
-import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
+import { registrarAltaDeContrato } from "../services/altaTempranaService.js";
+import { arrancarDescargaConstancias, descargaConstanciasDe, pendientesDeConstancia } from "../services/arca/constanciasAltas.js";
 import { numeroALetras } from "../utils/numeroALetras.js";
 import { cambiosAlAprobar } from "../services/revisionDeSolicitud.js";
 const __filename = fileURLToPath(import.meta.url);
@@ -2883,6 +2879,37 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
         res.status(500).json({ error: "No se pudo leer el registro de altas." });
     }
 });
+/**
+ * POST /contratos/altas-arca/constancias { empresaId } — baja de ARCA las constancias de las altas ya
+ * presentadas de esa empleadora y las manda a donde va cada una (Outbox o «No firmar»). Arranca y
+ * vuelve; se sigue por el GET. 409 si otra corrida de ARCA tiene la sesión.
+ */
+router.post("/contratos/altas-arca/constancias", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const r = await arrancarDescargaConstancias({ tenantId: String(req.tenantObjectId), tenantObjectId: req.tenantObjectId, tenantCarpeta: req.tenantId || "unknown_tenant", empresaId: String(req.body?.empresaId || "") });
+        res.json({ arrancada: true, ...r });
+    }
+    catch (error) {
+        if (error instanceof CandadoArcaOcupado) {
+            res.status(409).json({ error: error.message, ocupadaPor: error.tipo });
+            return;
+        }
+        res.status(400).json({ error: String(error?.message || error) });
+    }
+});
+/** GET /contratos/altas-arca/constancias?empresaId=… — cuántas esperan su constancia y el avance de la descarga. */
+router.get("/contratos/altas-arca/constancias", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const d = descargaConstanciasDe(String(req.tenantObjectId));
+        const empresaId = String(req.query?.empresaId || "");
+        const pendientes = empresaId ? (await pendientesDeConstancia(req.tenantObjectId, empresaId)).length : 0;
+        res.json({ pendientes, hay: !!d, corriendo: !!d && !d.terminada, empresaId: d?.empresaId, total: d?.total || 0, eventos: d?.eventos || [] });
+    }
+    catch (error) {
+        console.error("Constancias de alta error:", error);
+        res.status(500).json({ error: "No se pudo leer el estado de la descarga." });
+    }
+});
 router.get("/contratos/obras-sociales/pendientes", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const empresa = String(req.query?.empresa || "");
@@ -3307,111 +3334,23 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/alta-documen
             res.status(400).json({ error: "Contrato no encontrado" });
             return;
         }
-        /*
-          SI ES EL ALTA TEMPRANA, SE VALIDA ANTES DE GUARDAR. El PDF tiene que ser la «Constancia del
-          trabajador» de ARCA, decir Alta, y traer el CUIL, el CUIT de la empleadora y la fecha de inicio
-          de ESTE contrato. ARCA entrega por la misma impresora la constancia de BAJA cuando la relación
-          ya terminó, y un PDF de otra persona con el nombre de este contrato saldría a firmar igual.
-          Si no coincide no se guarda, no se archiva y no se envía: se devuelve por qué.
-  
-          Esta ruta también recibe la Constancia de CUIT (contratos de Servicios): esos no se tocan. Se
-          valida cuando el contrato está en el trámite de alta temprana, o cuando el PDF ES una
-          constancia del trabajador (aunque el contrato ya haya avanzado de estado).
-        */
-        const contratoActual = up.contracts[idx].toObject();
-        const bufferAlta = await fs.promises.readFile(req.file.path);
-        const constancia = await leerConstanciaTrabajadorPdf(bufferAlta).catch(() => leerConstanciaTrabajador(""));
-        const estadoActual = contratoActual.estado_id != null ? await Info.findOne({ type: "estado-empleado", "data.id": contratoActual.estado_id }).select("data.tipoImpositivo").lean() : null;
-        const esAltaTemprana = estadoActual?.data?.tipoImpositivo === "alta_temprana_afip" || !!contratoActual.altaArcaPresentada;
-        const validarConstancia = esAltaTemprana || !!constancia.tipo;
-        const persona = validarConstancia ? await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).select("firstName lastName email metadata").lean() : null;
-        if (validarConstancia) {
-            const empresa = contratoActual.empresaContratoId ? await Company.findById(contratoActual.empresaContratoId).select("cuit").lean() : null;
-            const problemas = problemasDeConstancia(constancia, { cuil: persona?.metadata?.cuit, empleadorCuit: empresa?.cuit, fechaInicio: contratoActual.fecha_alta_contrato });
-            if (problemas.length > 0) {
-                fs.promises.unlink(req.file.path).catch(() => { });
-                res.status(422).json({ error: "El PDF no es la constancia de alta de este contrato. No se guardó, no se archivó y no se envió a firmar.", problemas });
-                return;
-            }
-        }
+        // Validar, guardar y rutear: el mismo camino que la descarga desde ARCA (`altaTempranaService.ts`).
         const tenantId = req.tenantId || "unknown_tenant";
-        const altaDocumentoUrl = `/storage/${tenantId}/${userId}/contratos/${req.file.filename}`;
-        const altaDocumentoNombre = req.file.originalname;
-        // Reemplazo: borrar el archivo anterior del disco (best-effort, no bloquea la respuesta).
-        const anterior = up.contracts[idx]?.altaDocumentoUrl;
-        if (anterior && typeof anterior === "string") {
-            const anteriorPath = path.join(__dirname, "../..", anterior.replace(/^\/storage\//, "storage/"));
-            fs.promises.unlink(anteriorPath).catch(() => { });
+        const r = await registrarAltaDeContrato({
+            tenantObjectId: req.tenantObjectId,
+            up,
+            idx,
+            userId,
+            buffer: await fs.promises.readFile(req.file.path),
+            altaDocumentoUrl: `/storage/${tenantId}/${userId}/contratos/${req.file.filename}`,
+            altaDocumentoNombre: req.file.originalname,
+        });
+        if ("problemas" in r) {
+            fs.promises.unlink(req.file.path).catch(() => { });
+            res.status(422).json({ error: "El PDF no es la constancia de alta de este contrato. No se guardó, no se archivó y no se envió a firmar.", problemas: r.problemas });
+            return;
         }
-        /*
-          POR DÓNDE SIGUE EL ALTA YA VALIDADA. Un archivo, un lugar:
-  
-            · el tipo de contrato la manda a firmar → va YA al Outbox de HelloSign, sola, y queda marcada
-              como enviada (`altaEnviadaAFirmarEl`): el envío del contrato no la vuelve a mandar;
-            · el tipo de contrato no la firma → se archiva en «Alta temprana de Arca/No firmar».
-  
-          Las dos con la nomenclatura de Altas de ARCA. Y en los dos casos el alta ya está: el contrato
-          pasa al estado que la carpeta de altas alimenta («Envío de documentación»), sin esperar
-          ninguna firma. Se avanza acá y no por el proceso de carpetas porque ese solo lee la raíz de
-          cada una, y porque la que va al Outbox no pasa por la de altas. El proceso, a su vez, sabe
-          que el alta en el Outbox no es el contrato (`esElAltaEnviada`).
-        */
-        let ruteo;
-        let altaConstancia;
-        if (validarConstancia) {
-            const tipoContrato = Types.ObjectId.isValid(String(contratoActual.contrato_id || "")) ? await Contrato.findById(contratoActual.contrato_id).select("data.requiereFirmaAlta").lean() : null;
-            // Sin el dato, sí: el mismo criterio que la pantalla (`contratoRequiereFirmaAlta`).
-            ruteo = { vaAFirma: tipoContrato?.data?.requiereFirmaAlta !== false };
-            let enviadaComo;
-            try {
-                const tenant = await Tenant.findById(req.tenantObjectId).lean();
-                const cfg = getTenantDropboxConfig(tenant);
-                const carpeta = await resolverCarpetaPorProposito(ruteo.vaAFirma ? "outbox" : "alta_temprana");
-                if (!cfg || !carpeta) {
-                    ruteo.aviso = !cfg ? "Dropbox no está conectado: el alta quedó cargada en el contrato pero no se subió." : `No hay una carpeta de «${ruteo.vaAFirma ? "Outbox" : "Alta temprana de ARCA"}» configurada: el alta quedó cargada en el contrato pero no se subió.`;
-                }
-                else {
-                    const nombre = `${await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "AltaAFIP", user: persona, up, contract: contratoActual, docName: "AltaAFIP" })}.pdf`;
-                    // Dropbox crea «No firmar» sola la primera vez: subir a un path arma las carpetas que falten.
-                    const destino = `${carpeta.replace(/\/$/, "")}${ruteo.vaAFirma ? "" : "/No firmar"}/${nombre}`;
-                    await uploadFile(String(req.tenantObjectId), cfg, destino, bufferAlta, true);
-                    ruteo.archivadaEn = destino;
-                    enviadaComo = nombre;
-                }
-            }
-            catch (e) {
-                console.error("Alta temprana: no se pudo subir a Dropbox:", e?.message || e);
-                ruteo.aviso = "No se pudo subir el alta a Dropbox. Quedó cargada en el contrato: volvé a subirla para reintentar.";
-            }
-            altaConstancia = { clave: constancia.clave || undefined, nroTramite: constancia.nroTramite || undefined, validadaEl: new Date(), vaAFirma: ruteo.vaAFirma, archivadaEn: ruteo.archivadaEn, enviadaComo };
-        }
-        const conAlta = { ...up.contracts[idx].toObject(), altaDocumentoUrl, altaDocumentoNombre };
-        if (altaConstancia) {
-            conAlta.altaConstancia = altaConstancia;
-            // Enviada = quedó en el Outbox. Si no se pudo subir, no se marca: viaja con el contrato cuando
-            // se lo envíe a firmar, que es el camino de antes, y tampoco sale dos veces.
-            conAlta.altaEnviadaAFirmarEl = ruteo?.vaAFirma && ruteo.archivadaEn ? new Date() : undefined;
-            // La clave de alta que da ARCA: es la que la presentación no pudo leer de la pantalla.
-            if (conAlta.altaArcaPresentada && constancia.clave)
-                conAlta.altaArcaPresentada = { ...conAlta.altaArcaPresentada, cat: constancia.clave };
-        }
-        up.contracts[idx] = conAlta;
-        up.markModified("contracts");
-        await up.save();
-        if (ruteo) {
-            try {
-                const destino = (await cargarEstadosPorEvento("dropbox_carpeta")).find((e) => (e.data?.transicionAutomatica?.carpetas || []).some((c) => [].concat(c.proposito || []).includes("alta_temprana")));
-                if (destino) {
-                    const r = await aplicarTransicion(up, idx, destino);
-                    if (r.aplicada)
-                        ruteo.estado = destino.name;
-                }
-            }
-            catch (e) {
-                console.error("Alta temprana: no se pudo avanzar el estado:", e?.message || e);
-            }
-        }
-        res.json({ altaDocumentoUrl, altaDocumentoNombre, ruteo });
+        res.json({ altaDocumentoUrl: r.altaDocumentoUrl, altaDocumentoNombre: r.altaDocumentoNombre, ruteo: r.ruteo });
     }
     catch (error) {
         console.error("Upload alta-documento error:", error);
