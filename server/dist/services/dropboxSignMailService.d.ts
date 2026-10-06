@@ -108,12 +108,7 @@ export interface ResultadoLectura {
 export declare function motivoFalloImap(e: any): string;
 export declare function leerCasillaDropboxSign(tenantId: string, soloPrueba?: boolean): Promise<ResultadoLectura>;
 export declare function registrarLectura(r: ResultadoLectura): any;
-/** Corre la lectura para todos los tenants que la tengan activada (el sondeo de respaldo). */
+/** Corre la lectura para todos los tenants que la tengan activada. */
 export declare function leerCasillasDeTodosLosTenants(): Promise<void>;
-/**
- * Rearma la vigilancia de un tenant con su configuración actual. Lo llama la ruta que guarda la
- * casilla: una contraseña nueva o la lectura apagada tienen que regir sin reiniciar el servidor.
- */
-export declare function actualizarVigilancia(tenantId: string): void;
-/** Arranca la vigilancia de las casillas y el sondeo de respaldo (lo llama server.ts al levantar). */
+/** Arranca la lectura periódica de la casilla (lo llama server.ts al levantar). */
 export declare const initDropboxSignMailScheduler: () => void;

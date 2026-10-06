@@ -276,8 +276,8 @@ export function motivoFalloImap(e) {
  * `soloPrueba` conecta y cuenta los avisos sin escribir nada (para el botón "Probar" de la config).
  */
 /**
- * UNA LECTURA A LA VEZ POR TENANT. Con la casilla vigilada por IDLE hay tres disparadores —el aviso
- * de Gmail, el sondeo de respaldo y el botón «Leer ahora»— y dos lecturas en paralelo listarían
+ * UNA LECTURA A LA VEZ POR TENANT. Hay dos disparadores —el sondeo y el botón «Leer ahora»— y dos
+ * lecturas en paralelo listarían
  * Outbox al mismo tiempo e intentarían mover el mismo PDF dos veces. Se encolan: cada una espera a
  * que termine la anterior.
  */
@@ -292,7 +292,7 @@ export function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
     }).catch(() => { });
     return esta;
 }
-/** Arma el cliente IMAP de la casilla configurada (lo usan la lectura y la vigilancia). */
+/** Arma el cliente IMAP de la casilla configurada. */
 function clienteImap(cfg, extra = {}) {
     return new ImapFlow({
         host: String(cfg.imapHost),
@@ -371,7 +371,11 @@ async function leerCasillaAhora(tenantId, soloPrueba = false) {
                 for await (const m of client.fetch(uids.join(","), { envelope: true }, { uid: true }))
                     asuntos.set(Number(m.uid), m?.envelope?.subject || "");
             }
-            for (const uid of uids) {
+            for (const [n, uid] of uids.entries()) {
+                // Cada 20 avisos se le devuelve el hilo a Node: mientras esto corre, el servidor sigue
+                // atendiendo requests en vez de esperar a que termine la lectura entera.
+                if (n > 0 && n % 20 === 0)
+                    await new Promise((r) => setImmediate(r));
                 const asunto = asuntos.get(uid) || "";
                 const archivo = extraerArchivoDeAsunto(asunto);
                 if (!archivo) {
@@ -427,11 +431,15 @@ async function leerCasillaAhora(tenantId, soloPrueba = false) {
         finally {
             lock.release();
         }
-        await client.logout();
     }
     catch (e) {
         console.warn("[DROPBOX-SIGN-MAIL] Falló la casilla:", motivoFalloImap(e));
         return { ok: false, detalle: `No se pudo leer la casilla: ${motivoFalloImap(e)}`, avisos, movidos, duplicados, sinArchivoEnOutbox, logs };
+    }
+    finally {
+        // SIEMPRE se cierra, también si la lectura falló a mitad de camino: antes el error salteaba el
+        // `logout` y la conexión con Gmail quedaba abierta, acumulándose de a una por lectura fallida.
+        await client.logout().catch(() => client.close());
     }
     const detalle = soloPrueba
         ? `Conexión OK. ${avisos} aviso(s) de envío en los últimos ${DIAS_ATRAS} días.`
@@ -447,7 +455,7 @@ async function leerCasillaAhora(tenantId, soloPrueba = false) {
 }
 /**
  * Update de Mongo que deja registrada una lectura. La corrida se suma al historial solo si encontró
- * algo o si falló: hay una lectura por cada mail que entra y otra cada 15 minutos, y guardar las vacías llenaría el documento
+ * algo o si falló: hay una lectura cada 2 minutos, y guardar las vacías llenaría el documento
  * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
  */
 /** Lo que vale guardar de una lectura: lo que se movió y lo que falló. Lo demás se repite en cada una. */
@@ -478,7 +486,7 @@ export function registrarLectura(r) {
     }
     return update;
 }
-/** Lee la casilla de un tenant y deja registrado el resultado (lo usan el sondeo y la vigilancia). */
+/** Lee la casilla de un tenant y deja registrado el resultado. */
 async function leerYRegistrar(tenantId) {
     try {
         const r = await leerCasillaDropboxSign(tenantId);
@@ -488,96 +496,40 @@ async function leerYRegistrar(tenantId) {
         console.error(`[DROPBOX-SIGN-MAIL] tenant ${tenantId}:`, e?.message || e);
     }
 }
-/** Corre la lectura para todos los tenants que la tengan activada (el sondeo de respaldo). */
+/*
+  SONDEO PERIÓDICO, SIN VIGILANCIA POR IDLE.
+
+  Del 06/10/2026 10:41 al de la tarde hubo una vigilancia por IDLE: una conexión fija con Gmail que
+  disparaba una lectura completa por CADA mail que entraba a la casilla. Con ella el servidor se
+  bloqueaba de a 20–55 segundos (un /health tardaba eso en abrir el TLS) y con la lectura apagada
+  volvía a responder. Se sacó: se lee cada `TICK_MS`, una lectura a la vez, y si la anterior no
+  terminó la siguiente se saltea en vez de encolarse.
+*/
+let sondeoEnCurso = false;
+/** Corre la lectura para todos los tenants que la tengan activada. */
 export async function leerCasillasDeTodosLosTenants() {
-    const tenants = await Tenant.find({ "integrations.dropboxSign.enabled": true }).select("_id").lean();
-    for (const t of tenants) {
-        await leerYRegistrar(String(t._id));
-        // Si la vigilancia de este tenant se cayó y no pudo volver, el sondeo la rearma.
-        if (vigilanciaActiva && !vigilancias.has(String(t._id)))
-            void vigilarCasilla(String(t._id));
+    if (sondeoEnCurso) {
+        console.warn("[DROPBOX-SIGN-MAIL] La lectura anterior todavía no terminó: se saltea esta vuelta.");
+        return;
     }
-}
-const vigilancias = new Map();
-const reintentos = new Map();
-/** Solo vigila el proceso que corre las tareas programadas (el VPS), no una copia local. */
-let vigilanciaActiva = false;
-/** Espera antes de leer, para juntar los avisos que llegan en ráfaga. */
-const ESPERA_RAFAGA_MS = 5 * 1000;
-function dejarDeVigilar(tenantId) {
-    const v = vigilancias.get(tenantId);
-    if (!v)
-        return;
-    v.parada = true;
-    if (v.temporizador)
-        clearTimeout(v.temporizador);
-    vigilancias.delete(tenantId);
-    v.client.logout().catch(() => v.client.close());
-}
-async function vigilarCasilla(tenantId) {
-    dejarDeVigilar(tenantId);
-    // Campo por campo: Mongo no deja incluir `dropboxSign` y excluir su historial en la misma proyección.
-    const tenant = await Tenant.findById(tenantId)
-        .select(["enabled", "email", "imapHost", "imapPort", "imapSecure", "imapUser", "imapPasswordEnc"].map((c) => `integrations.dropboxSign.${c}`).join(" "))
-        .lean();
-    const cfg = tenant?.integrations?.dropboxSign || {};
-    if (!cfg.enabled || !cfg.email || !cfg.imapHost || !cfg.imapPasswordEnc)
-        return;
-    // `maxIdleTime`: el IDLE se renueva antes de los ~29 minutos en que Gmail lo da por muerto.
-    const client = clienteImap(cfg, { maxIdleTime: 20 * 60 * 1000 });
-    const v = { client, parada: false };
-    vigilancias.set(tenantId, v);
-    client.on("error", (e) => console.warn(`[DROPBOX-SIGN-MAIL] Vigilancia ${tenantId}:`, motivoFalloImap(e)));
-    client.on("exists", () => {
-        if (v.temporizador)
-            clearTimeout(v.temporizador);
-        v.temporizador = setTimeout(() => void leerYRegistrar(tenantId), ESPERA_RAFAGA_MS);
-    });
-    client.on("close", () => {
-        if (v.parada)
-            return;
-        vigilancias.delete(tenantId);
-        const n = (reintentos.get(tenantId) || 0) + 1;
-        reintentos.set(tenantId, n);
-        const espera = Math.min(5 * 60 * 1000, 15 * 1000 * 2 ** (n - 1));
-        console.warn(`[DROPBOX-SIGN-MAIL] Vigilancia ${tenantId}: se cerró la conexión; reintento en ${Math.round(espera / 1000)} s.`);
-        setTimeout(() => {
-            if (vigilanciaActiva && !vigilancias.has(tenantId))
-                void vigilarCasilla(tenantId);
-        }, espera);
-    });
+    sondeoEnCurso = true;
     try {
-        await client.connect();
-        // Con el buzón abierto y sin comandos pendientes, imapflow entra solo en IDLE.
-        await client.mailboxOpen("INBOX");
-        reintentos.delete(tenantId);
-        console.log(`[DROPBOX-SIGN-MAIL] Vigilando la casilla de ${tenantId} (IDLE).`);
+        const tenants = await Tenant.find({ "integrations.dropboxSign.enabled": true }).select("_id").lean();
+        for (const t of tenants)
+            await leerYRegistrar(String(t._id));
     }
-    catch (e) {
-        // El evento `close` agenda el reintento; acá solo queda el motivo.
-        console.warn(`[DROPBOX-SIGN-MAIL] Vigilancia ${tenantId}: no se pudo conectar:`, motivoFalloImap(e));
-        client.close();
+    finally {
+        sondeoEnCurso = false;
     }
 }
-/**
- * Rearma la vigilancia de un tenant con su configuración actual. Lo llama la ruta que guarda la
- * casilla: una contraseña nueva o la lectura apagada tienen que regir sin reiniciar el servidor.
- */
-export function actualizarVigilancia(tenantId) {
-    if (!vigilanciaActiva)
-        return;
-    reintentos.delete(tenantId);
-    void vigilarCasilla(tenantId);
-}
-/** El sondeo de respaldo: la vigilancia avisa en el momento, esto levanta lo que se haya perdido. */
-const TICK_MS = 15 * 60 * 1000;
-/** Arranca la vigilancia de las casillas y el sondeo de respaldo (lo llama server.ts al levantar). */
+/** Cada cuánto se revisa la casilla: lo que tarda, como mucho, un envío en pasar a «Enviado a la firma». */
+const TICK_MS = 2 * 60 * 1000;
+/** Arranca la lectura periódica de la casilla (lo llama server.ts al levantar). */
 export const initDropboxSignMailScheduler = () => {
     console.log("[DROPBOX-SIGN-MAIL] Initializing scheduler...");
-    vigilanciaActiva = true;
     setTimeout(() => {
         leerCasillasDeTodosLosTenants().catch((err) => console.error("[DROPBOX-SIGN-MAIL] Initial tick error:", err));
-    }, 20 * 1000);
+    }, 60 * 1000);
     setInterval(() => {
         leerCasillasDeTodosLosTenants().catch((err) => console.error("[DROPBOX-SIGN-MAIL] Interval tick error:", err));
     }, TICK_MS);
