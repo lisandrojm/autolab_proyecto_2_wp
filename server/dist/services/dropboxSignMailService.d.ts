@@ -71,6 +71,19 @@ export interface ResultadoLectura {
     logs: LineaLog[];
 }
 /**
+ * Por qué falló el IMAP, en palabras que sirvan para arreglarlo.
+ *
+ * `imapflow` tira SIEMPRE «Command failed» cuando el servidor contesta NO/BAD: el motivo real viene
+ * aparte, en `responseText` (lo que dijo el servidor) y `authenticationFailed`. Mostrando solo el
+ * `message`, la pantalla decía «Command failed» igual para una contraseña rechazada que para
+ * cualquier otra cosa, y no había por dónde empezar.
+ *
+ * El caso que más pasa tiene nombre propio: Gmail no acepta la contraseña de la cuenta por IMAP,
+ * pide una «contraseña de aplicación». No se manda nunca `executedCommand`: en un LOGIN lleva la
+ * contraseña.
+ */
+export declare function motivoFalloImap(e: any): string;
+/**
  * Lee la casilla del tenant y archiva en Pendbox un JSON por cada aviso de envío a firmar.
  * `soloPrueba` conecta y cuenta los avisos sin escribir nada (para el botón "Probar" de la config).
  */

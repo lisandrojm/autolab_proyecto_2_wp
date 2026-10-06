@@ -126,6 +126,28 @@ export function yaEstaEnPendbox(entries, archivo, ident) {
     });
 }
 /**
+ * Por qué falló el IMAP, en palabras que sirvan para arreglarlo.
+ *
+ * `imapflow` tira SIEMPRE «Command failed» cuando el servidor contesta NO/BAD: el motivo real viene
+ * aparte, en `responseText` (lo que dijo el servidor) y `authenticationFailed`. Mostrando solo el
+ * `message`, la pantalla decía «Command failed» igual para una contraseña rechazada que para
+ * cualquier otra cosa, y no había por dónde empezar.
+ *
+ * El caso que más pasa tiene nombre propio: Gmail no acepta la contraseña de la cuenta por IMAP,
+ * pide una «contraseña de aplicación». No se manda nunca `executedCommand`: en un LOGIN lleva la
+ * contraseña.
+ */
+export function motivoFalloImap(e) {
+    const texto = String(e?.responseText || "").trim();
+    const codigo = String(e?.serverResponseCode || "").trim();
+    const credenciales = e?.authenticationFailed === true || /AUTHENTICATIONFAILED|Invalid credentials|Web login required|Application-specific password/i.test(`${codigo} ${texto}`);
+    if (credenciales) {
+        return `El servidor rechazó el usuario o la contraseña${texto ? ` («${texto}»)` : ""}. Con Gmail no sirve la contraseña de la cuenta: hay que crear una «contraseña de aplicación» (Cuenta de Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones) y pegar esa, de 16 letras, en «Contraseña de la casilla». También tiene que estar habilitado IMAP en la configuración de Gmail.`;
+    }
+    const base = String(e?.message || e || "error desconocido");
+    return texto ? `${base}: ${codigo ? `[${codigo}] ` : ""}${texto}` : base;
+}
+/**
  * Lee la casilla del tenant y archiva en Pendbox un JSON por cada aviso de envío a firmar.
  * `soloPrueba` conecta y cuenta los avisos sin escribir nada (para el botón "Probar" de la config).
  */
@@ -149,6 +171,9 @@ export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
         auth: { user: String(cfg.imapUser || cfg.email), pass: decryptSecret(cfg.imapPasswordEnc) },
         logger: false,
     });
+    // Sin este listener, un corte de la conexión (Gmail cierra sockets ociosos) emite un `error` que
+    // nadie escucha, y en Node eso es una excepción no manejada que tumba el proceso entero.
+    client.on("error", (e) => console.warn("[DROPBOX-SIGN-MAIL] Error de la conexión IMAP:", motivoFalloImap(e)));
     let avisos = 0;
     let movidos = 0;
     let duplicados = 0;
@@ -258,7 +283,8 @@ export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
         await client.logout();
     }
     catch (e) {
-        return { ok: false, detalle: `No se pudo leer la casilla: ${e?.message || e}`, avisos, movidos, duplicados, sinArchivoEnOutbox, logs };
+        console.warn("[DROPBOX-SIGN-MAIL] Falló la casilla:", motivoFalloImap(e));
+        return { ok: false, detalle: `No se pudo leer la casilla: ${motivoFalloImap(e)}`, avisos, movidos, duplicados, sinArchivoEnOutbox, logs };
     }
     const detalle = soloPrueba
         ? `Conexión OK. ${avisos} aviso(s) de envío en los últimos ${DIAS_ATRAS} días.`
