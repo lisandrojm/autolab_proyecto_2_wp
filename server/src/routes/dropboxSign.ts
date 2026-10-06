@@ -4,7 +4,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
-import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
+import { leerCasillaDropboxSign, registrarLectura, actualizarVigilancia } from "../services/dropboxSignMailService.js";
 
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
@@ -96,6 +96,8 @@ router.put("/config", async (req: AuthenticatedRequest & TenantRequest, res) => 
       return;
     }
 
+    // La vigilancia por IDLE toma la configuración nueva (o se apaga) sin reiniciar el servidor.
+    actualizarVigilancia(String(req.tenantObjectId));
     res.json({ ok: true, tienePassword: !!cfg.imapPasswordEnc, enabled: !!cfg.enabled });
   } catch (error) {
     console.error("Dropbox Sign save config error:", error);

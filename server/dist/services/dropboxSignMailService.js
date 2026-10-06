@@ -23,12 +23,12 @@ import { aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
  * Qué hace por cada aviso encontrado:
  *  1. Lee del ASUNTO el nombre del documento ("Se inició el proceso de firma de <archivo>").
  *  2. De ese nombre saca quién es (CUIL o email) y de qué período habla (ver `leerAnclas`).
- *  3. Busca en "Outbox" el sobre entero de esa persona y período (contrato, release y alta: ver
- *     `documentosDelAvisoEnOutbox`). Si no hay nada, no hace nada: sin respaldo en Outbox el aviso
- *     no se puede atribuir a un documento propio (puede ser de otra cuenta o de un reenvío).
+ *  3. Busca en "Outbox" EL archivo del aviso: el de nombre completo igual al título, aunque el
+ *     título traiga algo agregado al final (ver `documentosDelAvisoEnOutbox`). Si no está, no hace
+ *     nada: sin respaldo en Outbox el aviso no se puede atribuir a un documento propio.
  *  4. Si el documento ya está en "Pendbox", no lo vuelve a mover. Los avisos se repiten (reenvíos,
  *     recordatorios, resumen diario), así que el chequeo evita trabajo al pedo.
- *  5. Mueve esos PDF de Outbox a Pendbox —no se genera ningún archivo extra— y pasa el contrato al
+ *  5. Mueve ese PDF de Outbox a Pendbox —no se genera ningún archivo extra— y pasa el contrato al
  *     estado de Pendbox («Enviado a la firma») en el momento, sin esperar al escaneo de carpetas.
  */
 /**
@@ -109,35 +109,40 @@ export function buscarEnOutbox(entries, archivo, ident) {
     return porNombre.length === 1 ? porNombre[0] : null;
 }
 /**
- * TODOS los documentos del aviso que están en Outbox: el sobre entero.
+ * EL documento del aviso en Outbox: el archivo cuyo nombre completo (sin la extensión) es el título.
  *
- * «Enviar a firmar» manda juntos el contrato, su release y el alta, pero el aviso de Dropbox Sign
- * nombra UNO solo —el título de la solicitud, que además es editable: llegan títulos como
- * «<archivo>-Frame Firma Digital»—. Buscar ese único archivo dejaba el resto en Outbox, y si el
- * nombrado era el alta el contrato ni siquiera avanzaba (el escaneo de carpetas no mueve un contrato
- * por su alta). Así que se mueve todo lo de esa persona y ese período.
+ * Coinciden TODOS los campos —proyecto, persona, tipo, contrato, período, CUIT, email y empresa—, no
+ * solo la persona y el período: un alta, su contrato y su release comparten persona y período, y
+ * mover «lo de esa persona» se llevó a Pendbox los tres por un aviso que nombraba solo el alta.
  *
- * Por persona (CUIL o email) Y período: sin fechas en el aviso no hay forma de saber cuál de sus
- * documentos es, y ahí solo se acepta un candidato único. Sin anclas, por nombre: igual, o el
- * archivo cuyo nombre es el PRINCIPIO del título (el título le agregó un sufijo).
+ * Lo que el título tenga DESPUÉS del nombre no importa («…_Empresa-30717068374-Frame Firma
+ * Digital»): el título de la solicitud es editable y Dropbox Sign o quien envía le agregan cosas.
+ * Para que eso no confunda un nombre con otro más largo que lo contiene, después del nombre tiene que
+ * venir un separador, no una letra o un número; y si igual quedan dos, gana el más largo.
+ *
+ * Primero se compara el texto tal cual. Solo si no aparece nada, normalizado a letras y números (por
+ * si Dropbox Sign cambió algún símbolo), con la misma regla de «el título empieza con el nombre».
  */
-export function documentosDelAvisoEnOutbox(entries, archivo, ident) {
+export function documentosDelAvisoEnOutbox(entries, archivo, _ident) {
     const pdfs = entries.filter((e) => e.tag === "file" && !/\.json$/i.test(e.name));
-    if (ident.cuit || ident.email) {
-        const porAnclas = pdfs.filter((e) => mismoDocumento(ident, leerAnclas(e.name)));
-        if (porAnclas.length > 0 && (ident.fechas.length > 0 || porAnclas.length === 1))
-            return porAnclas;
-    }
-    const objetivo = normalizarNombre(archivo);
-    const exactos = pdfs.filter((e) => normalizarNombre(e.name) === objetivo);
-    if (exactos.length === 1)
-        return exactos;
-    // El piso de largo evita que un nombre cortito («contrato») sea «el principio» de cualquier título.
-    const prefijos = pdfs.filter((e) => {
-        const n = normalizarNombre(e.name);
-        return n.length >= 20 && objetivo.startsWith(n);
+    const titulo = String(archivo || "").trim();
+    const sinExtension = (n) => n.replace(/\.[a-z0-9]{2,4}$/i, "").trim();
+    const elMasLargo = (xs) => (xs.length === 0 ? [] : [xs.reduce((a, b) => (sinExtension(b.name).length > sinExtension(a.name).length ? b : a))]);
+    const tal = pdfs.filter((e) => {
+        const base = sinExtension(e.name);
+        return base.length > 0 && titulo.startsWith(base) && (titulo.length === base.length || !/[A-Za-z0-9]/.test(titulo[base.length]));
     });
-    return prefijos.length === 1 ? prefijos : [];
+    if (tal.length > 0)
+        return elMasLargo(tal);
+    // Los símbolos se vuelven UN separador genérico, pero el separador queda: sin él, un nombre
+    // cortado («…Empresa-3071706837») pasaba por el principio de otro («…Empresa-30717068374»).
+    const separadores = (v) => sinExtension(String(v || "")).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const objetivo = separadores(titulo);
+    const normalizados = pdfs.filter((e) => {
+        const n = separadores(e.name);
+        return n.length >= 20 && objetivo.startsWith(n) && (objetivo.length === n.length || objetivo[n.length] === "-");
+    });
+    return elMasLargo(normalizados);
 }
 /**
  * El contrato del aviso: la persona (CUIL, si no email) y el período del nombre.
@@ -203,15 +208,10 @@ async function avanzarContratoDelAviso(tenantId, ident) {
  * silencio y quedaba registrado como "ya estaba" — la peor forma de perder un envío, porque el log
  * dice que todo salió bien.
  */
-export function yaEstaEnPendbox(entries, archivo, ident) {
-    const objetivo = normalizarNombre(archivo);
-    return entries.some((e) => {
-        if (e.tag !== "file")
-            return false;
-        if (normalizarNombre(e.name) === objetivo)
-            return true;
-        return mismoDocumento(ident, leerAnclas(e.name));
-    });
+export function yaEstaEnPendbox(entries, archivo, _ident) {
+    // La MISMA regla que para encontrarlo en Outbox: el nombre completo. Por persona y período, el
+    // contrato ya enviado hacía pasar por «duplicado» el aviso de su alta, que nunca se movía.
+    return documentosDelAvisoEnOutbox(entries.map((e) => ({ ...e, path: "" })), archivo).length > 0;
 }
 /**
  * Por qué falló el IMAP, en palabras que sirvan para arreglarlo.
@@ -239,7 +239,35 @@ export function motivoFalloImap(e) {
  * Lee la casilla del tenant y archiva en Pendbox un JSON por cada aviso de envío a firmar.
  * `soloPrueba` conecta y cuenta los avisos sin escribir nada (para el botón "Probar" de la config).
  */
-export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
+/**
+ * UNA LECTURA A LA VEZ POR TENANT. Con la casilla vigilada por IDLE hay tres disparadores —el aviso
+ * de Gmail, el sondeo de respaldo y el botón «Leer ahora»— y dos lecturas en paralelo listarían
+ * Outbox al mismo tiempo e intentarían mover el mismo PDF dos veces. Se encolan: cada una espera a
+ * que termine la anterior.
+ */
+const lecturasEnCurso = new Map();
+export function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
+    const anterior = lecturasEnCurso.get(tenantId) || Promise.resolve();
+    const esta = anterior.catch(() => { }).then(() => leerCasillaAhora(tenantId, soloPrueba));
+    lecturasEnCurso.set(tenantId, esta);
+    esta.finally(() => {
+        if (lecturasEnCurso.get(tenantId) === esta)
+            lecturasEnCurso.delete(tenantId);
+    }).catch(() => { });
+    return esta;
+}
+/** Arma el cliente IMAP de la casilla configurada (lo usan la lectura y la vigilancia). */
+function clienteImap(cfg, extra = {}) {
+    return new ImapFlow({
+        host: String(cfg.imapHost),
+        port: Number(cfg.imapPort) || 993,
+        secure: cfg.imapSecure !== false,
+        auth: { user: String(cfg.imapUser || cfg.email), pass: decryptSecret(cfg.imapPasswordEnc) },
+        logger: false,
+        ...extra,
+    });
+}
+async function leerCasillaAhora(tenantId, soloPrueba = false) {
     const tenant = await Tenant.findById(tenantId).lean();
     const cfg = tenant?.integrations?.dropboxSign || {};
     const vacio = { avisos: 0, movidos: 0, duplicados: 0, sinArchivoEnOutbox: 0, logs: [] };
@@ -252,13 +280,7 @@ export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
     const dropboxCfg = getTenantDropboxConfig(tenant);
     const pendbox = await resolverCarpetaPorProposito("pendbox");
     const outbox = await resolverCarpetaPorProposito("outbox");
-    const client = new ImapFlow({
-        host: String(cfg.imapHost),
-        port: Number(cfg.imapPort) || 993,
-        secure: cfg.imapSecure !== false,
-        auth: { user: String(cfg.imapUser || cfg.email), pass: decryptSecret(cfg.imapPasswordEnc) },
-        logger: false,
-    });
+    const client = clienteImap(cfg);
     // Sin este listener, un corte de la conexión (Gmail cierra sockets ociosos) emite un `error` que
     // nadie escucha, y en Node eso es una excepción no manejada que tumba el proceso entero.
     client.on("error", (e) => console.warn("[DROPBOX-SIGN-MAIL] Error de la conexión IMAP:", motivoFalloImap(e)));
@@ -344,9 +366,9 @@ export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
                         logs.push({ resultado: "sin-archivo", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `${pistas} Outbox tiene ${enOutbox.filter((e) => e.tag === "file").length} archivo(s).` });
                         continue;
                     }
-                    // El sobre entero pasa de Outbox a Pendbox (contrato, release y alta). Los listados en
-                    // memoria se actualizan para que un aviso repetido de esta misma corrida caiga en el
-                    // chequeo de duplicado sin volver a pedirle las carpetas a Dropbox.
+                    // El archivo del aviso pasa de Outbox a Pendbox. Los listados en memoria se actualizan para
+                    // que un aviso repetido de esta misma corrida caiga en el chequeo de duplicado sin volver a
+                    // pedirle las carpetas a Dropbox.
                     for (const pdf of sobre) {
                         const destinoPdf = `${pendbox.replace(/\/$/, "")}/${pdf.name}`;
                         await moveEntry(tenantId, dropboxCfg, pdf.path, destinoPdf);
@@ -393,7 +415,7 @@ export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
 }
 /**
  * Update de Mongo que deja registrada una lectura. La corrida se suma al historial solo si encontró
- * algo o si falló: el job corre cada 5 minutos y guardar las corridas vacías llenaría el documento
+ * algo o si falló: hay una lectura por cada mail que entra y otra cada 15 minutos, y guardar las vacías llenaría el documento
  * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
  */
 export function registrarLectura(r) {
@@ -415,24 +437,100 @@ export function registrarLectura(r) {
     }
     return update;
 }
-/** Corre la lectura para todos los tenants que la tengan activada (lo usa el scheduler). */
+/** Lee la casilla de un tenant y deja registrado el resultado (lo usan el sondeo y la vigilancia). */
+async function leerYRegistrar(tenantId) {
+    try {
+        const r = await leerCasillaDropboxSign(tenantId);
+        await Tenant.updateOne({ _id: tenantId }, registrarLectura(r));
+    }
+    catch (e) {
+        console.error(`[DROPBOX-SIGN-MAIL] tenant ${tenantId}:`, e?.message || e);
+    }
+}
+/** Corre la lectura para todos los tenants que la tengan activada (el sondeo de respaldo). */
 export async function leerCasillasDeTodosLosTenants() {
     const tenants = await Tenant.find({ "integrations.dropboxSign.enabled": true }).select("_id").lean();
     for (const t of tenants) {
-        try {
-            const r = await leerCasillaDropboxSign(String(t._id));
-            await Tenant.updateOne({ _id: t._id }, registrarLectura(r));
-        }
-        catch (e) {
-            console.error(`[DROPBOX-SIGN-MAIL] tenant ${t._id}:`, e?.message || e);
-        }
+        await leerYRegistrar(String(t._id));
+        // Si la vigilancia de este tenant se cayó y no pudo volver, el sondeo la rearma.
+        if (vigilanciaActiva && !vigilancias.has(String(t._id)))
+            void vigilarCasilla(String(t._id));
     }
 }
-/** Cada cuánto se revisa la casilla (mismo orden de magnitud que el escaneo de carpetas). */
-const TICK_MS = 5 * 60 * 1000;
-/** Arranca el chequeo periódico de la casilla (lo llama server.ts al levantar). */
+const vigilancias = new Map();
+const reintentos = new Map();
+/** Solo vigila el proceso que corre las tareas programadas (el VPS), no una copia local. */
+let vigilanciaActiva = false;
+/** Espera antes de leer, para juntar los avisos que llegan en ráfaga. */
+const ESPERA_RAFAGA_MS = 5 * 1000;
+function dejarDeVigilar(tenantId) {
+    const v = vigilancias.get(tenantId);
+    if (!v)
+        return;
+    v.parada = true;
+    if (v.temporizador)
+        clearTimeout(v.temporizador);
+    vigilancias.delete(tenantId);
+    v.client.logout().catch(() => v.client.close());
+}
+async function vigilarCasilla(tenantId) {
+    dejarDeVigilar(tenantId);
+    const tenant = await Tenant.findById(tenantId).select("integrations.dropboxSign").lean();
+    const cfg = tenant?.integrations?.dropboxSign || {};
+    if (!cfg.enabled || !cfg.email || !cfg.imapHost || !cfg.imapPasswordEnc)
+        return;
+    // `maxIdleTime`: el IDLE se renueva antes de los ~29 minutos en que Gmail lo da por muerto.
+    const client = clienteImap(cfg, { maxIdleTime: 20 * 60 * 1000 });
+    const v = { client, parada: false };
+    vigilancias.set(tenantId, v);
+    client.on("error", (e) => console.warn(`[DROPBOX-SIGN-MAIL] Vigilancia ${tenantId}:`, motivoFalloImap(e)));
+    client.on("exists", () => {
+        if (v.temporizador)
+            clearTimeout(v.temporizador);
+        v.temporizador = setTimeout(() => void leerYRegistrar(tenantId), ESPERA_RAFAGA_MS);
+    });
+    client.on("close", () => {
+        if (v.parada)
+            return;
+        vigilancias.delete(tenantId);
+        const n = (reintentos.get(tenantId) || 0) + 1;
+        reintentos.set(tenantId, n);
+        const espera = Math.min(5 * 60 * 1000, 15 * 1000 * 2 ** (n - 1));
+        console.warn(`[DROPBOX-SIGN-MAIL] Vigilancia ${tenantId}: se cerró la conexión; reintento en ${Math.round(espera / 1000)} s.`);
+        setTimeout(() => {
+            if (vigilanciaActiva && !vigilancias.has(tenantId))
+                void vigilarCasilla(tenantId);
+        }, espera);
+    });
+    try {
+        await client.connect();
+        // Con el buzón abierto y sin comandos pendientes, imapflow entra solo en IDLE.
+        await client.mailboxOpen("INBOX");
+        reintentos.delete(tenantId);
+        console.log(`[DROPBOX-SIGN-MAIL] Vigilando la casilla de ${tenantId} (IDLE).`);
+    }
+    catch (e) {
+        // El evento `close` agenda el reintento; acá solo queda el motivo.
+        console.warn(`[DROPBOX-SIGN-MAIL] Vigilancia ${tenantId}: no se pudo conectar:`, motivoFalloImap(e));
+        client.close();
+    }
+}
+/**
+ * Rearma la vigilancia de un tenant con su configuración actual. Lo llama la ruta que guarda la
+ * casilla: una contraseña nueva o la lectura apagada tienen que regir sin reiniciar el servidor.
+ */
+export function actualizarVigilancia(tenantId) {
+    if (!vigilanciaActiva)
+        return;
+    reintentos.delete(tenantId);
+    void vigilarCasilla(tenantId);
+}
+/** El sondeo de respaldo: la vigilancia avisa en el momento, esto levanta lo que se haya perdido. */
+const TICK_MS = 15 * 60 * 1000;
+/** Arranca la vigilancia de las casillas y el sondeo de respaldo (lo llama server.ts al levantar). */
 export const initDropboxSignMailScheduler = () => {
     console.log("[DROPBOX-SIGN-MAIL] Initializing scheduler...");
+    vigilanciaActiva = true;
     setTimeout(() => {
         leerCasillasDeTodosLosTenants().catch((err) => console.error("[DROPBOX-SIGN-MAIL] Initial tick error:", err));
     }, 20 * 1000);

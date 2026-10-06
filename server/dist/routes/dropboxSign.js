@@ -4,7 +4,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
-import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
+import { leerCasillaDropboxSign, registrarLectura, actualizarVigilancia } from "../services/dropboxSignMailService.js";
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
  * "documento enviado" de Dropbox Sign.
@@ -89,6 +89,8 @@ router.put("/config", async (req, res) => {
             res.status(400).json({ error: "Para activar la lectura hay que cargar la contraseña de la casilla." });
             return;
         }
+        // La vigilancia por IDLE toma la configuración nueva (o se apaga) sin reiniciar el servidor.
+        actualizarVigilancia(String(req.tenantObjectId));
         res.json({ ok: true, tienePassword: !!cfg.imapPasswordEnc, enabled: !!cfg.enabled });
     }
     catch (error) {

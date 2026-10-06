@@ -37,7 +37,7 @@ describe("motivoFalloImap", () => {
   });
 });
 
-import { extraerArchivoDeAsunto, documentosDelAvisoEnOutbox, extraerIdentidadDeArchivo } from "./dropboxSignMailService.js";
+import { extraerArchivoDeAsunto, documentosDelAvisoEnOutbox, extraerIdentidadDeArchivo, yaEstaEnPendbox } from "./dropboxSignMailService.js";
 
 describe("aviso «Se inició el proceso de firma de …-Frame Firma Digital» (06/10/2026)", () => {
   const ASUNTO = "Se inició el proceso de firma de 426_LN+_AQUINO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20442166987_enzogabrielaquino01-ARROBA-gmail.com_Empresa-30717068374-Frame Firma Digital";
@@ -59,14 +59,25 @@ describe("aviso «Se inició el proceso de firma de …-Frame Firma Digital» (0
     assert.deepEqual(ident.fechas, ["20261001", "20261031"]);
   });
 
-  it("mueve el sobre entero de esa persona y período: alta, contrato y release", () => {
-    const sobre = documentosDelAvisoEnOutbox(OUTBOX, archivo, ident).map((d) => d.name.split("_")[3]);
-    assert.deepEqual(sobre.sort(), ["AltaAFIP", "Contrato", "Release"]);
+  it("mueve SOLO el archivo nombrado: no el contrato ni el release de la misma persona y período", () => {
+    assert.deepEqual(
+      documentosDelAvisoEnOutbox(OUTBOX, archivo, ident).map((d) => d.name),
+      ["426_LN+_AQUINO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20442166987_enzogabrielaquino01-ARROBA-gmail.com_Empresa-30717068374.pdf"],
+    );
   });
 
-  it("sin anclas, el archivo cuyo nombre es el principio del título", () => {
-    const sinAnclas = { ...ident, cuit: "", email: "", fechas: [] as string[] };
-    const r = documentosDelAvisoEnOutbox([f("Contrato-especial-de-Fulano-de-Tal.pdf"), f("Otro.pdf")], "Contrato-especial-de-Fulano-de-Tal-Frame Firma Digital", sinAnclas);
+  it("con el contrato ya en Pendbox, el aviso del alta NO es un duplicado", () => {
+    assert.equal(yaEstaEnPendbox([OUTBOX[1], OUTBOX[2]], archivo, ident), false);
+    assert.equal(yaEstaEnPendbox([OUTBOX[0]], archivo, ident), true);
+  });
+
+  it("un nombre que es el principio de otro no se confunde: después del nombre tiene que venir un separador", () => {
+    const corto = f("426_LN+_AQUINO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20442166987_enzogabrielaquino01-ARROBA-gmail.com_Empresa-3071706837.pdf");
+    assert.deepEqual(documentosDelAvisoEnOutbox([corto], archivo, ident), []);
+  });
+
+  it("un nombre cualquiera, con algo agregado al final del título", () => {
+    const r = documentosDelAvisoEnOutbox([f("Contrato-especial-de-Fulano-de-Tal.pdf"), f("Otro.pdf")], "Contrato-especial-de-Fulano-de-Tal-Frame Firma Digital");
     assert.deepEqual(r.map((d) => d.name), ["Contrato-especial-de-Fulano-de-Tal.pdf"]);
   });
 });

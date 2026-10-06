@@ -34,23 +34,25 @@ export declare function buscarEnOutbox(entries: {
     path: string;
 } | null;
 /**
- * TODOS los documentos del aviso que están en Outbox: el sobre entero.
+ * EL documento del aviso en Outbox: el archivo cuyo nombre completo (sin la extensión) es el título.
  *
- * «Enviar a firmar» manda juntos el contrato, su release y el alta, pero el aviso de Dropbox Sign
- * nombra UNO solo —el título de la solicitud, que además es editable: llegan títulos como
- * «<archivo>-Frame Firma Digital»—. Buscar ese único archivo dejaba el resto en Outbox, y si el
- * nombrado era el alta el contrato ni siquiera avanzaba (el escaneo de carpetas no mueve un contrato
- * por su alta). Así que se mueve todo lo de esa persona y ese período.
+ * Coinciden TODOS los campos —proyecto, persona, tipo, contrato, período, CUIT, email y empresa—, no
+ * solo la persona y el período: un alta, su contrato y su release comparten persona y período, y
+ * mover «lo de esa persona» se llevó a Pendbox los tres por un aviso que nombraba solo el alta.
  *
- * Por persona (CUIL o email) Y período: sin fechas en el aviso no hay forma de saber cuál de sus
- * documentos es, y ahí solo se acepta un candidato único. Sin anclas, por nombre: igual, o el
- * archivo cuyo nombre es el PRINCIPIO del título (el título le agregó un sufijo).
+ * Lo que el título tenga DESPUÉS del nombre no importa («…_Empresa-30717068374-Frame Firma
+ * Digital»): el título de la solicitud es editable y Dropbox Sign o quien envía le agregan cosas.
+ * Para que eso no confunda un nombre con otro más largo que lo contiene, después del nombre tiene que
+ * venir un separador, no una letra o un número; y si igual quedan dos, gana el más largo.
+ *
+ * Primero se compara el texto tal cual. Solo si no aparece nada, normalizado a letras y números (por
+ * si Dropbox Sign cambió algún símbolo), con la misma regla de «el título empieza con el nombre».
  */
 export declare function documentosDelAvisoEnOutbox(entries: {
     tag: string;
     name: string;
     path: string;
-}[], archivo: string, ident: AnclasNombre): {
+}[], archivo: string, _ident?: AnclasNombre): {
     name: string;
     path: string;
 }[];
@@ -69,7 +71,7 @@ export declare function documentosDelAvisoEnOutbox(entries: {
 export declare function yaEstaEnPendbox(entries: {
     tag: string;
     name: string;
-}[], archivo: string, ident: AnclasNombre): boolean;
+}[], archivo: string, _ident?: AnclasNombre): boolean;
 /** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
 export interface LineaLog {
     resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
@@ -104,18 +106,19 @@ export interface ResultadoLectura {
  * contraseña.
  */
 export declare function motivoFalloImap(e: any): string;
-/**
- * Lee la casilla del tenant y archiva en Pendbox un JSON por cada aviso de envío a firmar.
- * `soloPrueba` conecta y cuenta los avisos sin escribir nada (para el botón "Probar" de la config).
- */
 export declare function leerCasillaDropboxSign(tenantId: string, soloPrueba?: boolean): Promise<ResultadoLectura>;
 /**
  * Update de Mongo que deja registrada una lectura. La corrida se suma al historial solo si encontró
- * algo o si falló: el job corre cada 5 minutos y guardar las corridas vacías llenaría el documento
+ * algo o si falló: hay una lectura por cada mail que entra y otra cada 15 minutos, y guardar las vacías llenaría el documento
  * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
  */
 export declare function registrarLectura(r: ResultadoLectura): any;
-/** Corre la lectura para todos los tenants que la tengan activada (lo usa el scheduler). */
+/** Corre la lectura para todos los tenants que la tengan activada (el sondeo de respaldo). */
 export declare function leerCasillasDeTodosLosTenants(): Promise<void>;
-/** Arranca el chequeo periódico de la casilla (lo llama server.ts al levantar). */
+/**
+ * Rearma la vigilancia de un tenant con su configuración actual. Lo llama la ruta que guarda la
+ * casilla: una contraseña nueva o la lectura apagada tienen que regir sin reiniciar el servidor.
+ */
+export declare function actualizarVigilancia(tenantId: string): void;
+/** Arranca la vigilancia de las casillas y el sondeo de respaldo (lo llama server.ts al levantar). */
 export declare const initDropboxSignMailScheduler: () => void;

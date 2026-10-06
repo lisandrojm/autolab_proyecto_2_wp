@@ -275,10 +275,21 @@ describe("no se da por enviado un documento mirando otro", () => {
     assert.equal(yaEstaEnPendbox([archivo(anterior)], renovacion, leerAnclas(renovacion)), false);
   });
 
-  it("el mismo documento sí se reconoce, aunque el nombre venga transformado", () => {
+  it("el mismo documento sí se reconoce, aunque Dropbox Sign le cambie los símbolos", () => {
     const nombre = nombreDe();
-    const enPendbox = archivo(nombre.replace(/-ARROBA-/g, "_"));
+    const enPendbox = archivo(nombre.replace(/_/g, " "));
     assert.equal(yaEstaEnPendbox([enPendbox], nombre, leerAnclas(nombre)), true);
+  });
+
+  /*
+    POR NOMBRE COMPLETO, NO POR PERSONA Y PERÍODO (06/10/2026). Un alta, su contrato y su release
+    comparten persona y período: con el contrato en Pendbox, el aviso del alta se daba por repetido
+    y el alta no se movía nunca. Un nombre al que le falta un campo es OTRO documento.
+  */
+  it("otro documento de la misma persona y período no lo marca como enviado", () => {
+    const nombre = nombreDe();
+    const otro = archivo(nombre.replace(/-ARROBA-/g, "_"));
+    assert.equal(yaEstaEnPendbox([otro], nombre, leerAnclas(nombre)), false);
   });
 });
 
