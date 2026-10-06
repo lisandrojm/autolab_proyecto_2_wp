@@ -3,7 +3,9 @@ import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
 import { Company } from "../models/Company.js";
 import { Project } from "../models/Project.js";
 import { CentroCosto } from "../models/CentroCosto.js";
-import { PATRON_POR_DEFECTO, TipoNomenclatura, renderNomenclatura, recortarNombre } from "../utils/nomenclatura.js";
+import { PATRON_POR_DEFECTO, TipoNomenclatura, renderNomenclatura, recortarNombre, asegurarCodigo } from "../utils/nomenclatura.js";
+import { DocumentoGenerado, proximoNumeroDeDocumento, formatoCodigo } from "../models/DocumentoGenerado.js";
+import { fechaISO } from "../utils/contratoVigencia.js";
 import { datosNombreArchivo } from "../utils/employeeDocData.js";
 
 /**
@@ -79,22 +81,72 @@ export async function centroDeCostoDelProyecto(o: { projectId?: unknown; externa
  * bloques que los parsers de vuelta necesitan (ver `recortarNombre`). `reservar` es lo que el que
  * llama va a pegar después y todavía no está en el string — como mínimo la extensión.
  */
+/** A quién y a qué contrato pertenece el documento: lo que se guarda junto con su código. */
+export interface RegistroDocumento {
+  userId?: unknown;
+  userProjectId?: unknown;
+  projectId?: unknown;
+  contrato?: { indice?: number | null; alta?: string; baja?: string; carga?: string };
+}
+
+/**
+ * El código único de un documento nuevo («ID-000123») y su registro en `documentos_generados`.
+ *
+ * Si algo falla, devuelve "" y el documento sale igual, sin código: un nombre sin código se sigue
+ * reconociendo por el nombre completo, mientras que no poder generar el contrato no tiene arreglo.
+ */
+async function nuevoCodigo(tenantId: unknown, tipo: TipoNomenclatura, registro?: RegistroDocumento): Promise<{ codigo: string; guardar: (archivo: string) => Promise<void> }> {
+  const nada = { codigo: "", guardar: async () => {} };
+  if (!tenantId) return nada;
+  try {
+    const numero = await proximoNumeroDeDocumento(tenantId);
+    const codigo = formatoCodigo(numero);
+    const oid = (v: unknown) => (v && Types.ObjectId.isValid(String(v)) ? new Types.ObjectId(String(v)) : null);
+    return {
+      codigo,
+      guardar: async (archivo: string) => {
+        await DocumentoGenerado.create({
+          tenantId: oid(tenantId),
+          codigo,
+          numero,
+          tipo,
+          archivo,
+          userId: oid(registro?.userId),
+          userProjectId: oid(registro?.userProjectId),
+          projectId: oid(registro?.projectId),
+          contrato: registro?.contrato || {},
+        }).catch((e) => console.warn(`[NOMENCLATURA] No se pudo registrar ${codigo}:`, (e as any)?.message || e));
+      },
+    };
+  } catch (e) {
+    console.warn("[NOMENCLATURA] No se pudo pedir el código del documento; sale sin código:", (e as any)?.message || e);
+    return nada;
+  }
+}
+
 export async function nombreArchivo(
   tenantId: unknown,
   tipo: TipoNomenclatura,
   datos: Record<string, unknown>,
   reservar = 4,
+  /** De quién es el documento. Con esto el aviso de Dropbox Sign encuentra el contrato por el código. */
+  registro?: RegistroDocumento,
 ): Promise<string> {
-  const porDefecto = renderNomenclatura(PATRON_POR_DEFECTO[tipo], datos);
+  // Cada nombre que se genera es un documento nuevo, con su número. Quien ya trae uno, lo conserva.
+  const nuevo = datos.codigo ? null : await nuevoCodigo(tenantId, tipo, registro);
+  const conCodigo = nuevo ? { ...datos, codigo: nuevo.codigo } : datos;
+  const porDefecto = renderNomenclatura(PATRON_POR_DEFECTO[tipo], conCodigo);
+  let nombre: string;
   try {
     const fila = await NomenclaturaArchivo.findOne({ tenantId: tenantId as any, tipo }).select("patron").lean();
-    if (!fila?.patron) return recortarNombre(porDefecto, reservar);
-    const nombre = renderNomenclatura(fila.patron, datos);
-    return recortarNombre(nombre || porDefecto, reservar);
+    // Todo patrón lleva el código, aunque el guardado sea de antes de que existiera.
+    nombre = recortarNombre((fila?.patron && renderNomenclatura(asegurarCodigo(fila.patron), conCodigo)) || porDefecto, reservar);
   } catch (e) {
     console.warn("[NOMENCLATURA] No pude leer el patrón configurado; uso el de por defecto:", (e as any)?.message || e);
-    return recortarNombre(porDefecto, reservar);
+    nombre = recortarNombre(porDefecto, reservar);
   }
+  if (nuevo) await nuevo.guardar(nombre);
+  return nombre;
 }
 
 /** Atajo para los documentos de un contrato: arma los datos y aplica el patrón. */
@@ -119,5 +171,26 @@ export async function nombreArchivoDocumento(opts: {
   const { tenantId, tipo, empresa, ...resto } = opts;
   const valoresEmpresa = empresa ? empresaAValores(empresa) : await datosEmpresa(resto.contract?.empresaContratoId, resto.contract?.nombre_empresa_contrato);
   const centroDeCosto = await centroDeCostoDelProyecto({ projectId: resto.up?.projectId, externalProjectId: resto.up?.externalProjectId ?? resto.contract?.proyecto_id });
-  return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...valoresEmpresa, centroDeCosto });
+  return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...valoresEmpresa, centroDeCosto }, 4, registroDelContrato(resto.user, resto.up, resto.contract));
+}
+
+/**
+ * De quién es un documento de contrato: la persona, su vínculo con el proyecto y el contrato.
+ *
+ * El contrato se guarda por su posición Y por sus fechas: casi ninguno tiene `_id`, y la posición se
+ * corre si se borra uno anterior. La posición se busca por identidad o, si llegó una copia
+ * (`toObject`), por las mismas fechas de alta, baja y carga.
+ */
+function registroDelContrato(user: any, up: any, contract: any): RegistroDocumento {
+  const c: any = contract || {};
+  const contratos: any[] = Array.isArray(up?.contracts) ? up.contracts : [];
+  const mismo = (x: any) => x === c || (fechaISO(x?.fecha_alta_contrato) === fechaISO(c.fecha_alta_contrato) && fechaISO(x?.fecha_baja_contrato) === fechaISO(c.fecha_baja_contrato) && String(x?.fecha_carga ?? "") === String(c.fecha_carga ?? ""));
+  const indice = contratos.findIndex(mismo);
+  const pid = up?.projectId;
+  return {
+    userId: user?._id,
+    userProjectId: up?._id,
+    projectId: typeof pid === "object" && pid?._id ? pid._id : pid,
+    contrato: { indice: indice >= 0 ? indice : null, alta: fechaISO(c.fecha_alta_contrato), baja: fechaISO(c.fecha_baja_contrato), carga: String(c.fecha_carga ?? "") },
+  };
 }

@@ -46,7 +46,21 @@ export declare function centroDeCostoDelProyecto(o: {
  * bloques que los parsers de vuelta necesitan (ver `recortarNombre`). `reservar` es lo que el que
  * llama va a pegar después y todavía no está en el string — como mínimo la extensión.
  */
-export declare function nombreArchivo(tenantId: unknown, tipo: TipoNomenclatura, datos: Record<string, unknown>, reservar?: number): Promise<string>;
+/** A quién y a qué contrato pertenece el documento: lo que se guarda junto con su código. */
+export interface RegistroDocumento {
+    userId?: unknown;
+    userProjectId?: unknown;
+    projectId?: unknown;
+    contrato?: {
+        indice?: number | null;
+        alta?: string;
+        baja?: string;
+        carga?: string;
+    };
+}
+export declare function nombreArchivo(tenantId: unknown, tipo: TipoNomenclatura, datos: Record<string, unknown>, reservar?: number, 
+/** De quién es el documento. Con esto el aviso de Dropbox Sign encuentra el contrato por el código. */
+registro?: RegistroDocumento): Promise<string>;
 /** Atajo para los documentos de un contrato: arma los datos y aplica el patrón. */
 export declare function nombreArchivoDocumento(opts: {
     tenantId: unknown;

@@ -4,7 +4,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
 import { CentroCosto } from "../models/CentroCosto.js";
-import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura, campoNomenclatura, MAX_NOMBRE, largoEnBytes } from "../utils/nomenclatura.js";
+import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura, campoNomenclatura, MAX_NOMBRE, largoEnBytes, asegurarCodigo } from "../utils/nomenclatura.js";
 import { emailNomenclatura } from "../utils/employeeDocData.js";
 
 const router = Router();
@@ -47,6 +47,7 @@ const EJEMPLO: Record<string, string> = {
   fecha: "20261005",
   empresa: "2030 S.R.L.",
   empresaCuit: "30717068374",
+  codigo: "ID-000123",
 };
 
 /** Solo los valores de las variables que ESE tipo ofrece: mostrar el resto confunde más que ayuda. */
@@ -133,7 +134,8 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       await Promise.all(
         TIPOS_NOMENCLATURA.map(async (tipo) => {
         const fila: any = porTipo.get(tipo);
-        const patron = fila?.patron || PATRON_POR_DEFECTO[tipo];
+        // Con `{{codigo}}` aunque el guardado no lo tenga: es el que rige al generar (ver `asegurarCodigo`).
+        const patron = asegurarCodigo(fila?.patron || PATRON_POR_DEFECTO[tipo]);
         return {
           tipo,
           patron,
@@ -169,7 +171,8 @@ router.post("/previsualizar", async (req: AuthenticatedRequest & TenantRequest, 
     res.status(400).json({ error: "Tipo de documento desconocido." });
     return;
   }
-  const patron = String(req.body?.patron ?? "");
+  // Igual que al guardar: el código se agrega solo, así que el preview muestra el nombre que va a salir.
+  const patron = asegurarCodigo(String(req.body?.patron ?? ""));
   res.json({ errores: validarPatron(tipo, patron), ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }), valores: valoresDe(tipo), largo: await medirLargo(tipo, patron) });
 });
 
@@ -187,7 +190,8 @@ router.put("/:tipo", async (req: AuthenticatedRequest & TenantRequest, res) => {
       res.status(400).json({ error: "Tipo de documento desconocido." });
       return;
     }
-    const patron = String(req.body?.patron ?? "").trim();
+    // Se guarda CON el código aunque no lo hayan escrito: sin él el documento no se reconoce al volver.
+    const patron = asegurarCodigo(String(req.body?.patron ?? "").trim());
     const errores = validarPatron(tipo, patron);
     if (errores.length > 0) {
       res.status(400).json({ error: errores.map((e) => e.motivo).join(" "), errores });

@@ -12,7 +12,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE, TOPES_CAMPO } from "./nomenclatura.js";
+import { asegurarCodigo, validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE, TOPES_CAMPO } from "./nomenclatura.js";
 import { emailNomenclatura, MARCA_ARROBA, buildIdentidadTag } from "./employeeDocData.js";
 import { leerAnclas } from "./anclasNombre.js";
 /**
@@ -25,6 +25,8 @@ import { leerAnclas } from "./anclasNombre.js";
 const PARSERS_CUIL = /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/;
 /** Los mismos datos que usa la previsualización del ABM. */
 const DATOS = {
+    // El código único del documento (`{{codigo}}`): va en todos los patrones desde el 06/10/2026.
+    codigo: "ID-000123",
     apellido: "gonzalez-rotstein",
     nombres: "juan-manuel",
     proyecto: "426_LN+",
@@ -121,23 +123,23 @@ describe("el default rinde el nombre de siempre", () => {
      * PARA QUIÉN. El proyecto primero agrupa las carpetas por proyecto al ordenar por nombre; la
      * empleadora al final porque es el campo más largo y el que menos se busca.
      */
-    it("arranca con el proyecto y termina con la empleadora", () => {
+    it("arranca con el proyecto y termina con la empleadora y el código", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_D-20260810_H--_20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
+        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_D-20260810_H--_20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839_ID-000123");
         assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
-        assert.ok(nombre.endsWith("_Empresa-30710295839"), "el CUIT de la empleadora va último");
+        assert.ok(nombre.endsWith("_Empresa-30710295839_ID-000123"), "el CUIT de la empleadora va último, antes del código");
     });
     /**
      * Los siete tipos comparten el mismo esqueleto. Quien mira una carpeta con contratos, pedidos y
      * vacaciones mezclados lee siempre los mismos campos en el mismo lugar; cada tipo cambia solo en lo
      * que de verdad tiene distinto (un período contra un número).
      */
-    it("todos empiezan por centro de costo y proyecto, y terminan en la empleadora", () => {
+    it("todos empiezan por centro de costo y proyecto, y terminan en la empleadora y el código", () => {
         for (const tipo of TIPOS_NOMENCLATURA) {
             const p = PATRON_POR_DEFECTO[tipo];
             assert.ok(p.startsWith("{{centroDeCosto}}_{{proyecto}}_"), `${tipo} no arranca con el centro de costo y el proyecto: ${p}`);
-            // Sin el «_» delante: la etiqueta `EMPRESA-` vive en el patrón desde que el CUIT sale pelado.
-            assert.ok(p.endsWith("{{empresaCuit}}"), `${tipo} no termina con el CUIT de la empleadora: ${p}`);
+            // La empleadora al final, y después solo el código único del documento.
+            assert.ok(p.endsWith("Empresa-{{empresaCuit}}_{{codigo}}"), `${tipo} no termina con la empleadora y el código: ${p}`);
             // `{{nombres}}` salió del default: con el apellido y el CUIL alcanza para saber de quién es, y
             // eran los caracteres que faltaban para entrar en 255. Se sigue ofreciendo por si hace falta.
             assert.match(p, /\{\{apellido\}\}_\{\{tipo\}\}/, `${tipo} no respeta el orden persona → documento`);
@@ -181,7 +183,7 @@ describe("el default rinde el nombre de siempre", () => {
     });
     it("los de pedidos y vacaciones también conservan su identidad", () => {
         const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
-        assert.equal(pedido, "426-LN+_gonzalez-rotstein_Pedido_1042_20260821_20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
+        assert.equal(pedido, "426-LN+_gonzalez-rotstein_Pedido_1042_20260821_20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839_ID-000123");
         assert.match(pedido, PARSERS_CUIL);
     });
 });
@@ -272,7 +274,7 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
     it("la empleadora cierra el nombre en todos los tipos", () => {
         for (const tipo of TIPOS_NOMENCLATURA) {
             const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
-            assert.ok(nombre.endsWith("_Empresa-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
+            assert.ok(nombre.endsWith("_Empresa-30710295839_ID-000123"), `${tipo} termina en: ${nombre.slice(-60)}`);
         }
     });
 });
@@ -633,5 +635,24 @@ describe("{{centroDeCosto}}", () => {
     it("sin centro de costo el campo se cae y el nombre sigue siendo válido", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.AltaAFIP, { proyecto: "LN+", apellido: "AQUINO", tipo: "AltaAFIP", fechaAlta: "20261001", fechaBaja: "20261031", cuit: "20442166987" });
         assert.ok(nombre.startsWith("LN+_AQUINO_"), nombre);
+    });
+});
+describe("{{codigo}}: el código único del documento va en todos los patrones", () => {
+    it("los siete patrones de fábrica lo traen, al final", () => {
+        for (const tipo of TIPOS_NOMENCLATURA)
+            assert.ok(PATRON_POR_DEFECTO[tipo].endsWith("_{{codigo}}"), tipo);
+    });
+    it("a un patrón guardado sin código se le agrega al final, y uno que ya lo tiene no se toca", () => {
+        assert.equal(asegurarCodigo("{{proyecto}}_{{cuit}}_"), "{{proyecto}}_{{cuit}}_{{codigo}}");
+        assert.equal(asegurarCodigo("{{codigo}}_{{proyecto}}"), "{{codigo}}_{{proyecto}}");
+    });
+    it("es obligatorio, pero un patrón escrito sin él es válido: se completa solo", () => {
+        for (const tipo of TIPOS_NOMENCLATURA)
+            assert.ok(VARIABLES_POR_TIPO[tipo].some((v) => v.variable === "{{codigo}}" && v.requerida), tipo);
+        assert.deepEqual(validarPatron("Contrato", PATRON_POR_DEFECTO.Contrato.replace("_{{codigo}}", "")), []);
+    });
+    it("no se recorta nunca, aunque el nombre no entre en 255", () => {
+        const largo = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, contrato: "x".repeat(300) });
+        assert.ok(recortarNombre(largo).endsWith("_ID-000123"));
     });
 });

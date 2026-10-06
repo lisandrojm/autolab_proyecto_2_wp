@@ -65,3 +65,24 @@ describe("aviso «Se inició el proceso de firma de …-Frame Firma Digital» (0
         assert.deepEqual(r.map((d) => d.name), ["Contrato-especial-de-Fulano-de-Tal.pdf"]);
     });
 });
+describe("con código único (ID-000123): el aviso apunta a UN documento", () => {
+    const f = (name) => ({ tag: "file", name, path: `/Outbox/${name}` });
+    const base = "426_LN+_AQUINO_{T}_Plazo-fijo-6x6_D-20261001_H-20261031_20442166987_enzogabrielaquino01-ARROBA-gmail.com_Empresa-30717068374";
+    const OUTBOX = [f(`${base.replace("{T}", "AltaAFIP")}_ID-000201.pdf`), f(`${base.replace("{T}", "Contrato")}_ID-000202.pdf`), f(`${base.replace("{T}", "Release")}_ID-000203.pdf`)];
+    const asunto = (codigo) => `Se inició el proceso de firma de ${base.replace("{T}", "AltaAFIP")}_${codigo}-Frame Firma Digital`;
+    it("el código se lee del asunto aunque el título traiga algo pegado atrás", () => {
+        assert.equal(extraerIdentidadDeArchivo(extraerArchivoDeAsunto(asunto("ID-000201"))).codigo, "ID-000201");
+    });
+    it("mueve solo el documento de ese código", () => {
+        const archivo = extraerArchivoDeAsunto(asunto("ID-000201"));
+        assert.deepEqual(documentosDelAvisoEnOutbox(OUTBOX, archivo).map((d) => d.name), [OUTBOX[0].name]);
+    });
+    it("un código que no está en Outbox no mueve nada, aunque el resto del nombre coincida", () => {
+        assert.deepEqual(documentosDelAvisoEnOutbox(OUTBOX, extraerArchivoDeAsunto(asunto("ID-000999"))), []);
+    });
+    it("ya enviado = ese código en Pendbox; otro documento de Aquino en Pendbox no cuenta", () => {
+        const archivo = extraerArchivoDeAsunto(asunto("ID-000201"));
+        assert.equal(yaEstaEnPendbox([OUTBOX[1], OUTBOX[2]], archivo), false);
+        assert.equal(yaEstaEnPendbox([OUTBOX[0]], archivo), true);
+    });
+});

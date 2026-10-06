@@ -58,8 +58,17 @@ export const RE_CUIL_ETIQUETADO = /(?:^|_)CUIL-(\d{11})/i;
  * va primera en el nombre, sin ese anclaje se leería como tipo LE + número ROY.
  */
 export const RE_DOCUMENTO = /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/i;
-/** Una fecha YYYYMMDD aislada, salteando las que son en realidad el número de documento. */
-export const RE_FECHA = /(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g;
+/** Una fecha YYYYMMDD aislada, salteando las que son en realidad el número de documento o el código. */
+export const RE_FECHA = /(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC|ID)-)(\d{8})(?!\d)/g;
+/**
+ * El CÓDIGO ÚNICO del documento (`{{codigo}}`): «ID-000123». Es lo primero que se mira cuando un
+ * archivo vuelve, porque apunta a UN registro de `documentos_generados` sin deducir nada del resto.
+ *
+ * «ID-» y no «DOC-»: `DOC-` ya es la sigla del documento de quien no tiene CUIL (`RE_DOCUMENTO`), y
+ * `_DOC-000123` se habría leído como un número de documento. No puede estar pegado a una letra o un
+ * número de adelante (un email terminado en «…id») ni seguido de otro dígito.
+ */
+export const RE_CODIGO = /(?<![A-Za-z0-9])(ID-\d{6,})(?!\d)/;
 /**
  * El email, que dentro del nombre lleva el "@" escrito como `-ARROBA-` (ver `emailNomenclatura`).
  *
@@ -126,6 +135,7 @@ export function leerAnclas(nombreArchivo) {
         documento: doc ? doc[2] : "",
         fechas,
         email: leerEmail(nombre),
+        codigo: RE_CODIGO.exec(nombre)?.[1] || "",
     };
 }
 /**
@@ -206,5 +216,5 @@ export function esCampoAncla(campo) {
     // La forma con guiones (20-33150102-7) no sale nunca de la plataforma —el CUIT se escribe pelado—,
     // pero `leerAnclas` la lee, y un archivo renombrado a mano en Dropbox puede traerla. Si se puede
     // LEER, no se puede RECORTAR: si no, el recorte rompería un nombre que el circuito sí entendía.
-    return RE_CUIL_ETIQUETADO.test(campo) || /^(DNI|CI|LE|LC|PAS|DOC)-/i.test(campo) || /^\d{8}$/.test(campo) || /\d{11}/.test(campo) || RE_CUIT_SUELTO.test(campo);
+    return RE_CUIL_ETIQUETADO.test(campo) || /^(DNI|CI|LE|LC|PAS|DOC|ID)-/i.test(campo) || /^\d{8}$/.test(campo) || /\d{11}/.test(campo) || RE_CUIT_SUELTO.test(campo);
 }

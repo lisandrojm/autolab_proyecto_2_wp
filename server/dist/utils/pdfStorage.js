@@ -52,7 +52,7 @@ datosNombre) {
         const cuit = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
         // El patrón lo define el ABM de Nomenclatura de archivos (Plantillas). Sin configurar, el default
         // reproduce exactamente este nombre: por eso esto se pudo soltar sin migrar ni renombrar nada.
-        const filename = `${await nombreArchivo(tenantId, "Pedido", { ...(datosNombre || {}), tipo: "Pedido", numero: sanitizedOrderNumber, cuit, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
+        const filename = `${await nombreArchivo(tenantId, "Pedido", { ...(datosNombre || {}), tipo: "Pedido", numero: sanitizedOrderNumber, cuit, timestamp, fecha: String(timestamp).slice(0, 8) }, 4, { userId })}.pdf`;
         console.log("[PDF STORAGE] Filename:", filename);
         const filePath = path.join(storageDir, filename);
         console.log("[PDF STORAGE] Full file path:", filePath);
@@ -103,7 +103,7 @@ datosNombre) {
         const timestamp = Date.now();
         const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
         const cuit = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
-        const filename = `${await nombreArchivo(tenantId, "Vacacion", { ...(datosNombre || {}), tipo: "Vacacion", numero: sanitizedVacationNumber, cuit, timestamp, fecha: String(timestamp).slice(0, 8), anio: String(timestamp).slice(0, 4) })}.pdf`;
+        const filename = `${await nombreArchivo(tenantId, "Vacacion", { ...(datosNombre || {}), tipo: "Vacacion", numero: sanitizedVacationNumber, cuit, timestamp, fecha: String(timestamp).slice(0, 8), anio: String(timestamp).slice(0, 4) }, 4, { userId })}.pdf`;
         console.log("[PDF STORAGE] Filename:", filename);
         const filePath = path.join(storageDir, filename);
         console.log("[PDF STORAGE] Full file path:", filePath);

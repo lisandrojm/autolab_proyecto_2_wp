@@ -84,6 +84,10 @@ const V = {
   // afuera es un CUIT y nada más, y `{{cuit}}` dice qué sale sin tener que abrir la ayuda. El nombre
   // viejo sigue funcionando: ver ALIAS.
   cuit: { variable: "{{cuit}}", descripcion: "CUIT/CUIL de la persona, 11 dígitos (o su documento, si no tiene CUIL)", grupo: G.identificacion },
+  // EL CÓDIGO ÚNICO DEL DOCUMENTO. Es lo que usa el circuito de Dropbox Sign para saber de qué documento
+  // habla un aviso sin deducirlo del resto del nombre (ver `DocumentoGenerado`). Va siempre: si un
+  // patrón guardado no lo tiene, se le agrega al final (`asegurarCodigo`).
+  codigo: { variable: "{{codigo}}", descripcion: "Código único del documento (ej. ID-000123). Lo usa la plataforma para reconocerlo cuando vuelve de la firma", grupo: G.identificacion },
   tipo: { variable: "{{tipo}}", descripcion: "Tipo de documento (Contrato, Release…)", grupo: G.documento },
   contrato: { variable: "{{contrato}}", descripcion: "Nombre del tipo de contrato (ej. Jornada 2030 SRL)", grupo: G.documento },
   docName: { variable: "{{docName}}", descripcion: "Nombre de la plantilla usada", grupo: G.documento },
@@ -133,6 +137,7 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
     { ...V.email, requerida: true },
     V.extra,
     V.empresaCuit,
+    { ...V.codigo, requerida: true },
   ];
   return {
     Contrato: deContrato,
@@ -146,8 +151,8 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
     // Pedidos y Vacaciones también se firman y vuelven. No tienen período —no son un contrato— así que
     // lo que los ancla es su NÚMERO: es lo que permite decir "este PDF firmado es el pedido 1042 de
     // esta persona" y no solo "es un pedido de esta persona".
-    Pedido: [V.centroDeCosto, V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
-    Vacacion: [V.centroDeCosto, V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
+    Pedido: [V.centroDeCosto, V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, { ...V.codigo, requerida: true }, V.timestamp],
+    Vacacion: [V.centroDeCosto, V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, { ...V.codigo, requerida: true }, V.timestamp],
   };
 })();
 
@@ -173,15 +178,15 @@ export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
     vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
     que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
   */
-  const deContrato = "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}";
+  const deContrato = "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}_{{codigo}}";
   return {
     Contrato: deContrato,
     Release: deContrato,
     AltaAFIP: deContrato,
     ConstanciaCUIT: deContrato,
     Documentacion: deContrato,
-    Pedido: "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
-    Vacacion: "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
+    Pedido: "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}_{{codigo}}",
+    Vacacion: "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}_{{codigo}}",
   };
 })();
 
@@ -228,6 +233,21 @@ export const VARIABLES_COMPUESTAS = new Set(["cuit", "identidad"]);
  */
 const VARIABLES_RETIRADAS: Record<string, string> = {
   "{{empresa}}": "la empleadora ya se identifica con {{empresaCuit}}, que ocupa la mitad",
+};
+
+/**
+ * El patrón con `{{codigo}}`: si no lo tiene, se le agrega al FINAL.
+ *
+ * Se aplica al leer cualquier patrón —el que genera archivos y el que muestra el ABM—, así que todos
+ * los guardados lo llevan desde ya sin tener que migrar la base, y al editarlos el ABM los muestra con
+ * el código para que se guarden así. Al final y no en otro lado: es lo que menos se mira del nombre, y
+ * lo que se agregue después del nombre (el título de Dropbox Sign suma «-Frame Firma Digital») no lo
+ * afecta, porque se lo busca por su forma («ID-» + dígitos) y no por su posición.
+ */
+export const asegurarCodigo = (patron: string): string => {
+  const p = String(patron || "").trim();
+  if (!p || /\{\{\s*codigo\s*\}\}/.test(p)) return p;
+  return `${p.replace(/[_\s]+$/, "")}_{{codigo}}`;
 };
 
 /** Las variables que un patrón menciona, en orden y sin repetir. */
@@ -325,7 +345,9 @@ export interface ErrorPatron {
  *  2. no hay variables inventadas (renderizarían vacío en producción, y el ABM se vería bien);
  *  3. queda algo además de separadores (un patrón que rinde "" produce archivos sin nombre).
  */
-export function validarPatron(tipo: TipoNomenclatura, patron: string): ErrorPatron[] {
+export function validarPatron(tipo: TipoNomenclatura, patronEscrito: string): ErrorPatron[] {
+  // Se valida el patrón tal como va a regir: con `{{codigo}}`, que se agrega solo si falta.
+  const patron = asegurarCodigo(patronEscrito);
   const errores: ErrorPatron[] = [];
   const disponibles = VARIABLES_POR_TIPO[tipo] || [];
   const usadas = variablesUsadas(patron);

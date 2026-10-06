@@ -86,6 +86,16 @@ export declare const campoNomenclatura: (v: unknown) => string;
  * identificar el documento de la persona. Se veía perfecto y estaba roto.
  */
 export declare const VARIABLES_COMPUESTAS: Set<string>;
+/**
+ * El patrón con `{{codigo}}`: si no lo tiene, se le agrega al FINAL.
+ *
+ * Se aplica al leer cualquier patrón —el que genera archivos y el que muestra el ABM—, así que todos
+ * los guardados lo llevan desde ya sin tener que migrar la base, y al editarlos el ABM los muestra con
+ * el código para que se guarden así. Al final y no en otro lado: es lo que menos se mira del nombre, y
+ * lo que se agregue después del nombre (el título de Dropbox Sign suma «-Frame Firma Digital») no lo
+ * afecta, porque se lo busca por su forma («ID-» + dígitos) y no por su posición.
+ */
+export declare const asegurarCodigo: (patron: string) => string;
 /** Las variables que un patrón menciona, en orden y sin repetir. */
 export declare const variablesUsadas: (patron: string) => string[];
 /**
@@ -131,7 +141,7 @@ export interface ErrorPatron {
  *  2. no hay variables inventadas (renderizarían vacío en producción, y el ABM se vería bien);
  *  3. queda algo además de separadores (un patrón que rinde "" produce archivos sin nombre).
  */
-export declare function validarPatron(tipo: TipoNomenclatura, patron: string): ErrorPatron[];
+export declare function validarPatron(tipo: TipoNomenclatura, patronEscrito: string): ErrorPatron[];
 /**
  * Tope de caracteres por campo, para los que dependen de lo que alguien cargó en su ABM.
  *

@@ -58,8 +58,17 @@ export declare const RE_CUIL_ETIQUETADO: RegExp;
  * va primera en el nombre, sin ese anclaje se leería como tipo LE + número ROY.
  */
 export declare const RE_DOCUMENTO: RegExp;
-/** Una fecha YYYYMMDD aislada, salteando las que son en realidad el número de documento. */
+/** Una fecha YYYYMMDD aislada, salteando las que son en realidad el número de documento o el código. */
 export declare const RE_FECHA: RegExp;
+/**
+ * El CÓDIGO ÚNICO del documento (`{{codigo}}`): «ID-000123». Es lo primero que se mira cuando un
+ * archivo vuelve, porque apunta a UN registro de `documentos_generados` sin deducir nada del resto.
+ *
+ * «ID-» y no «DOC-»: `DOC-` ya es la sigla del documento de quien no tiene CUIL (`RE_DOCUMENTO`), y
+ * `_DOC-000123` se habría leído como un número de documento. No puede estar pegado a una letra o un
+ * número de adelante (un email terminado en «…id») ni seguido de otro dígito.
+ */
+export declare const RE_CODIGO: RegExp;
 /**
  * El email, que dentro del nombre lleva el "@" escrito como `-ARROBA-` (ver `emailNomenclatura`).
  *
@@ -94,6 +103,8 @@ export interface AnclasNombre {
     fechas: string[];
     /** Email reconstruido (con su "@"), en minúsculas. "" si el nombre no lo trae. */
     email: string;
+    /** El código único del documento («ID-000123»). "" en los nombres generados antes de que existiera. */
+    codigo: string;
 }
 /**
  * Compara direcciones sin depender de los símbolos.

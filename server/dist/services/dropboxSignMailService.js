@@ -9,6 +9,7 @@ import UserProject from "../models/UserProject.js";
 import { Info } from "../models/Info.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 import { aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
+import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
 /**
  * Detección de "documento enviado a firmar" leyendo la casilla de correo.
  *
@@ -125,6 +126,14 @@ export function buscarEnOutbox(entries, archivo, ident) {
  */
 export function documentosDelAvisoEnOutbox(entries, archivo, _ident) {
     const pdfs = entries.filter((e) => e.tag === "file" && !/\.json$/i.test(e.name));
+    /*
+      CON CÓDIGO («ID-000123»), EL CÓDIGO Y NADA MÁS. Es único por documento: no hace falta comparar el
+      resto del nombre, y no se cae a la comparación por nombre si no aparece — un código que no está
+      en la carpeta es un documento que no está, no uno que haya que adivinar por parecido.
+    */
+    const codigo = leerAnclas(archivo).codigo;
+    if (codigo)
+        return pdfs.filter((e) => leerAnclas(e.name).codigo === codigo).slice(0, 1);
     const titulo = String(archivo || "").trim();
     const sinExtension = (n) => n.replace(/\.[a-z0-9]{2,4}$/i, "").trim();
     const elMasLargo = (xs) => (xs.length === 0 ? [] : [xs.reduce((a, b) => (sinExtension(b.name).length > sinExtension(a.name).length ? b : a))]);
@@ -174,6 +183,28 @@ async function contratoDelAviso(tenantId, ident) {
     return candidatos.length === 1 ? candidatos[0] : null;
 }
 /**
+ * El contrato de un documento con código: el que quedó registrado en `documentos_generados` al
+ * generarlo. Se lo busca por sus fechas (no cambian) y, si no aparece, por la posición guardada.
+ */
+async function contratoDelCodigo(tenantId, codigo) {
+    const doc = await DocumentoGenerado.findOne({ tenantId, codigo }).lean();
+    if (!doc?.userProjectId)
+        return null;
+    const up = await UserProject.findById(doc.userProjectId);
+    if (!up)
+        return null;
+    const c = doc.contrato || {};
+    const contratos = up.contracts || [];
+    const porFechas = contratos
+        .map((x, idx) => ({ x, idx }))
+        .filter(({ x }) => fechaISO(x.fecha_alta_contrato) === (c.alta || "") && fechaISO(x.fecha_baja_contrato) === (c.baja || "") && (!c.carga || String(x.fecha_carga ?? "") === c.carga));
+    if (porFechas.length === 1)
+        return { up, idx: porFechas[0].idx };
+    if (typeof c.indice === "number" && contratos[c.indice])
+        return { up, idx: c.indice };
+    return null;
+}
+/**
  * Pasa el contrato al estado de Pendbox («Enviado a la firma») EN EL MOMENTO.
  *
  * El estado destino es el que tiene configurada la carpeta Pendbox (Configuración → Documentos →
@@ -186,7 +217,10 @@ async function avanzarContratoDelAviso(tenantId, ident) {
         const destino = estado ? await Info.findOne({ type: "estado-empleado", name: estado }) : null;
         if (!destino)
             return " No hay un estado con la carpeta Pendbox configurada: el estado no cambió.";
-        const contrato = await contratoDelAviso(tenantId, ident);
+        // Con código, el contrato es el que quedó registrado al generar el documento; sin código, se deduce.
+        const contrato = ident.codigo ? await contratoDelCodigo(tenantId, ident.codigo) : await contratoDelAviso(tenantId, ident);
+        if (ident.codigo && !contrato)
+            return ` El código ${ident.codigo} no tiene un contrato registrado: el estado no cambió.`;
         if (!contrato)
             return " No se pudo identificar un único contrato de esa persona y período: el estado no cambió.";
         const r = await aplicarTransicion(contrato.up, contrato.idx, destino);

@@ -17,6 +17,8 @@ import { buscarEnOutbox, yaEstaEnPendbox } from "../services/dropboxSignMailServ
 
 /** Los mismos datos que usa la previsualización del ABM, con un período cerrado de verdad. */
 const DATOS = {
+  // El código único del documento (`{{codigo}}`): va en todos los patrones desde el 06/10/2026.
+  codigo: "ID-000123",
   apellido: "gonzalez-rotstein",
   nombres: "juan-manuel",
   proyecto: "426_LN+",
@@ -33,7 +35,18 @@ const DATOS = {
   empresaCuit: "30710295839",
 };
 
-const nombreDe = (over: Record<string, unknown> = {}) => renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, ...over });
+/*
+  Cada documento distinto tiene su propio código, como en la realidad: se deriva de lo que cambia
+  respecto de DATOS. Los mismos datos dan el mismo código (es el mismo documento); otros datos, otro.
+  Con un código fijo, un contrato y su renovación habrían sido «el mismo documento».
+*/
+const codigoDe = (over: Record<string, unknown>): string => {
+  const clave = JSON.stringify(over);
+  let h = 0;
+  for (const ch of clave) h = (h * 31 + ch.charCodeAt(0)) % 1_000_000;
+  return `ID-${String(h).padStart(6, "0")}`;
+};
+const nombreDe = (over: Record<string, unknown> = {}) => renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, codigo: codigoDe(over), ...over });
 
 const archivo = (name: string) => ({ tag: "file", name, path: `/HelloSign/Outbox/${name}` });
 
@@ -287,9 +300,17 @@ describe("no se da por enviado un documento mirando otro", () => {
     y el alta no se movía nunca. Un nombre al que le falta un campo es OTRO documento.
   */
   it("otro documento de la misma persona y período no lo marca como enviado", () => {
+    const alta = nombreDe({ tipo: "AltaAFIP" });
+    const release = nombreDe({ tipo: "Release" });
+    assert.equal(yaEstaEnPendbox([archivo(release)], alta, leerAnclas(alta)), false);
+  });
+
+  it("con código, el código decide: el mismo código es el mismo documento aunque el nombre cambie", () => {
     const nombre = nombreDe();
-    const otro = archivo(nombre.replace(/-ARROBA-/g, "_"));
-    assert.equal(yaEstaEnPendbox([otro], nombre, leerAnclas(nombre)), false);
+    const codigo = leerAnclas(nombre).codigo;
+    assert.match(codigo, /^ID-\d{6}$/);
+    assert.equal(yaEstaEnPendbox([archivo(`otro-nombre-cualquiera_${codigo}.pdf`)], nombre, leerAnclas(nombre)), true);
+    assert.equal(yaEstaEnPendbox([archivo(nombre.replace(codigo, "ID-999999"))], nombre, leerAnclas(nombre)), false);
   });
 });
 
