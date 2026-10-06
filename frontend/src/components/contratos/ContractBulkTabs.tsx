@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt } from '@fortawesome/free-solid-svg-icons';
+import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
 import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
@@ -646,6 +647,29 @@ const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: Afip
         </option>
       ))}
     </select>
+  );
+};
+
+/**
+ * «Renovar» un contrato vencido: abre el wizard del equipo con ESE contrato precargado tal cual y las
+ * fechas vacías. Guarda un contrato NUEVO al lado del vencido, que queda en el historial (ver
+ * `renovando` en `ProjectTeamPage`).
+ */
+const BotonRenovar: React.FC<{ record: ContractOverviewRow }> = ({ record }) => {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigate(`/projects/${record.projectId}/team`, { state: { openWizardFor: { userId: record.userId, contractIndex: record.contractIndex, renovar: true } } });
+      }}
+      title="Crear un contrato nuevo con los mismos datos de éste, para cargarle las fechas"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-green-600 text-white hover:bg-green-700 transition-colors whitespace-nowrap"
+    >
+      <FontAwesomeIcon icon={faRotateRight} className="h-2.5 w-2.5" />
+      Renovar
+    </button>
   );
 };
 
@@ -2559,7 +2583,10 @@ export const ContractBulkAfipTab: React.FC<{
                         const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
                         return (
                           <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                              {!vigente && <BotonRenovar record={r} />}
+                            </div>
                             <div className="flex flex-col gap-0.5 text-xs">
                               <span>
                                 <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
@@ -3658,6 +3685,11 @@ export const ContractBulkFirmaTab: React.FC<{
                       Trámite
                     </BotonOrden>
                   </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="tipoContrato" {...ordenProps}>
+                      Tipo de Contrato
+                    </BotonOrden>
+                  </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
@@ -3673,11 +3705,6 @@ export const ContractBulkFirmaTab: React.FC<{
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
                     <BotonOrden columna="proyecto" {...ordenProps}>
                       Proyecto
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="tipoContrato" {...ordenProps}>
-                      Tipo de Contrato
                     </BotonOrden>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
@@ -3742,6 +3769,7 @@ export const ContractBulkFirmaTab: React.FC<{
                           <span className="text-[11px] text-gray-400 italic">—</span>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
                       <td className="px-4 py-3">
                         <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
@@ -3751,7 +3779,6 @@ export const ContractBulkFirmaTab: React.FC<{
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
                       <td className="px-4 py-3">
                         <EstadoBadge name={r.nombre_estado_empleado || ''} />
                       </td>

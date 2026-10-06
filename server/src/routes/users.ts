@@ -651,6 +651,51 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       idsOrdenados = ordenados.map((d: any) => d._id);
     }
 
+    /*
+      COLUMNAS DEL EQUIPO DE UN PROYECTO (Gestionar Equipo): dependen del contrato que RIGE en ese
+      proyecto —el que muestra la fila—, que lo elige `contratosQueRigenDelProyecto` con la misma regla
+      que la tabla. No se pueden expresar como sort de Mongo sobre `users`, así que se ordena acá a
+      todo el equipo filtrado (cientos, no miles: es un proyecto) y se pagina el resultado.
+
+      Los vacíos van al final en las dos direcciones, como en los DataTables de las otras pantallas:
+      un «—» arriba de todo no dice nada.
+    */
+    const ORDENES_DE_PROYECTO = ["ultimoContrato", "contratosProyecto", "tipoContrato", "estadoContrato", "rolEmpresa", "reemplazo", "montoJornada", "jornadas", "diasPorSemana", "horario"];
+    if (!idsOrdenados && req.query.projectId && ORDENES_DE_PROYECTO.includes(sortKey)) {
+      const pid = String(req.query.projectId);
+      const [personas, rige, vinculos] = await Promise.all([
+        User.find(filter).select("_id firstName lastName").lean(),
+        contratosQueRigenDelProyecto(pid, hoyArgentina(), ["nombre_rol_frame", "reemplazo", "sueldo_jornada", "cantidad_jornadas_laborales", "dias_por_semana", "hora_inicio"]),
+        sortKey === "rolEmpresa" ? UserProject.find({ projectId: pid }).select("userId nombre_rol_frame").lean() : Promise.resolve([] as any[]),
+      ]);
+      const rolPorPersona = new Map((vinculos as any[]).map((v) => [String(v.userId), v.nombre_rol_frame]));
+      const valor = (id: string): string | number | null => {
+        const c: any = rige.get(id);
+        if (sortKey === "ultimoContrato") return fechaISO(c?.fecha_alta_contrato) || null;
+        if (sortKey === "contratosProyecto") return c?._total ?? 0;
+        if (sortKey === "tipoContrato") return c?.nombre_contrato || null;
+        if (sortKey === "estadoContrato") return c?.nombre_estado_empleado || null;
+        if (sortKey === "reemplazo") return c ? (c.reemplazo ? 1 : 0) : null;
+        if (sortKey === "montoJornada") return Number(c?.sueldo_jornada) > 0 ? Number(c.sueldo_jornada) : null;
+        if (sortKey === "jornadas") return Number(c?.cantidad_jornadas_laborales) > 0 ? Number(c.cantidad_jornadas_laborales) : null;
+        if (sortKey === "diasPorSemana") return Number(c?.dias_por_semana) > 0 ? Number(c.dias_por_semana) : null;
+        if (sortKey === "horario") return c?.hora_inicio || null;
+        return rolPorPersona.get(id) || c?.nombre_rol_frame || null;
+      };
+      const comparar = new Intl.Collator("es", { sensitivity: "base", numeric: true }).compare;
+      const nombre = (u: any) => `${u.firstName || ""} ${u.lastName || ""}`;
+      const filas = (personas as any[]).map((u) => ({ id: u._id, n: nombre(u), v: valor(String(u._id)) }));
+      filas.sort((a, b) => {
+        const av = a.v === null || a.v === "";
+        const bv = b.v === null || b.v === "";
+        if (av || bv) return av === bv ? comparar(a.n, b.n) : av ? 1 : -1;
+        const d = typeof a.v === "number" && typeof b.v === "number" ? a.v - b.v : comparar(String(a.v), String(b.v));
+        // Desempate por nombre: estable entre páginas.
+        return sortDir * d || comparar(a.n, b.n);
+      });
+      idsOrdenados = filas.slice(skip, skip + limitNum).map((f) => f.id);
+    }
+
     if (idsOrdenados) {
       // La agregación ya paginó: acá solo se hidratan esos _id (el orden se reaplica más abajo).
       query = query.find({ _id: { $in: idsOrdenados } });

@@ -17,7 +17,7 @@ import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { getHelp } from '../data/help/helpContent';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots } from '@fortawesome/free-solid-svg-icons';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
@@ -62,6 +62,7 @@ import { SelectorCategoria } from '../components/contratos/SelectorCategoria';
 import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
 import { sedeElegida, sedesDelContrato } from '../utils/sedesProyecto';
 import { cachedFetch } from '../utils/refCache';
+import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { LinkSiPuede } from '../components/LinkSiPuede';
 
@@ -91,6 +92,18 @@ function vinculoConElProyecto(user: any, projectId?: string): any {
 function contratoQueRige(user: any, projectId?: string): any {
   if (user?.lastContract !== undefined) return user.lastContract;
   return getContratoActivo(vinculoConElProyecto(user, projectId)?.contracts as any[]);
+}
+
+/**
+ * La POSICIÓN del contrato que rige en los contratos de la persona en el proyecto (los contratos no
+ * tienen `_id`). La manda el server con la tabla (`lastContractIndex`); si vino el historial, se busca
+ * ahí. `null` = no se sabe, y entonces no se ofrece renovar: precargaría otro contrato.
+ */
+function indiceDelContratoQueRige(user: any, projectId?: string): number | null {
+  if (typeof user?.lastContractIndex === 'number') return user.lastContractIndex >= 0 ? user.lastContractIndex : null;
+  const contratos = (vinculoConElProyecto(user, projectId)?.contracts as any[]) || [];
+  const i = contratos.indexOf(contratoQueRige(user, projectId));
+  return i >= 0 ? i : null;
 }
 
 /** Cuántos contratos tiene la persona en el proyecto: lo cuenta el server, o el array si vino. */
@@ -260,6 +273,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Si el wizard se abrió para APROBAR una solicitud, guardamos su id: al guardar, el backend marca la
   // solicitud como aprobada. null = alta/edición normal.
   const [approvingSolicitudId, setApprovingSolicitudId] = useState<string | null>(null);
+  /**
+   * El wizard se abrió para RENOVAR un contrato vencido (botón «Renovar» de Contratos).
+   *
+   * Es un contrato NUEVO, como aprobar una solicitud: se agrega al lado del vencido —que queda como
+   * historial— y arranca en el estado impositivo de su plantilla. Lo que cambia es la precarga: el
+   * contrato vencido tal cual (categoría, rol, empresa, sueldo, área y turno), con las fechas vacías.
+   */
+  const [renovando, setRenovando] = useState(false);
   /*
     LO QUE QUIEN APRUEBA LE QUIERE DECIR A QUIEN PIDIÓ EL ALTA.
 
@@ -558,6 +579,19 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // Página actual del equipo (datos completos). TODOS los filtros se resuelven en el server: si se
   // aplicaran acá sobre la página cargada, la paginación mostraría resultados salteados y páginas vacías.
+  /*
+    ORDEN DE LA TABLA DEL EQUIPO, COMO UN DATATABLE: click asc → desc → sin orden.
+
+    Lo resuelve el SERVER (`GET /users?sort=…&order=…`): la tabla está paginada, y ordenar acá sería
+    ordenar sólo las 25 filas visibles. Las columnas del contrato (último contrato, tipo, estado,
+    jornadas…) se ordenan por el contrato que RIGE en el proyecto, el mismo que muestra la fila.
+    Va por ref porque `fetchTeamPage` se llama desde efectos que capturan un render anterior.
+  */
+  const { orden: ordenEquipo, alternar: alternarOrdenEquipo } = useOrden();
+  const ordenEquipoRef = useRef(ordenEquipo);
+  ordenEquipoRef.current = ordenEquipo;
+  const ordenEquipoProps = { orden: ordenEquipo, onAlternar: alternarOrdenEquipo };
+
   const fetchTeamPage = async (page: number, opts?: { search?: string; status?: string; rolMobile?: string; vigencia?: string; tipoContrato?: string; areaTurno?: string; estadoContrato?: string; reemplazo?: string }) => {
     if (!projectId) return;
     const search = opts?.search ?? searchTermTeam;
@@ -576,7 +610,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         que estas filas leen. Antes viajaban todos los proyectos de cada persona con el historial
         completo de contratos: 400 KB por página para dibujar una tabla de un solo proyecto.
       */
-      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: 'name', teamTable: true };
+      const orden = ordenEquipoRef.current;
+      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: orden ? orden.columna : 'name', teamTable: true };
+      if (orden) params.order = orden.direccion;
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === 'active') params.metadataActivo = 'true';
       if (status === 'inactive') params.metadataActivo = 'false';
@@ -762,6 +798,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, token, teamConfigKey]);
 
+  // Cambio de orden → volver a la página 1 con el orden nuevo (lo lee `fetchTeamPage` del ref).
+  const ordenEquipoInitedRef = React.useRef(false);
+  useEffect(() => {
+    if (!ordenEquipoInitedRef.current) {
+      ordenEquipoInitedRef.current = true;
+      return;
+    }
+    setTeamPage(1);
+    fetchTeamPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ordenEquipo]);
+
   // Cambio de página → traer esa página del server.
   const teamPageInitedRef = React.useRef(false);
   useEffect(() => {
@@ -894,7 +942,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     de que cargue el equipo (desde Contratos o desde una solicitud aprobada) lo daba por nuevo y le
     pisaba el estado con el impositivo de su tipo, como si el trámite no hubiera avanzado.
   */
-  const esAltaNueva = !!approvingSolicitudId || (editingContractIndex === null && !allUsers.some((m) => m._id === selectedUserForWizard?._id));
+  const esAltaNueva = !!approvingSolicitudId || renovando || (editingContractIndex === null && !allUsers.some((m) => m._id === selectedUserForWizard?._id));
 
   // Un estado impositivo solo puede estar vinculado a una Plantilla (lo exige el ABM de Estados),
   // así que a lo sumo hay uno por Tipo de contrato/Plantilla elegido: no hace falta que el usuario
@@ -1369,7 +1417,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     ya existe lo mide contra la regla con la que nació, o la del proyecto — lo mismo que el server
     (`reglaDeValoracion`), con el mismo criterio de «edición» que el guardado (`isUpdate`/índice).
   */
-  const wizardEditaContrato = !approvingSolicitudId && (editingContractIndex != null || (!!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id)));
+  const wizardEditaContrato = !approvingSolicitudId && !renovando && (editingContractIndex != null || (!!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id)));
   const valoracionProyectoId = wizardEditaContrato ? reglaContratoEditado || idValoracionDe(project?.valoracionId) : valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
   const rolConValoracionPropia = wizardEditaContrato ? !!reglaContratoEditado : !!excepcionDelRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
   const valoracionDelRol = useMemo(() => {
@@ -1747,10 +1795,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   /* ------------------------------- Actions -------------------------------- */
 
-  const abrirWizardAhora = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
+  const abrirWizardAhora = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string, opciones?: { renovar?: boolean }) => {
+    // Renovar precarga el contrato del índice, pero NO lo edita: guarda uno nuevo (ver `renovando`).
+    const renovar = !!opciones?.renovar && typeof contractIndex === 'number';
+    setRenovando(renovar);
     // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
     // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
-    setEditingContractIndex(typeof contractIndex === 'number' ? contractIndex : null);
+    setEditingContractIndex(typeof contractIndex === 'number' && !renovar ? contractIndex : null);
     // La categoría que se precargue ahora no la puso el efecto automático (ver `categoriaAutomatica`).
     categoriaAutomatica.current = null;
     // Si viene de aprobar una solicitud, recordamos el id para marcarla aprobada al guardar.
@@ -2186,7 +2237,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       anterior, o «Activo») y el contrato no caía en la bandeja de ARCA. Es la misma regla que
       `esAltaNueva`, evaluada con la persona que se acaba de resolver.
     */
-    const esContratoNuevo = !!approveSolicitudId || (typeof contractIndex !== 'number' && !contractOverride && !allUsers.some((m) => m._id === user._id));
+    const esContratoNuevo = !!approveSolicitudId || renovar || (typeof contractIndex !== 'number' && !contractOverride && !allUsers.some((m) => m._id === user._id));
     const estadoDelContratoNuevo = esContratoNuevo ? estadoImpositivoDePlantilla(allEstados, deLaSolicitud.contrato_frame_id ?? initialContratoFrameId) : undefined;
 
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
@@ -2226,15 +2277,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : '',
       hora_inicio: lastContract?.hora_inicio || metaHoraInicio || '09:00',
       hora_fin: lastContract?.hora_fin || metaHoraFin || '18:00',
-      fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
-      fecha_baja_contrato: formatDate(lastContract?.fecha_baja_contrato),
+      // Renovar deja el período vacío: es lo único que cambia, y precargar el vencido invita a guardarlo igual.
+      fecha_alta_contrato: renovar ? '' : formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
+      fecha_baja_contrato: renovar ? '' : formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
       // Los contratos anteriores a este campo no traen días: se abren vacíos y hay que elegirlos,
       // en vez de inventar una semana que nadie declaró.
       dias_por_semana: Number((lastContract as any)?.dias_por_semana) || 5,
       dias_semana: Array.isArray((lastContract as any)?.dias_semana) ? ((lastContract as any).dias_semana as number[]) : [],
       dias_rotativos: !!(lastContract as any)?.dias_rotativos,
-      fechas_trabajadas: Array.isArray((lastContract as any)?.fechas_trabajadas) ? ((lastContract as any).fechas_trabajadas as string[]) : [],
+      fechas_trabajadas: !renovar && Array.isArray((lastContract as any)?.fechas_trabajadas) ? ((lastContract as any).fechas_trabajadas as string[]) : [],
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
       sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
@@ -2246,7 +2298,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       reemplazo: lastContract?.reemplazo || false,
       empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
       // Un contrato NUEVO no arrastra la excepción del anterior: arranca heredando el que le toca.
-      puestoDesempenado: esContratoNuevo ? '' : String((lastContract as any)?.puestoDesempenado || ''),
+      // Renovar sí lo conserva: es el mismo puesto, con otro período.
+      puestoDesempenado: esContratoNuevo && !renovar ? '' : String((lastContract as any)?.puestoDesempenado || ''),
       observaciones: lastContract?.observaciones || '',
       areaShiftAssignments: areaShiftAssignments,
       // Contrato NUEVO sin solicitud: la semana del tipo de contrato precargado (ver `semanaDelTipoDeContrato`).
@@ -2300,10 +2353,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const st = location.state as any;
     if (wizardAutoOpenedRef.current) return;
     if (!st?.openWizardFor || !project) return;
-    const { userId, contractIndex } = st.openWizardFor;
+    const { userId, contractIndex, renovar } = st.openWizardFor;
     if (!userId) return;
     wizardAutoOpenedRef.current = true;
-    handleOpenWizard(userId, undefined, typeof contractIndex === 'number' ? contractIndex : undefined);
+    handleOpenWizard(userId, undefined, typeof contractIndex === 'number' ? contractIndex : undefined, undefined, { renovar: !!renovar });
     navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, project]);
@@ -2328,6 +2381,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
     const diasSueltos = contratoSel?.data?.modoFechas === 'dias';
     if (diasSueltos && wizardData.fechas_trabajadas.length === 0) faltan.push('Días que trabaja (marcalos en el calendario)');
+    // Antes venía siempre precargada (hoy o la del contrato); renovar la deja vacía a propósito.
+    if (!diasSueltos && !wizardData.fecha_alta_contrato) faltan.push('Fecha alta contrato');
     if (contratoSel && !diasSueltos && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
     if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push('Área y turno');
     if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push('Horario (entrada y salida)');
@@ -2388,9 +2443,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         userId: selectedUserForWizard._id,
         // Aprobar SIEMPRE agrega un contrato, aunque la persona ya esté en el equipo: una renovación
         // es un contrato nuevo y el anterior tiene que seguir estando (es el historial de la persona).
-        isUpdate: approvingSolicitudId ? false : isExistingMember,
+        // Renovar, lo mismo: el contrato vencido queda y se agrega el nuevo.
+        isUpdate: approvingSolicitudId || renovando ? false : isExistingMember,
         // Si se está editando un contrato puntual, el backend actualiza ESE índice (no el último).
-        contractIndex: approvingSolicitudId ? undefined : (editingContractIndex ?? undefined),
+        contractIndex: approvingSolicitudId || renovando ? undefined : (editingContractIndex ?? undefined),
         // Si el wizard se abrió para aprobar una solicitud, el backend la marca aprobada.
         // Qué solicitud se está aprobando: el contrato va en la persona real, así que hay que decir cuál.
         approveSolicitud: approvingSolicitudId || undefined,
@@ -2449,7 +2505,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
       const wasApproving = !!approvingSolicitudId;
       const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || 'El usuario';
-      sweetAlert.success(wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
+      sweetAlert.success(renovando ? 'Contrato renovado' : wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', renovando ? `${nombre} tiene un contrato nuevo; el vencido quedó en su historial.` : `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
 
       // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id, { team: 'ids' });
@@ -2470,6 +2526,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         }
       }
       setApprovingSolicitudId(null);
+      setRenovando(false);
 
       setSelectedUserForWizard(null);
       setRolFrameAgregado(null);
@@ -2734,7 +2791,27 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             <div className="flex flex-col gap-1">
               {(() => {
                 const vigente = esContratoVigente(activeContract);
-                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>;
+                const indice = vigente ? null : indiceDelContratoQueRige(user, projectId);
+                return (
+                  <div className="flex items-center gap-1.5">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                    {/* Mismo botón que en Contratos: contrato NUEVO con éste precargado y las fechas vacías (ver `renovando`). */}
+                    {indice !== null && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleOpenWizard(user._id, undefined, indice, undefined, { renovar: true });
+                        }}
+                        title="Crear un contrato nuevo con los mismos datos de éste, para cargarle las fechas"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-green-600 text-white hover:bg-green-700 transition-colors whitespace-nowrap"
+                      >
+                        <FontAwesomeIcon icon={faRotateRight} className="h-2.5 w-2.5" />
+                        Renovar
+                      </button>
+                    )}
+                  </div>
+                );
               })()}
               <div className="flex flex-col gap-0.5">
                 <span>
@@ -3824,13 +3901,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         isOpen={!!selectedUserForWizard}
         onClose={() => {
           setSelectedUserForWizard(null);
+          setRenovando(false);
           // El oficio agregado a mano es de ESTA carga: si se cierra sin guardar, no queda nada.
           setRolFrameAgregado(null);
           setRolFrameBusqueda('');
           // Abierto desde Solicitudes no hay pantalla atrás: cerrarlo es cerrar el modo entero.
           soloAprobacion?.onCerrar();
         }}
-        title={esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
+        title={renovando ? 'Renovar contrato' : esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
         subtitle={
           selectedUserForWizard ? (
             <div className="flex flex-col gap-0.5">
@@ -5265,7 +5343,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                 fila: por una celda fija translúcida se ve pasar lo que scrollea.
                                 `#18202f` es ese mismo gris ya mezclado sobre el fondo del panel.
                               */}
-                              <th className="sticky left-0 z-[15] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Usuario</th>
+                              <th className="sticky left-0 z-[15] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]"><BotonOrden columna="name" {...ordenEquipoProps}>Usuario</BotonOrden></th>
                               {/*
                                 «Último Contrato», y no «Alta / Baja».
 
@@ -5275,11 +5353,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                 no se pierde: la celda sigue rotulando sus dos líneas con «Alta:» y
                                 «Baja:».
                               */}
-                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Último Contrato</th>
-                              <th className="px-4 py-3 font-semibold text-center">Contratos</th>
-                              <th className="px-4 py-3 font-semibold">Rol/es</th>
-                              <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
-                              <th className="px-4 py-3 font-semibold">Estado</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="ultimoContrato" {...ordenEquipoProps}>Último Contrato</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold text-center"><BotonOrden columna="contratosProyecto" {...ordenEquipoProps}>Contratos</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="roles" {...ordenEquipoProps}>Rol/es</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="rolEmpresa" {...ordenEquipoProps}>Rol/es Empresa</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="estado" {...ordenEquipoProps}>Estado</BotonOrden></th>
                               <th className="px-4 py-3 font-semibold">Área / Turno</th>
                               <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">
                                 <span className="inline-flex items-center gap-1.5">
@@ -5290,14 +5368,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                 </span>
                               </th>
                               <th className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Supervisores coordinados</th>
-                              <th className="px-4 py-3 font-semibold">Contrato</th>
-                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
+                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="tipoContrato" {...ordenEquipoProps}>Contrato</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="estadoContrato" {...ordenEquipoProps}>Estado Contrato</BotonOrden></th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
-                              <th className="px-4 py-3 font-semibold">Reemplazo</th>
-                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Monto / Jorn.</th>
-                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Jornadas</th>
-                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Días por semana</th>
-                              <th className="px-4 py-3 font-semibold">Horario</th>
+                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="reemplazo" {...ordenEquipoProps}>Reemplazo</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="montoJornada" {...ordenEquipoProps}>Monto / Jorn.</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="jornadas" {...ordenEquipoProps}>Jornadas</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="diasPorSemana" {...ordenEquipoProps}>Días por semana</BotonOrden></th>
+                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="horario" {...ordenEquipoProps}>Horario</BotonOrden></th>
                               <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Horas / día</th>
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                             </tr>
