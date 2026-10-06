@@ -2,8 +2,13 @@ import { ImapFlow } from "imapflow";
 import { Tenant } from "../models/Tenant.js";
 import { decryptSecret } from "../utils/secretCrypto.js";
 import { leerAnclas, mismoDocumento } from "../utils/anclasNombre.js";
-import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
+import { resolverCarpetaPorProposito, resolverProposito } from "../utils/estadoCarpetas.js";
 import { getTenantDropboxConfig, listFolder, moveEntry } from "./dropboxService.js";
+import { User } from "../models/User.js";
+import UserProject from "../models/UserProject.js";
+import { Info } from "../models/Info.js";
+import { fechaISO } from "../utils/contratoVigencia.js";
+import { aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
 /**
  * Detección de "documento enviado a firmar" leyendo la casilla de correo.
  *
@@ -18,13 +23,13 @@ import { getTenantDropboxConfig, listFolder, moveEntry } from "./dropboxService.
  * Qué hace por cada aviso encontrado:
  *  1. Lee del ASUNTO el nombre del documento ("Se inició el proceso de firma de <archivo>").
  *  2. De ese nombre saca quién es (CUIL o email) y de qué período habla (ver `leerAnclas`).
- *  3. Busca ese documento en "Outbox". Si no está, no hace nada: sin respaldo en Outbox el aviso no
- *     se puede atribuir a un documento propio (puede ser de otra cuenta o de un reenvío).
- *  4. Si el documento ya está en "Pendbox", lo saltea. Los avisos se repiten (reenvíos,
+ *  3. Busca en "Outbox" el sobre entero de esa persona y período (contrato, release y alta: ver
+ *     `documentosDelAvisoEnOutbox`). Si no hay nada, no hace nada: sin respaldo en Outbox el aviso
+ *     no se puede atribuir a un documento propio (puede ser de otra cuenta o de un reenvío).
+ *  4. Si el documento ya está en "Pendbox", no lo vuelve a mover. Los avisos se repiten (reenvíos,
  *     recordatorios, resumen diario), así que el chequeo evita trabajo al pedo.
- *  5. Mueve el PDF de Outbox a Pendbox. Ese movimiento es el ÚNICO efecto: no se genera ningún
- *     archivo extra. Es lo que hace avanzar el contrato de "Para Firmar" a "Enviado a la firma" y
- *     deja "Para Firmar" solo con lo que todavía no se envió.
+ *  5. Mueve esos PDF de Outbox a Pendbox —no se genera ningún archivo extra— y pasa el contrato al
+ *     estado de Pendbox («Enviado a la firma») en el momento, sin esperar al escaneo de carpetas.
  */
 /**
  * Términos con los que se le pide la búsqueda al servidor IMAP. Van sin acentos a propósito: el
@@ -102,6 +107,89 @@ export function buscarEnOutbox(entries, archivo, ident) {
     }
     const porNombre = pdfs.filter((e) => normalizarNombre(e.name) === objetivo);
     return porNombre.length === 1 ? porNombre[0] : null;
+}
+/**
+ * TODOS los documentos del aviso que están en Outbox: el sobre entero.
+ *
+ * «Enviar a firmar» manda juntos el contrato, su release y el alta, pero el aviso de Dropbox Sign
+ * nombra UNO solo —el título de la solicitud, que además es editable: llegan títulos como
+ * «<archivo>-Frame Firma Digital»—. Buscar ese único archivo dejaba el resto en Outbox, y si el
+ * nombrado era el alta el contrato ni siquiera avanzaba (el escaneo de carpetas no mueve un contrato
+ * por su alta). Así que se mueve todo lo de esa persona y ese período.
+ *
+ * Por persona (CUIL o email) Y período: sin fechas en el aviso no hay forma de saber cuál de sus
+ * documentos es, y ahí solo se acepta un candidato único. Sin anclas, por nombre: igual, o el
+ * archivo cuyo nombre es el PRINCIPIO del título (el título le agregó un sufijo).
+ */
+export function documentosDelAvisoEnOutbox(entries, archivo, ident) {
+    const pdfs = entries.filter((e) => e.tag === "file" && !/\.json$/i.test(e.name));
+    if (ident.cuit || ident.email) {
+        const porAnclas = pdfs.filter((e) => mismoDocumento(ident, leerAnclas(e.name)));
+        if (porAnclas.length > 0 && (ident.fechas.length > 0 || porAnclas.length === 1))
+            return porAnclas;
+    }
+    const objetivo = normalizarNombre(archivo);
+    const exactos = pdfs.filter((e) => normalizarNombre(e.name) === objetivo);
+    if (exactos.length === 1)
+        return exactos;
+    // El piso de largo evita que un nombre cortito («contrato») sea «el principio» de cualquier título.
+    const prefijos = pdfs.filter((e) => {
+        const n = normalizarNombre(e.name);
+        return n.length >= 20 && objetivo.startsWith(n);
+    });
+    return prefijos.length === 1 ? prefijos : [];
+}
+/**
+ * El contrato del aviso: la persona (CUIL, si no email) y el período del nombre.
+ *
+ * Solo si queda UNO. Con dos contratos de la misma persona en el mismo período no se adivina: el
+ * escaneo de carpetas lo va a resolver después con el nombre de cada archivo.
+ */
+async function contratoDelAviso(tenantId, ident) {
+    if (ident.fechas.length === 0)
+        return null;
+    const cuit = String(ident.cuit || "").replace(/\D/g, "");
+    const filtroPersona = cuit.length === 11 ? { "metadata.cuit": { $in: [cuit, `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}`] } } : ident.email ? { email: new RegExp(`^${ident.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") } : null;
+    if (!filtroPersona)
+        return null;
+    const personas = await User.find({ tenantId, ...filtroPersona }).select("_id").lean();
+    if (personas.length === 0)
+        return null;
+    const ups = await UserProject.find({ userId: { $in: personas.map((p) => p._id) } });
+    const compacta = (v) => fechaISO(v).replace(/-/g, "");
+    const candidatos = [];
+    for (const up of ups) {
+        (up.contracts || []).forEach((c, idx) => {
+            const alta = compacta(c.fecha_alta_contrato);
+            const baja = compacta(c.fecha_baja_contrato);
+            if (alta && ident.fechas.includes(alta) && (!baja || ident.fechas.includes(baja)))
+                candidatos.push({ up, idx });
+        });
+    }
+    return candidatos.length === 1 ? candidatos[0] : null;
+}
+/**
+ * Pasa el contrato al estado de Pendbox («Enviado a la firma») EN EL MOMENTO.
+ *
+ * El estado destino es el que tiene configurada la carpeta Pendbox (Configuración → Documentos →
+ * Dropbox): no se escribe el nombre a mano. `aplicarTransicion` solo avanza, nunca retrocede, así que
+ * es seguro repetirlo en cada lectura. Devuelve el texto para el log.
+ */
+async function avanzarContratoDelAviso(tenantId, ident) {
+    try {
+        const { estado } = await resolverProposito("pendbox");
+        const destino = estado ? await Info.findOne({ type: "estado-empleado", name: estado }) : null;
+        if (!destino)
+            return " No hay un estado con la carpeta Pendbox configurada: el estado no cambió.";
+        const contrato = await contratoDelAviso(tenantId, ident);
+        if (!contrato)
+            return " No se pudo identificar un único contrato de esa persona y período: el estado no cambió.";
+        const r = await aplicarTransicion(contrato.up, contrato.idx, destino);
+        return r.aplicada ? ` El contrato pasó a «${destino.name}».` : r.motivo === "ya_estaba" ? ` El contrato ya estaba en «${destino.name}».` : "";
+    }
+    catch (e) {
+        return ` No se pudo cambiar el estado: ${e?.message || e}`;
+    }
 }
 /**
  * ¿Ese documento ya está en Pendbox? Se compara por nombre normalizado y, si no, por los campos
@@ -233,17 +321,19 @@ export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
                 // Fuera del try para que el log de error también pueda informar de qué persona se trataba.
                 const ident = extraerIdentidadDeArchivo(archivo);
                 try {
-                    // Ya movido en una corrida anterior: se sigue de largo.
+                    // Ya movido en una corrida anterior: no se mueve de nuevo, pero el estado se intenta igual
+                    // (un sobre movido a mano, o antes de que esto cambiara el estado, quedaba sin avanzar).
                     if (yaEstaEnPendbox(enPendbox, archivo, ident)) {
                         duplicados++;
-                        logs.push({ resultado: "duplicado", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: "El documento ya estaba en Pendbox; no se vuelve a mover." });
+                        const estado = await avanzarContratoDelAviso(tenantId, ident);
+                        logs.push({ resultado: "duplicado", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `El documento ya estaba en Pendbox; no se vuelve a mover.${estado}` });
                         continue;
                     }
-                    // Sin PDF en Outbox no hay documento propio al que atribuir el aviso (puede ser de otra
-                    // cuenta o un reenvío). No se archiva nada; si el PDF aparece después, la próxima corrida
-                    // lo toma, porque el aviso se sigue encontrando mientras esté dentro de la ventana.
-                    const pdf = buscarEnOutbox(enOutbox, archivo, ident);
-                    if (!pdf) {
+                    // Sin documentos en Outbox no hay nada propio al que atribuir el aviso (puede ser de otra
+                    // cuenta o un reenvío). No se archiva nada; si aparecen después, la próxima corrida los
+                    // toma, porque el aviso se sigue encontrando mientras esté dentro de la ventana.
+                    const sobre = documentosDelAvisoEnOutbox(enOutbox, archivo, ident);
+                    if (sobre.length === 0) {
                         sinArchivoEnOutbox++;
                         // El detalle nombra los datos que SE BUSCARON, no solo el CUIT: si el aviso trae un
                         // período y ningún archivo de Outbox lo tiene, decir "no hay ninguno con este CUIL"
@@ -254,21 +344,24 @@ export async function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
                         logs.push({ resultado: "sin-archivo", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `${pistas} Outbox tiene ${enOutbox.filter((e) => e.tag === "file").length} archivo(s).` });
                         continue;
                     }
-                    // Único efecto sobre Dropbox: el PDF pasa de Outbox a Pendbox. Eso es lo que hace avanzar
-                    // el contrato de "Para Firmar" a "Enviado a la firma"; no se genera ningún archivo extra.
-                    await moveEntry(tenantId, dropboxCfg, pdf.path, `${pendbox.replace(/\/$/, "")}/${pdf.name}`);
-                    movidos++;
-                    // Los listados en memoria se actualizan para que un aviso repetido de esta misma corrida
-                    // caiga en el chequeo de duplicado sin volver a pedirle las carpetas a Dropbox.
-                    enOutbox = enOutbox.filter((e) => e.path !== pdf.path);
-                    enPendbox.push({ tag: "file", name: pdf.name, path: `${pendbox.replace(/\/$/, "")}/${pdf.name}` });
+                    // El sobre entero pasa de Outbox a Pendbox (contrato, release y alta). Los listados en
+                    // memoria se actualizan para que un aviso repetido de esta misma corrida caiga en el
+                    // chequeo de duplicado sin volver a pedirle las carpetas a Dropbox.
+                    for (const pdf of sobre) {
+                        const destinoPdf = `${pendbox.replace(/\/$/, "")}/${pdf.name}`;
+                        await moveEntry(tenantId, dropboxCfg, pdf.path, destinoPdf);
+                        movidos++;
+                        enOutbox = enOutbox.filter((e) => e.path !== pdf.path);
+                        enPendbox.push({ tag: "file", name: pdf.name, path: destinoPdf });
+                    }
+                    const estado = await avanzarContratoDelAviso(tenantId, ident);
                     logs.push({
                         resultado: "archivado",
                         asunto,
-                        archivo: pdf.name,
+                        archivo: sobre.map((p) => p.name).join(" · "),
                         cuit: ident.cuit,
                         documento: ident.documento,
-                        detalle: "El PDF se movió de Outbox a Pendbox.",
+                        detalle: `${sobre.length === 1 ? "El PDF se movió" : `Se movieron ${sobre.length} PDF`} de Outbox a Pendbox.${estado}`,
                     });
                 }
                 catch (e) {

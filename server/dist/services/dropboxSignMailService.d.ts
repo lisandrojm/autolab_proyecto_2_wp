@@ -34,6 +34,27 @@ export declare function buscarEnOutbox(entries: {
     path: string;
 } | null;
 /**
+ * TODOS los documentos del aviso que están en Outbox: el sobre entero.
+ *
+ * «Enviar a firmar» manda juntos el contrato, su release y el alta, pero el aviso de Dropbox Sign
+ * nombra UNO solo —el título de la solicitud, que además es editable: llegan títulos como
+ * «<archivo>-Frame Firma Digital»—. Buscar ese único archivo dejaba el resto en Outbox, y si el
+ * nombrado era el alta el contrato ni siquiera avanzaba (el escaneo de carpetas no mueve un contrato
+ * por su alta). Así que se mueve todo lo de esa persona y ese período.
+ *
+ * Por persona (CUIL o email) Y período: sin fechas en el aviso no hay forma de saber cuál de sus
+ * documentos es, y ahí solo se acepta un candidato único. Sin anclas, por nombre: igual, o el
+ * archivo cuyo nombre es el PRINCIPIO del título (el título le agregó un sufijo).
+ */
+export declare function documentosDelAvisoEnOutbox(entries: {
+    tag: string;
+    name: string;
+    path: string;
+}[], archivo: string, ident: AnclasNombre): {
+    name: string;
+    path: string;
+}[];
+/**
  * ¿Ese documento ya está en Pendbox? Se compara por nombre normalizado y, si no, por los campos
  * obligatorios de la nomenclatura: el archivo real suele tener un nombre distinto al del asunto
  * (Dropbox Sign transforma símbolos y el título de la solicitud es editable), así que el nombre solo
