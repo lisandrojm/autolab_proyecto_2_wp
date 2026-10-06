@@ -20,7 +20,7 @@ import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
  *
  * La casilla la usan personas, así que el job es de solo lectura sobre el correo: no marca nada como
  * leído ni mueve mensajes. Busca por asunto dentro de una ventana de días y lo que evita reprocesar
- * es el JSON ya archivado en Pendbox.
+ * es que el PDF ya salió de Outbox.
  *
  * Qué hace por cada aviso encontrado:
  *  1. Lee del ASUNTO el nombre del documento ("Se inició el proceso de firma de <archivo>").
@@ -28,8 +28,8 @@ import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
  *  3. Busca en "Outbox" EL archivo del aviso: el de nombre completo igual al título, aunque el
  *     título traiga algo agregado al final (ver `documentosDelAvisoEnOutbox`). Si no está, no hace
  *     nada: sin respaldo en Outbox el aviso no se puede atribuir a un documento propio.
- *  4. Si el documento ya está en "Pendbox", no lo vuelve a mover. Los avisos se repiten (reenvíos,
- *     recordatorios, resumen diario), así que el chequeo evita trabajo al pedo.
+ *  4. Si el documento ya no está en Outbox, no hace nada: ya se movió en una lectura anterior. Los
+ *     avisos se repiten (cada lectura revisa 30 días), y Pendbox no se lista: ver `leerCasillaAhora`.
  *  5. Mueve ese PDF de Outbox a Pendbox —no se genera ningún archivo extra— y pasa el contrato al
  *     estado de Pendbox («Enviado a la firma») en el momento, sin esperar al escaneo de carpetas.
  */
@@ -334,7 +334,8 @@ function clienteImap(cfg: any, extra: Record<string, unknown> = {}): ImapFlow {
 }
 
 async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<ResultadoLectura> {
-  const tenant = await Tenant.findById(tenantId).lean();
+  // Sin el historial de lecturas: es lo que más pesa del tenant y acá no se usa.
+  const tenant = await Tenant.findById(tenantId).select("-integrations.dropboxSign.lastCheckHistorial").lean();
   const cfg: any = (tenant as any)?.integrations?.dropboxSign || {};
   const vacio = { avisos: 0, movidos: 0, duplicados: 0, sinArchivoEnOutbox: 0, logs: [] };
   if (!cfg.email || !cfg.imapHost || !cfg.imapPasswordEnc) {
@@ -360,15 +361,20 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
   const errores: string[] = [];
   const logs: LineaLog[] = [];
 
-  // Ambas carpetas se listan una sola vez y se mantienen en memoria: un aviso archivado agrega su
-  // JSON a `enPendbox` y saca el PDF de `enOutbox`, así los avisos repetidos de la misma corrida
-  // (Dropbox Sign manda recordatorios y resúmenes) también caen en el chequeo de duplicado.
+  /*
+    SOLO SE LISTA OUTBOX, NO PENDBOX.
+
+    Pendbox acumula todo lo enviado (cientos de archivos) y se listaba ENTERO en cada lectura para
+    preguntar, por cada aviso de los últimos 30 días, si ya estaba ahí: un recorrido síncrono de
+    avisos × archivos que dejaba al servidor sin atender requests (un /health tardó 27 s). No hace
+    falta: si el documento está en Outbox se mueve; si no está, ya se movió antes o no es de la
+    plataforma, y en los dos casos no hay nada que hacer. Un aviso repetido en la misma corrida cae
+    en el segundo caso porque el PDF ya salió de `enOutbox`.
+  */
   let enOutbox: { tag: string; name: string; path: string }[] = [];
-  let enPendbox: { tag: string; name: string; path: string }[] = [];
   if (!soloPrueba && dropboxCfg) {
     try {
       if (outbox) enOutbox = ((await listFolder(tenantId, dropboxCfg, outbox, true)).entries || []) as any[];
-      if (pendbox) enPendbox = ((await listFolder(tenantId, dropboxCfg, pendbox, true)).entries || []) as any[];
     } catch (e: any) {
       return { ok: false, detalle: `No se pudieron leer las carpetas de Dropbox: ${e?.message || e}`, ...vacio };
     }
@@ -380,7 +386,7 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
     try {
       // La búsqueda es por ASUNTO dentro de una ventana de días, NO por "no leído": esta casilla la
       // usan personas, y si alguien abre el aviso antes que el job, el flag \Seen lo haría invisible
-      // para siempre. Lo que evita reprocesar es el JSON ya archivado en Pendbox, y por eso tampoco
+      // para siempre. Lo que evita reprocesar es que el PDF ya salió de Outbox, y por eso tampoco
       // se tocan los flags del mensaje: la bandeja queda tal como la dejó su dueño.
       const desde = new Date(Date.now() - DIAS_ATRAS * 24 * 60 * 60 * 1000);
       const encontrados = new Set<number>();
@@ -391,9 +397,15 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
       // De más viejo a más nuevo: si un documento tiene varios avisos, gana el primero.
       const uids = [...encontrados].sort((a, b) => a - b).slice(0, MAX_MENSAJES);
 
+      // Los asuntos de TODOS los mensajes en un solo FETCH, no uno por mensaje: eran cientos de idas y
+      // vueltas a Gmail por lectura, y ahora hay una lectura por cada mail que entra.
+      const asuntos = new Map<number, string>();
+      if (uids.length > 0) {
+        for await (const m of client.fetch(uids.join(","), { envelope: true }, { uid: true })) asuntos.set(Number((m as any).uid), (m as any)?.envelope?.subject || "");
+      }
+
       for (const uid of uids) {
-        const msg = await client.fetchOne(String(uid), { envelope: true }, { uid: true });
-        const asunto = (msg as any)?.envelope?.subject || "";
+        const asunto = asuntos.get(uid) || "";
         const archivo = extraerArchivoDeAsunto(asunto);
         if (!archivo) {
           // Vino del SEARCH pero no es un aviso de envío (p. ej. "Fulano firmó...", resumen diario).
@@ -412,28 +424,13 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
         // Fuera del try para que el log de error también pueda informar de qué persona se trataba.
         const ident = extraerIdentidadDeArchivo(archivo);
         try {
-          // Ya movido en una corrida anterior: no se mueve de nuevo, pero el estado se intenta igual
-          // (un sobre movido a mano, o antes de que esto cambiara el estado, quedaba sin avanzar).
-          if (yaEstaEnPendbox(enPendbox, archivo, ident)) {
-            duplicados++;
-            const estado = await avanzarContratoDelAviso(tenantId, ident);
-            logs.push({ resultado: "duplicado", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `El documento ya estaba en Pendbox; no se vuelve a mover.${estado}` });
-            continue;
-          }
-
-          // Sin documentos en Outbox no hay nada propio al que atribuir el aviso (puede ser de otra
-          // cuenta o un reenvío). No se archiva nada; si aparecen después, la próxima corrida los
-          // toma, porque el aviso se sigue encontrando mientras esté dentro de la ventana.
+          // No está en Outbox: ya se movió en una lectura anterior (o en esta, por un aviso repetido),
+          // o no es de un documento de la plataforma. No se hace nada, ni se carga ningún contrato: es
+          // la situación de casi todos los avisos de la ventana de 30 días, en CADA lectura.
           const sobre = documentosDelAvisoEnOutbox(enOutbox, archivo, ident);
           if (sobre.length === 0) {
             sinArchivoEnOutbox++;
-            // El detalle nombra los datos que SE BUSCARON, no solo el CUIT: si el aviso trae un
-            // período y ningún archivo de Outbox lo tiene, decir "no hay ninguno con este CUIL"
-            // manda a buscar el problema al lado equivocado.
-            const periodo = ident.fechas.length > 0 ? ` del período ${ident.fechas.join(" a ")}` : "";
-            const quien = ident.cuit ? `del CUIL ${ident.cuit}` : ident.email ? `de ${ident.email}` : "";
-            const pistas = quien ? `No hay ningún archivo en Outbox ${quien}${periodo}.` : "El título del aviso no trae CUIL, email ni documento, y ningún archivo de Outbox coincide por nombre.";
-            logs.push({ resultado: "sin-archivo", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `${pistas} Outbox tiene ${enOutbox.filter((e) => e.tag === "file").length} archivo(s).` });
+            logs.push({ resultado: "sin-archivo", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `No está en Outbox: ya se movió a Pendbox antes, o no es de un documento de la plataforma.` });
             continue;
           }
           // El archivo del aviso pasa de Outbox a Pendbox. Los listados en memoria se actualizan para
@@ -444,7 +441,6 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
             await moveEntry(tenantId, dropboxCfg, pdf.path, destinoPdf);
             movidos++;
             enOutbox = enOutbox.filter((e) => e.path !== pdf.path);
-            enPendbox.push({ tag: "file", name: pdf.name, path: destinoPdf });
           }
           const estado = await avanzarContratoDelAviso(tenantId, ident);
 
@@ -489,6 +485,9 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
  * algo o si falló: hay una lectura por cada mail que entra y otra cada 15 minutos, y guardar las vacías llenaría el documento
  * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
  */
+/** Lo que vale guardar de una lectura: lo que se movió y lo que falló. Lo demás se repite en cada una. */
+const LINEAS_QUE_SE_GUARDAN = new Set<LineaLog["resultado"]>(["archivado", "error"]);
+
 export function registrarLectura(r: ResultadoLectura): any {
   const update: any = {
     $set: {
@@ -497,12 +496,19 @@ export function registrarLectura(r: ResultadoLectura): any {
       "integrations.dropboxSign.lastCheckDetalle": r.detalle,
     },
   };
-  if (r.logs.length > 0 || !r.ok) {
+  /*
+    SOLO LECTURAS CON NOVEDADES. Antes se guardaba cada lectura con un log de TODOS los avisos de la
+    ventana de 30 días —los mismos, repetidos—, y con una lectura por cada mail que entra eso inflaba
+    el documento del tenant, que se lee en muchas pantallas. Ahora: una lectura entra al historial si
+    movió algo o falló, y solo con esas líneas.
+  */
+  const lineas = r.logs.filter((l) => LINEAS_QUE_SE_GUARDAN.has(l.resultado));
+  if (lineas.length > 0 || !r.ok) {
     update.$push = {
       "integrations.dropboxSign.lastCheckHistorial": {
-        $each: [{ at: new Date(), ok: r.ok, detalle: r.detalle, logs: r.logs }],
+        $each: [{ at: new Date(), ok: r.ok, detalle: r.detalle, logs: lineas }],
         $position: 0,
-        $slice: 50,
+        $slice: 30,
       },
     };
   }
@@ -568,7 +574,10 @@ function dejarDeVigilar(tenantId: string): void {
 
 async function vigilarCasilla(tenantId: string): Promise<void> {
   dejarDeVigilar(tenantId);
-  const tenant = await Tenant.findById(tenantId).select("integrations.dropboxSign").lean();
+  // Campo por campo: Mongo no deja incluir `dropboxSign` y excluir su historial en la misma proyección.
+  const tenant = await Tenant.findById(tenantId)
+    .select(["enabled", "email", "imapHost", "imapPort", "imapSecure", "imapUser", "imapPasswordEnc"].map((c) => `integrations.dropboxSign.${c}`).join(" "))
+    .lean();
   const cfg: any = (tenant as any)?.integrations?.dropboxSign || {};
   if (!cfg.enabled || !cfg.email || !cfg.imapHost || !cfg.imapPasswordEnc) return;
 

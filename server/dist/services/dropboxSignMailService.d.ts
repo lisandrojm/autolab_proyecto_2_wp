@@ -107,11 +107,6 @@ export interface ResultadoLectura {
  */
 export declare function motivoFalloImap(e: any): string;
 export declare function leerCasillaDropboxSign(tenantId: string, soloPrueba?: boolean): Promise<ResultadoLectura>;
-/**
- * Update de Mongo que deja registrada una lectura. La corrida se suma al historial solo si encontró
- * algo o si falló: hay una lectura por cada mail que entra y otra cada 15 minutos, y guardar las vacías llenaría el documento
- * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
- */
 export declare function registrarLectura(r: ResultadoLectura): any;
 /** Corre la lectura para todos los tenants que la tengan activada (el sondeo de respaldo). */
 export declare function leerCasillasDeTodosLosTenants(): Promise<void>;
