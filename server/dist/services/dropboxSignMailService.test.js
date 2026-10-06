@@ -86,3 +86,10 @@ describe("con código único (ID-000123): el aviso apunta a UN documento", () =>
         assert.equal(yaEstaEnPendbox([OUTBOX[0]], archivo), true);
     });
 });
+describe("archivo renombrado con código después de mandarlo a firmar", () => {
+    it("el aviso con el título viejo (sin código) lo encuentra igual", () => {
+        const viejo = "426_LN+_CASTRO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20412923767_brianchicago.22-ARROBA-gmail.com_Empresa-30717068374";
+        const enOutbox = [{ tag: "file", name: `${viejo}_ID-000310.pdf`, path: "/Outbox/x" }];
+        assert.equal(documentosDelAvisoEnOutbox(enOutbox, `${viejo}-Frame Firma Digital`).length, 1);
+    });
+});

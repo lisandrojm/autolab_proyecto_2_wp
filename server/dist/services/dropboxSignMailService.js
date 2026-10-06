@@ -135,7 +135,9 @@ export function documentosDelAvisoEnOutbox(entries, archivo, _ident) {
     if (codigo)
         return pdfs.filter((e) => leerAnclas(e.name).codigo === codigo).slice(0, 1);
     const titulo = String(archivo || "").trim();
-    const sinExtension = (n) => n.replace(/\.[a-z0-9]{2,4}$/i, "").trim();
+    // Un título SIN código contra un archivo que ya lo tiene (se renombró con `codigosEnOutbox` después de
+    // mandarlo a firmar): se compara el archivo sin su código, que es el nombre con el que se envió.
+    const sinExtension = (n) => n.replace(/\.[a-z0-9]{2,4}$/i, "").replace(/_ID-\d{6,}$/, "").trim();
     const elMasLargo = (xs) => (xs.length === 0 ? [] : [xs.reduce((a, b) => (sinExtension(b.name).length > sinExtension(a.name).length ? b : a))]);
     const tal = pdfs.filter((e) => {
         const base = sinExtension(e.name);
