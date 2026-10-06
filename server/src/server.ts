@@ -114,6 +114,7 @@ import { dropboxWebhookRoutes } from "./routes/dropboxWebhook.js";
 import { afipRoutes } from "./routes/afip.js";
 import { firmaDigitalRoutes } from "./routes/firmaDigital.js";
 import { dropboxSignRoutes } from "./routes/dropboxSign.js";
+import { iniciarMonitorDeBloqueos } from "./utils/monitorBloqueos.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -407,6 +408,9 @@ connectDB()
       `SIN_TAREAS_PROGRAMADAS=true` las apaga: para levantar una copia local contra la base real sin
       duplicar backups ni sincronizaciones del servidor publicado.
     */
+    // Cada bloqueo de más de 2 s queda en el log con la memoria del momento (ver `monitorBloqueos`).
+    iniciarMonitorDeBloqueos();
+
     if (process.env.SIN_TAREAS_PROGRAMADAS === "true") {
       console.log("⏸️  SIN_TAREAS_PROGRAMADAS: no se inician las tareas programadas.");
     } else {
