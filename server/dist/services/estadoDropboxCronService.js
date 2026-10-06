@@ -62,6 +62,18 @@ function leTocaEscanear(tenant) {
 // De-dupe de warnings: no repetir el mismo log en cada corrida mientras el archivo siga sin poder
 // asignarse (se resetea si el server reinicia — aceptable para un log de diagnóstico).
 const lastWarned = new Map();
+/** El CUIT leído del CONTENIDO de cada PDF, por archivo y fecha de modificación (ver `scanEstadoParaTenant`). */
+const cuitPorContenido = new Map();
+const REINTENTO_CONTENIDO_MS = 6 * 60 * 60 * 1000;
+const DESCARGAS_EN_PARALELO = 2;
+/** Tope de lo recordado: si se pasa, se olvidan los más viejos (un Map conserva el orden de inserción). */
+const MAX_RECORDADOS = 20000;
+function recordarContenido(clave, cuit) {
+    cuitPorContenido.delete(clave);
+    cuitPorContenido.set(clave, { cuit, at: Date.now() });
+    while (cuitPorContenido.size > MAX_RECORDADOS)
+        cuitPorContenido.delete(cuitPorContenido.keys().next().value);
+}
 export const initEstadoDropboxScheduler = () => {
     console.log("[ESTADO-DROPBOX-CRON] Initializing scheduler...");
     setTimeout(() => {
@@ -286,38 +298,61 @@ async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
             continue;
         }
         const archivos = entries.filter((e) => e.tag === "file");
-        // Resolución del CUIT de cada archivo (nombre, y si hace falta contenido del PDF) EN PARALELO: es la
-        // parte lenta (baja y parsea PDFs enteros), y no toca `disponibles` — sacarla del loop secuencial de
-        // abajo evita que un escaneo con varios archivos sin CUIT en el nombre tarde la suma de todos ellos
-        // (riesgo real de superar el timeout del botón "Forzar escaneo ahora").
+        /*
+          EL CUIT DE CADA ARCHIVO: del nombre siempre; del CONTENIDO del PDF solo si hace falta y sirve.
+    
+          Leer el contenido es descargar el PDF entero y parsearlo, y parsear es trabajo SÍNCRONO: mientras
+          corre, Node no atiende nada. Se hacía con TODOS los archivos sin CUIT en el nombre, todos a la
+          vez y en cada escaneo —y hay un escaneo por cada aviso de Dropbox—. El 06/10/2026 eso dejó al
+          servidor al 85 % de CPU con 1,6 GB de RAM y bloqueos de 20–55 s: los PDFs viejos de
+          «Requested signatures» se bajaban una y otra vez, las descargas vencían por el mismo bloqueo, y
+          como nada quedaba guardado, el escaneo siguiente volvía a empezar. Ahora:
+    
+            · NO se lee el contenido de un archivo ANTERIOR al contrato más viejo que se busca: se iba a
+              descartar igual (`anterior_al_contrato`), así que bajarlo no servía para nada;
+            · lo leído se RECUERDA por archivo y fecha de modificación (`cuitPorContenido`): un PDF se
+              parsea una vez, no en cada escaneo. Si falló, se reintenta recién a las 6 horas;
+            · de a DOS descargas por vez, devolviéndole el hilo a Node entre una y otra.
+        */
+        const creados = disponibles.map((c) => c.creadoEl);
+        const cotaMinima = creados.some((c) => c === null) ? null : Math.min(...creados);
         const identidadPorArchivo = new Map();
-        await Promise.all(archivos.map(async (file) => {
-            // 1) CUIT en el nombre del archivo — la vía más barata y la que van a traer los documentos que
-            //    genera el propio sistema (`buildDocFileName`) apenas Dropbox Sign los devuelva firmados.
-            //    El EMAIL sale del mismo lado y en la misma pasada: es el identificador que siempre está,
-            //    porque hay personas sin CUIL y ninguna sin email.
-            let cuitEncontrado = extraerCuitDeNombre(file.name);
-            const emailEncontrado = normalizarEmail(leerAnclas(file.name).email);
-            let viaCuit = cuitEncontrado ? "nombre" : null;
-            // 2) Si el nombre no trae CUIT, intentar leerlo del contenido del PDF (documentos de AFIP que
-            //    el usuario sube a mano y que no siguen la convención de nombre, pero sí traen el CUIT como
-            //    texto — mismo parser que ya usa la carga masiva de constancias). Solo si tampoco hay email:
-            //    con email ya se sabe de quién es, y bajar y parsear el PDF entero es la parte lenta.
-            if (!cuitEncontrado && !emailEncontrado && /\.pdf$/i.test(file.name)) {
-                try {
-                    const buffer = await downloadFileContent(String(tenant._id), cfg, file.path);
-                    const datos = await parseConstanciaPdf(buffer);
-                    if (datos.cuit) {
-                        cuitEncontrado = datos.cuit;
-                        viaCuit = "contenido";
-                    }
-                }
-                catch (err) {
-                    console.warn(`[ESTADO-DROPBOX-CRON] No se pudo leer el CUIT del contenido de "${file.path}":`, err?.message || err);
-                }
+        const porContenido = [];
+        for (const file of archivos) {
+            const cuit = extraerCuitDeNombre(file.name);
+            const email = normalizarEmail(leerAnclas(file.name).email);
+            identidadPorArchivo.set(file.path, { cuit, email, via: cuit ? "nombre" : null });
+            if (cuit || email || !/\.pdf$/i.test(file.name))
+                continue;
+            const modificado = Date.parse(String(file.serverModified || ""));
+            if (cotaMinima !== null && Number.isFinite(modificado) && modificado < cotaMinima)
+                continue;
+            porContenido.push(file);
+        }
+        const leerContenido = async (file) => {
+            const clave = `${tenant._id}:${file.path}:${file.serverModified || ""}`;
+            const previo = cuitPorContenido.get(clave);
+            if (previo && (previo.cuit || Date.now() - previo.at < REINTENTO_CONTENIDO_MS)) {
+                if (previo.cuit)
+                    identidadPorArchivo.set(file.path, { cuit: previo.cuit, email: "", via: "contenido" });
+                return;
             }
-            identidadPorArchivo.set(file.path, { cuit: cuitEncontrado, email: emailEncontrado, via: viaCuit });
-        }));
+            let cuit = "";
+            try {
+                const buffer = await downloadFileContent(String(tenant._id), cfg, file.path);
+                cuit = (await parseConstanciaPdf(buffer)).cuit || "";
+            }
+            catch (err) {
+                console.warn(`[ESTADO-DROPBOX-CRON] No se pudo leer el CUIT del contenido de "${file.path}":`, err?.message || err);
+            }
+            recordarContenido(clave, cuit);
+            if (cuit)
+                identidadPorArchivo.set(file.path, { cuit, email: "", via: "contenido" });
+        };
+        for (let i = 0; i < porContenido.length; i += DESCARGAS_EN_PARALELO) {
+            await Promise.all(porContenido.slice(i, i + DESCARGAS_EN_PARALELO).map(leerContenido));
+            await new Promise((r) => setImmediate(r));
+        }
         for (const file of archivos) {
             const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
             const { cuit: cuitEncontrado, email: emailEncontrado, via: viaCuit } = identidadPorArchivo.get(file.path) || { cuit: "", email: "", via: null };
