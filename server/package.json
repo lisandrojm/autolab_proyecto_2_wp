@@ -116,6 +116,7 @@
     "test:nomenclatura": "tsx --test src/utils/nomenclatura.test.ts",
     "test:variables-documento": "tsx --test src/utils/variablesDocumento.test.ts",
     "test:anclas": "tsx --test src/utils/anclasNombre.test.ts",
+    "test:aviso-firma": "tsx --test src/services/circuitoAvisoFirma.test.ts src/services/dropboxSignMailService.test.ts",
     "test:grupo-tipo-servicio": "tsx --test src/utils/grupoTipoServicio.test.ts",
     "test:escalas": "tsx --test src/utils/auditoriaEscalas.test.ts",
     "test:estado-fuente": "tsx --test src/utils/estadoFuenteConvenio.test.ts",
