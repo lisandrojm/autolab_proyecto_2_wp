@@ -1187,7 +1187,7 @@ export const UsersPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
                     {/* Basic Info */}
-                    {viewUser.metadata?.documento && (
+                    {!!viewUser.metadata?.documento && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
@@ -1197,7 +1197,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.tipoDocumentoId && (
+                    {!!viewUser.metadata?.tipoDocumentoId && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faPassport} className="text-gray-300" />
@@ -1207,7 +1207,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.fechaNac && (
+                    {!!viewUser.metadata?.fechaNac && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faCalendar} className="text-gray-300" />
@@ -1217,7 +1217,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.generoId && (
+                    {!!viewUser.metadata?.generoId && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faVenusMars} className="text-gray-300" />
@@ -1227,7 +1227,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.estadoCivil && (
+                    {!!viewUser.metadata?.estadoCivil && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faUser} className="text-gray-300" />
@@ -1237,7 +1237,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.nivelEstudioId && (
+                    {!!viewUser.metadata?.nivelEstudioId && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faGraduationCap} className="text-gray-300" />
@@ -1247,7 +1247,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {(viewUser.metadata?.nacionalidadId || viewUser.metadata?.paisId) && (
+                    {!!(viewUser.metadata?.nacionalidadId || viewUser.metadata?.paisId) && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faPassport} className="text-gray-300" />
@@ -1269,17 +1269,22 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.osId && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faStethoscope} className="text-gray-300" />
-                          Obra Social
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{insuranceCompanies.find((ic) => ic.data.id === viewUser.metadata?.osId)?.name || '—'}</p>
-                      </div>
-                    )}
+                    {/*
+                      SIEMPRE, con «Sin asignar» si no tiene. Estaba condicionado a `osId &&`, y con
+                      `osId: 0` —sin obra social— React dibujaba el 0 suelto, sin rótulo.
+                    */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faStethoscope} className="text-gray-300" />
+                        Obra Social
+                      </label>
+                      {(() => {
+                        const nombre = viewUser.metadata?.osId ? insuranceCompanies.find((ic) => ic.data.id === viewUser.metadata?.osId)?.name : '';
+                        return nombre ? <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{nombre}</p> : <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">Sin asignar</p>;
+                      })()}
+                    </div>
 
-                    {viewUser.metadata?.cuit && (
+                    {!!viewUser.metadata?.cuit && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
@@ -1296,7 +1301,7 @@ export const UsersPage: React.FC = () => {
               {viewActiveTab === 'domicilio' && (
                 <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
-                    {viewUser.metadata?.paisId && (
+                    {!!viewUser.metadata?.paisId && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
@@ -1306,7 +1311,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.localidad && (
+                    {!!viewUser.metadata?.localidad && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
@@ -1316,7 +1321,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.calle && (
+                    {!!viewUser.metadata?.calle && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
@@ -1328,7 +1333,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.pisoDepto && (
+                    {!!viewUser.metadata?.pisoDepto && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
@@ -1338,7 +1343,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.codigoPostal && (
+                    {!!viewUser.metadata?.codigoPostal && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
@@ -1348,7 +1353,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.telefono && (
+                    {!!viewUser.metadata?.telefono && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faUser} className="text-gray-300" />
@@ -1397,7 +1402,7 @@ export const UsersPage: React.FC = () => {
                     </div>
                   )}
 
-                  {viewUser.metadata?.cuentaBancariaConfirmada && (
+                  {!!viewUser.metadata?.cuentaBancariaConfirmada && (
                     <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
                       <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
                       <div>
@@ -1426,7 +1431,7 @@ export const UsersPage: React.FC = () => {
                     </div>
                   )}
 
-                  {viewUser.metadata?.cambioCuentaConfirmada && (
+                  {!!viewUser.metadata?.cambioCuentaConfirmada && (
                     <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
                       <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
                       <div>
@@ -1439,7 +1444,7 @@ export const UsersPage: React.FC = () => {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
-                    {viewUser.metadata?.bancoId && (
+                    {!!viewUser.metadata?.bancoId && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
@@ -1449,7 +1454,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.cbu && (
+                    {!!viewUser.metadata?.cbu && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
@@ -1459,7 +1464,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.tipoDeCuentaBancaria && (
+                    {!!viewUser.metadata?.tipoDeCuentaBancaria && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
@@ -1469,7 +1474,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.nroDeCuentaBancaria && (
+                    {!!viewUser.metadata?.nroDeCuentaBancaria && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
@@ -1479,7 +1484,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {viewUser.metadata?.aliasBancario && (
+                    {!!viewUser.metadata?.aliasBancario && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
@@ -1497,7 +1502,7 @@ export const UsersPage: React.FC = () => {
                   {/* Las mismas secciones que la pestaña Sistema del formulario, en solo lectura: lo
                       que se ve acá es exactamente lo que se edita allá. */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {viewUser.metadata?.numeroLegajoTango && (
+                    {!!viewUser.metadata?.numeroLegajoTango && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                           <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
