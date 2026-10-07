@@ -18,7 +18,7 @@ import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSu
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
-import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, importePorJornadaDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
 import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
@@ -2587,6 +2587,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             mesesEq={mesesEq}
             indeterminado={indeterminado}
             jornadas={jornadasDelContrato}
+            jornadasDelTipo={jornadasDelTipo}
+            proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaElegida)}
             diasSemana={diasSemanaNum}
             bloqueado={importesBloqueados}
             textoBloqueado="Se habilita al elegir la categoría."

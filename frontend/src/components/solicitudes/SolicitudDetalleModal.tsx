@@ -13,7 +13,7 @@ import { activityLogTypesAPI, RequestConfig } from "../../api/requestConfig";
 import { projectsAPI } from "../../api/projects";
 import { EstadoBadge, estadoLabel } from "../EstadoSelect";
 import { textoDeDias } from "../../utils/jerarquiaTurnos";
-import { mesesEquivalentes, periodoDeCalculo } from "../../utils/jornadas";
+import { mesesEquivalentes, mesesParaImportes, periodoDeCalculo } from "../../utils/jornadas";
 import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista, formatFechaSolicitud, useCatalogosDeSolicitudes } from "./SolicitudesTable";
 
 /*
@@ -260,9 +260,15 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
     que esta pantalla conteste distinto que la que cargó el alta.
   */
   // Tiempo indeterminado: las jornadas son las de un mes completo y no hay total (ver `periodoDeCalculo`).
-  const indeterminado = !!contratos.find((c) => String(c._id) === String(m.contratoId || ""))?.data?.esTiempoIndeterminado;
+  const contratoDeLaSolicitud = contratos.find((c) => String(c._id) === String(m.contratoId || ""));
+  const indeterminado = !!contratoDeLaSolicitud?.data?.esTiempoIndeterminado;
   const periodo = periodoDeCalculo(m.startDate, m.dueDate, indeterminado);
-  const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana, Array.isArray(m.fechasTrabajadas) && m.fechasTrabajadas.length ? m.fechasTrabajadas : undefined);
+  // Con jornadas en el tipo («Jornada»: 22 por mes), el mensual es jornada × 22: ver `mesesParaImportes`.
+  const mesesEq = mesesParaImportes(
+    mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana, Array.isArray(m.fechasTrabajadas) && m.fechasTrabajadas.length ? m.fechasTrabajadas : undefined),
+    jornadas,
+    Number(contratoDeLaSolicitud?.data?.cantidadJornadas) || null,
+  );
   const totalCalculado = jornadas > 0 ? valorJornada * jornadas : null;
   const mensual = totalCalculado !== null && mesesEq > 0 ? totalCalculado / mesesEq : null;
   const total = indeterminado ? null : totalCalculado;

@@ -332,6 +332,16 @@ export const convenioDeCategoria = (categoriaId: string | number | undefined, ca
  */
 export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undefined, multiplicadorDiario?: number | null, jornadasDelTipo?: number | null): number => (categoria ? importePorJornada(categoria.data as any, multiplicadorDiario, jornadasDelTipo) : 0);
 
+/**
+ * Neto ÷ bruto de la escala de una categoría (0,81 en el 634/11): convierte el importe por jornada
+ * —bruto— en lo que cobra la persona. `null` si la categoría no trae los dos (un servicio no tiene).
+ */
+export const proporcionNetoDeCategoria = (categoria: CategoriaSatItem | null | undefined): number | null => {
+  const bruto = Number(categoria?.data?.sueldoBruto);
+  const neto = Number(categoria?.data?.neto);
+  return bruto > 0 && neto > 0 ? neto / bruto : null;
+};
+
 /** Un nivel del catálogo de Valoraciones. Para compararlos alcanza con el orden. */
 export interface NivelDeValoracion {
   _id: string;

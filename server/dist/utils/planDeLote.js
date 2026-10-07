@@ -19,7 +19,7 @@
  *
  * ERRORES frenan la contratación entera (el lote es todo o nada). ADVERTENCIAS se muestran y no frenan.
  */
-import { derivarImportes, erroresDeJornadas, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../compartido/jornadas.js";
+import { derivarImportes, erroresDeJornadas, importePorJornada, mesesParaImportes, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../compartido/jornadas.js";
 import { semanaDelTipoDeContrato } from "../compartido/diasDeTrabajo.js";
 export const MAX_INTEGRANTES_POR_LOTE = 50;
 /** "HH:MM" a horas (cruza la medianoche). `null` si no se entiende. Igual que `horasDelHorario` del formulario. */
@@ -112,7 +112,8 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
             dailyRate = escala;
         }
         const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana, porDiasSueltos ? fechasSueltas : undefined);
-        const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 ? dailyRate : null, mesesEq, jornadas, diasSemana: diasPorSemana });
+        // Con las jornadas del tipo («Jornada»: 22 por mes), el mensual es jornada × 22: ver `mesesParaImportes`.
+        const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 ? dailyRate : null, mesesEq: mesesParaImportes(mesesEq, jornadas, Number(contrato?.cantidadJornadas) || null), jornadas, diasSemana: diasPorSemana });
         // ── Las reglas del formulario individual ──
         if (sinPersona)
             errores.push("Falta la persona del puesto: elegila o excluí el puesto.");

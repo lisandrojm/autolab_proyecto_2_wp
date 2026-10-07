@@ -250,6 +250,17 @@ export const derivarImportes = (p) => {
     const semana = jornada !== null && diasSemana > 0 ? jornada * diasSemana : null;
     return { jornada, semana, mensual, total };
 };
+/**
+ * CUÁNTOS MESES DURA EL CONTRATO PARA LOS IMPORTES, con las jornadas del tipo de contrato.
+ *
+ * Si el tipo dice cuántas jornadas tiene un mes («Jornada»: 22), un mes son 22 jornadas: el contrato
+ * dura `jornadas ÷ 22` meses, y con eso `derivarImportes` da mensual = jornada × 22 —que es la escala
+ * mensual × el multiplicador, la misma base de `importePorJornada`—. Con los meses del calendario, un
+ * día suelto contaba como un cuarto de mes y el mensual salía jornada × 4.
+ *
+ * Sin jornadas en el tipo, los meses del período de siempre (`mesesEquivalentes`).
+ */
+export const mesesParaImportes = (mesesEq, jornadas, jornadasDelTipo) => Number(jornadasDelTipo) > 0 && jornadas > 0 ? jornadas / Number(jornadasDelTipo) : mesesEq;
 /** Editar la jornada deja como ancla el mensual que le corresponde. `null` si todavía no se puede calcular. */
 export const anclaDesdeJornada = (jornada, jornadas, mesesEq) => jornadas > 0 && mesesEq > 0 ? { unidad: "mensual", valor: (jornada * jornadas) / mesesEq } : null;
 /** Sin jornadas cargadas en el tipo de contrato, el mes se cuenta de 30 días. */

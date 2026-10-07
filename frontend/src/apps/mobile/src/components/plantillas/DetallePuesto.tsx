@@ -12,7 +12,7 @@ import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategori
 import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
 import { AyudaImportes, diferenciaContraEscala, PROPS_IMPORTES_MOVIL } from "../contratacion/AyudaImportes";
 import { ImportesDelContrato } from "../../../../../components/contratacion/ImportesDelContrato";
-import { importePorJornadaDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
+import { importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
 import { jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { marcasParaSelector } from "./PantallaEquipo";
 import { nombreRoles, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
@@ -243,6 +243,8 @@ export default function DetallePuesto() {
                 onValorJornada={setImporte}
                 mesesEq={mesesEqRef}
                 jornadas={jornadasRef}
+                jornadasDelTipo={jornadasDelPuesto}
+                proporcionNeto={proporcionNetoDeCategoria(categoriaDelPuesto)}
                 diasSemana={diasRef.length}
                 bloqueado={!categoriaActual}
                 textoBloqueado="Se habilita al elegir la categoría."

@@ -56,7 +56,7 @@ import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
-import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos } from '../utils/seleccionConvenioCategoria';
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, proporcionNetoDeCategoria } from '../utils/seleccionConvenioCategoria';
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
 import { SelectorCategoria } from '../components/contratos/SelectorCategoria';
 import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
@@ -4700,7 +4700,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   Lo que se guarda sigue siendo el sueldo por jornada.
                 */}
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} diasSemana={diasSemanaWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
+                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
 
                   {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
                   <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">

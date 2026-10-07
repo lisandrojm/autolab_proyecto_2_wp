@@ -12,7 +12,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { anclaDesdeJornada, derivarImportes, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
+import { anclaDesdeJornada, derivarImportes, mesesParaImportes, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
 const LU_VI = [1, 2, 3, 4, 5];
 const cerca = (a, b) => assert.ok(a !== null && Math.abs(a - b) < 1e-9, `${a} ≠ ${b}`);
 test("diasCorridos: ambos extremos inclusive; null si falta una fecha o el fin es anterior", () => {
@@ -157,4 +157,17 @@ test("jornadas fijadas por el tipo de contrato: mandan sobre el calendario, salv
 test("erroresDeJornadas: sin fechas no se envía, aunque las jornadas estén cargadas a mano", () => {
     assert.match(erroresDeJornadas({ ...base, desde: "", hasta: "", ajustado: true, calculadas: null, jornadas: "30" }).fechas || "", /inicio/);
     assert.match(erroresDeJornadas({ ...base, hasta: "" }).fechas || "", /fin/);
+});
+test("mesesParaImportes: con jornadas en el tipo, el mensual es jornada × esas jornadas (no × los meses del calendario)", () => {
+    // «Jornada» (22 por mes), un día suelto: antes el mensual salía jornada × 4 (un día = un cuarto de mes).
+    const meses = mesesParaImportes(0.25, 1, 22);
+    const i = derivarImportes({ ancla: null, jornada: 66686.15, mesesEq: meses, jornadas: 1, diasSemana: 1 });
+    assert.equal(Number(i.mensual.toFixed(2)), 1467095.3);
+    assert.equal(Number(i.total.toFixed(2)), 66686.15);
+    // Editar el mensual: la jornada sale de dividirlo por las 22, no por los días del período.
+    const j = derivarImportes({ ancla: { unidad: "mensual", valor: 1467095.3 }, jornada: null, mesesEq: mesesParaImportes(0.25, 1, 22), jornadas: 1, diasSemana: 1 });
+    assert.equal(Number(j.jornada.toFixed(2)), 66686.15);
+    // Sin jornadas en el tipo, los meses del período.
+    assert.equal(mesesParaImportes(0.5, 11, null), 0.5);
+    assert.equal(mesesParaImportes(0.5, 0, 22), 0.5);
 });
