@@ -322,16 +322,15 @@ export const convenioDeCategoria = (categoriaId: string | number | undefined, ca
  * desde cero era pedirle a un coordinador que calcule algo que el convenio ya dice.
  */
 /**
- * El importe por jornada que propone una categoría: su neto mensual dividido 30.
+ * El importe por jornada que propone una categoría con el tipo de contrato elegido:
  *
- * EL MULTIPLICADOR DEL TIPO DE CONTRATO SE APLICA ACÁ. Un contrato «Jornada» con multiplicador 1,5
- * paga una vez y media la jornada de la escala: el número que hay que proponer es el ya multiplicado,
- * no la escala pelada —que es lo que valdría si el contrato fuera común—. Vive en esta función y no
- * en cada pantalla para que la app y el escritorio propongan lo mismo.
+ *     (básico + adicional + presentismo) ÷ jornadas del tipo de contrato × multiplicador diario
  *
- * Sin multiplicador cargado (0, vacío o ausente) se usa 1: es «sin multiplicador», no «por cero».
+ * Con «Jornada» (22 jornadas, ×1,5) el G10 del 634/11 da 66.686,15. La cuenta vive en
+ * `importePorJornada` (`@compartido/jornadas`), la misma del server: la app y el escritorio proponen lo
+ * mismo. Sin jornadas en el tipo se divide por 30; sin multiplicador se usa 1.
  */
-export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undefined, multiplicadorDiario?: number | null): number => (categoria ? importePorJornada(categoria.data?.neto, multiplicadorDiario) : 0);
+export const importePorJornadaDeCategoria = (categoria: CategoriaSatItem | undefined, multiplicadorDiario?: number | null, jornadasDelTipo?: number | null): number => (categoria ? importePorJornada(categoria.data as any, multiplicadorDiario, jornadasDelTipo) : 0);
 
 /** Un nivel del catálogo de Valoraciones. Para compararlos alcanza con el orden. */
 export interface NivelDeValoracion {

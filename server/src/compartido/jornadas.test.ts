@@ -130,14 +130,17 @@ test("hayAjuste / erroresDeJornadas: pisar el calendario exige motivo, y «Otro�
   assert.deepEqual(erroresDeJornadas({ ...ajustado, motivo: "otro", nota: "llovió dos días" }), {});
 });
 
-test("importePorJornada: neto ÷ 30 × multiplicador del tipo de contrato (sin multiplicador = 1)", () => {
-  assert.equal(importePorJornada(30000), 1000);
-  assert.equal(importePorJornada(30000, 1.5), 1500);
-  assert.equal(importePorJornada(30000, 0), 1000);
-  assert.equal(importePorJornada(30000, null), 1000);
-  // Redondea a centavos DESPUÉS de multiplicar.
-  assert.equal(importePorJornada(1176624.4, 1.5), 58831.22);
-  assert.equal(importePorJornada(undefined, 1.5), 0);
+test("importePorJornada: (básico + adicional + presentismo) ÷ jornadas del tipo × multiplicador", () => {
+  // El caso del pedido (06/10/2026): G10 del 634/11 con «Jornada», 22 jornadas y ×1,5.
+  const g10 = { sueldoBasico: 734833.55, sueldoAdicional: 154315.05, presentismo: 88914.86, sueldoBruto: 978063.46 };
+  assert.equal(importePorJornada(g10, 1.5, 22), 66686.15);
+  // Sin multiplicador (0, vacío) = 1; sin jornadas en el tipo = 30.
+  assert.equal(importePorJornada(g10, 0, 22), 44457.43);
+  assert.equal(importePorJornada(g10, null, null), 32602.12);
+  assert.equal(importePorJornada({ sueldoBasico: 22000, sueldoAdicional: 0, presentismo: 0 }, 1.5, 22), 1500);
+  // Sin los tres componentes, el bruto (que es su suma).
+  assert.equal(importePorJornada({ sueldoBruto: 30000 }, 1, 30), 1000);
+  assert.equal(importePorJornada(undefined, 1.5, 22), 0);
 });
 
 test("jornadasCalculadasDelPedido: por días sueltos son los días marcados, no los de la semana del período", () => {

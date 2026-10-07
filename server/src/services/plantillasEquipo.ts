@@ -129,8 +129,8 @@ async function escalaDe(plantilla: any, puesto: any): Promise<number | null> {
   const categoriaSatId = puesto?.categoriaSatId;
   if (!idOk(categoriaSatId)) return null;
   const contratoId = puesto?.contratoId || plantilla.contratoId;
-  const [[cat], contrato]: any[] = await Promise.all([resolverCategoriasCompatPorId([oid(categoriaSatId)]), contratoId ? Contrato.findById(contratoId).select("data.multiplicadorDiario").lean() : null]);
-  return cat ? importePorJornada(cat.data?.neto, contrato?.data?.multiplicadorDiario) : null;
+  const [[cat], contrato]: any[] = await Promise.all([resolverCategoriasCompatPorId([oid(categoriaSatId)]), contratoId ? Contrato.findById(contratoId).select("data.multiplicadorDiario data.cantidadJornadas").lean() : null]);
+  return cat ? importePorJornada(cat.data, contrato?.data?.multiplicadorDiario, contrato?.data?.cantidadJornadas) : null;
 }
 
 // ── Las condiciones propias de un equipo ────────────────────────────────
@@ -912,7 +912,12 @@ async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: Integra
     hayContratos: !!hayContratos,
     convenioCct: String(convenio?.externalId || "").trim(),
     hayConvenios: !!hayConvenios,
-    categorias: new Map(categorias.map((c: any) => [String(c._id), { neto: Number(c.data?.neto) || 0, convenio: String(c.data?.convenio || "").trim(), nombre: c.name || "" }])),
+    categorias: new Map(
+      categorias.map((c: any) => [
+        String(c._id),
+        { neto: Number(c.data?.neto) || 0, sueldoBasico: Number(c.data?.sueldoBasico) || 0, sueldoAdicional: Number(c.data?.sueldoAdicional) || 0, presentismo: Number(c.data?.presentismo) || 0, sueldoBruto: Number(c.data?.sueldoBruto) || 0, convenio: String(c.data?.convenio || "").trim(), nombre: c.name || "" },
+      ]),
+    ),
     personas: new Map(personas.map((u: any) => [String(u._id), { nombre: nombreDe(u), activo: u.metadata?.activo !== false, esSolicitud: !!u.metadata?.isSolicitud }])),
     equipo: new Set(equipo.map((u: any) => String(u._id))),
     // Mismo filtro que el formulario: activos y sin «horas extra», que no es una ausencia.

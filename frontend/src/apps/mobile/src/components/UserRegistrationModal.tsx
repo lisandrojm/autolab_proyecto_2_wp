@@ -804,6 +804,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     en nada, que es lo contrario de lo que un campo vacío quiere decir.
   */
   const multiplicadorDiario = Number(contratoElegido?.data?.multiplicadorDiario) > 0 ? Number(contratoElegido!.data!.multiplicadorDiario) : 1;
+  /** Las jornadas del tipo de contrato: el importe por jornada divide la escala mensual por esto (ver `importePorJornada`). */
+  const jornadasDelTipo = Number(contratoElegido?.data?.cantidadJornadas) > 0 ? Number(contratoElegido!.data!.cantidadJornadas) : null;
 
   /**
    * ESTE TIPO DE CONTRATO SE PIDE POR DÍAS SUELTOS, no por período (ver `modoFechas` en el ABM).
@@ -856,12 +858,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const diferenciaContraEscala = useMemo(() => {
     // Con el multiplicador incluido: si no, un contrato de 1,5 mostraría siempre «+50% contra la escala».
-    const escala = importePorJornadaDeCategoria(categoriaElegida || undefined, multiplicadorDiario);
+    const escala = importePorJornadaDeCategoria(categoriaElegida || undefined, multiplicadorDiario, jornadasDelTipo);
     const cargado = Number(formData.dailyRate);
     if (!escala || !Number.isFinite(cargado) || !formData.dailyRate) return null;
     const delta = Number((cargado - escala).toFixed(2));
     return delta === 0 ? null : { escala, delta };
-  }, [categoriaElegida, formData.dailyRate, multiplicadorDiario]);
+  }, [categoriaElegida, formData.dailyRate, multiplicadorDiario, jornadasDelTipo]);
 
   const limiteHoras = contratoElegido?.data?.horasPorJornada ?? null;
   const limiteDias = contratoElegido?.data?.diasPorSemana ?? null;
@@ -1539,9 +1541,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     const propuesto = importePorJornadaDeCategoria(
       categoriasSat.find((c) => c._id === formData.categoriaSatId),
       multiplicadorDiario,
+      jornadasDelTipo,
     );
     if (propuesto > 0) setFormData((p) => ({ ...p, dailyRate: String(propuesto) }));
-  }, [formData.categoriaSatId, formData.contratoId, categoriasSat, multiplicadorDiario]);
+  }, [formData.categoriaSatId, formData.contratoId, categoriasSat, multiplicadorDiario, jornadasDelTipo]);
 
   /*
     AL ELEGIR UN TIPO DE SERVICIOS SE SUELTA LA CATEGORÍA, y el importe se queda.
@@ -2569,6 +2572,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               className="contents"
               categoria={categoriaElegida}
               multiplicador={multiplicadorDiario}
+              jornadasDelTipo={jornadasDelTipo}
               valorJornada={formData.dailyRate}
               onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
               bloqueado={importesBloqueados}
@@ -2586,7 +2590,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             diasSemana={diasSemanaNum}
             bloqueado={importesBloqueados}
             textoBloqueado="Se habilita al elegir la categoría."
-            ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaElegida?.name} cct={convenioElegido?.externalId} multiplicador={multiplicadorDiario} contrato={contratoElegido?.name} escalaBase={importePorJornadaDeCategoria(categoriaElegida || undefined)} diferencia={diferenciaContraEscala} />}
+            ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaElegida?.name} cct={convenioElegido?.externalId} multiplicador={multiplicadorDiario} contrato={contratoElegido?.name} escalaBase={importePorJornadaDeCategoria(categoriaElegida || undefined, 1, jornadasDelTipo)} diferencia={diferenciaContraEscala} />}
             {...PROPS_IMPORTES_MOVIL}
           />
         </div>

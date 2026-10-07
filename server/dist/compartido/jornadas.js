@@ -252,12 +252,31 @@ export const derivarImportes = (p) => {
 };
 /** Editar la jornada deja como ancla el mensual que le corresponde. `null` si todavía no se puede calcular. */
 export const anclaDesdeJornada = (jornada, jornadas, mesesEq) => jornadas > 0 && mesesEq > 0 ? { unidad: "mensual", valor: (jornada * jornadas) / mesesEq } : null;
+/** Sin jornadas cargadas en el tipo de contrato, el mes se cuenta de 30 días. */
+export const JORNADAS_DEL_MES_POR_DEFECTO = 30;
 /**
- * EL IMPORTE POR JORNADA DE UNA CATEGORÍA: su neto mensual ÷ 30, por el multiplicador del tipo de
- * contrato («Jornada» paga 1,5). Sin multiplicador cargado (0, vacío o ausente) se usa 1: es «sin
- * multiplicador», no «por cero». Se redondea a centavos DESPUÉS de multiplicar.
+ * EL IMPORTE POR JORNADA DE UNA CATEGORÍA, con el tipo de contrato:
+ *
+ *     (básico + adicional + presentismo) ÷ jornadas del tipo de contrato × multiplicador diario
+ *
+ * Con «Jornada» (22 jornadas, ×1,5) y el G10 del 634/11: (734.833,55 + 154.315,05 + 88.914,86)
+ * ÷ 22 × 1,5 = 66.686,15. Antes era el NETO ÷ 30 × multiplicador (39.611,57 con esos números): no
+ * usaba las jornadas del tipo y partía del neto en vez del bruto.
+ *
+ *   - Sin los tres componentes por separado se usa el bruto de la escala, que es su suma.
+ *   - Sin jornadas en el tipo de contrato (0, vacío o ausente) se divide por 30.
+ *   - Sin multiplicador (0, vacío o ausente) se usa 1: es «sin multiplicador», no «por cero».
+ *
+ * Se redondea a centavos DESPUÉS de multiplicar. Es la única cuenta: la usan el formulario del móvil,
+ * las plantillas de equipo, la carga en lote y la web.
  */
-export const importePorJornada = (neto, multiplicadorDiario) => {
+export const importePorJornada = (escala, multiplicadorDiario, jornadasDelTipo) => {
+    if (!escala)
+        return 0;
+    const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    const componentes = n(escala.sueldoBasico) + n(escala.sueldoAdicional) + n(escala.presentismo);
+    const mensual = componentes > 0 ? componentes : n(escala.sueldoBruto);
+    const jornadas = Number(jornadasDelTipo) > 0 ? Number(jornadasDelTipo) : JORNADAS_DEL_MES_POR_DEFECTO;
     const multiplicador = Number(multiplicadorDiario) > 0 ? Number(multiplicadorDiario) : 1;
-    return Number(((Number(neto ?? 0) / 30) * multiplicador).toFixed(2));
+    return Number(((mensual / jornadas) * multiplicador).toFixed(2));
 };

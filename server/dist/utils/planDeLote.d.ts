@@ -138,8 +138,13 @@ export interface Contexto {
     convenioCct: string;
     /** Hay convenios que ofrecer: sin ninguno, el individual no exige convenio. */
     hayConvenios: boolean;
+    /** La escala de cada categoría (para el importe por jornada: ver `importePorJornada`), su convenio y su nombre. */
     categorias: Map<string, {
         neto: number;
+        sueldoBasico?: number;
+        sueldoAdicional?: number;
+        presentismo?: number;
+        sueldoBruto?: number;
         convenio: string;
         nombre: string;
     }>;

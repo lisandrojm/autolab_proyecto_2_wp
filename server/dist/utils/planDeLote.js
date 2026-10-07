@@ -90,7 +90,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const fijadasPorTipo = jornadasFijadasPorElTipo(contrato?.cantidadJornadas, porDiasSueltos);
         const jornadas = fijadasPorTipo ?? (rotativos ? Number(p.jornadas) || Number(contratacion.jornadasRotativos) || 0 : calculadas || 0);
         // ── Lo que se paga por jornada ──
-        const escala = categoria ? importePorJornada(categoria.neto, multiplicador) : 0;
+        const escala = categoria ? importePorJornada(categoria, multiplicador, Number(contrato?.cantidadJornadas) || null) : 0;
         let dailyRate = 0;
         let origenImporte = "escala";
         if (p.dailyRate != null && Number(p.dailyRate) > 0) {

@@ -58,8 +58,9 @@ export default function DetallePuesto() {
   const contratoDelPuesto = catalogos.contratos.find((c) => c._id === x?.efectivo.contratoId) as any;
   const multDelPuesto = Number(contratoDelPuesto?.data?.multiplicadorDiario) > 0 ? Number(contratoDelPuesto.data.multiplicadorDiario) : 1;
   const categoriaDelPuesto = catalogos.categoriasSat.find((c) => c._id === x?.efectivo.categoriaSatId);
-  const escalaBase = importePorJornadaDeCategoria(categoriaDelPuesto);
-  const escala = importePorJornadaDeCategoria(categoriaDelPuesto, multDelPuesto);
+  const jornadasDelPuesto = Number(contratoDelPuesto?.data?.cantidadJornadas) > 0 ? Number(contratoDelPuesto.data.cantidadJornadas) : null;
+  const escalaBase = importePorJornadaDeCategoria(categoriaDelPuesto, 1, jornadasDelPuesto);
+  const escala = importePorJornadaDeCategoria(categoriaDelPuesto, multDelPuesto, jornadasDelPuesto);
   /** Si la persona escribió en los importes: lo que emite el componente al montarse no cuenta. */
   const tocoImporte = useRef(false);
   /*

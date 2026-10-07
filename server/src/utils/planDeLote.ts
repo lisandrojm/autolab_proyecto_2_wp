@@ -146,7 +146,8 @@ export interface Contexto {
   convenioCct: string;
   /** Hay convenios que ofrecer: sin ninguno, el individual no exige convenio. */
   hayConvenios: boolean;
-  categorias: Map<string, { neto: number; convenio: string; nombre: string }>;
+  /** La escala de cada categoría (para el importe por jornada: ver `importePorJornada`), su convenio y su nombre. */
+  categorias: Map<string, { neto: number; sueldoBasico?: number; sueldoAdicional?: number; presentismo?: number; sueldoBruto?: number; convenio: string; nombre: string }>;
   personas: Map<string, { nombre: string; activo: boolean; esSolicitud: boolean }>;
   /** Los `_id` de las personas del equipo del proyecto: a quién se puede reemplazar. */
   equipo: Set<string>;
@@ -261,7 +262,7 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     const jornadas = fijadasPorTipo ?? (rotativos ? Number(p.jornadas) || Number(contratacion.jornadasRotativos) || 0 : calculadas || 0);
 
     // ── Lo que se paga por jornada ──
-    const escala = categoria ? importePorJornada(categoria.neto, multiplicador) : 0;
+    const escala = categoria ? importePorJornada(categoria, multiplicador, Number(contrato?.cantidadJornadas) || null) : 0;
     let dailyRate = 0;
     let origenImporte: FilaDelPlan["origenImporte"] = "escala";
     if (p.dailyRate != null && Number(p.dailyRate) > 0) {

@@ -12,7 +12,8 @@ import { CampoImporte } from "./CampoImporte";
       presentismo  = (básico + adicional) × 10 %
       bruto        = básico + adicional + presentismo
       neto         = bruto × 0,81
-      por jornada  = neto ÷ 30 × multiplicador del tipo de contrato
+      por jornada  = (básico + adicional + presentismo) ÷ jornadas del tipo de contrato × multiplicador
+                     (la cuenta de `importePorJornada`; sin jornadas en el tipo, ÷ 30)
 
   Como es lineal, lo pactado se describe con UN factor contra la escala: el importe por jornada
   cargado ÷ el de la escala. Cada columna es su valor de escala por ese factor. Editar cualquiera
@@ -28,6 +29,8 @@ interface Props {
   categoria: CategoriaSatItem | null | undefined;
   /** Multiplicador del tipo de contrato (0 o vacío = 1). */
   multiplicador?: number | null;
+  /** Jornadas del tipo de contrato (0 o vacío = 30): la escala mensual se divide por esto. */
+  jornadasDelTipo?: number | null;
   /** El importe por jornada, texto canónico ("45454.545454"). El mismo de `ImportesDelContrato`. */
   valorJornada: string;
   onValorJornada: (valor: string) => void;
@@ -44,7 +47,7 @@ interface Props {
 
 const pct = (n: number) => `${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })} %`;
 
-export function EscalaDelContrato({ categoria, multiplicador, valorJornada, onValorJornada, bloqueado = false, className = "", claseEtiqueta, claseCampo, claseAyuda, icono, adornoCampo, infoEnRotulo }: Props) {
+export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, valorJornada, onValorJornada, bloqueado = false, className = "", claseEtiqueta, claseCampo, claseAyuda, icono, adornoCampo, infoEnRotulo }: Props) {
   const [enEdicion, setEnEdicion] = useState<{ columna: Columna; texto: string } | null>(null);
   const d: any = categoria?.data || {};
   const mult = Number(multiplicador) > 0 ? Number(multiplicador) : 1;
@@ -55,8 +58,14 @@ export function EscalaDelContrato({ categoria, multiplicador, valorJornada, onVa
     bruto: Number(d.sueldoBruto) || 0,
     neto: Number(d.neto) || 0,
   };
-  // Sin redondear: el factor tiene que dar exacto 1 cuando lo cargado es la escala.
-  const jornadaDeEscala = (escala.neto / 30) * mult;
+  /*
+    La misma cuenta que `importePorJornada` (@compartido/jornadas), SIN redondear: el factor tiene que
+    dar 1 cuando lo cargado es la escala. Básico + adicional + presentismo (o el bruto, si no vienen
+    por separado) ÷ las jornadas del tipo de contrato × su multiplicador.
+  */
+  const jornadas = Number(jornadasDelTipo) > 0 ? Number(jornadasDelTipo) : 30;
+  const mensualDeEscala = escala.basico + escala.adicional + escala.presentismo > 0 ? escala.basico + escala.adicional + escala.presentismo : escala.bruto;
+  const jornadaDeEscala = (mensualDeEscala / jornadas) * mult;
   if (!categoria || jornadaDeEscala <= 0) return null;
 
   const jornada = Number(valorJornada);
@@ -80,8 +89,8 @@ export function EscalaDelContrato({ categoria, multiplicador, valorJornada, onVa
     adicional: "El adicional del convenio: el básico por el % adicional del grupo.",
     pct: "El % adicional es fijo para el grupo: lo define el convenio, no el contrato. Por eso no se edita acá.",
     presentismo: "El 10 % del básico más el adicional.",
-    bruto: "Básico + adicional + presentismo: lo que cobra antes de los descuentos de ley.",
-    neto: `El bruto menos los descuentos (queda el 81 %). Es el sueldo mensual de la escala: dividido 30${mult !== 1 ? ` y por el multiplicador del contrato (×${mult.toLocaleString("es-AR")})` : ""} da el importe por jornada.`,
+    bruto: `Básico + adicional + presentismo: lo que cobra antes de los descuentos de ley. Dividido ${jornadas} (las jornadas del tipo de contrato)${mult !== 1 ? ` y por el multiplicador del contrato (×${mult.toLocaleString("es-AR")})` : ""} da el importe por jornada.`,
+    neto: "El bruto menos los descuentos (queda el 81 %).",
   };
   const pie = distinto ? ` Cargado ${factor > 1 ? "por encima" : "por debajo"} de la escala (${pct((factor - 1) * 100)}): si lo cambiás, se recalculan los demás y los importes del contrato.` : " Si lo cambiás, se recalculan los demás y los importes del contrato.";
 

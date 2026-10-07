@@ -316,8 +316,9 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const hasta = sueltos ? fechas[fechas.length - 1] || "" : hastaPropio;
   const periodo = periodoDeCalculo(desde, hasta, indeterminado);
   const mult = Number(contratoDoc?.data?.multiplicadorDiario) > 0 ? Number(contratoDoc.data.multiplicadorDiario) : 1;
-  const escalaBase = importePorJornadaDeCategoria(categoriaActual || undefined);
-  const escala = importePorJornadaDeCategoria(categoriaActual || undefined, mult);
+  const jornadasDelTipo = Number(contratoDoc?.data?.cantidadJornadas) > 0 ? Number(contratoDoc.data.cantidadJornadas) : null;
+  const escalaBase = importePorJornadaDeCategoria(categoriaActual || undefined, 1, jornadasDelTipo);
+  const escala = importePorJornadaDeCategoria(categoriaActual || undefined, mult, jornadasDelTipo);
   const importesBloqueados = !esServicios && !categoriaIdActual;
   const diasDeSemana = sueltos ? [...new Set(fechas.map((s) => new Date(`${s}T12:00:00Z`).getUTCDay()))] : x.efectivo.diasSemana || [];
   const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasDeSemana, sueltos ? fechas : undefined);

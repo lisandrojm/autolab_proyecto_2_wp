@@ -29,9 +29,11 @@ const ctx = ({ contrato, ...x } = {}) => ({
     convenioCct: "634/11",
     hayConvenios: true,
     categorias: new Map([
-        ["cat1", { neto: 30000, convenio: "634/11", nombre: "Oro" }],
-        ["cat2", { neto: 45000, convenio: "634/11", nombre: "Platino" }],
-        ["catOtro", { neto: 30000, convenio: "131/75", nombre: "Otra" }],
+        // El importe por jornada sale del BRUTO de la escala (ver `importePorJornada`): se carga igual al
+        // neto para que las cuentas de estos tests sigan siendo redondas (30.000 ÷ 30 = 1.000).
+        ["cat1", { neto: 30000, sueldoBruto: 30000, convenio: "634/11", nombre: "Oro" }],
+        ["cat2", { neto: 45000, sueldoBruto: 45000, convenio: "634/11", nombre: "Platino" }],
+        ["catOtro", { neto: 30000, sueldoBruto: 30000, convenio: "131/75", nombre: "Otra" }],
     ]),
     personas: new Map([
         ["u1", { nombre: "Ana Uno", activo: true, esSolicitud: false }],
