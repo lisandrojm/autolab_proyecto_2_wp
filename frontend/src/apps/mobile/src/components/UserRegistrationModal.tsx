@@ -2588,6 +2588,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             indeterminado={indeterminado}
             jornadas={jornadasDelContrato}
             jornadasDelTipo={jornadasDelTipo}
+            diasPorSemanaDelTipo={Number(contratoElegido?.data?.diasPorSemana) || null}
             proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaElegida)}
             diasSemana={diasSemanaNum}
             bloqueado={importesBloqueados}

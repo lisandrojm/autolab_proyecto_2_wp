@@ -244,6 +244,7 @@ export default function DetallePuesto() {
                 mesesEq={mesesEqRef}
                 jornadas={jornadasRef}
                 jornadasDelTipo={jornadasDelPuesto}
+                diasPorSemanaDelTipo={Number(contratoDelPuesto?.data?.diasPorSemana) || null}
                 proporcionNeto={proporcionNetoDeCategoria(categoriaDelPuesto)}
                 diasSemana={diasRef.length}
                 bloqueado={!categoriaActual}

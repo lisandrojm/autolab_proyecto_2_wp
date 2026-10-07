@@ -272,7 +272,9 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   const totalCalculado = jornadas > 0 ? valorJornada * jornadas : null;
   const mensual = totalCalculado !== null && mesesEq > 0 ? totalCalculado / mesesEq : null;
   const total = indeterminado ? null : totalCalculado;
-  const semanal = valorJornada > 0 && diasPorSemana > 0 ? valorJornada * diasPorSemana : null;
+  // La semana del contrato: los días por semana del tipo («Jornada»: 5) si los tiene, aunque sea por días sueltos.
+  const diasDeLaSemana = Number(contratoDeLaSolicitud?.data?.diasPorSemana) > 0 ? Number(contratoDeLaSolicitud!.data!.diasPorSemana) : diasPorSemana;
+  const semanal = valorJornada > 0 && diasDeLaSemana > 0 ? valorJornada * diasDeLaSemana : null;
 
   /*
     ÁREA Y TURNO, CON HORARIO Y DÍAS. El nombre del turno solo («Tarde») no dice a qué hora ni qué

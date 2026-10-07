@@ -113,7 +113,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         }
         const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana, porDiasSueltos ? fechasSueltas : undefined);
         // Con las jornadas del tipo («Jornada»: 22 por mes), el mensual es jornada × 22: ver `mesesParaImportes`.
-        const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 ? dailyRate : null, mesesEq: mesesParaImportes(mesesEq, jornadas, Number(contrato?.cantidadJornadas) || null), jornadas, diasSemana: diasPorSemana });
+        const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 ? dailyRate : null, mesesEq: mesesParaImportes(mesesEq, jornadas, Number(contrato?.cantidadJornadas) || null), jornadas, diasSemana: Number(contrato?.diasPorSemana) > 0 ? Number(contrato.diasPorSemana) : diasPorSemana });
         // ── Las reglas del formulario individual ──
         if (sinPersona)
             errores.push("Falta la persona del puesto: elegila o excluí el puesto.");
