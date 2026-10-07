@@ -1691,17 +1691,28 @@ const contratoIdDeContrato = async (c: any): Promise<string> => {
  *
  * `porExcepcion` dice si la regla sale de una excepción: es lo que se guarda en el contrato.
  */
-const reglaDeValoracion = async (args: { proyecto: any; contrato: any; esNuevo: boolean }): Promise<{ id: string; porExcepcion: boolean }> => {
-  if (args.esNuevo) {
-    const excepcion = excepcionDelRol(args.proyecto, args.contrato?.rol_frame_id, await contratoIdDeContrato(args.contrato));
-    if (excepcion) return { id: idDeValoracion(excepcion.valoracionId), porExcepcion: true };
-    return { id: idDeValoracion(args.proyecto?.valoracionId), porExcepcion: false };
-  }
-  const nacio = idDeValoracion(args.contrato?.valoracion_regla_id);
-  return nacio ? { id: nacio, porExcepcion: true } : { id: idDeValoracion(args.proyecto?.valoracionId), porExcepcion: false };
+/*
+  QUÉ VALORACIONES SE ACEPTAN SIN MOTIVO (`aceptadas`), además de la principal (`id`).
+
+  Una categoría de CUALQUIERA de estas no pide motivo: la del proyecto, la de la excepción configurada
+  para ese rol empresa + tipo de contrato y, al editar, la regla con la que nació el contrato. Antes se
+  aceptaba UNA sola, y pasaba esto: con la excepción «Director de Programas + Plazo fijo → Oro», elegir
+  la categoría Plata del propio proyecto pedía motivo; y al editar (Configurar Miembro) la excepción no
+  se miraba nunca. El motivo es para lo que no está contemplado por ninguna regla.
+*/
+const reglaDeValoracion = async (args: { proyecto: any; contrato: any; esNuevo: boolean }): Promise<{ id: string; porExcepcion: boolean; aceptadas: string[] }> => {
+  const delProyecto = idDeValoracion(args.proyecto?.valoracionId);
+  const excepcion = excepcionDelRol(args.proyecto, args.contrato?.rol_frame_id, await contratoIdDeContrato(args.contrato));
+  const deLaExcepcion = excepcion ? idDeValoracion(excepcion.valoracionId) : "";
+  const nacio = args.esNuevo ? "" : idDeValoracion(args.contrato?.valoracion_regla_id);
+  const aceptadas = [...new Set([nacio, deLaExcepcion, delProyecto].filter(Boolean))];
+  // La principal —la que filtra, la que se nombra en el error y la que se guarda como regla— no cambia:
+  // al crear, la excepción; al editar, la regla con la que nació; si no, la del proyecto.
+  if (args.esNuevo) return deLaExcepcion ? { id: deLaExcepcion, porExcepcion: true, aceptadas } : { id: delProyecto, porExcepcion: false, aceptadas };
+  return nacio ? { id: nacio, porExcepcion: true, aceptadas } : { id: delProyecto, porExcepcion: false, aceptadas };
 };
 
-const revisarValoracion = async (args: { regla: { id: string; porExcepcion: boolean }; rolFrameId: unknown; categoriaSatId: unknown; motivo?: unknown }) => {
+const revisarValoracion = async (args: { regla: { id: string; porExcepcion: boolean; aceptadas?: string[] }; rolFrameId: unknown; categoriaSatId: unknown; motivo?: unknown }) => {
   const motivo = String(args.motivo || "").trim();
   const delProyectoId = args.regla.id;
   const esExcepcionDelRol = args.regla.porExcepcion;
@@ -1719,7 +1730,9 @@ const revisarValoracion = async (args: { regla: { id: string; porExcepcion: bool
     }
   }
 
-  const desalineada = !!delProyectoId && !!deLaCategoriaId && deLaCategoriaId !== delProyectoId;
+  // Desalineada = la de la categoría no es NINGUNA de las aceptadas (ver `reglaDeValoracion`).
+  const aceptadas = args.regla.aceptadas?.length ? args.regla.aceptadas : [delProyectoId].filter(Boolean);
+  const desalineada = aceptadas.length > 0 && !!deLaCategoriaId && !aceptadas.includes(deLaCategoriaId);
   // El nombre se busca acá, donde se puede esperar: `aGuardar` es sincrónico a propósito, para que
   // el que llama no tenga que acordarse de un `await` más en medio del armado del contrato.
   const nombreDeLaCategoria = deLaCategoriaId ? String(((await Valoracion.findById(deLaCategoriaId).select("name").lean()) as any)?.name || "") : "";

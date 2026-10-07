@@ -1419,6 +1419,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const wizardEditaContrato = !approvingSolicitudId && !renovando && (editingContractIndex != null || (!!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id)));
   const valoracionProyectoId = wizardEditaContrato ? reglaContratoEditado || idValoracionDe(project?.valoracionId) : valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
+  /*
+    LAS VALORACIONES QUE NO PIDEN MOTIVO: la del proyecto, la de la excepción para este rol + tipo de
+    contrato y, al editar, la regla con la que nació el contrato. La misma lista que arma el server
+    (`reglaDeValoracion`). El motivo queda para lo que no contempla ninguna de las tres.
+  */
+  const valoracionesAceptadas = useMemo(
+    () => [...new Set([wizardEditaContrato ? reglaContratoEditado : '', valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id), idValoracionDe(project?.valoracionId)].filter(Boolean).map(String))],
+    [wizardEditaContrato, reglaContratoEditado, project, wizardData.rol_frame_id, wizardData.contrato_id],
+  );
   const rolConValoracionPropia = wizardEditaContrato ? !!reglaContratoEditado : !!excepcionDelRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
   const valoracionDelRol = useMemo(() => {
     const v = valoraciones.find((x) => String(x._id) === valoracionProyectoId);
@@ -1466,8 +1475,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const rol = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
     const asociada = ((rol?.data?.categoriasSat as any[]) || []).find((c) => String(c?.id) === String(wizardData.categoria_sat_id));
     const deLaCategoria = asociada?.valoracionId ? String(asociada.valoracionId) : '';
-    return !!deLaCategoria && deLaCategoria !== valoracionProyectoId;
-  }, [valoracionProyectoId, allRoleFrames, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
+    return !!deLaCategoria && !valoracionesAceptadas.includes(deLaCategoria);
+  }, [valoracionProyectoId, valoracionesAceptadas, allRoleFrames, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
 
   /*
     LA CATEGORÍA VIENE ELEGIDA SEGÚN LA VALORACIÓN DEL PROYECTO.

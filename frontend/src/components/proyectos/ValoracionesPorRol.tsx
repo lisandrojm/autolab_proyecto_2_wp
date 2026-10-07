@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faXmark, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faXmark, faArrowRight, faPen, faCheck } from "@fortawesome/free-solid-svg-icons";
 import type { SimpleCatalogItem } from "../../api/simpleCatalog";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from "../../api/contratos";
@@ -39,6 +39,9 @@ export const ValoracionesPorRol: React.FC<{
   const [rolNuevo, setRolNuevo] = useState("");
   const [contratoNuevo, setContratoNuevo] = useState("");
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
+  /** La fila que se está editando (su clave) y lo que lleva elegido mientras tanto. */
+  const [editando, setEditando] = useState<string | null>(null);
+  const [borrador, setBorrador] = useState<ValoracionDeRolForm | null>(null);
 
   useEffect(() => {
     cachedFetch("roleFrames:all", () => roleFrameAPI.list())
@@ -63,6 +66,24 @@ export const ValoracionesPorRol: React.FC<{
 
   const poner = (fila: ValoracionDeRolForm) => onChange([...value.filter((x) => claveDe(x) !== claveDe(fila)), fila]);
   const quitar = (fila: ValoracionDeRolForm) => onChange(value.filter((x) => claveDe(x) !== claveDe(fila)));
+
+  const empezarEdicion = (fila: ValoracionDeRolForm) => {
+    setEditando(claveDe(fila));
+    setBorrador({ ...fila });
+  };
+  const cancelarEdicion = () => {
+    setEditando(null);
+    setBorrador(null);
+  };
+  /**
+   * Guarda la fila editada. Si cambió el tipo de contrato cambia su clave, así que se saca la vieja y
+   * se pone la nueva: es la misma excepción, con otro tipo de contrato.
+   */
+  const confirmarEdicion = (original: ValoracionDeRolForm) => {
+    if (!borrador) return;
+    onChange([...value.filter((x) => claveDe(x) !== claveDe(original) && claveDe(x) !== claveDe(borrador)), borrador]);
+    cancelarEdicion();
+  };
 
   /** Los badges de las valoraciones para elegir. Las que el rol no tiene van apagadas, con el porqué. */
   const selector = (rolFrameId: number, elegida: string, alElegir: (id: string) => void) => (
@@ -105,6 +126,41 @@ export const ValoracionesPorRol: React.FC<{
             .sort((a, b) => nombreRol(a.rolFrameId).localeCompare(nombreRol(b.rolFrameId), "es", { sensitivity: "base" }) || nombreContrato(a.contratoId).localeCompare(nombreContrato(b.contratoId), "es", { sensitivity: "base" }))
             .map((x) => {
               const v = valoraciones.find((o) => o._id === x.valoracionId);
+              const enEdicion = editando === claveDe(x) && borrador;
+              if (enEdicion) {
+                // El mismo rol con OTRO tipo que ya tiene su excepción no se ofrece: serían dos para lo mismo.
+                const ocupado = (contratoId: string) => contratoId !== (x.contratoId || "") && yaEsta(x.rolFrameId, contratoId);
+                return (
+                  <li key={claveDe(x)} className="px-3 py-2.5 space-y-2 bg-blue-50/60 dark:bg-blue-950/20">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="min-w-[12rem] text-sm font-medium text-gray-800 dark:text-gray-200">{nombreRol(x.rolFrameId)}</span>
+                      <select className="input-field py-1.5 text-sm max-w-[16rem]" value={borrador.contratoId || ""} onChange={(e) => setBorrador({ ...borrador, contratoId: e.target.value || null })}>
+                        {!x.contratoId && <option value="">Cualquier tipo de contrato</option>}
+                        {/* El tipo actual aunque esté inactivo: si no, el select lo cambiaría solo al abrir. */}
+                        {x.contratoId && !contratosOrdenados.some((c) => c._id === x.contratoId) && <option value={x.contratoId}>{nombreContrato(x.contratoId)}</option>}
+                        {contratosOrdenados.map((c) => (
+                          <option key={c._id} value={c._id} disabled={ocupado(c._id)}>
+                            {c.name}
+                            {ocupado(c._id) ? " (ya tiene)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selector(x.rolFrameId, borrador.valoracionId, (id) => setBorrador({ ...borrador, valoracionId: id }))}
+                      <span className="ml-auto flex items-center gap-3">
+                        <button type="button" onClick={cancelarEdicion} className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:underline">
+                          Cancelar
+                        </button>
+                        <button type="button" onClick={() => confirmarEdicion(x)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                          <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />
+                          Listo
+                        </button>
+                      </span>
+                    </div>
+                  </li>
+                );
+              }
               return (
                 <li key={claveDe(x)} className="px-3 py-2 flex flex-wrap items-center gap-2">
                   <span className="min-w-[12rem]">
@@ -114,13 +170,18 @@ export const ValoracionesPorRol: React.FC<{
                   <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5 text-gray-400" />
                   {/*
                     SÓLO LA ELEGIDA. Con los tres niveles en cada fila no se leía cuál regía: parecían
-                    opciones abiertas. Para cambiarla se quita con la ✕ y se vuelve a fijar.
+                    opciones abiertas. Para cambiarla, el lápiz abre la fila en edición.
                   */}
                   {v ? <ChipValoracion nombre={String(v.name)} color={String(v.color || "")} /> : <span className="text-[11px] text-gray-400">Valoración borrada</span>}
                   {v && !cubre(x.rolFrameId, x.valoracionId) && roles.length > 0 && <span className="text-[11px] text-amber-700 dark:text-amber-400">Este rol no tiene categorías {v.name}.</span>}
-                  <button type="button" onClick={() => quitar(x)} title="Quitar: vuelve a usar la valoración del proyecto. Para cambiar el nivel, quitala y volvé a fijarla." aria-label={`Quitar ${nombreRol(x.rolFrameId)}`} className="ml-auto text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
+                  <span className="ml-auto flex items-center gap-3">
+                    <button type="button" onClick={() => empezarEdicion(x)} title="Cambiar la valoración o el tipo de contrato" aria-label={`Editar ${nombreRol(x.rolFrameId)}`} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                      <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
+                    </button>
+                    <button type="button" onClick={() => quitar(x)} title="Quitar: vuelve a usar la valoración del proyecto." aria-label={`Quitar ${nombreRol(x.rolFrameId)}`} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                      <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
                 </li>
               );
             })}
