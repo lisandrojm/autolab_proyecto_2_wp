@@ -291,3 +291,34 @@ export const importePorJornada = (escala, multiplicadorDiario, jornadasDelTipo) 
     const multiplicador = Number(multiplicadorDiario) > 0 ? Number(multiplicadorDiario) : 1;
     return Number(((mensual / jornadas) * multiplicador).toFixed(2));
 };
+/**
+ * LOS SUELDOS DEL CONTRATO, la misma cuenta que muestra la solicitud del móvil.
+ *
+ * Parten del importe por jornada que se pactó (`jornadaBruto`, el `sueldo_jornada` del contrato o el
+ * `dailyRate` de la solicitud), que es BRUTO, y de las jornadas del contrato:
+ *
+ *     diario neto  = jornada bruta × neto/bruto de la escala          (0,81 en el 634/11)
+ *     en mano      = diario neto × jornadas
+ *     neto         = diario neto × jornadas
+ *     bruto        = jornada bruta × jornadas
+ *     diferencia   = diario neto − diario neto de la escala          (0 si no se editó el importe)
+ *
+ * Antes el neto y el bruto eran los MENSUALES de la escala aunque el contrato fuera de un día, el
+ * diario neto era el neto ÷ 30 y el sueldo en mano salía de la jornada bruta: cuatro números que no
+ * hablaban del mismo contrato. Sin escala (un servicio) no hay descuentos que aplicar: neto = bruto.
+ */
+export const sueldosDelContrato = (p) => {
+    const r2 = (n) => Number((Number.isFinite(n) ? n : 0).toFixed(2));
+    const jornada = Number(p.jornadaBruto) || 0;
+    const jornadas = Number(p.jornadas) > 0 ? Number(p.jornadas) : 0;
+    const prop = Number(p.proporcionNeto) > 0 ? Number(p.proporcionNeto) : 1;
+    const diarioNeto = jornada * prop;
+    const escala = Number(p.jornadaBrutoEscala) > 0 ? Number(p.jornadaBrutoEscala) : null;
+    return {
+        sueldo_diario_neto: r2(diarioNeto),
+        sueldo_mano: r2(diarioNeto * jornadas),
+        sueldo_neto: r2(diarioNeto * jornadas),
+        sueldo_bruto: r2(jornada * jornadas),
+        diferencia_diaria_neto: escala === null ? 0 : r2(diarioNeto - escala * prop),
+    };
+};

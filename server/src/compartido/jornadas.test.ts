@@ -12,7 +12,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { anclaDesdeJornada, derivarImportes, mesesParaImportes, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo, DatosJornadas } from "./jornadas.js";
+import { anclaDesdeJornada, derivarImportes, mesesParaImportes, sueldosDelContrato, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo, DatosJornadas } from "./jornadas.js";
 
 const LU_VI = [1, 2, 3, 4, 5];
 const cerca = (a: number | null, b: number) => assert.ok(a !== null && Math.abs(a - b) < 1e-9, `${a} ≠ ${b}`);
@@ -191,4 +191,22 @@ test("mesesParaImportes: con jornadas en el tipo, el mensual es jornada × esas 
   // Sin jornadas en el tipo, los meses del período.
   assert.equal(mesesParaImportes(0.5, 11, null), 0.5);
   assert.equal(mesesParaImportes(0.5, 0, 22), 0.5);
+});
+
+test("sueldosDelContrato: la misma cuenta que la solicitud del móvil", () => {
+  // G10 con «Jornada» (66.686,15 bruto por jornada, neto/bruto 0,81), 1 jornada, sin editar.
+  const prop = 792231.46 / 978063.53;
+  const s = sueldosDelContrato({ jornadaBruto: 66686.15, jornadas: 1, proporcionNeto: prop, jornadaBrutoEscala: 66686.15 });
+  assert.equal(s.sueldo_diario_neto, 54015.78);
+  assert.equal(s.sueldo_mano, 54015.78);
+  assert.equal(s.sueldo_neto, 54015.78);
+  assert.equal(s.sueldo_bruto, 66686.15);
+  assert.equal(s.diferencia_diaria_neto, 0);
+  // Tres jornadas y un importe editado por encima de la escala.
+  const e = sueldosDelContrato({ jornadaBruto: 70000, jornadas: 3, proporcionNeto: 0.81, jornadaBrutoEscala: 66686.15 });
+  assert.equal(e.sueldo_bruto, 210000);
+  assert.equal(e.sueldo_mano, 170100);
+  assert.equal(e.diferencia_diaria_neto, 2684.22);
+  // Un servicio: sin escala, neto = bruto y no hay diferencia.
+  assert.deepEqual(sueldosDelContrato({ jornadaBruto: 1000, jornadas: 2 }), { sueldo_diario_neto: 1000, sueldo_mano: 2000, sueldo_neto: 2000, sueldo_bruto: 2000, diferencia_diaria_neto: 0 });
 });

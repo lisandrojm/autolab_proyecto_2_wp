@@ -29,6 +29,7 @@ import { puestoParaGuardar } from "../services/arca/puestosDesempenados.js";
 import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "../compartido/sucursalesDeEmpresa.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
+import { importePorJornada, sueldosDelContrato } from "../compartido/jornadas.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
@@ -1542,6 +1543,23 @@ const contratoIdDeContrato = async (c) => {
     return plantilla?.contratoId ? String(plantilla.contratoId) : "";
 };
 /**
+ * LOS SUELDOS DE UN CONTRATO a partir de su importe por jornada (bruto), sus jornadas y la escala de
+ * su categoría: la cuenta de `sueldosDelContrato`, la misma del móvil y del formulario. Sin categoría
+ * (un servicio) neto = bruto. Devuelve los cinco campos más el sueldo en mano en letras.
+ */
+const sueldosConEscala = async (contrato, tipoContrato) => {
+    const cat = contrato?.categoria_sat_id != null && contrato.categoria_sat_id !== "" ? await buscarCategoriaCompatPorLegacyId(Number(contrato.categoria_sat_id)) : null;
+    const bruto = Number(cat?.data?.sueldoBruto) || 0;
+    const neto = Number(cat?.data?.neto) || 0;
+    const s = sueldosDelContrato({
+        jornadaBruto: Number(contrato?.sueldo_jornada) || 0,
+        jornadas: Number(contrato?.cantidad_jornadas_laborales) || 0,
+        proporcionNeto: bruto > 0 && neto > 0 ? neto / bruto : null,
+        jornadaBrutoEscala: cat ? importePorJornada(cat.data, tipoContrato?.data?.multiplicadorDiario, tipoContrato?.data?.cantidadJornadas) : null,
+    });
+    return { ...s, sueldo_mano_texto: numeroALetras(s.sueldo_mano) };
+};
+/**
  * CONTRA QUÉ VALORACIÓN SE MIDE UN CONTRATO.
  *
  *   - NUEVO (alta desde «Agregar miembro», aprobar una solicitud): la excepción del proyecto para su
@@ -1944,18 +1962,13 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             }
             contract.puestoDesempenado = puesto.valor || "";
         }
-        if (isValidId(contract.contrato_id)) {
-            const tipoContrato = await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas").lean();
-            const fijas = Math.trunc(Number(tipoContrato?.data?.cantidadJornadas) || 0);
-            if (fijas > 0 && tipoContrato?.data?.modoFechas !== "dias" && Number(contract.cantidad_jornadas_laborales) !== fijas) {
-                contract.cantidad_jornadas_laborales = fijas;
-                const jornada = Number(contract.sueldo_jornada) || 0;
-                if (jornada > 0) {
-                    contract.sueldo_mano = Number((jornada * fijas).toFixed(2));
-                    contract.sueldo_mano_texto = numeroALetras(contract.sueldo_mano);
-                }
-            }
-        }
+        const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas data.multiplicadorDiario").lean() : null;
+        const fijas = Math.trunc(Number(tipoContrato?.data?.cantidadJornadas) || 0);
+        if (fijas > 0 && tipoContrato?.data?.modoFechas !== "dias" && Number(contract.cantidad_jornadas_laborales) !== fijas)
+            contract.cantidad_jornadas_laborales = fijas;
+        // Los sueldos, con la misma cuenta que la solicitud del móvil y el formulario (ver `sueldosConEscala`).
+        if (Number(contract.sueldo_jornada) > 0)
+            Object.assign(contract, await sueldosConEscala(contract, tipoContrato));
         const enrichedContract = {
             ...contract,
             empresaContratoId: contract.empresaContratoId || null,
@@ -3271,25 +3284,20 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
             return;
         }
         const camposDeValoracion = veredicto.aGuardar(req.user.userId);
-        const sueldo_neto = Number(Number(cat.data?.neto ?? 0).toFixed(2));
-        const sueldo_bruto = Number(Number(cat.data?.sueldoBruto ?? 0).toFixed(2));
-        const sueldo_diario_neto = Number((sueldo_neto / 30).toFixed(2));
-        // La diferencia diaria mide cuánto se cambió el importe por jornada respecto del pedido: cambiar la
-        // categoría no toca el importe, así que se conserva la que tenía.
-        const diferencia_diaria_neto = Number(contrato.diferencia_diaria_neto || 0);
+        // Los sueldos con la escala de la categoría NUEVA y el importe por jornada que ya tenía el contrato.
+        const tipoDelContrato = Types.ObjectId.isValid(String(contrato.contrato_id || "")) ? await Contrato.findById(contrato.contrato_id).select("data.cantidadJornadas data.multiplicadorDiario").lean() : null;
+        const sueldos = await sueldosConEscala({ ...contrato.toObject(), categoria_sat_id: categoriaSatId }, tipoDelContrato);
+        const { sueldo_neto, sueldo_bruto, sueldo_diario_neto, diferencia_diaria_neto } = sueldos;
         up.contracts[idx] = {
             ...contrato.toObject(),
             ...camposDeValoracion,
             categoria_sat_id: categoriaSatId,
             nombre_categoria_sat: cat.name || "",
-            sueldo_neto,
-            sueldo_bruto,
-            sueldo_diario_neto,
-            diferencia_diaria_neto,
+            ...sueldos,
         };
         up.markModified("contracts");
         await up.save();
-        res.json({ categoria_sat_id: categoriaSatId, nombre_categoria_sat: cat.name || "", sueldo_neto, sueldo_bruto, sueldo_diario_neto, diferencia_diaria_neto });
+        res.json({ categoria_sat_id: categoriaSatId, nombre_categoria_sat: cat.name || "", sueldo_neto, sueldo_bruto, sueldo_diario_neto, diferencia_diaria_neto, sueldo_mano: sueldos.sueldo_mano, sueldo_mano_texto: sueldos.sueldo_mano_texto });
     }
     catch (error) {
         console.error("Update contract categoria-sat error:", error);

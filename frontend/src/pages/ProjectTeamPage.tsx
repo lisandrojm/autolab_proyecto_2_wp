@@ -30,7 +30,7 @@ import { ImportesDelContrato } from '../components/contratacion/ImportesDelContr
 import { SelectorHora } from '../components/contratacion/SelectorHora';
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
 import { numeroALetras } from '../utils/numeroALetras';
-import { avisoIndeterminado, erroresDeJornadas, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { avisoIndeterminado, erroresDeJornadas, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
@@ -56,7 +56,7 @@ import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
-import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, proporcionNetoDeCategoria } from '../utils/seleccionConvenioCategoria';
+import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, proporcionNetoDeCategoria, importePorJornadaDeCategoria } from '../utils/seleccionConvenioCategoria';
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
 import { SelectorCategoria } from '../components/contratos/SelectorCategoria';
 import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
@@ -546,21 +546,27 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const jornadaBaseWizard = useRef<number | null>(null);
 
   /* -------------------------- Auto-Calculations ---------------------------
-   * El Sueldo NETO y BRUTO salen de la Categoría seleccionada (ya vienen
-   * calculados en el catálogo: bruto = básico + adicional + presentismo; neto = bruto × 0.81).
-   * De ahí se derivan el diario neto (neto / 30) y la diferencia diaria contra
-   * lo que efectivamente se paga por jornada. Sin categoría → todo en 0.
+   * LOS SUELDOS DEL CONTRATO, con la MISMA cuenta que la solicitud del móvil (`sueldosDelContrato`):
+   * parten del importe por jornada pactado —bruto— y de las jornadas del contrato.
+   *
+   *   diario neto = jornada bruta × neto/bruto de la escala · en mano = neto = diario neto × jornadas
+   *   bruto = jornada bruta × jornadas · diferencia = diario neto − diario neto de la escala
+   *
+   * Antes el neto y el bruto eran los mensuales de la escala aunque el contrato fuera de un día, y el
+   * diario neto el neto ÷ 30. Sin categoría (un servicio) no hay escala: neto = bruto, sin diferencia.
    */
   useEffect(() => {
-    const sueldo_mano = wizardData.sueldo_jornada * wizardData.cantidad_jornadas_laborales;
-
     const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
-    const sueldo_neto = cat ? Number(Number(cat.data?.neto ?? 0).toFixed(2)) : 0;
-    const sueldo_bruto = cat ? Number(Number(cat.data?.sueldoBruto ?? 0).toFixed(2)) : 0;
-    const sueldo_diario_neto = cat ? Number((sueldo_neto / 30).toFixed(2)) : 0;
-    const base = jornadaBaseWizard.current;
-    const diferencia_diaria_neto = base !== null ? Number((wizardData.sueldo_jornada - base).toFixed(2)) : cat ? Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2)) : 0;
-    const sueldo_mano_texto = numeroALetras(sueldo_mano);
+    const contratoTipo = contratos.find((c) => c._id === wizardData.contrato_id);
+    const jornadaEscala = cat ? importePorJornadaDeCategoria(cat, Number(contratoTipo?.data?.multiplicadorDiario) || null, Number(contratoTipo?.data?.cantidadJornadas) || null) : null;
+    const calculados = sueldosDelContrato({
+      jornadaBruto: Number(wizardData.sueldo_jornada) || 0,
+      jornadas: Number(wizardData.cantidad_jornadas_laborales) || 0,
+      proporcionNeto: proporcionNetoDeCategoria(cat),
+      jornadaBrutoEscala: jornadaEscala,
+    });
+    const sueldo_mano_texto = numeroALetras(calculados.sueldo_mano);
+    const { sueldo_mano, sueldo_neto, sueldo_bruto, sueldo_diario_neto, diferencia_diaria_neto } = calculados;
 
     if (sueldo_mano !== wizardData.sueldo_mano || sueldo_neto !== wizardData.sueldo_neto || sueldo_bruto !== wizardData.sueldo_bruto || sueldo_diario_neto !== wizardData.sueldo_diario_neto || diferencia_diaria_neto !== wizardData.diferencia_diaria_neto || sueldo_mano_texto !== wizardData.sueldo_mano_texto) {
       setWizardData((prev) => ({
@@ -573,7 +579,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         sueldo_mano_texto,
       }));
     }
-  }, [wizardData.sueldo_jornada, wizardData.cantidad_jornadas_laborales, wizardData.categoria_sat_id, allCategoriasSat]);
+  }, [wizardData.sueldo_jornada, wizardData.cantidad_jornadas_laborales, wizardData.categoria_sat_id, wizardData.contrato_id, allCategoriasSat, contratos]);
 
   /* ------------------------------ Fetchers ------------------------------- */
 

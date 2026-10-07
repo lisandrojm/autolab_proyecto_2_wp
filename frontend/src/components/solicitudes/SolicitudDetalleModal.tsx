@@ -14,6 +14,7 @@ import { projectsAPI } from "../../api/projects";
 import { EstadoBadge, estadoLabel } from "../EstadoSelect";
 import { textoDeDias } from "../../utils/jerarquiaTurnos";
 import { mesesEquivalentes, mesesParaImportes, periodoDeCalculo } from "../../utils/jornadas";
+import { importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../utils/seleccionConvenioCategoria";
 import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista, formatFechaSolicitud, useCatalogosDeSolicitudes } from "./SolicitudesTable";
 
 /*
@@ -275,6 +276,18 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   // La semana del contrato: los días por semana del tipo («Jornada»: 5) si los tiene, aunque sea por días sueltos.
   const diasDeLaSemana = Number(contratoDeLaSolicitud?.data?.diasPorSemana) > 0 ? Number(contratoDeLaSolicitud!.data!.diasPorSemana) : diasPorSemana;
   const semanal = valorJornada > 0 && diasDeLaSemana > 0 ? valorJornada * diasDeLaSemana : null;
+  /*
+    LO MISMO QUE MUESTRA EL FORMULARIO: la escala de la categoría y el neto. El importe por jornada
+    guardado es BRUTO; el neto sale de la proporción neto/bruto de la escala, y la escala se muestra
+    ajustada por cuánto se apartó lo pactado de ella (el mismo factor que usa `EscalaDelContrato`).
+  */
+  const proporcionNeto = esServicios ? null : proporcionNetoDeCategoria(categoria);
+  const netoPorJornada = proporcionNeto && valorJornada > 0 ? valorJornada * proporcionNeto : null;
+  const totalNeto = !indeterminado && netoPorJornada !== null && jornadas > 0 ? netoPorJornada * jornadas : null;
+  const jornadaDeEscala = categoria && !esServicios ? importePorJornadaDeCategoria(categoria, Number(contratoDeLaSolicitud?.data?.multiplicadorDiario) || null, Number(contratoDeLaSolicitud?.data?.cantidadJornadas) || null) : 0;
+  const factorEscala = jornadaDeEscala > 0 && valorJornada > 0 ? valorJornada / jornadaDeEscala : 1;
+  const escalaAjustada = (v: unknown) => (Number(v) > 0 ? Number(v) * factorEscala : null);
+  const adicionalPct = Number(categoria?.data?.sueldoBasico) > 0 ? (Number(categoria?.data?.sueldoAdicional) / Number(categoria?.data?.sueldoBasico)) * 100 : null;
 
   /*
     ÁREA Y TURNO, CON HORARIO Y DÍAS. El nombre del turno solo («Tarde») no dice a qué hora ni qué
@@ -544,12 +557,24 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                       }
                     />
                     <Fila label="Grupo" valor={grupoTexto} />
+                    {categoria && (
+                      <>
+                        <Fila label="Sueldo básico" valor={pesos(escalaAjustada(categoria.data?.sueldoBasico))} />
+                        <Fila label="Adicional" valor={pesos(escalaAjustada(categoria.data?.sueldoAdicional))} />
+                        <Fila label="% Adicional" valor={adicionalPct !== null ? `${adicionalPct.toLocaleString("es-AR", { maximumFractionDigits: 2 })} %` : ""} />
+                        <Fila label="Presentismo" valor={pesos(escalaAjustada(categoria.data?.presentismo))} />
+                        <Fila label="Sueldo bruto" valor={pesos(escalaAjustada(categoria.data?.sueldoBruto))} />
+                        <Fila label="Neto" valor={pesos(escalaAjustada(categoria.data?.neto))} />
+                      </>
+                    )}
                   </>
                 )}
-                <Fila label="Importe por jornada" valor={pesos(valorJornada || null)} />
-                <Fila label="Importe por semana" valor={pesos(semanal)} />
-                <Fila label="Importe mensual" valor={pesos(mensual)} />
-                <Fila label="Importe total" valor={indeterminado ? <span className="text-gray-400">No tiene: tiempo indeterminado</span> : pesos(total)} />
+                {/* Los mismos rótulos y cuentas que el formulario (`ImportesDelContrato`): bruto, salvo el total, que es neto. */}
+                <Fila label={proporcionNeto ? "Importe por jornada bruto" : "Importe por jornada"} valor={pesos(valorJornada || null)} />
+                {proporcionNeto && <Fila label="Importe por jornada neto" valor={pesos(netoPorJornada)} />}
+                <Fila label={proporcionNeto ? "Importe por semana bruto" : "Importe por semana"} valor={pesos(semanal)} />
+                <Fila label={proporcionNeto ? "Importe mensual bruto" : "Importe mensual"} valor={pesos(mensual)} />
+                <Fila label={proporcionNeto ? "Importe total del contrato neto" : "Importe total"} valor={indeterminado ? <span className="text-gray-400">No tiene: tiempo indeterminado</span> : pesos(proporcionNeto ? totalNeto : total)} />
               </Bloque>
 
               <Bloque titulo="Área y turno">

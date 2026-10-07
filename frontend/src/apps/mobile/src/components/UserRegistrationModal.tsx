@@ -124,6 +124,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const { profile } = useProfile();
   const [submitting, setSubmitting] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  /**
+   * Terminaron de llegar los catálogos de los que dependen las cascadas de limpieza (proyectos, roles,
+   * categorías, tipos de contrato). Ver `cascadasListas`.
+   */
+  const [catalogosCargados, setCatalogosCargados] = useState(false);
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
   const [proyectosActivos, setProjects] = useState<Project[]>([]);
@@ -418,7 +423,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     También limpia lo que dejó de ser válido: si se cambia de proyecto, la empresa que ya no
     pertenece no puede quedar seleccionada de arrastre.
   */
+  /*
+    LAS CASCADAS DE LIMPIEZA ESPERAN A LOS CATÁLOGOS.
+
+    Borran la empleadora, el convenio o la categoría que «ya no son válidos». Al abrir una solicitud
+    para editarla, los catálogos todavía están llegando: con las listas vacías, lo guardado parecía
+    inválido y se borraba —y con la categoría se iba el importe, que quedaba en 0—. Hasta que llegan,
+    no se limpia nada.
+  */
+  const cascadasListas = empresasCargadas && catalogosCargados;
+
   useEffect(() => {
+    if (!cascadasListas) return;
     const valida = empresasDelProyecto.some((c) => c._id === formData.empresaContratoId);
     if (!valida) {
       const unica = empresasDelProyecto.length === 1 ? empresasDelProyecto[0]._id : "";
@@ -431,7 +447,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       */
       if (formData.empresaContratoId !== unica) setFormData((p) => ({ ...p, empresaContratoId: unica, convenioId: "", categoriaSatId: "", dailyRate: esServicios ? p.dailyRate : "" }));
     }
-  }, [empresasDelProyecto, formData.empresaContratoId, esServicios]);
+  }, [cascadasListas, empresasDelProyecto, formData.empresaContratoId, esServicios]);
 
   /*
     LA SEDE: una de las del proyecto, con la principal (la que el proyecto tiene por defecto)
@@ -496,11 +512,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           .then((projs) => setProjects(projs.filter((p) => p.status === "active")))
           .catch((e) => console.error("Error cargando proyectos:", e));
 
-        roleFrameAPI
+        const cargaRoles = roleFrameAPI
           .list()
           .then(setRoleFrames)
           .catch((e) => console.error("Error cargando roles empresa:", e));
-        categoriaSatAPI
+        const cargaCategorias = categoriaSatAPI
           .list()
           .then(setCategoriasSat)
           .catch((e) => console.error("Error cargando categorías:", e));
@@ -516,7 +532,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           })
           .catch((e) => console.error("Error cargando estados:", e));
         // Los tipos de contrato y sus plantillas: de ahí sale el trámite, que ya no se elige a mano.
-        contratosAPI
+        const cargaContratos = contratosAPI
           .list()
           .then((cs) => setContratos(cs.filter((c) => c.isActive !== false)))
           .catch((e) => console.error("Error cargando tipos de contrato:", e));
@@ -533,6 +549,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         // El spinner lo sueltan los proyectos y nada más: son el primer campo del formulario y sin
         // ellos no se puede empezar. El buscador de personas ya no bloquea porque ya no baja nada.
         proyectos.finally(() => setLoadingData(false));
+        setCatalogosCargados(false);
+        void Promise.allSettled([proyectos, cargaRoles, cargaCategorias, cargaContratos]).then(() => setCatalogosCargados(true));
       };
       loadData();
     }
@@ -1419,6 +1437,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     lee como un error de la pantalla.
   */
   useEffect(() => {
+    if (!cascadasListas) return;
     const valido = conveniosDisponibles.some((c) => c.externalId === convenioCct);
     if (!valido) {
       const unico = conveniosDisponibles.length === 1 ? convenioPorCct.get(conveniosDisponibles[0].externalId)?._id || "" : "";
@@ -1431,7 +1450,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       setFormData((p) => ({ ...p, categoriaSatId: "", dailyRate: "" }));
       setAvisoCascada("Se limpió la categoría: no pertenece al convenio elegido.");
     }
-  }, [conveniosDisponibles, convenioCct, convenioPorCct, formData.convenioId, formData.categoriaSatId, categoriasSat]);
+  }, [cascadasListas, conveniosDisponibles, convenioCct, convenioPorCct, formData.convenioId, formData.categoriaSatId, categoriasSat]);
 
   /*
     EL CONVENIO SE PRECARGA DESDE EL ROL EMPRESA DE LA PERSONA.
@@ -1473,11 +1492,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     corresponde, que es la que seguía viajando en el submit aunque el desplegable no la listara.
   */
   useEffect(() => {
-    if (!formData.categoriaSatId) return;
+    if (!cascadasListas || !formData.categoriaSatId) return;
     if (categoriasDisponibles.some((c) => c._id === formData.categoriaSatId)) return;
     setFormData((prev) => ({ ...prev, categoriaSatId: "", dailyRate: "" }));
     setAvisoCascada("Se limpió la categoría: ya no la habilita el rol empresa elegido.");
-  }, [categoriasDisponibles, formData.categoriaSatId]);
+  }, [cascadasListas, categoriasDisponibles, formData.categoriaSatId]);
 
   /*
     LA CATEGORÍA VIENE ELEGIDA SEGÚN LA VALORACIÓN DEL PROYECTO, como en el escritorio y en las
@@ -1554,10 +1573,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     El convenio no se toca acá —lo reponen solos los efectos de arriba— y simplemente no se manda.
   */
   useEffect(() => {
-    if (!esServicios || !formData.categoriaSatId) return;
+    if (!cascadasListas || !esServicios || !formData.categoriaSatId) return;
     setFormData((p) => ({ ...p, categoriaSatId: "" }));
     setAvisoCascada("");
-  }, [esServicios, formData.categoriaSatId]);
+  }, [cascadasListas, esServicios, formData.categoriaSatId]);
 
   /** El motivo elegido, para mostrar su nombre sin repetir el `find` en cada lugar donde se usa. */
 
