@@ -544,6 +544,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    * ahí se compara contra el diario neto de la escala, como antes.
    */
   const jornadaBaseWizard = useRef<number | null>(null);
+  /** La categoría y el tipo de contrato con los que se propuso el importe por última vez (ver el efecto de la propuesta). */
+  const propuestaWizard = useRef('');
 
   /* -------------------------- Auto-Calculations ---------------------------
    * LOS SUELDOS DEL CONTRATO, con la MISMA cuenta que la solicitud del móvil (`sueldosDelContrato`):
@@ -1033,6 +1035,26 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     bruto, diario) queda en 0, como ya pasaba sin categoría. Es la misma regla que la solicitud del móvil.
   */
   const esServicios = !!wizardData.contrato_id && tramitePorContrato.get(wizardData.contrato_id) === 'constancia_cuit';
+
+  /*
+    EN UN CONTRATO NUEVO, EL IMPORTE POR JORNADA LO PROPONE LA ESCALA, como en la solicitud del móvil.
+
+    Al cambiar la categoría o el tipo de contrato (del que salen el multiplicador y las jornadas) se
+    propone `importePorJornadaDeCategoria`: la misma cuenta que el móvil. Se propone, no se impone: el
+    campo sigue editable. Abrir el formulario NO es cambiarlos (ver `propuestaWizard` en la apertura),
+    así que lo que pidió una solicitud o lo que trae una renovación no se pisa. Editar un contrato que
+    ya existe tampoco: ahí manda lo que se pactó.
+  */
+  useEffect(() => {
+    if (!selectedUserForWizard || !esAltaNueva || esServicios || !wizardData.categoria_sat_id) return;
+    const clave = `${wizardData.categoria_sat_id}::${wizardData.contrato_id}`;
+    if (propuestaWizard.current === clave) return;
+    propuestaWizard.current = clave;
+    const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
+    const tipo = contratos.find((c) => c._id === wizardData.contrato_id);
+    const propuesto = importePorJornadaDeCategoria(cat, Number(tipo?.data?.multiplicadorDiario) || null, Number(tipo?.data?.cantidadJornadas) || null);
+    if (propuesto > 0) setWizardData((prev) => ({ ...prev, sueldo_jornada: propuesto }));
+  }, [selectedUserForWizard, esAltaNueva, esServicios, wizardData.categoria_sat_id, wizardData.contrato_id, allCategoriasSat, contratos]);
 
   /*
     LAS MISMAS CUENTAS QUE LA SOLICITUD DE LA APP (ver `utils/jornadas.ts` e `ImportesDelContrato`).
@@ -2276,9 +2298,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         : null;
     const semanaInicial = semanaInicialCalc ? { dias_por_semana: semanaInicialCalc.diasPorSemana, dias_semana: semanaInicialCalc.dias } : {};
 
-    // La jornada con la que abre: lo pedido en la solicitud, o lo que tenía el contrato.
-    const jornadaInicial = Number(deLaSolicitud.sueldo_jornada) || Number(lastContract?.sueldo_jornada) || 0;
+    /*
+      La jornada con la que abre: lo pedido en la solicitud, o lo que tenía el contrato.
+
+      RENOVAR ES UN CONTRATO NUEVO: el importe sale de la ESCALA VIGENTE de su categoría con su tipo de
+      contrato (`importePorJornadaDeCategoria`), como cuando se elige la categoría en un alta. Copiar el
+      del vencido arrastraba un importe calculado con otra escala —o con la cuenta vieja— y el
+      formulario lo mostraba como una «diferencia» que nadie había decidido.
+    */
+    const catParaEscala = allCategoriasSat.find((c) => String(c.data?.id) === String(deLaSolicitud.categoria_sat_id ?? initialCatId));
+    const tipoParaEscala = contratos.find((c) => c._id === (deLaSolicitud.contrato_id ?? initialContratoId));
+    const jornadaDeEscala = catParaEscala ? importePorJornadaDeCategoria(catParaEscala, Number(tipoParaEscala?.data?.multiplicadorDiario) || null, Number(tipoParaEscala?.data?.cantidadJornadas) || null) : 0;
+    const jornadaInicial = renovar && jornadaDeEscala > 0 ? jornadaDeEscala : Number(deLaSolicitud.sueldo_jornada) || Number(lastContract?.sueldo_jornada) || 0;
     jornadaBaseWizard.current = jornadaInicial > 0 ? jornadaInicial : null;
+    // La propuesta automática (ver abajo) arranca con la categoría y el tipo con los que abre: abrir no es «cambiarlos».
+    propuestaWizard.current = `${deLaSolicitud.categoria_sat_id ?? initialCatId}::${deLaSolicitud.contrato_id ?? initialContratoId}`;
     // Reset wizard data with pulled data or defaults
     setWizardData({
       rol_frame_id: initialRolFrameId,
@@ -2302,7 +2336,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       dias_semana: Array.isArray((lastContract as any)?.dias_semana) ? ((lastContract as any).dias_semana as number[]) : [],
       dias_rotativos: !!(lastContract as any)?.dias_rotativos,
       fechas_trabajadas: !renovar && Array.isArray((lastContract as any)?.fechas_trabajadas) ? ((lastContract as any).fechas_trabajadas as string[]) : [],
-      sueldo_jornada: lastContract?.sueldo_jornada || 0,
+      sueldo_jornada: renovar && jornadaDeEscala > 0 ? jornadaDeEscala : lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
       sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
       sueldo_diario_neto: lastContract?.sueldo_diario_neto || 0,
