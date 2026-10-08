@@ -11,7 +11,7 @@ import { BannerEscalasVencidas } from './BannerEscalasVencidas';
 import { BannerCategoriasDesalineadas } from './BannerCategoriasDesalineadas';
 import { EstadoArcaChip } from './EstadoArcaChip';
 import { SelectorCodigoArca } from './SelectorCodigoArca';
-import { SelectorPuestoDesempenado } from '../arca/SelectorPuestoDesempenado';
+import { SelectorPuestoDesempenado, listarPuestos } from '../arca/SelectorPuestoDesempenado';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../utils/fechas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -474,6 +474,37 @@ export const CategoriasArcaTab: React.FC = () => {
       sueldoNetoLetras: e.sueldoNetoLetras || '',
       fechaActualizacion: aInputDate(e.fechaActualizacion),
     };
+  };
+
+  /*
+    EL PUESTO DESEMPEÑADO DE CADA CATEGORÍA, A LA VISTA.
+
+    Se carga en el formulario de la categoría (lápiz), pero la lista no lo mostraba: parecía que no se
+    podía asignar por categoría. Es el segundo nivel de la jerarquía Convenio → Categoría → Rol
+    Empresa; manda el Rol Empresa si lo tiene. Sin puesto no es un error —puede venir del rol o del
+    convenio—: va una opción discreta para asignarlo.
+  */
+  const [puestosArca, setPuestosArca] = useState<{ externalId?: string; name?: string }[]>([]);
+  useEffect(() => {
+    void listarPuestos().then((ps) => setPuestosArca(ps as any));
+  }, []);
+  const PuestoDeCategoria: React.FC<{ cat: CategoriaArca; grupo: GrupoConvenio | null }> = ({ cat, grupo }) => {
+    const codigo = cat.puestoDesempenado || '';
+    const desc = codigo ? puestosArca.find((p) => p.externalId === codigo)?.name || '' : '';
+    if (codigo) {
+      return (
+        <button type="button" disabled={!canManage} onClick={() => abrirEditarCategoria(cat, grupo, convenioSel)} title="Puesto desempeñado de ARCA de esta categoría (Altas Masivas, registro de 85). Manda el del Rol Empresa si lo tiene." className="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 max-w-full disabled:cursor-default">
+          <span className="font-mono">{codigo}</span>
+          {desc && <span className="truncate max-w-[16rem]">{desc}</span>}
+        </button>
+      );
+    }
+    if (!canManage) return null;
+    return (
+      <button type="button" onClick={() => abrirEditarCategoria(cat, grupo, convenioSel)} title="Asignar el puesto desempeñado de ARCA a esta categoría. Opcional: si el Rol Empresa lo tiene, manda el del rol; si no, el del convenio." className="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 transition-colors">
+        + Puesto ARCA
+      </button>
+    );
   };
 
   /** `grupo` es `null` para las categorías sueltas: no todas cuelgan de uno. */
@@ -1156,6 +1187,9 @@ export const CategoriasArcaTab: React.FC = () => {
                                           </td>
                                           <td className="px-4 py-2">
                                             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
+                                            <span className="block">
+                                              <PuestoDeCategoria cat={c} grupo={g} />
+                                            </span>
                                             {!c.isActive && (
                                               <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
                                                 NO ELEGIBLE
@@ -1258,6 +1292,9 @@ export const CategoriasArcaTab: React.FC = () => {
                         </td>
                         <td className="px-4 py-2.5">
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
+                          <span className="block">
+                            <PuestoDeCategoria cat={c} grupo={null} />
+                          </span>
                           {!c.isActive && (
                             <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
                               NO ELEGIBLE

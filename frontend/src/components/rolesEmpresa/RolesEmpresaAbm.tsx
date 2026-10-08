@@ -5,7 +5,7 @@ import { categoriaSatAPI, CategoriaSatItem, esElegible } from '../../api/categor
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
-import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation, faPlus, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
 import { SelectorValoracion } from '../proyectos/SelectorValoracion';
@@ -14,6 +14,9 @@ import { useThemeStore } from '../../stores/themeStore';
 import { valoracionesPorBrutoAPI, ValoracionSugerida } from '../../api/valoraciones';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { SelectorPuestoDesempenado, listarPuestos } from '../arca/SelectorPuestoDesempenado';
+
+/** Para qué sirve el puesto de la función: el mismo texto en la opción de cada tarjeta, el filtro y el formulario. */
+const TEXTO_PUESTO = "Lo pide el alta URGENTE (Altas Masivas, registro de 85). Es lo primero que se mira: si la función lo tiene, no hace falta en la categoría ni en el convenio";
 
 const valoracionesApi = createSimpleCatalogApi('/valoraciones');
 const conveniosApi = createSimpleCatalogApi('/convenios');
@@ -370,7 +373,13 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     }
   };
 
-  /** El puesto de la función, o el aviso de que falta con el botón para asignarlo. */
+  /**
+   * El puesto de la función, o la OPCIÓN de asignarlo.
+
+   * No es una advertencia: el puesto se puede asignar en el convenio, en la categoría o acá, y manda el
+   * más específico. Una función sin puesto está bien si lo tiene su categoría o su convenio. Por eso el
+   * botón es discreto y explica para qué sirve, en vez de un cartel ámbar que lo presentaba como error.
+   */
   const PuestoDeFuncion: React.FC<{ role: RoleFrameItem }> = ({ role }) => {
     const codigo = role.data?.puestoDesempenado || '';
     return codigo ? (
@@ -393,11 +402,11 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
           e.stopPropagation();
           setAsignandoPuesto(role);
         }}
-        title="Sin puesto desempeñado: las Altas Masivas de sus contratos lo van a pedir. Click para asignarlo."
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
+        title={`${TEXTO_PUESTO}. Click para asignarlo.`}
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 transition-colors"
       >
-        <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
-        Sin puesto ARCA · Asignar
+        <FontAwesomeIcon icon={faPlus} className="h-2 w-2" />
+        Puesto ARCA
       </button>
     );
   };
@@ -660,10 +669,10 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         <button
           type="button"
           onClick={() => setSoloSinPuesto((v) => !v)}
-          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${soloSinPuesto ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 border-amber-300 dark:border-amber-800'}`}
-          title="Funciones sin puesto desempeñado de ARCA: sus contratos no pueden generar las Altas Masivas"
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${soloSinPuesto ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+          title={`Ver solo las funciones sin puesto propio. ${TEXTO_PUESTO}.`}
         >
-          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+          <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
           Sin puesto ARCA ({sinPuesto})
         </button>
         {/* El `+` se mudó al encabezado de la página, al lado del info del título. */}
@@ -954,7 +963,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Puesto desempeñado (ARCA)</label>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">Lo pide el alta URGENTE (Altas Masivas, registro de 85). Es lo primero que se mira: si la función lo tiene, no hace falta en la categoría ni en la empresa.</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">{TEXTO_PUESTO}.</p>
               <SelectorPuestoDesempenado valor={formPuesto} onChange={setFormPuesto} />
             </div>
 
@@ -1183,6 +1192,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
       )}
       {asignandoPuesto && (
         <Modal isOpen={!!asignandoPuesto} onClose={() => setAsignandoPuesto(null)} title="Puesto desempeñado (ARCA)" subtitle={asignandoPuesto.name} size="md" zIndex={90}>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">{TEXTO_PUESTO}.</p>
           <SelectorPuestoDesempenado autoFocus valor={asignandoPuesto.data?.puestoDesempenado || ''} onChange={(codigo) => void asignarPuesto(asignandoPuesto, codigo)} />
         </Modal>
       )}

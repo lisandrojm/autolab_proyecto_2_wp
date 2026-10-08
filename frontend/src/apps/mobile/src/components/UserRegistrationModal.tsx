@@ -2377,16 +2377,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           {porDiasSueltos ? (
             <div className="space-y-1">
               {/*
-                NO SE PUEDEN MARCAR DÍAS QUE YA PASARON.
+                SE PUEDEN MARCAR DÍAS QUE YA PASARON (pedido del 08/10/2026).
 
-                Esto es un pedido de contratación: las jornadas que declara son las que la persona VA a
-                trabajar. Un día de la semana pasada no es algo que se pueda pedir —ya pasó— y elegirlo
-                terminaba en un alta que ARCA rechaza por declararse tarde.
-
-                Los días que ya estuvieran marcados se pueden sacar igual, aunque hayan quedado en el
-                pasado: el límite es sobre lo que se agrega (ver `CustomMultiDatePicker`).
+                Antes el calendario no dejaba elegir nada anterior a hoy: un pedido de contratación declara
+                lo que la persona VA a trabajar. Pero hay que poder anotar a alguien que ya trabajó y no se
+                cargó a tiempo. Se permite, y se avisa abajo: el alta temprana ante ARCA de un día que ya
+                pasó se declara tarde y ARCA puede rechazarla.
               */}
-              <CustomMultiDatePicker label="Días que trabaja" value={formData.fechasTrabajadas} onChange={(d: string | string[]) => elegirDiasSueltos(Array.isArray(d) ? d : d ? [d] : [])} minDate={fechaDeHoy()} />
+              <CustomMultiDatePicker label="Días que trabaja" value={formData.fechasTrabajadas} onChange={(d: string | string[]) => elegirDiasSueltos(Array.isArray(d) ? d : d ? [d] : [])} />
+              {formData.fechasTrabajadas.some((f) => f < fechaDeHoy()) && (
+                <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">Hay días anteriores a hoy. Si el contrato va con alta temprana ante ARCA, se declara tarde y ARCA puede rechazarla.</p>
+              )}
               <p className="text-[11px] text-slate-400">
                 {formData.fechasTrabajadas.length > 0 ? (
                   <>

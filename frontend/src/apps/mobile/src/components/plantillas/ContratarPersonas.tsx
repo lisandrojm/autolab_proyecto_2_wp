@@ -23,7 +23,7 @@ import { estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, r
 import { porDiasSueltos } from "./Condiciones";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { AIRE, MARGEN, Rotulo, pastillaDe } from "./piezas";
-import { CLASE_HORA, fechaCorta, fechaDeHoy, pesos, Pill, textoHorario } from "./comun";
+import { CLASE_HORA, fechaCorta, pesos, Pill, textoHorario } from "./comun";
 import { cambiosDeContrato } from "./Condiciones";
 
 /*
@@ -426,7 +426,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                 <Rotulo icono={faUsers}>Fechas{marca(fechasDistintas)}</Rotulo>
                 {sueltos ? (
                   <div className="space-y-1">
-                    <CustomMultiDatePicker label="Días que trabaja" value={fechas} onChange={(v: string | string[]) => cambiar({ fechas: [...new Set(Array.isArray(v) ? v : v ? [v] : [])].sort() })} minDate={fechaDeHoy()} />
+                    <CustomMultiDatePicker label="Días que trabaja" value={fechas} onChange={(v: string | string[]) => cambiar({ fechas: [...new Set(Array.isArray(v) ? v : v ? [v] : [])].sort() })} />
                     <p className="text-[11px] text-slate-400">
                       {fechas.length > 0 ? (
                         <>

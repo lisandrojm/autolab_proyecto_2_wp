@@ -76,6 +76,7 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/valoraciones", permisos: ["config_valoraciones:view", "config_frame_functions:view"] },
   { path: "/admin/sedes", permisos: ["admin_sedes:view"] },
   { path: "/admin/contracts", permisos: ["admin_contracts:view"] },
+  { path: "/admin/renovaciones", permisos: ["admin_contracts:view"] },
   { path: "/admin/contratos-sin-dias", permisos: ["admin_contracts:view"] },
   { path: "/admin/plantillas-equipo", permisos: ["admin_hiring_templates:view"] },
   { path: "/admin/solicitudes", permisos: ["admin_users:view"] },

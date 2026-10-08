@@ -100,7 +100,7 @@ function usePaginado<T>(items: T[], porPagina: number = FILAS_POR_PAGINA) {
   return { pagina: paginaValida, setPagina, totalPaginas, visibles, total: items.length, desde };
 }
 
-const Paginador: React.FC<{ pagina: number; totalPaginas: number; total: number; desde: number; mostrados: number; onPagina: (p: number) => void }> = ({ pagina, totalPaginas, total, desde, mostrados, onPagina }) => {
+export const Paginador: React.FC<{ pagina: number; totalPaginas: number; total: number; desde: number; mostrados: number; onPagina: (p: number) => void }> = ({ pagina, totalPaginas, total, desde, mostrados, onPagina }) => {
   if (totalPaginas <= 1) return null;
   return (
     <div className="flex items-center justify-between gap-3 px-1 pt-3">
@@ -397,7 +397,7 @@ const BotonHabilitarFirma: React.FC<{
   );
 };
 
-const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
+export const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
   const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
   if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
   return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" /> : <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />;
@@ -655,7 +655,7 @@ const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: Afip
  * fechas vacías. Guarda un contrato NUEVO al lado del vencido, que queda en el historial (ver
  * `renovando` en `ProjectTeamPage`).
  */
-const BotonRenovar: React.FC<{ record: ContractOverviewRow }> = ({ record }) => {
+export const BotonRenovar: React.FC<{ record: ContractOverviewRow; grande?: boolean }> = ({ record, grande = false }) => {
   const navigate = useNavigate();
   return (
     <button
@@ -665,9 +665,9 @@ const BotonRenovar: React.FC<{ record: ContractOverviewRow }> = ({ record }) => 
         navigate(`/projects/${record.projectId}/team`, { state: { openWizardFor: { userId: record.userId, contractIndex: record.contractIndex, renovar: true } } });
       }}
       title="Crear un contrato nuevo con los mismos datos de éste, para cargarle las fechas"
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-green-600 text-white hover:bg-green-700 transition-colors whitespace-nowrap"
+      className={`inline-flex items-center rounded font-bold bg-green-600 text-white hover:bg-green-700 transition-colors whitespace-nowrap ${grande ? "gap-1.5 px-3 py-1.5 text-xs" : "gap-1 px-1.5 py-0.5 text-[10px] uppercase"}`}
     >
-      <FontAwesomeIcon icon={faRotateRight} className="h-2.5 w-2.5" />
+      <FontAwesomeIcon icon={faRotateRight} className={grande ? "h-3 w-3" : "h-2.5 w-2.5"} />
       Renovar
     </button>
   );

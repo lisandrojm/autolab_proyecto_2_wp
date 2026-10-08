@@ -8,7 +8,7 @@ import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Vacio } from "./Pantalla";
 import { EstadoContratar, faltaDe, formaDe, guardarEstado, leerEstado, nuevaClave } from "./estadoContratar";
 import { estadoDe, nombreTurno, rutas } from "./equipoUtil";
-import { ChipTurno, fechaCorta, fechaDeHoy, Pill, textoHorario } from "./comun";
+import { ChipTurno, fechaCorta, Pill, textoHorario } from "./comun";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { cambiosDeContrato } from "./Condiciones";
 import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTipoContrato";
@@ -135,7 +135,7 @@ function TarjetaEquipo({ equipo, p, estado, f, areas, catalogos, onCambio }: { e
         <div className="space-y-3 border-t border-slate-200 px-3 py-3 dark:border-slate-700">
           {conDias && (
             <>
-              <CustomMultiDatePicker label="Días que trabajan" value={f.fechas} onChange={(d: string | string[]) => onCambio({ fechas: [...new Set(Array.isArray(d) ? d : d ? [d] : [])].sort() })} minDate={fechaDeHoy()} />
+              <CustomMultiDatePicker label="Días que trabajan" value={f.fechas} onChange={(d: string | string[]) => onCambio({ fechas: [...new Set(Array.isArray(d) ? d : d ? [d] : [])].sort() })} />
               {f.fechas.length > 0 && <p className="text-sm text-slate-800 dark:text-slate-100">{`${f.fechas.length} ${f.fechas.length === 1 ? "jornada" : "jornadas"}: ${f.fechas.map(fechaCorta).join(" · ")}`}</p>}
             </>
           )}

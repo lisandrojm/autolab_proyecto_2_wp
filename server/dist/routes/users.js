@@ -48,6 +48,7 @@ import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSch
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
+import { momentoDeCarga } from "../utils/archivoDeContrato.js";
 import { claveEstado } from "../utils/estadoClave.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
 const router = Router();
@@ -941,7 +942,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // es casi la mitad del payload para nada.
         // Orden por columna de la tabla (ver `components/ui/OrdenTabla` en el front). Sólo columnas que
         // salen de esta fase: ordenar la página ya recortada sería ordenar 25 filas, no el listado.
-        const COLUMNAS_ORDEN = ["usuario", "cuit", "contratos", "cliente", "proyecto", "rolEmpresa", "estado", "contrato", "estadoContrato", "reemplazo", "altaBaja"];
+        const COLUMNAS_ORDEN = ["usuario", "cuit", "contratos", "cliente", "proyecto", "rolEmpresa", "estado", "contrato", "estadoContrato", "reemplazo", "altaBaja", "fechaCarga"];
         const ordenColumna = COLUMNAS_ORDEN.includes(String(req.query.sort || "")) ? String(req.query.sort) : "";
         const ordenSigno = req.query.dir === "desc" ? -1 : 1;
         const necesitaNombreContrato = !!req.query.tipoContrato || !!req.query.search || ordenColumna === "contrato";
@@ -1157,7 +1158,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                     sinCuit: user.metadata?.sinCuit === true,
                     // Sólo para ordenar: dos contratos de la misma persona quedan juntos y por fecha.
                     _alta: fechaISO(contrato.fecha_alta_contrato),
-                    _contratoOrden: ordenColumna ? { n: contrato.nombre_contrato, e: contrato.nombre_estado_empleado, m: contrato.reemplazo } : undefined,
+                    _contratoOrden: ordenColumna ? { n: contrato.nombre_contrato, e: contrato.nombre_estado_empleado, m: contrato.reemplazo, g: momentoDeCarga(contrato.fecha_carga) } : undefined,
                 });
             }
         }
@@ -1174,6 +1175,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 case "estadoContrato": return r._contratoOrden?.e || "";
                 case "reemplazo": return r._contratoOrden?.m ? 1 : 0;
                 case "altaBaja": return r._alta || "";
+                // La fecha de creación del contrato: viene ISO o «AAAA-MM-DD» según quién lo creó; se compara en ms.
+                case "fechaCarga": return r._contratoOrden?.g ?? null;
                 default: return null;
             }
         };

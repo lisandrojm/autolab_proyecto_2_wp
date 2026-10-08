@@ -162,6 +162,11 @@ export interface AprobacionEnModal {
    * modal abre ESE contrato en el mismo formulario, en vez de arrancar una aprobación.
    */
   editarContrato?: { userId: string; contractIndex: number };
+  /**
+   * RENOVAR un contrato vencido, desde la pantalla de Renovaciones: el mismo modal «Renovar contrato»
+   * del equipo (el vencido precargado, las fechas vacías), sin salir de esa pantalla. `solicitudId` va vacío.
+   */
+  renovarContrato?: { userId: string; contractIndex: number };
   onCerrar: () => void;
   /** Se guardó: la solicitud quedó aprobada, o el contrato corregido. */
   onAprobada: () => void;
@@ -1824,8 +1829,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   useEffect(() => {
     if (!soloAprobacion || wizardAutoAbierto.current || !project) return;
     wizardAutoAbierto.current = true;
-    const { editarContrato } = soloAprobacion;
-    if (editarContrato) void handleOpenWizard(editarContrato.userId, undefined, editarContrato.contractIndex);
+    const { editarContrato, renovarContrato } = soloAprobacion;
+    if (renovarContrato) void handleOpenWizard(renovarContrato.userId, undefined, renovarContrato.contractIndex, undefined, { renovar: true });
+    else if (editarContrato) void handleOpenWizard(editarContrato.userId, undefined, editarContrato.contractIndex);
     else void handleOpenWizard(soloAprobacion.solicitudId, undefined, undefined, soloAprobacion.solicitudId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soloAprobacion, project]);
@@ -2554,7 +2560,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
       const wasApproving = !!approvingSolicitudId;
       const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || 'El usuario';
-      sweetAlert.success(renovando ? 'Contrato renovado' : wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', renovando ? `${nombre} tiene un contrato nuevo; el vencido quedó en su historial.` : `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
+      sweetAlert.success(renovando ? 'Contrato renovado' : wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', renovando ? `${nombre} tiene un contrato nuevo; el vencido quedó en su historial. Ya está en Contratos › Trámite impositivo para gestionarlo.` : `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
 
       // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id, { team: 'ids' });

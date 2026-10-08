@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserTie, faCloudArrowDown, faFileImport, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faUserTie, faCloudArrowDown, faFileImport, faSpinner, faFileContract, faListUl, faUserGear, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { useNavigate } from "react-router-dom";
 import axios from "../api/axiosConfig";
 import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
@@ -40,6 +41,9 @@ export const ArcaPuestosDesempenadosPage: React.FC = () => {
   const [recarga, setRecarga] = useState(0);
   const [importando, setImportando] = useState<"arca" | "archivo" | null>(null);
   const [resumen, setResumen] = useState<ResumenImportacion | null>(null);
+  const navigate = useNavigate();
+  /** El info de «Dónde se asigna»: los tres niveles y en qué orden mandan. */
+  const [infoNiveles, setInfoNiveles] = useState(false);
   const [info, setInfo] = useState(false);
   const archivo = useRef<HTMLInputElement>(null);
 
@@ -92,6 +96,26 @@ export const ArcaPuestosDesempenadosPage: React.FC = () => {
             <input ref={archivo} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={(e) => e.target.files?.[0] && void importarArchivo(e.target.files[0])} />
             <button type="button" onClick={() => setInfo(true)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
               ¿De dónde sale?
+            </button>
+            {/*
+              DÓNDE SE ASIGNA: tres niveles, en el orden de la jerarquía (Convenio → Categoría → Rol Empresa).
+              Al resolver el puesto de un contrato manda el más específico: el Rol Empresa, si lo tiene.
+            */}
+            <span className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" aria-hidden />
+            <button type="button" onClick={() => setInfoNiveles(true)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400" title="Dónde se asigna el puesto" aria-label="Dónde se asigna el puesto">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => navigate("/convenios")} className={boton} title="El puesto por defecto de cada convenio">
+              <FontAwesomeIcon icon={faFileContract} className="h-3.5 w-3.5" />
+              Convenios
+            </button>
+            <button type="button" onClick={() => navigate("/arca/categorias")} className={boton} title="El puesto de cada categoría (lápiz de la categoría)">
+              <FontAwesomeIcon icon={faListUl} className="h-3.5 w-3.5" />
+              Categorías
+            </button>
+            <button type="button" onClick={() => navigate("/roles-empresa")} className={boton} title="El puesto de cada rol empresa (función)">
+              <FontAwesomeIcon icon={faUserGear} className="h-3.5 w-3.5" />
+              Roles Empresa
             </button>
           </div>
         }
@@ -190,6 +214,30 @@ export const ArcaPuestosDesempenadosPage: React.FC = () => {
         )}
       </InfoModal>
 
+      <InfoModal isOpen={infoNiveles} onClose={() => setInfoNiveles(false)} title="Dónde se asigna el puesto" size="md">
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+          <p>
+            Lo pide el alta URGENTE (Altas Masivas, registro de 85). Se puede asignar en tres niveles, de lo más general a lo más específico:
+          </p>
+          <ol className="list-decimal pl-5 space-y-1.5">
+            <li>
+              <strong>Convenio</strong> — el puesto típico de todo el convenio («personal de apoyo a la producción» en el de televisión).
+            </li>
+            <li>
+              <strong>Categoría</strong> — el de una categoría del convenio. Se carga en el lápiz de la categoría.
+            </li>
+            <li>
+              <strong>Rol Empresa</strong> — el de una función («Asistente de Cámara»).
+            </li>
+          </ol>
+          <p>
+            <strong>Manda el más específico:</strong> si el Rol Empresa lo tiene, no hace falta en la categoría ni en el convenio; si no, se toma el de la categoría, y si tampoco, el del convenio. Después
+            vienen el default de la empleadora y la ★ de esta pantalla. En un contrato puntual se puede elegir otro, solo para ese contrato.
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Ninguno es obligatorio: alcanza con que alguno de los niveles lo tenga.</p>
+        </div>
+      </InfoModal>
+
       <InfoModal isOpen={info} onClose={() => setInfo(false)} title="Puestos desempeñados de ARCA" size="md">
         <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
           <p>
@@ -204,7 +252,7 @@ export const ArcaPuestosDesempenadosPage: React.FC = () => {
             La importación agrega los nuevos y actualiza las descripciones; <strong>no pisa lo cargado a mano</strong>, no borra nada y no rompe asignaciones (se guardan por código).
           </p>
           <p>
-            <strong>De dónde sale el puesto de un contrato:</strong> del Rol Empresa → de la categoría → del default de la empleadora → de la ★ de esta pantalla.
+            <strong>De dónde sale el puesto de un contrato:</strong> del Rol Empresa → de la categoría → del convenio → del default de la empleadora → de la ★ de esta pantalla.
           </p>
         </div>
       </InfoModal>
