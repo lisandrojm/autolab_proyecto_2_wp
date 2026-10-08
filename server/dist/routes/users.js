@@ -945,7 +945,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const COLUMNAS_ORDEN = ["usuario", "cuit", "contratos", "cliente", "proyecto", "rolEmpresa", "estado", "contrato", "estadoContrato", "reemplazo", "altaBaja", "fechaCarga"];
         const ordenColumna = COLUMNAS_ORDEN.includes(String(req.query.sort || "")) ? String(req.query.sort) : "";
         const ordenSigno = req.query.dir === "desc" ? -1 : 1;
-        const necesitaNombreContrato = !!req.query.tipoContrato || !!req.query.search || ordenColumna === "contrato";
+        const necesitaNombreContrato = !!req.query.tipoContrato || !!req.query.tiposContrato || !!req.query.search || ordenColumna === "contrato";
         const necesitaEstado = !!req.query.estadoContrato || !!req.query.estados || ordenColumna === "estadoContrato";
         const necesitaReemplazo = !!req.query.reemplazo || ordenColumna === "reemplazo";
         // La empleadora solo se trae si se está filtrando por ella (contexto Empresa): sin filtro, pedirla
@@ -1031,6 +1031,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const metadataActivo = req.query.metadataActivo !== undefined ? req.query.metadataActivo === "true" : undefined;
         const vigencia = req.query.vigencia ? String(req.query.vigencia) : undefined;
         const tipoContrato = req.query.tipoContrato ? String(req.query.tipoContrato) : undefined;
+        // VARIOS tipos a la vez (`?tiposContrato=A&tiposContrato=B`): lo usa Renovaciones, que los elige con checkboxes.
+        const tiposContrato = new Set([].concat(req.query.tiposContrato || []).map((t) => String(t)).filter(Boolean));
         const estadoContrato = req.query.estadoContrato ? String(req.query.estadoContrato) : undefined;
         const reemplazo = req.query.reemplazo ? String(req.query.reemplazo) : undefined;
         /**
@@ -1112,6 +1114,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                         continue;
                 }
                 if (tipoContrato && String(contrato.nombre_contrato ?? "") !== tipoContrato)
+                    continue;
+                if (tiposContrato.size > 0 && !tiposContrato.has(String(contrato.nombre_contrato ?? "")))
                     continue;
                 if (estadoContrato && estadoCanonico(String(contrato.nombre_estado_empleado ?? "")) !== estadoCanonico(estadoContrato))
                     continue;

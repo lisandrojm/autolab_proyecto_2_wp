@@ -31,7 +31,8 @@ import { BotonOrden, useOrden } from "../components/ui/OrdenTabla";
   CUIT): no hay nada que mover a mano. Editar y eliminar son las acciones de siempre de la fila.
 */
 
-const POR_PAGINA = 25;
+/** Cuántas filas por página se pueden elegir. */
+const TAMANIOS_PAGINA = [25, 50, 100];
 
 /*
   LAS CUATRO COLUMNAS FIJAS: Fecha de creación, Renovar, Último contrato y Usuario. `sticky` pide un
@@ -62,6 +63,9 @@ const fechaDeCreacion = (s?: string): string => {
 
 export const RenovacionesPage: React.FC = () => {
   const [filas, setFilas] = useState<ContractOverviewRow[] | null>(null);
+  /** Pidiendo una página: la tabla anterior queda a la vista, con un indicador, en vez de desaparecer. */
+  const [cargando, setCargando] = useState(false);
+  const [porPagina, setPorPagina] = useState(25);
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [pagina, setPagina] = useState(1);
@@ -89,7 +93,13 @@ export const RenovacionesPage: React.FC = () => {
   const [filterUserStatus, setFilterUserStatus] = useState("");
   const [filterClientId, setFilterClientId] = useState("");
   const [filterProjectId, setFilterProjectId] = useState("");
-  const [filterTipoContrato, setFilterTipoContrato] = useState("");
+  /*
+    TIPOS DE CONTRATO: VARIOS A LA VEZ, dentro de Filtros Avanzados (`multiSelectFilters`): un campo como
+    select que abre un modal de casillas, y lo elegido como badges. Acá lo normal es mirar, por ejemplo,
+    todos los «Eventual…» juntos.
+  */
+  const [tiposElegidos, setTiposElegidos] = useState<string[]>([]);
+
   const [clientOptions, setClientOptions] = useState<{ id: string; name: string }[]>([]);
   const [projectOptions, setProjectOptions] = useState<{ id: string; name: string; clientId: string }[]>([]);
 
@@ -117,22 +127,22 @@ export const RenovacionesPage: React.FC = () => {
   // El buscador vuelve a la primera página; se espera un momento para no pedir una vez por tecla.
   useEffect(() => {
     setPagina(1);
-  }, [busqueda, filterUserStatus, filterClientId, filterProjectId, filterTipoContrato, orden]);
+  }, [busqueda, filterUserStatus, filterClientId, filterProjectId, tiposElegidos, orden, porPagina]);
 
   useEffect(() => {
     let cancelado = false;
-    setFilas(null);
+    setCargando(true);
     const t = setTimeout(() => {
       usersAPI
         .listContractsOverview({
           page: pagina,
-          limit: POR_PAGINA,
+          limit: porPagina,
           search: busqueda.trim() || undefined,
           vigencia: "novigente",
           metadataActivo: filterUserStatus ? String(filterUserStatus === "active") : undefined,
           clientId: filterClientId || undefined,
           projectId: filterProjectId || undefined,
-          tipoContrato: filterTipoContrato || undefined,
+          tiposContrato: tiposElegidos.length > 0 ? tiposElegidos : undefined,
           sort: orden ? orden.columna : "altaBaja",
           dir: orden ? orden.direccion : "desc",
         })
@@ -142,13 +152,14 @@ export const RenovacionesPage: React.FC = () => {
           setTotal(r.total);
           setTotalPaginas(r.totalPages);
         })
-        .catch(() => !cancelado && setFilas([]));
+        .catch(() => !cancelado && setFilas([]))
+        .finally(() => !cancelado && setCargando(false));
     }, 250);
     return () => {
       cancelado = true;
       clearTimeout(t);
     };
-  }, [pagina, busqueda, recarga, filterUserStatus, filterClientId, filterProjectId, filterTipoContrato, orden]);
+  }, [pagina, porPagina, busqueda, recarga, filterUserStatus, filterClientId, filterProjectId, tiposElegidos, orden]);
 
   const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900";
 
@@ -195,7 +206,15 @@ export const RenovacionesPage: React.FC = () => {
           selectFilters={[
             { label: "Cliente", value: filterClientId, onChange: setFilterClientId, placeholder: "Todos los clientes", options: clientOptions.map((c) => ({ value: c.id, label: c.name })) },
             { label: "Proyecto", value: filterProjectId, onChange: setFilterProjectId, placeholder: "Todos los proyectos", options: proyectosOfrecidos.map((p) => ({ value: p.id, label: p.name })) },
-            { label: "Tipo de contrato", value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: "Todos los tipos", options: contratoFrames.map((cf) => ({ value: cf.name, label: cf.name })) },
+          ]}
+          multiSelectFilters={[
+            {
+              label: "Tipo de contrato",
+              values: tiposElegidos,
+              onChange: setTiposElegidos,
+              placeholder: "Todos los tipos",
+              options: [...new Set(contratoFrames.map((cf) => cf.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })).map((n) => ({ value: n, label: n })),
+            },
           ]}
         />
       }
@@ -209,7 +228,27 @@ export const RenovacionesPage: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+          {/* La paginación también ARRIBA: con filas altas, el paginador del pie quedaba muy abajo. */}
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {(pagina - 1) * porPagina + 1}–{(pagina - 1) * porPagina + filas.length} de {total}
+              {cargando && <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500 align-[-2px]" aria-label="Cargando" />}
+            </span>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                Por página
+                <select value={porPagina} onChange={(e) => setPorPagina(Number(e.target.value))} className="rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                  {TAMANIOS_PAGINA.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Paginador pagina={pagina} totalPaginas={totalPaginas} total={total} desde={(pagina - 1) * porPagina} mostrados={filas.length} onPagina={setPagina} />
+            </div>
+          </div>
+          <div className={`overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800/50 transition-opacity ${cargando ? "opacity-60" : ""}`}>
             <table className="w-full text-left min-w-[1400px]">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -242,6 +281,11 @@ export const RenovacionesPage: React.FC = () => {
                   <th className={th}>
                     <BotonOrden columna="proyecto" {...ordenProps}>
                       Proyecto
+                    </BotonOrden>
+                  </th>
+                  <th className={th}>
+                    <BotonOrden columna="contrato" {...ordenProps}>
+                      Tipo de contrato
                     </BotonOrden>
                   </th>
                   <th className={th}>
@@ -288,6 +332,7 @@ export const RenovacionesPage: React.FC = () => {
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || "—"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || "—"}</td>
                     <td className="px-4 py-3">
                       <EstadoBadge name={r.nombre_estado_empleado || ""} />
                     </td>
@@ -305,7 +350,7 @@ export const RenovacionesPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-          <Paginador pagina={pagina} totalPaginas={totalPaginas} total={total} desde={(pagina - 1) * POR_PAGINA} mostrados={filas.length} onPagina={setPagina} />
+          <Paginador pagina={pagina} totalPaginas={totalPaginas} total={total} desde={(pagina - 1) * porPagina} mostrados={filas.length} onPagina={setPagina} />
         </>
       )}
       {renovando && (

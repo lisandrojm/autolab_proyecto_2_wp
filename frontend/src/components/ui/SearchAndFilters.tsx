@@ -36,6 +36,19 @@ export interface SelectFilter {
   renderOption?: (option: FilterOption) => React.ReactNode;
 }
 
+/**
+ * VARIAS opciones a la vez. En el modal se ve como un select; al tocarlo abre otro modal con casillas,
+ * y lo elegido queda debajo como badges que se quitan con la ✕. Vacío = sin filtrar (todos).
+ */
+export interface MultiSelectFilter {
+  label: string;
+  values: string[];
+  onChange: (values: string[]) => void;
+  options: FilterOption[];
+  /** Lo que dice el campo cuando no hay nada elegido («Todos los tipos»). */
+  placeholder?: string;
+}
+
 export interface SwitchFilter {
   value: boolean;
   onChange: (value: boolean) => void;
@@ -62,6 +75,7 @@ interface SearchAndFiltersProps {
   dateFilter?: DateRangeFilter;
   // New filter props for modal
   selectFilters?: SelectFilter[];
+  multiSelectFilters?: MultiSelectFilter[];
   switchFilters?: SwitchFilter[];
   radioFilters?: RadioFilter[];
 
@@ -151,16 +165,26 @@ const RenderedSelect: React.FC<SelectFilter> = ({ value, onChange, options, plac
   );
 };
 
-export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, selectFilters = [], switchFilters = [], radioFilters = [], className = "", extraActions }) => {
+export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, selectFilters = [], multiSelectFilters = [], switchFilters = [], radioFilters = [], className = "", extraActions }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
+  /** El filtro múltiple que tiene abierto su modal de casillas, y lo que se va marcando hasta «Aplicar». */
+  const [eligiendo, setEligiendo] = useState<{ idx: number; marcados: string[] } | null>(null);
 
   const hasDateFilters = dateFilter && (dateFilter.startDate || dateFilter.endDate);
   const hasSelectFilters = selectFilters.some((sf) => sf.value !== "");
   const hasSwitchFilters = switchFilters.some((sw) => sw.value);
   const hasRadioFilters = radioFilters.some((rf) => rf.value !== "");
-  const hasActiveFilters = hasDateFilters || hasSelectFilters || hasSwitchFilters || hasRadioFilters;
-  const activeFilterCount = [hasDateFilters, ...selectFilters.map((sf) => sf.value !== ""), ...switchFilters.map((sw) => sw.value), ...radioFilters.map((rf) => rf.value !== "")].filter(Boolean).length;
-  const shouldShowBadges = hasDateFilters || hasSelectFilters || hasSwitchFilters || radioFilters.length > 0;
+  const hasMultiFilters = multiSelectFilters.some((mf) => mf.values.length > 0);
+  const hasActiveFilters = hasDateFilters || hasSelectFilters || hasSwitchFilters || hasRadioFilters || hasMultiFilters;
+  const activeFilterCount = [hasDateFilters, ...selectFilters.map((sf) => sf.value !== ""), ...multiSelectFilters.map((mf) => mf.values.length > 0), ...switchFilters.map((sw) => sw.value), ...radioFilters.map((rf) => rf.value !== "")].filter(Boolean).length;
+  const shouldShowBadges = hasDateFilters || hasSelectFilters || hasSwitchFilters || hasMultiFilters || radioFilters.length > 0;
+  const etiquetaDe = (mf: MultiSelectFilter, v: string) => mf.options.find((o) => o.value === v)?.label || v;
+  /** Quitar UNA opción de un filtro múltiple (la ✕ de su badge), con el mismo aviso que los demás filtros. */
+  const quitarDeMulti = (mf: MultiSelectFilter, v: string) => {
+    const quedan = mf.values.filter((x) => x !== v);
+    mf.onChange(quedan);
+    sweetAlert.filtro(`${mf.label}: ${quedan.length === 0 ? mf.placeholder || "Todos" : quedan.map((x) => etiquetaDe(mf, x)).join(", ")}`);
+  };
 
   /*
     Los filtros se aplican SOLOS: cada onChange ya dispara el filtrado de la lista. El problema es que
@@ -198,6 +222,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
       dateFilter.onEndDateChange("");
     }
     selectFilters.forEach((sf) => sf.onChange(""));
+    multiSelectFilters.forEach((mf) => mf.onChange([]));
     switchFilters.forEach((sw) => sw.onChange(false));
     radioFilters.forEach((rf) => rf.onChange(""));
     // Un solo aviso: usa los onChange originales justamente para no disparar uno por filtro.
@@ -219,7 +244,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
   };
 
   // Check if filter modal should be shown (date filter OR new filters exist)
-  const showFilterButton = dateFilter || selectFilters.length > 0 || switchFilters.length > 0 || radioFilters.length > 0;
+  const showFilterButton = dateFilter || selectFilters.length > 0 || multiSelectFilters.length > 0 || switchFilters.length > 0 || radioFilters.length > 0;
 
   return (
     <>
@@ -300,6 +325,21 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                   </button>
                 </span>
               ))}
+            {multiSelectFilters.flatMap((mf, idx) =>
+              mf.values.map((v) => (
+                <span
+                  key={`multi-${idx}-${v}`}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium
+                               bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200
+                               border border-blue-300 dark:border-blue-700"
+                >
+                  {mf.label}: {etiquetaDe(mf, v)}
+                  <button onClick={() => quitarDeMulti(mf, v)} className="p-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors" title={`Quitar ${etiquetaDe(mf, v)}`}>
+                    <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                  </button>
+                </span>
+              )),
+            )}
             {switchFiltersUI
               .filter((sw) => sw.value)
               .map((sw, idx) => (
@@ -430,7 +470,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
 
             {/* Select Filters Section */}
             {selectFilters.length > 0 && (
-              <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className={`space-y-3 ${multiSelectFilters.length > 0 ? "" : "pb-4 border-b border-gray-200 dark:border-gray-700"}`}>
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtros por Categoría</h4>
                 {selectFiltersUI.map((sf, idx) => (
                   <div key={idx}>
@@ -454,6 +494,38 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                       </select>
                       <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Multi-select: un campo como select que abre un modal de casillas; lo elegido, como badges. */}
+            {multiSelectFilters.length > 0 && (
+              <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+                {selectFilters.length === 0 && <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtros por Categoría</h4>}
+                {multiSelectFilters.map((mf, idx) => (
+                  <div key={`multi-${idx}`}>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{mf.label}</label>
+                    <button
+                      type="button"
+                      onClick={() => setEligiendo({ idx, marcados: mf.values })}
+                      className="relative w-full px-3 py-2 pr-8 text-left border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                    >
+                      {mf.values.length === 0 ? mf.placeholder || "Todos" : mf.values.length === 1 ? etiquetaDe(mf, mf.values[0]) : `${mf.values.length} elegidos`}
+                      <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    </button>
+                    {mf.values.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {mf.values.map((v) => (
+                          <span key={v} className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border border-blue-300 dark:border-blue-700">
+                            {etiquetaDe(mf, v)}
+                            <button type="button" onClick={() => quitarDeMulti(mf, v)} className="p-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors" title={`Quitar ${etiquetaDe(mf, v)}`}>
+                              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -489,6 +561,63 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 </p>
               </div>
             )}
+          </div>
+        </Modal>
+      )}
+      {/* El modal de casillas de un filtro múltiple, ARRIBA del de filtros. */}
+      {eligiendo && multiSelectFilters[eligiendo.idx] && (
+        <Modal
+          isOpen
+          zIndex={70}
+          onClose={() => setEligiendo(null)}
+          title={multiSelectFilters[eligiendo.idx].label}
+          subtitle="Marcá uno o varios. Sin ninguno marcado, se ven todos."
+          size="sm"
+          footer={
+            <div className="flex w-full items-center justify-between gap-2">
+              <div className="flex items-center gap-3 text-xs">
+                <button type="button" onClick={() => setEligiendo({ ...eligiendo, marcados: multiSelectFilters[eligiendo.idx].options.map((o) => o.value) })} className="font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                  Marcar todos
+                </button>
+                <button type="button" onClick={() => setEligiendo({ ...eligiendo, marcados: [] })} className="font-semibold text-gray-500 hover:underline dark:text-gray-400">
+                  Ninguno
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setEligiendo(null)} className="btn-secondary">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const mf = multiSelectFilters[eligiendo.idx];
+                    mf.onChange(eligiendo.marcados);
+                    sweetAlert.filtro(`${mf.label}: ${eligiendo.marcados.length === 0 ? mf.placeholder || "Todos" : eligiendo.marcados.map((x) => etiquetaDe(mf, x)).join(", ")}`);
+                    setEligiendo(null);
+                  }}
+                  className="btn-primary"
+                >
+                  Aplicar{eligiendo.marcados.length > 0 ? ` (${eligiendo.marcados.length})` : ""}
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <div className="max-h-[55vh] space-y-1 overflow-y-auto">
+            {multiSelectFilters[eligiendo.idx].options.map((o) => {
+              const marcado = eligiendo.marcados.includes(o.value);
+              return (
+                <label key={o.value} className={`flex cursor-pointer items-center gap-3 rounded border px-3 py-2 text-sm transition-colors ${marcado ? "border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30" : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"}`}>
+                  <input
+                    type="checkbox"
+                    checked={marcado}
+                    onChange={() => setEligiendo({ ...eligiendo, marcados: marcado ? eligiendo.marcados.filter((x) => x !== o.value) : [...eligiendo.marcados, o.value] })}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-800 dark:text-gray-200">{o.label}</span>
+                </label>
+              );
+            })}
           </div>
         </Modal>
       )}
