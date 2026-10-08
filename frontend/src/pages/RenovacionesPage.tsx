@@ -5,7 +5,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { usersAPI, ContractOverviewRow } from "../api/users";
-import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
+import { contratoFrameAPI, ContratoFrameItem, plantillaActivaParaFiltrar } from "../api/contratosFrame";
 import { infoAPI, InfoItem } from "../api/info";
 import { EstadoImpositivoCell, Paginador } from "../components/contratos/ContractBulkTabs";
 import { ProjectTeamPage } from "./ProjectTeamPage";
@@ -213,7 +213,7 @@ export const RenovacionesPage: React.FC = () => {
               values: tiposElegidos,
               onChange: setTiposElegidos,
               placeholder: "Todos los tipos",
-              options: [...new Set(contratoFrames.map((cf) => cf.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })).map((n) => ({ value: n, label: n })),
+              options: [...new Set(contratoFrames.filter(plantillaActivaParaFiltrar).map((cf) => cf.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })).map((n) => ({ value: n, label: n })),
             },
           ]}
         />

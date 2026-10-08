@@ -35,7 +35,7 @@ import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMulti
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
-import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato } from '../api/contratosFrame';
+import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaActivaParaFiltrar } from '../api/contratosFrame';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
@@ -5281,7 +5281,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           value: filterTipoContrato,
                           onChange: setFilterTipoContrato,
                           placeholder: 'Todos los tipos',
-                          options: contratoFrames.map((cf) => ({ value: cf.name, label: cf.name })),
+                          options: contratoFrames.filter(plantillaActivaParaFiltrar).map((cf) => ({ value: cf.name, label: cf.name })),
                         },
                         {
                           label: 'Área / Turno',

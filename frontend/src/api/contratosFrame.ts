@@ -196,6 +196,14 @@ export const contratosDePlantilla = (cf: Pick<ContratoFrameItem, "contratoId" | 
   const uno = typeof cf.contratoId === "object" ? cf.contratoId?._id : cf.contratoId;
   return uno ? [String(uno)] : [];
 };
+/**
+ * ¿Esta plantilla se ofrece en los FILTROS de tipo de contrato? No si está desactivada, ni si lo está el
+ * tipo de contrato al que pertenece: los contratos viejos la siguen mostrando por nombre, pero filtrar
+ * por algo que ya no se usa solo alarga la lista.
+ */
+export const plantillaActivaParaFiltrar = (cf: Pick<ContratoFrameItem, "isActive" | "contratoId">): boolean =>
+  cf.isActive !== false && !(typeof cf.contratoId === "object" && cf.contratoId?.isActive === false);
+
 export const plantillaEsDeContrato = (cf: Pick<ContratoFrameItem, "contratoId" | "contratoIds">, contratoId: unknown): boolean => {
   const id = String((contratoId as any)?._id ?? contratoId ?? "");
   return !!id && contratosDePlantilla(cf).includes(id);

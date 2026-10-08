@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usersAPI, ContractOverviewRow, Contract } from '../api/users';
 import { projectsAPI } from '../api/projects';
 import { clientsAPI, Client } from '../api/clients';
-import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
+import { contratoFrameAPI, ContratoFrameItem, plantillaActivaParaFiltrar } from '../api/contratosFrame';
 import { areasAPI, Area } from '../api/areas';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { infoAPI, InfoItem } from '../api/info';
@@ -531,7 +531,7 @@ export const ContractsPage: React.FC = () => {
                       value: filterTipoContrato,
                       onChange: setFilterTipoContrato,
                       placeholder: 'Todos los tipos',
-                      options: contratoFrames.map((cf) => ({ value: cf.name, label: cf.name })),
+                      options: contratoFrames.filter(plantillaActivaParaFiltrar).map((cf) => ({ value: cf.name, label: cf.name })),
                     },
                     {
                       label: 'Estado de contrato',
