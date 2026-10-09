@@ -1,7 +1,7 @@
 import htmlPdf from "html-pdf-node";
 import path from "path";
 import fs from "fs";
-import { MARCA_FIRMA, brutoDeEscalaEnDocumento } from "./employeeDocData.js";
+import { MARCA_FIRMA, brutoDeEscalaEnDocumento, importesNetosDelContrato } from "./employeeDocData.js";
 import { numeroALetras } from "./numeroALetras.js";
 
 /**
@@ -257,6 +257,11 @@ function sueldosDeEjemplo(): Record<string, string> {
     sueldoBruto: n(2185346.12),
     sueldoNeto: n(1770130.36),
     sueldoDiarioNeto: n(59004.35),
+    // Los netos de la solicitud, con la misma función que un contrato real (ver `importesNetosDelContrato`).
+    ...(() => {
+      const netos = importesNetosDelContrato({ jornadaBruto: 72844.87, escalaNeto: 1770130.36, escalaBruto: 2185346.12, diasPorSemana: 5, jornadasPorMes: 30, jornadas: 30 });
+      return { importeJornadaNeto: n(netos.jornada), importeSemanaNeto: n(netos.semana), importeMensualNeto: n(netos.mensual), importeTotalNeto: n(netos.total), importeTotalNetoLetras: numeroALetras(netos.total) };
+    })(),
     // El bruto de la ESCALA de la categoría (en un contrato real puede diferir de {{sueldoBruto}}).
     ...brutoDeEscalaEnDocumento(2185346.12),
   };
@@ -310,6 +315,11 @@ export function getDummyDocVariables(): Record<string, string> {
     cantidadJornadas: "30",
     horaInicio: "09:00",
     horaFin: "18:00",
+    horario: "09:00 a 18:00",
+    diasPorSemana: "5",
+    diasQueTrabaja: "Lu a Vi",
+    fechasTrabajadas: "16/03/2026, 17/03/2026",
+    tramite: "Pedido de AFIP",
     // Cargos y Niveles salieron de la aplicación: en un contrato real resuelven vacío (ver `buildEmployeeDocData`).
     nombreNivel: "",
     nivel: "",

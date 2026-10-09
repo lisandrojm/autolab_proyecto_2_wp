@@ -4,6 +4,8 @@ import { formatDateAr } from "./releaseFiller.js";
 import { normalizarCuit } from "./constanciaPdf.js";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
+import { Contrato } from "../models/Contrato.js";
+import { Info } from "../models/Info.js";
 const num = (n) => (n != null && n !== "" && !isNaN(Number(n)) ? Number(n).toLocaleString("es-AR") : "");
 /** "YYYY-MM-DD" → "YYYYMMDD" (token compacto, sin separadores). "" si no matchea ese formato. */
 const fechaCompacta = (s) => {
@@ -292,6 +294,48 @@ export function brutoDeEscalaEnDocumento(sueldoBrutoEscala) {
         return { sueldoBrutoCatSatNumero: "", sueldoBrutoCatSatLetras: "" };
     return { sueldoBrutoCatSatNumero: num(n), sueldoBrutoCatSatLetras: numeroALetras(n) };
 }
+const DIAS_CORTOS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
+/** «Lu a Vi», «Lu, Mi, Vi», «Lun a Dom»: los días de la semana que trabaja, como los muestra la app. */
+export function textoDeDiasSemana(dias) {
+    const d = [...new Set((Array.isArray(dias) ? dias : []).map(Number).filter((x) => x >= 0 && x <= 6))].sort((a, b) => a - b);
+    if (d.length === 0)
+        return "";
+    if (d.length === 7)
+        return "Lun a Dom";
+    const sinDomingo = d.filter((x) => x !== 0);
+    const esRango = !d.includes(0) && sinDomingo.length > 1 && sinDomingo[sinDomingo.length - 1] - sinDomingo[0] === sinDomingo.length - 1;
+    if (esRango)
+        return `${DIAS_CORTOS[sinDomingo[0]]} a ${DIAS_CORTOS[sinDomingo[sinDomingo.length - 1]]}`;
+    return d.map((x) => DIAS_CORTOS[x]).join(", ");
+}
+/**
+ * LOS IMPORTES NETOS DEL CONTRATO, para las variables del documento (pedido del 09/10/2026): los mismos
+ * números que la solicitud muestra en «Importe por jornada / semana / mensual / total neto». Puro.
+ *
+ *   neto por jornada = importe por jornada (bruto) × neto ÷ bruto de la escala de la categoría
+ *   semana           = neto por jornada × días por semana (los del tipo de contrato, si los tiene)
+ *   mensual          = neto por jornada × jornadas por mes del tipo (sin ellas, 30)
+ *   total            = neto por jornada × jornadas del contrato
+ *
+ * Sin escala (sin categoría) no hay proporción: el importe por jornada ya es lo que se paga.
+ */
+export function importesNetosDelContrato(p) {
+    const jornada = Number(p.jornadaBruto) || 0;
+    const neto = Number(p.escalaNeto);
+    const bruto = Number(p.escalaBruto);
+    const proporcion = neto > 0 && bruto > 0 ? neto / bruto : 1;
+    const porJornada = jornada * proporcion;
+    const dias = Number(p.diasPorSemana) > 0 ? Number(p.diasPorSemana) : 0;
+    const porMes = Number(p.jornadasPorMes) > 0 ? Number(p.jornadasPorMes) : 30;
+    const jornadas = Number(p.jornadas) > 0 ? Number(p.jornadas) : 0;
+    const r2 = (n) => Math.round(n * 100) / 100;
+    return {
+        jornada: jornada > 0 ? r2(porJornada) : 0,
+        semana: jornada > 0 && dias > 0 ? r2(porJornada * dias) : 0,
+        mensual: jornada > 0 ? r2(porJornada * porMes) : 0,
+        total: jornada > 0 && jornadas > 0 ? r2(porJornada * jornadas) : 0,
+    };
+}
 export async function buildEmployeeDocData(user, up, contract, empresa) {
     const meta = user?.metadata || {};
     const c = contract || {};
@@ -325,6 +369,7 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
     let catSatConvenio = "";
     let catSatCodigoArca = "";
     let catSatBrutoEscala = 0;
+    let catSatNetoEscala = 0;
     if (c.categoria_sat_id != null) {
         try {
             // Resuelve contra el modelo nuevo (Categoria + su grupo) con fallback a la tabla vieja.
@@ -337,6 +382,7 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
                 catSatConvenio = String(cat.data?.convenio || "").trim();
                 catSatCodigoArca = String(cat.data?.codigoArca || "").trim();
                 catSatBrutoEscala = cat.data?.sueldoBruto;
+                catSatNetoEscala = cat.data?.neto;
             }
         }
         catch {
@@ -345,6 +391,41 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
     }
     if (!catSatNumero && c.categoria_sat_id != null)
         catSatNumero = String(c.categoria_sat_id);
+    /*
+      El TIPO de contrato (días por semana y jornadas por mes, para los importes netos) y el TRÁMITE (el
+      estado impositivo: «Pedido de Servicios», «Pedido de AFIP»). Si no resuelven quedan vacíos: no
+      pueden tumbar la generación del PDF.
+    */
+    let tipoDiasPorSemana = null;
+    let tipoJornadasPorMes = null;
+    let tramite = "";
+    try {
+        if (c.contrato_id) {
+            const tipo = await Contrato.findById(c.contrato_id).select("data.diasPorSemana data.cantidadJornadas").lean();
+            tipoDiasPorSemana = tipo?.data?.diasPorSemana;
+            tipoJornadasPorMes = tipo?.data?.cantidadJornadas;
+        }
+        if (c.estado_id != null) {
+            const estado = await Info.findOne({ type: "estado-empleado", "data.id": c.estado_id }).select("name data.tipoImpositivo").lean();
+            const tipoImpositivo = estado?.data?.tipoImpositivo;
+            if (tipoImpositivo) {
+                const pedido = await Info.findOne({ type: "estado-empleado", "data.esImpositivo": true, "data.tipoImpositivo": tipoImpositivo }).select("name").lean();
+                tramite = String(pedido?.name || estado?.name || "");
+            }
+        }
+    }
+    catch {
+        /* sin tipo o sin estado → quedan vacíos */
+    }
+    const netos = importesNetosDelContrato({
+        jornadaBruto: c.sueldo_jornada,
+        escalaNeto: catSatNetoEscala,
+        escalaBruto: catSatBrutoEscala,
+        diasPorSemana: Number(tipoDiasPorSemana) > 0 ? tipoDiasPorSemana : c.dias_por_semana,
+        jornadasPorMes: tipoJornadasPorMes,
+        jornadas: c.cantidad_jornadas_laborales,
+    });
+    const fechasTrabajadas = (Array.isArray(c.fechas_trabajadas) ? [...c.fechas_trabajadas] : []).sort().map((f) => formatDateAr(f)).filter(Boolean).join(", ");
     const sueldoJornadaNum = Number(c.sueldo_jornada) || 0;
     const sueldoManoNum = Number(c.sueldo_mano) || 0;
     return {
@@ -426,6 +507,13 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
         horaInicio: c.hora_inicio || "",
         horaFin: c.hora_fin || "",
         cantidadJornadas: c.cantidad_jornadas_laborales != null ? String(c.cantidad_jornadas_laborales) : "",
+        // «Pedido de Servicios» / «Pedido de AFIP»: el trámite del contrato (su estado impositivo).
+        tramite,
+        horario: c.hora_inicio && c.hora_fin ? `${c.hora_inicio} a ${c.hora_fin}` : "",
+        diasPorSemana: c.dias_por_semana != null && Number(c.dias_por_semana) > 0 ? String(c.dias_por_semana) : "",
+        // Por días sueltos, los días marcados; si no, los días de la semana («Lu a Vi») o «Rotativos».
+        diasQueTrabaja: fechasTrabajadas || (c.dias_rotativos ? "Rotativos" : textoDeDiasSemana(c.dias_semana)),
+        fechasTrabajadas,
         // ── Categoría SAT ──
         catSatNumero,
         categoriaSat: catSatNombre,
@@ -446,6 +534,12 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
         sueldoNeto: num(c.sueldo_neto),
         sueldoBruto: num(c.sueldo_bruto),
         sueldoDiarioNeto: num(c.sueldo_diario_neto),
+        // Los importes NETOS, como los muestra la solicitud: ver `importesNetosDelContrato`.
+        importeJornadaNeto: num(netos.jornada || null),
+        importeSemanaNeto: num(netos.semana || null),
+        importeMensualNeto: num(netos.mensual || null),
+        importeTotalNeto: num(netos.total || null),
+        importeTotalNetoLetras: netos.total > 0 ? numeroALetras(netos.total) : "",
         // El bruto de la ESCALA vigente de la categoría, no el del contrato: ver `brutoDeEscalaEnDocumento`.
         ...brutoDeEscalaEnDocumento(catSatBrutoEscala),
         // ── Otros ──

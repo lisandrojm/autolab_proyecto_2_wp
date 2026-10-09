@@ -7,7 +7,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { brutoDeEscalaEnDocumento } from "./employeeDocData.js";
+import { brutoDeEscalaEnDocumento, importesNetosDelContrato, textoDeDiasSemana } from "./employeeDocData.js";
 import { getDummyDocVariables, replaceDocVariables } from "./documentPdf.js";
 import { numeroALetras } from "./numeroALetras.js";
 /** Las variables que ofrece el modal «Variables del contrato» (frontend/src/api/contratosFrame.ts). */
@@ -50,5 +50,30 @@ describe("catálogo del editor ↔ previsualización", () => {
         const r = replaceDocVariables("es de Pesos {{sueldoBrutoCatSatLetras}} ({{sueldoBrutoCatSatNumero}}).", d);
         assert.equal(r, `es de Pesos ${d.sueldoBrutoCatSatLetras} (${d.sueldoBrutoCatSatNumero}).`);
         assert.doesNotMatch(r, /\{|\}/);
+    });
+});
+describe("importes netos y días del contrato (variables del 09/10/2026)", () => {
+    it("los mismos números que la solicitud: neto por jornada, semana, mes del tipo y total por las jornadas del contrato", () => {
+        // Asistente de cámara (G7): escala bruta 1.239.806,04 y neta 1.004.242,89; tipo Servicios de 22 jornadas por mes; 16 jornadas.
+        const bruto = 1239806.04;
+        const neto = 1004242.89;
+        const jornadaBruta = bruto / 22;
+        const r = importesNetosDelContrato({ jornadaBruto: jornadaBruta, escalaNeto: neto, escalaBruto: bruto, diasPorSemana: 5, jornadasPorMes: 22, jornadas: 16 });
+        // Al centavo: el bruto de la escala del ejemplo está redondeado.
+        const cerca = (a, b) => assert.ok(Math.abs(a - b) <= 0.02, `${a} ≠ ${b}`);
+        cerca(r.jornada, 45647.4);
+        cerca(r.semana, 228237.02);
+        cerca(r.mensual, 1004242.89);
+        cerca(r.total, 730358.46);
+    });
+    it("sin escala el importe por jornada ya es el neto, y sin jornadas no hay total", () => {
+        const r = importesNetosDelContrato({ jornadaBruto: 1000, diasPorSemana: 0, jornadasPorMes: null, jornadas: 0 });
+        assert.deepEqual(r, { jornada: 1000, semana: 0, mensual: 30000, total: 0 });
+    });
+    it("los días como los muestra la app", () => {
+        assert.equal(textoDeDiasSemana([1, 2, 3, 4, 5]), "Lu a Vi");
+        assert.equal(textoDeDiasSemana([0, 1, 2, 3, 4, 5, 6]), "Lun a Dom");
+        assert.equal(textoDeDiasSemana([1, 3, 5]), "Lu, Mi, Vi");
+        assert.equal(textoDeDiasSemana([]), "");
     });
 });

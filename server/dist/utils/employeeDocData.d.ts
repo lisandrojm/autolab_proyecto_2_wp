@@ -159,4 +159,30 @@ export declare function brutoDeEscalaEnDocumento(sueldoBrutoEscala: unknown): {
     sueldoBrutoCatSatNumero: string;
     sueldoBrutoCatSatLetras: string;
 };
+/** «Lu a Vi», «Lu, Mi, Vi», «Lun a Dom»: los días de la semana que trabaja, como los muestra la app. */
+export declare function textoDeDiasSemana(dias: unknown): string;
+/**
+ * LOS IMPORTES NETOS DEL CONTRATO, para las variables del documento (pedido del 09/10/2026): los mismos
+ * números que la solicitud muestra en «Importe por jornada / semana / mensual / total neto». Puro.
+ *
+ *   neto por jornada = importe por jornada (bruto) × neto ÷ bruto de la escala de la categoría
+ *   semana           = neto por jornada × días por semana (los del tipo de contrato, si los tiene)
+ *   mensual          = neto por jornada × jornadas por mes del tipo (sin ellas, 30)
+ *   total            = neto por jornada × jornadas del contrato
+ *
+ * Sin escala (sin categoría) no hay proporción: el importe por jornada ya es lo que se paga.
+ */
+export declare function importesNetosDelContrato(p: {
+    jornadaBruto: unknown;
+    escalaNeto?: unknown;
+    escalaBruto?: unknown;
+    diasPorSemana?: unknown;
+    jornadasPorMes?: unknown;
+    jornadas?: unknown;
+}): {
+    jornada: number;
+    semana: number;
+    mensual: number;
+    total: number;
+};
 export declare function buildEmployeeDocData(user: any, up: any, contract: any, empresa?: any): Promise<Record<string, any>>;

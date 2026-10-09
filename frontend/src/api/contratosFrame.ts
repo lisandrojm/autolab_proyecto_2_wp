@@ -72,12 +72,12 @@ export const contratoVariables: GrupoVariables[] = [
     nota: "«{{nombreProyecto}}» es la OBRA («Surrender»); «{{nombreCliente}}» es para quién se hace («REELSHORT»).",
     advertencia: "Para el título del documento va el CLIENTE. Usar {{nombreProyecto}} ahí titula el contrato con el nombre de la película.",
     grupo: "Contrato y proyecto",
-    vars: ["{{nombreProyecto}}", "{{nombreCliente}}", "{{rolFrame}}", "{{nombreContrato}}", "{{nombreSede}}", "{{nombreCargo}}", "{{nombreNivel}}", "{{nombreArea}}", "{{nombreTurno}}", "{{fechaAltaContrato}}", "{{fechaBajaContrato}}", "{{horaInicio}}", "{{horaFin}}", "{{cantidadJornadas}}"],
+    vars: ["{{nombreProyecto}}", "{{nombreCliente}}", "{{rolFrame}}", "{{nombreContrato}}", "{{nombreSede}}", "{{nombreCargo}}", "{{nombreNivel}}", "{{nombreArea}}", "{{nombreTurno}}", "{{fechaAltaContrato}}", "{{fechaBajaContrato}}", "{{horaInicio}}", "{{horaFin}}", "{{horario}}", "{{diasPorSemana}}", "{{diasQueTrabaja}}", "{{fechasTrabajadas}}", "{{cantidadJornadas}}", "{{tramite}}"],
   },
   {
-    nota: "«{{sueldoBruto}}» es el del contrato (se copió de la escala al asignar la categoría y no se actualiza); «{{sueldoBrutoCatSatNumero}}» y «{{sueldoBrutoCatSatLetras}}» son el bruto de la escala VIGENTE de la categoría.",
+    nota: "Los «importe…Neto» son los de la solicitud: neto por jornada (jornada bruta × neto/bruto de la escala), por semana, por mes y el total del contrato (neto por jornada × jornadas). «{{sueldoBruto}}» es el del contrato (se copió de la escala al asignar la categoría y no se actualiza); «{{sueldoBrutoCatSatNumero}}» y «{{sueldoBrutoCatSatLetras}}» son el bruto de la escala VIGENTE de la categoría.",
     grupo: "Sueldos",
-    vars: ["{{sueldoJornada}}", "{{sueldoJornadaLetras}}", "{{sueldoMano}}", "{{sueldoManoLetras}}", "{{sueldoNeto}}", "{{sueldoBruto}}", "{{sueldoDiarioNeto}}", "{{sueldoBrutoCatSatNumero}}", "{{sueldoBrutoCatSatLetras}}"],
+    vars: ["{{importeJornadaNeto}}", "{{importeSemanaNeto}}", "{{importeMensualNeto}}", "{{importeTotalNeto}}", "{{importeTotalNetoLetras}}", "{{sueldoJornada}}", "{{sueldoJornadaLetras}}", "{{sueldoMano}}", "{{sueldoManoLetras}}", "{{sueldoNeto}}", "{{sueldoBruto}}", "{{sueldoDiarioNeto}}", "{{sueldoBrutoCatSatNumero}}", "{{sueldoBrutoCatSatLetras}}"],
   },
   {
     grupo: "Categoría",
