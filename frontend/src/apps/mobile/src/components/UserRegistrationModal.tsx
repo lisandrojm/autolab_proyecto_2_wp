@@ -1622,6 +1622,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   // Tiempo indeterminado: sin fecha de baja se cuenta sobre el mes del alta (ver `periodoDeCalculo`).
   const indeterminado = !!contratoElegido?.data?.esTiempoIndeterminado;
+  /** Ya hay período: días marcados, o desde y hasta (sin hasta en tiempo indeterminado). Abre el resto del formulario. */
+  const hayFechasCargadas = porDiasSueltos ? formData.fechasTrabajadas.length > 0 : !!formData.startDate && (indeterminado || !!formData.dueDate);
   const periodo = useMemo(() => periodoDeCalculo(formData.startDate, formData.dueDate, indeterminado), [formData.startDate, formData.dueDate, indeterminado]);
 
   /*
@@ -2445,6 +2447,20 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         </div>
 
         {/*
+          HASTA QUE HAYA FECHAS NO SE MUESTRA NADA DE LO DE ABAJO (pedido del 09/10/2026).
+
+          Área y turno, días, jornadas e importes dependen del período: sin fechas quedaban a la vista
+          campos que no se podían completar —jornadas en cero, mensual y total vacíos—. Con días
+          sueltos alcanza un día marcado; con período, desde y hasta (tiempo indeterminado no tiene hasta).
+        */}
+        {!hayFechasCargadas ? (
+          <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">
+            {porDiasSueltos ? "Marcá los días que trabaja" : indeterminado ? "Cargá la fecha de inicio" : "Cargá desde y hasta"} para seguir: el área y turno, los días y los importes dependen de las fechas.
+          </p>
+        ) : (
+        <>
+
+        {/*
           EL ÁREA Y TURNO DE LA PERSONA: OBLIGATORIO, y es lo que precarga el wizard de aprobación.
 
           El coordinador pide el alta para SU área: se le ofrecen sus coordinaciones en el proyecto (el
@@ -2659,6 +2675,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         <AvisosSuperposicion avisos={avisosSuperposicion} />
 
         <CampoComentarios valor={formData.comentarios} onCambio={(v) => setFormData((prev) => ({ ...prev, comentarios: v }))} />
+        </>
+        )}
         </fieldset>
 
         {/*
