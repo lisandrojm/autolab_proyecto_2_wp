@@ -63,11 +63,17 @@ export declare const jornadasDelCalendario: (desde: string | undefined, hasta: s
  *  - con días ROTATIVOS: no hay patrón del cual deducirlas (`null`: se cargan a mano).
  *  - por PERÍODO: los días de la semana marcados que caen en él (`jornadasDelCalendario`).
  *
- * SALVO QUE EL TIPO DE CONTRATO LAS FIJE (`jornadasDelTipo`, la «Cantidad de jornadas» de su ABM): un
- * plazo fijo son 30 aunque el calendario del mes dé 27. Ahí manda el tipo, con período o con días
- * rotativos. Con días sueltos no: cada día marcado es una jornada, y eso es lo que se paga.
+ * EL TIPO DE CONTRATO YA NO LAS FIJA (pedido del 09/10/2026). Antes su «Cantidad de jornadas» mandaba
+ * sobre el calendario —un tipo con 22 daba 22 jornadas del 9 al 31 de octubre, que son 17—, y el total
+ * del contrato no era la suma de los días del contrato. Ahora el total es SIEMPRE jornada × los días
+ * reales del período (o los marcados). La «Cantidad de jornadas» del tipo sigue valiendo para lo que
+ * es: cuántas jornadas tiene un MES, de donde salen el importe por jornada de la escala y el mensual
+ * (ver `importePorJornada` y `mesesParaImportes`).
+ *
+ * Se deja la función —siempre `null`— porque la usan la app, el escritorio y el plan de lote: volver a
+ * fijarlas es cambiar esto, en un solo lugar.
  */
-export declare const jornadasFijadasPorElTipo: (jornadasDelTipo: unknown, porDiasSueltos: boolean) => number | null;
+export declare const jornadasFijadasPorElTipo: (_jornadasDelTipo: unknown, _porDiasSueltos: boolean) => number | null;
 export declare const jornadasCalculadasDelPedido: (p: {
     porDiasSueltos: boolean;
     fechas: string[];

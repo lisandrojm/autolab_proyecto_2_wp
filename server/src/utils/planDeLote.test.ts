@@ -344,14 +344,14 @@ test("puesto sin tipo de contrato (y plantilla sin uno viejo): error", () => {
   assert.ok(borrado.errores.some((e) => /ya no existe/.test(e)));
 });
 
-test("tipo «6x6» con 30 jornadas: semana de 6 días, jornadas fijadas y la sede principal del proyecto", () => {
+test("tipo «6x6» con 30 jornadas: semana de 6 días, jornadas del calendario y la sede principal del proyecto", () => {
   const c = ctx({ contrato: { modoFechas: "periodo", diasPorSemana: 6, cantidadJornadas: 30 }, sedePrincipal: 7 });
   const { filas } = planDeLote(plantilla, [integ("1")], SEPT, {}, c);
   // El puesto venía Lu–Vi: el tipo suma el sábado.
   assert.deepEqual(filas[0].datos!.diasSemana, [1, 2, 3, 4, 5, 6]);
   assert.equal(filas[0].datos!.diasPorSemana, 6);
-  // Septiembre de lunes a sábado da 26; el tipo dice 30.
-  assert.equal(filas[0].jornadas, 30);
-  assert.equal(filas[0].importes.total, 30000);
+  // Septiembre de lunes a sábado da 26: son ésas, aunque el tipo diga 30 (el 30 es el divisor del mes).
+  assert.equal(filas[0].jornadas, 26);
+  assert.equal(filas[0].importes.total, 26000);
   assert.equal(filas[0].datos!.sedeId, 7);
 });
