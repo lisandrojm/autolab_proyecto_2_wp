@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, fechaEnTexto, pantallaAltas, registroRechazadoDelPegado, topeDelPegado } from "./altas-arca.mjs";
+import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, fechaEnTexto, motivoDelRechazo, pantallaAltas, registroRechazadoDelPegado, topeDelPegado } from "./altas-arca.mjs";
 
 // Con fin de línea normalizado: en un checkout de Windows (autocrlf) el archivo llega con CRLF, y los
 // tests que recortan la fuente por un marcador con salto de línea no lo encontraban.
@@ -311,4 +311,27 @@ test("la búsqueda pide lo más nuevo primero, sin presentar nada", () => {
   assert.match(c, /ddlCampoOrden/);
   assert.match(c, /ddlOrden/);
   assert.ok(c.indexOf("selectOption") < c.indexOf('apretar(page, "consulta_continuar")'));
+});
+
+test("motivoDelRechazo: lo que dijo ARCA en una ventana emergente manda", () => {
+  assert.equal(motivoDelRechazo({ dialogos: ["El CUIL 27440427834 ya posee una relación laboral activa."], enRojo: ["Otro texto rojo"] }), "El CUIL 27440427834 ya posee una relación laboral activa.");
+});
+
+test("motivoDelRechazo: el texto en rojo, aunque no diga «error»", () => {
+  const enRojo = ["Registro 1: La fecha de inicio es anterior a la permitida para la modalidad 022", "Registro 1: La fecha de inicio es anterior a la permitida para la modalidad 022 Volver"];
+  assert.equal(motivoDelRechazo({ enRojo }), "Registro 1: La fecha de inicio es anterior a la permitida para la modalidad 022");
+});
+
+test("motivoDelRechazo: las instrucciones fijas en rojo no son el motivo", () => {
+  const fija = "Debe ingresar un registro por línea (hasta 9).";
+  assert.equal(motivoDelRechazo({ enRojo: [fija, "El código de obra social 120900 no existe"], antes: [fija] }), "El código de obra social 120900 no existe");
+});
+
+test("motivoDelRechazo: sin rojo, el renglón de la pantalla que explica el rechazo", () => {
+  const texto = "Ingreso masivo de datos\nPegue los registros\nLa remuneración no corresponde a la categoría informada\nAceptar  Cancelar";
+  assert.equal(motivoDelRechazo({ texto, antes: ["Ingreso masivo de datos", "Pegue los registros", "Aceptar  Cancelar"] }), "La remuneración no corresponde a la categoría informada");
+});
+
+test("motivoDelRechazo: si ARCA no dijo nada nuevo, se aclara que no mostró el motivo", () => {
+  assert.match(motivoDelRechazo({ texto: "Ingreso masivo de datos", antes: ["Ingreso masivo de datos"] }), /no mostró el motivo/);
 });

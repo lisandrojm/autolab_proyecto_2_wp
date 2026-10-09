@@ -370,6 +370,60 @@ export function topeDelPegado(texto) {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+/** Palabras con que ARCA explica un rechazo. Más amplio que «error»: ARCA casi nunca usa esa palabra. */
+const PALABRAS_DE_RECHAZO = /error|inv[aá]lid|incorrect|debe|no (?:se )?(?:puede|corresponde|existe|permite|encuentra|admite|es v[aá]lid|est[aá])|ya (?:posee|existe|tiene|registra|fue|est[aá])|rechaz|formato|longitud|car[aá]cter|obligatori|inexistente|vencid|supera|excede|fuera de|registro\s*\d|l[ií]nea\s*\d/i;
+
+/**
+ * POR QUÉ ARCA RECHAZÓ EL PEGADO, en el orden en que es más confiable. Puro.
+ *
+ *   1. Lo que dijo en una ventana emergente durante el pegado.
+ *   2. Lo que muestra en ROJO o en un elemento de error/mensaje (`lblError`, `ValidationSummary`…).
+ *   3. Los renglones de la pantalla con palabras de rechazo.
+ *
+ * `antes`: los textos (rojos y renglones) que la pantalla ya mostraba antes de apretar «Aceptar». Se
+ * descartan: una instrucción fija en rojo («Debe ingresar un registro por línea») no es el motivo.
+ *
+ * Antes se miraba sólo 3, con «error|inválido|incorrecto|debe» y sobre los primeros 4000 caracteres:
+ * el motivo real («El CUIL ya posee una relación laboral…») no tenía ninguna de esas palabras o quedaba
+ * más abajo, y se mostraba «ARCA no aceptó el texto pegado» sin decir por qué.
+ */
+export function motivoDelRechazo({ dialogos = [], enRojo = [], texto = "", antes = [] } = {}) {
+  const limpio = (t) => String(t || "").replace(/\s+/g, " ").trim();
+  // Lo que ya estaba en pantalla antes de apretar «Aceptar» son las instrucciones fijas, no el motivo.
+  const fijos = new Set(antes.map(limpio));
+  const util = (t) => t.length >= 6 && /[a-záéíóúñ]{3}/i.test(t) && !fijos.has(t);
+  const juntar = (xs) => [...new Set(xs.map(limpio).filter(util))].join(" · ").slice(0, 600);
+  const deDialogos = juntar(dialogos);
+  if (deDialogos) return deDialogos;
+  const marcados = enRojo.map(limpio).filter(util);
+  // De un elemento y su contenedor queda el más chico: el contenedor repite el texto con relleno.
+  const internos = marcados.filter((t) => !marcados.some((o) => o !== t && t.includes(o)));
+  const rojo = juntar(internos);
+  if (rojo) return rojo;
+  const renglones = String(texto || "").split("\n").map(limpio).filter((l) => util(l) && l.length <= 400 && PALABRAS_DE_RECHAZO.test(l));
+  return juntar(renglones) || "ARCA no aceptó el texto pegado y no mostró el motivo en pantalla.";
+}
+
+/** Los textos visibles en rojo o en elementos de error/mensaje de la pantalla. */
+async function textosDeError(page) {
+  return page
+    .evaluate(() => {
+      const out = [];
+      for (const el of document.querySelectorAll("body *")) {
+        if (/^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION|NOSCRIPT)$/.test(el.tagName)) continue;
+        if (!(el.offsetWidth || el.offsetHeight || el.getClientRects().length)) continue;
+        const t = (el.innerText || "").trim();
+        if (!t || t.length > 600) continue;
+        const marca = `${el.id || ""} ${typeof el.className === "string" ? el.className : ""}`;
+        const c = getComputedStyle(el).color.match(/(\d+),\s*(\d+),\s*(\d+)/);
+        const rojo = !!c && Number(c[1]) >= 150 && Number(c[2]) < 100 && Number(c[3]) < 100;
+        if (rojo || /error|mensaje|msj|alert|valid/i.test(marca)) out.push(t);
+      }
+      return out;
+    })
+    .catch(() => []);
+}
+
 /**
  * Qué registro rechazó el pegado, a partir del mensaje de ARCA. Devuelve su índice, o -1 si el
  * mensaje no lo dice. Puro.
@@ -794,10 +848,15 @@ export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = t
     const rechazadas = [];
     let registros = String(texto).split("\n").filter(Boolean);
     for (;;) {
+      const dialogosAntes = estado.dialogos.length;
+      const textoAntes = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
+      const antes = [...(await textosDeError(page)), ...textoAntes.split("\n")];
       await apretar(page, "aceptar_pegado");
       await esperarPantalla(page, ["altas", "archivo_altas"], "resultado del pegado");
       if ((await pantallaActual(page)) !== "archivo_altas") break;
-      const msg = ((await leerPantalla(page)).texto.split("\n").find((l) => /error|inv[aá]lid|incorrect|debe/i.test(l)) || "ARCA no aceptó el texto pegado.").trim();
+      // La pantalla ENTERA, no los 4000 caracteres de `leerPantalla`: el motivo suele estar abajo del cuadro.
+      const textoEntero = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
+      const msg = motivoDelRechazo({ dialogos: estado.dialogos.slice(dialogosAntes), enRojo: await textosDeError(page), texto: textoEntero, antes });
       const i = registroRechazadoDelPegado(msg, registros);
       const fuera = i >= 0 ? [registros[i]] : registros;
       for (const r of fuera) rechazadas.push({ cuil: r.slice(0, 11), estado: "rechazada", motivo: msg });
