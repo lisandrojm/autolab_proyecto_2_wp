@@ -57,6 +57,7 @@ import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { fuzzyMatch } from '../utils/searchHelpers';
 // La cadena empleadora → convenio → categoría vive acá, compartida con la solicitud del móvil.
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, proporcionNetoDeCategoria, importePorJornadaDeCategoria } from '../utils/seleccionConvenioCategoria';
+import { tramiteSinConvenioNiCategoria } from '@compartido/tramiteSinEscala';
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
 import { SelectorCategoria } from '../components/contratos/SelectorCategoria';
 import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
@@ -1039,7 +1040,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     y el sueldo en mano sigue saliendo de jornada × jornadas; lo que cuelga de la categoría (neto,
     bruto, diario) queda en 0, como ya pasaba sin categoría. Es la misma regla que la solicitud del móvil.
   */
-  const esServicios = !!wizardData.contrato_id && tramitePorContrato.get(wizardData.contrato_id) === 'constancia_cuit';
+  // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+  const esServicios = !!wizardData.contrato_id && tramiteSinConvenioNiCategoria(tramitePorContrato.get(wizardData.contrato_id));
 
   /*
     EN UN CONTRATO NUEVO, EL IMPORTE POR JORNADA LO PROPONE LA ESCALA, como en la solicitud del móvil.

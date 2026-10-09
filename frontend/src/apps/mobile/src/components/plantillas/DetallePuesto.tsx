@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRightArrowLeft, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faUserPlus } from "@fortawesome/free-solid-svg-icons";
@@ -134,7 +135,8 @@ export default function DetallePuesto() {
   const volverAlEquipo = () => void cambiar({ areaId: base.areaId, shiftId: base.shiftId, inTime: base.inTime, outTime: base.outTime, diasSemana: base.diasSemana, diasPorSemana: base.diasPorSemana, diasRotativos: base.diasRotativos, contratoId: base.contratoId, nombreContrato: base.nombreContrato, tipoImpositivo: base.tipoImpositivo });
 
   const quitarReemplazo = () => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { quitar: true }));
-  const esServicios = efectivo.tipoImpositivo === "constancia_cuit";
+  // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+  const esServicios = tramiteSinConvenioNiCategoria(efectivo.tipoImpositivo);
   const empresa = empresaDelEquipo;
   const convenio = convenioDelEquipo;
   // La oferta de categorías con la misma regla del alta individual: las del nivel del proyecto, y «ver todas» si no está la que se busca.

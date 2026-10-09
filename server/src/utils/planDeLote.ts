@@ -22,6 +22,7 @@
 import { derivarImportes, erroresDeJornadas, importePorJornada, mesesParaImportes, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo, Importes } from "../compartido/jornadas.js";
 import { DatosSolicitud } from "../compartido/solicitudDeContratacion.js";
 import { semanaDelTipoDeContrato } from "../compartido/diasDeTrabajo.js";
+import { tramiteSinConvenioNiCategoria } from "../compartido/tramiteSinEscala.js";
 
 export interface PlantillaParaPlan {
   projectId: string;
@@ -233,7 +234,8 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     const contrato = contratoId ? ctx.contratos.get(contratoId) : undefined;
     const porDiasSueltos = contrato?.modoFechas === "dias";
     const indeterminado = !!contrato?.esTiempoIndeterminado;
-    const esServicios = tipoImpositivo === "constancia_cuit";
+    // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+    const esServicios = tramiteSinConvenioNiCategoria(tipoImpositivo);
     const multiplicador = Number(contrato?.multiplicadorDiario) > 0 ? Number(contrato!.multiplicadorDiario) : 1;
     const limiteHoras = contrato?.horasPorJornada ?? null;
 

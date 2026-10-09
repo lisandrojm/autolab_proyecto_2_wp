@@ -19,6 +19,7 @@
 import { User } from "../api/users";
 import { CategoriaSatItem } from "../api/categoriasSat";
 import { InfoItem } from "../api/info";
+import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { RoleFrameItem } from "../api/roleFrames";
 import { ContratoFrameItem, plantillaEsDeContrato } from "../api/contratosFrame";
 import { ContratoItem } from "../api/contratos";
@@ -129,7 +130,8 @@ export function contratoDesdeSolicitud({ solicitud, persona, proyecto, cat }: { 
   const jornadas = !ajustado && calculadas !== null ? calculadas : jornadasPedidas;
 
   // ── Qué falta: `faltantesPaso1` del formulario ──
-  const esServicios = !!contratoId && tipoImpositivoDeContrato(contratoId, cat.contratoFrames, cat.estados) === "constancia_cuit";
+  // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+  const esServicios = !!contratoId && tramiteSinConvenioNiCategoria(tipoImpositivoDeContrato(contratoId, cat.contratoFrames, cat.estados));
   const faltan: string[] = [];
   if (!rolFrameId) faltan.push("rol empresa");
   if (!esServicios && !categoriaSatId) faltan.push("categoría");

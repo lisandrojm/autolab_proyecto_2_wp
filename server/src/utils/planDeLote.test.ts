@@ -146,13 +146,13 @@ test("horario más largo que el que admite el contrato: error, igual que el form
   assert.ok(filas[0].errores.some((e) => /12 h.*hasta 9 h/.test(e)));
 });
 
-test("servicios: sin categoría ni convenio, con importe a mano obligatorio", () => {
+test("servicios: lleva convenio, categoría y el importe de la escala, igual que un pedido de ARCA (09/10/2026)", () => {
   const serv = { ...plantilla, tipoImpositivo: "constancia_cuit" };
-  const sinImporte = planDeLote(serv, [integ("1")], SEPT, {}, ctx()).filas[0];
-  assert.ok(sinImporte.errores.some((e) => /servicio/.test(e)));
-  const conImporte = planDeLote(serv, [integ("1", { dailyRateManual: 5000 })], SEPT, {}, ctx()).filas[0];
-  assert.deepEqual(conImporte.errores, []);
-  assert.equal(conImporte.datos!.esServicios, true);
+  const fila = planDeLote(serv, [integ("1")], SEPT, {}, ctx()).filas[0];
+  assert.deepEqual(fila.errores, []);
+  assert.equal(fila.importes.jornada, 1000);
+  assert.equal(fila.datos!.esServicios, false);
+  assert.equal(fila.datos!.tipoImpositivo, "constancia_cuit");
 });
 
 test("fechas faltantes o al revés: error", () => {
@@ -294,7 +294,8 @@ test("tipo de contrato por puesto: servicios en un puesto no vuelve servicios al
   const { filas } = planDeLote(plantilla, [integ("1"), serv], SEPT, {}, ctx());
   assert.equal(filas[0].datos!.esServicios, false);
   assert.equal(filas[0].importes.jornada, 1000);
-  assert.equal(filas[1].datos!.esServicios, true);
+  // Servicios ya no se separa por los importes (lleva categoría como ARCA): se distingue por el trámite.
+  assert.equal(filas[1].datos!.tipoImpositivo, "constancia_cuit");
   assert.deepEqual(filas[1].errores, []);
 });
 
@@ -317,7 +318,7 @@ test("tipo de contrato elegido al contratar: vale para todos y le gana al del pu
   const conPuntual = planDeLote(plantilla, [integ("1"), servicios], general, { i2: { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit" } }, ctx());
   assert.equal(conPuntual.filas[0].datos!.contratoId, "c1x1");
   assert.equal(conPuntual.filas[1].datos!.contratoId, "cServ");
-  assert.equal(conPuntual.filas[1].datos!.esServicios, true);
+  assert.equal(conPuntual.filas[1].datos!.tipoImpositivo, "constancia_cuit");
   assert.deepEqual(conPuntual.filas[1].errores, []);
 });
 

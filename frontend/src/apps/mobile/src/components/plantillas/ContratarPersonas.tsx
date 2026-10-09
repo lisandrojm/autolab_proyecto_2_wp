@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faPen, faUsers } from "@fortawesome/free-solid-svg-icons";
@@ -289,7 +290,8 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const sueltos = porDiasSueltos(catalogos, contratoRige);
   const contratoDoc = catalogos.contratos.find((c) => c._id === contratoRige) as any;
   const indeterminado = !!contratoDoc?.data?.esTiempoIndeterminado;
-  const esServicios = (catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit";
+  // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+  const esServicios = tramiteSinConvenioNiCategoria(catalogos.tramitePorContrato.get(contratoRige));
   const oferta = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, verTodasDelConvenio, false, x.efectivo.contratoId);
   const categoriaIdActual = d.categoriaSatId ?? base.categoriaSatId;
   const categoriaActual = catalogos.categoriasSat.find((c) => c._id === categoriaIdActual) || null;

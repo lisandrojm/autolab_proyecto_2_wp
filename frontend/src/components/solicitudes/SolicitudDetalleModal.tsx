@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faCommentDots, faTriangleExclamation , faPenToSquare , faRotateLeft, faStar } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
@@ -247,7 +248,8 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
   const cctTexto = convenioElegido ? [String(convenioElegido.externalId || "").trim(), convenioElegido.name].filter(Boolean).join(" · ") : String(categoria?.data?.convenio || "");
   const grupoTexto = categoria?.data?.numeroCategoria ? `Grupo ${categoria.data.numeroCategoria}${categoria.data.grupoNombre ? ` — ${categoria.data.grupoNombre}` : ""}` : categoria ? "Sin grupo" : "";
   /** Un servicio no tiene convenio ni categoría: el importe se carga a mano (regla del formulario). */
-  const esServicios = m.tipoImpositivo === "constancia_cuit";
+  // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+  const esServicios = tramiteSinConvenioNiCategoria(m.tipoImpositivo);
   const tramite = catalogos.resolverTramite(m.tipoImpositivo);
   const diasSemana: number[] = Array.isArray(m.diasSemana) ? m.diasSemana : [];
   const jornadas = Number(m.workdaysCount) || 0;

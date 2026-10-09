@@ -19,6 +19,7 @@ import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
+import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
@@ -408,7 +409,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     jornada queda libre —no hay escala de donde proponerlo—. La cuenta del total (importe × jornadas)
     no cambia: nunca dependió de la categoría.
   */
-  const esServicios = formData.tipoImpositivo === "constancia_cuit";
+  // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+  const esServicios = tramiteSinConvenioNiCategoria(formData.tipoImpositivo);
 
   /** La categoría elegida, resuelta al catálogo: de ahí salen su código de ARCA y su escala. */
   const categoriaElegida = useMemo(() => categoriasSat.find((c) => c._id === formData.categoriaSatId) || null, [categoriasSat, formData.categoriaSatId]);

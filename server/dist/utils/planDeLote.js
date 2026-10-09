@@ -21,6 +21,7 @@
  */
 import { derivarImportes, erroresDeJornadas, importePorJornada, mesesParaImportes, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../compartido/jornadas.js";
 import { semanaDelTipoDeContrato } from "../compartido/diasDeTrabajo.js";
+import { tramiteSinConvenioNiCategoria } from "../compartido/tramiteSinEscala.js";
 export const MAX_INTEGRANTES_POR_LOTE = 50;
 /** "HH:MM" a horas (cruza la medianoche). `null` si no se entiende. Igual que `horasDelHorario` del formulario. */
 const horasDelHorario = (entrada, salida) => {
@@ -64,7 +65,8 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const contrato = contratoId ? ctx.contratos.get(contratoId) : undefined;
         const porDiasSueltos = contrato?.modoFechas === "dias";
         const indeterminado = !!contrato?.esTiempoIndeterminado;
-        const esServicios = tipoImpositivo === "constancia_cuit";
+        // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
+        const esServicios = tramiteSinConvenioNiCategoria(tipoImpositivo);
         const multiplicador = Number(contrato?.multiplicadorDiario) > 0 ? Number(contrato.multiplicadorDiario) : 1;
         const limiteHoras = contrato?.horasPorJornada ?? null;
         const inTime = p.inTime || integ.inTime || "";
