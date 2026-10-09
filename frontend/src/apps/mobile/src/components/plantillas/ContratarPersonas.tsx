@@ -11,7 +11,7 @@ import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategori
 import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
 import { CampoComentarios } from "../contratacion/CampoComentarios";
 import { AyudaImportes, diferenciaContraEscala, PROPS_IMPORTES_MOVIL } from "../contratacion/AyudaImportes";
-import { importePorJornadaDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
+import { importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
 import { CustomDatePicker } from "../CustomDatePicker";
 import { mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { CustomMultiDatePicker } from "../CustomMultiDatePicker";
@@ -500,6 +500,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                     indeterminado={indeterminado}
                     jornadas={jornadas}
                     diasSemana={diasDeSemana.length}
+                    proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaActual)}
                     bloqueado={importesBloqueados}
                     textoBloqueado="Se habilita al elegir la categoría."
                     ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaActual?.name} cct={cct} multiplicador={mult} contrato={contratoDoc?.name} escalaBase={escalaBase} diferencia={diferencia} />}

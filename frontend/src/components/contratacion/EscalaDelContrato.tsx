@@ -125,7 +125,7 @@ export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, v
       </div>
       {campo("presentismo", "Presentismo")}
       {campo("bruto", "Sueldo bruto")}
-      {campo("neto", "Neto")}
+      {campo("neto", "Sueldo neto")}
     </div>
   );
 }
