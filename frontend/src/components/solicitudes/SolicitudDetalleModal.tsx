@@ -589,6 +589,11 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                 {/* De dónde sale el total: el mismo resumen que el formulario (ver `resumenTotal` en `ImportesDelContrato`). */}
                 {!indeterminado && jornadas > 0 && valorJornada > 0 && (
                   <ul className="space-y-0.5 rounded-lg border border-gray-200 bg-gray-50/60 px-2.5 py-2 text-[11px] leading-snug text-gray-500 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
+                    {(contratoDeLaSolicitud?.name || tramite) && (
+                      <li>
+                        <span className="font-semibold text-gray-600 dark:text-gray-300">Tipo de contrato:</span> {[contratoDeLaSolicitud?.name, tramite?.name].filter(Boolean).join(" · ")}
+                      </li>
+                    )}
                     <li>
                       <span className="font-semibold text-gray-600 dark:text-gray-300">Período:</span>{" "}
                       {Array.isArray(m.fechasTrabajadas) && m.fechasTrabajadas.length ? [...m.fechasTrabajadas].sort().map((f: string) => fecha(f)).join(", ") : `Del ${fecha(m.startDate)} al ${fecha(m.dueDate)}`}

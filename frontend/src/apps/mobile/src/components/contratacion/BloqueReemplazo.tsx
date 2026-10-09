@@ -28,9 +28,14 @@ interface Props {
   onElegirPersona: () => void;
   onQuitarPersona: () => void;
   zIndex?: number;
+  /**
+   * Qué días cubre el contrato, para decirlo en el aviso del motivo: «las 2 jornadas: 01/10/2026 y
+   * 02/10/2026». Sin esto el aviso habla de «todos los días del contrato» en general.
+   */
+  alcance?: string;
 }
 
-export function BloqueReemplazo({ activo, onActivo, motivos, motivoId, onMotivo, nombreReemplazado, onElegirPersona, onQuitarPersona, zIndex = 80 }: Props) {
+export function BloqueReemplazo({ activo, onActivo, motivos, motivoId, onMotivo, nombreReemplazado, onElegirPersona, onQuitarPersona, zIndex = 80, alcance }: Props) {
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const motivoElegido = motivos.find((m) => m._id === motivoId) || null;
   return (
@@ -59,6 +64,10 @@ export function BloqueReemplazo({ activo, onActivo, motivos, motivoId, onMotivo,
               <FontAwesomeIcon icon={faClock} className="text-[10px] text-blue-500" />
               Motivo <span className="text-red-500">*</span>
             </label>
+            {/* Pedido del 09/10/2026: el reemplazo cubre el contrato entero; uno de un día va en su propio contrato. */}
+            <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
+              {alcance ? <>El motivo vale para TODO el contrato: {alcance}.</> : "El motivo vale para todos los días del contrato."} Si el reemplazo es sólo por uno de esos días, hacé un contrato aparte para ese día.
+            </p>
             {motivoElegido ? (
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 py-1.5 pl-3 pr-1.5 text-sm font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">

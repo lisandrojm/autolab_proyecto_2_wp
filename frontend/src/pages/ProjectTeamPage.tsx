@@ -1083,6 +1083,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   /** Lo que explica el importe total, debajo del campo (ver `resumenTotal` en `ImportesDelContrato`). */
   const fechaARWizard = (f: string) => (f ? new Date(`${f}T00:00:00`).toLocaleDateString('es-AR') : '');
   const resumenDelTotalWizard = {
+    tipoContrato: [contratos.find((c) => c._id === wizardData.contrato_id)?.name, wizardData.contrato_id ? estadoImpositivoPorTipo(allEstados, tramitePorContrato.get(wizardData.contrato_id))?.name : ''].filter(Boolean).join(' · '),
     periodo: porDiasSueltosWizard
       ? [...wizardData.fechas_trabajadas].sort().map(fechaARWizard).join(', ')
       : wizardData.fecha_alta_contrato
@@ -4874,6 +4875,19 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   {wizardData.reemplazo && (
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
+                      {/* El reemplazo cubre el contrato entero; uno de un día va en su propio contrato (igual que en la app). */}
+                      <p className="text-[11px] font-medium text-red-600 dark:text-red-400 ml-1">
+                        {resumenDelTotalWizard.periodo ? (
+                          <>
+                            El reemplazo vale para TODO el contrato: {porDiasSueltosWizard ? `${wizardData.fechas_trabajadas.length} ${wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}: ` : ''}
+                            {resumenDelTotalWizard.periodo}
+                            {!porDiasSueltosWizard && Number(wizardData.cantidad_jornadas_laborales) > 0 ? ` (${wizardData.cantidad_jornadas_laborales} jornadas)` : ''}.
+                          </>
+                        ) : (
+                          'El reemplazo vale para todos los días del contrato.'
+                        )}{' '}
+                        Si es sólo por uno de esos días, hacé un contrato aparte para ese día.
+                      </p>
                       {/*
                         SE ELIGE EN UNA VENTANA CON BUSCADOR, no en un desplegable.
 

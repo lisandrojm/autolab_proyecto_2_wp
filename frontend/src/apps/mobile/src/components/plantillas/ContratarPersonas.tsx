@@ -13,6 +13,7 @@ import { CampoComentarios } from "../contratacion/CampoComentarios";
 import { AyudaImportes, diferenciaContraEscala, PROPS_IMPORTES_MOVIL } from "../contratacion/AyudaImportes";
 import { importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
 import { textoDeDias } from "../../../../../utils/jerarquiaTurnos";
+import { estadoImpositivoPorTipo } from "../../../../../utils/tramiteImpositivo";
 
 const fechaAR = (f: string) => (f ? new Date(`${f}T00:00:00`).toLocaleDateString("es-AR") : "");
 import { CustomDatePicker } from "../CustomDatePicker";
@@ -506,6 +507,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                     proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaActual)}
                     soloNeto={(catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit"}
                     resumenTotal={{
+                      tipoContrato: [contratoDoc?.name, estadoImpositivoPorTipo(catalogos.estados, catalogos.tramitePorContrato.get(contratoRige))?.name].filter(Boolean).join(" · "),
                       periodo: sueltos ? [...fechas].sort().map(fechaAR).join(", ") : desde ? (indeterminado ? `Desde el ${fechaAR(desde)} (tiempo indeterminado)` : `Del ${fechaAR(desde)} al ${fechaAR(hasta)}`) : "",
                       dias: sueltos ? `${fechas.length} ${fechas.length === 1 ? "día marcado" : "días marcados"}` : textoDeDias(diasDeSemana),
                     }}
@@ -521,6 +523,17 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
 
               {/* ── Reemplazo: el bloque del alta individual (motivo primero, después a quién) ── */}
               <BloqueReemplazo
+                alcance={
+                  sueltos
+                    ? fechas.length
+                      ? `${fechas.length} ${fechas.length === 1 ? "jornada" : "jornadas"}: ${[...fechas].sort().map(fechaAR).join(", ")}`
+                      : ""
+                    : desde
+                      ? indeterminado
+                        ? `desde el ${fechaAR(desde)}, sin fecha de baja`
+                        : `del ${fechaAR(desde)} al ${fechaAR(hasta)}${jornadas > 0 ? ` (${jornadas} ${jornadas === 1 ? "jornada" : "jornadas"})` : ""}`
+                      : ""
+                }
                 activo={!!d.isReplacement}
                 onActivo={(v) => cambiar({ isReplacement: v, ...(v ? {} : { replacedUserId: undefined, motivoReemplazoId: undefined }) })}
                 motivos={catalogos.motivos}

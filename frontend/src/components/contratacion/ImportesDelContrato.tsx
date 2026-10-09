@@ -113,6 +113,8 @@ interface Props {
 }
 
 export interface ResumenTotal {
+  /** El tipo de contrato y su trámite: «Jornada · Pedido de servicios». */
+  tipoContrato?: string;
   /** «Del 01/10/2026 al 31/10/2026», o los días sueltos marcados. */
   periodo?: string;
   /** «Edición · Mañana (06:00 a 12:00)». */
@@ -322,6 +324,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
   const jornadaDelTotal = valorDe.jornada !== null ? valorDe.jornada * vista("total") : null;
   const totalVisto = valorDe.total !== null ? valorDe.total * vista("total") : null;
   const lineasResumen: Array<[string, string]> = [];
+  if (resumenTotal?.tipoContrato) lineasResumen.push(["Tipo de contrato", resumenTotal.tipoContrato]);
   if (resumenTotal?.periodo) lineasResumen.push(["Período", resumenTotal.periodo]);
   if (resumenTotal?.areaTurno) lineasResumen.push(["Área / turno", resumenTotal.areaTurno]);
   if (resumenTotal?.dias) lineasResumen.push(["Días", resumenTotal.dias]);

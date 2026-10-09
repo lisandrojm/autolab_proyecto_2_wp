@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Modal } from "./Modal";
 import { CampoTipoContrato, ModalTipoContrato } from "./contratacion/SelectorTipoContrato";
 import { CampoCategoria, ModalCategoria } from "./contratacion/SelectorCategoria";
@@ -33,7 +33,7 @@ import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { infoAPI, InfoItem } from "../../../../api/info";
 import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
 import { fuzzyMatch } from "../../../../utils/searchHelpers";
-import { estadosImpositivos, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeContrato } from "../../../../utils/tramiteImpositivo";
+import { estadosImpositivos, estadoImpositivoPorTipo, esTipoImpositivo, TipoImpositivo, tipoImpositivoDeContrato } from "../../../../utils/tramiteImpositivo";
 import { claveOrdenTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
 import { SelectorHora } from "../../../../components/contratacion/SelectorHora";
 import { ImportesDelContrato } from "../../../../components/contratacion/ImportesDelContrato";
@@ -383,6 +383,20 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const eraRechazada = (editingUser?.metadata as any)?.solicitudStatus === "rechazada";
   const nombreLegado = !!editingUser && !personaRegistrada && !!formData.fullName;
   const sinPersona = !personaRegistrada && !nombreLegado;
+
+  /** El alto del bloque de la persona, pegado arriba: las fechas se pegan justo debajo. */
+  const [altoPersona, setAltoPersona] = useState(0);
+  const observadorPersona = useRef<ResizeObserver | null>(null);
+  // Ref de callback: se mide cuando el bloque se monta (el Modal lo monta después de abrir), no al abrir.
+  const refPersona = useCallback((el: HTMLDivElement | null) => {
+    observadorPersona.current?.disconnect();
+    observadorPersona.current = null;
+    if (!el) return;
+    setAltoPersona(el.offsetHeight);
+    if (typeof ResizeObserver === "undefined") return;
+    observadorPersona.current = new ResizeObserver(() => setAltoPersona(el.offsetHeight));
+    observadorPersona.current.observe(el);
+  }, []);
 
   // Quien tiene «Registro» puede mandarle su link a la persona que no encuentra, sin salir de acá.
   const { user: yo } = useAuthStore();
@@ -1775,9 +1789,22 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const importesBloqueados = !esServicios && !formData.categoriaSatId;
 
+  /** Qué días cubre el contrato, dicho para el aviso del motivo de reemplazo. */
+  const alcanceDelContrato = (() => {
+    const n = jornadasDelContrato;
+    const jornadasTexto = n > 0 ? `${n} ${n === 1 ? "jornada" : "jornadas"}` : "";
+    if (porDiasSueltos) return formData.fechasTrabajadas.length ? `${jornadasTexto}: ${[...formData.fechasTrabajadas].sort().map((f) => new Date(`${f}T00:00:00`).toLocaleDateString("es-AR")).join(", ")}` : "";
+    if (!formData.startDate) return "";
+    const desde = new Date(`${formData.startDate}T00:00:00`).toLocaleDateString("es-AR");
+    if (indeterminado) return `desde el ${desde}, sin fecha de baja`;
+    if (!formData.dueDate) return "";
+    return `del ${desde} al ${new Date(`${formData.dueDate}T00:00:00`).toLocaleDateString("es-AR")}${jornadasTexto ? ` (${jornadasTexto})` : ""}`;
+  })();
+
   /** Lo que explica el importe total, debajo del campo (ver `resumenTotal` en `ImportesDelContrato`). */
   const fechaAR = (f: string) => (f ? new Date(`${f}T00:00:00`).toLocaleDateString("es-AR") : "");
   const resumenDelTotal = {
+    tipoContrato: [contratoElegido?.name, estadoImpositivoPorTipo(impositivos, formData.tipoImpositivo as TipoImpositivo)?.name].filter(Boolean).join(" · "),
     periodo: porDiasSueltos
       ? [...formData.fechasTrabajadas].sort().map(fechaAR).join(", ")
       : formData.startDate
@@ -2186,7 +2213,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           entera con lugar para leerla, y lo elegido como badge con su X. Nada se superpone al
           formulario porque el formulario no está debajo.
         */}
-        <div className="space-y-1">
+        {/*
+          ELEGIDA LA PERSONA, QUEDA PEGADA DEBAJO DEL TÍTULO (pedido del 09/10/2026), con un borde de lado
+          a lado: al bajar por el formulario se sigue viendo de quién se está pidiendo el alta. Mismo
+          recurso que el bloque de fechas (`-top-6` y `-mx-6` por el padding del cuerpo del Modal); las
+          fechas se pegan justo debajo, a la altura que mide `refPersona`.
+        */}
+        <div ref={refPersona} className={formData.fullName ? "sticky -top-6 z-30 -mx-6 space-y-1 border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-700 dark:bg-gray-800" : "space-y-1"}>
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
             <FontAwesomeIcon icon={faSearch} className="text-blue-500 text-[10px]" />
             Persona <span className="text-red-500">*</span>
@@ -2399,7 +2432,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           contenedor que scrollea, o sea 24 px más abajo por el `p-6`, y en ese hueco se veía pasar el
           formulario entre el título y las fechas.
         */}
-        <div id="bloque-fechas" className="sticky -top-6 z-20 -mx-6 space-y-1 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-slate-700 dark:bg-gray-800">
+        <div id="bloque-fechas" style={formData.fullName && altoPersona > 0 ? { top: altoPersona - 24 } : undefined} className="sticky -top-6 z-20 -mx-6 space-y-1 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-slate-700 dark:bg-gray-800">
           {/*
             EL CALENDARIO LO DECIDE EL TIPO DE CONTRATO (ver `modoFechas` en su ABM).
 
@@ -2671,6 +2704,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
         {/* El reemplazo: el bloque compartido con las plantillas de equipo (ver contratacion/BloqueReemplazo). */}
         <BloqueReemplazo
+          alcance={alcanceDelContrato}
           activo={formData.isReplacement}
           onActivo={(v) => {
             // Apagar el switch LIMPIA a quién reemplaza y el motivo: una solicitud que dice «no es reemplazo» no lleva un reemplazado adentro.
