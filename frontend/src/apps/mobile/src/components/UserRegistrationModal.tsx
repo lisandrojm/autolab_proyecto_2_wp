@@ -1775,6 +1775,24 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const importesBloqueados = !esServicios && !formData.categoriaSatId;
 
+  /** Lo que explica el importe total, debajo del campo (ver `resumenTotal` en `ImportesDelContrato`). */
+  const fechaAR = (f: string) => (f ? new Date(`${f}T00:00:00`).toLocaleDateString("es-AR") : "");
+  const resumenDelTotal = {
+    periodo: porDiasSueltos
+      ? [...formData.fechasTrabajadas].sort().map(fechaAR).join(", ")
+      : formData.startDate
+        ? indeterminado
+          ? `Desde el ${fechaAR(formData.startDate)} (tiempo indeterminado)`
+          : `Del ${fechaAR(formData.startDate)} al ${fechaAR(formData.dueDate)}`
+        : "",
+    areaTurno: areaTurnoElegido ? `${areaTurnoElegido.areaNombre} · ${areaTurnoElegido.turnoNombre}${areaTurnoElegido.horario ? ` (${areaTurnoElegido.horario})` : ""}` : "",
+    dias: porDiasSueltos
+      ? `${formData.fechasTrabajadas.length} ${formData.fechasTrabajadas.length === 1 ? "día marcado" : "días marcados"}`
+      : formData.diasRotativos
+        ? "Rotativos"
+        : [textoDeDias(formData.diasSemana), formData.diasPorSemana ? `${formData.diasPorSemana} por semana` : ""].filter(Boolean).join(" · "),
+  };
+
 
   /*
     «GUARDAR COMO PLANTILLA DE EQUIPO»: arma una plantilla con esta persona y estos valores (proyecto,
@@ -2643,6 +2661,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             diasSemana={diasSemanaNum}
             bloqueado={importesBloqueados}
             soloNeto={soloNeto}
+            resumenTotal={resumenDelTotal}
             textoBloqueado="Se habilita al elegir la categoría."
             ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaElegida?.name} cct={convenioElegido?.externalId} multiplicador={multiplicadorDiario} contrato={contratoElegido?.name} escalaBase={importePorJornadaDeCategoria(categoriaElegida || undefined, 1, jornadasDelTipo)} diferencia={diferenciaContraEscala} />}
             {...PROPS_IMPORTES_MOVIL}

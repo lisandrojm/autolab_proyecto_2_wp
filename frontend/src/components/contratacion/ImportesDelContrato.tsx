@@ -104,9 +104,26 @@ interface Props {
    * que es un valor de referencia de la categoría del convenio. Sin `proporcionNeto` no cambia nada.
    */
   soloNeto?: boolean;
+  /**
+   * DE DÓNDE SALE EL TOTAL, en letra chica debajo del campo (pedido del 09/10/2026): el período, el área
+   * y turno, los días y la cuenta jornada × jornadas. Cada pantalla pasa los textos que tiene; los que
+   * faltan no se dibujan. La cuenta la arma el componente con sus propios números.
+   */
+  resumenTotal?: ResumenTotal;
 }
 
-export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mesesDelPeriodo, jornadas, jornadasDelTipo, proporcionNeto, diasPorSemanaDelTipo, diasSemana: diasMarcados, indeterminado = false, soloNeto: soloNetoPedido = false, bloqueado = false, textoBloqueado, ayudaJornada, className = "", claseEtiqueta, claseCampo, claseCampoTotal, claseAyuda, icono, adornoCampo, infoEnRotulo, conservarJornadaExterna = false }: Props) {
+export interface ResumenTotal {
+  /** «Del 01/10/2026 al 31/10/2026», o los días sueltos marcados. */
+  periodo?: string;
+  /** «Edición · Mañana (06:00 a 12:00)». */
+  areaTurno?: string;
+  /** «Lu a Vi», «5 días por semana»… */
+  dias?: string;
+}
+
+const pesosAR = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mesesDelPeriodo, jornadas, jornadasDelTipo, proporcionNeto, diasPorSemanaDelTipo, diasSemana: diasMarcados, indeterminado = false, soloNeto: soloNetoPedido = false, bloqueado = false, textoBloqueado, ayudaJornada, className = "", claseEtiqueta, claseCampo, claseCampoTotal, claseAyuda, icono, adornoCampo, infoEnRotulo, conservarJornadaExterna = false, resumenTotal }: Props) {
   // Los meses que dura el contrato PARA LOS IMPORTES: con jornadas en el tipo, jornadas ÷ esas jornadas.
   const mesesEq = mesesParaImportes(mesesDelPeriodo, jornadas, jornadasDelTipo);
   // La semana del contrato: los días por semana del tipo, si los tiene; si no, los días marcados.
@@ -224,7 +241,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
     else setAncla(originalNumero === null ? null : anclaDesdeJornada(originalNumero, jornadas, mesesEq));
   };
 
-  const campo = (unidad: UnidadImporte, rotulo: string, deshabilitado: boolean, ayuda: React.ReactNode, clase: string) => (
+  const campo = (unidad: UnidadImporte, rotulo: string, deshabilitado: boolean, ayuda: React.ReactNode, clase: string, debajo?: React.ReactNode) => (
     <div className="space-y-1">
       <label className={claseEtiqueta}>
         {icono}
@@ -240,6 +257,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
         <CampoImporte valor={importeEn(unidad)} onCambio={(v) => cambiarImporte(unidad, v)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={clase} />
       )}
       {!infoEnRotulo && ayuda}
+      {debajo}
     </div>
   );
 
@@ -296,6 +314,32 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
     );
   };
 
+  /*
+    EL RESUMEN DEL TOTAL: lo que la pantalla sabe (período, área y turno, días) y la cuenta con los
+    números de acá. El total es siempre jornada × jornadas del contrato (la jornada se deriva así: ver
+    `derivarImportes`), en neto si hay proporción y en lo que se ve si no.
+  */
+  const jornadaDelTotal = valorDe.jornada !== null ? valorDe.jornada * vista("total") : null;
+  const totalVisto = valorDe.total !== null ? valorDe.total * vista("total") : null;
+  const lineasResumen: Array<[string, string]> = [];
+  if (resumenTotal?.periodo) lineasResumen.push(["Período", resumenTotal.periodo]);
+  if (resumenTotal?.areaTurno) lineasResumen.push(["Área / turno", resumenTotal.areaTurno]);
+  if (resumenTotal?.dias) lineasResumen.push(["Días", resumenTotal.dias]);
+  if (!sinJornadas) lineasResumen.push(["Cantidad de jornadas", String(jornadas)]);
+  if (!sinJornadas && !indeterminado && jornadaDelTotal !== null && totalVisto !== null) {
+    lineasResumen.push(["Cuenta", `${pesosAR(jornadaDelTotal)}${netoSobreBruto ? " neto" : ""} por jornada × ${jornadas} ${jornadas === 1 ? "jornada" : "jornadas"} = ${pesosAR(totalVisto)}`]);
+  }
+  const resumen =
+    resumenTotal && lineasResumen.length > 0 ? (
+      <ul className="mt-1 space-y-0.5 rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2 text-[11px] leading-snug text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+        {lineasResumen.map(([k, v]) => (
+          <li key={k}>
+            <span className="font-semibold text-slate-600 dark:text-slate-300">{k}:</span> {v}
+          </li>
+        ))}
+      </ul>
+    ) : null;
+
   return (
     <div className={className}>
       {soloNeto ? (
@@ -314,7 +358,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
       {conNeto && campoNeto("mes", "Importe mensual neto", "El importe mensual")}
       </>
       )}
-      {campo("total", conNeto ? "Importe total del contrato neto" : "Importe total del contrato", sinJornadas || indeterminado, ayuda(indeterminado ? "Tiempo indeterminado: el contrato no termina, así que no tiene total. Lo que rige es el mensual." : !sinJornadas ? conNeto ? `Neto por jornada × ${jornadas} jornada(s) del contrato: lo que cobra por todo el contrato. Si lo cambiás, se recalculan los demás.` : Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadas} jornada(s) del contrato.` : `Mensual × meses del contrato (${mesesEq.toLocaleString("es-AR", { maximumFractionDigits: 2 })}). Si lo cambiás, se recalculan los demás.` : TEXTO_SIN_JORNADAS), claseCampoTotal)}
+      {campo("total", conNeto ? "Importe total del contrato neto" : "Importe total del contrato", sinJornadas || indeterminado, ayuda(indeterminado ? "Tiempo indeterminado: el contrato no termina, así que no tiene total. Lo que rige es el mensual." : !sinJornadas ? conNeto ? `Neto por jornada × ${jornadas} jornada(s) del contrato: lo que cobra por todo el contrato. Si lo cambiás, se recalculan los demás.` : Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadas} jornada(s) del contrato.` : `Mensual × meses del contrato (${mesesEq.toLocaleString("es-AR", { maximumFractionDigits: 2 })}). Si lo cambiás, se recalculan los demás.` : TEXTO_SIN_JORNADAS), claseCampoTotal, resumen)}
       {hayQueRestaurar && !bloqueado && (
         <div className="col-span-full">
           <button

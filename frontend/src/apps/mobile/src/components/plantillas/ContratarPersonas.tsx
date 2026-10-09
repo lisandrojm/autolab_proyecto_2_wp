@@ -12,6 +12,9 @@ import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
 import { CampoComentarios } from "../contratacion/CampoComentarios";
 import { AyudaImportes, diferenciaContraEscala, PROPS_IMPORTES_MOVIL } from "../contratacion/AyudaImportes";
 import { importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../../utils/seleccionConvenioCategoria";
+import { textoDeDias } from "../../../../../utils/jerarquiaTurnos";
+
+const fechaAR = (f: string) => (f ? new Date(`${f}T00:00:00`).toLocaleDateString("es-AR") : "");
 import { CustomDatePicker } from "../CustomDatePicker";
 import { mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { CustomMultiDatePicker } from "../CustomMultiDatePicker";
@@ -502,6 +505,10 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                     diasSemana={diasDeSemana.length}
                     proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaActual)}
                     soloNeto={(catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit"}
+                    resumenTotal={{
+                      periodo: sueltos ? [...fechas].sort().map(fechaAR).join(", ") : desde ? (indeterminado ? `Desde el ${fechaAR(desde)} (tiempo indeterminado)` : `Del ${fechaAR(desde)} al ${fechaAR(hasta)}`) : "",
+                      dias: sueltos ? `${fechas.length} ${fechas.length === 1 ? "día marcado" : "días marcados"}` : textoDeDias(diasDeSemana),
+                    }}
                     bloqueado={importesBloqueados}
                     textoBloqueado="Se habilita al elegir la categoría."
                     ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaActual?.name} cct={cct} multiplicador={mult} contrato={contratoDoc?.name} escalaBase={escalaBase} diferencia={diferencia} />}

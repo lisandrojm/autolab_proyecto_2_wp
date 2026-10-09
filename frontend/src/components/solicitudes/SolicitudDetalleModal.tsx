@@ -586,6 +586,32 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
                 {proporcionNeto && <Fila label="Importe mensual neto" valor={pesos(mensual != null ? mensual * proporcionNeto : null)} />}
                 <Fila label={proporcionNeto ? "Importe total del contrato neto" : "Importe total"} valor={indeterminado ? <span className="text-gray-400">No tiene: tiempo indeterminado</span> : pesos(proporcionNeto ? totalNeto : total)} />
                 {soloNeto && <p className="text-[11px] text-gray-500 dark:text-gray-400">Pedido de servicios: los importes son valores de referencia de la categoría asignada, del sindicato y convenio elegidos.</p>}
+                {/* De dónde sale el total: el mismo resumen que el formulario (ver `resumenTotal` en `ImportesDelContrato`). */}
+                {!indeterminado && jornadas > 0 && valorJornada > 0 && (
+                  <ul className="space-y-0.5 rounded-lg border border-gray-200 bg-gray-50/60 px-2.5 py-2 text-[11px] leading-snug text-gray-500 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
+                    <li>
+                      <span className="font-semibold text-gray-600 dark:text-gray-300">Período:</span>{" "}
+                      {Array.isArray(m.fechasTrabajadas) && m.fechasTrabajadas.length ? [...m.fechasTrabajadas].sort().map((f: string) => fecha(f)).join(", ") : `Del ${fecha(m.startDate)} al ${fecha(m.dueDate)}`}
+                    </li>
+                    {areasTurnos.length > 0 && (
+                      <li>
+                        <span className="font-semibold text-gray-600 dark:text-gray-300">Área / turno:</span> {areasTurnos.map((a) => `${a.area} · ${a.detalle.map((t) => `${t.nombre}${t.horario ? ` (${t.horario})` : ""}`).join(", ")}`).join("; ")}
+                      </li>
+                    )}
+                    {(diasSemana.length > 0 || diasPorSemana > 0) && (
+                      <li>
+                        <span className="font-semibold text-gray-600 dark:text-gray-300">Días:</span> {[m.diasRotativos ? "Rotativos" : textoDeDias(diasSemana), diasPorSemana ? `${diasPorSemana} por semana` : ""].filter(Boolean).join(" · ")}
+                      </li>
+                    )}
+                    <li>
+                      <span className="font-semibold text-gray-600 dark:text-gray-300">Cantidad de jornadas:</span> {jornadas}
+                    </li>
+                    <li>
+                      <span className="font-semibold text-gray-600 dark:text-gray-300">Cuenta:</span> {pesos(netoPorJornada ?? valorJornada)}
+                      {netoPorJornada !== null ? " neto" : ""} por jornada × {jornadas} {jornadas === 1 ? "jornada" : "jornadas"} = {pesos(netoPorJornada !== null ? totalNeto : total)}
+                    </li>
+                  </ul>
+                )}
               </Bloque>
 
               <Bloque titulo="Área y turno">

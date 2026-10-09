@@ -1080,6 +1080,32 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     de la app: en vez de alta y baja se pintan los días en un calendario y cada uno es una jornada.
   */
   const porDiasSueltosWizard = contratos.find((c) => c._id === wizardData.contrato_id)?.data?.modoFechas === 'dias';
+  /** Lo que explica el importe total, debajo del campo (ver `resumenTotal` en `ImportesDelContrato`). */
+  const fechaARWizard = (f: string) => (f ? new Date(`${f}T00:00:00`).toLocaleDateString('es-AR') : '');
+  const resumenDelTotalWizard = {
+    periodo: porDiasSueltosWizard
+      ? [...wizardData.fechas_trabajadas].sort().map(fechaARWizard).join(', ')
+      : wizardData.fecha_alta_contrato
+        ? indeterminadoWizard
+          ? `Desde el ${fechaARWizard(wizardData.fecha_alta_contrato)} (tiempo indeterminado)`
+          : `Del ${fechaARWizard(wizardData.fecha_alta_contrato)} al ${fechaARWizard(wizardData.fecha_baja_contrato)}`
+        : '',
+    areaTurno: wizardData.areaShiftAssignments
+      .flatMap((a) => {
+        const area = allAreas.find((x: any) => String(x._id) === String(a.areaId)) as any;
+        return a.shiftIds.map((sid) => {
+          const turno = allShifts.find((x: any) => String(x._id) === String(sid)) as any;
+          const horario = turno?.startTime && turno?.endTime ? ` (${turno.startTime} a ${turno.endTime})` : '';
+          return `${area?.name || 'Área'} · ${turno?.name || 'Turno'}${horario}`;
+        });
+      })
+      .join('; '),
+    dias: porDiasSueltosWizard
+      ? `${wizardData.fechas_trabajadas.length} ${wizardData.fechas_trabajadas.length === 1 ? 'día marcado' : 'días marcados'}`
+      : wizardData.dias_rotativos
+        ? 'Rotativos'
+        : [textoDeDias(wizardData.dias_semana), wizardData.dias_por_semana ? `${wizardData.dias_por_semana} por semana` : ''].filter(Boolean).join(' · '),
+  };
   const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard && !porDiasSueltosWizard);
   // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
   const tipoDelWizard = contratos.find((c) => c._id === wizardData.contrato_id);
@@ -4753,7 +4779,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   Lo que se guarda sigue siendo el sueldo por jornada.
                 */}
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
+                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
 
                   {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
                   <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
