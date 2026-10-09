@@ -1276,10 +1276,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       return { ...prev, dias_por_semana: limiteDiasWizard, dias_semana: dias };
     });
   }, [limiteDiasWizard, porDiasSueltosWizard]);
+  // Al soltar la categoría, el importe que venía de su escala (bruto) pasa a NETO: en un Pedido de
+  // servicios se paga el neto. Misma regla que la solicitud del móvil.
   useEffect(() => {
     if (!esServicios || !wizardData.categoria_sat_id) return;
-    setWizardData((prev) => ({ ...prev, categoria_sat_id: '' }));
-  }, [esServicios, wizardData.categoria_sat_id]);
+    const proporcion = proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)));
+    setWizardData((prev) => ({ ...prev, categoria_sat_id: '', ...(proporcion && Number(prev.sueldo_jornada) > 0 ? { sueldo_jornada: Math.round(Number(prev.sueldo_jornada) * proporcion * 100) / 100 } : {}) }));
+  }, [esServicios, wizardData.categoria_sat_id, allCategoriasSat]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;

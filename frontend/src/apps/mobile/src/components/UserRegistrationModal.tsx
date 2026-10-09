@@ -1566,17 +1566,26 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   }, [formData.categoriaSatId, formData.contratoId, categoriasSat, multiplicadorDiario, jornadasDelTipo]);
 
   /*
-    AL ELEGIR UN TIPO DE SERVICIOS SE SUELTA LA CATEGORÍA, y el importe se queda.
+    AL ELEGIR UN TIPO DE SERVICIOS SE SUELTA LA CATEGORÍA, y el importe se queda… EN NETO.
 
     La categoría escondida seguiría viajando si no se limpia. El importe, en cambio, es lo que se va a
     pagar y ahora se carga a mano: borrarlo sería hacerle perder a alguien lo que acaba de escribir.
     El convenio no se toca acá —lo reponen solos los efectos de arriba— y simplemente no se manda.
+
+    Con categoría, el importe por jornada es BRUTO (sale de la escala). Un Pedido de servicios no lleva
+    descuentos de ley: lo que se paga es el neto. Se pasa a neto con la proporción neto/bruto de la
+    escala de esa categoría (pedido del 09/10/2026: en servicios, sólo los netos).
   */
   useEffect(() => {
     if (!cascadasListas || !esServicios || !formData.categoriaSatId) return;
-    setFormData((p) => ({ ...p, categoriaSatId: "" }));
+    const proporcion = proporcionNetoDeCategoria(categoriasSat.find((c) => c._id === formData.categoriaSatId));
+    setFormData((p) => {
+      const bruto = Number(p.dailyRate);
+      const dailyRate = proporcion && bruto > 0 ? String(Math.round(bruto * proporcion * 100) / 100) : p.dailyRate;
+      return { ...p, categoriaSatId: "", dailyRate };
+    });
     setAvisoCascada("");
-  }, [cascadasListas, esServicios, formData.categoriaSatId]);
+  }, [cascadasListas, esServicios, formData.categoriaSatId, categoriasSat]);
 
   /** El motivo elegido, para mostrar su nombre sin repetir el `find` en cada lugar donde se usa. */
 
