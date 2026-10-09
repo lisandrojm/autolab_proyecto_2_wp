@@ -411,6 +411,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
   const esServicios = tramiteSinConvenioNiCategoria(formData.tipoImpositivo);
+  // Pedido de servicios: lleva convenio y categoría, pero sólo se ven los netos (ver `soloNeto` en `ImportesDelContrato`).
+  const soloNeto = formData.tipoImpositivo === "constancia_cuit";
 
   /** La categoría elegida, resuelta al catálogo: de ahí salen su código de ARCA y su escala. */
   const categoriaElegida = useMemo(() => categoriasSat.find((c) => c._id === formData.categoriaSatId) || null, [categoriasSat, formData.categoriaSatId]);
@@ -2623,6 +2625,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               valorJornada={formData.dailyRate}
               onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
               bloqueado={importesBloqueados}
+              soloNeto={soloNeto}
               {...PROPS_IMPORTES_MOVIL}
             />
           )}
@@ -2639,6 +2642,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaElegida)}
             diasSemana={diasSemanaNum}
             bloqueado={importesBloqueados}
+            soloNeto={soloNeto}
             textoBloqueado="Se habilita al elegir la categoría."
             ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaElegida?.name} cct={convenioElegido?.externalId} multiplicador={multiplicadorDiario} contrato={contratoElegido?.name} escalaBase={importePorJornadaDeCategoria(categoriaElegida || undefined, 1, jornadasDelTipo)} diferencia={diferenciaContraEscala} />}
             {...PROPS_IMPORTES_MOVIL}

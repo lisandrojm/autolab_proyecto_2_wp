@@ -248,6 +248,7 @@ export default function DetallePuesto() {
                 jornadasDelTipo={jornadasDelPuesto}
                 diasPorSemanaDelTipo={Number(contratoDelPuesto?.data?.diasPorSemana) || null}
                 proporcionNeto={proporcionNetoDeCategoria(categoriaDelPuesto)}
+                soloNeto={efectivo.tipoImpositivo === "constancia_cuit"}
                 diasSemana={diasRef.length}
                 bloqueado={!categoriaActual}
                 textoBloqueado="Se habilita al elegir la categoría."

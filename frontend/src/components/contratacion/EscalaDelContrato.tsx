@@ -43,11 +43,13 @@ interface Props {
   adornoCampo?: React.ReactNode;
   /** Igual que en `ImportesDelContrato`: la ayuda detrás de una «i» en el rótulo (móvil). */
   infoEnRotulo?: (titulo: string, ayuda: React.ReactNode) => React.ReactNode;
+  /** Pedido de servicios: sólo el sueldo neto, como valor de referencia (ver `soloNeto` en `ImportesDelContrato`). */
+  soloNeto?: boolean;
 }
 
 const pct = (n: number) => `${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })} %`;
 
-export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, valorJornada, onValorJornada, bloqueado = false, className = "", claseEtiqueta, claseCampo, claseAyuda, icono, adornoCampo, infoEnRotulo }: Props) {
+export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, valorJornada, onValorJornada, bloqueado = false, className = "", claseEtiqueta, claseCampo, claseAyuda, icono, adornoCampo, infoEnRotulo, soloNeto = false }: Props) {
   const [enEdicion, setEnEdicion] = useState<{ columna: Columna; texto: string } | null>(null);
   const d: any = categoria?.data || {};
   const mult = Number(multiplicador) > 0 ? Number(multiplicador) : 1;
@@ -90,7 +92,7 @@ export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, v
     pct: "El % adicional es fijo para el grupo: lo define el convenio, no el contrato. Por eso no se edita acá.",
     presentismo: "El 10 % del básico más el adicional.",
     bruto: `Básico + adicional + presentismo: lo que cobra antes de los descuentos de ley. Dividido ${jornadas} (las jornadas del tipo de contrato)${mult !== 1 ? ` y por el multiplicador del contrato (×${mult.toLocaleString("es-AR")})` : ""} da el importe por jornada.`,
-    neto: "El bruto menos los descuentos (queda el 81 %).",
+    neto: soloNeto ? "Es un valor de referencia: el sueldo neto de la escala de la categoría asignada, del sindicato y convenio elegidos." : "El bruto menos los descuentos (queda el 81 %).",
   };
   const pie = distinto ? ` Cargado ${factor > 1 ? "por encima" : "por debajo"} de la escala (${pct((factor - 1) * 100)}): si lo cambiás, se recalculan los demás y los importes del contrato.` : " Si lo cambiás, se recalculan los demás y los importes del contrato.";
 
@@ -111,6 +113,8 @@ export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, v
       {!infoEnRotulo && <p className={claseAyuda}>{ayudas[c]}</p>}
     </div>
   );
+
+  if (soloNeto) return <div className={className}>{campo("neto", "Sueldo neto")}</div>;
 
   return (
     <div className={className}>

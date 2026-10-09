@@ -501,6 +501,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                     jornadas={jornadas}
                     diasSemana={diasDeSemana.length}
                     proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaActual)}
+                    soloNeto={(catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit"}
                     bloqueado={importesBloqueados}
                     textoBloqueado="Se habilita al elegir la categoría."
                     ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaActual?.name} cct={cct} multiplicador={mult} contrato={contratoDoc?.name} escalaBase={escalaBase} diferencia={diferencia} />}
