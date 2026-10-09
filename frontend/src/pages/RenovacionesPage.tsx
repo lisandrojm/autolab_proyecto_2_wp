@@ -219,7 +219,7 @@ export const RenovacionesPage: React.FC = () => {
         />
       }
     >
-      {filas === null ? (
+      {filas === null || (cargando && filas.length === 0) ? (
         <LoadingSpinner />
       ) : filas.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 dark:border-gray-700 dark:bg-gray-800">
@@ -232,7 +232,6 @@ export const RenovacionesPage: React.FC = () => {
           <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {(pagina - 1) * porPagina + 1}–{(pagina - 1) * porPagina + filas.length} de {total}
-              {cargando && <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500 align-[-2px]" aria-label="Cargando" />}
             </span>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -248,7 +247,17 @@ export const RenovacionesPage: React.FC = () => {
               <Paginador pagina={pagina} totalPaginas={totalPaginas} total={total} desde={(pagina - 1) * porPagina} mostrados={filas.length} onPagina={setPagina} />
             </div>
           </div>
-          <div className={`overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800/50 transition-opacity ${cargando ? "opacity-60" : ""}`}>
+          {/*
+            FILTRANDO: el «Cargando…» de la plataforma ENCIMA de la tabla, que queda atrás atenuada. Sin
+            esto, los resultados viejos seguían a la vista sin ninguna señal de que venían otros.
+          */}
+          <div className="relative">
+            {cargando && (
+              <div className="absolute inset-0 z-[20] flex items-start justify-center rounded-xl bg-white/60 pt-16 backdrop-blur-[1px] dark:bg-gray-900/60">
+                <LoadingSpinner message="Filtrando..." />
+              </div>
+            )}
+          <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
             <table className="w-full text-left min-w-[1400px]">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -349,6 +358,7 @@ export const RenovacionesPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
           <Paginador pagina={pagina} totalPaginas={totalPaginas} total={total} desde={(pagina - 1) * porPagina} mostrados={filas.length} onPagina={setPagina} />
         </>
