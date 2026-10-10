@@ -2131,7 +2131,7 @@ export const ContractBulkAfipTab: React.FC<{
             {/* Lo que ya se presentó por URGENTE: una fila por persona, con lo que contestó ARCA. */}
             <button type="button" onClick={() => setHistorialAltasOpen(true)} title="Registro de lo ya presentado por Altas Masivas (URGENTE)" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors shrink-0">
               <FontAwesomeIcon icon={faFileLines} className="h-3.5 w-3.5" />
-              Presentadas
+              Presentación A.R.C.A
             </button>
           </div>
         </div>
