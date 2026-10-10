@@ -1978,15 +1978,11 @@ export const ContractBulkAfipTab: React.FC<{
           logueado con UN CUIT, así que "Todas" sirve para mirar, no para generar (ver `generarTxt`). */}
       {filterTipo === 'alta_temprana_afip' && empresaOptions.length > 0 && (
         <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-          <span className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap shrink-0">Empresa Contrato | </span>
           <button onClick={() => setFilterEmpresaId('')} className={empresaTabClass(filterEmpresaId === '')}>
             Todas ({conteoPorEmpresa.total})
           </button>
-          {/* Los que todavía no eligieron empleadora tienen pestaña propia: no son de ninguna empresa
-              y son, justamente, el trabajo pendiente. Desde acá se los asigna en lote. */}
-          <button onClick={() => setFilterEmpresaId(SIN_EMPRESA)} className={empresaTabClass(filterEmpresaId === SIN_EMPRESA)} title="Contratos que todavía no tienen elegida su empleadora">
-            Sin asignar ({conteoPorEmpresa.sinAsignar})
-          </button>
+          {/* Sin pestaña «Sin asignar» (10/10/2026): los contratos sin empleadora se ven en «Todas», y la
+              empleadora se elige fila por fila. El valor `SIN_EMPRESA` sigue existiendo por el filtro. */}
           {empresaOptions.map((e) => (
             <button key={e.value} onClick={() => setFilterEmpresaId(e.value)} className={empresaTabClass(filterEmpresaId === e.value)}>
               {e.label} ({conteoPorEmpresa.porId.get(e.value) || 0})
