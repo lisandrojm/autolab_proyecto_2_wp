@@ -2677,6 +2677,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
               bloqueado={importesBloqueados}
               soloNeto={soloNeto}
+              sinBrutoNiNeto
               {...PROPS_IMPORTES_MOVIL}
             />
           )}

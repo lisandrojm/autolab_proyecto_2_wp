@@ -45,11 +45,13 @@ interface Props {
   infoEnRotulo?: (titulo: string, ayuda: React.ReactNode) => React.ReactNode;
   /** Pedido de servicios: sólo el sueldo neto, como valor de referencia (ver `soloNeto` en `ImportesDelContrato`). */
   soloNeto?: boolean;
+  /** Sin «Sueldo bruto» ni «Sueldo neto»: el móvil muestra básico, adicional y presentismo; el bruto y el neto se ven en los importes por jornada. */
+  sinBrutoNiNeto?: boolean;
 }
 
 const pct = (n: number) => `${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })} %`;
 
-export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, valorJornada, onValorJornada, bloqueado = false, className = "", claseEtiqueta, claseCampo, claseAyuda, icono, adornoCampo, infoEnRotulo, soloNeto = false }: Props) {
+export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, valorJornada, onValorJornada, bloqueado = false, className = "", claseEtiqueta, claseCampo, claseAyuda, icono, adornoCampo, infoEnRotulo, soloNeto = false, sinBrutoNiNeto = false }: Props) {
   const [enEdicion, setEnEdicion] = useState<{ columna: Columna; texto: string } | null>(null);
   const d: any = categoria?.data || {};
   const mult = Number(multiplicador) > 0 ? Number(multiplicador) : 1;
@@ -128,8 +130,8 @@ export function EscalaDelContrato({ categoria, multiplicador, jornadasDelTipo, v
         {!infoEnRotulo && <p className={claseAyuda}>{ayudas.pct}</p>}
       </div>
       {campo("presentismo", "Presentismo")}
-      {campo("bruto", "Sueldo bruto")}
-      {campo("neto", "Sueldo neto")}
+      {!sinBrutoNiNeto && campo("bruto", "Sueldo bruto")}
+      {!sinBrutoNiNeto && campo("neto", "Sueldo neto")}
     </div>
   );
 }
