@@ -63,17 +63,20 @@ export declare const jornadasDelCalendario: (desde: string | undefined, hasta: s
  *  - con días ROTATIVOS: no hay patrón del cual deducirlas (`null`: se cargan a mano).
  *  - por PERÍODO: los días de la semana marcados que caen en él (`jornadasDelCalendario`).
  *
- * EL TIPO DE CONTRATO YA NO LAS FIJA (pedido del 09/10/2026). Antes su «Cantidad de jornadas» mandaba
- * sobre el calendario —un tipo con 22 daba 22 jornadas del 9 al 31 de octubre, que son 17—, y el total
- * del contrato no era la suma de los días del contrato. Ahora el total es SIEMPRE jornada × los días
- * reales del período (o los marcados). La «Cantidad de jornadas» del tipo sigue valiendo para lo que
- * es: cuántas jornadas tiene un MES, de donde salen el importe por jornada de la escala y el mensual
- * (ver `importePorJornada` y `mesesParaImportes`).
+ * SALVO QUE EL TIPO DE CONTRATO LAS FIJE EN BASE 30 (pedido del 10/10/2026): un contrato por período
+ * se liquida como un mensualizado. Su «Cantidad de jornadas» (30 en un plazo fijo) es lo que vale un
+ * MES COMPLETO, tenga 28 o 31 días y se trabaje 5 o 6 días por semana; los días por semana sólo dicen
+ * qué días del calendario se trabaja. Un tramo de mes (entra o termina a mitad de mes) vale sus DÍAS
+ * CORRIDOS, francos incluidos: del 1 al 15 son 15 jornadas, no 11 hábiles. Con un tipo que no sea de
+ * 30 (Servicios: 22), el tramo se lleva en proporción: días corridos × 22 ÷ 30.
  *
- * Se deja la función —siempre `null`— porque la usan la app, el escritorio y el plan de lote: volver a
- * fijarlas es cambiar esto, en un solo lugar.
+ * Con días SUELTOS («Jornada») no: cada día marcado es un jornal, y la «Cantidad de jornadas» del tipo
+ * (22) es sólo el divisor del sueldo mensual para sacar el valor del jornal.
+ *
+ * Es la misma base de `importePorJornada` (escala ÷ jornadas del tipo) y de `mesesParaImportes`: con
+ * un mes completo el mensual es jornada × 30 y el total, lo mismo.
  */
-export declare const jornadasFijadasPorElTipo: (_jornadasDelTipo: unknown, _porDiasSueltos: boolean) => number | null;
+export declare const jornadasFijadasPorElTipo: (jornadasDelTipo: unknown, porDiasSueltos: boolean, desde?: string, hasta?: string) => number | null;
 export declare const jornadasCalculadasDelPedido: (p: {
     porDiasSueltos: boolean;
     fechas: string[];

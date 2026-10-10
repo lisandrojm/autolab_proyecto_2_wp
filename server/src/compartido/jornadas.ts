@@ -107,19 +107,39 @@ export const jornadasDelCalendario = (desde: string | undefined, hasta: string |
  *  - con días ROTATIVOS: no hay patrón del cual deducirlas (`null`: se cargan a mano).
  *  - por PERÍODO: los días de la semana marcados que caen en él (`jornadasDelCalendario`).
  *
- * EL TIPO DE CONTRATO YA NO LAS FIJA (pedido del 09/10/2026). Antes su «Cantidad de jornadas» mandaba
- * sobre el calendario —un tipo con 22 daba 22 jornadas del 9 al 31 de octubre, que son 17—, y el total
- * del contrato no era la suma de los días del contrato. Ahora el total es SIEMPRE jornada × los días
- * reales del período (o los marcados). La «Cantidad de jornadas» del tipo sigue valiendo para lo que
- * es: cuántas jornadas tiene un MES, de donde salen el importe por jornada de la escala y el mensual
- * (ver `importePorJornada` y `mesesParaImportes`).
+ * SALVO QUE EL TIPO DE CONTRATO LAS FIJE EN BASE 30 (pedido del 10/10/2026): un contrato por período
+ * se liquida como un mensualizado. Su «Cantidad de jornadas» (30 en un plazo fijo) es lo que vale un
+ * MES COMPLETO, tenga 28 o 31 días y se trabaje 5 o 6 días por semana; los días por semana sólo dicen
+ * qué días del calendario se trabaja. Un tramo de mes (entra o termina a mitad de mes) vale sus DÍAS
+ * CORRIDOS, francos incluidos: del 1 al 15 son 15 jornadas, no 11 hábiles. Con un tipo que no sea de
+ * 30 (Servicios: 22), el tramo se lleva en proporción: días corridos × 22 ÷ 30.
  *
- * Se deja la función —siempre `null`— porque la usan la app, el escritorio y el plan de lote: volver a
- * fijarlas es cambiar esto, en un solo lugar.
+ * Con días SUELTOS («Jornada») no: cada día marcado es un jornal, y la «Cantidad de jornadas» del tipo
+ * (22) es sólo el divisor del sueldo mensual para sacar el valor del jornal.
+ *
+ * Es la misma base de `importePorJornada` (escala ÷ jornadas del tipo) y de `mesesParaImportes`: con
+ * un mes completo el mensual es jornada × 30 y el total, lo mismo.
  */
-export const jornadasFijadasPorElTipo = (_jornadasDelTipo: unknown, _porDiasSueltos: boolean): number | null => null;
+export const jornadasFijadasPorElTipo = (jornadasDelTipo: unknown, porDiasSueltos: boolean, desde?: string, hasta?: string): number | null => {
+  const porMes = Number(jornadasDelTipo);
+  if (porDiasSueltos || !Number.isFinite(porMes) || porMes <= 0) return null;
+  const d1 = utc(desde);
+  const d2 = utc(hasta);
+  if (d1 === null || d2 === null || d2 < d1) return null;
+  let total = 0;
+  const fin = new Date(d2);
+  for (let anio = new Date(d1).getUTCFullYear(), mes = new Date(d1).getUTCMonth(); anio < fin.getUTCFullYear() || (anio === fin.getUTCFullYear() && mes <= fin.getUTCMonth()); mes === 11 ? (anio++, (mes = 0)) : mes++) {
+    const inicioMes = Date.UTC(anio, mes, 1);
+    const finMes = Date.UTC(anio, mes + 1, 0);
+    const diasDelMes = Math.round((finMes - inicioMes) / DIA_MS) + 1;
+    const tramo = Math.round((Math.min(d2, finMes) - Math.max(d1, inicioMes)) / DIA_MS) + 1;
+    // Mes completo: lo que dice el tipo. Tramo: días corridos, en proporción a 30.
+    total += tramo === diasDelMes ? porMes : (tramo * porMes) / 30;
+  }
+  return Math.round(total);
+};
 export const jornadasCalculadasDelPedido = (p: { porDiasSueltos: boolean; fechas: string[]; rotativos: boolean; desde: string; hasta: string; dias: number[]; jornadasDelTipo?: unknown }): number | null => {
-  const fijadas = jornadasFijadasPorElTipo(p.jornadasDelTipo, p.porDiasSueltos);
+  const fijadas = jornadasFijadasPorElTipo(p.jornadasDelTipo, p.porDiasSueltos, p.desde, p.hasta);
   if (fijadas !== null) return fijadas;
   if (p.porDiasSueltos) return p.fechas.length > 0 ? new Set(p.fechas).size : null;
   if (p.rotativos) return null;

@@ -260,7 +260,7 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     // jornadas con la regla compartida.
     const periodo = periodoDeCalculo(desde, hasta, indeterminado);
     const calculadas = jornadasCalculadasDelPedido({ porDiasSueltos, fechas: fechasSueltas, rotativos, desde: periodo.desde, hasta: periodo.hasta, dias: diasSemana, jornadasDelTipo: contrato?.cantidadJornadas });
-    const fijadasPorTipo = jornadasFijadasPorElTipo(contrato?.cantidadJornadas, porDiasSueltos);
+    const fijadasPorTipo = jornadasFijadasPorElTipo(contrato?.cantidadJornadas, porDiasSueltos, periodo.desde, periodo.hasta);
     const jornadas = fijadasPorTipo ?? (rotativos ? Number(p.jornadas) || Number(contratacion.jornadasRotativos) || 0 : calculadas || 0);
 
     // ── Lo que se paga por jornada ──

@@ -12,7 +12,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { anclaDesdeJornada, derivarImportes, mesesParaImportes, sueldosDelContrato, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
+import { anclaDesdeJornada, derivarImportes, mesesParaImportes, sueldosDelContrato, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
 const LU_VI = [1, 2, 3, 4, 5];
 const cerca = (a, b) => assert.ok(a !== null && Math.abs(a - b) < 1e-9, `${a} ≠ ${b}`);
 test("diasCorridos: ambos extremos inclusive; null si falta una fecha o el fin es anterior", () => {
@@ -144,16 +144,31 @@ test("mesesEquivalentes con días sueltos: cuenta los días marcados, no todo el
     cerca(importes.total, 600);
     cerca(importes.semana, 200);
 });
-test("las jornadas del contrato salen SIEMPRE del calendario: la «Cantidad de jornadas» del tipo ya no las fija (09/10/2026)", () => {
-    // Octubre 2026 de lunes a sábado da 27, aunque el tipo diga 30.
+test("por período, el tipo fija las jornadas en base 30 (10/10/2026): el mes completo vale 30, el tramo sus días corridos", () => {
+    // Sin «Cantidad de jornadas» en el tipo, el calendario de siempre: octubre 2026 de lunes a sábado da 27.
     assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-10-31", dias: [1, 2, 3, 4, 5, 6] }), 27);
-    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-10-31", dias: [1, 2, 3, 4, 5, 6], jornadasDelTipo: 30 }), 27);
-    // Del 9 al 31 de octubre de lunes a viernes: 16 (el 9 es viernes), aunque el tipo diga 22 (el caso que lo pidió).
-    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-09", hasta: "2026-10-31", dias: [1, 2, 3, 4, 5], jornadasDelTipo: 22 }), 16);
-    // Rotativos: no hay patrón, se cargan a mano.
-    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "2026-10-01", hasta: "2026-10-31", dias: [], jornadasDelTipo: "30" }), null);
+    // Con 30 en el tipo, el mes completo son 30, trabaje 5 o 6 días por semana y tenga el mes 30 o 31 días.
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-10-31", dias: [1, 2, 3, 4, 5, 6], jornadasDelTipo: 30 }), 30);
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-11-01", hasta: "2026-11-30", dias: [1, 2, 3, 4, 5], jornadasDelTipo: 30 }), 30);
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-02-01", hasta: "2026-02-28", dias: [1, 2, 3, 4, 5], jornadasDelTipo: 30 }), 30);
+    // Dos meses completos: 60.
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-11-30", dias: [1, 2, 3, 4, 5, 6], jornadasDelTipo: 30 }), 60);
+    // Tramo de mes: días corridos, con los francos adentro. Del 1 al 15 son 15; del 9 al 31 de octubre, 23.
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-10-15", dias: [1, 2, 3, 4, 5], jornadasDelTipo: 30 }), 15);
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-09", hasta: "2026-10-31", dias: [1, 2, 3, 4, 5], jornadasDelTipo: 30 }), 23);
+    // Un mes completo más un tramo: 30 + 15.
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-11-15", dias: [1, 2, 3, 4, 5], jornadasDelTipo: 30 }), 45);
+    // Un tipo de 22 por período: el tramo va en proporción (15 días corridos × 22 ÷ 30 = 11).
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: "2026-10-01", hasta: "2026-10-15", dias: [1, 2, 3, 4, 5], jornadasDelTipo: 22 }), 11);
+    // Rotativos con tipo: base 30 igual (es por período); sin tipo, no hay patrón y se cargan a mano.
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "2026-10-01", hasta: "2026-10-31", dias: [], jornadasDelTipo: "30" }), 30);
+    assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "2026-10-01", hasta: "2026-10-31", dias: [] }), null);
     // Días sueltos: cada día marcado es una jornada, aunque el tipo diga 22.
     assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: true, fechas: ["2026-10-02", "2026-10-09"], rotativos: false, desde: "", hasta: "", dias: [], jornadasDelTipo: 22 }), 2);
+    // Sin fechas no hay con qué contar.
+    assert.equal(jornadasFijadasPorElTipo(30, false), null);
+    assert.equal(jornadasFijadasPorElTipo(30, false, "2026-10-01", "2026-10-31"), 30);
+    assert.equal(jornadasFijadasPorElTipo(30, true, "2026-10-01", "2026-10-31"), null);
     // Vacío o 0 en el tipo: se calcula.
     assert.equal(jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: true, desde: "", hasta: "", dias: [], jornadasDelTipo: 0 }), null);
 });

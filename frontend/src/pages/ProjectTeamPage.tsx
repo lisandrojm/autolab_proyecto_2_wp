@@ -1110,7 +1110,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard && !porDiasSueltosWizard);
   // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
   const tipoDelWizard = contratos.find((c) => c._id === wizardData.contrato_id);
-  const jornadasFijadasWizard = jornadasFijadasPorElTipo(tipoDelWizard?.data?.cantidadJornadas, porDiasSueltosWizard);
+  const jornadasFijadasWizard = jornadasFijadasPorElTipo(tipoDelWizard?.data?.cantidadJornadas, porDiasSueltosWizard, periodoWizard.desde, periodoWizard.hasta);
   const jornadasCalculadasWizard = jornadasCalculadasDelPedido({ porDiasSueltos: porDiasSueltosWizard, fechas: wizardData.fechas_trabajadas, rotativos: wizardData.dias_rotativos, desde: periodoWizard.desde, hasta: periodoWizard.hasta, dias: wizardData.dias_semana, jornadasDelTipo: tipoDelWizard?.data?.cantidadJornadas });
   /**
    * Los días marcados en el calendario, y lo que se deduce de ellos: el período (primero y último),

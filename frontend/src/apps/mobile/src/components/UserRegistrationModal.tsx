@@ -1719,7 +1719,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     justificar y se sale solo del ajuste, limpiando motivo y aclaración.
   */
   // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
-  const jornadasFijadas = jornadasFijadasPorElTipo(contratoElegido?.data?.cantidadJornadas, porDiasSueltos);
+  const jornadasFijadas = jornadasFijadasPorElTipo(contratoElegido?.data?.cantidadJornadas, porDiasSueltos, periodo.desde, periodo.hasta);
   useEffect(() => {
     if (jornadasFijadas !== null) {
       setFormData((p) => (p.workdaysCount === String(jornadasFijadas) && !p.workdaysOverridden ? p : { ...p, workdaysCount: String(jornadasFijadas), workdaysOverridden: false, workdaysOverrideReason: "", workdaysOverrideNote: "" }));

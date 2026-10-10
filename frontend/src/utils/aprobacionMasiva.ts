@@ -25,7 +25,7 @@ import { ContratoFrameItem, plantillaEsDeContrato } from "../api/contratosFrame"
 import { ContratoItem } from "../api/contratos";
 import { getContratoActivo } from "./contratoVigencia";
 import { estadoImpositivoDePlantilla, tipoImpositivoDeContrato } from "./tramiteImpositivo";
-import { erroresDeJornadas, jornadasDelCalendario, periodoDeCalculo } from "./jornadas";
+import { erroresDeJornadas, jornadasCalculadasDelPedido, periodoDeCalculo } from "./jornadas";
 import { horasDelHorario } from "./horario";
 import { faltaDefinirDias } from "../components/contratos/DiasDeTrabajo";
 import { numeroALetras } from "./numeroALetras";
@@ -124,7 +124,9 @@ export function contratoDesdeSolicitud({ solicitud, persona, proyecto, cat }: { 
   const diasSemana: number[] = Array.isArray(ms.diasSemana) && ms.diasSemana.length ? ms.diasSemana : Array.isArray(anterior?.dias_semana) ? anterior.dias_semana : [];
   const diasRotativos = ms.diasRotativos !== undefined ? !!ms.diasRotativos : !!anterior?.dias_rotativos;
   const periodo = periodoDeCalculo(fechaAlta, fechaBaja, indeterminado);
-  const calculadas = jornadasDelCalendario(periodo.desde, periodo.hasta, diasSemana);
+  // La misma regla que el formulario: por período, base 30 del tipo de contrato; si no, el calendario.
+  const porDiasSueltos = contratoSel?.data?.modoFechas === "dias";
+  const calculadas = jornadasCalculadasDelPedido({ porDiasSueltos, fechas: Array.isArray(ms.fechasTrabajadas) ? ms.fechasTrabajadas : [], rotativos: diasRotativos, desde: periodo.desde, hasta: periodo.hasta, dias: diasSemana, jornadasDelTipo: contratoSel?.data?.cantidadJornadas });
   const ajustado = !!ms.workdaysOverridden;
   const jornadasPedidas = Number(ms.workdaysCount) || Number(anterior?.cantidad_jornadas_laborales) || 5;
   const jornadas = !ajustado && calculadas !== null ? calculadas : jornadasPedidas;
