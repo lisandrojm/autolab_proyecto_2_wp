@@ -55,6 +55,8 @@ interface EmployeeOption {
      *  hay fila en project.teamConfig). Preferido sobre `areaId`/`shiftId`, que son legacy y ya casi
      *  nadie los tiene cargados. */
     areaShiftAssignments?: { areaId: string; shiftIds: string[] }[];
+    /** Nombre del tipo de contrato que rige hoy en el proyecto (`nombre_contrato`). */
+    nombreContrato?: string;
   }>;
 }
 
@@ -1074,6 +1076,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                   lastContractVigente: lastContractIsVigente(p.contracts),
                   contractStartTime: activeContract?.hora_inicio || undefined,
                   contractEndTime: activeContract?.hora_fin || undefined,
+                  nombreContrato: activeContract?.nombre_contrato || undefined,
                   areaId: p.areaId || activeContract?.areaId || undefined,
                   shiftId: p.shiftId || activeContract?.shiftId || undefined,
                   areaShiftAssignments: normalizeAreaShiftAssignments(activeContract?.areaShiftAssignments),
@@ -1349,6 +1352,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                       lastContractVigente: lastContractIsVigente(p.contracts),
                       contractStartTime: activeContract?.hora_inicio || undefined,
                       contractEndTime: activeContract?.hora_fin || undefined,
+                  nombreContrato: activeContract?.nombre_contrato || undefined,
                       areaId: p.areaId || activeContract?.areaId || undefined,
                       shiftId: p.shiftId || activeContract?.shiftId || undefined,
                       areaShiftAssignments: normalizeAreaShiftAssignments(activeContract?.areaShiftAssignments),
@@ -2129,6 +2133,29 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
   };
 
   // ===================== WIZARD LOGIC REPAIRED =====================
+  /** El tipo de contrato de la persona en el proyecto elegido, para mostrarlo en las tarjetas. */
+  const tipoContratoDe = (emp: EmployeeOption): string => emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.nombreContrato || "";
+
+  /**
+   * ¿ESTA PERSONA YA ES EL REEMPLAZO DE OTRA en este reporte? Pasa cuando a alguien lo dan de alta
+   * el mismo día para reemplazar a un ausente: figura en el equipo del turno Y como reemplazo. Si el
+   * asistente le preguntaba igual «¿asistió?», al guardar iba dos veces (fila propia «presente» y
+   * `replacementId` del ausente). Queda SOLO como reemplazo: no se le pregunta ni se guarda su fila.
+   *
+   * Es derivado de `wizardData`, no un estado aparte: si después se cambia o se quita el reemplazo
+   * del ausente, vuelve a ser una pregunta normal sin nada viejo guardado.
+   */
+  const reemplazoDe = (empId: string): { ausente: EmployeeOption; motivo: string; horasExtra: number } | null => {
+    for (const [ausenteId, d] of Object.entries(wizardData)) {
+      if (ausenteId === empId || d.status !== "absent" || d.replacementId !== empId) continue;
+      const ausente = projectEmployees.find((e) => e.id === ausenteId);
+      if (!ausente) continue;
+      return { ausente, motivo: logTypes.find((t) => t._id === d.typeId)?.name || "Ausente", horasExtra: d.replacementOvertimeHours || 0 };
+    }
+    return null;
+  };
+  const textoHorasExtra = (horas: number) => (horas > 0 ? `+${horas}h extra` : "sin horas extra");
+
   const updateWizardEntry = (employeeId: string, updates: Partial<WizardEntry>) => {
     setWizardData((prev) => ({
       ...prev,
@@ -2138,6 +2165,13 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
 
   const handleWizardNext = () => {
     if (wizardIndex >= projectEmployees.length - 1) {
+      // Si a alguien se le quitó el reemplazo después de pasar por su paso, quedó sin respuesta: se vuelve ahí.
+      const sinResponder = projectEmployees.findIndex((e) => wizardData[e.id]?.status === undefined && !reemplazoDe(e.id));
+      if (sinResponder >= 0) {
+        sweetAlert.info("Falta una respuesta", `${projectEmployees[sinResponder].name} quedó sin responder: ya no es reemplazo de nadie.`);
+        setWizardIndex(sinResponder);
+        return;
+      }
       finalizeWizard();
     } else {
       setWizardIndex(wizardIndex + 1);
@@ -2165,6 +2199,8 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
     let hasAnomalies = false;
 
     projectEmployees.forEach((emp) => {
+      // Quien ya es reemplazo de un ausente queda en la fila del ausente, no tiene entrada propia.
+      if (reemplazoDe(emp.id)) return;
       const data = wizardData[emp.id];
       if (!data) return;
 
@@ -2264,6 +2300,10 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
 
       // Iterate over projectEmployees (already filtered by area/shift) to ensure we save their schedule snapshot
       for (const emp of projectEmployees) {
+        // SIN FILA PROPIA si ya es el reemplazo de alguien en este reporte: va una sola vez, como
+        // `replacementId` (con sus horas extra y horarios) en la fila del ausente. Con fila propia
+        // «presente» además, el día se contaba dos veces.
+        if (entries.some((e) => e.replacementId === emp.id)) continue;
         // Try to find if we have a specific entry (anomaly/overtime)
         const entry = entries.find((e) => e.employeeId === emp.id);
 
@@ -3148,6 +3188,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                   const data = wizardData[currentEmp.id] || {};
                                   const isPresent = data.status === "present";
                                   const isAbsent = data.status === "absent";
+                                  const cubierto = reemplazoDe(currentEmp.id);
 
                                   return (
                                     <>
@@ -3174,6 +3215,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                                   <span>{currentEmp.name}</span>
                                                   {renderVacationBadge(currentEmp.id, currentEmp.name)}
                                                 </div>
+                                                {tipoContratoDe(currentEmp) && <span className="ml-10 text-[10px] font-bold uppercase tracking-wider text-gray-500">{tipoContratoDe(currentEmp)}</span>}
                                               </h3>
                                             </div>
                                           </h3>
@@ -3213,13 +3255,29 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                         </div>
 
                                         <div className="p-5 space-y-6">
+                                          {/* Ya es el reemplazo de otra persona: no se pregunta, se dice. */}
+                                          {cubierto && (
+                                            <div className="rounded border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/15 p-3 text-center">
+                                              <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                                                <FontAwesomeIcon icon={faInfoCircle} className="mr-1.5" />
+                                                Reemplazó a {cubierto.ausente.name} ({cubierto.motivo}) · {textoHorasExtra(cubierto.horasExtra)}
+                                              </p>
+                                              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">No se le pregunta: queda como reemplazo en el registro de {cubierto.ausente.name.split(" ")[0]}, sin fila propia.</p>
+                                              <button type="button" onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === cubierto.ausente.id))} className="mt-2 text-xs font-semibold text-amber-800 dark:text-amber-300 underline">
+                                                Cambiar en {cubierto.ausente.name}
+                                              </button>
+                                            </div>
+                                          )}
                                           {/* 1. Presence Toggle */}
+                                          {!cubierto && (
                                           <div>
                                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
                                             <div className="flex gap-3">
                                               <button
                                                 onClick={() => {
                                                   updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined });
+                                                  // El bloque de horas extras aparece debajo y en el teléfono queda fuera de la vista: se lo trae.
+                                                  setTimeout(() => formScrollRef.current?.querySelector(".ot-container-row")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
                                                 }}
                                                 className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                               >
@@ -3236,6 +3294,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                               </button>
                                             </div>
                                           </div>
+                                          )}
 
                                           {/* 2. Logic based on Presence */}
                                           {isPresent && (
@@ -3271,7 +3330,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                                 <div className="pt-2 pb-1 text-center ot-details-row scroll-mt-[70px]">
                                                   <button onClick={() => setActiveOvertimeModal("wizard")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
                                                     <FontAwesomeIcon icon={faClock} />
-                                                    {data.overtimeHours > 0 ? `${data.overtimeHours} Horas Extras (Regulares)` : "Configurar Horas Extras (Regulares)"}
+                                                    {data.overtimeHours > 0 ? `${data.overtimeHours} Horas Extras` : "Configurar Horas Extras"}
                                                   </button>
                                                 </div>
                                               )}
@@ -3285,6 +3344,13 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                                 <FontAwesomeIcon icon={faInfoCircle} />
                                                 {data.typeId ? `Motivo: ${logTypes.find((t) => t._id === data.typeId)?.name || "Configurado"}` : "Configurar Ausencia"}
                                               </button>
+                                              {/* Quién lo reemplazó y si hizo horas extra: así se entiende sin abrir el motivo. */}
+                                              {data.replacementId && (
+                                                <button onClick={() => setActiveAbsenceModal("wizard")} className="mt-2 text-sm font-bold text-amber-700 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200 flex items-center justify-center w-full gap-2 p-2 border border-amber-300 dark:border-amber-800/60 rounded bg-amber-50 dark:bg-amber-900/15">
+                                                  <FontAwesomeIcon icon={faUsers} />
+                                                  Reemplazo: {employees.find((e) => e.id === data.replacementId)?.name || "—"} · {textoHorasExtra(data.replacementOvertimeHours || 0)}
+                                                </button>
+                                              )}
                                             </div>
                                           )}
 
@@ -3303,12 +3369,14 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                               const histType = histData?.typeId ? logTypes.find((t) => t._id === histData.typeId) : null;
                                               const histReplacement = histData?.replacementId ? employees.find((e) => e.id === histData.replacementId) : null;
                                               const repString = histReplacement ? ` (Reemplazo: ${histReplacement.name}${histData?.replacementOvertimeHours ? ` + ${histData.replacementOvertimeHours}h Extra` : ""})` : "";
+                                              const histCubierto = reemplazoDe(histEmp.id);
 
                                               return (
                                                 <div key={histEmp.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center opacity-75 grayscale-[0.3]">
                                                   <div>
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                       <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
+                                                      {tipoContratoDe(histEmp) && <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">{tipoContratoDe(histEmp)}</span>}
                                                       {renderVacationBadge(histEmp.id, histEmp.name)}
                                                       {(() => {
                                                         const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(histEmp);
@@ -3330,9 +3398,13 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                                         );
                                                       })()}
                                                     </div>
-                                                    <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} mt-0.5`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
+                                                    {histCubierto ? (
+                                                      <div className="text-xs font-medium text-amber-700 dark:text-amber-400 mt-0.5">Reemplazo de {histCubierto.ausente.name} ({histCubierto.motivo}) · {textoHorasExtra(histCubierto.horasExtra)}</div>
+                                                    ) : (
+                                                      <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} mt-0.5`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
+                                                    )}
                                                   </div>
-                                                  <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === histEmp.id))} className="text-xs text-blue-500 hover:underline">
+                                                  <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === (histCubierto ? histCubierto.ausente.id : histEmp.id)))} className="text-xs text-blue-500 hover:underline">
                                                     Editar
                                                   </button>
                                                 </div>
@@ -3743,7 +3815,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                               <div className="pt-2 pb-1 text-center">
                                                 <button onClick={() => setActiveOvertimeModal("fast-entry")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
                                                   <FontAwesomeIcon icon={faClock} />
-                                                  {draftOvertimeHours > 0 ? `${draftOvertimeHours} Horas Extras (Regulares)` : "Configurar Horas Extras (Regulares)"}
+                                                  {draftOvertimeHours > 0 ? `${draftOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
                                                 </button>
                                               </div>
                                               <button onClick={handleAddRecord} disabled={!draftTypeId} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded mt-2 disabled:opacity-50 shadow-sm">
@@ -3881,6 +3953,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                           disabled={(() => {
                             const currentEmp = projectEmployees[wizardIndex];
                             if (!currentEmp) return true;
+                            if (reemplazoDe(currentEmp.id)) return false;
                             const data = wizardData[currentEmp.id];
                             if (!data || data.status === undefined) return true;
                             // If OT is enabled (defined), value MUST be > 0.
@@ -4077,7 +4150,17 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
         isOpen={activeOvertimeModal !== null}
         onClose={handleCloseOvertimeModal}
         zIndex={80}
-        title={`${activeOvertimeModal === "entry-edit" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Regulares)"} - ${(() => {
+        footer={
+          <>
+          <button type="button" onClick={handleCancelOvertime} className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+            Cancelar
+          </button>
+          <button type="button" onClick={() => setActiveOvertimeModal(null)} disabled={isOvertimeTimeIncomplete} className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
+            Listo
+          </button>
+          </>
+        }
+        title={`${activeOvertimeModal === "entry-edit" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras"} - ${(() => {
           if (activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
             return projectEmployees[wizardIndex].name;
           }
@@ -4447,20 +4530,22 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
               })()
             : null}
         {isOvertimeTimeIncomplete && <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.</div>}
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
-          <button type="button" onClick={handleCancelOvertime} className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
-            Cancelar
-          </button>
-          <button type="button" onClick={() => setActiveOvertimeModal(null)} disabled={isOvertimeTimeIncomplete} className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
-            Listo
-          </button>
-        </div>
       </Modal>
 
       <Modal
         isOpen={activeReplacementOvertimeModal !== null}
         onClose={handleCloseReplacementOvertimeModal}
         zIndex={80}
+        footer={
+          <>
+          <button type="button" onClick={handleCancelReplacementOvertime} className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+            Cancelar
+          </button>
+          <button type="button" onClick={() => setActiveReplacementOvertimeModal(null)} disabled={isReplacementOvertimeTimeIncomplete} className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isReplacementOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
+            Listo
+          </button>
+          </>
+        }
         title={`${activeReplacementOvertimeModal === "fast-entry" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Reemplazos)"} - ${(() => {
           if (activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
             const currentEmp = projectEmployees[wizardIndex];
@@ -4702,14 +4787,6 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
               })()
             : null}
         {isReplacementOvertimeTimeIncomplete && <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.</div>}
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
-          <button type="button" onClick={handleCancelReplacementOvertime} className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
-            Cancelar
-          </button>
-          <button type="button" onClick={() => setActiveReplacementOvertimeModal(null)} disabled={isReplacementOvertimeTimeIncomplete} className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isReplacementOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
-            Listo
-          </button>
-        </div>
       </Modal>
 
       {/* Absence Configuration Modal */}
@@ -5493,21 +5570,29 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
               .slice(0, wizardIndex)
               .reverse()
               .map((emp) => {
-                const data = wizardData[emp.id];
-                if (!data) return null;
+                const cubierto = reemplazoDe(emp.id);
+                const data = wizardData[emp.id] || {};
+                if (!wizardData[emp.id] && !cubierto) return null;
                 const isPresent = data.status === "present";
                 const isOvertime = (data.overtimeHours || 0) > 0;
 
                 const repObj = data.replacementId ? employees.find((e) => e.id === data.replacementId) : null;
                 const repStr = repObj ? ` (Reemplazo: ${repObj.name}${data.replacementOvertimeHours ? ` + ${data.replacementOvertimeHours}h Extra` : ""})` : "";
 
-                const typeName = isPresent ? (isOvertime ? `Horas Extra (${data.overtimeHours}h)` : "Presente") : `${logTypes.find((t) => t._id === data.typeId)?.name || "Ausente"}${repStr}`;
+                const typeName = cubierto
+                  ? `Reemplazo de ${cubierto.ausente.name} (${cubierto.motivo}) · ${textoHorasExtra(cubierto.horasExtra)}`
+                  : isPresent
+                    ? isOvertime
+                      ? `Horas Extra (${data.overtimeHours}h)`
+                      : "Presente"
+                    : `${logTypes.find((t) => t._id === data.typeId)?.name || "Ausente"}${repStr}`;
 
                 return (
                   <div key={emp.id} className="bg-white dark:bg-slate-800/50 rounded-xl p-3 flex justify-between items-center border border-slate-100 dark:border-slate-700 shadow-sm">
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{emp.name}</div>
+                        {tipoContratoDe(emp) && <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">{tipoContratoDe(emp)}</span>}
                         {(() => {
                           const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(emp);
                           return (
@@ -5528,7 +5613,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                           );
                         })()}
                       </div>
-                      <div className={`text-xs font-medium ${isPresent ? (isOvertime ? "text-blue-600" : "text-blue-600") : "text-red-500"} mt-0.5`}>{typeName}</div>
+                      <div className={`text-xs font-medium ${cubierto ? "text-amber-700 dark:text-amber-400" : isPresent ? "text-blue-600" : "text-red-500"} mt-0.5`}>{typeName}</div>
                     </div>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-inner ${isPresent ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}>
                       <FontAwesomeIcon icon={isPresent ? faCheck : faTimes} className="text-sm" />
