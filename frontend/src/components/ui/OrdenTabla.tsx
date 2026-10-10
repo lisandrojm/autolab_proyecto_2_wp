@@ -19,6 +19,8 @@ export type Direccion = 'asc' | 'desc';
 export interface Orden {
   columna: string;
   direccion: Direccion;
+  /** Es el orden con el que abre la tabla, no uno elegido: el encabezado no lo resalta. */
+  porDefecto?: boolean;
 }
 
 /** Lo que devuelve un accesor: el valor por el que se ordena la columna, no lo que se dibuja. */
@@ -52,9 +54,11 @@ export function ordenarFilas<T>(items: T[], orden: Orden | null, valor: ((x: T) 
 
 /** Sólo el estado del orden: asc → desc → sin orden. */
 export function useOrden(inicial: Orden | null = null) {
-  const [orden, setOrden] = useState<Orden | null>(inicial);
+  // El inicial queda marcado `porDefecto`: ordena, pero el encabezado no se pinta como si alguien lo
+  // hubiera elegido, y el primer click sobre esa columna arranca el ciclo normal (asc → desc → sin orden).
+  const [orden, setOrden] = useState<Orden | null>(inicial ? { ...inicial, porDefecto: true } : null);
   const alternar = (columna: string) =>
-    setOrden((o) => (!o || o.columna !== columna ? { columna, direccion: 'asc' } : o.direccion === 'asc' ? { columna, direccion: 'desc' } : null));
+    setOrden((o) => (!o || o.porDefecto || o.columna !== columna ? { columna, direccion: 'asc' } : o.direccion === 'asc' ? { columna, direccion: 'desc' } : null));
   return { orden, setOrden, alternar };
 }
 
@@ -82,7 +86,7 @@ export const BotonOrden: React.FC<{
   className?: string;
   title?: string;
 }> = ({ columna, orden, onAlternar, children, className = '', title }) => {
-  const activa = orden?.columna === columna;
+  const activa = orden?.columna === columna && !orden?.porDefecto;
   const icono = !activa ? faSort : orden!.direccion === 'asc' ? faSortUp : faSortDown;
   const ayuda = title || (activa ? (orden!.direccion === 'asc' ? 'Orden ascendente. Click: descendente.' : 'Orden descendente. Click: quitar el orden.') : 'Ordenar por esta columna');
   return (

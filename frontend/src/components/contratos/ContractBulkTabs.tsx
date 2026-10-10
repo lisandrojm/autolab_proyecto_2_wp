@@ -824,20 +824,21 @@ const GRUPO_ENCUADRE_TH_FIN = `${GRUPO_ENCUADRE_TH} border-r-2 border-r-blue-500
 /**
  * Cuántas columnas hay antes de que empiece la banda, en la pestaña de Alta temprana.
  *
- * Son: el check, «Datos ARCA», «Fecha de creación», «Usuario», «Alta / Baja», «Alta ARCA» y «CUIT». Lo usa el colSpan
+ * Son: el check, «Datos ARCA», «Usuario», «Fecha de creación», «Alta / Baja», «Alta ARCA» y «CUIT». Lo usa el colSpan
  * de la fila que rotula el grupo: si se agrega una columna a la izquierda y esto no se actualiza,
  * el rótulo se corre y termina titulando columnas que no son.
  */
 const COLUMNAS_ANTES_DEL_GRUPO = 7;
 /**
- * Cuántas columnas viajan FIJAS a la izquierda: el check, «Datos ARCA», «Fecha de creación» y «Usuario».
+ * Cuántas columnas viajan FIJAS a la izquierda: el check, «Datos ARCA» y «Usuario». («Fecha de
+ * creación» fue fija un tiempo, entre las dos; se sacó de ahí el 10/10/2026: va después de Usuario y scrollea.)
  *
  * La fila que rotula el grupo la usa para que su primer relleno tape exactamente ese bloque y se
  * quede quieto con él. El resto del hueco de la izquierda se calcula contra
  * `COLUMNAS_ANTES_DEL_GRUPO` en vez de ir como un tercer número suelto: así el bloque sigue sumando
  * lo mismo aunque cambie el offset del grupo.
  */
-const COLUMNAS_FIJAS = 4;
+const COLUMNAS_FIJAS = 3;
 /**
  * EL ANCHO DE LA COLUMNA DEL CHECK: 3rem EXACTAS, EN LAS DOS CELDAS.
  *
@@ -1603,16 +1604,8 @@ export const ContractBulkAfipTab: React.FC<{
    * («Completo», «12/13»), en Sin CUIT es un botón que dice «Enviar a Generar Documentos».
    */
   const anchoColFija = filterTipo === 'sin_cuit' ? 'w-60 min-w-[15rem] max-w-[15rem]' : 'w-44 min-w-[11rem] max-w-[11rem]';
-  /** 3rem del check + el ancho de arriba. */
-  const izquierdaColFecha = filterTipo === 'sin_cuit' ? 'left-[18rem]' : 'left-[14rem]';
-  /**
-   * «Fecha de creación», entre «Datos ARCA» y «Usuario»: también fija, porque entre dos fijas una que
-   * scrollea pasaría por debajo de la primera y dejaría la fila del rótulo del grupo sin tapar.
-   * Mismo criterio de ancho exacto que `anchoColFija`.
-   */
-  const anchoColFecha = 'w-32 min-w-[8rem] max-w-[8rem]';
-  /** El offset de «Fecha de creación» + sus 8rem. */
-  const izquierdaColUsuario = filterTipo === 'sin_cuit' ? 'left-[26rem]' : 'left-[22rem]';
+  /** 3rem del check + el ancho de arriba: donde arranca «Usuario», la última fija. */
+  const izquierdaColUsuario = filterTipo === 'sin_cuit' ? 'left-[18rem]' : 'left-[14rem]';
   /** El borde marcado y la sombra van en la ÚLTIMA fija, que ahora es «Usuario». */
   const bordeFinDeFijas = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
 
@@ -2358,14 +2351,15 @@ export const ContractBulkAfipTab: React.FC<{
                     principio para saber a quién se le estaba tocando el contrato. Ver `anchoColFija`
                     para por qué el ancho de la de al lado está fijado a mano.
                   */}
-                  <th className={`sticky ${izquierdaColFecha} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFecha}`} title="Cuándo se cargó el contrato en el sistema">
-                    <BotonOrden columna="fechaCarga" {...ordenProps}>
-                      Fecha de creación
-                    </BotonOrden>
-                  </th>
                   <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>
                     <BotonOrden columna="usuario" {...ordenProps}>
                       Usuario
+                    </BotonOrden>
+                  </th>
+                  {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla. */}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Cuándo se cargó el contrato en WeProdu">
+                    <BotonOrden columna="fechaCarga" {...ordenProps}>
+                      Fecha de creación
                     </BotonOrden>
                   </th>
                   {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
@@ -2533,9 +2527,6 @@ export const ContractBulkAfipTab: React.FC<{
                         </div>
                       )}
                     </td>
-                    <td className={`sticky ${izquierdaColFecha} z-[5] px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColFecha} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      {fechaDeCarga(r.fecha_carga) || <span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>}
-                    </td>
                     {/* «Usuario», la otra columna fija: de quién es la fila. Ver `anchoColFija`. */}
                     <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                       <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
@@ -2543,6 +2534,9 @@ export const ContractBulkAfipTab: React.FC<{
                         <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {fechaDeCarga(r.fecha_carga) || <span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>}
                     </td>
                     {filterTipo === 'sin_cuit' && (
                       <td className="px-4 py-3">
