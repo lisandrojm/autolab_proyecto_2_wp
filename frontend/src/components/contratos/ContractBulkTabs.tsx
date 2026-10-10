@@ -1770,7 +1770,8 @@ export const ContractBulkAfipTab: React.FC<{
    */
   const objetivoValidacion = seleccionadosValidables;
   /**
-   * A quiénes alcanza el borrado masivo: SOLO lo tildado, y solo lo que está validado.
+   * Lo tildado que ya tiene la obra social validada. Hubo un botón para quitarlas en masa (se sacó el
+   * 10/10/2026); queda porque la ayuda de «Validar» lo usa para explicar por qué está en cero.
    *
    * Los dos botones trabajan sobre lo tildado, pero este además exige que ya estén validadas: borrar
    * tira trabajo hecho contra ARCA — cada una de esas obras sociales costó una consulta real al
@@ -1782,44 +1783,6 @@ export const ContractBulkAfipTab: React.FC<{
     [seleccionados, afipCat],
   );
 
-  const [borrandoOs, setBorrandoOs] = useState(false);
-
-  /**
-   * Saca la obra social de los contratos tildados.
-   *
-   * La confirmación dice el NÚMERO y qué queda después, no un «¿estás seguro?». Y dice lo que hace
-   * que sea reversible —el valor lo devuelve ARCA, no se carga a mano— porque sin eso la operación
-   * parece más destructiva de lo que es y nadie la usa; con eso, se entiende que el costo es volver
-   * a correr la validación.
-   */
-  const quitarObrasSocialesEnLote = useCallback(async () => {
-    if (objetivoBorrado.length === 0) return;
-    const r = await sweetAlert.confirm(
-      `¿Quitar ${objetivoBorrado.length} obra${objetivoBorrado.length === 1 ? '' : 's'} social${objetivoBorrado.length === 1 ? '' : 'es'}?`,
-      `Esos contratos vuelven a quedar SIN VALIDAR y no entran en el TXT hasta validarlos de nuevo en ARCA. No se pierde ningún dato propio: el valor lo devuelve el organismo, así que se recupera volviendo a validar.`,
-      'Sí, quitar',
-    );
-    if (!r.isConfirmed) return;
-
-    setBorrandoOs(true);
-    try {
-      const res = await projectsAPI.quitarObrasSocialesLote(
-        objetivoBorrado.map((x) => ({ projectId: x.row.projectId, userId: x.row.userId, contratoId: String(x.row.contratoId || x.row.contractIndex) })),
-      );
-      await load(true);
-      if (res.fallidos.length > 0) {
-        // Se dicen los que NO entraron, no solo cuántos sí: un «listo» sobre un borrado parcial deja
-        // a alguien creyendo que la tabla quedó limpia cuando no.
-        sweetAlert.error('Quedaron algunos sin quitar', `Se quitaron ${res.quitados}. No se pudo con ${res.fallidos.length}: ${res.fallidos[0].motivo}`);
-      } else {
-        sweetAlert.success('Listo', `${res.quitados} volvieron a quedar sin validar.`);
-      }
-    } catch (e: any) {
-      sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudieron quitar las obras sociales.');
-    } finally {
-      setBorrandoOs(false);
-    }
-  }, [objetivoBorrado, load]);
 
   // El TXT se arma con lo seleccionado; si no hay selección, con todo lo filtrado (comodidad).
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
@@ -2079,25 +2042,6 @@ export const ContractBulkAfipTab: React.FC<{
                   son estas 20 o alguna otra cosa, y ese es justamente el dato que decide si apretarlo. */}
               {objetivoValidacion.length > 0 ? `Validar ${objetivoValidacion.length} obras sociales` : 'Validar obras sociales'}
             </button>
-            {/*
-              Quitar en masa. Aparece SOLO con filas tildadas que tengan obra social.
-
-              No está siempre visible a propósito: es la acción destructiva de esta barra y no tiene
-              por qué competir por atención con las tres que se usan todos los días. Cuando hay algo
-              que quitar, aparece; el resto del tiempo no ocupa lugar ni tienta.
-            */}
-            {objetivoBorrado.length > 0 && (
-              <button
-                type="button"
-                onClick={quitarObrasSocialesEnLote}
-                disabled={borrandoOs}
-                title={`Saca la obra social de los ${objetivoBorrado.length} contratos tildados que la tengan. Vuelven a quedar sin validar.`}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50 transition-colors shrink-0"
-              >
-                <FontAwesomeIcon icon={borrandoOs ? faSpinner : faTrash} spin={borrandoOs} className="h-3.5 w-3.5" />
-                Quitar {objetivoBorrado.length} obra{objetivoBorrado.length === 1 ? '' : 's'} social{objetivoBorrado.length === 1 ? '' : 'es'}
-              </button>
-            )}
 
             <button
               onClick={presentarAltasMasivas}
@@ -2114,7 +2058,7 @@ export const ContractBulkAfipTab: React.FC<{
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
-              Generar TXT A.R.C.A{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+              Presentar A.R.C.A{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
             {/* Lo que ya se presentó por URGENTE: una fila por persona, con lo que contestó ARCA. */}
             <button type="button" onClick={() => setHistorialAltasOpen(true)} title="Registro de lo ya presentado por Altas Masivas (URGENTE)" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors shrink-0">
