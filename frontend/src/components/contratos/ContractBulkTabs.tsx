@@ -1083,6 +1083,8 @@ export const ContractBulkAfipTab: React.FC<{
   const [obraSocialSinEmpresa, setObraSocialSinEmpresa] = useState<ContractOverviewRow | null>(null);
   // Explicación de qué son y de dónde salen los datos que exige la columna "Datos ARCA".
   const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
+  /** El ⓘ de una pestaña de empleadora: de cuál se está mirando el resumen ('' = Todas). */
+  const [resumenEmpresa, setResumenEmpresa] = useState<{ id: string; nombre: string } | null>(null);
   // Explicación de qué es la columna "Datos CUIT/CUIL" y por qué gatea Validar / Validar ARCA Masivo.
   const [datosCuitInfoOpen, setDatosCuitInfoOpen] = useState(false);
   // Explicación de por qué "Empresa Contrato" es obligatoria (modal informativo).
@@ -1418,29 +1420,12 @@ export const ContractBulkAfipTab: React.FC<{
   */
 
   /**
-   * Cuántas quedan sin constatar en lo que se está mirando: es el número del botón.
-   *
-   * Se cuenta con `estadoObraSocial`, la misma función que pinta la celda y filtra la columna. Antes
-   * tenía su propia condición y contaba de más —incluía las que no tienen empleadora y las que la
-   * empleadora no registró—, así que el botón decía 26 y el filtro traía 24.
-   */
-  const countSinConstatar = useMemo(
-    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !!x.row.empresaContratoId && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar').length,
-    [rowsPorFiltrosComunes, afipCat],
-  );
-  /**
    * Pendientes que NO se pueden validar todavía porque les falta la empleadora.
    *
    * Se cuentan aparte y se dicen: si entraran en el número del botón, este abriría una tanda que no
    * puede aplicar ninguna. Y si no se mencionaran, el contador diría 0 con 20 contratos pendientes a
    * la vista, que se lee como que el sistema no los ve.
    */
-  /** Total y validadas, para el chip informativo. Misma función que la celda: no pueden discrepar. */
-  const countObraSocialTotal = useMemo(() => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip').length, [rowsPorFiltrosComunes]);
-  const countObraSocialValidadas = useMemo(
-    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && ['validada_arca', 'validada_default'].includes(estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)))).length,
-    [rowsPorFiltrosComunes, afipCat],
-  );
   const countSinEmpleadora = useMemo(
     () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !x.row.empresaContratoId && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar').length,
     [rowsPorFiltrosComunes, afipCat],
@@ -1451,8 +1436,6 @@ export const ContractBulkAfipTab: React.FC<{
   const countAlta = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
   const countCuit = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'constancia_cuit' && !noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
   const countSinCuit = rowsPorFiltrosComunes.filter((x) => noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
-  const countCompletos = impositivoRows.filter((x) => x.result.completo).length;
-  const countIncompletos = impositivoRows.length - countCompletos;
 
   // Contador de "Firma digital": los contratos en el estado de envío de documentación, con los mismos
   // filtros de la barra que aplican los otros dos, para que los tres números sean comparables.
@@ -1517,6 +1500,39 @@ export const ContractBulkAfipTab: React.FC<{
     }
     return { porId, sinAsignar, total: base.length };
   }, [impositivoRows, matchesCommonFilters, pasaFiltroTramite]);
+
+  /**
+   * EL RESUMEN DE CADA PESTAÑA DE EMPLEADORA (el ⓘ de al lado): completos e incompletos para el TXT,
+   * y obras sociales validadas y sin validar. Mismo corte que el número de la pestaña (`conteoPorEmpresa`):
+   * los filtros de la barra sí, el de empresa no. Antes eran badges fijos arriba de la tabla que
+   * contaban lo que se estaba mirando; acá cada empleadora tiene el suyo, y «Todas» el total.
+   */
+  const resumenPorEmpresa = useMemo(() => {
+    const vacio = () => ({ total: 0, completos: 0, incompletos: 0, osTotal: 0, osValidadas: 0, osSinValidar: 0, osSinEmpleadora: 0 });
+    const porId = new Map<string, ReturnType<typeof vacio>>([['', vacio()]]);
+    const base = impositivoRows.filter((x) => matchesCommonFilters(x.row) && pasaFiltroTramite(x));
+    for (const x of base) {
+      const r = x.row;
+      const claves = ['', r.empresaContratoId ? String(r.empresaContratoId) : null].filter((k): k is string => k !== null);
+      for (const k of claves) {
+        if (!porId.has(k)) porId.set(k, vacio());
+        const t = porId.get(k)!;
+        t.total++;
+        if (x.result.completo) t.completos++;
+        else t.incompletos++;
+        if (r._tipo === 'alta_temprana_afip') {
+          t.osTotal++;
+          const estado = estadoObraSocial(r, resolveAfipValues(r, afipCat));
+          if (estado === 'validada_arca' || estado === 'validada_default') t.osValidadas++;
+          else if (estado === 'sin_validar') {
+            t.osSinValidar++;
+            if (!r.empresaContratoId) t.osSinEmpleadora++;
+          }
+        }
+      }
+    }
+    return porId;
+  }, [impositivoRows, matchesCommonFilters, pasaFiltroTramite, afipCat]);
 
   // Opciones de los selects del filtro avanzado. Salen de `impositivoRows` y no de `rows` porque en
   // la consulta también vienen los contratos en "Envío de documentación" (para el contador de Firma):
@@ -1981,12 +1997,21 @@ export const ContractBulkAfipTab: React.FC<{
           <button onClick={() => setFilterEmpresaId('')} className={empresaTabClass(filterEmpresaId === '')}>
             Todas ({conteoPorEmpresa.total})
           </button>
+          <button type="button" onClick={() => setResumenEmpresa({ id: '', nombre: 'Todas las empleadoras' })} title="Completos, incompletos y obras sociales de todas las empleadoras" className="mr-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
+            <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+          </button>
           {/* Sin pestaña «Sin asignar» (10/10/2026): los contratos sin empleadora se ven en «Todas», y la
               empleadora se elige fila por fila. El valor `SIN_EMPRESA` sigue existiendo por el filtro. */}
           {empresaOptions.map((e) => (
-            <button key={e.value} onClick={() => setFilterEmpresaId(e.value)} className={empresaTabClass(filterEmpresaId === e.value)}>
-              {e.label} ({conteoPorEmpresa.porId.get(e.value) || 0})
-            </button>
+            <React.Fragment key={e.value}>
+              <button onClick={() => setFilterEmpresaId(e.value)} className={empresaTabClass(filterEmpresaId === e.value)}>
+                {e.label} ({conteoPorEmpresa.porId.get(e.value) || 0})
+              </button>
+              {/* El ⓘ de la pestaña: completos, incompletos y obras sociales de ESA empleadora. */}
+              <button type="button" onClick={() => setResumenEmpresa({ id: e.value, nombre: e.label })} title={`Completos, incompletos y obras sociales de ${e.label}`} className="mr-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
+                <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+              </button>
+            </React.Fragment>
           ))}
         </div>
       )}
@@ -2022,42 +2047,9 @@ export const ContractBulkAfipTab: React.FC<{
               </LinkSiPuede>
             </div>
           )}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Contratos con todos los datos ARCA cargados">
-              <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-              {countCompletos} completos
-            </span>
-            <button onClick={() => setSoloIncompletos((v) => !v)} className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${soloIncompletos ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30'}`} title="Mostrar solo los contratos con datos ARCA faltantes">
-              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-              {countIncompletos} incompletos
-            </button>
-            {/*
-              * Obras sociales: INFORMATIVO, no una acción.
-              *
-              * Había acá un botón que arrancaba la corrida sobre "todos los pendientes del filtro".
-              * Se sacó: la validación es por selección —se tildan las filas y se usa «Validar obras
-              * sociales»—, y tener dos botones que hacen lo mismo con conjuntos distintos hacía que
-              * no se supiera cuál se estaba por mandar. Acá solo se dice cómo viene la cosa.
-              */}
-            {countObraSocialTotal > 0 && (
-              <span
-                title={`${countObraSocialValidadas} con la obra social validada contra ARCA · ${countSinConstatar} sin validar${
-                  countSinEmpleadora > 0 ? ` (de esas, ${countSinEmpleadora} esperan que se les elija la empleadora)` : ''
-                }. «Validar obras sociales» agarra solo lo que tildes: las que ya están validadas no se vuelven a consultar.`}
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
-              >
-                <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
-                Obras sociales:
-                <span className="text-green-700 dark:text-green-400">{countObraSocialValidadas} validadas</span>
-                <span aria-hidden className="text-gray-400">·</span>
-                <span className={countSinConstatar + countSinEmpleadora > 0 ? 'text-amber-700 dark:text-amber-400' : ''}>{countSinConstatar + countSinEmpleadora} sin validar</span>
-              </span>
-            )}
-          </div>
-
           {/* El circuito ARCA, en el orden en que se hace: validar → TXT. La asignación masiva de
               Empresa, Convenio y Categoría y los ⓘ de cada botón se sacaron: cargaban la pantalla. */}
-          <div className="flex flex-wrap items-center justify-start gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
 
             <button
               type="button"
@@ -2833,6 +2825,63 @@ export const ContractBulkAfipTab: React.FC<{
       {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => load(true)} />}
 
       {historialAltasOpen && <HistorialAltasArca isOpen={historialAltasOpen} onClose={() => setHistorialAltasOpen(false)} empresaId={empresaDeLaPestana?._id} />}
+
+      {resumenEmpresa && (() => {
+        const r = resumenPorEmpresa.get(resumenEmpresa.id) || { total: 0, completos: 0, incompletos: 0, osTotal: 0, osValidadas: 0, osSinValidar: 0, osSinEmpleadora: 0 };
+        const fila = (icono: typeof faCheck, clase: string, numero: number, texto: string, nota?: string) => (
+          <li className="flex items-start gap-3 py-2">
+            <span className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${clase}`}>
+              <FontAwesomeIcon icon={icono} className="h-3.5 w-3.5" />
+            </span>
+            <div>
+              <p className="text-sm text-gray-800 dark:text-gray-100">
+                <span className="text-xl font-bold mr-1.5">{numero}</span>
+                {texto}
+              </p>
+              {nota && <p className="text-xs text-gray-500 dark:text-gray-400">{nota}</p>}
+            </div>
+          </li>
+        );
+        return (
+          <Modal isOpen onClose={() => setResumenEmpresa(null)} title={resumenEmpresa.nombre} size="sm" zIndex={80}>
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {r.total} contrato(s) en la bandeja de Alta temprana de ARCA{resumenEmpresa.id ? ' de esta empleadora' : ''}, con los filtros de la barra aplicados.
+              </p>
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                {fila(faCheck, 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', r.completos, 'completos', 'Tienen todos los datos para el TXT.')}
+                {fila(faTriangleExclamation, 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', r.incompletos, 'incompletos', 'Les falta algún dato ARCA; el badge de cada fila dice cuál.')}
+                {fila(faStethoscope, 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', r.osValidadas, 'obras sociales validadas', 'Constatadas contra ARCA, o la del convenio cuando ARCA dijo que no figura.')}
+                {fila(
+                  faStethoscope,
+                  r.osSinValidar > 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                  r.osSinValidar,
+                  'obras sociales sin validar',
+                  r.osSinEmpleadora > 0 ? `${r.osSinEmpleadora} de ellas esperan que se les elija la empleadora. «Validar obras sociales» toma sólo las filas que tildes.` : '«Validar obras sociales» toma sólo las filas que tildes; las validadas no se vuelven a consultar.',
+                )}
+              </ul>
+              {r.incompletos > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterEmpresaId(resumenEmpresa.id);
+                    setSoloIncompletos(true);
+                    setResumenEmpresa(null);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                >
+                  Ver sólo los {r.incompletos} incompletos
+                </button>
+              )}
+              {soloIncompletos && (
+                <button type="button" onClick={() => { setSoloIncompletos(false); setResumenEmpresa(null); }} className="w-full px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800">
+                  Volver a ver todos
+                </button>
+              )}
+            </div>
+          </Modal>
+        );
+      })()}
 
       {datosAfipInfoOpen && (
         <Modal isOpen={datosAfipInfoOpen} onClose={() => setDatosAfipInfoOpen(false)} title="Datos ARCA" size="sm" zIndex={80}>
