@@ -246,6 +246,23 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
     else setAncla(originalNumero === null ? null : anclaDesdeJornada(originalNumero, jornadas, mesesEq));
   };
 
+  /*
+    DEBAJO DEL TÍTULO, POR CUÁNTAS JORNADAS SE MULTIPLICA: el mensual usa las jornadas del tipo de
+    contrato (30 en «Plazo fijo», 22 en «Jornada»), no los días del mes; el total, las jornadas reales
+    del contrato. Con los dos números a la vista se entiende por qué un mes de 27 jornadas trabajadas
+    muestra un mensual de 30 y un total de 27.
+  */
+  const jornadasDe = (unidad: UnidadImporte): string | null => {
+    if (sinJornadas) return null;
+    if (unidad === "mes") return Number(jornadasDelTipo) > 0 ? `× ${jornadasDelTipo} jornadas del tipo de contrato` : indeterminado ? `× ${jornadas} jornadas` : "prorrateado por los días hábiles del mes";
+    if (unidad === "total") return indeterminado ? null : `× ${jornadas} ${jornadas === 1 ? "jornada" : "jornadas"} del contrato`;
+    if (unidad === "semana") return diasSemana > 0 ? `× ${diasSemana} ${diasSemana === 1 ? "día" : "días"} por semana` : null;
+    return null;
+  };
+  const subRotulo = (unidad: UnidadImporte) => {
+    const texto = jornadasDe(unidad);
+    return texto ? <span className="block text-[10px] font-normal normal-case tracking-normal text-slate-400 dark:text-slate-500">{texto}</span> : null;
+  };
   const campo = (unidad: UnidadImporte, rotulo: string, deshabilitado: boolean, ayuda: React.ReactNode, clase: string, debajo?: React.ReactNode) => (
     <div className="space-y-1">
       <label className={claseEtiqueta}>
@@ -253,6 +270,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
         {rotulo}
         {infoEnRotulo?.(rotulo, ayuda)}
       </label>
+      {subRotulo(unidad)}
       {adornoCampo ? (
         <div className="relative">
           {adornoCampo}
@@ -307,6 +325,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
           {rotulo}
           {infoEnRotulo?.(rotulo, ayudaNeto)}
         </label>
+        {subRotulo(unidad)}
         {adornoCampo ? (
           <div className="relative">
             {adornoCampo}
