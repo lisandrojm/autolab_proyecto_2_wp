@@ -328,7 +328,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
           {esCoordinador && <span className="shrink-0 rounded border border-amber-300 bg-amber-100 px-1 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Supervisor</span>}
         </div>
         {/* El tipo de contrato en su propia línea: con las fechas y el estado en la misma se truncaba. */}
-        {m.nombreContrato && <p className="truncate text-[11px] font-medium text-slate-700 dark:text-slate-300">{m.nombreContrato}</p>}
+        {m.nombreContrato && <p className="truncate text-[10px] font-bold uppercase tracking-wider text-gray-500">{m.nombreContrato}</p>}
         <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
           Alta: {fechaContrato(m.fechaAlta)} · Baja: {m.fechaBaja ? fechaContrato(m.fechaBaja) : "—"}
           {m.estadoContrato ? ` · ${m.estadoContrato}` : ""}
