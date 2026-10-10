@@ -2114,7 +2114,7 @@ export const ContractBulkAfipTab: React.FC<{
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
-              Generar TXT URGENTE{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+              Generar TXT A.R.C.A{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
             {/* Lo que ya se presentó por URGENTE: una fila por persona, con lo que contestó ARCA. */}
             <button type="button" onClick={() => setHistorialAltasOpen(true)} title="Registro de lo ya presentado por Altas Masivas (URGENTE)" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors shrink-0">
