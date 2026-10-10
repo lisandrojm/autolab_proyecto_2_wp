@@ -198,23 +198,26 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
   }, [ancla, jornadas, mesesEq]);
 
   /** El campo que se está escribiendo muestra lo tipeado: si no, el recálculo lo reescribiría en cada tecla. */
-  const [enEdicion, setEnEdicion] = useState<{ unidad: UnidadImporte; texto: string } | null>(null);
+  const [enEdicion, setEnEdicion] = useState<{ unidad: UnidadImporte; texto: string; neto?: boolean } | null>(null);
   const valorDe: Record<UnidadImporte, number | null> = { jornada: importes.jornada, semana: importes.semana, mes: importes.mensual, total: indeterminado ? null : importes.total };
   // Dos decimales siempre, y sólo al mostrar.
   const importeEn = (unidad: UnidadImporte) => {
-    if (enEdicion?.unidad === unidad) return enEdicion.texto;
+    if (enEdicion?.unidad === unidad && !enEdicion.neto) return enEdicion.texto;
     const v = valorDe[unidad];
     return v === null || !Number.isFinite(v) ? "" : (v * vista(unidad)).toFixed(2);
   };
-  const cambiarImporte = (unidad: UnidadImporte, texto: string) => {
+  const cambiarImporte = (unidad: UnidadImporte, texto: string, enNeto = false) => {
     editado.current = true;
     setModificado(true);
-    setEnEdicion({ unidad, texto });
+    setEnEdicion({ unidad, texto, neto: enNeto });
     const valor = Number(texto);
     const vacio = texto === "" || !Number.isFinite(valor);
+    // Lo escrito puede venir en neto (el campo neto, o todo en neto con `soloNeto`): se pasa a bruto
+    // con la proporción de la escala antes de anclar, porque el ancla y la jornada guardada son brutas.
+    const factor = enNeto && netoSobreBruto ? netoSobreBruto : vista(unidad);
     if (unidad === "mes" || unidad === "total") {
       // El total puede estar a la vista en neto: el ancla siempre es bruto.
-      setAncla(vacio ? null : { unidad: unidad === "mes" ? "mensual" : "total", valor: valor / vista(unidad) });
+      setAncla(vacio ? null : { unidad: unidad === "mes" ? "mensual" : "total", valor: valor / factor });
       if (vacio) {
         jornadaEscrita.current = "";
         onValorJornada("");
@@ -224,7 +227,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
     if (unidad === "semana" && !vacio && diasSemana <= 0) return;
     // Jornada o semana: se avisa la jornada y el efecto de arriba la toma como nueva, anclando en su mensual.
     // Lo que se ve puede estar en neto (`soloNeto`): la jornada que se avisa siempre es bruta.
-    const nueva = vacio ? "" : unidad === "semana" ? String(valor / vista(unidad) / diasSemana) : vista(unidad) === 1 ? texto : String(valor / vista(unidad));
+    const nueva = vacio ? "" : unidad === "semana" ? String(valor / factor / diasSemana) : factor === 1 ? texto : String(valor / factor);
     tipeoPendiente.current = nueva !== valorJornada;
     onValorJornada(nueva);
   };
@@ -286,15 +289,16 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
   const sinJornadas = jornadas <= 0;
 
   /*
-    CADA IMPORTE, EN BRUTO Y EN NETO, de a pares (pedido del 09/10/2026): jornada, semana y mensual. El
-    bruto es el que se edita —es lo que se guarda—; el neto se calcula con la proporción neto/bruto de
-    la escala y es de sólo lectura. El total del contrato va sólo en neto: es lo que cobra la persona.
+    CADA IMPORTE, EN BRUTO Y EN NETO, de a pares (pedido del 09/10/2026): jornada, semana y mensual. Los
+    dos se editan (pedido del 10/10/2026): escribir el neto recalcula el bruto con la proporción
+    neto/bruto de la escala, y al revés. Lo que se guarda sigue siendo el bruto por jornada. El total
+    del contrato va sólo en neto: es lo que cobra la persona.
   */
   const conNeto = Number(proporcionNeto) > 0;
-  const textoNeto = (que: string) => `${que} bruto menos los descuentos de ley (queda el ${(Number(proporcionNeto) * 100).toLocaleString("es-AR", { maximumFractionDigits: 2 })} %, como en la escala). Se calcula solo.`;
-  const campoNeto = (unidad: UnidadImporte, rotulo: string, que: string) => {
+  const textoNeto = (que: string) => `${que} bruto menos los descuentos de ley (queda el ${(Number(proporcionNeto) * 100).toLocaleString("es-AR", { maximumFractionDigits: 2 })} %, como en la escala). Si lo cambiás, el bruto se recalcula.`;
+  const campoNeto = (unidad: UnidadImporte, rotulo: string, que: string, deshabilitado: boolean) => {
     const v = valorDe[unidad];
-    const valor = v === null || !Number.isFinite(v) ? "" : (v * Number(proporcionNeto)).toFixed(2);
+    const valor = enEdicion?.unidad === unidad && enEdicion.neto ? enEdicion.texto : v === null || !Number.isFinite(v) ? "" : (v * Number(proporcionNeto)).toFixed(2);
     const ayudaNeto = ayuda(textoNeto(que));
     return (
       <div className="space-y-1">
@@ -306,10 +310,10 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
         {adornoCampo ? (
           <div className="relative">
             {adornoCampo}
-            <CampoImporte valor={valor} onCambio={() => {}} disabled className={claseCampo} />
+            <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseCampo} />
           </div>
         ) : (
-          <CampoImporte valor={valor} onCambio={() => {}} disabled className={claseCampo} />
+          <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseCampo} />
         )}
         {!infoEnRotulo && ayudaNeto}
       </div>
@@ -354,11 +358,11 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
       ) : (
       <>
       {/* El neto a la izquierda y el bruto a la derecha: el neto es el que se mira; el bruto, el que se guarda. */}
-      {conNeto && campoNeto("jornada", "Importe por jornada neto", "El importe por jornada")}
+      {conNeto && campoNeto("jornada", "Importe por jornada neto", "El importe por jornada", sinJornadas)}
       {campo("jornada", conNeto ? "Importe por jornada bruto" : "Importe por Jornada", sinJornadas, sinJornadas ? ayuda(TEXTO_SIN_JORNADAS) : ayudaJornada ?? ayuda("Total ÷ jornadas del contrato. Varía según los días hábiles de cada mes."), claseCampo)}
-      {conNeto && campoNeto("semana", "Importe por semana neto", "El importe por semana")}
+      {conNeto && campoNeto("semana", "Importe por semana neto", "El importe por semana", sinJornadas || diasSemana <= 0)}
       {campo("semana", conNeto ? "Importe por semana bruto" : "Importe por Semana", sinJornadas || diasSemana <= 0, ayuda(sinJornadas ? TEXTO_SIN_JORNADAS : diasSemana > 0 ? `Jornada × ${diasSemana} ${diasSemana === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Marcá los días que trabaja para calcularlo."), claseCampo)}
-      {conNeto && campoNeto("mes", "Importe mensual neto", "El importe mensual")}
+      {conNeto && campoNeto("mes", "Importe mensual neto", "El importe mensual", mesesEq <= 0 || sinJornadas)}
       {campo("mes", conNeto ? "Importe mensual bruto" : "Importe mensual", mesesEq <= 0 || sinJornadas, ayuda(mesesEq > 0 && !sinJornadas ? (Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadasDelTipo} jornadas por mes del tipo de contrato. Si lo cambiás, se recalculan los demás.` : indeterminado ? `Un mes completo: jornada × ${jornadas} jornadas. Si lo cambiás, se recalculan los demás.` : "Se prorratea según los días hábiles reales de cada mes del período. Si lo cambiás, se recalculan los demás.") : TEXTO_SIN_JORNADAS), claseCampo)}
       </>
       )}
