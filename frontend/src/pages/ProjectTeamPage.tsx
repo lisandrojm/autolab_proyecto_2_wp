@@ -5492,12 +5492,29 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           </thead>
                           {/* Sin `divide-y`: en el modelo separado los bordes de `<tr>` no se
                               dibujan. La línea entre filas la pone cada celda (ver `renderUserRow`). */}
-                          <tbody>{rows.map((u) => renderUserRow(u))}</tbody>
+                          <tbody>
+                            {/* Primera carga: sin filas y buscando. Con los encabezados solos la tabla parecía colgada. */}
+                            {rows.length === 0 && teamFetching ? (
+                              <tr>
+                                <td colSpan={99} className="py-16">
+                                  <LoadingSpinner message="Cargando equipo..." />
+                                </td>
+                              </tr>
+                            ) : (
+                              rows.map((u) => renderUserRow(u))
+                            )}
+                          </tbody>
                         </table>
                       </div>
                     </div>
                   ) : (
+                    rows.length === 0 && teamFetching ? (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 py-16">
+                      <LoadingSpinner message="Cargando equipo..." />
+                    </div>
+                    ) : (
                     <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>{rows.map((u) => renderUserCard(u))}</div>
+                    )
                   );
                 })()}
 
