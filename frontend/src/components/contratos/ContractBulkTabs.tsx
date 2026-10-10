@@ -1814,16 +1814,14 @@ export const ContractBulkAfipTab: React.FC<{
 
   // El TXT se arma con lo seleccionado; si no hay selección, con todo lo filtrado (comodidad).
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
-  // `generarTxt` le agrega el CUIT de la empleadora y la fecha: queda `altas_30710295839_20260817.txt`.
-  const nombreArchivoTxt = 'altas';
   /*
-    LAS DOS CORRIDAS AUTOMÁTICAS DE ALTA EN ARCA.
-
-    «Generar TXT Masivo (ARCA)» baja el archivo de 130 (como siempre, de respaldo) y lo presenta por
-    Carga Masiva. «URGENTE» arma registros de 85 —otro formato: informa puesto, convenio y situación
-    de revista— y los pega en Altas Masivas, máximo 9. Las dos corren en el SERVIDOR (ver
+    LA CORRIDA AUTOMÁTICA DE ALTA EN ARCA: «URGENTE» arma registros de 85 —informa puesto, convenio y
+    situación de revista— y los pega en Altas Masivas, por tandas de 9. Corre en el SERVIDOR (ver
     `CorridaAltasArca` y `server/src/services/arca/corridaAltas.ts`), que vuelve a cotejar cada
     registro contra la base antes de mandarlo.
+
+    El botón de Carga Masiva (archivo de 130) se sacó el 10/10/2026: el URGENTE es inmediato y queda
+    como único camino. El motor de Carga Masiva sigue en el servidor por si hiciera falta volver.
 
     SOLO DESDE LA PESTAÑA DE UNA EMPRESA. Un TXT es de UNA empleadora y se presenta logueado con su
     CUIT: desde «Todas» o «Sin asignar» no hay a nombre de quién presentarlo.
@@ -1869,19 +1867,6 @@ export const ContractBulkAfipTab: React.FC<{
 
   const personaDe = (row: ImpositivoRow) => ({ nombre: row.userName || '', cuil: String(row.cuit || '').replace(/\D/g, '') });
 
-  /** Carga Masiva: baja el TXT de 130 (respaldo) y abre la corrida que lo presenta. */
-  const presentarCargaMasiva = () => {
-    if (!empresaDeLaPestana) return;
-    const items = fuenteTxt.filter((x) => x.result.completo).map((x) => ({ x, registro: buildAltaRecord(x.row, afipCat) })).filter((y): y is { x: (typeof fuenteTxt)[number]; registro: string } => !!y.registro);
-    if (!generarTxt(fuenteTxt, nombreArchivoTxt)) return;
-    setLoteAltas({
-      modo: 'carga_masiva',
-      empresa: { _id: empresaDeLaPestana._id, razonSocial: empresaDeLaPestana.razonSocial, cuit: String(empresaDeLaPestana.cuit || '').replace(/\D/g, '') },
-      personas: items.map((y) => personaDe(y.x.row)),
-      items: items.map((y) => ({ userProjectId: y.x.row._id, contractIndex: y.x.row.contractIndex, registro: y.registro })),
-    });
-    setCorridaAltasOpen(true);
-  };
 
   /** URGENTE: registros de 85, al portapapeles, y la corrida que los pega en Altas Masivas. */
   const presentarAltasMasivas = async () => {
@@ -2133,15 +2118,6 @@ export const ContractBulkAfipTab: React.FC<{
               </button>
             )}
 
-            <button
-              onClick={presentarCargaMasiva}
-              disabled={!empresaDeLaPestana || fuenteTxt.every((x) => !x.result.completo)}
-              title={bloqueoPorValidacion || motivoSinEmpresa || (seleccionados.length > 0 ? 'Genera el TXT con los contratos seleccionados (solo los completos) y lo presenta en ARCA por Carga Masiva' : 'Genera el TXT con los contratos completos del listado y lo presenta en ARCA por Carga Masiva (o marcá algunos con el check)')}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-            >
-              <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
-              Generar TXT Masivo (ARCA){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
-            </button>
             <button
               onClick={presentarAltasMasivas}
               disabled={!empresaDeLaPestana || completosTxt === 0}
