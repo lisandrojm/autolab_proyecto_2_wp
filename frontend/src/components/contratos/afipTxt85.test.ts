@@ -539,7 +539,7 @@ describe("puesto desempeñado elegido en el contrato", () => {
     assert.ok(!/etiqueta: "Puesto desempeñado", valor: "en blanco"/.test(datosArca), "ya no figura «en blanco»");
     assert.match(configurar, /<CampoPuestoConDefaultDelServer\s+rolFrameId=\{wizardData\.rol_frame_id\}\s+categoriaSatId=\{wizardData\.categoria_sat_id\}\s+empresaId=\{wizardData\.empresaContratoId\}/);
     assert.match(configurar, /puestoDesempenado: wizardData\.puestoDesempenado \|\| "",|puestoDesempenado: wizardData\.puestoDesempenado \|\| '',/);
-    // Un contrato nuevo no arrastra la excepción del anterior.
-    assert.match(configurar, /puestoDesempenado: esContratoNuevo \? /);
+    // Un contrato nuevo no arrastra la excepción del anterior (salvo que sea una renovación).
+    assert.match(configurar, /puestoDesempenado: esContratoNuevo (&& !renovar )?\? /);
   });
 });
