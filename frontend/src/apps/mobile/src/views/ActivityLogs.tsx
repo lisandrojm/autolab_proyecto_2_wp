@@ -789,6 +789,12 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
   const [activeOvertimeModal, setActiveOvertimeModal] = useState<"wizard" | "fast-entry" | null>(null);
   const [activeReplacementOvertimeModal, setActiveReplacementOvertimeModal] = useState<"wizard" | "fast-entry" | null>(null);
   const [activeAbsenceModal, setActiveAbsenceModal] = useState<"wizard" | "fast-entry" | null>(null);
+  /*
+    EL MOTIVO DE AUSENCIA SE ELIGE EN UN MODAL, no en un `<select>`: en el teléfono el desplegable
+    nativo es chico, se abre fuera del modal y dejaba un recuadro blanco. Una lista de botones grandes
+    se toca mejor. Acá queda abierto el selector con sus opciones y qué hacer con la elegida.
+  */
+  const [selectorMotivo, setSelectorMotivo] = useState<{ actual: string; opciones: RequestConfig[]; elegir: (id: string) => void } | null>(null);
   const [showProcessedHistory, setShowProcessedHistory] = useState(false);
 
   const [wizardIndex, setWizardIndex] = useState<number>(-1); // -1: Not started, 0+: Employee Index
@@ -4789,6 +4795,30 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
         {isReplacementOvertimeTimeIncomplete && <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.</div>}
       </Modal>
 
+      {/* El selector de motivo: una lista de botones grandes, por encima del modal de ausencia. */}
+      <Modal isOpen={!!selectorMotivo} onClose={() => setSelectorMotivo(null)} title="Motivo de ausencia" zIndex={70}>
+        <div className="space-y-2 pb-2">
+          {(selectorMotivo?.opciones || []).map((t) => {
+            const elegido = t._id === selectorMotivo?.actual;
+            return (
+              <button
+                key={t._id}
+                type="button"
+                onClick={() => {
+                  selectorMotivo?.elegir(t._id);
+                  setSelectorMotivo(null);
+                }}
+                className={`w-full p-3 rounded-lg border text-left text-base font-semibold flex items-center justify-between gap-2 transition-colors ${elegido ? "border-blue-500 bg-blue-600 text-white" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 active:bg-slate-100 dark:active:bg-slate-700"}`}
+              >
+                <span>{t.name}</span>
+                {elegido && <FontAwesomeIcon icon={faCheck} />}
+              </button>
+            );
+          })}
+          {selectorMotivo && selectorMotivo.opciones.length === 0 && <p className="text-sm text-slate-500">No hay motivos de ausencia configurados.</p>}
+        </div>
+      </Modal>
+
       {/* Absence Configuration Modal */}
       <Modal isOpen={activeAbsenceModal !== null} onClose={() => setActiveAbsenceModal(null)} title="Configurar Ausencia" zIndex={60}>
         {activeAbsenceModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]
@@ -4800,27 +4830,26 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                 <div className="space-y-4 pt-2 pb-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
-                    <select
-                      className="w-full p-3 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      value={data?.typeId || ""}
-                      onChange={(e) => {
-                        const newId = e.target.value;
-                        const type = logTypes.find((t) => t._id === newId);
-                        updateWizardEntry(currentEmp.id, {
-                          typeId: newId,
-                          replacementId: type?.requiresReplacement ? data.replacementId : undefined,
-                        });
-                      }}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectorMotivo({
+                          actual: data?.typeId || "",
+                          opciones: logTypes.filter((t) => !t.name.toLowerCase().includes("horas extra") && t.isActive),
+                          elegir: (newId) => {
+                            const type = logTypes.find((t) => t._id === newId);
+                            updateWizardEntry(currentEmp.id, {
+                              typeId: newId,
+                              replacementId: type?.requiresReplacement ? data.replacementId : undefined,
+                            });
+                          },
+                        })
+                      }
+                      className={`w-full p-3 rounded border text-left flex items-center justify-between gap-2 focus:ring-2 focus:ring-blue-500 ${selectedType ? "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold" : "border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-bold"}`}
                     >
-                      <option value="">Seleccionar motivo...</option>
-                      {logTypes
-                        .filter((t) => !t.name.toLowerCase().includes("horas extra") && t.isActive)
-                        .map((t) => (
-                          <option key={t._id} value={t._id}>
-                            {t.name}
-                          </option>
-                        ))}
-                    </select>
+                      <span>{selectedType?.name || "Elegir motivo…"}</span>
+                      <FontAwesomeIcon icon={faChevronRight} className="text-xs opacity-70" />
+                    </button>
                   </div>
 
                   {selectedType?.requiresReplacement && (
@@ -4910,26 +4939,25 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                   <div className="space-y-4 pt-2 pb-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
-                      <select
-                        className="w-full p-3 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                        value={draftTypeId}
-                        onChange={(e) => {
-                          handleTypeChange(e as any);
-                        }}
-                      >
-                        <option value="">Seleccionar motivo...</option>
-                        {logTypes
-                          .filter((t) => {
-                            const canShow = t.visibility === "all" || (t.visibility === "specific" && selectedProjectId && t.allowedProjectIds?.includes(selectedProjectId));
-                            if (!canShow) return false;
-                            return !t.name.toLowerCase().includes("horas extra");
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectorMotivo({
+                            actual: draftTypeId,
+                            opciones: logTypes.filter((t) => {
+                              const canShow = t.visibility === "all" || (t.visibility === "specific" && selectedProjectId && t.allowedProjectIds?.includes(selectedProjectId));
+                              if (!canShow) return false;
+                              return !t.name.toLowerCase().includes("horas extra");
+                            }),
+                            // `handleTypeChange` lee el id de un evento de select: se le arma uno igual.
+                            elegir: (newId) => handleTypeChange({ target: { value: newId } } as any),
                           })
-                          .map((t) => (
-                            <option key={t._id} value={t._id}>
-                              {t.name}
-                            </option>
-                          ))}
-                      </select>
+                        }
+                        className={`w-full p-3 rounded border text-left flex items-center justify-between gap-2 focus:ring-2 focus:ring-blue-500 ${draftTypeId ? "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold" : "border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-bold"}`}
+                      >
+                        <span>{logTypes.find((t) => t._id === draftTypeId)?.name || "Elegir motivo…"}</span>
+                        <FontAwesomeIcon icon={faChevronRight} className="text-xs opacity-70" />
+                      </button>
                     </div>
 
                     {selectedType?.requiresReplacement && (
