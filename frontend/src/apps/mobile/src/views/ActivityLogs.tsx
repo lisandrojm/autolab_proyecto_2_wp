@@ -57,6 +57,8 @@ interface EmployeeOption {
     areaShiftAssignments?: { areaId: string; shiftIds: string[] }[];
     /** Nombre del tipo de contrato que rige hoy en el proyecto (`nombre_contrato`). */
     nombreContrato?: string;
+    /** Fecha de inicio del contrato que rige hoy (YYYY-MM-DD): es lo que ordena el reporte. */
+    contractStartDate?: string;
   }>;
 }
 
@@ -1083,6 +1085,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                   contractStartTime: activeContract?.hora_inicio || undefined,
                   contractEndTime: activeContract?.hora_fin || undefined,
                   nombreContrato: activeContract?.nombre_contrato || undefined,
+                  contractStartDate: String(activeContract?.fecha_alta_contrato || "").slice(0, 10) || undefined,
                   areaId: p.areaId || activeContract?.areaId || undefined,
                   shiftId: p.shiftId || activeContract?.shiftId || undefined,
                   areaShiftAssignments: normalizeAreaShiftAssignments(activeContract?.areaShiftAssignments),
@@ -1359,6 +1362,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                       contractStartTime: activeContract?.hora_inicio || undefined,
                       contractEndTime: activeContract?.hora_fin || undefined,
                   nombreContrato: activeContract?.nombre_contrato || undefined,
+                  contractStartDate: String(activeContract?.fecha_alta_contrato || "").slice(0, 10) || undefined,
                       areaId: p.areaId || activeContract?.areaId || undefined,
                       shiftId: p.shiftId || activeContract?.shiftId || undefined,
                       areaShiftAssignments: normalizeAreaShiftAssignments(activeContract?.areaShiftAssignments),
@@ -1575,7 +1579,21 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
         return keyA.shiftOrder - keyB.shiftOrder;
       }
 
-      // Tiebreaker: sort by name within the same shift
+      /*
+        DENTRO DEL TURNO, POR FECHA DE INICIO DEL CONTRATO (el más viejo primero), y recién después por
+        nombre. Alfabético mezclaba a los de siempre con el jornalero dado de alta ese mismo día, que
+        casi siempre está ahí para reemplazar a alguien: con los nuevos al final, cuando se llega a
+        ellos el ausente ya tiene motivo y reemplazo, y no se les pregunta dos veces.
+      */
+      const inicioDe = (e: EmployeeOption) => e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.contractStartDate || "";
+      const inicioA = inicioDe(a);
+      const inicioB = inicioDe(b);
+      if (inicioA !== inicioB) {
+        // Sin fecha va al final: no se sabe desde cuándo está.
+        if (!inicioA) return 1;
+        if (!inicioB) return -1;
+        return inicioA.localeCompare(inicioB);
+      }
       return a.name.localeCompare(b.name);
     });
 
