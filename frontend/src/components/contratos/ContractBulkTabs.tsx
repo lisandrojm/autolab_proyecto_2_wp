@@ -2057,7 +2057,7 @@ export const ContractBulkAfipTab: React.FC<{
 
           {/* El circuito ARCA, en el orden en que se hace: validar → TXT. La asignación masiva de
               Empresa, Convenio y Categoría y los ⓘ de cada botón se sacaron: cargaban la pantalla. */}
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center justify-start gap-3">
 
             <button
               type="button"
