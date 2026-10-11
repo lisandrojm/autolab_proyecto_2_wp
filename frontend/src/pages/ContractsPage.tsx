@@ -286,6 +286,9 @@ export const ContractsPage: React.FC = () => {
       const resp = await usersAPI.listContractsOverview({
         page,
         limit: PAGE_SIZE,
+        // Sólo los contratos creados en WeProdu (Solicitudes o «Agregar miembro»): los importados de
+        // FRAME/WP no se gestionan desde acá. Es el mismo filtro que las bandejas de Gestión.
+        origen: 'sistema',
         search: searchTerm || undefined,
         clientId: filterClientId || undefined,
         projectId: filterProjectId || undefined,
