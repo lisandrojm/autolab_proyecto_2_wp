@@ -1846,6 +1846,7 @@ export const ContractBulkAfipTab: React.FC<{
     nombre: row.userName || '',
     cuil: String(row.cuit || '').replace(/\D/g, ''),
     alta: row.fecha_alta_contrato ? formatDate(row.fecha_alta_contrato) : '',
+    altaISO: fechaISO(row.fecha_alta_contrato),
     baja: row.fecha_baja_contrato ? formatDate(row.fecha_baja_contrato) : '',
     contrato: row.nombre_contrato || '',
     proyecto: row.projectName || '',

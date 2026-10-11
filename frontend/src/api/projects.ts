@@ -849,6 +849,24 @@ class ProjectsAPI {
     return data;
   }
 
+  /** Presentaciones Automáticas: estado de la de las 14 h y las altas pendientes, con su cuenta regresiva. */
+  async presentacionAutomatica(): Promise<EstadoPresentacionAutomatica> {
+    const { data } = await axios.get(`/contratos/altas-arca/automatica`, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Prende o apaga la presentación automática de las 14 h. */
+  async setPresentacionAutomatica(activa: boolean): Promise<{ activa: boolean }> {
+    const { data } = await axios.put(`/contratos/altas-arca/automatica`, { activa }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Presenta YA una sola alta, sin esperar su día. El servidor arma el registro; después se sigue la corrida con `estadoAltasArca`. */
+  async forzarPresentacionArca(item: { userProjectId: string; contractIndex: number }): Promise<{ arrancada: boolean; total: number; enSeco: boolean }> {
+    const { data } = await axios.post(`/contratos/altas-arca/automatica/forzar`, item, { headers: this.getHeaders() });
+    return data;
+  }
+
   /** Estado de la corrida de altas, con TODOS sus eventos. Se consulta por polling. */
   async estadoAltasArca(): Promise<EstadoCorridaAltas> {
     const { data } = await axios.get(`/contratos/altas-arca/corrida`, { headers: this.getHeaders() });
@@ -1030,4 +1048,40 @@ export interface EstadoCorridaAltas {
   enSecoForzado?: boolean;
   /** Otra corrida de ARCA tiene la sesión del tenant (obras sociales, nombres, altas). */
   ocupadaPor?: string | null;
+}
+
+/** Un alta temprana pendiente, como la ve «Presentaciones Automáticas A.R.C.A». */
+export interface AltaPendienteArca {
+  userProjectId: string;
+  contractIndex: number;
+  userId: string;
+  nombre: string;
+  cuil: string;
+  proyecto: string;
+  cliente: string;
+  tipoContrato: string;
+  fechaAlta: string;
+  fechaBaja: string;
+  empresa: { _id: string; razonSocial: string } | null;
+  /** Cuándo la presenta la automática (fecha de alta, 14 h argentinas), ISO. */
+  momento: string;
+  presentable: boolean;
+  motivo: string;
+}
+
+export interface EstadoPresentacionAutomatica {
+  activa: boolean;
+  hora: number;
+  ahora: string;
+  hoy: string;
+  proximaCorrida: string;
+  enSeco: boolean;
+  ultimaCorrida: null | {
+    fecha: string;
+    dia: string;
+    empresas: Array<{ empresa: string; enviados: number; enSeco?: boolean; error?: string }>;
+    omitidos: Array<{ nombre: string; cuil: string; empresa: string; motivo: string }>;
+    error?: string;
+  };
+  contratos: AltaPendienteArca[];
 }

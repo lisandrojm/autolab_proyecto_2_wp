@@ -25,6 +25,7 @@ import { ClientDetailPage } from "./pages/ClientDetailPage";
 import { ClientProjectsPage } from "./pages/ClientProjectsPage";
 import { ContractsPage } from "./pages/ContractsPage";
 import { RenovacionesPage } from "./pages/RenovacionesPage";
+import { PresentacionesArcaPage } from "./pages/PresentacionesArcaPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
 import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
@@ -338,6 +339,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RenovacionesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/presentaciones-arca"
+                element={
+                  <ProtectedRoute>
+                    <PresentacionesArcaPage />
                   </ProtectedRoute>
                 }
               />

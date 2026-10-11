@@ -25,11 +25,14 @@ const POLL_MS = 2000;
 /** Sin eventos nuevos en este tiempo, se avisa que la corrida parece colgada (no se corta nada). */
 const TOPE_SIN_EVENTOS_MS = 90_000;
 
+/** Hoy en Argentina ("YYYY-MM-DD"), sin depender de la zona de la PC. */
+const hoyEnArgentina = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+
 export interface LoteParaPresentar {
   modo: ModoAltasArca;
   empresa: { _id: string; razonSocial: string; cuit: string };
   /** Con el período: la misma persona puede ir más de una vez, un alta por cada contrato. */
-  personas: Array<{ nombre: string; cuil: string; alta?: string; baja?: string; contrato?: string; proyecto?: string }>;
+  personas: Array<{ nombre: string; cuil: string; alta?: string; baja?: string; contrato?: string; proyecto?: string; /** "YYYY-MM-DD", para avisar si todavía no es su día. */ altaISO?: string }>;
   items: Array<{ userProjectId: string; contractIndex: number; registro: string }>;
   /** Solo URGENTE: el texto que también quedó en el portapapeles, por si hay que pegarlo a mano. */
   texto?: string;
@@ -341,6 +344,23 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
                 </div>
               </Modal>
             )}
+            {/*
+              TODAVÍA NO ES EL DÍA. Lo normal es que cada alta salga sola a las 14 h de su día (ver
+              «Presentaciones Automáticas A.R.C.A»); presentarla antes a mano se puede, pero se avisa.
+            */}
+            {(() => {
+              const hoy = hoyEnArgentina();
+              const antes = lote.personas.filter((p) => p.altaISO && p.altaISO > hoy);
+              if (antes.length === 0) return null;
+              return (
+                <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    Todavía no es el día de la presentación{antes.length === 1 ? ` de ${antes[0].nombre} (su alta es el ${antes[0].alta})` : ` de ${antes.length} de estas altas`}. La presentación automática las presenta solas a las 14 h de su día.
+                  </span>
+                </div>
+              );
+            })()}
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
               {lote.personas.map((p, i) => (
                 <li key={`${p.cuil}-${i}`} className="px-3 py-1.5 flex justify-between gap-3">
