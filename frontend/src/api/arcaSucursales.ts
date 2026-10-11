@@ -1,31 +1,9 @@
 import axios from "./axiosConfig";
 
-/**
- * Catálogo de Sucursales del padrón de ARCA (Simplificación Registral).
- *
- * No confundir con Sedes: la Sede es el lugar de trabajo con el que opera el sistema; la Sucursal es
- * una entidad del padrón de ARCA con su código, domicilio y actividades. Las empresas no cargan
- * estos datos, solo eligen cuáles les corresponden.
- */
-export interface ArcaSucursalActividad {
-  /** Código de actividad de 6 dígitos (pos. 79-84 del TXT de alta). */
-  codigo: string;
-  descripcion?: string;
-}
 
-export interface ArcaSucursal {
-  _id: string;
-  /** Código de sucursal de 5 dígitos (pos. 74-78 del TXT de alta). */
-  codigo: string;
-  /** Domicilio tal como figura en el padrón, ej. "ZAPIOLA 392". */
-  domicilio: string;
-  localidad?: string;
-  codigoPostal?: string;
-  actividades: ArcaSucursalActividad[];
-  isActive?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+
+import type { ArcaSucursal } from "@compartido/arca/tiposArca";
+export type { ArcaSucursalActividad, ArcaSucursal } from "@compartido/arca/tiposArca";
 
 export type ArcaSucursalInput = Omit<ArcaSucursal, "_id" | "createdAt" | "updatedAt">;
 

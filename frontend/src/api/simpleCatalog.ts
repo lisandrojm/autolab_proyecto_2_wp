@@ -1,15 +1,8 @@
 import axios from "./axiosConfig";
 
-export interface SimpleCatalogItem {
-  _id: string;
-  externalId: string;
-  name: string;
-  data?: { id?: number; nombre?: string };
-  createdAt?: string;
-  updatedAt?: string;
-  // Campos extra opcionales por catálogo (ej. Bancos → tipoEntidad).
-  [key: string]: unknown;
-}
+
+import type { SimpleCatalogItem } from "@compartido/arca/tiposArca";
+export type { SimpleCatalogItem } from "@compartido/arca/tiposArca";
 
 export interface SimpleCatalogApi {
   /**

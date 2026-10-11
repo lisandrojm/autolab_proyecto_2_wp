@@ -94,10 +94,10 @@ describe("validación previa a generar: sucursal y actividad contra SU empresa",
     });
 });
 describe("una sola resolución para el generador y para el cotejo del lote", () => {
-    const front = readFileSync(resolve(AQUI, "../../../frontend/src/components/contratos/afipCompleteness.ts"), "utf8");
+    const front = readFileSync(resolve(AQUI, "./arca/afipCompleteness.ts"), "utf8");
     const server = readFileSync(resolve(AQUI, "../services/arca/validarLoteAltas.ts"), "utf8");
     it("los dos importan la resolución compartida", () => {
-        assert.match(front, /from "@compartido\/sucursalesDeEmpresa"/);
+        assert.match(front, /from "\.\.\/sucursalesDeEmpresa\.js"/);
         assert.match(server, /from "\.\.\/\.\.\/compartido\/sucursalesDeEmpresa\.js"/);
     });
     it("los dos sacan el código de `codigoDeSucursalParaEmpresa` y las actividades de `actividadesDeSucursalParaEmpresa`", () => {

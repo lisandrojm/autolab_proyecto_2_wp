@@ -1,6 +1,9 @@
 import axios from "./axiosConfig";
 import { emitUsersChanged } from "../utils/navbarEvents";
 
+import type { ContractOverviewRow } from "@compartido/arca/tiposArca";
+export type { SinCuitDocumento, SinCuitValidacion, AltaArcaPresentada, ContractOverviewRow } from "@compartido/arca/tiposArca";
+
 /* ---------- Tipos base ---------- */
 type ObjectIdString = string & { readonly __objectIdBrand: unique symbol };
 
@@ -80,144 +83,8 @@ export interface Contract {
 }
 
 /** Fila de la página global "Contratos" (`GET /users/contracts-overview`): usuario × proyecto, con su contrato activo. */
-/** Un documento de respaldo del flujo "Sin CUIT" (extranjeros con el trámite de ARCA pendiente). */
-export interface SinCuitDocumento {
-  tipo: "pasaporte" | "dni_precario" | "residencia_tramite" | "cuil_provisorio" | "otro";
-  numero: string;
-  archivoUrl?: string;
-  archivoNombre?: string;
-  observaciones?: string;
-  cargadoPorNombre?: string;
-  cargadoAt?: string;
-}
 
-/** Estado de la validación excepcional del flujo "Sin CUIT" (ver pestaña Sin CUIT de Contratos). */
-export interface SinCuitValidacion {
-  documentos: SinCuitDocumento[];
-  validado?: boolean;
-  validadoPorNombre?: string;
-  validadoAt?: string;
-  /** Cuándo revisar si ya obtuvo CUIL y puede pasar al flujo normal de ARCA ("YYYY-MM-DD"). */
-  fechaSeguimiento?: string;
-}
 
-export interface ContractOverviewRow {
-  _id: string;
-  userId: string;
-  userName: string;
-  /** El nombre es el que ARCA tiene registrado para el CUIT: se tomó del Padrón al validar. */
-  userNombreValidadoArca?: boolean;
-  userEmail: string;
-  userActivo: boolean;
-  /** id externo (FRAME) del usuario — para resolver a quién reemplaza otro contrato de la misma página. */
-  userExternalId: number | null;
-  userRoles: { _id: string; name: string; permissions?: string[] }[];
-  clientId: string;
-  clientName: string;
-  projectId: string;
-  projectName: string;
-  nombreRolFrame: string;
-  contractsInProject: number;
-  contractIndex: number;
-  nombre_contrato: string;
-  nombre_estado_empleado: string;
-  nombre_sede: string;
-  areaShiftAssignments: { areaId: string | any; shiftIds: (string | any)[] }[];
-  reemplazo: boolean;
-  empleado_id_reemplezado?: number | null;
-  fecha_alta_contrato: string;
-  fecha_baja_contrato: string;
-  /** Cuándo se cargó el contrato en el sistema: ISO completo o "YYYY-MM-DD" según quién lo creó; vacío en los importados. */
-  fecha_carga?: string;
-  sueldo_mano?: number;
-  cantidad_jornadas_laborales?: number;
-  hora_inicio?: string;
-  hora_fin?: string;
-  // Documentos del contrato ACTIVO, para las columnas de descarga/carga de la tabla de Contratos.
-  altaDocumentoUrl?: string;
-  altaDocumentoNombre?: string;
-  /**
-   * Lo que presentó la corrida automática de altas en ARCA. No es el estado del contrato: es la marca
-   * que evita presentarlo dos veces. `indeterminado` = hay que mirarlo en ARCA antes de hacer nada.
-   */
-  altaArcaPresentada?: AltaArcaPresentada | null;
-  /** Datos leídos del PDF de la Constancia de CUIT de ARCA ("YYYY-MM-DD"). Vale un mes: la vigencia marca cuándo hay que volver a pedirla. */
-  constanciaVigenciaDesde?: string;
-  constanciaVigenciaHasta?: string;
-  constanciaVerificador?: string;
-  /** Resultado de la última consulta al Padrón de ARCA — reemplaza al PDF como fuente de verdad. */
-  constanciaAfipEstado?: "activo" | "inactivo" | "desconocido" | "";
-  constanciaAfipConsultadaAt?: string;
-  /** Recién con esto el trámite se considera terminado (ver ConstanciaBulk.tsx estadoConstancia). */
-  constanciaAfipDropboxSubidaAt?: string;
-  /** "Firma Digital": Contrato y Release(s) se generan con botones independientes; enviados a firmar
-   *  (paso 2, "Enviar a firmar") recién cuando ambos están generados. */
-  firmaContratoUrl?: string;
-  firmaContratoNombre?: string;
-  firmaReleases?: { releaseId: string; nombre: string; url: string }[];
-  firmaGeneradoAt?: string;
-  firmaReleasesGeneradoAt?: string;
-  firmaEnviadaAt?: string;
-  empresaContratoId?: string;
-  empresaReleaseId?: string;
-  nombre_empresa_contrato?: string;
-  nombre_empresa_release?: string;
-  /** La empresa del release no la eligió nadie: el proyecto tiene una sola y viene puesta. No se puede quitar. */
-  empresaReleaseDelProyecto?: boolean;
-  /** Empresas del proyecto (con fallback a las del ABM) para el menú "Descargar con:". */
-  contratoEmpresas?: { id: string; label: string }[];
-  releaseEmpresas?: { id: string; label: string }[];
-  // FKs para el chequeo de completitud ARCA (se resuelven contra los catálogos en el front).
-  cuit?: string;
-  /** La persona declaró NO tener CUIT/CUIL argentino: va por el circuito "Sin CUIT", no por ARCA. */
-  sinCuit?: boolean;
-  /** Flujo "Sin CUIT": documentación de respaldo cargada + OK manual de quien revisa. */
-  sinCuitValidacion?: SinCuitValidacion | null;
-  /**
-   * Identidad del contrato dentro del member. Se usa para direccionarlo en los PATCH sin depender del
-   * índice: la posición cambia sola si se borra otro contrato mientras la pantalla está abierta.
-   */
-  contratoId?: string;
-  /**
-   * Obra social de ESTE contrato (RNOS), no de la persona: ARCA la declara por alta (pos. 40-45) y
-   * caduca sola por desregulación. Vacío no es un faltante — significa que se aplica la del convenio.
-   */
-  osId?: number | null;
-  /** De dónde salió `osId`. Vacío = no está fijada en el contrato y la resuelve la cascada. */
-  obraSocialOrigen?: "constatada" | "manual" | "heredada-usuario" | "";
-  /**
-   * Dónde se constató. La FUENTE es el padrón de beneficiarios de la SSS (declaración jurada de cada
-   * obra social, consulta de solo lectura); ARCA queda como desempate, porque lo que precompleta
-   * viene de relaciones laborales anteriores y puede estar atrasado.
-   */
-  obraSocialConstatadaEn?: "sss" | "arca" | "";
-  /** Cuándo se constató (solo con origen `constatada`). */
-  obraSocialConstatadaEl?: string;
-  /**
-   * Se consultó el padrón de la SSS y la persona NO figura afiliada. Es una respuesta, no un vacío:
-   * el contrato queda constatado y usa la obra social del convenio.
-   */
-  obraSocialNoFigura?: boolean;
-  /** Lo devolvió ARCA: el campo va en modo lectura y el server rechaza sobrescribirlo (409). */
-  obraSocialBloqueada?: boolean;
-  /** La función con la que se contrató: de ella sale la valoración de cada categoría. */
-  rol_frame_id?: number | null;
-  categoria_sat_id?: number | null;
-  sede_id?: number | null;
-  tipo_contrato_id?: number | null;
-  /**
-   * Sucursal del padrón de ARCA (domicilio de desempeño) con la que se declara este contrato. Se
-   * elige entre las asignadas a su empresa empleadora. No tiene relación con `sede_id`.
-   */
-  sucursalArcaId?: string | null;
-  /**
-   * Actividad del domicilio elegida para ESTE contrato. Solo hace falta cuando la sucursal tiene más
-   * de una actividad declarada; con una sola, el contrato la hereda y este campo queda vacío.
-   */
-  actividadArca?: string | null;
-  /** Puesto desempeñado elegido en ESTE contrato (registro de 85). Vacío = hereda el que le toca por defecto. */
-  puestoDesempenado?: string | null;
-}
 
 /**
  * Una fila de `GET /users/solicitudes-overview`: el equivalente de `ContractOverviewRow` para lo que
@@ -1055,16 +922,3 @@ function paramsDelListado(params: ListadoUsuariosParams): URLSearchParams {
 
 export const usersAPI = new UsersAPI();
 
-export interface AltaArcaPresentada {
-  via: "carga_masiva" | "altas_masivas";
-  fecha: string;
-  /** `presentando`: se marcó antes del «Aceptar» de ARCA y la corrida se cortó sin resultado. */
-  resultado: "presentada" | "indeterminado" | "fallida" | "presentando";
-  codigoNovedad?: string;
-  nroTransaccion?: string;
-  motivo?: string;
-  /** Altas Masivas por tandas. */
-  tanda?: number;
-  cat?: string;
-  porConsulta?: boolean;
-}

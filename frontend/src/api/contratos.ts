@@ -1,43 +1,8 @@
 import axios from "./axiosConfig";
 
-/**
- * Contrato: el tipo de contrato real (Jornada, Plazo fijo 5x7, Tiempo Indeterminado, ...). Es lo
- * que se elige en el wizard de Agregar/Configurar miembro. Cada Contrato puede tener una o varias
- * Plantillas (ver `api/contratosFrame.ts`) que son el documento PDF en sí.
- */
-export interface ContratoItem {
-  _id: string;
-  name: string;
-  data: {
-    cantidadJornadas: number;
-    multiplicadorDiario: number;
-    esTiempoIndeterminado: boolean;
-    /**
-     * Cómo se eligen las fechas al pedir el alta: un período (`periodo`, el de siempre) o días
-     * sueltos pintados en un calendario (`dias`), donde cada día marcado es una jornada.
-     */
-    modoFechas?: "periodo" | "dias";
-    /** Límites de la jornada del tipo de contrato. `null`/ausente = sin límite. */
-    horasPorJornada?: number | null;
-    diasPorSemana?: number | null;
-    /** «Se envía a firmar el contrato». */
-    requiereFirma: boolean;
-    /** «Se envía a firmar el release» (además del tipo de release). Ausente = sí. */
-    requiereFirmaRelease?: boolean;
-    /** «Se envía a firmar el alta de ARCA» (sólo con alta temprana). Ausente = sí. */
-    requiereFirmaAlta?: boolean;
-    /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad). */
-    afipModalidadContrato?: string;
-    afipTipoServicio?: string;
-    afipActividad?: string;
-    afipModalidadLiquidacion?: string;
-    /** Si genera alta temprana ante ARCA. `false` = no es relación laboral (ej. locación de servicios). */
-    generaAlta?: boolean;
-  };
-  isActive?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+
+import type { ContratoItem } from "@compartido/arca/tiposArca";
+export type { ContratoItem } from "@compartido/arca/tiposArca";
 
 export interface ContratoInput {
   nombre: string;

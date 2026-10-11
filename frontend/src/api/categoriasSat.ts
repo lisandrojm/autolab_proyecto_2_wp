@@ -1,66 +1,8 @@
 import axios from "./axiosConfig";
-import type { EstadoCategoriaArca } from "@compartido/catalogoArca";
 
-export interface CategoriaSatItem {
-  _id: string;
-  externalId: string;
-  name: string;
-  /**
-   * `false` = resuelve pero no se elige. Son alias que existen para que contratos históricos
-   * encuentren su sueldo y su código ARCA, y no deben ofrecerse al cargar un contrato nuevo.
-   * El listado las trae SIEMPRE: filtrar es responsabilidad de cada selector, nunca de la
-   * resolución (si el TXT las filtrara, esos contratos saldrían sin sueldo). Usar `esElegible`.
-   */
-  isActive?: boolean;
-  data: {
-    id: number;
-    numeroCategoria: number;
-    sueldoBruto: number;
-    sueldoBrutoLetras: string;
-    neto: number;
-    sueldoNetoLetras: string;
-    fechaActualizacion: string;
-    /** Numérico, por compatibilidad: pierde los ceros a la izquierda (35283, no "035283"). */
-    codigoAfip: number;
-    /**
-     * El MISMO código, canónico: 6 dígitos con ceros a la izquierda, tal como lo escribe ARCA.
-     * Es lo que hay que mostrar; `codigoAfip` queda para los consumidores que esperan un número.
-     */
-    codigoArca?: string;
-    /**
-     * Código de CCT al que pertenece la categoría ("0131/75"). NO va al TXT: se usa para validar
-     * que la categoría sea de un convenio habilitado para la empleadora del contrato.
-     */
-    convenio?: string;
-    /**
-     * Código de puesto desempeñado de ARCA (4 díg.). Solo lo informa el registro de 85 (Altas
-     * Masivas); vacío = cae al default de la empleadora / instalación.
-     */
-    puestoDesempenado?: string;
-    /** Lo que ARCA dice HOY de este código (espejo de ARCA). */
-    descripcionArca?: string;
-    /**
-     * El código contra el espejo de ARCA: `ok` / `nombre_distinto` / `grupo_distinto` /
-     * `no_existe_en_arca` / `no_vigente`. `null` = espejo sin sembrar (no se sabe, no bloquea).
-     */
-    estadoArca?: EstadoCategoriaArca | null;
-    /** `nombre_distinto` que alguien revisó y confirmó: no bloquea el alta. */
-    estadoArcaConfirmada?: boolean;
-    presentismo: number;
-    sueldoBasico: number;
-    sueldoAdicional: number;
-    nombre: string;
-    /** El grupo salarial del que cuelga, si el convenio tiene grupos. Es donde vive la escala. */
-    grupoId?: string | null;
-    grupoNombre?: string;
-    /** Hasta cuándo rige la escala. Vacío = la paritaria no declaró vencimiento. */
-    vigenciaHasta?: string;
-    /** De dónde salió la escala: del grupo, de la propia categoría, o de ningún lado. */
-    escalaOrigen?: "categoria" | "grupo" | null;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+
+import type { CategoriaSatItem } from "@compartido/arca/tiposArca";
+export type { CategoriaSatItem } from "@compartido/arca/tiposArca";
 
 /**
  * ¿Se puede ELEGIR esta categoría para un contrato nuevo? Usarla en los selectores; nunca en la

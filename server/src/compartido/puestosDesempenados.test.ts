@@ -51,7 +51,7 @@ describe("resolverPuesto: Rol Empresa → Categoría → convenio → empresa �
   });
 
   it("los dos consumidores —generador del registro y cotejo del lote— pasan los CINCO escalones a la misma función", () => {
-    const front = readFileSync(resolve(AQUI, "../../../frontend/src/components/contratos/afipCompleteness.ts"), "utf8");
+    const front = readFileSync(resolve(AQUI, "./arca/afipCompleteness.ts"), "utf8");
     const server = readFileSync(resolve(AQUI, "../services/arca/validarLoteAltas.ts"), "utf8");
     for (const [quien, fuente] of [["afipCompleteness", front], ["validarLoteAltas", server]] as const) {
       const llamada = fuente.slice(fuente.indexOf("resolverPuesto({"));
@@ -60,7 +60,7 @@ describe("resolverPuesto: Rol Empresa → Categoría → convenio → empresa �
       assert.ok(args.indexOf("categoria:") < args.indexOf("convenio:") && args.indexOf("convenio:") < args.indexOf("empresa:"), `${quien}: orden de los argumentos`);
     }
     // Y ninguno arma su propia cascada: el import es el de `compartido`.
-    assert.match(front, /import \{ resolverPuesto \} from "@compartido\/puestosDesempenados"/);
+    assert.match(front, /import \{ resolverPuesto \} from "\.\.\/puestosDesempenados\.js"/);
     assert.match(server, /import \{ resolverPuesto \} from "\.\.\/\.\.\/compartido\/puestosDesempenados\.js"/);
   });
   it("sin rol ni categoría, la empresa", () => assert.deepEqual(resolverPuesto({ empresa: "1111", global: "2222" }), { codigo: "1111", origen: "empresa" }));
@@ -127,7 +127,7 @@ describe("el puesto elegido en el CONTRATO es el primer escalón", () => {
   });
 
   it("los dos consumidores le pasan también el del contrato", () => {
-    const front = readFileSync(resolve(AQUI, "../../../frontend/src/components/contratos/afipCompleteness.ts"), "utf8");
+    const front = readFileSync(resolve(AQUI, "./arca/afipCompleteness.ts"), "utf8");
     const server = readFileSync(resolve(AQUI, "../services/arca/validarLoteAltas.ts"), "utf8");
     assert.match(front, /resolverPuesto\(\{ contrato: row\.puestoDesempenado, rol:/);
     assert.match(server, /resolverPuesto\(\{ contrato: c\.puestoDesempenado, rol:/);
