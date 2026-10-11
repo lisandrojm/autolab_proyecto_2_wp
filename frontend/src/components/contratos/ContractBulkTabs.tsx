@@ -1084,6 +1084,8 @@ export const ContractBulkAfipTab: React.FC<{
   // Explicación de qué son y de dónde salen los datos que exige la columna "Datos ARCA".
   const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
   /** El ⓘ de una pestaña de empleadora: de cuál se está mirando el resumen ('' = Todas). */
+  /** El ⓘ de «Presentar A.R.C.A»: qué hace falta para poder presentar. */
+  const [presentarInfoOpen, setPresentarInfoOpen] = useState(false);
   const [resumenEmpresa, setResumenEmpresa] = useState<{ id: string; nombre: string } | null>(null);
   // Explicación de qué es la columna "Datos CUIT/CUIL" y por qué gatea Validar / Validar ARCA Masivo.
   const [datosCuitInfoOpen, setDatosCuitInfoOpen] = useState(false);
@@ -2064,6 +2066,9 @@ export const ContractBulkAfipTab: React.FC<{
               {/* El número es lo que va a ARCA: los tildados completos, no todos los tildados. */}
               Presentar A.R.C.A{completos85.length > 0 ? ` (${completos85.length})` : ''}
             </button>
+            <button type="button" onClick={() => setPresentarInfoOpen(true)} title="Qué hace falta para presentar en ARCA" aria-label="Qué hace falta para presentar en ARCA" className="-ml-1 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 shrink-0">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
             {/* Lo que ya se presentó por URGENTE: una fila por persona, con lo que contestó ARCA. */}
             <button type="button" onClick={() => setHistorialAltasOpen(true)} title="Registro de lo ya presentado por Altas Masivas (URGENTE)" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors shrink-0">
               <FontAwesomeIcon icon={faFileLines} className="h-3.5 w-3.5" />
@@ -2773,6 +2778,22 @@ export const ContractBulkAfipTab: React.FC<{
       {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => load(true)} />}
 
       {historialAltasOpen && <HistorialAltasArca isOpen={historialAltasOpen} onClose={() => setHistorialAltasOpen(false)} empresaId={empresaDeLaPestana?._id} />}
+
+      {presentarInfoOpen && (
+        <Modal isOpen onClose={() => setPresentarInfoOpen(false)} title="Presentar en A.R.C.A" size="sm" zIndex={80}>
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+            <p>
+              Para presentar en ARCA hay que <strong>elegir una empresa en las pestañas</strong> de arriba (no «Todas»): cada presentación se hace logueado con el CUIT de UNA empleadora.
+            </p>
+            <ol className="list-decimal list-inside space-y-1 text-gray-600 dark:text-gray-300">
+              <li>Elegí la pestaña de la empresa.</li>
+              <li>Tildá los contratos a presentar (el check de la cabecera toma todos, de todas las páginas).</li>
+              <li>Tocá «Presentar A.R.C.A»: el número entre paréntesis es lo que va a ARCA, los tildados que están completos.</li>
+            </ol>
+            {!empresaDeLaPestana && <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Ahora estás en «Todas»: por eso el botón está apagado.</p>}
+          </div>
+        </Modal>
+      )}
 
       {resumenEmpresa && (() => {
         const r = resumenPorEmpresa.get(resumenEmpresa.id) || { total: 0, completos: 0, incompletos: 0, osTotal: 0, osValidadas: 0, osSinValidar: 0, osSinEmpleadora: 0 };
