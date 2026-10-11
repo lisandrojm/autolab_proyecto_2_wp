@@ -115,7 +115,8 @@ export const InstructivoParaFirmar: React.FC = () => (
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Cuando vuelve firmado queda en <span className="font-mono text-xs">Requested signatures</span> y se ve en la pestaña <strong>Firmados</strong>.
+              Cuando vuelve firmado queda en <span className="font-mono text-xs">Requested signatures</span> y se ve en la pestaña <strong>Firmados</strong>. En ese momento el original sale solo de{" "}
+              <strong>Enviado a la firma</strong>: esa pestaña muestra únicamente lo que todavía espera la firma.
             </p>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
               El envío y la firma se hacen en Dropbox Sign, no en la aplicación. Desde acá sí podés descargar, renombrar o eliminar los archivos de Outbox antes de importarlos.
@@ -134,6 +135,8 @@ export const InstructivoParaFirmar: React.FC = () => (
  *    llega acá moviéndose desde Outbox, así Outbox queda solo con lo no enviado y no se puede
  *    mandar dos veces por error.
  * 3. `firmados` — carpeta "Requested signatures": Dropbox Sign deja acá lo que ya volvió firmado.
+ *    Cuando aparece, el escaneo de carpetas del server saca el original de Pendbox (y le pone el
+ *    código al firmado si volvió sin él), así «Enviado a la firma» queda solo con lo pendiente.
  *
  * En "para_firmar" y "firmados" el archivo todavía no está en manos de Dropbox Sign (el primero) o ya
  * volvió (el último), así que se puede descargar, renombrar o eliminar directo desde acá — misma

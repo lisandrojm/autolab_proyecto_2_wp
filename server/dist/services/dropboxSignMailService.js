@@ -32,6 +32,11 @@ import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
  *     avisos se repiten (cada lectura revisa 30 días), y Pendbox no se lista: ver `leerCasillaAhora`.
  *  5. Mueve ese PDF de Outbox a Pendbox —no se genera ningún archivo extra— y pasa el contrato al
  *     estado de Pendbox («Enviado a la firma») en el momento, sin esperar al escaneo de carpetas.
+ *
+ * El resto del circuito no pasa por acá: cuando Dropbox Sign deja el firmado en «Requested
+ * signatures» («Firmados»), el escaneo de carpetas (`estadoDropboxCronService`) le pone el código
+ * al firmado si no lo trae y saca el original de Pendbox, así «Enviado a la firma» muestra solo lo
+ * que de verdad sigue esperando la firma (ver `utils/limpiezaPendbox.ts`).
  */
 /**
  * Términos con los que se le pide la búsqueda al servidor IMAP. Van sin acentos a propósito: el

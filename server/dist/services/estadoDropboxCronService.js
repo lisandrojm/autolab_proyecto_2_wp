@@ -8,6 +8,7 @@ import { cargarEstadosPorEvento, aplicarTransicion } from "./estadoTransicionAut
 import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
 import { esElAltaEnviada, momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
+import { limpiarPendbox } from "./limpiezaPendboxService.js";
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
  * archivos nuevos en la carpeta de Dropbox configurada, y si matchean a un contrato que está esperando
@@ -210,6 +211,29 @@ async function scanTenant(tenant, estadosConTrigger) {
         catch (e) {
             console.warn("[Dropbox] no se pudo completar el accountId del tenant (se reintenta):", e?.message || e);
         }
+    }
+    /*
+      EL ORIGINAL SALE DE PENDBOX CUANDO VUELVE EL FIRMADO (ver `utils/limpiezaPendbox.ts`). Va acá por
+      la misma razón que el relleno de arriba: es la única puerta que atraviesan el tick y «Forzar
+      escaneo ahora». Y va ANTES de las transiciones de esta pasada: si el firmado volvió sin código, el
+      renombre se lo pone, y `esElAltaEnviada` —que compara el nombre contra `altaConstancia.enviadaComo`—
+      lo reconoce ya en este escaneo y no recién en el siguiente.
+  
+      Es solo limpieza de archivos: no mueve ningún estado. Si falta una carpeta no hace nada, y si
+      falla no rompe el escaneo. Lo que no se pudo emparejar se loguea una vez por archivo y motivo.
+    */
+    try {
+        const r = await limpiarPendbox(String(tenant._id), cfg, { enSeco: false });
+        for (const o of r.plan.omitidos) {
+            logSiCambio(`${tenant._id}:pendbox:${o.firmado.path}`, o.motivo, `[Pendbox] ${o.firmado.name}: ${o.motivo}${o.candidatos?.length ? ` (${o.candidatos.join(" | ")})` : ""}`);
+        }
+        for (const f of r.fallas)
+            console.warn(`[Pendbox] falló ${f.paso} de ${f.firmado}: ${f.error}`);
+        if (r.renombrados || r.borrados)
+            console.log(`[Pendbox] tenant ${tenant._id}: ${r.renombrados} firmado(s) renombrado(s), ${r.borrados} original(es) borrado(s) de Pendbox`);
+    }
+    catch (e) {
+        console.warn("[Pendbox] no se pudo limpiar Pendbox (se reintenta en la próxima pasada):", e?.message || e);
     }
     let transicionesAplicadas = 0;
     for (const estadoDestino of estadosConTrigger) {
