@@ -154,9 +154,6 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   /** Explicación de cómo se importan los contratos desde Outbox (modal del ⓘ). */
   const [infoOpen, setInfoOpen] = useState(false);
 
-  /** "enviado_firma" queda de solo lectura: la solicitud ya está en curso en Dropbox Sign. */
-  const permiteAcciones = tipo !== "enviado_firma";
-
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -374,7 +371,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
       </div>
 
       {/* Barra de selección masiva — igual que en "Dropbox | Documentos" */}
-      {permiteAcciones && selected.size > 0 && (
+      {selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5">
           {/* El peso al lado de la cantidad: es lo único que puede frenar la descarga. */}
           <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -442,20 +439,18 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  {permiteAcciones && (
-                    <th className="px-4 py-3 w-10 bg-gray-50 dark:bg-gray-900">
-                      <input
-                        type="checkbox"
-                        className="cursor-pointer accent-blue-600"
-                        checked={allSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = !allSelected && filtradas.some((e) => selected.has(e.path));
-                        }}
-                        onChange={toggleSelectAll}
-                        title="Seleccionar todos los archivos"
-                      />
-                    </th>
-                  )}
+                  <th className="px-4 py-3 w-10 bg-gray-50 dark:bg-gray-900">
+                    <input
+                      type="checkbox"
+                      className="cursor-pointer accent-blue-600"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = !allSelected && filtradas.some((e) => selected.has(e.path));
+                      }}
+                      onChange={toggleSelectAll}
+                      title="Seleccionar todos los archivos"
+                    />
+                  </th>
                   {/* La fecha primero: es por lo que se ordena y lo primero que se mira. */}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                     <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
@@ -478,11 +473,9 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {ordenados.map((e) => (
                   <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
-                    {permiteAcciones && (
-                      <td className="px-4 py-3">
-                        <input type="checkbox" className="cursor-pointer accent-blue-600" checked={selected.has(e.path)} onChange={() => toggleSelected(e.path)} />
-                      </td>
-                    )}
+                    <td className="px-4 py-3">
+                      <input type="checkbox" className="cursor-pointer accent-blue-600" checked={selected.has(e.path)} onChange={() => toggleSelected(e.path)} />
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtFecha(e.serverModified)}</td>
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
@@ -495,9 +488,12 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        {/* "Enviado a la firma" queda de solo lectura: la solicitud ya está en curso en Dropbox Sign. */}
-                        {permiteAcciones ? (
-                          <>
+                        {/*
+                          También en «Enviado a la firma» (antes era de solo lectura): borrar o renombrar
+                          acá no toca la solicitud en Dropbox Sign, que ya tiene su copia; sirve para
+                          sacar un archivo que se mandó mal.
+                        */}
+                        <>
                             <button type="button" onClick={() => descargar(e)} disabled={descargando === e.path} title="Descargar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50">
                               <FontAwesomeIcon icon={descargando === e.path ? faSpinner : faDownload} spin={descargando === e.path} className="h-4 w-4" />
                             </button>
@@ -507,10 +503,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                             <button type="button" onClick={() => handleDelete(e)} disabled={eliminando === e.path} title="Eliminar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
                               <FontAwesomeIcon icon={eliminando === e.path ? faSpinner : faTrash} spin={eliminando === e.path} className="h-4 w-4" />
                             </button>
-                          </>
-                        ) : (
-                          <span className="text-[11px] text-gray-400 italic">Esperando la firma</span>
-                        )}
+                        </>
                       </div>
                     </td>
                   </tr>
