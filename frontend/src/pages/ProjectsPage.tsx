@@ -899,7 +899,7 @@ export const ProjectsPage: React.FC = () => {
                               <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5" />
                             </div>
                             <div>
-                              <div className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                              <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
                                 {area.name}
                                 {area.isSystem && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 uppercase tracking-wider">Sistema</span>}
                               </div>
