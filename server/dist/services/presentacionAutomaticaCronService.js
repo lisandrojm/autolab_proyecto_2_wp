@@ -1,13 +1,16 @@
 import { Tenant } from "../models/Tenant.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
-import { HORA_PRESENTACION, correrPresentacionDelDia, horaArgentina } from "./arca/presentacionAutomatica.js";
+import { correrPresentacionDelDia } from "./arca/presentacionAutomatica.js";
+import { configDe, horaTexto, yaPasoLaHora } from "./arca/horarioAltasAutomaticas.js";
 /**
- * EL HORARIO DE LA PRESENTACIÓN AUTOMÁTICA: a las 14 h argentinas, una vez por día y por tenant, se
- * presentan en ARCA las altas que empiezan ese día (ver `arca/presentacionAutomatica.ts`).
+ * EL HORARIO DE LA PRESENTACIÓN AUTOMÁTICA: a la hora que configuró cada tenant (14:00 argentinas por
+ * defecto), una vez por día, se presentan en ARCA las altas que empiezan ese día o en los días de
+ * anticipación configurados (ver `arca/presentacionAutomatica.ts` y `arca/horarioAltasAutomaticas.ts`).
  *
  * Mismo patrón que las otras tareas del servidor: un `setInterval` que mira la hora. La hora es la de
- * Argentina y no la del VPS (puede estar en UTC). Si el servidor estuvo caído a las 14 h, corre apenas
- * vuelve, siempre que siga siendo el mismo día: «sólo lo de ese día».
+ * Argentina y no la del VPS (puede estar en UTC). Si el servidor estuvo caído a esa hora, corre apenas
+ * vuelve, siempre que siga siendo el mismo día. Si se cambia la hora a una más tarde cuando la corrida
+ * de hoy ya pasó, no vuelve a correr hoy.
  *
  * El día se marca ANTES de presentar: si el proceso se cae a mitad de camino no se reintenta solo, y lo
  * que quedó sin presentar se ve en la pantalla con su botón «Forzar». Relanzar sería seguro igual
@@ -19,8 +22,6 @@ import { HORA_PRESENTACION, correrPresentacionDelDia, horaArgentina } from "./ar
 const TICK_MS = 60_000;
 const enCurso = new Set();
 async function tick() {
-    if (horaArgentina() < HORA_PRESENTACION)
-        return;
     const hoy = hoyArgentina();
     let tenants = [];
     try {
@@ -36,7 +37,11 @@ async function tick() {
         const id = String(t._id);
         if (enCurso.has(id))
             continue;
-        if (t.integrations?.arcaSimplificacion?.presentacionAutomatica?.ultimoDia === hoy)
+        const pa = t.integrations?.arcaSimplificacion?.presentacionAutomatica || {};
+        if (pa.ultimoDia === hoy)
+            continue;
+        const cfg = configDe(pa);
+        if (!yaPasoLaHora(cfg))
             continue;
         enCurso.add(id);
         void (async () => {
@@ -45,8 +50,8 @@ async function tick() {
                 const marcado = await Tenant.updateOne({ _id: t._id, "integrations.arcaSimplificacion.presentacionAutomatica.ultimoDia": { $ne: hoy } }, { $set: { "integrations.arcaSimplificacion.presentacionAutomatica.ultimoDia": hoy } });
                 if (marcado.modifiedCount === 0)
                     return;
-                console.log(`[presentacion-automatica] ${id}: presentando las altas del ${hoy}`);
-                const resumen = await correrPresentacionDelDia(id, t._id);
+                console.log(`[presentacion-automatica] ${id}: corrida de las ${horaTexto(cfg)} del ${hoy} (anticipación ${cfg.diasAntes} día/s)`);
+                const resumen = await correrPresentacionDelDia(id, t._id, cfg);
                 await Tenant.updateOne({ _id: t._id }, { $set: { "integrations.arcaSimplificacion.presentacionAutomatica.ultimaCorrida": resumen } });
                 console.log(`[presentacion-automatica] ${id}: ${resumen.empresas.map((e) => `${e.empresa} ${e.error ? `error: ${e.error}` : `${e.enviados} enviada(s)`}`).join(" · ") || "nada para presentar"}; ${resumen.omitidos.length} sin presentar`);
             }
@@ -63,5 +68,5 @@ async function tick() {
 export function initPresentacionAutomaticaScheduler() {
     setTimeout(() => void tick(), 15_000);
     setInterval(() => void tick(), TICK_MS);
-    console.log(`[presentacion-automatica] programada: todos los días a las ${HORA_PRESENTACION} h (Argentina), para los tenants que la tengan activa`);
+    console.log("[presentacion-automatica] programada: todos los días a la hora configurada por cada tenant (Argentina), para los que la tengan activa");
 }

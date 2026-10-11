@@ -1,9 +1,11 @@
 import { Types } from "mongoose";
 import { type AfipCatalogs } from "../../compartido/arca/afipCompleteness.js";
+import { ConfigAltasAutomaticas } from "./horarioAltasAutomaticas.js";
 /**
- * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día a las 14 h (hora argentina) se presentan las
- * altas tempranas cuyo contrato EMPIEZA ese día. Si nadie hace nada, cada alta sale sola el día de su
- * alta. Lo que no está completo no se presenta y queda con su motivo en «Presentaciones Automáticas».
+ * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día, a la hora configurada (14:00 argentinas por
+ * defecto), se presentan las altas tempranas que empiezan ese día —o en los próximos N días, si se
+ * configuró anticipación; ver `horarioAltasAutomaticas.ts`—. Si nadie hace nada, cada alta sale sola.
+ * Lo que no está completo no se presenta y queda con su motivo en «A.R.C.A Altas Automáticas».
  *
  * EL REGISTRO LO ARMA EL MISMO CÓDIGO QUE LA PANTALLA (`compartido/arca`), con los mismos catálogos que
  * carga Contratos (`useCatalogosArca`) y la misma fila que devuelve `contracts-overview`. Después pasa
@@ -12,11 +14,6 @@ import { type AfipCatalogs } from "../../compartido/arca/afipCompleteness.js";
  * Sólo contratos creados en WeProdu (Solicitudes o «Agregar miembro»): los importados no se gestionan
  * desde Contratos y no se presentan solos.
  */
-export declare const HORA_PRESENTACION = 14;
-/** El momento en que la automática presenta el alta de esa fecha. Argentina no tiene horario de verano. */
-export declare const momentoDePresentacion: (fecha: string) => Date;
-/** Hora argentina actual (0-23), sin depender de la zona del VPS. */
-export declare const horaArgentina: (d?: Date) => number;
 /** Los catálogos de ARCA tal como los recibe la pantalla (pasados por JSON: ids como texto). */
 export declare function catalogosArca(): Promise<AfipCatalogs>;
 export interface CandidatoAlta {
@@ -34,7 +31,7 @@ export interface CandidatoAlta {
         _id: string;
         razonSocial: string;
     } | null;
-    /** Momento en que la automática lo presenta (fecha de alta, 14 h), ISO. */
+    /** La próxima corrida automática que lo presenta, ISO. Vacío = ya no hay ninguna (su día pasó): se fuerza a mano. */
     momento: string;
     /** Se puede presentar tal como está. */
     presentable: boolean;
@@ -54,6 +51,7 @@ export declare function candidatosDeAlta(tenantObjectId: Types.ObjectId, opts?: 
         userProjectId: string;
         contractIndex: number;
     };
+    cfg?: ConfigAltasAutomaticas;
 }): Promise<CandidatoAlta[]>;
 export interface ResultadoEmpresa {
     empresa: string;
@@ -73,8 +71,8 @@ export declare function presentarCandidatos(o: {
     candidatos: CandidatoAlta[];
     automatica: boolean;
 }): Promise<ResultadoEmpresa[]>;
-/** La corrida de las 14 h de UN tenant: las altas de hoy. Devuelve el resumen que se guarda. */
-export declare function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId): Promise<{
+/** La corrida del día de UN tenant: las altas de hoy (y de los próximos días, según la anticipación). Devuelve el resumen que se guarda. */
+export declare function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas): Promise<{
     fecha: string;
     dia: string;
     empresas: ResultadoEmpresa[];

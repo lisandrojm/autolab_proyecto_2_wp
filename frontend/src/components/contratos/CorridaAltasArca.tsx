@@ -356,7 +356,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
                 <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
                   <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                   <span>
-                    Todavía no es el día de la presentación{antes.length === 1 ? ` de ${antes[0].nombre} (su alta es el ${antes[0].alta})` : ` de ${antes.length} de estas altas`}. «A.R.C.A Altas Automáticas» las presenta solas a las 14 h de su día.
+                    Todavía no es el día de la presentación{antes.length === 1 ? ` de ${antes[0].nombre} (su alta es el ${antes[0].alta})` : ` de ${antes.length} de estas altas`}. «A.R.C.A Altas Automáticas» las presenta solas en el día y horario configurados.
                   </span>
                 </div>
               );

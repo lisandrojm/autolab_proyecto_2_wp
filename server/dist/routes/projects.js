@@ -22,7 +22,8 @@ import { CentroCosto } from "../models/CentroCosto.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
 import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
-import { HORA_PRESENTACION, candidatosDeAlta, horaArgentina, momentoDePresentacion } from "../services/arca/presentacionAutomatica.js";
+import { candidatosDeAlta } from "../services/arca/presentacionAutomatica.js";
+import { configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
@@ -2842,27 +2843,20 @@ router.post("/contratos/altas-arca/corrida", requireTenant, authenticateToken, r
   PRESENTACIONES AUTOMÁTICAS (ver `services/arca/presentacionAutomatica.ts`): la pantalla que muestra qué
   altas se van a presentar solas a las 14 h del día de alta, con su cuenta regresiva, y deja forzar una.
 */
-const sumarDias = (iso, n) => {
-    const d = new Date(`${iso}T12:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + n);
-    return d.toISOString().slice(0, 10);
-};
 /** GET /contratos/altas-arca/automatica — estado de la automática y las altas pendientes (desde 30 días atrás). */
-router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission(["admin_contracts:view", "config_afip:view"]), async (req, res) => {
     try {
         const hoy = hoyArgentina();
         const t = await Tenant.findById(req.tenantObjectId).select("integrations.arcaSimplificacion.presentacionAutomatica").lean();
         const pa = t?.integrations?.arcaSimplificacion?.presentacionAutomatica || {};
-        // Las vencidas (de días anteriores, sin presentar) siguen a la vista para forzarlas a mano.
-        const candidatos = await candidatosDeAlta(req.tenantObjectId, { desde: sumarDias(hoy, -30) });
-        const corrioHoy = pa.ultimoDia === hoy;
-        const proxima = !corrioHoy && horaArgentina() < HORA_PRESENTACION ? hoy : sumarDias(hoy, 1);
+        const cfg = configDe(pa);
+        // La pantalla de configuración sólo quiere el horario: armar los candidatos (catálogos, registros) sobra.
+        const candidatos = req.query.soloConfig === "true" ? [] : await candidatosDeAlta(req.tenantObjectId, { desde: sumarDias(hoy, -30), cfg });
         res.json({
             activa: !!pa.activa,
-            hora: HORA_PRESENTACION,
+            config: cfg,
             ahora: new Date().toISOString(),
             hoy,
-            proximaCorrida: momentoDePresentacion(proxima).toISOString(),
             ultimaCorrida: pa.ultimaCorrida || null,
             enSeco: enSecoForzado(),
             // El registro no viaja: la pantalla no lo necesita y el servidor lo vuelve a armar al presentar.
@@ -2874,19 +2868,36 @@ router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
         res.status(500).json({ error: String(error?.message || "Internal server error") });
     }
 });
-/** PUT /contratos/altas-arca/automatica — prende o apaga la automática. */
-router.put("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+/**
+ * PUT /contratos/altas-arca/automatica — prende o apaga la automática y/o cambia su horario
+ * (`hora`, `minuto`, `diasAntes`). Cada campo es opcional: se toca sólo lo que viene. Lo usan la página
+ * de Altas Automáticas (el interruptor) y Configuración → ARCA → Altas Automáticas (el horario).
+ */
+router.put("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission(["admin_contracts:view", "config_afip:view"]), async (req, res) => {
     try {
-        const activa = req.body?.activa === true;
-        const set = { "integrations.arcaSimplificacion.presentacionAutomatica.activa": activa };
+        const v = validarConfig(req.body);
+        if (v.ok === false) {
+            res.status(400).json({ error: v.error });
+            return;
+        }
+        const base = "integrations.arcaSimplificacion.presentacionAutomatica";
+        const set = {};
+        for (const [k, val] of Object.entries(v.cambios))
+            set[`${base}.${k}`] = val;
+        if (req.body?.activa !== undefined)
+            set[`${base}.activa`] = req.body.activa === true;
+        const t = await Tenant.findById(req.tenantObjectId).select(base).lean();
+        const pa = t?.integrations?.arcaSimplificacion?.presentacionAutomatica || {};
+        const cfg = configDe({ ...pa, ...v.cambios });
         /*
-          Prendida DESPUÉS de las 14 h, arranca mañana: si no, el próximo minuto presentaría solas las altas
+          Prendida DESPUÉS de la hora, arranca mañana: si no, el próximo minuto presentaría solas las altas
           de hoy, y prender un interruptor no debería mandar nada a ARCA en el acto. Las de hoy se fuerzan a mano.
         */
-        if (activa && horaArgentina() >= HORA_PRESENTACION)
-            set["integrations.arcaSimplificacion.presentacionAutomatica.ultimoDia"] = hoyArgentina();
-        await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
-        res.json({ activa });
+        if (req.body?.activa === true && !pa.activa && yaPasoLaHora(cfg))
+            set[`${base}.ultimoDia`] = hoyArgentina();
+        if (Object.keys(set).length > 0)
+            await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
+        res.json({ activa: req.body?.activa !== undefined ? req.body.activa === true : !!pa.activa, config: cfg });
     }
     catch (error) {
         console.error("Put presentacion automatica error:", error);

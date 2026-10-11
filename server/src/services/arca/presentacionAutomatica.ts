@@ -21,11 +21,13 @@ import { TEXTO_PROBLEMA_SUCURSAL } from "../../compartido/sucursalesDeEmpresa.js
 import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVigentes.js";
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
 import { quienTiene } from "./candadoArca.js";
+import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, proximaCorridaPara, ventanaDeLaCorrida } from "./horarioAltasAutomaticas.js";
 
 /**
- * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día a las 14 h (hora argentina) se presentan las
- * altas tempranas cuyo contrato EMPIEZA ese día. Si nadie hace nada, cada alta sale sola el día de su
- * alta. Lo que no está completo no se presenta y queda con su motivo en «Presentaciones Automáticas».
+ * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día, a la hora configurada (14:00 argentinas por
+ * defecto), se presentan las altas tempranas que empiezan ese día —o en los próximos N días, si se
+ * configuró anticipación; ver `horarioAltasAutomaticas.ts`—. Si nadie hace nada, cada alta sale sola.
+ * Lo que no está completo no se presenta y queda con su motivo en «A.R.C.A Altas Automáticas».
  *
  * EL REGISTRO LO ARMA EL MISMO CÓDIGO QUE LA PANTALLA (`compartido/arca`), con los mismos catálogos que
  * carga Contratos (`useCatalogosArca`) y la misma fila que devuelve `contracts-overview`. Después pasa
@@ -35,12 +37,6 @@ import { quienTiene } from "./candadoArca.js";
  * desde Contratos y no se presentan solos.
  */
 
-export const HORA_PRESENTACION = 14;
-/** El momento en que la automática presenta el alta de esa fecha. Argentina no tiene horario de verano. */
-export const momentoDePresentacion = (fecha: string): Date => new Date(`${fecha}T${String(HORA_PRESENTACION).padStart(2, "0")}:00:00-03:00`);
-/** Hora argentina actual (0-23), sin depender de la zona del VPS. */
-export const horaArgentina = (d: Date = new Date()): number =>
-  Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", hour12: false }).format(d)) % 24;
 
 /** Los catálogos de ARCA tal como los recibe la pantalla (pasados por JSON: ids como texto). */
 export async function catalogosArca(): Promise<AfipCatalogs> {
@@ -84,7 +80,7 @@ export interface CandidatoAlta {
   fechaAlta: string;
   fechaBaja: string;
   empresa: { _id: string; razonSocial: string } | null;
-  /** Momento en que la automática lo presenta (fecha de alta, 14 h), ISO. */
+  /** La próxima corrida automática que lo presenta, ISO. Vacío = ya no hay ninguna (su día pasó): se fuerza a mano. */
   momento: string;
   /** Se puede presentar tal como está. */
   presentable: boolean;
@@ -100,8 +96,11 @@ export interface CandidatoAlta {
  */
 export async function candidatosDeAlta(
   tenantObjectId: Types.ObjectId,
-  opts: { desde?: string; hasta?: string; soloContrato?: { userProjectId: string; contractIndex: number } } = {},
+  opts: { desde?: string; hasta?: string; soloContrato?: { userProjectId: string; contractIndex: number }; cfg?: ConfigAltasAutomaticas } = {},
 ): Promise<CandidatoAlta[]> {
+  const cfg = opts.cfg || CONFIG_POR_DEFECTO;
+  const ahora = new Date();
+  const hoy = hoyArgentina();
   const proyectos: any[] = await Project.find({ tenantId: tenantObjectId }).select("_id name clientId").lean();
   if (proyectos.length === 0) return [];
   const proyectoPorId = new Map(proyectos.map((p) => [String(p._id), p]));
@@ -245,7 +244,7 @@ export async function candidatosDeAlta(
       fechaAlta,
       fechaBaja,
       empresa: empresa ? { _id: String(empresa._id), razonSocial: String(empresa.razonSocial || "") } : null,
-      momento: fechaAlta ? momentoDePresentacion(fechaAlta).toISOString() : "",
+      momento: proximaCorridaPara(fechaAlta, cfg, ahora, hoy)?.toISOString() || "",
       presentable: !motivo && !!registro,
       motivo,
       registro: motivo ? null : registro,
@@ -317,10 +316,11 @@ export async function presentarCandidatos(o: { tenantId: string; tenantObjectId:
   return resultados;
 }
 
-/** La corrida de las 14 h de UN tenant: las altas de hoy. Devuelve el resumen que se guarda. */
-export async function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId) {
+/** La corrida del día de UN tenant: las altas de hoy (y de los próximos días, según la anticipación). Devuelve el resumen que se guarda. */
+export async function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas) {
   const hoy = hoyArgentina();
-  const candidatos = await candidatosDeAlta(tenantObjectId, { desde: hoy, hasta: hoy });
+  const { desde, hasta } = ventanaDeLaCorrida(hoy, cfg);
+  const candidatos = await candidatosDeAlta(tenantObjectId, { desde, hasta, cfg });
   const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos, automatica: true });
   return {
     fecha: new Date().toISOString(),

@@ -3,19 +3,22 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faClock, faTriangleExclamation, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { projectsAPI, type AltaPendienteArca, type EstadoPresentacionAutomatica } from "../api/projects";
+import { Link } from "react-router-dom";
+import { projectsAPI, horaTexto, anticipacionTexto, type AltaPendienteArca, type EstadoPresentacionAutomatica } from "../api/projects";
 import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /*
-  PRESENTACIONES AUTOMÁTICAS A.R.C.A: cada alta temprana se presenta sola a las 14 h (hora argentina)
-  del día de su alta. Acá se ve qué va a salir y cuándo —con la cuenta regresiva de cada una—, qué no
+  A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
+  por defecto) del día de su alta, o con la anticipación configurada (Configuración → ARCA → Altas Automáticas). Acá se ve qué va a salir y cuándo —con la cuenta regresiva de cada una—, qué no
   va a salir y por qué, y se puede forzar una para presentarla ya. La corrida la hace el servidor
   (`services/arca/presentacionAutomatica.ts`); esta pantalla sólo la muestra y la prende o apaga.
 */
 
 const fechaCorta = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso || "—");
 const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
+/** La fecha argentina de un instante ISO ("DD/MM/AAAA"): la corrida de las 22 h ya es «mañana» en UTC. */
+const fechaArgentina = (iso: string) => fechaCorta(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(iso)));
 
 /** Días, horas y minutos que faltan; null si ya pasó. */
 const faltan = (destinoMs: number, ahoraMs: number): { d: number; h: number; m: number } | null => {
@@ -81,7 +84,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     if (activa) {
       const r = await sweetAlert.confirm(
         "Activar la presentación automática",
-        `Todos los días a las ${estado?.hora ?? 14} h se van a presentar en ARCA, sin que nadie apriete nada, las altas que empiezan ese día y están completas. No se deshace.`,
+        `Todos los días a las ${horaTexto(estado?.config)} se van a presentar en ARCA, sin que nadie apriete nada, las altas completas que empiezan ${anticipacionTexto(estado?.config) === "el mismo día del alta" ? "ese día" : "en los próximos días (" + anticipacionTexto(estado?.config) + ")"}. No se deshace.`,
         "Sí, activar",
         "Cancelar",
       );
@@ -89,7 +92,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     }
     setGuardando(true);
     try {
-      await projectsAPI.setPresentacionAutomatica(activa);
+      await projectsAPI.setPresentacionAutomatica({ activa });
       await cargar();
     } catch (err: any) {
       sweetAlert.error("No se pudo guardar", err?.response?.data?.error || err?.message || "");
@@ -119,9 +122,9 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   const { proximas, vencidas } = useMemo(() => {
     const lista = estado?.contratos || [];
-    const hoy = estado?.hoy || "";
-    // Vencidas: su día ya pasó (o hoy ya pasaron las 14 h) y siguen sin presentar.
-    const vencida = (c: AltaPendienteArca) => c.fechaAlta < hoy || (c.fechaAlta === hoy && new Date(c.momento).getTime() <= ahoraServidor);
+    // Vencidas: el servidor no les encontró una próxima corrida (su día pasó, o es hoy y la hora ya
+    // pasó). También si la cuenta llegó a cero mientras la pantalla estaba abierta.
+    const vencida = (c: AltaPendienteArca) => !c.momento || new Date(c.momento).getTime() <= ahoraServidor;
     return { proximas: lista.filter((c) => !vencida(c)), vencidas: lista.filter(vencida) };
   }, [estado, ahoraServidor]);
 
@@ -164,7 +167,7 @@ export const PresentacionesArcaPage: React.FC = () => {
           <div className="space-y-1">
             <CuentaRegresiva destino={c.momento} ahora={ahoraServidor} />
             <p className="text-[11px] text-gray-500">
-              {fechaCorta(c.fechaAlta)} a las {estado?.hora ?? 14} h{!estado?.activa ? " (si está activada)" : ""}
+              {fechaArgentina(c.momento)} a las {horaTexto(estado?.config)}{!estado?.activa ? " (si está activada)" : ""}
             </p>
           </div>
         )}
@@ -208,7 +211,7 @@ export const PresentacionesArcaPage: React.FC = () => {
   return (
     <PageLayout
       title="A.R.C.A Altas Automáticas"
-      subtitle={`Cada alta temprana se presenta sola en ARCA a las ${estado?.hora ?? 14} h del día de su alta.`}
+      subtitle={`Cada alta temprana se presenta sola en ARCA a las ${horaTexto(estado?.config)}, ${anticipacionTexto(estado?.config)}.`}
       faIcon={{ icon: faClock }}
       itemCount={estado?.contratos.length ?? 0}
       infoModal={{
@@ -218,13 +221,16 @@ export const PresentacionesArcaPage: React.FC = () => {
         title: "A.R.C.A Altas Automáticas",
         content: (
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-            <p>Con la automática activada, todos los días a las {estado?.hora ?? 14} h (hora argentina) se presentan en ARCA las altas tempranas que empiezan ese día. Sólo las de ese día.</p>
+            <p>
+              Con la automática activada, todos los días a las {horaTexto(estado?.config)} (hora argentina) se presentan en ARCA las altas tempranas que empiezan ese día
+              {estado?.config.diasAntes ? ` o en los próximos ${estado.config.diasAntes} día(s)` : ""}. El horario y la anticipación se cambian en Configuración → ARCA → Altas Automáticas.
+            </p>
             <p>Entran los contratos creados en WeProdu (Solicitudes o «Agregar miembro») que están en Alta temprana de ARCA y tienen todos los datos completos. Los que no están completos no se presentan y figuran con su motivo.</p>
             <p>Una persona no tiene dos altas a la vez con la misma empleadora: si ya tiene una presentada que no terminó, la nueva espera.</p>
             <p>
               <strong>Forzar presentación</strong> presenta una ya, sin esperar su día. Lo que se presentó, a mano o solo, queda en el registro de «Alta Temprana A.R.C.A» de Contratos.
             </p>
-            <p>Si se activa después de las {estado?.hora ?? 14} h, empieza al día siguiente: las de hoy se fuerzan a mano.</p>
+            <p>Si se activa después de las {horaTexto(estado?.config)}, empieza al día siguiente: las de hoy se fuerzan a mano.</p>
           </div>
         ),
       }}
@@ -246,12 +252,17 @@ export const PresentacionesArcaPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {(!estado.activa || estado.enSeco) && (
-            <div className="space-y-1">
-              {!estado.activa && <p className="text-sm text-amber-700 dark:text-amber-400">Desactivada: no se presenta nada sola. Activala para que cada alta salga a las {estado.hora} h de su día.</p>}
-              {estado.enSeco && <p className="text-xs text-gray-500">Este servidor corre en prueba: llega hasta antes de presentar y no manda nada a ARCA.</p>}
-            </div>
-          )}
+          <div className="space-y-1">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              <FontAwesomeIcon icon={faClock} className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
+              Todos los días a las <strong>{horaTexto(estado.config)}</strong>, {anticipacionTexto(estado.config)}.{" "}
+              <Link to="/arca/altas-automaticas" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
+                Cambiar horario
+              </Link>
+            </p>
+            {!estado.activa && <p className="text-sm text-amber-700 dark:text-amber-400">Desactivada: no se presenta nada sola. Activala para que cada alta salga a las {horaTexto(estado.config)} de su día.</p>}
+            {estado.enSeco && <p className="text-xs text-gray-500">Este servidor corre en prueba: llega hasta antes de presentar y no manda nada a ARCA.</p>}
+          </div>
 
           {u && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-2">

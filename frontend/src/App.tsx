@@ -26,6 +26,7 @@ import { ClientProjectsPage } from "./pages/ClientProjectsPage";
 import { ContractsPage } from "./pages/ContractsPage";
 import { RenovacionesPage } from "./pages/RenovacionesPage";
 import { PresentacionesArcaPage } from "./pages/PresentacionesArcaPage";
+import { ArcaAltasAutomaticasConfigPage } from "./pages/ArcaAltasAutomaticasConfigPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
 import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
@@ -701,6 +702,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <GuiaObrasSocialesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/altas-automaticas"
+                element={
+                  <ProtectedRoute>
+                    <ArcaAltasAutomaticasConfigPage />
                   </ProtectedRoute>
                 }
               />

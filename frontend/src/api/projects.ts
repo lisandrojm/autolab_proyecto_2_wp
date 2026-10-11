@@ -849,15 +849,15 @@ class ProjectsAPI {
     return data;
   }
 
-  /** Presentaciones Automáticas: estado de la de las 14 h y las altas pendientes, con su cuenta regresiva. */
-  async presentacionAutomatica(): Promise<EstadoPresentacionAutomatica> {
-    const { data } = await axios.get(`/contratos/altas-arca/automatica`, { headers: this.getHeaders() });
+  /** Altas Automáticas: estado, horario configurado y las altas pendientes con su cuenta regresiva. `soloConfig` ahorra los candidatos. */
+  async presentacionAutomatica(opts: { soloConfig?: boolean } = {}): Promise<EstadoPresentacionAutomatica> {
+    const { data } = await axios.get(`/contratos/altas-arca/automatica${opts.soloConfig ? "?soloConfig=true" : ""}`, { headers: this.getHeaders() });
     return data;
   }
 
-  /** Prende o apaga la presentación automática de las 14 h. */
-  async setPresentacionAutomatica(activa: boolean): Promise<{ activa: boolean }> {
-    const { data } = await axios.put(`/contratos/altas-arca/automatica`, { activa }, { headers: this.getHeaders() });
+  /** Prende o apaga las Altas Automáticas y/o cambia su horario. Cada campo es opcional: se toca sólo lo que viene. */
+  async setPresentacionAutomatica(cambios: Partial<{ activa: boolean } & ConfigAltasAutomaticas>): Promise<{ activa: boolean; config: ConfigAltasAutomaticas }> {
+    const { data } = await axios.put(`/contratos/altas-arca/automatica`, cambios, { headers: this.getHeaders() });
     return data;
   }
 
@@ -1063,18 +1063,32 @@ export interface AltaPendienteArca {
   fechaAlta: string;
   fechaBaja: string;
   empresa: { _id: string; razonSocial: string } | null;
-  /** Cuándo la presenta la automática (fecha de alta, 14 h argentinas), ISO. */
+  /** La próxima corrida automática que la presenta, ISO. Vacío = ya no hay ninguna (su día pasó): se fuerza a mano. */
   momento: string;
   presentable: boolean;
   motivo: string;
 }
 
+/** El horario de las Altas Automáticas (ver `horarioAltasAutomaticas.ts` en el server). */
+export interface ConfigAltasAutomaticas {
+  /** Hora argentina de la corrida diaria, 0-23. */
+  hora: number;
+  minuto: number;
+  /** Con cuánta anticipación: 0 = el mismo día del alta; N = hasta N días antes. */
+  diasAntes: number;
+}
+
+/** "14:00". */
+export const horaTexto = (c?: ConfigAltasAutomaticas | null): string => (c ? `${String(c.hora).padStart(2, "0")}:${String(c.minuto).padStart(2, "0")}` : "14:00");
+
+/** «el mismo día del alta» / «hasta 2 días antes del alta». */
+export const anticipacionTexto = (c?: ConfigAltasAutomaticas | null): string => (!c || c.diasAntes === 0 ? "el mismo día del alta" : c.diasAntes === 1 ? "hasta 1 día antes del alta" : `hasta ${c.diasAntes} días antes del alta`);
+
 export interface EstadoPresentacionAutomatica {
   activa: boolean;
-  hora: number;
+  config: ConfigAltasAutomaticas;
   ahora: string;
   hoy: string;
-  proximaCorrida: string;
   enSeco: boolean;
   ultimaCorrida: null | {
     fecha: string;

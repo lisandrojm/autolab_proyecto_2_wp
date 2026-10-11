@@ -111,7 +111,9 @@ const ARCA_CONEXION_PATHS = [ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH];
 const ARCA_COMO_FUNCIONA_PATH = '/arca/como-funciona';
 /** Guía del único trámite del módulo que sale de la app: la validación de obras sociales. */
 const ARCA_GUIA_OS_PATH = '/arca/guia-obras-sociales';
-const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH];
+/** El horario de las Altas Automáticas (a qué hora y con cuánta anticipación se presentan solas). */
+const ARCA_ALTAS_AUTO_PATH = '/arca/altas-automaticas';
+const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH, ARCA_ALTAS_AUTO_PATH];
 
 /** ABM de Empresas. La ficha de cada una cuelga del mismo grupo: ver `empresasGroup`. */
 const EMPRESAS_PATH = '/empresas';
@@ -520,6 +522,8 @@ export const MobileNavbar: React.FC = () => {
       // funciona. No expone ningún dato — es la explicación del circuito.
       if (puedeAbrir(ARCA_COMO_FUNCIONA_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_COMO_FUNCIONA_PATH, icon: faSitemap, label: 'Cómo funciona', scope: 'global' });
       if (puedeAbrir(ARCA_GUIA_OS_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_GUIA_OS_PATH, icon: faShieldHeart, label: 'Validar obras sociales', scope: 'global' });
+      // Mismo permiso que la conexión: configura cuándo el servidor presenta solo, con esa conexión.
+      if (puedeAbrir(ARCA_ALTAS_AUTO_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_ALTAS_AUTO_PATH, icon: faClock, label: 'Altas Automáticas', scope: 'global' });
       // Tablas oficiales del organismo: comparten un solo permiso porque son el mismo tipo de
       // nomenclador (se siembran desde ARCA y casi no se editan), no tres módulos distintos.
       if (puedeAbrir('/arca/sucursales')) base.push({ permiso: 'config_arca_sucursales:view', path: '/arca/sucursales', icon: faLocationDot, label: 'Domicilios de Explotación', scope: 'global' });
@@ -690,7 +694,7 @@ export const MobileNavbar: React.FC = () => {
       una cuarta lista a mano se desincroniza en cuanto alguien agregue una pantalla al módulo, y el
       síntoma sería un ítem que desaparece del menú sin que nada avise.
     */
-    const arcaOtros = ARCA_PATHS.filter((ruta) => !ARCA_NOMENCLADOR_PATHS.includes(ruta) && !ARCA_CONEXION_PATHS.includes(ruta))
+    const arcaOtros = ARCA_PATHS.filter((ruta) => !ARCA_NOMENCLADOR_PATHS.includes(ruta) && !ARCA_CONEXION_PATHS.includes(ruta) && ruta !== ARCA_ALTAS_AUTO_PATH)
       .map(itemArca)
       .filter(Boolean) as any[];
     // El subgrupo «Conexión» entra en el orden por su propio rótulo, como un hermano más.
@@ -698,6 +702,10 @@ export const MobileNavbar: React.FC = () => {
       ...arcaOtros,
       ...(conexionChildren.length > 0 ? [{ path: '#arca-conexion', groupKey: 'arcaConexion', icon: faPlug, label: 'Conexión', scope: 'global' as const, children: conexionChildren }] : []),
     ].sort(byLabel);
+    // «Altas Automáticas» va ÚLTIMA, debajo de «Validar obras sociales» (pedido del 11/10/2026), fuera
+    // del orden alfabético que la dejaría primera: es lo que el módulo hace solo, después de lo que se configura.
+    const altasAutomaticas = itemArca(ARCA_ALTAS_AUTO_PATH);
+    if (altasAutomaticas) arcaResto.push(altasAutomaticas);
     const arcaChildren: any[] = [
       ...(arcaNomencladores.length > 0 ? [{ path: '#arca-nomencladores', sectionKey: 'nomencladores', section: 'Nomencladores de ARCA', hint: 'Universales: se importan una vez y valen para todos los CUIT.' }] : []),
       ...arcaNomencladores,
