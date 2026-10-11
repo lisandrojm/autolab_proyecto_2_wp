@@ -766,6 +766,20 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           juntos. Son las dos fechas que la fila muestra («Vigente · Alta 3/2/2025 · Baja —»).
         */
         const rigeEnElPicker = picker && idsPagina.length > 0 ? await contratosQueRigenDeLasPersonas(idsPagina, hoyArgentina()) : null;
+        /*
+          QUIÉN CARGÓ CADA SOLICITUD (`solicitudCreadaPor`), con nombre y roles: la tabla de Solicitudes lo
+          muestra en su columna «Solicitó», con los roles de coordinación o supervisión debajo. Una consulta
+          para toda la página; sólo cuando se piden solicitudes.
+        */
+        const solicitantes = new Map();
+        if (req.query.solicitudAny === "true") {
+            const ids = [...new Set(enrichedUsers.map((u) => String(u.metadata?.solicitudCreadaPor || "")).filter((id) => Types.ObjectId.isValid(id)))];
+            if (ids.length > 0) {
+                const quienes = await User.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("firstName lastName roles").populate({ path: "roles", select: "name", model: Role }).lean();
+                for (const q of quienes)
+                    solicitantes.set(String(q._id), { nombre: `${q.firstName || ""} ${q.lastName || ""}`.trim(), roles: (q.roles || []).map((r) => String(r?.name || "")).filter(Boolean) });
+            }
+        }
         const totalesPorUsuario = new Map();
         if (teamTable && idsPagina.length > 0) {
             const filas = await UserProject.aggregate([
@@ -791,6 +805,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
                     // sigue sumando sobre `metadata.projects` como siempre.
                     metadata: totales ? { ...u.metadata, jornadasTotales: totales.jornadas, contratosTotales: totales.contratos } : u.metadata,
                     solicitudesPendientes: solicitudesPorUsuario.get(String(u._id)) || [],
+                    ...(solicitantes.size > 0 && u.metadata?.solicitudCreadaPor ? { solicitante: solicitantes.get(String(u.metadata.solicitudCreadaPor)) || null } : {}),
                 };
             }),
             pagination: {

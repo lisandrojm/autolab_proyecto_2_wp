@@ -817,6 +817,20 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     */
     const rigeEnElPicker = picker && idsPagina.length > 0 ? await contratosQueRigenDeLasPersonas(idsPagina, hoyArgentina()) : null;
 
+    /*
+      QUIÉN CARGÓ CADA SOLICITUD (`solicitudCreadaPor`), con nombre y roles: la tabla de Solicitudes lo
+      muestra en su columna «Solicitó», con los roles de coordinación o supervisión debajo. Una consulta
+      para toda la página; sólo cuando se piden solicitudes.
+    */
+    const solicitantes = new Map<string, { nombre: string; roles: string[] }>();
+    if (req.query.solicitudAny === "true") {
+      const ids = [...new Set(enrichedUsers.map((u: any) => String(u.metadata?.solicitudCreadaPor || "")).filter((id: string) => Types.ObjectId.isValid(id)))];
+      if (ids.length > 0) {
+        const quienes: any[] = await User.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("firstName lastName roles").populate({ path: "roles", select: "name", model: Role }).lean();
+        for (const q of quienes) solicitantes.set(String(q._id), { nombre: `${q.firstName || ""} ${q.lastName || ""}`.trim(), roles: (q.roles || []).map((r: any) => String(r?.name || "")).filter(Boolean) });
+      }
+    }
+
     const totalesPorUsuario = new Map<string, { jornadas: number; contratos: number }>();
     if (teamTable && idsPagina.length > 0) {
       const filas: any[] = await UserProject.aggregate([
@@ -842,6 +856,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           // sigue sumando sobre `metadata.projects` como siempre.
           metadata: totales ? { ...u.metadata, jornadasTotales: totales.jornadas, contratosTotales: totales.contratos } : u.metadata,
           solicitudesPendientes: solicitudesPorUsuario.get(String(u._id)) || [],
+          ...(solicitantes.size > 0 && u.metadata?.solicitudCreadaPor ? { solicitante: solicitantes.get(String(u.metadata.solicitudCreadaPor)) || null } : {}),
         };
       }),
       pagination: {

@@ -49,6 +49,8 @@ export interface ProyectoDeSolicitud {
  * entera de la diferencia.
  */
 export interface SolicitudVista {
+  /** Quién la cargó, con sus roles (sólo los de coordinación o supervisión se muestran). */
+  solicitante?: { nombre: string; roles: string[] } | null;
   _id: string;
   nombre: string;
   email?: string;
@@ -89,11 +91,15 @@ export interface SolicitudVista {
   obraSocial?: ObraSocialDeSolicitud | null;
 }
 
+/** Roles del solicitante que se muestran como badge en la columna «Solicitó». */
+const ROL_QUE_SOLICITA = /coordinador|supervisor/i;
+
 /** Adapta un `User` con `metadata.isSolicitud` a la forma de la tabla. */
 export const solicitudDesdeUser = (u: any): SolicitudVista => {
   const m = u?.metadata || {};
   return {
     _id: String(u._id),
+    solicitante: u.solicitante ?? null,
     nombre: m.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
     email: u.email,
     estado: (m.solicitudStatus || "pendiente") as EstadoSolicitud,
@@ -271,6 +277,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </th>
               )}
               <th className="px-4 py-3 font-semibold">Nombre</th>
+              <th className="px-4 py-3 font-semibold">Solicitó</th>
               {mostrarProyectos && (
                 <>
                   <th className="px-4 py-3 font-semibold">Cliente</th>
@@ -361,6 +368,30 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         </p>
                       )}
                     </div>
+                  </td>
+
+                  {/*
+                    QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
+                    con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
+                    suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
+                  */}
+                  <td className="px-4 py-3">
+                    {s.solicitante?.nombre ? (
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p>
+                        {s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
+                              <span key={r} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                                {r}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
                   </td>
 
                   {/*
