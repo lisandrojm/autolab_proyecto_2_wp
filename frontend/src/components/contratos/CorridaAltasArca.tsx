@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faSpinner, faCircle, faTriangleExclamation, faCopy, faFlask, faCircleQuestion, faDownload, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faCircleInfo, faCircleCheck, faCircleXmark, faSpinner, faCircle, faTriangleExclamation, faCopy, faFlask, faCircleQuestion, faDownload, faEye } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
 import { projectsAPI, EstadoCorridaAltas, ModoAltasArca } from '../../api/projects';
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
@@ -137,6 +137,8 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
   const [deteniendo, setDeteniendo] = useState(false);
   /** El modal «Lo presentado»: cada registro tal cual se mandó a ARCA, campo por campo. */
   const [verPresentado, setVerPresentado] = useState(false);
+  /** El detalle del aviso rojo (empleadora, tandas, Detener): detrás de un ⓘ para no cargar la confirmación. */
+  const [verAviso, setVerAviso] = useState(false);
   const intervalo = useRef<number | null>(null);
   const cantEventos = useRef(0);
   const avisoTerminado = useRef(false);
@@ -312,19 +314,32 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
               </div>
             )}
             <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 px-3 py-2.5">
-              <p className="font-semibold text-red-800 dark:text-red-300">
-                <FontAwesomeIcon icon={faTriangleExclamation} className="mr-1.5" />
-                Esto presenta {lote.personas.length} alta(s) ante ARCA y no se deshace.
+              <p className="font-semibold text-red-800 dark:text-red-300 flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faTriangleExclamation} />
+                <span className="flex-1">Esto presenta {lote.personas.length} alta(s) ante ARCA y no se deshace.</span>
+                <button type="button" onClick={() => setVerAviso(true)} title="Qué se presenta, a nombre de quién y en cuántas tandas" aria-label="Ver el detalle del aviso" className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 shrink-0">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                </button>
               </p>
-              <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                Empleadora: <strong>{lote.empresa.razonSocial}</strong> · CUIT {fmtCuit(lote.empresa.cuit)}. Se verifica en la pantalla de ARCA antes de escribir.
-              </p>
-              {porTandas && (
-                <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                  Se presentan en <strong>{tandasDelLote} tanda(s)</strong> de hasta {MAX_ALTAS_MASIVAS}, una después de la otra, con esta única confirmación. Lo que ya esté presentado se saltea. «Detener» corta al terminar la tanda en curso: lo presentado hasta ahí queda presentado.
-                </p>
-              )}
             </div>
+            {verAviso && (
+              <Modal isOpen onClose={() => setVerAviso(false)} title="Antes de presentar" size="sm" zIndex={90}>
+                <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 px-3 py-2.5">
+                  <p className="font-semibold text-red-800 dark:text-red-300">
+                    <FontAwesomeIcon icon={faTriangleExclamation} className="mr-1.5" />
+                    Esto presenta {lote.personas.length} alta(s) ante ARCA y no se deshace.
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                    Empleadora: <strong>{lote.empresa.razonSocial}</strong> · CUIT {fmtCuit(lote.empresa.cuit)}. Se verifica en la pantalla de ARCA antes de escribir.
+                  </p>
+                  {porTandas && (
+                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                      Se presentan en <strong>{tandasDelLote} tanda(s)</strong> de hasta {MAX_ALTAS_MASIVAS}, una después de la otra, con esta única confirmación. Lo que ya esté presentado se saltea. «Detener» corta al terminar la tanda en curso: lo presentado hasta ahí queda presentado.
+                    </p>
+                  )}
+                </div>
+              </Modal>
+            )}
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
               {lote.personas.map((p) => (
                 <li key={p.cuil} className="px-3 py-1.5 flex justify-between gap-2">
