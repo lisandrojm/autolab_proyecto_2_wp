@@ -429,7 +429,7 @@ describe("validación previa a generar los TXT: sucursal y actividad contra la e
   it("los dos botones pasan por el freno: el de 130 (generarTxt) y el URGENTE", () => {
     const fuente = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "ContractBulkTabs.tsx"), "utf8");
     assert.match(fuente, /const generarTxt = [^\n]+\n\s+if \(frenaPorSucursal\(items\)\) return false;/);
-    assert.match(fuente, /const presentarAltasMasivas = async \(\) => \{\s+if \(!empresaDeLaPestana\) return;[\s\S]{0,200}if \(frenaPorSucursal\(fuenteTxt\)\) return;/);
+    assert.match(fuente, /const presentarAltasMasivas = async \(fuente[^)]*\) => \{\s+if \(!empresa\) return;[\s\S]{0,300}if \(frenaPorSucursal\(fuente\)\) return;/);
   });
 });
 
