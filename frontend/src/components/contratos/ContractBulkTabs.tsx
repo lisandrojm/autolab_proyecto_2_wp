@@ -1784,8 +1784,9 @@ export const ContractBulkAfipTab: React.FC<{
   );
 
 
-  // El TXT se arma con lo seleccionado; si no hay selección, con todo lo filtrado (comodidad).
-  const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
+  // Se presenta SÓLO lo tildado (10/10/2026): antes, sin selección, tomaba todo lo filtrado, y un clic
+  // de más mandaba a ARCA la bandeja entera. Para todo, el check de la cabecera (toma todas las páginas).
+  const fuenteTxt = seleccionados;
   /*
     LA CORRIDA AUTOMÁTICA DE ALTA EN ARCA: «URGENTE» arma registros de 85 —informa puesto, convenio y
     situación de revista— y los pega en Altas Masivas, por tandas de 9. Corre en el SERVIDOR (ver
@@ -2045,12 +2046,14 @@ export const ContractBulkAfipTab: React.FC<{
 
             <button
               onClick={presentarAltasMasivas}
-              disabled={!empresaDeLaPestana || completosTxt === 0}
+              disabled={!empresaDeLaPestana || completos85.length === 0}
               title={
                 bloqueoPorValidacion ||
                 motivoSinEmpresa ||
-                (completosTxt === 0
-                  ? 'No hay contratos completos para Altas Masivas'
+                (seleccionados.length === 0
+                  ? 'Tildá los contratos a presentar (el check de la cabecera toma todos, de todas las páginas)'
+                  : completosTxt === 0
+                  ? 'Ninguno de los contratos tildados está completo para Altas Masivas'
                   : faltan85 > 0
                       ? `A ${faltan85} de los ${completosTxt} contrato(s) les falta el puesto desempeñado, que Altas Masivas exige. Apretá para ver dónde se carga`
                       : `Copia ${completosTxt} registro(s) de 85 al portapapeles y los presenta en ARCA por Altas Masivas${completosTxt > MAX_ALTAS_MASIVAS ? `, en ${Math.ceil(completosTxt / MAX_ALTAS_MASIVAS)} tandas de hasta ${MAX_ALTAS_MASIVAS}` : ''}`)
@@ -2058,7 +2061,8 @@ export const ContractBulkAfipTab: React.FC<{
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
-              Presentar A.R.C.A{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+              {/* El número es lo que va a ARCA: los tildados completos, no todos los tildados. */}
+              Presentar A.R.C.A{completos85.length > 0 ? ` (${completos85.length})` : ''}
             </button>
             {/* Lo que ya se presentó por URGENTE: una fila por persona, con lo que contestó ARCA. */}
             <button type="button" onClick={() => setHistorialAltasOpen(true)} title="Registro de lo ya presentado por Altas Masivas (URGENTE)" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors shrink-0">
@@ -2249,7 +2253,7 @@ export const ContractBulkAfipTab: React.FC<{
                 )}
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
-                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title="Seleccionar todos los del listado" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title={`Seleccionar los ${selectableFiltered.length} del listado (todas las páginas, no sólo la que se ve)`} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   {/*
                     * La columna fija, la que queda a la vista mientras se scrollea a lo ancho:

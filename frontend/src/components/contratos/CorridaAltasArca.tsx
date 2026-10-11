@@ -285,7 +285,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
       {!confirmado && !corriendo && lote && (
         <button type="button" onClick={presentar} disabled={arrancando || !!otraCorrida} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50 ${lote.modo === 'altas_masivas' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
           {arrancando && <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" />}
-          {enSecoEfectivo ? 'Probar en seco' : 'Presentar en ARCA'}
+          {enSecoEfectivo ? `Probar en seco (${lote.personas.length})` : `Presentar en ARCA (${lote.personas.length})`}
         </button>
       )}
       <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
