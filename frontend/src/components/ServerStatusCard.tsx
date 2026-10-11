@@ -14,11 +14,10 @@ export const ServerStatusCard: React.FC = () => {
   }
 
   return (
-    <div className={`fixed bottom-5 right-8 hidden xl:block z-50 transition-all duration-500 ease-in-out`}>
+    <div className={`fixed bottom-2 right-2 hidden xl:block z-50 transition-all duration-500 ease-in-out`}>
       {isCollapsed ? (
-        <button onClick={() => setIsCollapsed(false)} className="flex items-center justify-center w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-indigo-500/20 transition-all hover:scale-110 active:scale-95 group relative" title="Ver estado del sistema">
-          <div className="absolute inset-0 rounded-full bg-indigo-500 animate-ping opacity-20 group-hover:opacity-40" />
-          <FontAwesomeIcon icon={faTerminal} className="h-4 w-4 relative z-10" />
+        <button onClick={() => setIsCollapsed(false)} className="flex items-center justify-center w-6 h-6 bg-indigo-600/70 hover:bg-indigo-500 text-white rounded-full shadow transition-all hover:scale-110 active:scale-95 group relative" title="Ver estado del sistema">
+          <FontAwesomeIcon icon={faTerminal} className="h-2.5 w-2.5 relative z-10" />
         </button>
       ) : (
         <div className="w-80 bg-white/70 dark:bg-gray-800/80 shadow-2xl rounded-2xl p-4 border border-white/20 dark:border-white/10 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-300 relative group">
