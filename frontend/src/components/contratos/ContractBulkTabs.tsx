@@ -1840,7 +1840,16 @@ export const ContractBulkAfipTab: React.FC<{
       .catch(() => {});
   }, []);
 
-  const personaDe = (row: ImpositivoRow) => ({ nombre: row.userName || '', cuil: String(row.cuit || '').replace(/\D/g, '') });
+  // Con el período y el tipo de contrato: una misma persona puede ir varias veces (un alta por
+  // período), y sin las fechas la lista parecía tener repetidos.
+  const personaDe = (row: ImpositivoRow) => ({
+    nombre: row.userName || '',
+    cuil: String(row.cuit || '').replace(/\D/g, ''),
+    alta: row.fecha_alta_contrato ? formatDate(row.fecha_alta_contrato) : '',
+    baja: row.fecha_baja_contrato ? formatDate(row.fecha_baja_contrato) : '',
+    contrato: row.nombre_contrato || '',
+    proyecto: row.projectName || '',
+  });
 
 
   /** URGENTE: registros de 85, al portapapeles, y la corrida que los pega en Altas Masivas. */

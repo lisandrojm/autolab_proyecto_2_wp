@@ -28,7 +28,8 @@ const TOPE_SIN_EVENTOS_MS = 90_000;
 export interface LoteParaPresentar {
   modo: ModoAltasArca;
   empresa: { _id: string; razonSocial: string; cuit: string };
-  personas: Array<{ nombre: string; cuil: string }>;
+  /** Con el período: la misma persona puede ir más de una vez, un alta por cada contrato. */
+  personas: Array<{ nombre: string; cuil: string; alta?: string; baja?: string; contrato?: string; proyecto?: string }>;
   items: Array<{ userProjectId: string; contractIndex: number; registro: string }>;
   /** Solo URGENTE: el texto que también quedó en el portapapeles, por si hay que pegarlo a mano. */
   texto?: string;
@@ -341,10 +342,23 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
               </Modal>
             )}
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
-              {lote.personas.map((p) => (
-                <li key={p.cuil} className="px-3 py-1.5 flex justify-between gap-2">
-                  <span>{p.nombre}</span>
-                  <span className="font-mono text-xs text-gray-500">{fmtCuit(p.cuil)}</span>
+              {lote.personas.map((p, i) => (
+                <li key={`${p.cuil}-${i}`} className="px-3 py-1.5 flex justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate">{p.nombre}</p>
+                    {(p.alta || p.contrato) && (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        {p.alta && (
+                          <>
+                            <span className="text-gray-400">Alta:</span> {p.alta} · <span className="text-gray-400">Baja:</span> {p.baja || '—'}
+                          </>
+                        )}
+                        {p.contrato ? `${p.alta ? ' · ' : ''}${p.contrato}` : ''}
+                        {p.proyecto ? ` · ${p.proyecto}` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <span className="font-mono text-xs text-gray-500 shrink-0">{fmtCuit(p.cuil)}</span>
                 </li>
               ))}
             </ul>
