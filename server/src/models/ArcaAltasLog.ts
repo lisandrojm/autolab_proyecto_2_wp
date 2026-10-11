@@ -16,6 +16,8 @@ export interface IArcaAltasLog extends Document {
   tenantId: Types.ObjectId;
   tipo: "carga_masiva" | "altas_masivas";
   usuarioId?: Types.ObjectId;
+  /** La lanzó la presentación automática de las 14 h: no hay persona detrás. */
+  automatica?: boolean;
   empresaId?: Types.ObjectId;
   empresaCuit?: string;
   empresaRazonSocial?: string;
@@ -52,6 +54,7 @@ const schema = new Schema<IArcaAltasLog>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     tipo: { type: String, enum: ["carga_masiva", "altas_masivas"], required: true },
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
+    automatica: { type: Boolean },
     empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaCuit: String,
     empresaRazonSocial: String,

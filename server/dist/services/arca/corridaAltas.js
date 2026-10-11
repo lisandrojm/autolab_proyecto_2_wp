@@ -70,6 +70,7 @@ export async function arrancarCorridaAltas(opts) {
             descartadas: lote.descartadas.map((d) => ({ cuil: d.cuil, nombre: d.nombre, motivo: d.motivo })),
             señal: { cortada: false },
             arrancadaEl: new Date(),
+            automatica: !!opts.automatica,
         };
         corridas.set(tenantId, corrida);
         void (modo === "altas_masivas" ? correrPorTandas : correr)({ corrida, lote, tenantObjectId, usuarioId, cred });
@@ -233,6 +234,7 @@ async function correrPorTandas(o) {
         : lote.items.map((i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, registro: i.registro, resultado: "pendiente" }));
     // El log se crea ANTES de presentar y se va completando por tanda: si el servidor se cae, queda.
     const log = await ArcaAltasLog.create({
+        automatica: corrida.automatica || undefined,
         tenantId: tenantObjectId,
         tipo: "altas_masivas",
         usuarioId: usuarioId && Types.ObjectId.isValid(usuarioId) ? usuarioId : undefined,

@@ -148,6 +148,17 @@ export interface ITenant extends Document {
             ultimoLoginAt?: Date;
             /** Qué pasó la última vez, para que un fallo no haya que ir a buscarlo a los logs. */
             ultimoError?: string;
+            /**
+             * PRESENTACIÓN AUTOMÁTICA de las altas de cada día a las 14 h (ver `presentacionAutomatica.ts`).
+             * Apagada por defecto: presenta en ARCA sin que nadie apriete nada, así que se prende a mano.
+             */
+            presentacionAutomatica?: {
+                activa?: boolean;
+                /** "YYYY-MM-DD" del último día que corrió: no se repite en el mismo día. */
+                ultimoDia?: string;
+                /** Qué hizo la última vez: por empresa, y lo que no se presentó con su motivo. */
+                ultimaCorrida?: any;
+            };
         };
         /**
          * Casilla de correo que recibe las copias de "documento enviado" de Dropbox Sign (se activa en

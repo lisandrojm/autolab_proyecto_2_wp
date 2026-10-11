@@ -72,6 +72,8 @@ interface CorridaAltas {
   descartadas: Array<{ cuil: string; nombre: string; motivo: "presentada" | "incierta" }>;
   señal: { cortada: boolean };
   arrancadaEl: Date;
+  /** La lanzó la presentación automática de las 14 h (ver `presentacionAutomatica.ts`), no una persona. */
+  automatica?: boolean;
 }
 
 /** Una por tenant, en memoria, igual que la de obras sociales (ver allí por qué). */
@@ -114,6 +116,7 @@ export async function arrancarCorridaAltas(opts: {
   items: ItemLoteAltas[];
   enSeco?: boolean;
   forzar?: boolean;
+  automatica?: boolean;
 }): Promise<{ total: number; enSeco: boolean; empresa: LoteAltasValidado["empresa"] }> {
   const { tenantId, tenantObjectId, usuarioId, modo } = opts;
   // El candado ANTES de cualquier await: dos clicks seguidos no pueden arrancar dos corridas.
@@ -146,6 +149,7 @@ export async function arrancarCorridaAltas(opts: {
       descartadas: lote.descartadas.map((d) => ({ cuil: d.cuil, nombre: d.nombre, motivo: d.motivo })),
       señal: { cortada: false },
       arrancadaEl: new Date(),
+      automatica: !!opts.automatica,
     };
     corridas.set(tenantId, corrida);
     void (modo === "altas_masivas" ? correrPorTandas : correr)({ corrida, lote, tenantObjectId, usuarioId, cred });
@@ -311,6 +315,7 @@ async function correrPorTandas(o: { corrida: CorridaAltas; lote: LoteAltasValida
 
   // El log se crea ANTES de presentar y se va completando por tanda: si el servidor se cae, queda.
   const log = await ArcaAltasLog.create({
+      automatica: corrida.automatica || undefined,
     tenantId: tenantObjectId,
     tipo: "altas_masivas",
     usuarioId: usuarioId && Types.ObjectId.isValid(usuarioId) ? usuarioId : undefined,

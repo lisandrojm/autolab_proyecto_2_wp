@@ -113,6 +113,8 @@ interface CorridaAltas {
         cortada: boolean;
     };
     arrancadaEl: Date;
+    /** La lanzó la presentación automática de las 14 h (ver `presentacionAutomatica.ts`), no una persona. */
+    automatica?: boolean;
 }
 export declare const corridaAltasDe: (tenantId: string) => CorridaAltas | undefined;
 /**
@@ -134,6 +136,7 @@ export declare function arrancarCorridaAltas(opts: {
     items: ItemLoteAltas[];
     enSeco?: boolean;
     forzar?: boolean;
+    automatica?: boolean;
 }): Promise<{
     total: number;
     enSeco: boolean;

@@ -79,6 +79,11 @@ const tenantSchema = new Schema({
             sesionGuardadaAt: { type: Date },
             ultimoLoginAt: { type: Date },
             ultimoError: { type: String },
+            presentacionAutomatica: {
+                activa: { type: Boolean, default: false },
+                ultimoDia: { type: String },
+                ultimaCorrida: { type: Schema.Types.Mixed },
+            },
         },
         dropboxSign: {
             email: { type: String },

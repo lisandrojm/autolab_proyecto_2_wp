@@ -29,6 +29,7 @@ import { initEstadoDropboxScheduler } from "./services/estadoDropboxCronService.
 import { initParitariasScheduler } from "./services/paritariasCronService.js";
 import { initCentrosCostoScheduler } from "./services/centrosCostoCronService.js";
 import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
+import { initPresentacionAutomaticaScheduler } from "./services/presentacionAutomaticaCronService.js";
 
 
 
@@ -443,6 +444,13 @@ connectDB()
         initDropboxSignMailScheduler();
       } catch (error) {
         console.error("❌ Failed to initialize dropbox-sign mail scheduler:", error);
+      }
+
+      // Presentación automática de las altas en ARCA, todos los días a las 14 h (sólo tenants que la activaron).
+      try {
+        initPresentacionAutomaticaScheduler();
+      } catch (error) {
+        console.error("❌ Failed to initialize presentacion-automatica scheduler:", error);
       }
     }
 

@@ -18,6 +18,7 @@ import { listarCategoriasCompat } from "../../utils/categoriaCompat.js";
 import { claveEstado } from "../../utils/estadoClave.js";
 import { ESTADO_TYPE } from "../../utils/estadosImpositivosSistema.js";
 import { unirRegistros } from "../../compartido/layoutAltaArca.js";
+import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVigentes.js";
 import { cotejarRegistro, cuilDeRegistro, problemasDeForma } from "./cotejoAltas.js";
 export class LoteAltasError extends Error {
     status;
@@ -69,6 +70,9 @@ export async function validarLoteAltas(o) {
         .select("firstName lastName metadata.cuit")
         .lean();
     const userPorId = new Map(usuarios.map((u) => [String(u._id), u]));
+    // Las altas que estas personas ya tienen presentadas: no se da otra que se superponga con la misma
+    // empleadora (ver `altasVigentes.ts`).
+    const presentadasPrevias = await altasPresentadasDe([...proyectosDelTenant], ups.map((u) => String(u.userId)));
     // ── Lo que hace falta para resolver lo esperado ─────────────────────────────────────────────────
     const [categorias, convenios, obrasSociales, estados, defaultsGlobales, sucursales, modalidadesC, modalidadesL, tipos] = await Promise.all([
         listarCategoriasCompat(),
@@ -144,6 +148,11 @@ export async function validarLoteAltas(o) {
         }
         if (!o.forzar && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
             errores.push(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
+            return;
+        }
+        const pisa = altaQueSePisa({ userId: String(up.userId), userProjectId: it.userProjectId, contractIndex: it.contractIndex, empresaId: String(empresaId), alta: c.fecha_alta_contrato, baja: c.fecha_baja_contrato }, presentadasPrevias);
+        if (pisa) {
+            errores.push(`${etiqueta}: ${textoAltaQueSePisa(pisa)}.`);
             return;
         }
         const categoria = categorias.find((x) => Number(x?.data?.id) === Number(c.categoria_sat_id));

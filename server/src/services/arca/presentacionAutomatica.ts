@@ -1,0 +1,331 @@
+import { Types } from "mongoose";
+import UserProject from "../../models/UserProject.js";
+import { Project } from "../../models/Project.js";
+import { User } from "../../models/User.js";
+import { Client } from "../../models/Client.js";
+import { Company } from "../../models/Company.js";
+import { Contrato } from "../../models/Contrato.js";
+import { Convenio } from "../../models/Convenio.js";
+import { ObraSocial } from "../../models/ObraSocial.js";
+import { Info } from "../../models/Info.js";
+import { RoleFrame } from "../../models/RoleFrame.js";
+import { ArcaSucursal } from "../../models/ArcaSucursal.js";
+import { getArcaDefaults } from "../../models/ArcaDefault.js";
+import { listarCategoriasCompat } from "../../utils/categoriaCompat.js";
+import { claveEstado } from "../../utils/estadoClave.js";
+import { ESTADO_TYPE } from "../../utils/estadosImpositivosSistema.js";
+import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
+import { resolveAfip, resolveAfip85, problemasDeSucursalParaTxt, type AfipCatalogs } from "../../compartido/arca/afipCompleteness.js";
+import { buildAltaRecord85 } from "../../compartido/arca/afipTxt85.js";
+import { TEXTO_PROBLEMA_SUCURSAL } from "../../compartido/sucursalesDeEmpresa.js";
+import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVigentes.js";
+import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
+import { quienTiene } from "./candadoArca.js";
+
+/**
+ * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día a las 14 h (hora argentina) se presentan las
+ * altas tempranas cuyo contrato EMPIEZA ese día. Si nadie hace nada, cada alta sale sola el día de su
+ * alta. Lo que no está completo no se presenta y queda con su motivo en «Presentaciones Automáticas».
+ *
+ * EL REGISTRO LO ARMA EL MISMO CÓDIGO QUE LA PANTALLA (`compartido/arca`), con los mismos catálogos que
+ * carga Contratos (`useCatalogosArca`) y la misma fila que devuelve `contracts-overview`. Después pasa
+ * por `arrancarCorridaAltas`, que lo vuelve a cotejar contra la base como a cualquier presentación manual.
+ *
+ * Sólo contratos creados en WeProdu (Solicitudes o «Agregar miembro»): los importados no se gestionan
+ * desde Contratos y no se presentan solos.
+ */
+
+export const HORA_PRESENTACION = 14;
+/** El momento en que la automática presenta el alta de esa fecha. Argentina no tiene horario de verano. */
+export const momentoDePresentacion = (fecha: string): Date => new Date(`${fecha}T${String(HORA_PRESENTACION).padStart(2, "0")}:00:00-03:00`);
+/** Hora argentina actual (0-23), sin depender de la zona del VPS. */
+export const horaArgentina = (d: Date = new Date()): number =>
+  Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", hour12: false }).format(d)) % 24;
+
+/** Los catálogos de ARCA tal como los recibe la pantalla (pasados por JSON: ids como texto). */
+export async function catalogosArca(): Promise<AfipCatalogs> {
+  const [defaults, categorias, tipos, obrasSociales, sedes, empresas, sucursales, convenios, roleFrames, estados] = await Promise.all([
+    getArcaDefaults(),
+    listarCategoriasCompat(),
+    Contrato.find().sort({ name: 1 }).lean(),
+    ObraSocial.find().sort({ name: 1 }).lean(),
+    Info.find({ type: "sede" }).lean(),
+    Company.find().sort({ razonSocial: 1 }).lean(),
+    ArcaSucursal.find().sort({ codigo: 1 }).lean(),
+    Convenio.find().sort({ name: 1 }).lean(),
+    RoleFrame.find().sort({ name: 1 }).lean(),
+    Info.find({ type: ESTADO_TYPE }).sort({ "data.orden": 1, name: 1 }).lean(),
+  ]);
+  const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null));
+  return {
+    categorias: json(categorias),
+    tipos: json(tipos),
+    obrasSociales: json(obrasSociales),
+    sedes: json(sedes),
+    // Igual que GET /companies: los dos nombres de la obra social por defecto.
+    empresas: json((empresas as any[]).map((c) => ({ ...c, obraSocialId: c.obraSocialDefaultId ?? c.obraSocialId ?? null, obraSocialDefaultId: c.obraSocialDefaultId ?? c.obraSocialId ?? null }))),
+    sucursales: json(sucursales),
+    convenios: json(convenios),
+    estados: json(estados),
+    defaultsArcaGlobales: json((defaults as any)?.toObject ? (defaults as any).toObject() : defaults),
+    roleFrames: json(roleFrames),
+  } as AfipCatalogs;
+}
+
+export interface CandidatoAlta {
+  userProjectId: string;
+  contractIndex: number;
+  userId: string;
+  nombre: string;
+  cuil: string;
+  proyecto: string;
+  cliente: string;
+  tipoContrato: string;
+  fechaAlta: string;
+  fechaBaja: string;
+  empresa: { _id: string; razonSocial: string } | null;
+  /** Momento en que la automática lo presenta (fecha de alta, 14 h), ISO. */
+  momento: string;
+  /** Se puede presentar tal como está. */
+  presentable: boolean;
+  /** Por qué no, si no se puede. */
+  motivo: string;
+  /** El registro de 85, si está completo. */
+  registro: string | null;
+}
+
+/**
+ * Las altas tempranas pendientes de presentar del tenant, con su registro armado o el motivo por el
+ * que no se puede. `desde`/`hasta` acotan por fecha de alta; `soloContrato` busca uno puntual.
+ */
+export async function candidatosDeAlta(
+  tenantObjectId: Types.ObjectId,
+  opts: { desde?: string; hasta?: string; soloContrato?: { userProjectId: string; contractIndex: number } } = {},
+): Promise<CandidatoAlta[]> {
+  const proyectos: any[] = await Project.find({ tenantId: tenantObjectId }).select("_id name clientId").lean();
+  if (proyectos.length === 0) return [];
+  const proyectoPorId = new Map(proyectos.map((p) => [String(p._id), p]));
+
+  const estados: any[] = await Info.find({ type: ESTADO_TYPE }).select("name data").lean();
+  const clavesAltaTemprana = new Set(
+    estados.filter((e) => e?.data?.esImpositivo && e?.data?.tipoImpositivo === "alta_temprana_afip").map((e) => claveEstado(String(e.name || ""))),
+  );
+
+  const match: any = { projectId: { $in: proyectos.map((p) => p._id) } };
+  if (opts.soloContrato) {
+    if (!Types.ObjectId.isValid(opts.soloContrato.userProjectId)) return [];
+    match._id = new Types.ObjectId(opts.soloContrato.userProjectId);
+  } else {
+    // Que tenga algún contrato del sistema; el filtro fino va abajo, contrato por contrato. Con
+    // $elemMatch y no con «contracts.solicitudId: {$ne: null}»: sobre un array, $ne exige que NINGÚN
+    // contrato sea nulo, y quien tiene uno importado sin solicitud quedaba afuera.
+    match.$or = [{ contracts: { $elemMatch: { solicitudId: { $exists: true, $ne: null } } } }, { "contracts.origen": "agregar_miembro" }];
+  }
+  const filas: any[] = await UserProject.aggregate([
+    { $match: match },
+    {
+      $project: {
+        userId: 1,
+        projectId: 1,
+        c: { $map: { input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] }, as: "i", in: { i: "$$i", c: { $arrayElemAt: ["$contracts", "$$i"] } } } },
+      },
+    },
+    { $unwind: "$c" },
+  ]);
+
+  const elegidos: Array<{ up: any; i: number; c: any }> = [];
+  for (const f of filas) {
+    const c = f.c?.c;
+    const i = Number(f.c?.i);
+    if (!c) continue;
+    if (opts.soloContrato) {
+      if (i !== opts.soloContrato.contractIndex) continue;
+    } else {
+      if (!c.solicitudId && c.origen !== "agregar_miembro") continue;
+      const alta = fechaISO(c.fecha_alta_contrato);
+      if (!alta || (opts.desde && alta < opts.desde) || (opts.hasta && alta > opts.hasta)) continue;
+      // Lo ya presentado (o que pudo haber entrado) no es un pendiente.
+      if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") continue;
+    }
+    if (!clavesAltaTemprana.has(claveEstado(String(c.nombre_estado_empleado || "")))) continue;
+    elegidos.push({ up: f, i, c });
+  }
+  if (elegidos.length === 0) return [];
+
+  const userIds = [...new Set(elegidos.map((e) => String(e.up.userId)))];
+  const usuarios: any[] = await User.find({ _id: { $in: userIds }, tenantId: tenantObjectId }).select("firstName lastName email metadata.cuit metadata.sinCuit").lean();
+  const userPorId = new Map(usuarios.map((u) => [String(u._id), u]));
+  const idsClientes = [...new Set(proyectos.map((p) => String(p.clientId || "")).filter((id) => Types.ObjectId.isValid(id)))];
+  const clientes: any[] = await Client.find({ _id: { $in: idsClientes } }).select("name").lean();
+  const clientePorId = new Map(clientes.map((c) => [String(c._id), c.name || ""]));
+  const presentadas = await altasPresentadasDe(
+    proyectos.map((p) => p._id),
+    userIds,
+  );
+  const cat = await catalogosArca();
+  const empresaPorId = new Map(((cat.empresas || []) as any[]).map((e) => [String(e._id), e]));
+
+  const out: CandidatoAlta[] = [];
+  for (const { up, i, c } of elegidos) {
+    const u = userPorId.get(String(up.userId));
+    if (!u) continue; // de otro tenant o borrado
+    const proyecto = proyectoPorId.get(String(up.projectId));
+    const nombre = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || "(sin nombre)";
+    const fechaAlta = fechaISO(c.fecha_alta_contrato);
+    const fechaBaja = fechaISO(c.fecha_baja_contrato);
+    const empresaId = c.empresaContratoId ? String(c.empresaContratoId) : "";
+    const empresa = empresaPorId.get(empresaId);
+    // La misma fila que arma contracts-overview, con los campos que mira el generador.
+    const row: any = {
+      _id: String(up._id),
+      userId: String(up.userId),
+      userName: nombre,
+      projectId: String(up.projectId),
+      projectName: proyecto?.name || "",
+      contractIndex: i,
+      nombre_contrato: c.nombre_contrato || "",
+      nombre_estado_empleado: c.nombre_estado_empleado || "",
+      fecha_alta_contrato: c.fecha_alta_contrato || "",
+      fecha_baja_contrato: c.fecha_baja_contrato || "",
+      altaArcaPresentada: c.altaArcaPresentada || null,
+      empresaContratoId: empresaId,
+      nombre_empresa_contrato: c.nombre_empresa_contrato || "",
+      puestoDesempenado: c.puestoDesempenado || "",
+      categoria_sat_id: c.categoria_sat_id ?? null,
+      rol_frame_id: c.rol_frame_id ?? null,
+      sede_id: c.sede_id ?? null,
+      tipo_contrato_id: c.tipo_contrato_id ?? null,
+      sucursalArcaId: c.sucursalArcaId ? String(c.sucursalArcaId) : "",
+      actividadArca: c.actividadArca || "",
+      osId: c.obraSocialId ?? null,
+      obraSocialOrigen: c.obraSocialOrigen || "",
+      obraSocialConstatadaEn: c.obraSocialConstatadaEn || "",
+      obraSocialConstatadaEl: c.obraSocialConstatadaEl || "",
+      obraSocialNoFigura: !!c.obraSocialNoFigura,
+      cuit: u.metadata?.cuit || "",
+      sinCuit: u.metadata?.sinCuit === true,
+    };
+
+    let motivo = "";
+    let registro: string | null = null;
+    if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") motivo = "Ya se presentó en ARCA.";
+    else if (row.sinCuit) motivo = "No tiene CUIT/CUIL: va por el circuito «Sin CUIT», no por ARCA.";
+    else if (!empresaId || !empresa) motivo = "Falta elegir la Empresa Contrato.";
+    else {
+      const base = resolveAfip(row, cat);
+      const r85 = resolveAfip85(row, cat, base);
+      const suc = problemasDeSucursalParaTxt([row], cat);
+      if (!r85.completo) {
+        const faltan = r85.checks.filter((k) => k.estado === "falta" || k.estado === "error" || k.estado === "bloqueado").map((k) => k.label);
+        motivo = faltan.length > 0 ? `Faltan datos de ARCA: ${[...new Set(faltan)].join(", ")}.` : "Faltan datos de ARCA (ver «Datos ARCA» en Contratos).";
+      } else if (suc.length > 0) motivo = `Sucursal o actividad: ${TEXTO_PROBLEMA_SUCURSAL[suc[0].problema]}.`;
+      else {
+        try {
+          registro = buildAltaRecord85(row, cat);
+        } catch (e: any) {
+          motivo = `No se pudo armar el registro: ${e?.message || e}`;
+        }
+        if (!registro && !motivo) motivo = "No se pudo armar el registro de Altas Masivas.";
+      }
+      if (!motivo) {
+        const pisa = altaQueSePisa({ userId: String(up.userId), userProjectId: String(up._id), contractIndex: i, empresaId, alta: fechaAlta, baja: fechaBaja }, presentadas);
+        if (pisa) motivo = `${textoAltaQueSePisa(pisa).replace(/^ya/, "Ya")}.`;
+      }
+    }
+
+    out.push({
+      userProjectId: String(up._id),
+      contractIndex: i,
+      userId: String(up.userId),
+      nombre,
+      cuil: String(u.metadata?.cuit || "").replace(/\D/g, ""),
+      proyecto: proyecto?.name || "",
+      cliente: clientePorId.get(String(proyecto?.clientId || "")) || "",
+      tipoContrato: c.nombre_contrato || "",
+      fechaAlta,
+      fechaBaja,
+      empresa: empresa ? { _id: String(empresa._id), razonSocial: String(empresa.razonSocial || "") } : null,
+      momento: fechaAlta ? momentoDePresentacion(fechaAlta).toISOString() : "",
+      presentable: !motivo && !!registro,
+      motivo,
+      registro: motivo ? null : registro,
+    });
+  }
+  out.sort((a, b) => a.fechaAlta.localeCompare(b.fechaAlta) || a.nombre.localeCompare(b.nombre, "es"));
+  return out;
+}
+
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Espera a que se cumpla la condición, mirando cada 5 s. false si se venció el plazo. */
+async function esperarQue(cond: () => boolean, plazoMs: number): Promise<boolean> {
+  const fin = Date.now() + plazoMs;
+  while (!cond()) {
+    if (Date.now() > fin) return false;
+    await esperar(5000);
+  }
+  return true;
+}
+
+export interface ResultadoEmpresa {
+  empresa: string;
+  enviados: number;
+  enSeco?: boolean;
+  error?: string;
+}
+
+/**
+ * Presenta los candidatos, una corrida por empleadora (en ARCA se entra con el CUIT de cada una), en
+ * fila: cada corrida espera a que termine la anterior. Si hay otra corrida de ARCA en curso (una
+ * validación de obras sociales, una presentación manual), espera a que se libere.
+ */
+export async function presentarCandidatos(o: { tenantId: string; tenantObjectId: Types.ObjectId; usuarioId?: string; candidatos: CandidatoAlta[]; automatica: boolean }): Promise<ResultadoEmpresa[]> {
+  const grupos = new Map<string, CandidatoAlta[]>();
+  for (const c of o.candidatos) {
+    if (!c.presentable || !c.registro || !c.empresa) continue;
+    const g = grupos.get(c.empresa._id) || [];
+    g.push(c);
+    grupos.set(c.empresa._id, g);
+  }
+  const resultados: ResultadoEmpresa[] = [];
+  for (const [empresaId, items] of grupos) {
+    const razonSocial = items[0].empresa?.razonSocial || empresaId;
+    const libre = await esperarQue(() => !quienTiene(o.tenantId), 30 * 60_000);
+    if (!libre) {
+      resultados.push({ empresa: razonSocial, enviados: 0, error: "Había otra corrida de ARCA en curso y no terminó en 30 minutos." });
+      continue;
+    }
+    try {
+      const r = await arrancarCorridaAltas({
+        tenantId: o.tenantId,
+        tenantObjectId: o.tenantObjectId,
+        usuarioId: o.usuarioId,
+        modo: "altas_masivas",
+        empresaId,
+        items: items.map((c) => ({ userProjectId: c.userProjectId, contractIndex: c.contractIndex, registro: c.registro as string })),
+        automatica: o.automatica,
+      });
+      await esperarQue(() => {
+        const c = corridaAltasDe(o.tenantId);
+        return !c || c.terminada;
+      }, 90 * 60_000);
+      resultados.push({ empresa: razonSocial, enviados: r.total, enSeco: r.enSeco });
+    } catch (e: any) {
+      const detalle = Array.isArray(e?.detalle) && e.detalle.length > 0 ? ` ${e.detalle.map((d: any) => (typeof d === "string" ? d : `${d.etiqueta}: ${d.campo}`)).join(" · ")}` : "";
+      resultados.push({ empresa: razonSocial, enviados: 0, error: `${e?.message || e}${detalle}` });
+    }
+  }
+  return resultados;
+}
+
+/** La corrida de las 14 h de UN tenant: las altas de hoy. Devuelve el resumen que se guarda. */
+export async function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId) {
+  const hoy = hoyArgentina();
+  const candidatos = await candidatosDeAlta(tenantObjectId, { desde: hoy, hasta: hoy });
+  const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos, automatica: true });
+  return {
+    fecha: new Date().toISOString(),
+    dia: hoy,
+    empresas,
+    omitidos: candidatos.filter((c) => !c.presentable).map((c) => ({ nombre: c.nombre, cuil: c.cuil, empresa: c.empresa?.razonSocial || "", motivo: c.motivo })),
+  };
+}

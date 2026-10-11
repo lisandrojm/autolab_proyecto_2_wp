@@ -22,6 +22,8 @@ import { CentroCosto } from "../models/CentroCosto.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
 import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
+import { HORA_PRESENTACION, candidatosDeAlta, horaArgentina, momentoDePresentacion } from "../services/arca/presentacionAutomatica.js";
+import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
 import { encolarSiCorresponde } from "../services/arca/colaObrasSociales.js";
@@ -3027,6 +3029,101 @@ router.post("/contratos/altas-arca/corrida", requireTenant, authenticateToken, r
   }
 });
 
+/*
+  PRESENTACIONES AUTOMÁTICAS (ver `services/arca/presentacionAutomatica.ts`): la pantalla que muestra qué
+  altas se van a presentar solas a las 14 h del día de alta, con su cuenta regresiva, y deja forzar una.
+*/
+const sumarDias = (iso: string, n: number): string => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/** GET /contratos/altas-arca/automatica — estado de la automática y las altas pendientes (desde 30 días atrás). */
+router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const hoy = hoyArgentina();
+    const t: any = await Tenant.findById(req.tenantObjectId).select("integrations.arcaSimplificacion.presentacionAutomatica").lean();
+    const pa = t?.integrations?.arcaSimplificacion?.presentacionAutomatica || {};
+    // Las vencidas (de días anteriores, sin presentar) siguen a la vista para forzarlas a mano.
+    const candidatos = await candidatosDeAlta(req.tenantObjectId as Types.ObjectId, { desde: sumarDias(hoy, -30) });
+    const corrioHoy = pa.ultimoDia === hoy;
+    const proxima = !corrioHoy && horaArgentina() < HORA_PRESENTACION ? hoy : sumarDias(hoy, 1);
+    res.json({
+      activa: !!pa.activa,
+      hora: HORA_PRESENTACION,
+      ahora: new Date().toISOString(),
+      hoy,
+      proximaCorrida: momentoDePresentacion(proxima).toISOString(),
+      ultimaCorrida: pa.ultimaCorrida || null,
+      enSeco: enSecoForzado(),
+      // El registro no viaja: la pantalla no lo necesita y el servidor lo vuelve a armar al presentar.
+      contratos: candidatos.map(({ registro: _registro, ...c }) => c),
+    });
+  } catch (error: any) {
+    console.error("Get presentacion automatica error:", error);
+    res.status(500).json({ error: String(error?.message || "Internal server error") });
+  }
+});
+
+/** PUT /contratos/altas-arca/automatica — prende o apaga la automática. */
+router.put("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const activa = req.body?.activa === true;
+    const set: Record<string, unknown> = { "integrations.arcaSimplificacion.presentacionAutomatica.activa": activa };
+    /*
+      Prendida DESPUÉS de las 14 h, arranca mañana: si no, el próximo minuto presentaría solas las altas
+      de hoy, y prender un interruptor no debería mandar nada a ARCA en el acto. Las de hoy se fuerzan a mano.
+    */
+    if (activa && horaArgentina() >= HORA_PRESENTACION) set["integrations.arcaSimplificacion.presentacionAutomatica.ultimoDia"] = hoyArgentina();
+    await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
+    res.json({ activa });
+  } catch (error: any) {
+    console.error("Put presentacion automatica error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/** POST /contratos/altas-arca/automatica/forzar — presenta YA una sola alta, sin esperar su día. */
+router.post("/contratos/altas-arca/automatica/forzar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userProjectId = String(req.body?.userProjectId || "");
+    const contractIndex = Number(req.body?.contractIndex);
+    if (!Types.ObjectId.isValid(userProjectId) || !Number.isInteger(contractIndex) || contractIndex < 0) {
+      res.status(400).json({ error: "Contrato mal identificado." });
+      return;
+    }
+    const [c] = await candidatosDeAlta(req.tenantObjectId as Types.ObjectId, { soloContrato: { userProjectId, contractIndex } });
+    if (!c) {
+      res.status(404).json({ error: "No es un alta temprana pendiente de este cliente." });
+      return;
+    }
+    if (!c.presentable || !c.registro || !c.empresa) {
+      res.status(400).json({ error: c.motivo || "No se puede presentar." });
+      return;
+    }
+    const r = await arrancarCorridaAltas({
+      tenantId: String(req.tenantObjectId),
+      tenantObjectId: req.tenantObjectId,
+      usuarioId: req.user?.userId,
+      modo: "altas_masivas",
+      empresaId: c.empresa._id,
+      items: [{ userProjectId: c.userProjectId, contractIndex: c.contractIndex, registro: c.registro }],
+    });
+    res.json({ arrancada: true, ...r });
+  } catch (error: any) {
+    if (error instanceof LoteAltasError) {
+      res.status(error.status).json({ error: error.message, detalle: error.detalle });
+      return;
+    }
+    if (error instanceof CandadoArcaOcupado) {
+      res.status(409).json({ error: error.message, ocupadaPor: error.tipo });
+      return;
+    }
+    res.status(400).json({ error: String(error?.message || error) });
+  }
+});
+
 /** GET /contratos/altas-arca/corrida — estado y TODOS los eventos de la corrida en curso (o la última). */
 router.get("/contratos/altas-arca/corrida", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   const tenantId = String(req.tenantObjectId);
@@ -3080,7 +3177,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
     const logs: any[] = await ArcaAltasLog.find(filtro)
       .sort({ createdAt: -1 })
       .limit(200)
-      .select("createdAt usuarioId empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos tandas duracionMs")
+      .select("createdAt usuarioId automatica empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos tandas duracionMs")
       .populate("usuarioId", "firstName lastName")
       .lean();
     /*
@@ -3101,7 +3198,8 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
       logs.map((l) => ({
         _id: String(l._id),
         createdAt: l.createdAt,
-        usuario: l.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "",
+        // La de las 14 h no tiene persona detrás: se dice que fue la automática.
+        usuario: l.automatica ? "Automática (14 h)" : l.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "",
         empresaId: l.empresaId ? String(l.empresaId) : "",
         empresaCuit: l.empresaCuit || "",
         empresaRazonSocial: l.empresaRazonSocial || "",

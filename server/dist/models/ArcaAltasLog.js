@@ -3,6 +3,7 @@ const schema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     tipo: { type: String, enum: ["carga_masiva", "altas_masivas"], required: true },
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
+    automatica: { type: Boolean },
     empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaCuit: String,
     empresaRazonSocial: String,
