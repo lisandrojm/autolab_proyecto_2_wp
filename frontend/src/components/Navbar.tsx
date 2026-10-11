@@ -443,7 +443,7 @@ export const MobileNavbar: React.FC = () => {
       // Los contratos vencidos sin otro vigente en el proyecto: el acceso simple para renovarlos.
       if (puedeAbrir('/admin/renovaciones')) base.push({ permiso: 'admin_contracts:view', path: '/admin/renovaciones', icon: faRotateRight, label: 'Renovaciones', scope: 'global' });
       // Las altas que se presentan solas a las 14 h del día de alta, con su cuenta regresiva.
-      if (puedeAbrir('/admin/presentaciones-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/presentaciones-arca', icon: faClock, label: 'Presentaciones Automáticas A.R.C.A', scope: 'global' });
+      if (puedeAbrir('/admin/presentaciones-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/presentaciones-arca', icon: faClock, label: 'A.R.C.A Altas Automáticas', scope: 'global' });
       // Las plantillas GENERALES de equipo (puestos por rol): cada supervisor las copia en el móvil.
       if (puedeAbrir('/admin/plantillas-equipo')) base.push({ permiso: 'admin_hiring_templates:view', path: '/admin/plantillas-equipo', icon: faPeopleGroup, label: 'Plantillas', scope: 'global' });
       // Los vigentes que no dicen qué días se trabaja (casi todos vienen de FRAME): se completan ahí.

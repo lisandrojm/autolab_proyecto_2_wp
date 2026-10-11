@@ -207,7 +207,7 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Presentaciones Automáticas A.R.C.A"
+      title="A.R.C.A Altas Automáticas"
       subtitle={`Cada alta temprana se presenta sola en ARCA a las ${estado?.hora ?? 14} h del día de su alta.`}
       faIcon={{ icon: faClock }}
       itemCount={estado?.contratos.length ?? 0}
@@ -215,7 +215,7 @@ export const PresentacionesArcaPage: React.FC = () => {
         isOpen: ayuda,
         onOpen: () => setAyuda(true),
         onClose: () => setAyuda(false),
-        title: "Presentaciones Automáticas A.R.C.A",
+        title: "A.R.C.A Altas Automáticas",
         content: (
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             <p>Con la automática activada, todos los días a las {estado?.hora ?? 14} h (hora argentina) se presentan en ARCA las altas tempranas que empiezan ese día. Sólo las de ese día.</p>
