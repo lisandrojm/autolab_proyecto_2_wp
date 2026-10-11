@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { SeleccionMultiple } from '../ui/SeleccionMultiple';
 import { RotuloConInfo } from './RotuloConInfo';
+import { cachedFetch } from '../../utils/refCache';
 
 /**
  * LOS CONVENIOS BAJO LOS QUE CONTRATA ESTE PROYECTO.
@@ -42,14 +43,26 @@ interface Props {
   onChange: (ids: string[]) => void;
 }
 
+/**
+ * EL CATÁLOGO DE CONVENIOS, cacheado. Se pedía entero cada vez que se abría el formulario, y hasta que
+ * llegaba el badge del convenio elegido decía «—». Con caché la segunda apertura es inmediata, y las
+ * pantallas de proyectos lo piden al cargar (`precargarConvenios`), así que la primera también.
+ */
+const CLAVE_CATALOGO = 'convenios:catalogo';
+const pedirCatalogo = () => cachedFetch(CLAVE_CATALOGO, () => conveniosApi.list());
+export const precargarConvenios = () => {
+  pedirCatalogo().catch(() => {});
+};
+
 export const ConveniosDelProyecto: React.FC<Props> = ({ companies, empresasContrato, value, onChange }) => {
   const [catalogo, setCatalogo] = useState<SimpleCatalogItem[]>([]);
+  const [cargado, setCargado] = useState(false);
 
   useEffect(() => {
-    conveniosApi
-      .list()
-      .then(setCatalogo)
-      .catch(() => setCatalogo([]));
+    pedirCatalogo()
+      .then((c) => setCatalogo(Array.isArray(c) ? c : []))
+      .catch(() => setCatalogo([]))
+      .finally(() => setCargado(true));
   }, []);
 
   /** Los convenios que registraron las empresas del contrato elegidas, sin repetir. */
@@ -110,6 +123,7 @@ export const ConveniosDelProyecto: React.FC<Props> = ({ companies, empresasContr
         opciones={disponibles.map((c) => ({ id: c._id, nombre: `${c.externalId ? `${c.externalId} · ` : ''}${c.name}`, etiquetas: empresasDe.get(c._id) || [] }))}
         valor={value}
         onChange={onChange}
+        cargando={!cargado}
       />
     </div>
   );

@@ -21,7 +21,7 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
-import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
+import { ConveniosDelProyecto, precargarConvenios } from '../components/proyectos/ConveniosDelProyecto';
 import { SedesDelProyecto } from '../components/proyectos/SedesDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { sedesDelForm, nombresDeSedes, sedesParaElForm } from '../utils/sedesProyecto';
@@ -94,6 +94,9 @@ export const ProjectsPage: React.FC = () => {
       responsableId: undefined as number | undefined,
     },
   });
+
+  // El catálogo de convenios se pide ya, para que el formulario lo tenga al abrirse (ver `precargarConvenios`).
+  useEffect(() => precargarConvenios(), []);
 
   useEffect(() => {
     const handleResize = () => {

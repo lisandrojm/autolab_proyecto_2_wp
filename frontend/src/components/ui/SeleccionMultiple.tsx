@@ -49,13 +49,15 @@ interface Props {
   /** Marca el primero como «principal» (badge con un rótulo). */
   principal?: string;
   zIndex?: number;
+  /** Las opciones todavía no llegaron: los ids ya elegidos dicen «Cargando…» en vez de «—». */
+  cargando?: boolean;
 }
 
-export const SeleccionMultiple: React.FC<Props> = ({ label, opciones, valor, onChange, titulo, descripcion, placeholder = "Elegí uno o más…", placeholderBusqueda = "Buscar...", vacio = "No hay opciones cargadas.", principal, zIndex = 90 }) => {
+export const SeleccionMultiple: React.FC<Props> = ({ label, opciones, valor, onChange, titulo, descripcion, placeholder = "Elegí uno o más…", placeholderBusqueda = "Buscar...", vacio = "No hay opciones cargadas.", principal, zIndex = 90, cargando = false }) => {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
 
-  const nombreDe = (id: string) => opciones.find((o) => o.id === id)?.nombre || "—";
+  const nombreDe = (id: string) => opciones.find((o) => o.id === id)?.nombre || (cargando ? "Cargando…" : "—");
   const etiquetasDe = (id: string) => opciones.find((o) => o.id === id)?.etiquetas;
   const quitar = (id: string) => onChange(valor.filter((x) => x !== id));
   const alternar = (id: string) => (valor.includes(id) ? quitar(id) : onChange([...valor, id]));

@@ -18,7 +18,7 @@ import { getHelp, hasHelp } from '../data/help/helpContent';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { InfoModal } from '../components/ui/InfoModal';
-import { ConveniosDelProyecto } from '../components/proyectos/ConveniosDelProyecto';
+import { ConveniosDelProyecto, precargarConvenios } from '../components/proyectos/ConveniosDelProyecto';
 import { SedesDelProyecto } from '../components/proyectos/SedesDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { sedesDelForm, nombresDeSedes, sedesParaElForm } from '../utils/sedesProyecto';
@@ -59,6 +59,9 @@ export const ClientProjectsPage: React.FC = () => {
   // View Mode
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
+
+  // El catálogo de convenios se pide ya, para que el formulario lo tenga al abrirse (ver `precargarConvenios`).
+  useEffect(() => precargarConvenios(), []);
 
   useEffect(() => {
     const handleResize = () => setIsLg(window.innerWidth >= 1024);
