@@ -59,9 +59,9 @@ describe("el horario de la automática", () => {
         assert.equal(validarConfig({ diasAntes: -1 }).ok, false);
         assert.deepEqual(validarConfig({}), { ok: true, cambios: {} });
     });
-    it("sin anticipación la corrida toma sólo las altas de hoy; con 2 días, hasta pasado mañana", () => {
-        assert.deepEqual(ventanaDeLaCorrida("2026-10-10", cfg), { desde: "2026-10-10", hasta: "2026-10-10" });
-        assert.deepEqual(ventanaDeLaCorrida("2026-10-30", { ...cfg, diasAntes: 2 }), { desde: "2026-10-30", hasta: "2026-11-01" });
+    it("la corrida toma las atrasadas de hasta 30 días y, con anticipación, los días que vienen", () => {
+        assert.deepEqual(ventanaDeLaCorrida("2026-10-10", cfg), { desde: "2026-09-10", hasta: "2026-10-10" });
+        assert.deepEqual(ventanaDeLaCorrida("2026-10-30", { ...cfg, diasAntes: 2 }), { desde: "2026-09-30", hasta: "2026-11-01" });
     });
     describe("la próxima corrida que presenta un alta", () => {
         const hoy = "2026-10-10";
@@ -70,8 +70,8 @@ describe("el horario de la automática", () => {
         it("alta de hoy, antes de la hora: la corrida de hoy", () => {
             assert.equal(proximaCorridaPara("2026-10-10", cfg, manana, hoy)?.toISOString(), "2026-10-10T17:00:00.000Z");
         });
-        it("alta de hoy, después de la hora: ya no hay corrida (queda sin presentar)", () => {
-            assert.equal(proximaCorridaPara("2026-10-10", cfg, tarde, hoy), null);
+        it("alta de hoy, después de la hora: entra en la corrida de mañana (no queda para subir a mano)", () => {
+            assert.equal(proximaCorridaPara("2026-10-10", cfg, tarde, hoy)?.toISOString(), "2026-10-11T17:00:00.000Z");
         });
         it("alta de pasado mañana sin anticipación: la corrida de ese día", () => {
             assert.equal(proximaCorridaPara("2026-10-12", cfg, tarde, hoy)?.toISOString(), "2026-10-12T17:00:00.000Z");
@@ -85,8 +85,12 @@ describe("el horario de la automática", () => {
         it("con anticipación, un alta lejana sale en la primera corrida que la alcanza", () => {
             assert.equal(proximaCorridaPara("2026-10-20", { ...cfg, diasAntes: 3 }, tarde, hoy)?.toISOString(), "2026-10-17T17:00:00.000Z");
         });
-        it("un alta de ayer ya no tiene corrida", () => {
-            assert.equal(proximaCorridaPara("2026-10-09", cfg, manana, hoy), null);
+        it("un alta atrasada (falló, o se cargó después de su fecha) entra en la próxima corrida", () => {
+            assert.equal(proximaCorridaPara("2026-10-09", cfg, manana, hoy)?.toISOString(), "2026-10-10T17:00:00.000Z");
+            assert.equal(proximaCorridaPara("2026-10-01", cfg, tarde, hoy)?.toISOString(), "2026-10-11T17:00:00.000Z");
+        });
+        it("más vieja que 30 días, la automática ya no la toma: se fuerza a mano", () => {
+            assert.equal(proximaCorridaPara("2026-09-01", cfg, manana, hoy), null);
         });
     });
 });

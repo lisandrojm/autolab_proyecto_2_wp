@@ -31,7 +31,7 @@ export interface CandidatoAlta {
         _id: string;
         razonSocial: string;
     } | null;
-    /** La próxima corrida automática que lo presenta, ISO. Vacío = ya no hay ninguna (su día pasó): se fuerza a mano. */
+    /** La próxima corrida automática que lo presenta, ISO. Vacío = más vieja que el límite de atrasadas: se fuerza a mano. */
     momento: string;
     /** Se puede presentar tal como está. */
     presentable: boolean;

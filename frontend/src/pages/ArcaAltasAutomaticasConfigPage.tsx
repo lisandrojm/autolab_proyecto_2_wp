@@ -112,7 +112,10 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
               <strong>N días antes</strong>: la corrida toma las altas que empiezan ese día o en los próximos N días. Es una ventana, no una fecha exacta: un contrato cargado tarde sale igual en la
               primera corrida que lo alcanza, y a más tardar en la de su propio día.
             </p>
-            <p>Una alta cuyo día pasó sin presentarse no se presenta sola: queda en «A.R.C.A Altas Automáticas» para forzarla a mano.</p>
+            <p>
+              Las atrasadas también entran: un alta cuya fecha ya pasó, porque la corrida falló o porque el contrato se cargó después de su inicio, se presenta en la corrida siguiente y en todas las
+              que vengan hasta que salga. Solo las de más de 30 días quedan para forzar a mano desde «A.R.C.A Altas Automáticas».
+            </p>
             <p>Si se activa después de la hora, empieza al día siguiente.</p>
           </div>
         ),

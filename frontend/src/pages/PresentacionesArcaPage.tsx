@@ -122,11 +122,11 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   const { proximas, vencidas } = useMemo(() => {
     const lista = estado?.contratos || [];
-    // Vencidas: el servidor no les encontró una próxima corrida (su día pasó, o es hoy y la hora ya
-    // pasó). También si la cuenta llegó a cero mientras la pantalla estaba abierta.
-    const vencida = (c: AltaPendienteArca) => !c.momento || new Date(c.momento).getTime() <= ahoraServidor;
+    // Fuera de la automática: el servidor no les encontró una próxima corrida (más de 30 días de
+    // atraso). Las atrasadas de menos entran solas en la corrida siguiente y van en «Próximas».
+    const vencida = (c: AltaPendienteArca) => !c.momento;
     return { proximas: lista.filter((c) => !vencida(c)), vencidas: lista.filter(vencida) };
-  }, [estado, ahoraServidor]);
+  }, [estado]);
 
   const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 
@@ -162,13 +162,17 @@ export const PresentacionesArcaPage: React.FC = () => {
       </td>
       <td className="px-4 py-3">
         {esVencida ? (
-          <span className="text-xs font-semibold text-red-600 dark:text-red-400">{c.fechaAlta === estado?.hoy ? "Hoy, sin presentar" : "Su día pasó sin presentarse"}</span>
+          <span className="text-xs font-semibold text-red-600 dark:text-red-400">Más de 30 días de atraso: no entra en la automática</span>
         ) : (
           <div className="space-y-1">
             <CuentaRegresiva destino={c.momento} ahora={ahoraServidor} />
             <p className="text-[11px] text-gray-500">
-              {fechaArgentina(c.momento)} a las {horaTexto(estado?.config)}{!estado?.activa ? " (si está activada)" : ""}
+              {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaTexto(estado?.config)}`}
+              {!estado?.activa ? " (si está activada)" : ""}
             </p>
+            {estado && c.fechaAlta < estado.hoy && (
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Entra en la próxima corrida.</p>
+            )}
           </div>
         )}
       </td>
@@ -230,7 +234,11 @@ export const PresentacionesArcaPage: React.FC = () => {
             <p>
               <strong>Forzar presentación</strong> presenta una ya, sin esperar su día. Lo que se presentó, a mano o solo, queda en el registro de «Alta Temprana A.R.C.A» de Contratos.
             </p>
-            <p>Si se activa después de las {horaTexto(estado?.config)}, empieza al día siguiente: las de hoy se fuerzan a mano.</p>
+            <p>
+              Las atrasadas también entran: si una corrida falló, o el contrato se cargó después de su fecha de inicio, el alta se presenta en la corrida siguiente y en todas las que vengan hasta
+              que salga. Solo las de más de 30 días quedan fuera, para forzar a mano.
+            </p>
+            <p>Si se activa después de las {horaTexto(estado?.config)}, empieza al día siguiente.</p>
           </div>
         ),
       }}
@@ -298,8 +306,8 @@ export const PresentacionesArcaPage: React.FC = () => {
 
           {vencidas.length > 0 && (
             <section className="space-y-2">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-red-600 dark:text-red-400">Sin presentar ({vencidas.length})</h2>
-              <p className="text-xs text-gray-500">Su día ya pasó y siguen sin presentarse (últimos 30 días). La automática no vuelve sobre días anteriores: se presentan con «Forzar».</p>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-red-600 dark:text-red-400">Fuera de la automática ({vencidas.length})</h2>
+              <p className="text-xs text-gray-500">Su alta fue hace más de 30 días y siguen sin presentarse: la automática ya no las toma. Se presentan con «Forzar».</p>
               {tabla(vencidas, true)}
             </section>
           )}

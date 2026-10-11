@@ -1063,7 +1063,7 @@ export interface AltaPendienteArca {
   fechaAlta: string;
   fechaBaja: string;
   empresa: { _id: string; razonSocial: string } | null;
-  /** La próxima corrida automática que la presenta, ISO. Vacío = ya no hay ninguna (su día pasó): se fuerza a mano. */
+  /** La próxima corrida automática que la presenta, ISO. Vacío = más vieja que el límite de atrasadas (30 días): se fuerza a mano. */
   momento: string;
   presentable: boolean;
   motivo: string;

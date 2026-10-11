@@ -23,7 +23,7 @@ import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agr
 import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { candidatosDeAlta } from "../services/arca/presentacionAutomatica.js";
-import { configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
+import { DIAS_ATRAS_PENDIENTES, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
@@ -2851,7 +2851,7 @@ router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
         const pa = t?.integrations?.arcaSimplificacion?.presentacionAutomatica || {};
         const cfg = configDe(pa);
         // La pantalla de configuración sólo quiere el horario: armar los candidatos (catálogos, registros) sobra.
-        const candidatos = req.query.soloConfig === "true" ? [] : await candidatosDeAlta(req.tenantObjectId, { desde: sumarDias(hoy, -30), cfg });
+        const candidatos = req.query.soloConfig === "true" ? [] : await candidatosDeAlta(req.tenantObjectId, { desde: sumarDias(hoy, -DIAS_ATRAS_PENDIENTES), cfg });
         res.json({
             activa: !!pa.activa,
             config: cfg,
