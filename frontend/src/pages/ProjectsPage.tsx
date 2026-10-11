@@ -911,8 +911,8 @@ export const ProjectsPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => setConfiguringAreaId(ac.areaId)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all" title="Configurar Turnos">
-                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                            <button type="button" onClick={() => setConfiguringAreaId(ac.areaId)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="Configurar Turnos">
+                              <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
                             </button>
                             {!area.isSystem && (
                               <button
