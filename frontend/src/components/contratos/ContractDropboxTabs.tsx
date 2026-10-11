@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { BotonOrden, useOrdenTabla } from "../ui/OrdenTabla";
 
 /** Dropbox Sign (ex HelloSign): donde se firman los contratos que se mandan desde acá. */
 const DROPBOX_SIGN_URL = "https://www.dropbox.com/sign";
@@ -198,6 +199,12 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
    */
   const [zipRecibidos, setZipRecibidos] = useState<number | null>(null);
   const [zipTotal, setZipTotal] = useState<number | undefined>(undefined);
+
+  const { ordenados, orden, alternar } = useOrdenTabla(
+    filtradas,
+    { fecha: (e) => e.serverModified || "", contrato: (e) => e.name, tamanio: (e) => e.size || 0 },
+    { columna: "fecha", direccion: "desc" },
+  );
 
   const bytesSeleccionados = useMemo(() => entries.reduce((acc, e) => (selected.has(e.path) ? acc + (e.size || 0) : acc), 0), [entries, selected]);
   const excedePeso = bytesSeleccionados > ZIP_MAX_BYTES;
@@ -449,20 +456,34 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                       />
                     </th>
                   )}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Tamaño</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Modificado</th>
+                  {/* La fecha primero: es por lo que se ordena y lo primero que se mira. */}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
+                      Fecha
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="contrato" orden={orden} onAlternar={alternar}>
+                      Contrato
+                    </BotonOrden>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                    <BotonOrden columna="tamanio" orden={orden} onAlternar={alternar}>
+                      Tamaño
+                    </BotonOrden>
+                  </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filtradas.map((e) => (
+                {ordenados.map((e) => (
                   <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
                     {permiteAcciones && (
                       <td className="px-4 py-3">
                         <input type="checkbox" className="cursor-pointer accent-blue-600" checked={selected.has(e.path)} onChange={() => toggleSelected(e.path)} />
                       </td>
                     )}
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtFecha(e.serverModified)}</td>
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                         <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
@@ -472,7 +493,6 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtFecha(e.serverModified)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {/* "Enviado a la firma" queda de solo lectura: la solicitud ya está en curso en Dropbox Sign. */}
