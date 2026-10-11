@@ -1004,11 +1004,17 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     // La empleadora solo se trae si se está filtrando por ella (contexto Empresa): sin filtro, pedirla
     // sería payload de la fase 1 para nada, que es justamente lo que esta fase evita.
     const necesitaEmpresa = !!req.query.empresaContratoId;
+    /*
+      `origen=sistema`: sólo los contratos creados en WeProdu —aprobados desde Solicitudes (`solicitudId`)
+      o desde «Agregar miembro» (`origen`)—. Lo usa Contratos: los importados de FRAME/WP confundían.
+    */
+    const soloDelSistema = req.query.origen === "sistema";
     const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
     if (necesitaNombreContrato) camposContrato.n = "$$x.nombre_contrato";
     if (necesitaEstado) camposContrato.e = "$$x.nombre_estado_empleado";
     if (necesitaReemplazo) camposContrato.m = "$$x.reemplazo";
     if (necesitaEmpresa) camposContrato.q = "$$x.empresaContratoId";
+    if (soloDelSistema) camposContrato.o = { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] };
 
     /*
       LAS BANDEJAS FILTRAN EN MONGO, NO EN NODE.
@@ -1050,7 +1056,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       projectId: d.p,
       userId: d.u,
       nombre_rol_frame: d.r,
-      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q })),
+      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q, delSistema: c.o })),
     }));
     const msFase1 = Date.now() - tFase1;
 
@@ -1183,6 +1189,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       }
 
       if (empresaContratoId && String(contrato.empresaContratoId ?? "") !== empresaContratoId) continue;
+      if (soloDelSistema && !contrato.delSistema) continue;
 
       if (searchRegex) {
         const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim();

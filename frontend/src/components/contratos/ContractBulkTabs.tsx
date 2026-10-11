@@ -1182,7 +1182,7 @@ export const ContractBulkAfipTab: React.FC<{
       if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
       setLoading(true);
       setLoadError('');
-      return cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, estados: estadosPedidos, clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
+      return cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, origen: 'sistema', estados: estadosPedidos, clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
         .then((res) => setRows(res.rows))
         .catch((e: any) => {
           setRows([]);
@@ -3424,7 +3424,7 @@ export const ContractBulkFirmaTab: React.FC<{
         // El cliente y el proyecto elegidos van al server (ver `ambito`): sin eso, elegir un proyecto
         // de 65 personas igual barría los 7462 contratos del tenant para descartarlos acá.
         const res = estado
-          ? await cachedFetch(claveCacheEnvio(estado, filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 5000, estados: [estado], clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
+          ? await cachedFetch(claveCacheEnvio(estado, filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 5000, origen: 'sistema', estados: [estado], clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
           : { rows: [] as ContractOverviewRow[] };
         setRows(res.rows);
         setConfig(cfg);

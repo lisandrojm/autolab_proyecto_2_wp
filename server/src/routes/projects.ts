@@ -2193,7 +2193,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         ...(extEmpId ? { externalEmployeeId: extEmpId } : {}),
         nombre_proyecto: project.name,
         nombre_rol_frame: rolFrameName,
-        contracts: [enrichedContract],
+        contracts: [(enrichedContract as any).solicitudId ? enrichedContract : { ...enrichedContract, origen: "agregar_miembro" }],
       });
     } else {
       // Índice explícito (editar una tarjeta puntual del modal de contratos) → actualizar ESE contrato.
@@ -2209,6 +2209,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         if ((enrichedContract as any).altaDocumentoUrl === undefined) (enrichedContract as any).altaDocumentoUrl = (prevContract as any).altaDocumentoUrl;
         if ((enrichedContract as any).altaDocumentoNombre === undefined) (enrichedContract as any).altaDocumentoNombre = (prevContract as any).altaDocumentoNombre;
         if ((enrichedContract as any).solicitudId === undefined && (prevContract as any).solicitudId) (enrichedContract as any).solicitudId = (prevContract as any).solicitudId;
+        // Editar no le cambia el origen al contrato.
+        if ((prevContract as any).origen) (enrichedContract as any).origen = (prevContract as any).origen;
       }
 
       if (hasExplicitIndex) {
@@ -2216,6 +2218,9 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       } else if (isUpdate && userProject.contracts.length > 0) {
         userProject.contracts[userProject.contracts.length - 1] = enrichedContract as any;
       } else {
+        // Contrato NUEVO desde «Agregar miembro»: se marca, porque Contratos lista sólo los creados en
+        // WeProdu (Solicitudes o esto) y no los importados de FRAME/WP. Los de Solicitudes ya traen `solicitudId`.
+        if (!(enrichedContract as any).solicitudId) (enrichedContract as any).origen = "agregar_miembro";
         userProject.contracts.push(enrichedContract as any);
       }
       userProject.markModified("contracts");

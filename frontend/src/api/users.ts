@@ -702,6 +702,8 @@ class UsersAPI {
       estados?: string[];
       /** Varios tipos de contrato a la vez (por nombre). Lo usa Renovaciones. */
       tiposContrato?: string[];
+      /** `sistema`: sólo los contratos creados en WeProdu (Solicitudes o «Agregar miembro»). */
+      origen?: "sistema";
       /** Columna por la que ordena el server (ver `COLUMNAS_ORDEN` en la ruta) y su dirección. */
       sort?: string;
       dir?: "asc" | "desc";
@@ -723,6 +725,7 @@ class UsersAPI {
     if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
     if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
     if (params.estados?.length) searchParams.append("estados", params.estados.join(","));
+    if (params.origen) searchParams.append("origen", params.origen);
     for (const t of params.tiposContrato || []) searchParams.append("tiposContrato", t);
     if (params.sort) {
       searchParams.append("sort", params.sort);

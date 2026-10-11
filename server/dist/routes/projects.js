@@ -2029,7 +2029,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 ...(extEmpId ? { externalEmployeeId: extEmpId } : {}),
                 nombre_proyecto: project.name,
                 nombre_rol_frame: rolFrameName,
-                contracts: [enrichedContract],
+                contracts: [enrichedContract.solicitudId ? enrichedContract : { ...enrichedContract, origen: "agregar_miembro" }],
             });
         }
         else {
@@ -2048,6 +2048,9 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                     enrichedContract.altaDocumentoNombre = prevContract.altaDocumentoNombre;
                 if (enrichedContract.solicitudId === undefined && prevContract.solicitudId)
                     enrichedContract.solicitudId = prevContract.solicitudId;
+                // Editar no le cambia el origen al contrato.
+                if (prevContract.origen)
+                    enrichedContract.origen = prevContract.origen;
             }
             if (hasExplicitIndex) {
                 userProject.contracts[idxNum] = enrichedContract;
@@ -2056,6 +2059,10 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 userProject.contracts[userProject.contracts.length - 1] = enrichedContract;
             }
             else {
+                // Contrato NUEVO desde «Agregar miembro»: se marca, porque Contratos lista sólo los creados en
+                // WeProdu (Solicitudes o esto) y no los importados de FRAME/WP. Los de Solicitudes ya traen `solicitudId`.
+                if (!enrichedContract.solicitudId)
+                    enrichedContract.origen = "agregar_miembro";
                 userProject.contracts.push(enrichedContract);
             }
             userProject.markModified("contracts");

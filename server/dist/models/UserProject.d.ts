@@ -292,6 +292,12 @@ interface IContract {
      * contratos aprobados antes de que existiera el campo no lo tienen (ver `contratoDeSolicitud.ts`).
      */
     solicitudId?: Types.ObjectId;
+    /**
+     * De dónde salió el contrato, para los que se crean en WeProdu. `agregar_miembro`: desde «Agregar
+     * miembro» del proyecto. Se empezó a guardar el 10/10/2026: los anteriores (importados de FRAME/WP y
+     * los agregados a mano antes de esa fecha) no lo tienen. Los de Solicitudes se reconocen por `solicitudId`.
+     */
+    origen?: "agregar_miembro";
     sinCuitValidacion?: {
         /** Documentación de respaldo cargada. Hace falta al menos una para poder marcar `validado`. */
         documentos: {

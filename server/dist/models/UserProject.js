@@ -110,6 +110,7 @@ const contractSchema = new Schema({
     firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
     solicitudId: { type: Schema.Types.ObjectId, ref: "User" },
+    origen: { type: String, enum: ["agregar_miembro"] },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },
