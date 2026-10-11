@@ -240,7 +240,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
   const nombreDe = (cuil: string) => estado?.personas?.find((p) => p.cuil === cuil)?.nombre || fmtCuit(cuil);
   const colgada = corriendo && Date.now() - ultimoCambio > TOPE_SIN_EVENTOS_MS;
   const otraCorrida = !corriendo && !confirmado && estado?.ocupadaPor;
-  const titulo = modo === 'altas_masivas' ? 'Altas Masivas en ARCA (URGENTE)' : 'Carga Masiva en ARCA';
+  const titulo = modo === 'altas_masivas' ? 'Presentación Masiva en A.R.C.A' : 'Carga Masiva en ARCA';
   // Por tandas: Altas Masivas. Antes de arrancar se muestra el plan con el tope de siempre; una vez
   // que corre, manda lo que el servidor leyó de la pantalla de ARCA.
   const porTandas = modo === 'altas_masivas';
