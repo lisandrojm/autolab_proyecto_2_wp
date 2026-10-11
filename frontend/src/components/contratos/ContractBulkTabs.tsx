@@ -1853,16 +1853,22 @@ export const ContractBulkAfipTab: React.FC<{
 
 
   /** URGENTE: registros de 85, al portapapeles, y la corrida que los pega en Altas Masivas. */
-  const presentarAltasMasivas = async () => {
-    if (!empresaDeLaPestana) return;
+  /*
+    Recibe QUÉ presentar y A NOMBRE DE QUIÉN: el botón general manda lo tildado con la empresa de la
+    pestaña; el botón de cada fila manda esa sola fila con su propia Empresa Contrato, así se reusa el
+    mismo modal para presentar a una persona sin tener que tildarla ni cambiar de pestaña.
+  */
+  const presentarAltasMasivas = async (fuente: typeof fuenteTxt = fuenteTxt, empresa: typeof empresa = empresa) => {
+    if (!empresa) return;
+    const completosDeLaFuente = fuente.filter((x) => resolveAfip85(x.row, afipCat, x.result).completo);
     // Antes que nada: una sucursal o actividad que la empresa no tiene frena también el URGENTE.
-    if (frenaPorSucursal(fuenteTxt)) return;
+    if (frenaPorSucursal(fuente)) return;
     /*
       SIN PUESTO NO HAY REGISTRO DE 85, y se dice acá en vez de dejar el botón apagado: un botón gris
       no explica nada. Lo que falta es configuración (rol, categoría, convenio o default de la empleadora), no un
       dato de la persona, así que se nombra el lugar.
     */
-    const sinPuesto = fuenteTxt.filter((x) => x.result.completo && !completos85.includes(x));
+    const sinPuesto = fuente.filter((x) => x.result.completo && !completosDeLaFuente.includes(x));
     if (sinPuesto.length > 0) {
       const nombres = sinPuesto.slice(0, 5).map((x) => x.row.userName).join(', ');
       // Lo más útil es decir QUÉ ROLES no lo tienen: con cargarlo en el rol se resuelven todos sus contratos.
@@ -1874,11 +1880,11 @@ export const ContractBulkAfipTab: React.FC<{
       const roles = [...porRol.entries()].map(([r, n]) => `${r} (${n})`).join(', ');
       sweetAlert.error(
         'Falta el puesto desempeñado',
-        `Altas Masivas (registro de 85) exige el código de puesto desempeñado, y ${sinPuesto.length === 1 ? 'este contrato no lo tiene' : `${sinPuesto.length} contratos no lo tienen`}: ${nombres}${sinPuesto.length > 5 ? '…' : ''}. Roles sin puesto: ${roles}. Cargalo en el Rol Empresa (Usuarios → Roles Empresa), en la categoría (Configuración → ARCA → Categorías), como puesto por defecto del convenio (Convenios → editar el convenio: resuelve de una vez a todos los que trabajan bajo él) o como default de ${empresaDeLaPestana.razonSocial} (ficha de la empresa → ARCA → Puesto Desempeñado). La Carga Masiva no lo necesita.`,
+        `Altas Masivas (registro de 85) exige el código de puesto desempeñado, y ${sinPuesto.length === 1 ? 'este contrato no lo tiene' : `${sinPuesto.length} contratos no lo tienen`}: ${nombres}${sinPuesto.length > 5 ? '…' : ''}. Roles sin puesto: ${roles}. Cargalo en el Rol Empresa (Usuarios → Roles Empresa), en la categoría (Configuración → ARCA → Categorías), como puesto por defecto del convenio (Convenios → editar el convenio: resuelve de una vez a todos los que trabajan bajo él) o como default de ${empresa.razonSocial} (ficha de la empresa → ARCA → Puesto Desempeñado). La Carga Masiva no lo necesita.`,
       );
       return;
     }
-    const items = completos85.map((x) => ({ x, registro: buildAltaRecord85(x.row, afipCat) })).filter((y): y is { x: (typeof fuenteTxt)[number]; registro: string } => !!y.registro);
+    const items = completosDeLaFuente.map((x) => ({ x, registro: buildAltaRecord85(x.row, afipCat) })).filter((y): y is { x: (typeof fuenteTxt)[number]; registro: string } => !!y.registro);
     // Sin tope: el servidor las presenta en tandas de a lo sumo MAX_ALTAS_MASIVAS (ver `tandasAltas.ts`).
     if (items.length === 0) return;
     const texto = buildAltasMasivasTexto(items.map((y) => y.registro));
@@ -1889,12 +1895,36 @@ export const ContractBulkAfipTab: React.FC<{
     }
     setLoteAltas({
       modo: 'altas_masivas',
-      empresa: { _id: empresaDeLaPestana._id, razonSocial: empresaDeLaPestana.razonSocial, cuit: String(empresaDeLaPestana.cuit || '').replace(/\D/g, '') },
+      empresa: { _id: empresa._id, razonSocial: empresa.razonSocial, cuit: String(empresa.cuit || '').replace(/\D/g, '') },
       personas: items.map((y) => personaDe(y.x.row)),
       items: items.map((y) => ({ userProjectId: y.x.row._id, contractIndex: y.x.row.contractIndex, registro: y.registro })),
       texto,
     });
     setCorridaAltasOpen(true);
+  };
+
+  /*
+    PRESENTAR UNA SOLA PERSONA: el mismo modal de «Presentar Masivo en A.R.C.A» con esta fila sola.
+    La empresa es la de la pestaña o, desde «Todas», la Empresa Contrato de la fila: el alta va a nombre
+    de su empleadora igual. Sin empresa asignada no hay a nombre de quién presentarla.
+  */
+  const BotonPresentarFila = ({ row, result }: { row: ImpositivoRow; result: AfipRowResult }) => {
+    const empresa = empresaDeLaPestana || companies.find((c) => c._id === String(row.empresaContratoId || ''));
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          presentarAltasMasivas([{ row, result }] as typeof fuenteTxt, empresa);
+        }}
+        disabled={!empresa}
+        title={empresa ? `Presentar sólo a ${row.userName} en ARCA, a nombre de ${empresa.razonSocial}` : 'Elegí la Empresa Contrato de este contrato para poder presentarlo'}
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+      >
+        <FontAwesomeIcon icon={faBolt} className="h-2.5 w-2.5" />
+        Presentar A.R.C.A
+      </button>
+    );
   };
 
   /**
@@ -2052,11 +2082,11 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faStethoscope} className="h-3.5 w-3.5" />
               {/* El número va ADENTRO de la etiqueta: «Validar obras sociales» a secas no deja saber si
                   son estas 20 o alguna otra cosa, y ese es justamente el dato que decide si apretarlo. */}
-              {objetivoValidacion.length > 0 ? `Validar ${objetivoValidacion.length} obras sociales` : 'Validar obras sociales'}
+              {objetivoValidacion.length > 0 ? `Validar Masivo Obras Sociales (${objetivoValidacion.length})` : 'Validar Masivo Obras Sociales'}
             </button>
 
             <button
-              onClick={presentarAltasMasivas}
+              onClick={() => presentarAltasMasivas()}
               disabled={!empresaDeLaPestana || completos85.length === 0}
               title={
                 bloqueoPorValidacion ||
@@ -2073,7 +2103,7 @@ export const ContractBulkAfipTab: React.FC<{
             >
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
               {/* El número es lo que va a ARCA: los tildados completos, no todos los tildados. */}
-              Presentar A.R.C.A{completos85.length > 0 ? ` (${completos85.length})` : ''}
+              Presentar Masivo en A.R.C.A{completos85.length > 0 ? ` (${completos85.length})` : ''}
             </button>
             <button type="button" onClick={() => setPresentarInfoOpen(true)} title="Qué hace falta para presentar en ARCA" aria-label="Qué hace falta para presentar en ARCA" className="-ml-1 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
@@ -2192,7 +2222,10 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo === 'alta_temprana_afip' && (
-                    <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} prefijo="ARCA: " />
+                    <>
+                      <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} prefijo="ARCA: " />
+                      {result.completo && <BotonPresentarFila row={r} result={result} />}
+                    </>
                   )}
                   <span className="ml-auto">
                     <ContractActionsButtons record={r} onDeleted={() => load(true)} />
@@ -2467,7 +2500,10 @@ export const ContractBulkAfipTab: React.FC<{
                     </td>
                     <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColFija} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                       {filterTipo === 'alta_temprana_afip' ? (
-                        <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
+                        <div className="flex flex-col items-start gap-1.5">
+                          <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
+                          {result.completo && <BotonPresentarFila row={r} result={result} />}
+                        </div>
                       ) : noPoseeCuit(r.cuit, r.sinCuit) ? (
                         // Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos.
                         <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
@@ -2797,7 +2833,7 @@ export const ContractBulkAfipTab: React.FC<{
             <ol className="list-decimal list-inside space-y-1 text-gray-600 dark:text-gray-300">
               <li>Elegí la pestaña de la empresa.</li>
               <li>Tildá los contratos a presentar (el check de la cabecera toma todos, de todas las páginas).</li>
-              <li>Tocá «Presentar A.R.C.A»: el número entre paréntesis es lo que va a ARCA, los tildados que están completos.</li>
+              <li>Tocá «Presentar Masivo en A.R.C.A»: el número entre paréntesis es lo que va a ARCA, los tildados que están completos.</li>
             </ol>
             {!empresaDeLaPestana && <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Ahora estás en «Todas»: por eso el botón está apagado.</p>}
           </div>
