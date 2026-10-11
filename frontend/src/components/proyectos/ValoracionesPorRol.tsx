@@ -6,6 +6,7 @@ import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from "../../api/contratos";
 import { cachedFetch } from "../../utils/refCache";
 import { ChipValoracion } from "./ChipValoracion";
+import { Modal } from "../ui/Modal";
 
 export interface ValoracionDeRolForm {
   /** `RoleFrame.data.rol.id`: el mismo número que guarda el contrato en `rol_frame_id`. */
@@ -42,6 +43,11 @@ export const ValoracionesPorRol: React.FC<{
   /** La fila que se está editando (su clave) y lo que lleva elegido mientras tanto. */
   const [editando, setEditando] = useState<string | null>(null);
   const [borrador, setBorrador] = useState<ValoracionDeRolForm | null>(null);
+  /**
+   * LA LISTA VA EN UN MODAL. Con cientos de excepciones (602 en La Nación) ocupaba la mitad del
+   * formulario del proyecto; ahí queda una línea con cuántas hay y el botón que la abre.
+   */
+  const [abierto, setAbierto] = useState(false);
 
   useEffect(() => {
     cachedFetch("roleFrames:all", () => roleFrameAPI.list())
@@ -107,8 +113,34 @@ export const ValoracionesPorRol: React.FC<{
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-1">
         <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Valoración por rol empresa y tipo de contrato</label>
+        <button type="button" onClick={() => setAbierto(true)} className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+          <FontAwesomeIcon icon={faPen} className="h-2.5 w-2.5" />
+          {value.length > 0 ? `Ver y editar (${value.length})` : "Fijar valoración de un rol por tipo de contrato"}
+        </button>
+      </div>
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+        {value.length === 0 ? "Todos los roles y tipos de contrato usan la valoración del proyecto." : `${value.length} combinación(es) de rol y tipo de contrato con valoración fija; el resto usa la del proyecto.`}
+      </p>
+      <Modal
+        isOpen={abierto}
+        onClose={() => {
+          cancelarEdicion();
+          setAgregando(false);
+          setAbierto(false);
+        }}
+        title="Valoración por rol empresa y tipo de contrato"
+        size="lg"
+        zIndex={80}
+        footer={
+          <button type="button" onClick={() => { cancelarEdicion(); setAgregando(false); setAbierto(false); }} className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
+            Listo
+          </button>
+        }
+      >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[11px] text-gray-500 dark:text-gray-400">Los cambios se guardan al actualizar el proyecto.</span>
         {value.length > 0 && <span className="text-[11px] text-gray-400">({value.length})</span>}
         {!agregando && (
           <button type="button" onClick={() => setAgregando(true)} className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
@@ -237,6 +269,7 @@ export const ValoracionesPorRol: React.FC<{
           </div>
         </div>
       )}
+      </Modal>
     </div>
   );
 };

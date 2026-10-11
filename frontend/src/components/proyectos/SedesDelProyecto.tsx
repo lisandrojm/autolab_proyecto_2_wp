@@ -1,5 +1,6 @@
 import React from "react";
 import { SeleccionMultiple } from "../ui/SeleccionMultiple";
+import { RotuloConInfo } from "./RotuloConInfo";
 import { favoritasDeEmpresas, opcionesDeSede, ordenarSedes, sedesDelForm } from "../../utils/sedesProyecto";
 
 interface Props {
@@ -13,7 +14,16 @@ interface Props {
   onChange: (sedes: { sedeIds: number[]; sedeId: number | undefined }) => void;
 }
 
-const ROTULO = <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede *</span>;
+const ROTULO = (
+  <RotuloConInfo texto="Sede *" titulo="Sede">
+    <p>
+      Las sedes salen de las que la <strong>Empresa del Contrato</strong> tiene asociadas (Empresas → ficha de la empresa → Sedes). Al elegir la empresa se preselecciona su sede por defecto (★).
+    </p>
+    <p>
+      Se pueden elegir varias. La <strong>primera es la principal</strong>: es la que precarga el alta de contratos; las demás quedan para elegir en cada contrato.
+    </p>
+  </RotuloConInfo>
+);
 
 /**
  * LAS SEDES DEL PROYECTO, que dependen de la Empresa del Contrato.

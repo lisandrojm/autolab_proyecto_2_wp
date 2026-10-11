@@ -3,6 +3,7 @@ import { useThemeStore } from '../stores/themeStore';
 import { badgesDeValoracion, ChipValoracionDelProyecto, idValoracionDe, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
 import { ValoracionesPorRol } from '../components/proyectos/ValoracionesPorRol';
+import { RotuloConInfo } from '../components/proyectos/RotuloConInfo';
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
@@ -820,7 +821,14 @@ export const ProjectsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
+<div className="mb-2">
+                  <RotuloConInfo texto="Centro de costo *" titulo="Centro de costo">
+                    <p>
+                      Es el <strong>centro de costo de Tango</strong>, el sistema de gestión contable: el código y la descripción con los que se imputan en Tango los costos de este proyecto.
+                    </p>
+                    <p>La lista sale de Tango, con su empresa al lado. Se busca por código o por nombre.</p>
+                  </RotuloConInfo>
+                </div>
                 {/* Código + descripción, y con buscador: son 806 y el número solo no dice qué es. */}
                 <SelectorCentroCosto required valor={formData.metadata?.centroCostoId} empresaTangoId={formData.metadata?.centroCostoEmpresaTangoId} onCambio={(id, empresa) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: id, centroCostoEmpresaTangoId: empresa } }))} />
               </div>

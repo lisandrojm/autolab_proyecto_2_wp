@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { SeleccionMultiple } from '../ui/SeleccionMultiple';
+import { RotuloConInfo } from './RotuloConInfo';
 
 /**
  * LOS CONVENIOS BAJO LOS QUE CONTRATA ESTE PROYECTO.
@@ -20,7 +21,17 @@ import { SeleccionMultiple } from '../ui/SeleccionMultiple';
 
 const conveniosApi = createSimpleCatalogApi('/convenios');
 
-const ROTULO = <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Convenios del proyecto</span>;
+const ROTULO = (
+  <RotuloConInfo texto="Convenios del proyecto" titulo="Convenios del proyecto">
+    <p>
+      Los convenios (CCT) salen de los que la <strong>Empresa del Contrato</strong> tiene registrados ante ARCA.
+    </p>
+    <p>
+      Si no elegís ninguno, el alta de contratos ofrece <strong>todos</strong> los convenios de la empresa. Si elegís algunos, el alta ofrece <strong>sólo ésos</strong>, y con ellos las categorías que
+      se pueden contratar en este proyecto.
+    </p>
+  </RotuloConInfo>
+);
 
 interface Props {
   /** Todas las empresas, para resolver qué convenios registró cada una. */
@@ -100,9 +111,6 @@ export const ConveniosDelProyecto: React.FC<Props> = ({ companies, empresasContr
         valor={value}
         onChange={onChange}
       />
-      <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-        {value.length === 0 ? 'Sin acotar: el alta va a ofrecer todos los convenios de la empresa.' : `${value.length} de ${disponibles.length}. El alta va a ofrecer solo ${value.length === 1 ? 'ése' : 'ésos'}.`}
-      </p>
     </div>
   );
 };
