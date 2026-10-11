@@ -118,7 +118,7 @@ export const CampoValoracion: React.FC<{
                   {desforzada && <span className="text-amber-700 dark:text-amber-400"> Cambiaste el margen: la forzada se quitó. Forzala de nuevo si la querés distinta.</span>}
                 </span>
                 {!forzando && (
-                  <button type="button" onClick={() => setForzando(true)} className="ml-auto inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+                  <button type="button" onClick={() => setForzando(true)} className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                     Forzar valoración
                   </button>
                 )}
