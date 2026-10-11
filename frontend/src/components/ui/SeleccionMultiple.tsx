@@ -73,7 +73,7 @@ export const SeleccionMultiple: React.FC<Props> = ({ label, opciones, valor, onC
         <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
           {nombreDe(id)}
           <Etiquetas etiquetas={etiquetasDe(id)} />
-          {principal && i === 0 && valor.length > 1 && <span className="rounded bg-blue-600/15 px-1 text-[9px] uppercase tracking-wide">{principal}</span>}
+          {principal && i === 0 && valor.length > 1 && <span className="rounded bg-gray-100 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-700/70 dark:text-gray-300">{principal}</span>}
           <button type="button" onClick={() => quitar(id)} aria-label={`Quitar ${nombreDe(id)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
             <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
           </button>
