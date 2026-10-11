@@ -1858,7 +1858,7 @@ export const ContractBulkAfipTab: React.FC<{
     pestaña; el botón de cada fila manda esa sola fila con su propia Empresa Contrato, así se reusa el
     mismo modal para presentar a una persona sin tener que tildarla ni cambiar de pestaña.
   */
-  const presentarAltasMasivas = async (fuente: typeof fuenteTxt = fuenteTxt, empresa: typeof empresa = empresa) => {
+  const presentarAltasMasivas = async (fuente: typeof fuenteTxt = fuenteTxt, empresa: typeof empresaDeLaPestana = empresaDeLaPestana) => {
     if (!empresa) return;
     const completosDeLaFuente = fuente.filter((x) => resolveAfip85(x.row, afipCat, x.result).completo);
     // Antes que nada: una sucursal o actividad que la empresa no tiene frena también el URGENTE.
