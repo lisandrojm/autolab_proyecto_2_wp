@@ -106,6 +106,8 @@
     "nomenclatura:codigo": "dotenv -e .env.production -- tsx src/scripts/nomenclaturaCodigo.ts",
     "outbox:codigos:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/codigosEnOutbox.ts",
     "outbox:codigos": "dotenv -e .env.production -- tsx src/scripts/codigosEnOutbox.ts",
+    "pendbox:limpiar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/limpiarPendbox.ts",
+    "pendbox:limpiar": "dotenv -e .env.production -- tsx src/scripts/limpiarPendbox.ts",
     "altas:deshacer-outbox:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/deshacerAltasOutbox.ts",
     "altas:deshacer-outbox": "dotenv -e .env.production -- tsx src/scripts/deshacerAltasOutbox.ts",
     "tipos-servicio:grupo": "dotenv -e .env.production -- tsx src/scripts/backfillGrupoTipoServicio.ts",

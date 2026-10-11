@@ -1,6 +1,7 @@
 import { ImapFlow } from "imapflow";
 import { Tenant } from "../models/Tenant.js";
 import { decryptSecret } from "../utils/secretCrypto.js";
+import { candidatosPorNombre, elMasLargo } from "../utils/coincidenciaDeNombre.js";
 import { leerAnclas, mismoDocumento } from "../utils/anclasNombre.js";
 import { resolverCarpetaPorProposito, resolverProposito } from "../utils/estadoCarpetas.js";
 import { getTenantDropboxConfig, listFolder, moveEntry } from "./dropboxService.js";
@@ -134,26 +135,10 @@ export function documentosDelAvisoEnOutbox(entries, archivo, _ident) {
     const codigo = leerAnclas(archivo).codigo;
     if (codigo)
         return pdfs.filter((e) => leerAnclas(e.name).codigo === codigo).slice(0, 1);
-    const titulo = String(archivo || "").trim();
     // Un título SIN código contra un archivo que ya lo tiene (se renombró con `codigosEnOutbox` después de
     // mandarlo a firmar): se compara el archivo sin su código, que es el nombre con el que se envió.
-    const sinExtension = (n) => n.replace(/\.[a-z0-9]{2,4}$/i, "").replace(/_ID-\d{6,}$/, "").trim();
-    const elMasLargo = (xs) => (xs.length === 0 ? [] : [xs.reduce((a, b) => (sinExtension(b.name).length > sinExtension(a.name).length ? b : a))]);
-    const tal = pdfs.filter((e) => {
-        const base = sinExtension(e.name);
-        return base.length > 0 && titulo.startsWith(base) && (titulo.length === base.length || !/[A-Za-z0-9]/.test(titulo[base.length]));
-    });
-    if (tal.length > 0)
-        return elMasLargo(tal);
-    // Los símbolos se vuelven UN separador genérico, pero el separador queda: sin él, un nombre
-    // cortado («…Empresa-3071706837») pasaba por el principio de otro («…Empresa-30717068374»).
-    const separadores = (v) => sinExtension(String(v || "")).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const objetivo = separadores(titulo);
-    const normalizados = pdfs.filter((e) => {
-        const n = separadores(e.name);
-        return n.length >= 20 && objetivo.startsWith(n) && (objetivo.length === n.length || objetivo[n.length] === "-");
-    });
-    return elMasLargo(normalizados);
+    // La regla vive en `utils/coincidenciaDeNombre.ts`, compartida con la limpieza de Pendbox.
+    return elMasLargo(candidatosPorNombre(pdfs, archivo));
 }
 /**
  * El contrato del aviso: la persona (CUIL, si no email) y el período del nombre.
