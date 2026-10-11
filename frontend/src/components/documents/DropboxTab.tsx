@@ -6,6 +6,7 @@ import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { dropboxAPI, DropboxEntry, DropboxStatus } from "../../api/dropbox";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { ArchivoParaVer, VisorArchivoDropbox, esArchivoVisible } from "./VisorArchivoDropbox";
+import { BotonOrden, ordenarFilas, useOrden, type ValorOrden } from "../ui/OrdenTabla";
 
 const formatSize = (n?: number): string => {
   if (!n && n !== 0) return "";
@@ -356,15 +357,29 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
     return list;
   }, [currentPath, rootPath, fixedRoot, rootLabel]);
 
+  /*
+    ORDEN POR COLUMNA, COMO UN DATATABLE (ver `components/ui/OrdenTabla`). Abre por fecha, de la más
+    reciente a la más antigua: lo que se viene a buscar a Documentos es lo último que entró.
+
+    LAS CARPETAS SIEMPRE PRIMERO, por nombre. No tienen fecha ni tamaño, y mezcladas con los archivos
+    el orden por fecha las mandaría al final (los vacíos van últimos) y habría que scrollear para
+    entrar en una. El orden elegido rige adentro de cada grupo.
+  */
+  const { orden, alternar } = useOrden({ columna: "fecha", direccion: "desc" });
+  const ACCESORES: Record<string, (e: DropboxEntry) => ValorOrden> = {
+    fecha: (e) => e.serverModified || "",
+    nombre: (e) => e.name,
+    tamanio: (e) => e.size || 0,
+  };
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     const arr = term ? entries.filter((e) => e.name.toLowerCase().includes(term)) : entries;
-    // Carpetas primero, luego archivos; ambos alfabéticos.
-    return [...arr].sort((a, b) => {
-      if (a.tag !== b.tag) return a.tag === "folder" ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-  }, [entries, search]);
+    const porNombre = (a: DropboxEntry, b: DropboxEntry) => a.name.localeCompare(b.name);
+    const carpetas = arr.filter((e) => e.tag === "folder").sort(porNombre);
+    const archivos = arr.filter((e) => e.tag !== "folder").sort(porNombre);
+    const accesor = orden ? ACCESORES[orden.columna] : undefined;
+    return [...ordenarFilas(carpetas, orden, accesor), ...ordenarFilas(archivos, orden, accesor)];
+  }, [entries, search, orden]);
 
   // Archivos seleccionables en la vista actual (las carpetas no se tildan).
   const fileEntries = useMemo(() => filtered.filter((e) => e.tag === "file"), [filtered]);
@@ -588,9 +603,22 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                     title="Seleccionar todos los archivos"
                   />
                 </th>
-                <th className="px-4 py-3 font-semibold">Nombre</th>
-                <th className="px-4 py-3 font-semibold">Tamaño</th>
-                <th className="px-4 py-3 font-semibold">Modificado</th>
+                {/* La fecha primero: es por lo que se ordena y lo primero que se mira. */}
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">
+                  <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
+                    Fecha
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 font-semibold">
+                  <BotonOrden columna="nombre" orden={orden} onAlternar={alternar}>
+                    Nombre
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">
+                  <BotonOrden columna="tamanio" orden={orden} onAlternar={alternar}>
+                    Tamaño
+                  </BotonOrden>
+                </th>
                 <th className="px-4 py-3 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
@@ -616,6 +644,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                         />
                       )}
                     </td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatDate(e.serverModified) : "—"}</td>
                     <td className="px-4 py-2.5">
                       {e.tag === "folder" ? (
                         <button onClick={() => loadFolder(e.path)} className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-100 hover:text-blue-600">
@@ -633,7 +662,6 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-gray-500 text-xs">{e.tag === "file" ? formatSize(e.size) : "—"}</td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs">{formatDate(e.serverModified)}</td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center justify-end gap-1">
                         {e.tag === "file" && esArchivoVisible(e.name) && (
