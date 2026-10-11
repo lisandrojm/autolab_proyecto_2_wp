@@ -5,6 +5,7 @@ import { Modal } from '../ui/Modal';
 import { projectsAPI, EstadoCorridaAltas, ModoAltasArca } from '../../api/projects';
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
 import { ETIQUETA_ESTADO, EstadoPersonaTanda, detalleDeLoPresentado, progresoPorTandas, resumenCsv } from './progresoTandas';
+import { sweetAlert } from '../../utils/sweetAlert';
 
 /**
  * EL TRÁMITE DE ALTA EN ARCA, EN VIVO: Carga Masiva (archivo) o Altas Masivas (pegado, URGENTE).
@@ -131,6 +132,30 @@ const ICONO: Record<EstadoPaso, { icon: typeof faCircle; clase: string; spin?: b
   omitido: { icon: faFlask, clase: 'text-gray-400' },
 };
 
+/**
+ * EL AVISO AL TERMINAR LA CORRIDA (individual, masiva o forzada: todas pasan por este modal). Dice
+ * cuántas altas quedaron registradas en ARCA y cuál es el paso siguiente: descargar las altas
+ * tempranas, que es lo que archiva la constancia y pasa el contrato a Generar Documentos.
+ */
+function avisarCierreDeCorrida(r: EstadoCorridaAltas) {
+  if (r.enSeco || r.tipo !== 'altas_masivas') return;
+  const p = progresoPorTandas({ eventos: (r.eventos || []) as any, personas: r.personas || [], descartadas: r.descartadas });
+  const c = p.cuenta;
+  const sinResolver = c.rechazada + c.incierta + c.pendiente;
+  const nombres = p.tandas.flatMap((t) => t.personas.filter((x) => x.estado === 'registrada').map((x) => x.nombre));
+  if (c.registrada > 0 && sinResolver === 0 && !p.corte) {
+    void sweetAlert.successAlert(
+      c.registrada === 1 ? 'Alta presentada en ARCA' : `${c.registrada} altas presentadas en ARCA`,
+      `${c.registrada === 1 ? 'Quedó registrada' : 'Quedaron registradas'} en ARCA a nombre de ${r.empresaRazonSocial || 'la empleadora'}: ${nombres.join(', ')}.\n\nPaso siguiente: descargá las altas tempranas desde «Alta Temprana A.R.C.A». Ahí se bajan las constancias de ARCA, se archivan en Dropbox y cada contrato pasa a Generar Documentos.`,
+    );
+  } else if (c.registrada + sinResolver > 0) {
+    void sweetAlert.warningAlert(
+      'Corrida terminada con pendientes',
+      `${c.registrada} registrada(s), ${c.rechazada} rechazada(s), ${c.incierta} incierta(s)${c.pendiente > 0 ? `, ${c.pendiente} sin presentar` : ''}.${p.corte ? ` ${p.corte.mensaje}` : ''}${c.incierta > 0 ? ' Las inciertas se miran en ARCA → Relaciones Laborales → Consultas.' : ''}${c.registrada > 0 ? ' Las registradas pasan a Generar Documentos cuando descargues las altas tempranas desde «Alta Temprana A.R.C.A».' : ''}`,
+    );
+  }
+}
+
 export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTerminado }) => {
   const [estado, setEstado] = useState<EstadoCorridaAltas | null>(null);
   const [confirmado, setConfirmado] = useState(false);
@@ -157,6 +182,9 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
   // que la pantalla de atrás se redibujaba, incluida la recarga que dispara el final de la corrida.
   const alTerminar = useRef(onTerminado);
   alTerminar.current = onTerminado;
+  // Se vio corriendo en ESTA apertura del modal: el aviso de cierre es para la corrida que se miró
+  // terminar, no para una vieja que ya estaba terminada al abrir.
+  const vistaCorriendo = useRef(false);
   const consultar = useCallback(async () => {
     try {
       const r = await projectsAPI.estadoAltasArca();
@@ -165,11 +193,16 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
         cantEventos.current = r.eventos?.length || 0;
         setUltimoCambio(Date.now());
       }
+      if (r.corriendo) vistaCorriendo.current = true;
       if (!r.corriendo) {
         parar();
         if (r.hay && !avisoTerminado.current) {
           avisoTerminado.current = true;
           alTerminar.current?.();
+          if (vistaCorriendo.current) {
+            vistaCorriendo.current = false;
+            avisarCierreDeCorrida(r);
+          }
         }
       }
       return r;

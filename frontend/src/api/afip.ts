@@ -67,6 +67,8 @@ export interface ResultadoConsultaPadron {
   faultString?: string;
   /** Respuesta cruda de ARCA (o el Fault, si lo hubo) tal cual la parseó el server. */
   raw?: any;
+  /** El estado al que pasó el contrato al quedar archivada la constancia («Envío de documentación» = Generar Documentos). */
+  estadoNuevo?: string;
   /**
    * Presente SOLO si el nombre que había cargado no coincidía con el del Padrón y se reemplazó por
    * el de ARCA. Ausente cuando ya coincidía: ahí no hay nada que avisar.
@@ -79,6 +81,14 @@ export interface ResultadoConsultaPadronBulk {
   consultados: number;
   sinCuit: number;
   contratosActualizados: number;
+  /** Cuántos contratos pasaron a Generar Documentos en esta consulta. */
+  avanzados?: number;
+}
+
+/** Resultado de avanzar contratos ya validados y archivados (ver afipAPI.avanzarConstanciaArchivada). */
+export interface AvanzarConstanciaResult {
+  resultados: Array<ConsultaPadronTarget & { ok: boolean; aplicada?: boolean; estado?: string; motivo?: string }>;
+  avanzados: number;
 }
 
 /** Resultado de habilitar la firma de gente sin CUIT (ver afipAPI.habilitarFirma). */
@@ -279,6 +289,15 @@ export const afipAPI = {
    *  revalidar después de arreglar la autorización del servicio en ARCA, sin re-pegar el certificado. */
   async verificarServicio(): Promise<VerificacionServicioPadron> {
     const { data } = await axios.post("/afip/verificar-servicio", {}, { timeout: 30000 });
+    return data;
+  },
+
+  /**
+   * Para contratos que YA están validados y archivados pero siguen en Constancia de CUIT: los pasa a
+   * Generar Documentos sin volver a consultar a ARCA ni subir nada.
+   */
+  async avanzarConstanciaArchivada(targets: ConsultaPadronTarget[]): Promise<AvanzarConstanciaResult> {
+    const { data } = await axios.post("/afip/constancia-archivada/avanzar", { targets }, { timeout: 60000 });
     return data;
   },
 

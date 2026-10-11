@@ -24,6 +24,7 @@ import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { resolverCarpetaPorProposito, resolverSinCuit } from "../utils/estadoCarpetas.js";
 import { getTenantAfipConfig, verificarCredenciales, verificarServicioPadron, consultarPadron, clearTenantTicket, getCertificadoInfo } from "../services/afipService.js";
 import { getTenantDropboxConfig, uploadFile, getTemporaryLink, deleteEntry } from "../services/dropboxService.js";
+import { aplicarTransicion, estadoDestinoPorProposito } from "../services/estadoTransicionAutomaticaService.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
@@ -531,6 +532,8 @@ router.post("/consulta-padron/bulk", async (req, res) => {
         const tenantId = String(req.tenantObjectId);
         const docsCache = new Map(); // `${projectId}|${userId}` → documento UserProject
         const resultados = [];
+        // Los contratos cuya constancia quedó archivada en esta corrida: avanzan de estado al final.
+        const archivados = [];
         // Concurrencia acotada: no golpear el webservice de AFIP con todo el lote en simultáneo.
         const CONCURRENCIA = 3;
         const cuits = [...targetsPorCuit.keys()];
@@ -638,6 +641,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                                     dropboxPath = subida.path;
                                     subidaAt = new Date();
                                     dropboxSubido = true;
+                                    archivados.push({ up, idx: t.contractIndex, cuit });
                                 }
                                 catch (e) {
                                     const detalle = e?.response?.data ? JSON.stringify(e.response.data) : e?.message || String(e);
@@ -668,11 +672,37 @@ router.post("/consulta-padron/bulk", async (req, res) => {
             }));
         }
         await Promise.all([...docsCache.values()].map((up) => up.save()));
+        /*
+          CON LA CONSTANCIA ARCHIVADA EL TRÁMITE TERMINÓ: el contrato pasa YA al estado siguiente («Envío de
+          documentación», la bandeja Generar Documentos). Antes quedaba en Constancia de CUIT —verde, pero
+          ahí— hasta que el escaneo de carpetas viera el archivo en su próxima pasada (hasta 20 minutos).
+          El escaneo sigue existiendo para lo que se suba a mano; acá se le gana de mano con lo que ya se sabe.
+        */
+        let avanzados = 0;
+        if (archivados.length > 0) {
+            try {
+                const destino = await estadoDestinoPorProposito("constancia_cuit");
+                if (destino) {
+                    for (const a of archivados) {
+                        const r = await aplicarTransicion(a.up, a.idx, destino);
+                        if (r.aplicada)
+                            avanzados++;
+                        const res_ = resultados.find((x) => x.cuit === a.cuit);
+                        if (res_)
+                            res_.estadoNuevo = destino.name;
+                    }
+                }
+            }
+            catch (e) {
+                console.error("AFIP: la constancia se archivó pero no se pudo avanzar el estado (lo hará el escaneo):", e?.message || e);
+            }
+        }
         res.json({
             resultados,
             consultados: cuits.length,
             sinCuit: sinCuit.length,
             contratosActualizados: resultados.reduce((acc, r) => acc + r.contratosActualizados, 0),
+            avanzados,
         });
     }
     catch (error) {
@@ -690,6 +720,55 @@ router.post("/consulta-padron/bulk", async (req, res) => {
  * de bandeja. Si se validó por error (o hay que rehacerlo), borrarlo desde acá evita que en la
  * próxima sincronización el contrato se mueva solo.
  */
+/**
+ * POST /afip/constancia-archivada/avanzar — para un contrato que YA tiene el CUIT validado y la
+ * constancia archivada pero sigue en Constancia de CUIT (validado antes de que el archivado avanzara
+ * el estado, o el escaneo todavía no pasó): lo pasa al estado siguiente ahora. No consulta a ARCA ni
+ * vuelve a subir nada. Lo usan «Validar ARCA» y «Validar ARCA Masivo» cuando lo tildado ya está listo.
+ */
+router.post("/constancia-archivada/avanzar", async (req, res) => {
+    try {
+        let targets = [];
+        try {
+            targets = z.array(padronTargetSchema).max(5000).parse(req.body?.targets);
+        }
+        catch {
+            res.status(400).json({ error: "El listado de contratos (targets) es inválido." });
+            return;
+        }
+        const projectIds = [...new Set(targets.map((t) => t.projectId))].filter((id) => Types.ObjectId.isValid(id));
+        const proyectosDelTenant = new Set((await Project.find({ _id: { $in: projectIds }, tenantId: req.tenantObjectId }).select("_id").lean()).map((p) => String(p._id)));
+        const destino = await estadoDestinoPorProposito("constancia_cuit");
+        const resultados = [];
+        for (const t of targets) {
+            if (!proyectosDelTenant.has(t.projectId) || !Types.ObjectId.isValid(t.userId)) {
+                resultados.push({ ...t, ok: false, motivo: "El contrato no existe en esta cuenta." });
+                continue;
+            }
+            const up = await UserProject.findOne({ projectId: t.projectId, userId: t.userId });
+            const c = up?.contracts?.[t.contractIndex];
+            if (!c) {
+                resultados.push({ ...t, ok: false, motivo: "El contrato ya no existe." });
+                continue;
+            }
+            if (c.constanciaAfipEstado !== "activo" || !c.constanciaAfipDropboxSubidaAt) {
+                resultados.push({ ...t, ok: false, motivo: "El CUIT no está validado y archivado: hay que validarlo primero." });
+                continue;
+            }
+            if (!destino) {
+                resultados.push({ ...t, ok: false, motivo: "No hay un estado con la carpeta «Constancia de cuit» configurada (Documentos → Configurar transición automática)." });
+                continue;
+            }
+            const r = await aplicarTransicion(up, t.contractIndex, destino);
+            resultados.push({ ...t, ok: true, aplicada: r.aplicada, estado: destino.name });
+        }
+        res.json({ resultados, avanzados: resultados.filter((r) => r.aplicada).length });
+    }
+    catch (error) {
+        console.error("AFIP avanzar constancia archivada error:", error);
+        res.status(500).json({ error: `No se pudo avanzar el estado: ${error?.message || "error interno"}` });
+    }
+});
 router.post("/constancia-archivada/eliminar", async (req, res) => {
     try {
         const parsed = padronTargetSchema.safeParse(req.body || {});

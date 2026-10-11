@@ -22,3 +22,10 @@ export declare function cargarEstadosPorEvento(evento: EventoTransicionAutomatic
  * siguiente: alcanza con que esté más adelante que el actual (el evento certifica que ya llegó ahí).
  */
 export declare function aplicarTransicion(up: IUserProject, contractIndex: number, estadoDestino: IInfo): Promise<ResultadoTransicion>;
+/**
+ * EL ESTADO AL QUE LLEVA UN TRÁMITE: el que tiene configurada una carpeta de Dropbox con ese
+ * propósito («alta_temprana», «constancia_cuit»). Es el mismo estado al que mueve el escaneo de
+ * carpetas cuando ve el archivo; lo usan los caminos que ya saben que el trámite terminó (el alta
+ * registrada, la constancia archivada) para avanzar en el momento y no esperar la próxima pasada.
+ */
+export declare function estadoDestinoPorProposito(proposito: string): Promise<IInfo | null>;

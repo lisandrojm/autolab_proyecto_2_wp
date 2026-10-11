@@ -122,6 +122,21 @@ export const sweetAlert = {
     });
   },
 
+  /**
+   * Éxito que hay que LEER, no un toast: resume qué pasó (se validó, se archivó, cambió de estado) y
+   * espera el botón. Se usa al cierre de los trámites de ARCA.
+   */
+  successAlert: (title: string, text: string, confirmText = "Entendido") => {
+    return Swal.fire({
+      title,
+      text,
+      icon: "success",
+      confirmButtonText: confirmText,
+      confirmButtonColor: "#16a34a",
+      focusConfirm: false,
+    });
+  },
+
   warningAlert: (title: string, text: string, confirmText = "Entendido") => {
     return Swal.fire({
       title,

@@ -344,8 +344,33 @@ export const BotonConsultarAfipBulk: React.FC<{
   const elegibles = rows.filter((r) => constanciaPendiente(r) && cuitEsValido(r.cuit));
   const sinEmpresa = elegibles.filter((r) => !r.empresaContratoId);
   const pendientes = elegibles.filter((r) => r.empresaContratoId);
+  // Los tildados que YA están validados y archivados: no se consultan de nuevo, pero se les asegura
+  // el pase a Generar Documentos y se avisa (pedido del 11/10/2026).
+  const yaValidados = rows.filter((r) => estadoConstancia(r) === "activo_afip");
+  const avanzarYaValidados = async (): Promise<{ avanzados: number; yaEstaban: number }> => {
+    if (yaValidados.length === 0) return { avanzados: 0, yaEstaban: 0 };
+    const r = await afipAPI.avanzarConstanciaArchivada(yaValidados.map((x) => ({ projectId: x.projectId, userId: x.userId, contractIndex: x.contractIndex })));
+    return { avanzados: r.avanzados, yaEstaban: r.resultados.filter((x) => x.ok && !x.aplicada).length };
+  };
 
   const handleClick = async () => {
+    if (pendientes.length === 0 && yaValidados.length > 0 && sinEmpresa.length === 0) {
+      setConsultando(true);
+      try {
+        const { avanzados, yaEstaban } = await avanzarYaValidados();
+        const n = yaValidados.length;
+        await sweetAlert.successAlert(
+          n === 1 ? "Este CUIT ya está validado" : `Los ${n} CUIT tildados ya están validados`,
+          `${n === 1 ? "Ya figura activo" : "Ya figuran activos"} en el Padrón de ARCA y ${n === 1 ? "su comprobante ya está archivado" : "sus comprobantes ya están archivados"} en Dropbox (ARCA → Constancia de cuit).${avanzados > 0 ? ` ${avanzados === 1 ? "El contrato pasó" : `${avanzados} contratos pasaron`} a Generar Documentos.` : ""}${yaEstaban > 0 ? ` ${yaEstaban === 1 ? "1 ya estaba" : `${yaEstaban} ya estaban`} en Generar Documentos.` : ""}`,
+        );
+        onConsultado();
+      } catch (e: any) {
+        sweetAlert.error("Error", e?.response?.data?.error || "No se pudo avanzar los contratos.");
+      } finally {
+        setConsultando(false);
+      }
+      return;
+    }
     if (pendientes.length === 0) {
       // Se distingue «no hay nada» de «hay, pero les falta la empresa»: son dos acciones distintas.
       if (sinEmpresa.length > 0) {
@@ -374,9 +399,18 @@ export const BotonConsultarAfipBulk: React.FC<{
       const conError = resp.resultados.filter((r) => r.error).length;
       const sinArchivar = activos.filter((r) => !r.dropboxSubido).length;
       const renombrados = resp.resultados.filter((r) => r.renombrado);
-      sweetAlert.success(
-        "Consulta completa",
-        `${resp.consultados} CUIT(s) consultado(s) — ${activos.length} activo(s) en ARCA.${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — tocá "Validar" en cada fila para ver el motivo puntual.` : ""}`,
+      // Los tildados que ya estaban validados también se aseguran en Generar Documentos.
+      let deYaValidados = { avanzados: 0, yaEstaban: 0 };
+      try {
+        deYaValidados = await avanzarYaValidados();
+      } catch {
+        /* se informa igual lo consultado */
+      }
+      const archivados = activos.filter((r) => r.dropboxSubido).length;
+      const pasaron = (resp.avanzados || 0) + deYaValidados.avanzados;
+      await sweetAlert.successAlert(
+        "Validación completa",
+        `${resp.consultados} CUIT(s) consultado(s) en el Padrón de ARCA — ${activos.length} activo(s), ${archivados} comprobante(s) archivado(s) en Dropbox (ARCA → Constancia de cuit).${pasaron > 0 ? ` ${pasaron === 1 ? "1 contrato pasó" : `${pasaron} contratos pasaron`} a Generar Documentos.` : ""}${yaValidados.length > 0 ? ` ${yaValidados.length} ya estaba(n) validado(s) y archivado(s).` : ""}${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — tocá "Validar" en cada fila para ver el motivo.` : ""}`,
       );
       /*
         Los renombres se listan uno por uno, no se resumen en un número.
@@ -409,12 +443,18 @@ export const BotonConsultarAfipBulk: React.FC<{
     <button
       type="button"
       onClick={handleClick}
-      disabled={consultando || pendientes.length === 0}
-      title={pendientes.length === 0 ? "Tildá contratos con CUIT pendiente de validar" : "Valida contra el Padrón de ARCA el CUIT de cada contrato tildado, sin ir uno por uno"}
+      disabled={consultando || (pendientes.length === 0 && yaValidados.length === 0)}
+      title={
+        pendientes.length === 0 && yaValidados.length === 0
+          ? "Tildá contratos con CUIT pendiente de validar"
+          : pendientes.length === 0
+            ? `Los ${yaValidados.length} tildados ya están validados y archivados: se los pasa a Generar Documentos`
+            : "Valida contra el Padrón de ARCA el CUIT de cada contrato tildado, sin ir uno por uno"
+      }
       className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-600 text-white border-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
-      {consultando ? "Validando..." : `Validar ARCA Masivo (${pendientes.length})`}
+      {consultando ? "Validando..." : `Validar ARCA Masivo (${pendientes.length || yaValidados.length})`}
     </button>
   );
 };
@@ -445,6 +485,33 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    /*
+      YA VALIDADO Y ARCHIVADO: no se vuelve a consultar a ARCA ni a subir el comprobante (Dropbox lo
+      duplicaría con autorename). Se avisa qué pasó y, si el contrato seguía en Constancia de CUIT, se
+      lo pasa a Generar Documentos ahora, sin esperar al escaneo de carpetas.
+    */
+    if (estadoConstancia(row) === "activo_afip") {
+      setConsultando(true);
+      try {
+        const r = await afipAPI.avanzarConstanciaArchivada([{ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex }]);
+        const x = r.resultados[0];
+        const validadoEl = row.constanciaAfipConsultadaAt ? new Date(row.constanciaAfipConsultadaAt).toLocaleDateString("es-AR") : "";
+        if (x?.ok) {
+          await sweetAlert.successAlert(
+            "Este CUIT ya está validado",
+            `${cuit} ya figura activo en el Padrón de ARCA${validadoEl ? ` (validado el ${validadoEl})` : ""}, el comprobante ya está archivado en Dropbox (ARCA → Constancia de cuit) y el contrato ${x.aplicada ? "pasó a" : "ya está en"} Generar Documentos.`,
+          );
+        } else {
+          await sweetAlert.warningAlert("Validado, pero no avanzó", x?.motivo || "No se pudo pasar el contrato a Generar Documentos.");
+        }
+        onConsultado();
+      } catch (err: any) {
+        sweetAlert.error("Error", err?.response?.data?.error || "No se pudo avanzar el contrato.");
+      } finally {
+        setConsultando(false);
+      }
+      return;
+    }
     if (!cuit) {
       sweetAlert.error("Sin CUIT", "Esta persona no tiene un CUIT/CUIL cargado.");
       return;
@@ -482,7 +549,10 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       if (resultado?.error) {
         sweetAlert.error("No se pudo validar", resultado.error);
       } else if (resultado?.estado === "activo" && resultado.dropboxSubido) {
-        sweetAlert.success("CUIT activo y archivado", `${cuit} figura activo en el Padrón de ARCA y quedó archivado en Dropbox — el trámite queda completo.`);
+        await sweetAlert.successAlert(
+          "CUIT validado y archivado",
+          `${cuit} figura activo en el Padrón de ARCA y el comprobante quedó archivado en Dropbox (ARCA → Constancia de cuit).${resultado.estadoNuevo ? " El contrato pasó a Generar Documentos." : " El contrato pasa a Generar Documentos en la próxima pasada del escaneo de carpetas."}`,
+        );
       } else if (resultado?.estado === "activo") {
         sweetAlert.warningAlert("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de ARCA, pero no se pudo archivar el resultado en Dropbox. El trámite sigue pendiente.\n\nMotivo: ${resultado.dropboxError || "no se informó (revisá los Logs de ARCA)."}`);
       } else if (resultado?.estado === "inactivo") {

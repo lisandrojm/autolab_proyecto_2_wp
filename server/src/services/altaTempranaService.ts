@@ -12,7 +12,7 @@ import { IUserProject } from "../models/UserProject.js";
 import { leerConstanciaTrabajador, leerConstanciaTrabajadorPdf, problemasDeConstancia } from "../utils/constanciaTrabajadorPdf.js";
 import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
-import { aplicarTransicion, cargarEstadosPorEvento } from "./estadoTransicionAutomaticaService.js";
+import { aplicarTransicion, estadoDestinoPorProposito } from "./estadoTransicionAutomaticaService.js";
 import { nombreArchivoDocumento } from "./nomenclaturaService.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -130,7 +130,7 @@ export async function registrarAltaDeContrato(o: {
 
   if (ruteo) {
     try {
-      const destino = (await cargarEstadosPorEvento("dropbox_carpeta")).find((e: any) => (e.data?.transicionAutomatica?.carpetas || []).some((c: any) => ([] as string[]).concat(c.proposito || []).includes("alta_temprana")));
+      const destino = await estadoDestinoPorProposito("alta_temprana");
       if (destino) {
         const r = await aplicarTransicion(up, idx, destino);
         if (r.aplicada) ruteo.estado = destino.name;

@@ -4,6 +4,33 @@ import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, fa
 import { Modal } from '../ui/Modal';
 import { projectsAPI, CorridaAltasGuardada, EstadoConstanciasAlta } from '../../api/projects';
 import { detalleDeLoPresentado } from './progresoTandas';
+import { sweetAlert } from '../../utils/sweetAlert';
+
+/**
+ * EL AVISO AL TERMINAR LA DESCARGA DE LAS ALTAS TEMPRANAS: cuántas constancias se bajaron de ARCA, a
+ * dónde fueron (Outbox para firmar, o «Alta temprana de Arca / No firmar») y cuántos contratos pasaron
+ * a Generar Documentos. El destino viene en el texto de cada persona (ver constanciasAltas.ts).
+ */
+function avisarCierreDeDescarga(eventos: Array<Record<string, any> & { tipo: string }>) {
+  const porCuil = new Map<string, Record<string, any>>();
+  for (const e of eventos) if (e.tipo === 'persona') porCuil.set(e.cuil, e);
+  const personas = [...porCuil.values()];
+  const fallo = eventos.find((e) => e.tipo === 'fallo');
+  const listas = personas.filter((p) => p.estado === 'lista');
+  const outbox = listas.filter((p) => /outbox/i.test(String(p.detalle || ''))).length;
+  const noFirmar = listas.filter((p) => /no firmar/i.test(String(p.detalle || ''))).length;
+  const avanzaron = listas.filter((p) => /pasó a/i.test(String(p.detalle || ''))).length;
+  const problemas = personas.filter((p) => p.estado !== 'lista' && p.estado !== 'descargando');
+  const texto =
+    `${listas.length === 1 ? 'Se bajó la constancia' : `Se bajaron ${listas.length} constancias`} de ARCA${listas.length > 0 ? ` (${listas.map((p) => p.nombre).join(', ')})` : ''}.` +
+    (outbox > 0 ? ` ${outbox} al Outbox, lista(s) para enviar a firmar.` : '') +
+    (noFirmar > 0 ? ` ${noFirmar} archivada(s) en «Alta temprana de Arca / No firmar».` : '') +
+    (avanzaron > 0 ? ` ${avanzaron === 1 ? '1 contrato pasó' : `${avanzaron} contratos pasaron`} a Generar Documentos.` : '') +
+    (problemas.length > 0 ? `\n\nSin resolver: ${problemas.map((p) => `${p.nombre} (${p.estado}${p.detalle ? `: ${p.detalle}` : ''})`).join('; ')}.` : '') +
+    (fallo ? `\n\nLa descarga se cortó: ${fallo.mensaje}` : '');
+  if (listas.length > 0 && problemas.length === 0 && !fallo) void sweetAlert.successAlert(listas.length === 1 ? 'Alta temprana descargada' : `${listas.length} altas tempranas descargadas`, texto);
+  else if (personas.length > 0 || fallo) void sweetAlert.warningAlert('Descarga terminada con pendientes', texto);
+}
 
 /**
  * EL REGISTRO DE LO PRESENTADO EN ARCA POR ALTAS MASIVAS (URGENTE): una fila por persona y corrida.
@@ -96,13 +123,20 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
   const [errorConstancias, setErrorConstancias] = useState('');
   const [arrancando, setArrancando] = useState(false);
   const reloj = useRef<number | null>(null);
+  // La descarga se vio corriendo desde este modal: el aviso de cierre es de ESA descarga, no de una vieja.
+  const vistaCorriendo = useRef(false);
   const mirar = useCallback(async () => {
     try {
       const r = await projectsAPI.estadoConstanciasAlta(empresaId);
       setConstancias(r);
+      if (r.corriendo) vistaCorriendo.current = true;
       if (!r.corriendo && reloj.current) {
         window.clearInterval(reloj.current);
         reloj.current = null;
+      }
+      if (!r.corriendo && vistaCorriendo.current) {
+        vistaCorriendo.current = false;
+        avisarCierreDeDescarga(r.eventos || []);
       }
       return r;
     } catch {
@@ -127,6 +161,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
     setErrorConstancias('');
     try {
       await projectsAPI.descargarConstanciasAlta(empresaId);
+      vistaCorriendo.current = true; // por si termina antes del primer tick
       await mirar();
       seguir();
     } catch (e: any) {

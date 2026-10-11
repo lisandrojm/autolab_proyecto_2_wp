@@ -38,3 +38,13 @@ export async function aplicarTransicion(up, contractIndex, estadoDestino) {
     await up.save();
     return { aplicada: true, estadoAnteriorId, estadoNuevo: { id: destinoId, nombre: estadoDestino.name } };
 }
+/**
+ * EL ESTADO AL QUE LLEVA UN TRÁMITE: el que tiene configurada una carpeta de Dropbox con ese
+ * propósito («alta_temprana», «constancia_cuit»). Es el mismo estado al que mueve el escaneo de
+ * carpetas cuando ve el archivo; lo usan los caminos que ya saben que el trámite terminó (el alta
+ * registrada, la constancia archivada) para avanzar en el momento y no esperar la próxima pasada.
+ */
+export async function estadoDestinoPorProposito(proposito) {
+    const estados = await cargarEstadosPorEvento("dropbox_carpeta");
+    return estados.find((e) => (e.data?.transicionAutomatica?.carpetas || []).some((c) => [].concat(c.proposito || []).includes(proposito))) || null;
+}
