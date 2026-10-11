@@ -229,6 +229,16 @@ export const PresentacionesArcaPage: React.FC = () => {
         ),
       }}
       shouldShowInfo
+      titleBadge={
+        estado && (
+          // Al lado del título: es lo primero que se decide en esta pantalla.
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none ml-2 shrink-0" title={estado.activa ? "Desactivar la presentación automática" : "Activar la presentación automática"}>
+            <input type="checkbox" className="sr-only peer" checked={estado.activa} disabled={guardando} onChange={(e) => cambiarActiva(e.target.checked)} />
+            <span className="relative w-11 h-6 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-green-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
+            <span className={`text-sm font-semibold whitespace-nowrap ${estado.activa ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}>{estado.activa ? "Activada" : "Desactivada"}</span>
+          </label>
+        )
+      }
     >
       {cargando || !estado ? (
         <div className="flex justify-center py-16">
@@ -236,26 +246,12 @@ export const PresentacionesArcaPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 flex flex-wrap items-center justify-between gap-6">
-            <div className="space-y-2">
-              <label className="inline-flex items-center gap-3 cursor-pointer select-none">
-                <input type="checkbox" className="sr-only peer" checked={estado.activa} disabled={guardando} onChange={(e) => cambiarActiva(e.target.checked)} />
-                <span className="relative w-11 h-6 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-green-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">Presentación automática {estado.activa ? "activada" : "desactivada"}</span>
-              </label>
-              {!estado.activa && <p className="text-xs text-amber-700 dark:text-amber-400">Desactivada: no se presenta nada sola. Activala para que cada alta salga a las {estado.hora} h de su día.</p>}
+          {(!estado.activa || estado.enSeco) && (
+            <div className="space-y-1">
+              {!estado.activa && <p className="text-sm text-amber-700 dark:text-amber-400">Desactivada: no se presenta nada sola. Activala para que cada alta salga a las {estado.hora} h de su día.</p>}
               {estado.enSeco && <p className="text-xs text-gray-500">Este servidor corre en prueba: llega hasta antes de presentar y no manda nada a ARCA.</p>}
             </div>
-            {estado.activa && (
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Próxima presentación</p>
-                <CuentaRegresiva destino={estado.proximaCorrida} ahora={ahoraServidor} grande />
-                <p className="text-[11px] text-gray-500">
-                  {fechaCorta(estado.proximaCorrida.slice(0, 10))} a las {estado.hora} h · {proximas.filter((c) => c.momento === estado.proximaCorrida && c.presentable).length} lista(s) para ese día
-                </p>
-              </div>
-            )}
-          </div>
+          )}
 
           {u && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-2">
