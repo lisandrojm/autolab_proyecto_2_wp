@@ -1,4 +1,8 @@
 import axios from "./axiosConfig";
+import { invalidateRefCache } from "../utils/refCache";
+
+/** Clave con la que las pantallas cachean `arcaDefaultsAPI.get()`; `set` la invalida. */
+export const CLAVE_CACHE_DEFAULTS_ARCA = "arcaDefaults:global";
 
 /**
  * Los valores por defecto de ARCA de la instalación. Ver `server/src/models/ArcaDefault.ts`.
@@ -46,6 +50,7 @@ export const arcaDefaultsAPI = {
    */
   set: async (campo: CampoDefaultArca, valor: string | null): Promise<ArcaDefaults> => {
     const { data } = await axios.patch<ArcaDefaults>("/arca/defaults", { [campo]: valor });
+    invalidateRefCache(CLAVE_CACHE_DEFAULTS_ARCA);
     return data;
   },
 };

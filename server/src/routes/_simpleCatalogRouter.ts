@@ -181,11 +181,27 @@ interface SimpleCatalogDoc {
   [key: string]: unknown;
 }
 
+/*
+  EL LISTADO DE UN CATÁLOGO, EN MEMORIA UN MINUTO.
+
+  Los catálogos casi no cambian y se piden en cada pantalla: el de convenios son 2669 documentos
+  (841 KB) y tardaba 8 s en venir de Atlas CADA vez que alguien abría Contratos, Solicitudes o un
+  proyecto. Lo que tarda es el viaje desde Atlas (ver memoria «Latencia = bytes»), así que la segunda
+  vez sale de acá. Cualquier escritura del mismo router (alta, edición, borrado, import, bulk)
+  invalida el catálogo entero: lo stale dura, como mucho, lo que tarda esa request en empezar.
+*/
+const CACHE_CATALOGO_MS = 60_000;
+const cacheCatalogos = new Map<string, { en: number; items: unknown[] }>();
+
 export function createSimpleCatalogRouter(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   model: Model<any>,
   config: SimpleCatalogConfig
 ): Router {
+  const prefijoCache = `${model.modelName}:`;
+  const invalidarCacheCatalogo = () => {
+    for (const k of cacheCatalogos.keys()) if (k.startsWith(prefijoCache)) cacheCatalogos.delete(k);
+  };
   const router = Router();
   const upload = multer({ storage: multer.memoryStorage() });
 
@@ -268,9 +284,16 @@ export function createSimpleCatalogRouter(
         if (valor === undefined) continue;
         filtro[campo] = valor === "null" || valor === "" ? null : valor;
       }
+      const clave = `${prefijoCache}${JSON.stringify(filtro)}`;
+      const enCache = cacheCatalogos.get(clave);
+      if (enCache && Date.now() - enCache.en < CACHE_CATALOGO_MS) {
+        res.json(enCache.items);
+        return;
+      }
       let consulta = model.find(filtro).sort({ name: 1 });
       for (const p of config.populate || []) consulta = consulta.populate(p.path, p.select);
       const items = await consulta.lean();
+      cacheCatalogos.set(clave, { en: Date.now(), items });
       res.json(items);
     } catch (error) {
       console.error(`Get ${config.sheetName} error:`, error);
@@ -307,6 +330,7 @@ export function createSimpleCatalogRouter(
 
   // POST /import - importar desde Excel (upsert por externalId, si no por name)
   router.post("/import", ...guardias, upload.single("file"), async (req: AuthenticatedRequest, res: Response) => {
+    invalidarCacheCatalogo();
     try {
       if (!req.file) {
         res.status(400).json({ error: "Debe subir un archivo de Excel" });
@@ -404,6 +428,7 @@ export function createSimpleCatalogRouter(
    * Body: `{ items: [{ nombre, externalId?, ...extras }] }`.
    */
   router.post("/bulk", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
+    invalidarCacheCatalogo();
     try {
       const { items } = req.body as { items?: Array<Record<string, unknown>> };
       if (!Array.isArray(items)) {
@@ -474,6 +499,7 @@ export function createSimpleCatalogRouter(
 
   // POST / - crear manualmente
   router.post("/", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
+    invalidarCacheCatalogo();
     try {
       const sobran = clavesDeMas(req.body);
       if (sobran.length > 0) {
@@ -532,6 +558,7 @@ export function createSimpleCatalogRouter(
 
   // PUT /:id - actualizar
   router.put("/:id", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
+    invalidarCacheCatalogo();
     try {
       const { id } = req.params;
       const sobran = clavesDeMas(req.body);
@@ -602,6 +629,7 @@ export function createSimpleCatalogRouter(
 
   // DELETE /:id - eliminar
   router.delete("/:id", ...guardias, async (req: AuthenticatedRequest, res: Response) => {
+    invalidarCacheCatalogo();
     try {
       const { id } = req.params;
       if (config.antesDeBorrar) {

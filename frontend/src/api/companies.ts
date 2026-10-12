@@ -1,4 +1,8 @@
 import axios from './axiosConfig';
+import { invalidateRefCache } from '../utils/refCache';
+
+/** Clave con la que las pantallas cachean `companiesAPI.list()`; las escrituras de este archivo la invalidan. */
+export const CLAVE_CACHE_EMPRESAS = 'companies:all';
 
 export interface Company {
   _id: string;
@@ -160,6 +164,7 @@ class CompaniesAPI {
    */
   async setVinculos(tipo: TipoVinculoArca, itemId: string, empresaIds: string[]): Promise<{ vinculadas: number; desvinculadas: number; limpiezas: number }> {
     const { data } = await axios.put('/companies/vinculos', { tipo, itemId, empresaIds });
+    invalidateRefCache(CLAVE_CACHE_EMPRESAS);
     return data;
   }
 
@@ -175,16 +180,19 @@ class CompaniesAPI {
 
   async create(payload: Partial<CompanyInput>): Promise<Company> {
     const { data } = await axios.post('/companies', payload);
+    invalidateRefCache(CLAVE_CACHE_EMPRESAS);
     return data;
   }
 
   async update(id: string, payload: Partial<CompanyInput>): Promise<Company> {
     const { data } = await axios.put(`/companies/${id}`, payload);
+    invalidateRefCache(CLAVE_CACHE_EMPRESAS);
     return data;
   }
 
   async remove(id: string): Promise<void> {
     await axios.delete(`/companies/${id}`);
+    invalidateRefCache(CLAVE_CACHE_EMPRESAS);
   }
 }
 

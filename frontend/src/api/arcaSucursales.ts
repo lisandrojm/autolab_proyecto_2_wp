@@ -1,4 +1,8 @@
 import axios from "./axiosConfig";
+import { invalidateRefCache } from "../utils/refCache";
+
+/** Clave con la que las pantallas cachean `arcaSucursalesAPI.list()`; las escrituras de este archivo la invalidan. */
+export const CLAVE_CACHE_SUCURSALES = "arcaSucursales:all";
 
 
 
@@ -15,16 +19,19 @@ class ArcaSucursalesAPI {
 
   async create(payload: Partial<ArcaSucursalInput>): Promise<ArcaSucursal> {
     const { data } = await axios.post("/arca/sucursales", payload);
+    invalidateRefCache(CLAVE_CACHE_SUCURSALES);
     return data;
   }
 
   async update(id: string, payload: Partial<ArcaSucursalInput>): Promise<ArcaSucursal> {
     const { data } = await axios.put(`/arca/sucursales/${id}`, payload);
+    invalidateRefCache(CLAVE_CACHE_SUCURSALES);
     return data;
   }
 
   async remove(id: string): Promise<void> {
     await axios.delete(`/arca/sucursales/${id}`);
+    invalidateRefCache(CLAVE_CACHE_SUCURSALES);
   }
 
   /** Plantilla .xlsx con el formato que espera el importador. */
@@ -49,6 +56,7 @@ class ArcaSucursalesAPI {
     formData.append("file", file);
     // Sin headers explícitos: el interceptor pone Authorization y el browser el boundary multipart.
     const { data } = await axios.post("/arca/sucursales/import", formData);
+    invalidateRefCache(CLAVE_CACHE_SUCURSALES);
     return data;
   }
 }

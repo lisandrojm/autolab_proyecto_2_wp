@@ -1,4 +1,8 @@
 import axios from "./axiosConfig";
+import { invalidateRefCache } from "../utils/refCache";
+
+/** Clave con la que las pantallas cachean `roleFrameAPI.list()` (la usa Gestionar Equipo desde antes); las escrituras la invalidan. */
+export const CLAVE_CACHE_FUNCIONES = "roleFrames:all";
 
 export interface RoleFrameItem {
   _id: string;
@@ -77,11 +81,13 @@ class RoleFrameAPI {
 
   async create(payload: { name: string; categorias: CategoriaAsociada[]; puestoDesempenado?: string }): Promise<RoleFrameItem> {
     const { data } = await axios.post("/role-frames", payload);
+    invalidateRefCache(CLAVE_CACHE_FUNCIONES);
     return data;
   }
 
   async update(id: string, payload: { name?: string; categorias?: CategoriaAsociada[]; puestoDesempenado?: string }): Promise<RoleFrameItem> {
     const { data } = await axios.put(`/role-frames/${id}`, payload);
+    invalidateRefCache(CLAVE_CACHE_FUNCIONES);
     return data;
   }
 
@@ -93,6 +99,7 @@ class RoleFrameAPI {
 
   async remove(id: string): Promise<any> {
     const { data } = await axios.delete(`/role-frames/${id}`);
+    invalidateRefCache(CLAVE_CACHE_FUNCIONES);
     return data;
   }
 }

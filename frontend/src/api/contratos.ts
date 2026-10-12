@@ -1,4 +1,8 @@
 import axios from "./axiosConfig";
+import { invalidateRefCache } from "../utils/refCache";
+
+/** Clave con la que las pantallas cachean `contratosAPI.list()` (la usa Gestionar Equipo desde antes); las escrituras la invalidan. */
+export const CLAVE_CACHE_TIPOS_CONTRATO = "contratos:all";
 
 
 import type { ContratoItem } from "@compartido/arca/tiposArca";
@@ -31,16 +35,19 @@ class ContratosAPI {
 
   async create(payload: ContratoInput): Promise<ContratoItem> {
     const { data } = await axios.post("/contratos", payload);
+    invalidateRefCache(CLAVE_CACHE_TIPOS_CONTRATO);
     return data;
   }
 
   async update(id: string, payload: ContratoInput): Promise<ContratoItem> {
     const { data } = await axios.put(`/contratos/${id}`, payload);
+    invalidateRefCache(CLAVE_CACHE_TIPOS_CONTRATO);
     return data;
   }
 
   async remove(id: string): Promise<{ message: string }> {
     const { data } = await axios.delete(`/contratos/${id}`);
+    invalidateRefCache(CLAVE_CACHE_TIPOS_CONTRATO);
     return data;
   }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
+import { claveCacheCatalogo, createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { SeleccionMultiple } from '../ui/SeleccionMultiple';
 import { RotuloConInfo } from './RotuloConInfo';
 import { cachedFetch } from '../../utils/refCache';
@@ -48,7 +48,7 @@ interface Props {
  * llegaba el badge del convenio elegido decía «—». Con caché la segunda apertura es inmediata, y las
  * pantallas de proyectos lo piden al cargar (`precargarConvenios`), así que la primera también.
  */
-const CLAVE_CATALOGO = 'convenios:catalogo';
+const CLAVE_CATALOGO = claveCacheCatalogo('/convenios');
 const pedirCatalogo = () => cachedFetch(CLAVE_CATALOGO, () => conveniosApi.list());
 export const precargarConvenios = () => {
   pedirCatalogo().catch(() => {});

@@ -36,9 +36,26 @@ const parsearRef = (campo, v) => {
         return { motivo: `${campo}: "${s}" no es un id válido.` };
     return { valor: new mongoose.Types.ObjectId(s) };
 };
+/*
+  EL LISTADO DE UN CATÁLOGO, EN MEMORIA UN MINUTO.
+
+  Los catálogos casi no cambian y se piden en cada pantalla: el de convenios son 2669 documentos
+  (841 KB) y tardaba 8 s en venir de Atlas CADA vez que alguien abría Contratos, Solicitudes o un
+  proyecto. Lo que tarda es el viaje desde Atlas (ver memoria «Latencia = bytes»), así que la segunda
+  vez sale de acá. Cualquier escritura del mismo router (alta, edición, borrado, import, bulk)
+  invalida el catálogo entero: lo stale dura, como mucho, lo que tarda esa request en empezar.
+*/
+const CACHE_CATALOGO_MS = 60_000;
+const cacheCatalogos = new Map();
 export function createSimpleCatalogRouter(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 model, config) {
+    const prefijoCache = `${model.modelName}:`;
+    const invalidarCacheCatalogo = () => {
+        for (const k of cacheCatalogos.keys())
+            if (k.startsWith(prefijoCache))
+                cacheCatalogos.delete(k);
+    };
     const router = Router();
     const upload = multer({ storage: multer.memoryStorage() });
     /*
@@ -116,10 +133,17 @@ model, config) {
                     continue;
                 filtro[campo] = valor === "null" || valor === "" ? null : valor;
             }
+            const clave = `${prefijoCache}${JSON.stringify(filtro)}`;
+            const enCache = cacheCatalogos.get(clave);
+            if (enCache && Date.now() - enCache.en < CACHE_CATALOGO_MS) {
+                res.json(enCache.items);
+                return;
+            }
             let consulta = model.find(filtro).sort({ name: 1 });
             for (const p of config.populate || [])
                 consulta = consulta.populate(p.path, p.select);
             const items = await consulta.lean();
+            cacheCatalogos.set(clave, { en: Date.now(), items });
             res.json(items);
         }
         catch (error) {
@@ -153,6 +177,7 @@ model, config) {
     });
     // POST /import - importar desde Excel (upsert por externalId, si no por name)
     router.post("/import", ...guardias, upload.single("file"), async (req, res) => {
+        invalidarCacheCatalogo();
         try {
             if (!req.file) {
                 res.status(400).json({ error: "Debe subir un archivo de Excel" });
@@ -240,6 +265,7 @@ model, config) {
      * Body: `{ items: [{ nombre, externalId?, ...extras }] }`.
      */
     router.post("/bulk", ...guardias, async (req, res) => {
+        invalidarCacheCatalogo();
         try {
             const { items } = req.body;
             if (!Array.isArray(items)) {
@@ -309,6 +335,7 @@ model, config) {
     });
     // POST / - crear manualmente
     router.post("/", ...guardias, async (req, res) => {
+        invalidarCacheCatalogo();
         try {
             const sobran = clavesDeMas(req.body);
             if (sobran.length > 0) {
@@ -372,6 +399,7 @@ model, config) {
     });
     // PUT /:id - actualizar
     router.put("/:id", ...guardias, async (req, res) => {
+        invalidarCacheCatalogo();
         try {
             const { id } = req.params;
             const sobran = clavesDeMas(req.body);
@@ -446,6 +474,7 @@ model, config) {
     });
     // DELETE /:id - eliminar
     router.delete("/:id", ...guardias, async (req, res) => {
+        invalidarCacheCatalogo();
         try {
             const { id } = req.params;
             if (config.antesDeBorrar) {

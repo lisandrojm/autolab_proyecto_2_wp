@@ -1062,12 +1062,14 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const soloRenovables = req.query.renovables === "true";
     const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
     if (necesitaNombreContrato) camposContrato.n = "$$x.nombre_contrato";
-    // El estado viaja siempre: la regla de renovación lo necesita (ver `estadoDeRenovacion`).
-    camposContrato.e = "$$x.nombre_estado_empleado";
+    // Si vino por Solicitudes o por «Agregar miembro», siempre: distingue un contrato viejo de una renovación.
+    const delSistemaExpr = { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] };
+    camposContrato.o = delSistemaExpr;
+    // El estado lo necesita la regla de renovación (ver `estadoDeRenovacion`), pero sólo de los contratos
+    // del sistema: para los viejos no se mira. Mandarlo en todos era 50 KB más por pedido (0,6 s desde Atlas).
+    camposContrato.e = necesitaEstado ? "$$x.nombre_estado_empleado" : { $cond: [delSistemaExpr, "$$x.nombre_estado_empleado", null] };
     if (necesitaReemplazo) camposContrato.m = "$$x.reemplazo";
     if (necesitaEmpresa) camposContrato.q = "$$x.empresaContratoId";
-    // Y si vino por Solicitudes o por «Agregar miembro», también siempre: distingue un contrato viejo de una renovación.
-    camposContrato.o = { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] };
 
     /*
       LAS BANDEJAS FILTRAN EN MONGO, NO EN NODE.

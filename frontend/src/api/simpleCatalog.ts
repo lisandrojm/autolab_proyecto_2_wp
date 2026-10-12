@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import { invalidateRefCache } from "../utils/refCache";
 
 
 import type { SimpleCatalogItem } from "@compartido/arca/tiposArca";
@@ -26,10 +27,18 @@ export interface SimpleCatalogApi {
 }
 
 /**
+ * La clave con la que las pantallas cachean el listado de un catálogo (`cachedFetch`). Es una sola por
+ * catálogo para que crear, editar, borrar o importar desde Configuración la invalide y Contratos,
+ * Solicitudes y los proyectos vean el cambio al instante, en vez de esperar los 5 minutos del TTL.
+ */
+export const claveCacheCatalogo = (basePath: string) => `catalogo:${basePath}`;
+
+/**
  * Crea un cliente API para un catálogo simple ({ externalId, name }).
  * basePath ej: "/bancos", "/obras-sociales", "/centros-costo".
  */
 export function createSimpleCatalogApi(basePath: string): SimpleCatalogApi {
+  const invalidar = () => invalidateRefCache(claveCacheCatalogo(basePath));
   return {
     async list(filtros?: Record<string, string>) {
       const { data } = await axios.get(basePath, filtros && Object.keys(filtros).length > 0 ? { params: filtros } : undefined);
@@ -45,22 +54,27 @@ export function createSimpleCatalogApi(basePath: string): SimpleCatalogApi {
       const { data } = await axios.post(`${basePath}/import`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      invalidar();
       return data;
     },
     async importBulk(items) {
       const { data } = await axios.post(`${basePath}/bulk`, { items });
+      invalidar();
       return data;
     },
     async create(payload) {
       const { data } = await axios.post(basePath, payload);
+      invalidar();
       return data;
     },
     async update(id, payload) {
       const { data } = await axios.put(`${basePath}/${id}`, payload);
+      invalidar();
       return data;
     },
     async remove(id) {
       const { data } = await axios.delete(`${basePath}/${id}`);
+      invalidar();
       return data;
     },
   };

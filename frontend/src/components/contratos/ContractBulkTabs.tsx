@@ -8,13 +8,13 @@ import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../../utils/permisosMobile';
 import { projectsAPI } from '../../api/projects';
-import { companiesAPI, Company } from '../../api/companies';
+import { CLAVE_CACHE_EMPRESAS, companiesAPI, Company } from '../../api/companies';
 import { infoAPI, InfoItem } from '../../api/info';
 import { ContratoFrameItem } from '../../api/contratosFrame';
-import { contratosAPI, ContratoItem } from '../../api/contratos';
+import { CLAVE_CACHE_TIPOS_CONTRATO, contratosAPI, ContratoItem } from '../../api/contratos';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
-import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
-import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
+import { claveCacheCatalogo, createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
+import { arcaSucursalesAPI, ArcaSucursal, CLAVE_CACHE_SUCURSALES } from '../../api/arcaSucursales';
 import { DatosArcaDetalle, BadgeArca, ProgresoArca } from './DatosArcaDetalle';
 import { Release } from '../../api/release';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
@@ -29,7 +29,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
 import { resolveAfip, resolveAfip85, resolveAfipValues, esResuelto, problemasDeSucursalParaTxt, mensajeDeSucursalParaTxt, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
-import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
+import { CLAVE_CACHE_FUNCIONES, roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
 import { useValoraciones } from '../proyectos/ChipValoracion';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { buildAltaRecord85, buildAltasMasivasTexto } from './afipTxt85';
@@ -44,13 +44,15 @@ import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfip
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
-import { arcaDefaultsAPI, ArcaDefaults } from "../../api/arcaDefaults";
+import { arcaDefaultsAPI, ArcaDefaults, CLAVE_CACHE_DEFAULTS_ARCA } from "../../api/arcaDefaults";
 import { LinkSiPuede } from '../LinkSiPuede';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
+const CLAVE_CACHE_OBRAS_SOCIALES = claveCacheCatalogo('/obras-sociales');
 
 // Solo para traducir los convenioIds de la empresa a códigos de CCT y validar la Categoría.
 const conveniosApi = createSimpleCatalogApi('/convenios');
+const CLAVE_CACHE_CONVENIOS = claveCacheCatalogo('/convenios');
 
 /**
  * Prefijo de caché del listado de contratos que comparten las pestañas de Gestión. Cada una monta y
@@ -972,6 +974,10 @@ const ObraSocialCell: React.FC<{
  * tipos de contrato, obras sociales, sedes, empresas, sucursales, convenios y los defaults de la
  * instalación. Los usan Trámite impositivo y Generar Documentos (para el filtro de obra social): una
  * sola carga, para que las dos pestañas clasifiquen igual.
+ *
+ * Todos van por `cachedFetch` (5 min): cambiar de pestaña desmonta este componente y volvía a pedir
+ * los nueve catálogos —el de convenios son 2669 filas, 841 KB— cada vez que se abría Contratos. Las
+ * pantallas de Configuración invalidan la clave al escribir, así que lo que se edita se ve al instante.
  */
 function useCatalogosArca(allEstados: InfoItem[]) {
   const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
@@ -992,45 +998,37 @@ function useCatalogosArca(allEstados: InfoItem[]) {
   */
   const [defaultsArcaGlobales, setDefaultsArcaGlobales] = useState<ArcaDefaults>({});
   useEffect(() => {
-    arcaDefaultsAPI
-      .get()
+    cachedFetch(CLAVE_CACHE_DEFAULTS_ARCA, () => arcaDefaultsAPI.get())
       .then(setDefaultsArcaGlobales)
       .catch(() => setDefaultsArcaGlobales({}));
   }, []);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
 
   useEffect(() => {
-    categoriaSatAPI
-      .list()
+    // Las claves son las mismas que usa Gestionar Equipo: lo que ya trajo una pantalla le sirve a la otra.
+    cachedFetch('categoriaSat:all', () => categoriaSatAPI.list())
       .then(setCategorias)
       .catch(() => setCategorias([]));
-    contratosAPI
-      .list()
+    cachedFetch(CLAVE_CACHE_TIPOS_CONTRATO, () => contratosAPI.list())
       .then(setTipos)
       .catch(() => setTipos([]));
-    obrasSocialesApi
-      .list()
+    cachedFetch(CLAVE_CACHE_OBRAS_SOCIALES, () => obrasSocialesApi.list())
       .then(setObrasSociales)
       .catch(() => setObrasSociales([]));
-    infoAPI
-      .listSedes()
+    cachedFetch('info:sede', () => infoAPI.listSedes())
       .then(setSedes)
       .catch(() => setSedes([]));
-    companiesAPI
-      .list()
+    cachedFetch(CLAVE_CACHE_EMPRESAS, () => companiesAPI.list())
       .then(setCompanies)
       .catch(() => setCompanies([]));
-    arcaSucursalesAPI
-      .list()
+    cachedFetch(CLAVE_CACHE_SUCURSALES, () => arcaSucursalesAPI.list())
       .then(setArcaSucursales)
       .catch(() => setArcaSucursales([]));
-    conveniosApi
-      .list()
+    cachedFetch(CLAVE_CACHE_CONVENIOS, () => conveniosApi.list())
       .then(setConvenios)
       .catch(() => setConvenios([]));
     // De la función del contrato sale primero el puesto desempeñado del registro de 85.
-    roleFrameAPI
-      .list()
+    cachedFetch(CLAVE_CACHE_FUNCIONES, () => roleFrameAPI.list())
       .then(setRoleFramesCat)
       .catch(() => setRoleFramesCat([]));
   }, []);
