@@ -21,6 +21,12 @@ export const CONFIG_POR_DEFECTO = { hora: 14, minuto: 0, diasAntes: 0 };
 export const MAX_DIAS_ANTES = 30;
 /** Hasta cuántos días atrás la corrida sigue tomando un alta pendiente cuya fecha ya pasó. */
 export const DIAS_ATRAS_PENDIENTES = 30;
+/**
+ * UN CONTRATO QUE YA TERMINÓ NO SE DA DE ALTA (pedido del 11/10/2026): si la fecha de baja es anterior
+ * a hoy, la relación laboral ya pasó entera y presentar el alta no tiene sentido. Queda fuera de la
+ * automática y a la vista con ese motivo. Sin baja (relación abierta) no aplica.
+ */
+export const yaTermino = (fechaBaja, hoy) => /^\d{4}-\d{2}-\d{2}$/.test(fechaBaja) && fechaBaja < hoy;
 const entero = (v, min, max, porDefecto) => {
     const n = Number(v);
     return Number.isInteger(n) && n >= min && n <= max ? n : porDefecto;

@@ -1066,6 +1066,8 @@ export interface AltaPendienteArca {
   /** La próxima corrida automática que la presenta, ISO. Vacío = más vieja que el límite de atrasadas (30 días): se fuerza a mano. */
   momento: string;
   presentable: boolean;
+  /** La baja ya pasó: no tiene sentido dar el alta. */
+  terminado?: boolean;
   motivo: string;
 }
 

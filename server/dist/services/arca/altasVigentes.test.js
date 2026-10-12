@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { altaQueSePisa } from "./altasVigentes.js";
-import { CONFIG_POR_DEFECTO, configDe, minutosArgentina, momentoDeCorrida, proximaCorridaPara, validarConfig, ventanaDeLaCorrida } from "./horarioAltasAutomaticas.js";
+import { CONFIG_POR_DEFECTO, configDe, minutosArgentina, momentoDeCorrida, proximaCorridaPara, validarConfig, ventanaDeLaCorrida, yaTermino } from "./horarioAltasAutomaticas.js";
 const presentada = (o = {}) => ({ userId: "u1", userProjectId: "up1", contractIndex: 0, empresaId: "e1", alta: "2026-10-10", baja: "2026-10-12", ...o });
 const contrato = (o = {}) => ({
     userId: "u1",
@@ -88,6 +88,12 @@ describe("el horario de la automática", () => {
         it("un alta atrasada (falló, o se cargó después de su fecha) entra en la próxima corrida", () => {
             assert.equal(proximaCorridaPara("2026-10-09", cfg, manana, hoy)?.toISOString(), "2026-10-10T17:00:00.000Z");
             assert.equal(proximaCorridaPara("2026-10-01", cfg, tarde, hoy)?.toISOString(), "2026-10-11T17:00:00.000Z");
+        });
+        it("un contrato cuya baja ya pasó no se da de alta; sin baja o con baja de hoy en adelante, sí", () => {
+            assert.equal(yaTermino("2026-10-09", hoy), true);
+            assert.equal(yaTermino("2026-10-10", hoy), false);
+            assert.equal(yaTermino("2026-10-15", hoy), false);
+            assert.equal(yaTermino("", hoy), false);
         });
         it("más vieja que 30 días, la automática ya no la toma: se fuerza a mano", () => {
             assert.equal(proximaCorridaPara("2026-09-01", cfg, manana, hoy), null);

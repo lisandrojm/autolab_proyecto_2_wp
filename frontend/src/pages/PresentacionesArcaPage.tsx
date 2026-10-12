@@ -162,7 +162,9 @@ export const PresentacionesArcaPage: React.FC = () => {
       </td>
       <td className="px-4 py-3">
         {esVencida ? (
-          <span className="text-xs font-semibold text-red-600 dark:text-red-400">Más de 30 días de atraso: no entra en la automática</span>
+          <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+            {c.terminado ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): no tiene sentido dar el alta` : "Más de 30 días de atraso: no entra en la automática"}
+          </span>
         ) : (
           <div className="space-y-1">
             <CuentaRegresiva destino={c.momento} ahora={ahoraServidor} />
@@ -238,6 +240,10 @@ export const PresentacionesArcaPage: React.FC = () => {
               Las atrasadas también entran: si una corrida falló, o el contrato se cargó después de su fecha de inicio, el alta se presenta en la corrida siguiente y en todas las que vengan hasta
               que salga. Solo las de más de 30 días quedan fuera, para forzar a mano.
             </p>
+            <p>
+              <strong>Si la baja ya pasó, no se da el alta.</strong> Un contrato cuya fecha de baja es anterior a hoy ya terminó entero: presentar su alta no tiene sentido. Queda en «Fuera de la
+              automática» con ese motivo, y tampoco se puede forzar.
+            </p>
             <p>Si se activa después de las {horaTexto(estado?.config)}, empieza al día siguiente.</p>
           </div>
         ),
@@ -307,7 +313,10 @@ export const PresentacionesArcaPage: React.FC = () => {
           {vencidas.length > 0 && (
             <section className="space-y-2">
               <h2 className="text-sm font-bold uppercase tracking-wide text-red-600 dark:text-red-400">Fuera de la automática ({vencidas.length})</h2>
-              <p className="text-xs text-gray-500">Su alta fue hace más de 30 días y siguen sin presentarse: la automática ya no las toma. Se presentan con «Forzar».</p>
+              <p className="text-xs text-gray-500">
+                La automática no las toma: su contrato ya terminó (la baja es anterior a hoy, y un alta de una relación que ya pasó no tiene sentido), o su alta fue hace más de 30 días. Las de más de
+                30 días se presentan con «Forzar».
+              </p>
               {tabla(vencidas, true)}
             </section>
           )}

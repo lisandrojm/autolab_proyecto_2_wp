@@ -21,7 +21,7 @@ import { TEXTO_PROBLEMA_SUCURSAL } from "../../compartido/sucursalesDeEmpresa.js
 import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVigentes.js";
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
 import { quienTiene } from "./candadoArca.js";
-import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, proximaCorridaPara, ventanaDeLaCorrida } from "./horarioAltasAutomaticas.js";
+import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, proximaCorridaPara, ventanaDeLaCorrida, yaTermino } from "./horarioAltasAutomaticas.js";
 
 /**
  * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día, a la hora configurada (14:00 argentinas por
@@ -84,6 +84,8 @@ export interface CandidatoAlta {
   momento: string;
   /** Se puede presentar tal como está. */
   presentable: boolean;
+  /** La baja ya pasó: no tiene sentido dar el alta. Fuera de la automática, y no cuenta como omitido de una corrida. */
+  terminado: boolean;
   /** Por qué no, si no se puede. */
   motivo: string;
   /** El registro de 85, si está completo. */
@@ -207,7 +209,9 @@ export async function candidatosDeAlta(
 
     let motivo = "";
     let registro: string | null = null;
+    const terminado = yaTermino(fechaBaja, hoy);
     if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") motivo = "Ya se presentó en ARCA.";
+    else if (terminado) motivo = `El contrato ya terminó (baja el ${fechaBaja.slice(8, 10)}/${fechaBaja.slice(5, 7)}/${fechaBaja.slice(0, 4)}): no tiene sentido dar el alta.`;
     else if (row.sinCuit) motivo = "No tiene CUIT/CUIL: va por el circuito «Sin CUIT», no por ARCA.";
     else if (!empresaId || !empresa) motivo = "Falta elegir la Empresa Contrato.";
     else {
@@ -244,8 +248,9 @@ export async function candidatosDeAlta(
       fechaAlta,
       fechaBaja,
       empresa: empresa ? { _id: String(empresa._id), razonSocial: String(empresa.razonSocial || "") } : null,
-      momento: proximaCorridaPara(fechaAlta, cfg, ahora, hoy)?.toISOString() || "",
+      momento: terminado ? "" : proximaCorridaPara(fechaAlta, cfg, ahora, hoy)?.toISOString() || "",
       presentable: !motivo && !!registro,
+      terminado,
       motivo,
       registro: motivo ? null : registro,
     });
@@ -326,6 +331,7 @@ export async function correrPresentacionDelDia(tenantId: string, tenantObjectId:
     fecha: new Date().toISOString(),
     dia: hoy,
     empresas,
-    omitidos: candidatos.filter((c) => !c.presentable).map((c) => ({ nombre: c.nombre, cuil: c.cuil, empresa: c.empresa?.razonSocial || "", motivo: c.motivo })),
+    // Los terminados no son «sin presentar» de esta corrida: no entran y ya se ven aparte en la pantalla.
+    omitidos: candidatos.filter((c) => !c.presentable && !c.terminado).map((c) => ({ nombre: c.nombre, cuil: c.cuil, empresa: c.empresa?.razonSocial || "", motivo: c.motivo })),
   };
 }

@@ -35,6 +35,8 @@ export interface CandidatoAlta {
     momento: string;
     /** Se puede presentar tal como está. */
     presentable: boolean;
+    /** La baja ya pasó: no tiene sentido dar el alta. Fuera de la automática, y no cuenta como omitido de una corrida. */
+    terminado: boolean;
     /** Por qué no, si no se puede. */
     motivo: string;
     /** El registro de 85, si está completo. */

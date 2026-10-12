@@ -116,6 +116,7 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
               Las atrasadas también entran: un alta cuya fecha ya pasó, porque la corrida falló o porque el contrato se cargó después de su inicio, se presenta en la corrida siguiente y en todas las
               que vengan hasta que salga. Solo las de más de 30 días quedan para forzar a mano desde «A.R.C.A Altas Automáticas».
             </p>
+            <p>Un contrato cuya baja ya pasó no se da de alta: la relación ya terminó entera y el alta no tiene sentido. Queda a la vista con ese motivo.</p>
             <p>Si se activa después de la hora, empieza al día siguiente.</p>
           </div>
         ),

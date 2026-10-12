@@ -26,6 +26,12 @@ export declare const CONFIG_POR_DEFECTO: ConfigAltasAutomaticas;
 export declare const MAX_DIAS_ANTES = 30;
 /** Hasta cuántos días atrás la corrida sigue tomando un alta pendiente cuya fecha ya pasó. */
 export declare const DIAS_ATRAS_PENDIENTES = 30;
+/**
+ * UN CONTRATO QUE YA TERMINÓ NO SE DA DE ALTA (pedido del 11/10/2026): si la fecha de baja es anterior
+ * a hoy, la relación laboral ya pasó entera y presentar el alta no tiene sentido. Queda fuera de la
+ * automática y a la vista con ese motivo. Sin baja (relación abierta) no aplica.
+ */
+export declare const yaTermino: (fechaBaja: string, hoy: string) => boolean;
 /** Lo guardado (que puede faltar o venir viejo) a una configuración completa y válida. */
 export declare const configDe: (guardado: any) => ConfigAltasAutomaticas;
 /** Lo que manda el cliente al guardar: cada campo se valida; el que falta no se toca. */
