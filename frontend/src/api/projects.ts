@@ -1146,7 +1146,31 @@ export interface EstadoValidacionAutomaticaOS {
   /** Quiénes esperan validarse, con su estado. */
   pendientes: PendienteValidacionOS[];
   /** Las últimas corridas automáticas, con el resultado por persona. */
-  ultimas: Array<{ _id: string; fecha: string; empresaRazonSocial: string; total: number; validadas: number; guardadas: number; sinDeclarar: number; errores: number; faltaron: number; motivo: string; error: string; detalle: Array<{ cuil: string; rnos?: string; error?: string }> }>;
+  ultimas: Array<{
+    _id: string;
+    fecha: string;
+    empresaRazonSocial: string;
+    total: number;
+    validadas: number;
+    guardadas: number;
+    sinDeclarar: number;
+    errores: number;
+    faltaron: number;
+    motivo: string;
+    error: string;
+    detalle: Array<{ cuil: string; nombre: string; rnos?: string; obraSocial?: string; error?: string; empresa?: string; contrato: ContratoDeValidacionOS | null }>;
+  }>;
+}
+
+/** El contrato que se está validando, para la pantalla. */
+export interface ContratoDeValidacionOS {
+  tipo: string;
+  alta: string;
+  baja: string;
+  estado: string;
+  proyecto: string;
+  /** La obra social que tiene hoy el contrato, por nombre; vacío si no tiene. */
+  obraSocialActual: string;
 }
 
 export interface PendienteValidacionOS {
@@ -1158,4 +1182,5 @@ export interface PendienteValidacionOS {
   fechaCarga: string;
   estado: "en_corrida" | "en_cola" | "esperando_reintento" | "pendiente";
   detalle?: string;
+  contrato: ContratoDeValidacionOS | null;
 }

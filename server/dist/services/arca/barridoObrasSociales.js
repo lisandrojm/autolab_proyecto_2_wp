@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { Project } from "../../models/Project.js";
 import { User } from "../../models/User.js";
 import UserProject from "../../models/UserProject.js";
@@ -49,10 +50,6 @@ export function planBarrido(sinValidar, ultimoIntento, ahora, reintentoMs) {
 }
 /** "YYYY-MM-DD" de hace n días (UTC: alcanza para un corte de 30 días). */
 const hace = (dias) => new Date(Date.now() - dias * 86_400_000).toISOString().slice(0, 10);
-/**
- * Los contratos del tenant que la automática todavía debe validar. Proyectado en la base: no viajan
- * los `contracts` enteros (ver memoria «Latencia = bytes desde Atlas»).
- */
 export async function contratosSinValidar(tenantObjectId, diasAtras = DIAS_ATRAS) {
     const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id name").lean();
     const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), String(p.name || "")]));
@@ -80,6 +77,10 @@ export async function contratosSinValidar(tenantObjectId, diasAtras = DIAS_ATRAS
                         in: {
                             empresaContratoId: "$$c.empresaContratoId",
                             fecha_carga: "$$c.fecha_carga",
+                            nombre_contrato: "$$c.nombre_contrato",
+                            fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                            fecha_baja_contrato: "$$c.fecha_baja_contrato",
+                            nombre_estado_empleado: "$$c.nombre_estado_empleado",
                             obraSocialId: "$$c.obraSocialId",
                             obraSocialNoFigura: "$$c.obraSocialNoFigura",
                             obraSocialConstatadaEn: "$$c.obraSocialConstatadaEn",
@@ -104,7 +105,95 @@ export async function contratosSinValidar(tenantObjectId, diasAtras = DIAS_ATRAS
         for (const c of f.c || []) {
             if (yaConstatadaEnArca(c))
                 continue;
-            out.push({ cuil, empresaId: String(c.empresaContratoId), userId: String(u._id), nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim(), fechaCarga: String(c.fecha_carga || "").slice(0, 10), projectId: String(f.projectId || ""), proyecto: nombreProyecto.get(String(f.projectId || "")) || "" });
+            out.push({
+                cuil,
+                empresaId: String(c.empresaContratoId),
+                userId: String(u._id),
+                nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim(),
+                fechaCarga: String(c.fecha_carga || "").slice(0, 10),
+                projectId: String(f.projectId || ""),
+                proyecto: nombreProyecto.get(String(f.projectId || "")) || "",
+                tipoContrato: String(c.nombre_contrato || ""),
+                fechaAlta: String(c.fecha_alta_contrato || "").slice(0, 10),
+                fechaBaja: String(c.fecha_baja_contrato || "").slice(0, 10),
+                estadoContrato: String(c.nombre_estado_empleado || ""),
+                obraSocialId: c.obraSocialId ?? null,
+                noFigura: !!c.obraSocialNoFigura,
+            });
+        }
+    }
+    return out;
+}
+/**
+ * LA FICHA DE CADA PERSONA PARA LA PANTALLA: nombre y su contrato más reciente por empleadora (tipo,
+ * fechas, proyecto, estado, obra social que tiene hoy). Las corridas guardan sólo CUILs; sin esto la
+ * lista decía «20-38151429-4 · error» y no quién era ni qué contrato se estaba validando.
+ */
+export async function fichasDePersonas(tenantObjectId, cuils) {
+    const out = new Map();
+    const buscados = new Set(cuils.map((c) => String(c || "").replace(/\D/g, "")).filter((c) => c.length === 11));
+    if (buscados.size === 0)
+        return out;
+    const usuarios = await User.find({ tenantId: tenantObjectId, "metadata.cuit": { $exists: true, $ne: "" } }).select("firstName lastName metadata.cuit").lean();
+    const porUserId = new Map();
+    for (const u of usuarios) {
+        const cuil = String(u.metadata?.cuit || "").replace(/\D/g, "");
+        if (!buscados.has(cuil))
+            continue;
+        porUserId.set(String(u._id), { cuil, nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim() });
+        if (!out.has(cuil))
+            out.set(cuil, { nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim(), porEmpresa: new Map(), ultimo: null });
+    }
+    if (porUserId.size === 0)
+        return out;
+    const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id name").lean();
+    const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), String(p.name || "")]));
+    const filas = await UserProject.aggregate([
+        { $match: { userId: { $in: [...porUserId.keys()].map((id) => new Types.ObjectId(id)) }, projectId: { $in: proyectos.map((p) => p._id) } } },
+        {
+            $project: {
+                userId: 1,
+                projectId: 1,
+                c: {
+                    $map: {
+                        input: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond: { $gt: ["$$c.empresaContratoId", null] } } },
+                        as: "c",
+                        in: {
+                            empresaContratoId: "$$c.empresaContratoId",
+                            nombre_contrato: "$$c.nombre_contrato",
+                            fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                            fecha_baja_contrato: "$$c.fecha_baja_contrato",
+                            nombre_estado_empleado: "$$c.nombre_estado_empleado",
+                            obraSocialId: "$$c.obraSocialId",
+                            obraSocialNoFigura: "$$c.obraSocialNoFigura",
+                        },
+                    },
+                },
+            },
+        },
+    ]);
+    for (const f of filas) {
+        const p = porUserId.get(String(f.userId));
+        const ficha = p && out.get(p.cuil);
+        if (!ficha)
+            continue;
+        for (const c of f.c || []) {
+            const contrato = {
+                tipoContrato: String(c.nombre_contrato || ""),
+                fechaAlta: String(c.fecha_alta_contrato || "").slice(0, 10),
+                fechaBaja: String(c.fecha_baja_contrato || "").slice(0, 10),
+                estadoContrato: String(c.nombre_estado_empleado || ""),
+                proyecto: nombreProyecto.get(String(f.projectId || "")) || "",
+                empresaId: String(c.empresaContratoId),
+                obraSocialId: c.obraSocialId ?? null,
+                noFigura: !!c.obraSocialNoFigura,
+            };
+            // El más reciente por empleadora, y el más reciente de todos.
+            const previo = ficha.porEmpresa.get(contrato.empresaId);
+            if (!previo || contrato.fechaAlta > previo.fechaAlta)
+                ficha.porEmpresa.set(contrato.empresaId, contrato);
+            if (!ficha.ultimo || contrato.fechaAlta > ficha.ultimo.fechaAlta)
+                ficha.ultimo = contrato;
         }
     }
     return out;

@@ -4,7 +4,7 @@ import { faShieldHeart, faPlay, faUnlock, faCircleCheck, faCircleXmark, faSpinne
 import { Link } from "react-router-dom";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { projectsAPI, type EstadoValidacionAutomaticaOS, type PendienteValidacionOS } from "../api/projects";
+import { projectsAPI, type ContratoDeValidacionOS, type EstadoValidacionAutomaticaOS, type PendienteValidacionOS } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /*
@@ -25,6 +25,24 @@ const hace = (iso: string) => {
   return h < 48 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`;
 };
 
+/** El contrato en dos líneas: tipo con fechas, y proyecto con estado. */
+const Contrato: React.FC<{ c: ContratoDeValidacionOS | null }> = ({ c }) =>
+  c ? (
+    <div className="text-xs text-gray-600 dark:text-gray-400">
+      <p className="text-sm text-gray-800 dark:text-gray-200">{c.tipo || "—"}</p>
+      <p>
+        <span className="text-gray-400">Alta:</span> {fechaCorta(c.alta)} · <span className="text-gray-400">Baja:</span> {fechaCorta(c.baja)}
+      </p>
+      <p>
+        {c.proyecto && <span>{c.proyecto}</span>}
+        {c.estado && <span className="ml-1 px-1 rounded bg-gray-100 dark:bg-gray-800 text-[10px] uppercase font-bold">{c.estado}</span>}
+      </p>
+      {c.obraSocialActual && <p className="text-[11px] text-gray-500">O.S. actual: {c.obraSocialActual}</p>}
+    </div>
+  ) : (
+    <span className="text-xs text-gray-400">—</span>
+  );
+
 const ESTADO: Record<PendienteValidacionOS["estado"], { texto: string; clase: string; icono: any }> = {
   en_corrida: { texto: "Validando ahora", clase: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800", icono: faSpinner },
   en_cola: { texto: "En cola", clase: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 border-amber-200 dark:border-amber-800", icono: faHourglassHalf },
@@ -38,6 +56,7 @@ export const ValidacionObrasSocialesPage: React.FC = () => {
   const [ocupado, setOcupado] = useState(false);
   const [ayuda, setAyuda] = useState(false);
   const [abierta, setAbierta] = useState<string | null>(null);
+  const [abriLaPrimera, setAbriLaPrimera] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -51,6 +70,12 @@ export const ValidacionObrasSocialesPage: React.FC = () => {
   useEffect(() => {
     void cargar();
   }, [cargar]);
+  useEffect(() => {
+    if (!abriLaPrimera && estado?.ultimas.length) {
+      setAbierta(estado.ultimas[0]._id);
+      setAbriLaPrimera(true);
+    }
+  }, [estado, abriLaPrimera]);
   // Mientras corre, cada 5 s; si no, cada minuto.
   useEffect(() => {
     const t = setInterval(cargar, estado?.corrida?.corriendo ? 5_000 : 60_000);
@@ -209,9 +234,9 @@ export const ValidacionObrasSocialesPage: React.FC = () => {
                     <tr>
                       <th className={th}>Colaborador</th>
                       <th className={th}>Empresa</th>
-                      <th className={th}>Proyecto</th>
-                      <th className={th}>Contrato cargado</th>
-                      <th className={th}>Estado</th>
+                      <th className={th}>Contrato</th>
+                      <th className={th}>Cargado el</th>
+                      <th className={th}>Validación</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -224,7 +249,9 @@ export const ValidacionObrasSocialesPage: React.FC = () => {
                             <p className="text-xs font-mono text-gray-500">{fmtCuil(p.cuil)}</p>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{p.empresa}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{p.proyecto || "—"}</td>
+                          <td className="px-4 py-3">
+                            <Contrato c={p.contrato ? { ...p.contrato, proyecto: p.contrato.proyecto || p.proyecto } : null} />
+                          </td>
                           <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(p.fechaCarga)}</td>
                           <td className="px-4 py-3 text-xs">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${e.clase}`}>
@@ -268,13 +295,44 @@ export const ValidacionObrasSocialesPage: React.FC = () => {
                         <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">{new Date(u.fecha).toLocaleString("es-AR")}</span>
                       </button>
                       {abiertaEsta && u.detalle.length > 0 && (
-                        <ul className="mt-2 text-xs text-gray-600 dark:text-gray-300 space-y-0.5">
-                          {u.detalle.map((d, i) => (
-                            <li key={`${d.cuil}-${i}`} className="font-mono">
-                              {fmtCuil(d.cuil)} · {d.error ? <span className="text-red-600 dark:text-red-400 font-sans">{d.error}</span> : d.rnos ? <span className="text-green-700 dark:text-green-400">{d.rnos}</span> : <span className="text-gray-400 font-sans">sin obra social declarada</span>}
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="mt-2 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                          <table className="min-w-full">
+                            <thead>
+                              <tr>
+                                <th className={th}>Colaborador</th>
+                                <th className={th}>Empresa</th>
+                                <th className={th}>Contrato</th>
+                                <th className={th}>Resultado en ARCA</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {u.detalle.map((d, i) => (
+                                <tr key={`${d.cuil}-${i}`} className="border-t border-gray-100 dark:border-gray-800 align-top">
+                                  <td className="px-4 py-2">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.nombre || "(sin ficha)"}</p>
+                                    <p className="text-xs font-mono text-gray-500">{fmtCuil(d.cuil)}</p>
+                                  </td>
+                                  <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{d.empresa || u.empresaRazonSocial}</td>
+                                  <td className="px-4 py-2">
+                                    <Contrato c={d.contrato} />
+                                  </td>
+                                  <td className="px-4 py-2 text-xs max-w-[360px]">
+                                    {d.error ? (
+                                      <span className="text-red-600 dark:text-red-400">{d.error}</span>
+                                    ) : d.rnos ? (
+                                      <span className="text-green-700 dark:text-green-400">
+                                        <span className="font-mono">{d.rnos}</span>
+                                        {d.obraSocial ? ` · ${d.obraSocial}` : ""}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-500">Sin obra social declarada en ARCA: rige la del convenio.</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       )}
                     </li>
                   );

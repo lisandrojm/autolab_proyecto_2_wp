@@ -29,7 +29,7 @@ import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
 import { enCola, encolarSiCorresponde, validacionAutomaticaActiva } from "../services/arca/colaObrasSociales.js";
-import { INACTIVIDAD_COLGADA_MS, barrerTenant, contratosSinValidar, esperaReintento, esperandoReintento, validacionAutomaticaActivaEn } from "../services/arca/barridoObrasSociales.js";
+import { INACTIVIDAD_COLGADA_MS, barrerTenant, contratosSinValidar, esperaReintento, esperandoReintento, fichasDePersonas, validacionAutomaticaActivaEn } from "../services/arca/barridoObrasSociales.js";
 import { proximoBarridoDe } from "../services/barridoObrasSocialesCronService.js";
 import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
 import { credencialesDe } from "../services/arca/navegador.js";
@@ -2812,7 +2812,7 @@ router.get("/contratos/obras-sociales/automatica", requireTenant, authenticateTo
         const [activa, cred, ultimas, sinValidar] = await Promise.all([
             validacionAutomaticaActivaEn(req.tenantObjectId),
             credencialesDe(tenantId).catch(() => null),
-            ArcaObrasSocialesLog.find({ tenantId: req.tenantObjectId, automatica: true }).sort({ createdAt: -1 }).limit(10).select("createdAt empresaRazonSocial total validadas guardadas sinDeclarar errores faltaron motivo error detalle").lean(),
+            ArcaObrasSocialesLog.find({ tenantId: req.tenantObjectId, automatica: true }).sort({ createdAt: -1 }).limit(10).select("createdAt empresaId empresaRazonSocial total validadas guardadas sinDeclarar errores faltaron motivo error detalle").lean(),
             contratosSinValidar(req.tenantObjectId),
         ]);
         const c = corridaDe(tenantId);
@@ -2829,12 +2829,26 @@ router.get("/contratos/obras-sociales/automatica", requireTenant, authenticateTo
                     enCorrida.set(e.cuil, `error: ${e.motivo || "sin detalle"}`);
             }
         }
-        const empresas = await Company.find({ _id: { $in: [...new Set(sinValidar.map((x) => x.empresaId))] } }).select("razonSocial").lean();
+        // Quién es cada CUIL de las corridas, y qué contrato se validaba: las corridas guardan sólo el CUIL.
+        const cuilsDeCorridas = [...new Set(ultimas.flatMap((l) => (l.detalle || []).map((d) => String(d.cuil || ""))))];
+        const fichas = await fichasDePersonas(req.tenantObjectId, cuilsDeCorridas);
+        const idsEmpresa = new Set([...sinValidar.map((x) => x.empresaId), ...ultimas.map((l) => String(l.empresaId || "")).filter(Boolean)]);
+        for (const f of fichas.values())
+            for (const e of f.porEmpresa.keys())
+                idsEmpresa.add(e);
+        const empresas = await Company.find({ _id: { $in: [...idsEmpresa].filter((id) => Types.ObjectId.isValid(id)) } }).select("razonSocial").lean();
         const nombreEmpresa = new Map(empresas.map((e) => [String(e._id), String(e.razonSocial || "")]));
+        // El nombre de la obra social, por código RNOS (lo que contesta ARCA) y por id del catálogo (lo que tiene el contrato).
+        const rnosVistos = [...new Set(ultimas.flatMap((l) => (l.detalle || []).map((d) => String(d.rnos || "").replace(/\D/g, ""))).filter(Boolean))];
+        const idsOs = [...new Set([...sinValidar.map((p) => p.obraSocialId), ...[...fichas.values()].flatMap((f) => [...f.porEmpresa.values()].map((c) => c.obraSocialId))].filter((x) => x != null))];
+        const catalogoOs = rnosVistos.length || idsOs.length ? await ObraSocial.find({ $or: [{ externalId: { $in: rnosVistos } }, { "data.id": { $in: idsOs } }] }).select("externalId name data.id").lean() : [];
+        const osPorRnos = new Map(catalogoOs.map((o) => [String(o.externalId || "").replace(/\D/g, ""), String(o.name || "")]));
+        const osPorId = new Map(catalogoOs.map((o) => [Number(o.data?.id), String(o.name || "")]));
+        const contratoParaPantalla = (c) => c ? { tipo: c.tipoContrato, alta: c.fechaAlta, baja: c.fechaBaja, estado: c.estadoContrato, proyecto: c.proyecto, obraSocialActual: c.noFigura ? "No figura (rige la del convenio)" : c.obraSocialId != null ? osPorId.get(Number(c.obraSocialId)) || String(c.obraSocialId) : "" } : null;
         const pendientes = sinValidar.map((p) => {
             const d = enCorrida.get(p.cuil);
             const estado = d ? "en_corrida" : encolados.has(p.cuil) ? "en_cola" : esperaReintento(tenantId, p.cuil) ? "esperando_reintento" : "pendiente";
-            return { cuil: p.cuil, nombre: p.nombre, empresaId: p.empresaId, empresa: nombreEmpresa.get(p.empresaId) || p.empresaId, proyecto: p.proyecto, fechaCarga: p.fechaCarga, estado, detalle: d === "consultando" ? undefined : d };
+            return { cuil: p.cuil, nombre: p.nombre, empresaId: p.empresaId, empresa: nombreEmpresa.get(p.empresaId) || p.empresaId, proyecto: p.proyecto, fechaCarga: p.fechaCarga, estado, detalle: d === "consultando" ? undefined : d, contrato: contratoParaPantalla(p) };
         });
         const hechas = c ? c.eventos.filter((e) => e.tipo === "resultado" || e.tipo === "error").length : 0;
         const u = ultimas[0];
@@ -2849,7 +2863,26 @@ router.get("/contratos/obras-sociales/automatica", requireTenant, authenticateTo
             ultimaCorrida: u ? { fecha: u.createdAt, total: u.total, validadas: u.validadas, guardadas: u.guardadas, errores: u.errores, faltaron: u.faltaron, motivo: u.error || u.motivo || "" } : null,
             corrida: c ? { corriendo: !c.terminada, automatica: !!c.automatica, arrancadaEl: c.arrancadaEl, ultimoEventoEl: c.ultimoEventoEl, total: c.total, hechas, colgada: corridaColgada(tenantId, INACTIVIDAD_COLGADA_MS) } : null,
             pendientes,
-            ultimas: ultimas.map((l) => ({ _id: String(l._id), fecha: l.createdAt, empresaRazonSocial: l.empresaRazonSocial || "", total: l.total, validadas: l.validadas, guardadas: l.guardadas, sinDeclarar: l.sinDeclarar, errores: l.errores, faltaron: l.faltaron, motivo: l.motivo || "", error: l.error || "", detalle: l.detalle || [] })),
+            ultimas: ultimas.map((l) => ({
+                _id: String(l._id),
+                fecha: l.createdAt,
+                empresaRazonSocial: l.empresaRazonSocial || "",
+                total: l.total,
+                validadas: l.validadas,
+                guardadas: l.guardadas,
+                sinDeclarar: l.sinDeclarar,
+                errores: l.errores,
+                faltaron: l.faltaron,
+                motivo: l.motivo || "",
+                error: l.error || "",
+                detalle: (l.detalle || []).map((d) => {
+                    const cuil = String(d.cuil || "").replace(/\D/g, "");
+                    const ficha = fichas.get(cuil);
+                    const contrato = ficha ? ficha.porEmpresa.get(String(l.empresaId || "")) || ficha.ultimo : null;
+                    const rnos = String(d.rnos || "").replace(/\D/g, "");
+                    return { cuil, nombre: ficha?.nombre || "", rnos: d.rnos || "", obraSocial: rnos ? osPorRnos.get(rnos) || "" : "", error: d.error || "", empresa: contrato ? nombreEmpresa.get(contrato.empresaId) || "" : "", contrato: contratoParaPantalla(contrato) };
+                }),
+            })),
         });
     }
     catch (error) {

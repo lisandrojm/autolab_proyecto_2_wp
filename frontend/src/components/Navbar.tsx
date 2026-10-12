@@ -156,7 +156,7 @@ const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empr
  * «Clientes»: acá el orden es el dato —dice qué va antes y qué después—, y alfabético quedaría
  * Contratos, Documentos, Solicitudes, que es el ciclo contado al revés.
  */
-const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/admin/renovaciones', '/admin/presentaciones-arca', '/admin/validacion-obras-sociales', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'];
+const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/admin/renovaciones', '/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'];
 /** «Sin días» no es una etapa del ciclo sino una tarea de limpieza: va última y separada por una raya. */
 const CONTRATACION_APARTE = '/admin/contratos-sin-dias';
 /**

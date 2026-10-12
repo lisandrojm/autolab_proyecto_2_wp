@@ -39,12 +39,33 @@ export declare function planBarrido(sinValidar: ContratoSinValidar[], ultimoInte
  * Los contratos del tenant que la automática todavía debe validar. Proyectado en la base: no viajan
  * los `contracts` enteros (ver memoria «Latencia = bytes desde Atlas»).
  */
+export interface ContratoDeLaFicha {
+    tipoContrato: string;
+    fechaAlta: string;
+    fechaBaja: string;
+    estadoContrato: string;
+    proyecto: string;
+    empresaId: string;
+    /** La obra social que tiene hoy el contrato (id del catálogo), si alguna. */
+    obraSocialId: number | null;
+    noFigura: boolean;
+}
 export declare function contratosSinValidar(tenantObjectId: Types.ObjectId, diasAtras?: number): Promise<Array<ContratoSinValidar & {
     userId: string;
     nombre: string;
     fechaCarga: string;
     projectId: string;
     proyecto: string;
+} & ContratoDeLaFicha>>;
+/**
+ * LA FICHA DE CADA PERSONA PARA LA PANTALLA: nombre y su contrato más reciente por empleadora (tipo,
+ * fechas, proyecto, estado, obra social que tiene hoy). Las corridas guardan sólo CUILs; sin esto la
+ * lista decía «20-38151429-4 · error» y no quién era ni qué contrato se estaba validando.
+ */
+export declare function fichasDePersonas(tenantObjectId: Types.ObjectId, cuils: string[]): Promise<Map<string, {
+    nombre: string;
+    porEmpresa: Map<string, ContratoDeLaFicha>;
+    ultimo: ContratoDeLaFicha | null;
 }>>;
 /** ¿El tenant tiene la validación automática prendida? Por defecto sí; se apaga en Configuración → ARCA → Conexión. */
 export declare function validacionAutomaticaActivaEn(tenantObjectId: unknown): Promise<boolean>;
