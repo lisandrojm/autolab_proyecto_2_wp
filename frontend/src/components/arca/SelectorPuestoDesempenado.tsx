@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { normalizarNombre } from '@compartido/catalogoArca';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faPen } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faPen, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
+import { InfoModal } from '../ui/InfoModal';
 
 /**
  * PUESTO DESEMPEÑADO DE ARCA: se elige del catálogo (Configuración → ARCA → Puestos Desempeñados),
@@ -78,6 +79,7 @@ export const SelectorPuestoDesempenado: React.FC<{ valor: string; onChange: (cod
  */
 export const CampoPuestoCompacto: React.FC<{ valor: string; onChange: (codigo: string) => void; etiqueta?: string; ayuda?: string; zIndex?: number }> = ({ valor, onChange, etiqueta = 'Puesto desempeñado (ARCA)', ayuda, zIndex = 70 }) => {
   const [abierto, setAbierto] = useState(false);
+  const [info, setInfo] = useState(false);
   const [puestos, setPuestos] = useState<SimpleCatalogItem[] | null>(null);
   useEffect(() => {
     void listarPuestos().then(setPuestos);
@@ -87,6 +89,19 @@ export const CampoPuestoCompacto: React.FC<{ valor: string; onChange: (codigo: s
     <div>
       <div className="flex items-center gap-2 mb-1">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{etiqueta}</label>
+        {ayuda && (
+          <>
+            <button type="button" onClick={() => setInfo(true)} title={`Qué es «${etiqueta}»`} aria-label={`Qué es «${etiqueta}»`} className="text-blue-500 hover:text-blue-600 transition-colors">
+              <FontAwesomeIcon icon={faInfoCircle} />
+            </button>
+            <InfoModal isOpen={info} onClose={() => setInfo(false)} title={etiqueta} size="sm" zIndex={zIndex + 10}>
+              <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                <p>{ayuda}.</p>
+                <p>Es opcional: si la función no lo tiene, se toma el de la categoría, el del convenio o el de la empleadora, en ese orden.</p>
+              </div>
+            </InfoModal>
+          </>
+        )}
         <button
           type="button"
           onClick={() => setAbierto(true)}
@@ -104,7 +119,7 @@ export const CampoPuestoCompacto: React.FC<{ valor: string; onChange: (codigo: s
             {actual && (actual as any).activo === false && <span className="ml-1 text-amber-600">· desactivado</span>}
           </span>
         ) : (
-          <span className="text-gray-500">Sin puesto · opcional{ayuda ? `: ${ayuda}` : ''}</span>
+          <span className="text-gray-500">Sin puesto · opcional</span>
         )}
         {valor && (
           <button type="button" onClick={() => onChange('')} className="text-red-600 dark:text-red-400 hover:underline shrink-0">
@@ -115,7 +130,6 @@ export const CampoPuestoCompacto: React.FC<{ valor: string; onChange: (codigo: s
       {abierto && (
         <Modal isOpen onClose={() => setAbierto(false)} title={etiqueta} size="md" zIndex={zIndex}>
           <div className="space-y-3">
-            {ayuda && <p className="text-xs text-gray-500 dark:text-gray-400">{ayuda}.</p>}
             <SelectorPuestoDesempenado
               autoFocus
               valor={valor}
