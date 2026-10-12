@@ -179,11 +179,11 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
         };
         let motivo = "";
         let registro = null;
+        // Terminado (baja pasada): sigue armándose el registro, porque se puede FORZAR a mano (pedido del
+        // 12/10/2026); lo que no hace es entrar solo en la corrida (ver `correrPresentacionDelDia`).
         const terminado = yaTermino(fechaBaja, hoy);
         if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida")
             motivo = "Ya se presentó en ARCA.";
-        else if (terminado)
-            motivo = `El contrato ya terminó (baja el ${fechaBaja.slice(8, 10)}/${fechaBaja.slice(5, 7)}/${fechaBaja.slice(0, 4)}): no tiene sentido dar el alta.`;
         else if (row.sinCuit)
             motivo = "No tiene CUIT/CUIL: va por el circuito «Sin CUIT», no por ARCA.";
         else if (!empresaId || !empresa)
@@ -297,7 +297,8 @@ export async function correrPresentacionDelDia(tenantId, tenantObjectId, cfg) {
     const hoy = hoyArgentina();
     const { desde, hasta } = ventanaDeLaCorrida(hoy, cfg);
     const candidatos = await candidatosDeAlta(tenantObjectId, { desde, hasta, cfg });
-    const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos, automatica: true });
+    // Los terminados no entran solos: un alta de una relación que ya pasó se fuerza a mano, con intención.
+    const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos: candidatos.filter((c) => !c.terminado), automatica: true });
     return {
         fecha: new Date().toISOString(),
         dia: hoy,

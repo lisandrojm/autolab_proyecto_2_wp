@@ -157,7 +157,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     const antes = estado && c.fechaAlta > estado.hoy;
     const r = await sweetAlert.confirm(
       `Presentar ahora a ${c.nombre}`,
-      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
+      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
       "Sí, presentar",
       "Cancelar",
     );
@@ -215,7 +215,7 @@ export const PresentacionesArcaPage: React.FC = () => {
       <td className="px-4 py-3">
         {esVencida ? (
           <span className="text-xs font-semibold text-red-600 dark:text-red-400">
-            {c.terminado ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): no tiene sentido dar el alta` : "Más de 30 días de atraso: no entra en la automática"}
+            {c.terminado ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): la automática no la toma; se puede forzar` : "Más de 30 días de atraso: no entra en la automática"}
           </span>
         ) : (
           <div className="space-y-1">
@@ -293,8 +293,8 @@ export const PresentacionesArcaPage: React.FC = () => {
               que salga. Solo las de más de 30 días quedan fuera, para forzar a mano.
             </p>
             <p>
-              <strong>Si la baja ya pasó, no se da el alta.</strong> Un contrato cuya fecha de baja es anterior a hoy ya terminó entero: presentar su alta no tiene sentido. Queda en «Fuera de la
-              automática» con ese motivo, y tampoco se puede forzar.
+              <strong>Si la baja ya pasó, la automática no la presenta.</strong> Un contrato cuya fecha de baja es anterior a hoy ya terminó entero. Queda en «Fuera de la automática» con ese
+              motivo, y se puede forzar a mano si igual hace falta declararlo.
             </p>
             <p>Si se activa después de las {horaTexto(estado?.config)}, empieza al día siguiente.</p>
           </div>
@@ -469,8 +469,8 @@ export const PresentacionesArcaPage: React.FC = () => {
             <section className="space-y-2">
               <h2 className="text-sm font-bold uppercase tracking-wide text-red-600 dark:text-red-400">Fuera de la automática ({vencidas.length})</h2>
               <p className="text-xs text-gray-500">
-                La automática no las toma: su contrato ya terminó (la baja es anterior a hoy, y un alta de una relación que ya pasó no tiene sentido), o su alta fue hace más de 30 días. Las de más de
-                30 días se presentan con «Forzar».
+                La automática no las toma: su contrato ya terminó (la baja es anterior a hoy), o su alta fue hace más de 30 días. Las dos se pueden presentar igual con «Forzar», si hace falta
+                declarar una relación que ya pasó.
               </p>
               {tabla(vencidas, true)}
             </section>

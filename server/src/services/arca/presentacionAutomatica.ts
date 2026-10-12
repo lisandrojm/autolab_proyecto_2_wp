@@ -84,7 +84,7 @@ export interface CandidatoAlta {
   momento: string;
   /** Se puede presentar tal como está. */
   presentable: boolean;
-  /** La baja ya pasó: no tiene sentido dar el alta. Fuera de la automática, y no cuenta como omitido de una corrida. */
+  /** La baja ya pasó: la automática no lo toma (y no cuenta como omitido de una corrida), pero se puede forzar a mano. */
   terminado: boolean;
   /** Por qué no, si no se puede. */
   motivo: string;
@@ -209,9 +209,10 @@ export async function candidatosDeAlta(
 
     let motivo = "";
     let registro: string | null = null;
+    // Terminado (baja pasada): sigue armándose el registro, porque se puede FORZAR a mano (pedido del
+    // 12/10/2026); lo que no hace es entrar solo en la corrida (ver `correrPresentacionDelDia`).
     const terminado = yaTermino(fechaBaja, hoy);
     if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") motivo = "Ya se presentó en ARCA.";
-    else if (terminado) motivo = `El contrato ya terminó (baja el ${fechaBaja.slice(8, 10)}/${fechaBaja.slice(5, 7)}/${fechaBaja.slice(0, 4)}): no tiene sentido dar el alta.`;
     else if (row.sinCuit) motivo = "No tiene CUIT/CUIL: va por el circuito «Sin CUIT», no por ARCA.";
     else if (!empresaId || !empresa) motivo = "Falta elegir la Empresa Contrato.";
     else {
@@ -326,7 +327,8 @@ export async function correrPresentacionDelDia(tenantId: string, tenantObjectId:
   const hoy = hoyArgentina();
   const { desde, hasta } = ventanaDeLaCorrida(hoy, cfg);
   const candidatos = await candidatosDeAlta(tenantObjectId, { desde, hasta, cfg });
-  const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos, automatica: true });
+  // Los terminados no entran solos: un alta de una relación que ya pasó se fuerza a mano, con intención.
+  const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos: candidatos.filter((c) => !c.terminado), automatica: true });
   return {
     fecha: new Date().toISOString(),
     dia: hoy,
