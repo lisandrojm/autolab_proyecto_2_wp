@@ -139,6 +139,8 @@ export const RenovacionesPage: React.FC = () => {
           limit: porPagina,
           search: busqueda.trim() || undefined,
           vigencia: "novigente",
+          // Sólo lo que de verdad está sin renovar (sin contrato posterior, sin futuro, sin renovación pedida).
+          renovables: true,
           metadataActivo: filterUserStatus ? String(filterUserStatus === "active") : undefined,
           clientId: filterClientId || undefined,
           projectId: filterProjectId || undefined,

@@ -771,17 +771,34 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     // Solicitudes de alta pendientes de las personas de ESTA página: se adjuntan a su ficha para
     // mostrarlas ahí (con el proyecto pedido) en lugar de listarlas como una tarjeta duplicada.
     const idsPagina = enrichedUsers.map((u: any) => u._id).filter(Boolean);
+    /*
+      LO QUE NO DEPENDE ENTRE SÍ, A LA VEZ. Las solicitudes pendientes de la página, el contrato que
+      rige de cada persona del proyecto y los totales de la página iban en tres `await` en fila, y
+      cada uno es una ida a Atlas: Gestionar Equipo pagaba la suma. Ahora se piden juntos.
+    */
+    const [pendientes, contratoQueRige, rigeEnElPicker, filasTotales] = await Promise.all([
+      idsPagina.length > 0
+        ? (User.find({
+            "metadata.isSolicitud": true,
+            "metadata.solicitudStatus": "pendiente",
+            "metadata.solicitudUserId": { $in: idsPagina },
+          })
+            .select("metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate metadata.esRenovacion createdAt")
+            .populate({ path: "metadata.projectIds", select: "name", model: Project })
+            .lean() as Promise<any[]>)
+        : Promise.resolve([] as any[]),
+      teamTable ? contratosQueRigenDelProyecto(String(req.query.projectId), hoyArgentina(), CAMPOS_CONTRATO_TABLA) : Promise.resolve(null),
+      picker && idsPagina.length > 0 ? contratosQueRigenDeLasPersonas(idsPagina, hoyArgentina()) : Promise.resolve(null),
+      teamTable && idsPagina.length > 0
+        ? (UserProject.aggregate([
+            { $match: { userId: { $in: idsPagina } } },
+            { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
+            { $group: { _id: "$userId", jornadas: { $sum: { $ifNull: ["$contracts.cantidad_jornadas_laborales", 0] } }, contratos: { $sum: 1 } } },
+          ]) as Promise<any[]>)
+        : Promise.resolve([] as any[]),
+    ]);
     const solicitudesPorUsuario = new Map<string, any[]>();
     if (idsPagina.length > 0) {
-      const pendientes: any[] = await User.find({
-        "metadata.isSolicitud": true,
-        "metadata.solicitudStatus": "pendiente",
-        "metadata.solicitudUserId": { $in: idsPagina },
-      })
-        .select("metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate createdAt")
-        .populate({ path: "metadata.projectIds", select: "name", model: Project })
-        .lean();
-
       pendientes.forEach((s: any) => {
         const dueño = String(s.metadata?.solicitudUserId || "");
         if (!dueño) return;
@@ -792,6 +809,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           startDate: s.metadata?.startDate || "",
           dueDate: s.metadata?.dueDate || "",
           createdAt: s.createdAt,
+          esRenovacion: !!s.metadata?.esRenovacion,
         });
         solicitudesPorUsuario.set(dueño, lista);
       });
@@ -809,13 +827,11 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       EL CONTRATO QUE RIGE DE CADA UNO, ya elegido por Mongo. Ver el comentario del modo tabla: es lo
       único que la tabla muestra de todo el historial, y viene con su posición y con el total.
     */
-    const contratoQueRige = teamTable ? await contratosQueRigenDelProyecto(String(req.query.projectId), hoyArgentina(), CAMPOS_CONTRATO_TABLA) : null;
 
     /*
       MODO SELECTOR: el contrato que rige hoy de cada persona de ESTA página, con todos sus proyectos
       juntos. Son las dos fechas que la fila muestra («Vigente · Alta 3/2/2025 · Baja —»).
     */
-    const rigeEnElPicker = picker && idsPagina.length > 0 ? await contratosQueRigenDeLasPersonas(idsPagina, hoyArgentina()) : null;
 
     /*
       QUIÉN CARGÓ CADA SOLICITUD (`solicitudCreadaPor`), con nombre y roles: la tabla de Solicitudes lo
@@ -832,14 +848,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     }
 
     const totalesPorUsuario = new Map<string, { jornadas: number; contratos: number }>();
-    if (teamTable && idsPagina.length > 0) {
-      const filas: any[] = await UserProject.aggregate([
-        { $match: { userId: { $in: idsPagina } } },
-        { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
-        { $group: { _id: "$userId", jornadas: { $sum: { $ifNull: ["$contracts.cantidad_jornadas_laborales", 0] } }, contratos: { $sum: 1 } } },
-      ]);
-      for (const f of filas) totalesPorUsuario.set(String(f._id), { jornadas: Number(f.jornadas) || 0, contratos: Number(f.contratos) || 0 });
-    }
+    for (const f of filasTotales) totalesPorUsuario.set(String(f._id), { jornadas: Number(f.jornadas) || 0, contratos: Number(f.contratos) || 0 });
 
     res.json({
       users: enrichedUsers.map((u: any) => {
@@ -1024,6 +1033,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       o desde «Agregar miembro» (`origen`)—. Lo usa Contratos: los importados de FRAME/WP confundían.
     */
     const soloDelSistema = req.query.origen === "sistema";
+    /** `renovables=true` (Renovaciones): sólo los vencidos que de verdad están sin renovar. */
+    const soloRenovables = req.query.renovables === "true";
     const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
     if (necesitaNombreContrato) camposContrato.n = "$$x.nombre_contrato";
     if (necesitaEstado) camposContrato.e = "$$x.nombre_estado_empleado";
@@ -1162,6 +1173,22 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     // después, ya recortado a la página.
     const rows: any[] = [];
 
+    /*
+      RENOVAR SÓLO LO QUE DE VERDAD ESTÁ SIN RENOVAR (pedido del 11/10/2026). El botón salía en todo
+      contrato no vigente, también cuando la persona ya tenía otro contrato posterior en el proyecto
+      (renovado desde Gestionar Equipo), cuando el contrato que rige todavía no empezó, o cuando ya
+      había una solicitud de renovación pendiente: se podía renovar dos veces. Las tres cosas viajan
+      como flags por fila y la pantalla decide con eso.
+    */
+    const hoyISO = hoyArgentina();
+    const renovacionesPedidas = new Set<string>(
+      (
+        (await User.find({ tenantId: req.tenantObjectId, "metadata.isSolicitud": true, "metadata.esRenovacion": true, "metadata.solicitudStatus": { $in: ["pendiente", null] }, "metadata.renovacionDe.userProjectId": { $exists: true } })
+          .select("metadata.renovacionDe")
+          .lean()) as any[]
+      ).map((s) => `${s.metadata?.renovacionDe?.userProjectId || ""}::${fechaISO(s.metadata?.renovacionDe?.fechaBajaContrato)}`),
+    );
+
     for (const m of memberships) {
       const user: any = userMap.get(String(m.userId));
       const project: any = projectMap.get(String(m.projectId));
@@ -1205,6 +1232,11 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
 
       if (empresaContratoId && String(contrato.empresaContratoId ?? "") !== empresaContratoId) continue;
       if (soloDelSistema && !contrato.delSistema) continue;
+      if (soloRenovables) {
+        const alta = fechaISO(contrato.fecha_alta_contrato);
+        const fin = fechaISO(contrato.fecha_baja_contrato) || alta;
+        if (alta > hoyISO || contratos.some((o) => o !== contrato && fechaISO(o.fecha_alta_contrato) > fin) || renovacionesPedidas.has(`${m._id}::${fechaISO(contrato.fecha_baja_contrato)}`)) continue;
+      }
 
       if (searchRegex) {
         const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim();
@@ -1232,6 +1264,12 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         nombreRolFrame: m.nombre_rol_frame || "",
         contractsInProject: contratos.length,
         contractIndex: contratos.indexOf(contrato),
+        // Para «Renovar»: ya hay otro contrato que empieza después de que termina éste.
+        tienePosterior: contratos.some((o) => o !== contrato && fechaISO(o.fecha_alta_contrato) > (fechaISO(contrato.fecha_baja_contrato) || fechaISO(contrato.fecha_alta_contrato))),
+        // El contrato todavía no empezó: no vigente, pero no hay nada que renovar.
+        contratoFuturo: fechaISO(contrato.fecha_alta_contrato) > hoyISO,
+        // Ya se pidió la renovación de ESTE contrato por Solicitudes y está pendiente.
+        renovacionEnCurso: renovacionesPedidas.has(`${m._id}::${fechaISO(contrato.fecha_baja_contrato)}`),
         // Los campos del contrato se completan en la FASE 2 (solo para la página devuelta).
         contratoEmpresas: empresasPorProyecto.get(String(project._id))?.contratoEmpresas || [],
         releaseEmpresas: empresasPorProyecto.get(String(project._id))?.releaseEmpresas || [],
@@ -2164,6 +2202,26 @@ const traerDirectorio = (cacheKey: string, tenantObjectId: any, status?: string)
   directorioEnVuelo.set(cacheKey, pedido);
   return pedido;
 };
+
+/**
+ * GET /users/solicitudes-pendientes/conteo?projectId= — cuántas solicitudes de alta pendientes tiene
+ * un proyecto. Es el badge de Gestionar Equipo: antes bajaba las 500 solicitudes del tenant con sus
+ * contratos para contar las de un proyecto. Va antes de `/:id` para que no lo capture esa ruta.
+ */
+router.get("/solicitudes-pendientes/conteo", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const projectId = String(req.query.projectId || "");
+    if (!Types.ObjectId.isValid(projectId)) {
+      res.status(400).json({ error: "projectId inválido" });
+      return;
+    }
+    const pendientes = await User.countDocuments({ tenantId: req.tenantObjectId, "metadata.isSolicitud": true, "metadata.solicitudStatus": "pendiente", "metadata.projectIds": new Types.ObjectId(projectId) });
+    res.json({ pendientes });
+  } catch (error) {
+    console.error("Conteo de solicitudes pendientes error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/directory", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

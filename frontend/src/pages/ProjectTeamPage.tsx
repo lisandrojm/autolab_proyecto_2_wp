@@ -34,8 +34,8 @@ import { numeroALetras } from '../utils/numeroALetras';
 import { avisoIndeterminado, erroresDeJornadas, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
-import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
-import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
+import { estadoImpositivoDelContrato, formatDate as formatearFecha } from '../components/team/ContractCard';
+import { esContratoVigente, fechaISO, getContratoActivo, hoyISO } from '../utils/contratoVigencia';
 import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaActivaParaFiltrar } from '../api/contratosFrame';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
@@ -719,20 +719,27 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           .catch((e) => console.error('Error cargando catálogos:', e))
           .finally(() => setCatalogosWizardListos(true));
 
-        const [projectData, teamUsers, vacationsData, areasData, shiftsData] = await Promise.all([
+        /*
+          LA PRIMERA PÁGINA DE LA TABLA ARRANCA YA, junto con lo demás. Esperaba a que terminara todo
+          el grupo de abajo, así que lo que se veía era la llamada más lenta del grupo MÁS la de la
+          tabla, una detrás de la otra. Sólo necesita `projectId`.
+        */
+        fetchTeamPage(1);
+        // Las vacaciones las usa el wizard, no la pantalla: se piden sin frenar el spinner.
+        cachedFetch('vacations:all', () => vacationsAPI.getAll())
+          .then(setVacations)
+          .catch((e) => console.error('Error cargando vacaciones:', e));
+
+        const [projectData, teamUsers, areasData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId, { team: 'ids' }), // específico del proyecto: no se cachea
-          // Equipo: lista liviana completa (Coordinadores/contadores) + primera página con datos
-          // completos. La página no se espera: se pinta sola cuando llega (`teamFetching`).
+          // Equipo: lista liviana completa (Coordinadores/contadores). La página de la tabla ya está en camino.
           fetchFullTeamLite(),
-          cachedFetch('vacations:all', () => vacationsAPI.getAll()),
           cachedFetch('areas:all', () => areasAPI.listAll()),
           cachedFetch('shifts:all', () => shiftsAPI.getAll()),
         ]);
-        fetchTeamPage(1);
 
         setProject(projectData);
         setTeamConfig(projectData.teamConfig || []);
-        setVacations(vacationsData);
         setAllAreas(areasData);
         setAllShifts(shiftsData);
 
@@ -797,6 +804,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Se refresca cuando cambia `teamConfig`, o sea después de cada alta/edición de miembro.
   useEffect(() => {
     if (!projectId || !token) return;
+    // Recién con el proyecto cargado: antes se pedía una vez al montar y otra al llegar `teamConfig`,
+    // y cada pedido recorre todos los contratos del proyecto en el server.
+    if (!project) return;
     let cancelled = false;
     projectsAPI
       .getAreaShiftCounts(projectId)
@@ -811,7 +821,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     };
     // `teamConfigKey` y no `teamConfig`: ver arriba.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, token, teamConfigKey]);
+  }, [projectId, token, teamConfigKey, !!project]);
 
   // Cambio de orden → volver a la página 1 con el orden nuevo (lo lee `fetchTeamPage` del ref).
   const ordenEquipoInitedRef = React.useRef(false);
@@ -842,10 +852,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!projectId) return;
     const fetchCount = async () => {
       try {
-        const solis = await usersAPI.listSolicitudes();
-        // El badge cuenta solo las PENDIENTES: las rechazadas siguen listadas, pero ya no son tarea pendiente.
-        const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId) && (u.metadata?.solicitudStatus || 'pendiente') === 'pendiente').length;
-        setSolicitudesCount(count);
+        // Un conteo en el server: antes bajaban las 500 solicitudes del tenant, con sus contratos, para contar las de este proyecto.
+        setSolicitudesCount(await usersAPI.contarSolicitudesPendientesDelProyecto(projectId));
       } catch (e) {
         console.error('Error fetching solicitudes count:', e);
       }
@@ -2882,9 +2890,19 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             <div className="flex flex-col gap-1">
               {(() => {
                 const vigente = esContratoVigente(activeContract);
-                const indice = vigente ? null : indiceDelContratoQueRige(user, projectId);
+                // Sin renovar DOS VECES: un contrato que todavía no empezó es la renovación, y una
+                // solicitud de renovación pendiente ya está en camino (misma regla que en Contratos).
+                const futuro = !vigente && fechaISO(activeContract?.fecha_alta_contrato) > hoyISO();
+                const renovacionPedida = !vigente && ((user as any).solicitudesPendientes || []).some((s: any) => s?.esRenovacion);
+                const indice = vigente || futuro || renovacionPedida ? null : indiceDelContratoQueRige(user, projectId);
+                const motivoSinBoton = futuro ? `Empieza ${formatearFecha(activeContract?.fecha_alta_contrato)}` : renovacionPedida ? 'Renovación pedida' : '';
                 return (
                   <div className="flex items-center gap-1.5">
+                    {!vigente && motivoSinBoton && (
+                      <span title={futuro ? 'Este contrato todavía no empezó: no hay nada que renovar.' : 'Ya hay una solicitud de renovación pendiente (ver Solicitudes).'} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 whitespace-nowrap">
+                        {motivoSinBoton}
+                      </span>
+                    )}
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
                     {/* Mismo botón que en Contratos: contrato NUEVO con éste precargado y las fechas vacías (ver `renovando`). */}
                     {indice !== null && (

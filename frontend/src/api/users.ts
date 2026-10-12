@@ -231,7 +231,9 @@ export interface User {
    */
   solicitudesPendientes?: {
     _id: string;
-    proyectos: { _id: string; name: string }[];
+    proyectos: { _id: string; name: string   /** Es una solicitud de renovación de un contrato que vence. */
+    esRenovacion?: boolean;
+  }[];
     startDate?: string;
     dueDate?: string;
     createdAt?: string;
@@ -571,6 +573,8 @@ class UsersAPI {
       tiposContrato?: string[];
       /** `sistema`: sólo los contratos creados en WeProdu (Solicitudes o «Agregar miembro»). */
       origen?: "sistema";
+      /** Sólo los vencidos sin renovar: sin contrato posterior, sin futuro, sin renovación pedida. */
+      renovables?: boolean;
       /** Columna por la que ordena el server (ver `COLUMNAS_ORDEN` en la ruta) y su dirección. */
       sort?: string;
       dir?: "asc" | "desc";
@@ -593,6 +597,7 @@ class UsersAPI {
     if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
     if (params.estados?.length) searchParams.append("estados", params.estados.join(","));
     if (params.origen) searchParams.append("origen", params.origen);
+    if (params.renovables) searchParams.append("renovables", "true");
     for (const t of params.tiposContrato || []) searchParams.append("tiposContrato", t);
     if (params.sort) {
       searchParams.append("sort", params.sort);
@@ -719,6 +724,12 @@ class UsersAPI {
   async getAllContracts(userId: string): Promise<ManagedContract[]> {
     const { data } = await axios.get(`/users/${userId}/all-contracts`, { headers: this.getHeaders() });
     return Array.isArray(data) ? data : [];
+  }
+
+  /** Cuántas solicitudes pendientes tiene un proyecto (el badge de Gestionar Equipo). */
+  async contarSolicitudesPendientesDelProyecto(projectId: string): Promise<number> {
+    const { data } = await axios.get(`/users/solicitudes-pendientes/conteo`, { headers: this.getHeaders(), params: { projectId } });
+    return Number(data?.pendientes) || 0;
   }
 
   /** Trae las solicitudes de alta en CUALQUIER estado (pendiente/aprobada/rechazada/cancelada). */

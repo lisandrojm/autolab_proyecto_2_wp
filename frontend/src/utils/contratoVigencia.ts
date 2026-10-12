@@ -22,7 +22,7 @@ export interface ContratoVigenciaLike {
 }
 
 /** Fecha de hoy (local) como "YYYY-MM-DD", para comparar contra las fechas ISO de los contratos. */
-const hoyISO = (): string => {
+export const hoyISO = (): string => {
   const d = new Date();
   const mes = String(d.getMonth() + 1).padStart(2, "0");
   const dia = String(d.getDate()).padStart(2, "0");
