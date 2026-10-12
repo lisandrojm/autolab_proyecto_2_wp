@@ -38,18 +38,30 @@ import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, proximaCorridaPara, ventana
  */
 
 
-/** Los catálogos de ARCA tal como los recibe la pantalla (pasados por JSON: ids como texto). */
+/**
+ * Los catálogos de ARCA tal como los recibe la pantalla (pasados por JSON: ids como texto).
+ * Cacheados un minuto: son diez consultas y los pide cada pantalla, cada corrida y cada «Forzar».
+ */
+let catalogosEnCache: { en: number; p: Promise<AfipCatalogs> } | null = null;
 export async function catalogosArca(): Promise<AfipCatalogs> {
+  if (catalogosEnCache && Date.now() - catalogosEnCache.en < 60_000) return catalogosEnCache.p;
+  const p = leerCatalogosArca();
+  catalogosEnCache = { en: Date.now(), p };
+  p.catch(() => (catalogosEnCache = null));
+  return p;
+}
+async function leerCatalogosArca(): Promise<AfipCatalogs> {
   const [defaults, categorias, tipos, obrasSociales, sedes, empresas, sucursales, convenios, roleFrames, estados] = await Promise.all([
     getArcaDefaults(),
     listarCategoriasCompat(),
     Contrato.find().sort({ name: 1 }).lean(),
-    ObraSocial.find().sort({ name: 1 }).lean(),
+    // Sólo lo que mira el generador: convenios enteros eran 841 KB y 8 s por pedido.
+    ObraSocial.find().select("externalId name data.id").sort({ name: 1 }).lean(),
     Info.find({ type: "sede" }).lean(),
     Company.find().sort({ razonSocial: 1 }).lean(),
     ArcaSucursal.find().sort({ codigo: 1 }).lean(),
-    Convenio.find().sort({ name: 1 }).lean(),
-    RoleFrame.find().sort({ name: 1 }).lean(),
+    Convenio.find().select("externalId name obraSocialDefaultId puestoDesempenadoDefault").sort({ name: 1 }).lean(),
+    RoleFrame.find().select("name data.rol.id data.puestoDesempenado").sort({ name: 1 }).lean(),
     Info.find({ type: ESTADO_TYPE }).sort({ "data.orden": 1, name: 1 }).lean(),
   ]);
   const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null));
@@ -122,17 +134,54 @@ export async function candidatosDeAlta(
     // contrato sea nulo, y quien tiene uno importado sin solicitud quedaba afuera.
     match.$or = [{ contracts: { $elemMatch: { solicitudId: { $exists: true, $ne: null } } } }, { "contracts.origen": "agregar_miembro" }];
   }
+  /*
+    FILTRADO Y PROYECTADO EN MONGO. Traía todos los contratos ENTEROS de cada persona del tenant y
+    filtraba acá: con cientos de personas y decenas de contratos cada una, eran megabytes por pedido y
+    la pantalla cortaba a los 60 s (ver memoria «Latencia = bytes desde Atlas»). Ahora viajan sólo los
+    contratos del sistema cuya alta cae en la ventana, con los campos que mira el generador.
+  */
+  const t0 = Date.now();
+  const CAMPOS = [
+    "fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_estado_empleado", "altaArcaPresentada", "empresaContratoId", "nombre_empresa_contrato",
+    "puestoDesempenado", "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
+    "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen",
+  ];
+  // La fecha de alta como "YYYY-MM-DD" aunque esté guardada ISO (los formatos viejos no son del sistema).
+  const altaISO = { $cond: [{ $eq: [{ $type: "$$e.c.fecha_alta_contrato" }, "string"] }, { $substrCP: ["$$e.c.fecha_alta_contrato", 0, 10] }, ""] };
+  const cond = opts.soloContrato
+    ? { $eq: ["$$e.i", opts.soloContrato.contractIndex] }
+    : {
+        $and: [
+          { $or: [{ $gt: ["$$e.c.solicitudId", null] }, { $eq: ["$$e.c.origen", "agregar_miembro"] }] },
+          ...(opts.desde ? [{ $gte: [altaISO, opts.desde] }] : []),
+          ...(opts.hasta ? [{ $lte: [altaISO, opts.hasta] }] : []),
+        ],
+      };
   const filas: any[] = await UserProject.aggregate([
     { $match: match },
     {
       $project: {
         userId: 1,
         projectId: 1,
-        c: { $map: { input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] }, as: "i", in: { i: "$$i", c: { $arrayElemAt: ["$contracts", "$$i"] } } } },
+        c: {
+          $filter: {
+            input: {
+              $map: {
+                input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] },
+                as: "i",
+                in: { i: "$$i", c: { $let: { vars: { x: { $arrayElemAt: ["$contracts", "$$i"] } }, in: Object.fromEntries(CAMPOS.map((k) => [k, `$$x.${k}`])) } } },
+              },
+            },
+            as: "e",
+            cond,
+          },
+        },
       },
     },
+    { $match: { "c.0": { $exists: true } } },
     { $unwind: "$c" },
   ]);
+  const msFilas = Date.now() - t0;
 
   const elegidos: Array<{ up: any; i: number; c: any }> = [];
   for (const f of filas) {
@@ -257,6 +306,7 @@ export async function candidatosDeAlta(
     });
   }
   out.sort((a, b) => a.fechaAlta.localeCompare(b.fechaAlta) || a.nombre.localeCompare(b.nombre, "es"));
+  if (Date.now() - t0 > 2000) console.log(`[altas-automaticas] candidatos: ${out.length} en ${Date.now() - t0} ms (contratos ${msFilas} ms)`);
   return out;
 }
 

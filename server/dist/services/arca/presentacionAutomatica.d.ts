@@ -1,20 +1,6 @@
 import { Types } from "mongoose";
 import { type AfipCatalogs } from "../../compartido/arca/afipCompleteness.js";
 import { ConfigAltasAutomaticas } from "./horarioAltasAutomaticas.js";
-/**
- * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día, a la hora configurada (14:00 argentinas por
- * defecto), se presentan las altas tempranas que empiezan ese día —o en los próximos N días, si se
- * configuró anticipación; ver `horarioAltasAutomaticas.ts`—. Si nadie hace nada, cada alta sale sola.
- * Lo que no está completo no se presenta y queda con su motivo en «A.R.C.A Altas Automáticas».
- *
- * EL REGISTRO LO ARMA EL MISMO CÓDIGO QUE LA PANTALLA (`compartido/arca`), con los mismos catálogos que
- * carga Contratos (`useCatalogosArca`) y la misma fila que devuelve `contracts-overview`. Después pasa
- * por `arrancarCorridaAltas`, que lo vuelve a cotejar contra la base como a cualquier presentación manual.
- *
- * Sólo contratos creados en WeProdu (Solicitudes o «Agregar miembro»): los importados no se gestionan
- * desde Contratos y no se presentan solos.
- */
-/** Los catálogos de ARCA tal como los recibe la pantalla (pasados por JSON: ids como texto). */
 export declare function catalogosArca(): Promise<AfipCatalogs>;
 export interface CandidatoAlta {
     userProjectId: string;
