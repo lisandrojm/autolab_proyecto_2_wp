@@ -649,7 +649,7 @@ export const ContractsPage: React.FC = () => {
                     <tr className="border-b border-gray-100 dark:border-gray-800">
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
                         <BotonOrden columna="usuario" {...ordenProps}>
-                          Usuario
+                          Colaborador
                         </BotonOrden>
                       </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">

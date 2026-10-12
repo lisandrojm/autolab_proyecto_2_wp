@@ -40,7 +40,9 @@ export interface DepsCola {
   /** Quiénes siguen pendientes en esa empleadora (`pendientesObraSocial`). */
   pendientes: (tenantObjectId: unknown, empresaId: string) => Promise<Array<{ cuil: string }>>;
   /** Arranca la corrida (`arrancarCorrida`). Vuelve enseguida; tira `CandadoArcaOcupado` si hay otra. */
-  arrancar: (o: { tenantId: string; tenantObjectId: any; grupos: Array<{ empresaId: string; cuils: string[] }>; usuarioId?: string }) => Promise<unknown>;
+  arrancar: (o: { tenantId: string; tenantObjectId: any; grupos: Array<{ empresaId: string; cuils: string[] }>; usuarioId?: string; automatica?: boolean }) => Promise<unknown>;
+  /** ¿El tenant tiene prendida la validación automática? (Configuración → ARCA → Conexión). Ausente = sí. */
+  activaParaTenant?: (tenantObjectId: unknown) => Promise<boolean>;
   /** ¿Hay una corrida de ARCA en curso para el tenant? */
   ocupado: (tenantId: string) => boolean;
   /** Cuánto se espera desde el primer encolado para juntar los que vengan atrás. */
@@ -62,6 +64,7 @@ const depsReales = (): DepsCola => ({
   // Import perezoso: la corrida trae Playwright y los modelos, y encolar no los necesita hasta vaciar.
   pendientes: async (tenantObjectId, empresaId) => (await import("../obrasSocialesLoteService.js")).pendientesObraSocial(tenantObjectId, empresaId),
   arrancar: async (o) => (await import("./corridaServidor.js")).arrancarCorrida(o),
+  activaParaTenant: async (tenantObjectId) => (await import("./barridoObrasSociales.js")).validacionAutomaticaActivaEn(tenantObjectId),
   ocupado: (tenantId) => !!quienTiene(tenantId),
   esperaMs: segundos(process.env.ARCA_COLA_ESPERA_SEG, 20),
   reintentoMs: segundos(process.env.ARCA_COLA_REINTENTO_SEG, 30),
@@ -129,7 +132,7 @@ export function encolarValidacionObraSocial(p: { tenantId: string; tenantObjectI
   return true;
 }
 
-export type ResultadoDeVaciar = "vacia" | "ocupado" | "abandonada" | "nada_pendiente" | "arrancada" | "fallo";
+export type ResultadoDeVaciar = "vacia" | "ocupado" | "abandonada" | "nada_pendiente" | "arrancada" | "fallo" | "apagada";
 
 /**
  * Saca la cola del tenant en UNA corrida. La llama el temporizador; exportada para probarla.
@@ -158,6 +161,21 @@ export async function vaciarCola(tenantId: string, deps: DepsCola = depsReales()
   };
 
   if (deps.ocupado(tenantId)) return reintentarOSoltar();
+
+  // El tenant la apagó en Configuración: se vacía sin validar (quedan para el botón, como siempre).
+  if (deps.activaParaTenant) {
+    let activa = true;
+    try {
+      activa = await deps.activaParaTenant(c.tenantObjectId);
+    } catch {
+      /* si no se pudo leer, se asume prendida */
+    }
+    if (!activa) {
+      if (c.temporizador) clearTimeout(c.temporizador);
+      colas.delete(tenantId);
+      return "apagada";
+    }
+  }
 
   // Foto de lo encolado: lo que llegue durante los `await` de abajo queda para la próxima vuelta.
   const foto = new Map([...c.porEmpresa].map(([e, cuils]) => [e, new Set(cuils)]));
@@ -194,7 +212,7 @@ export async function vaciarCola(tenantId: string, deps: DepsCola = depsReales()
   }
 
   try {
-    await deps.arrancar({ tenantId, tenantObjectId: c.tenantObjectId, grupos, usuarioId: c.usuarioId });
+    await deps.arrancar({ tenantId, tenantObjectId: c.tenantObjectId, grupos, usuarioId: c.usuarioId, automatica: true });
   } catch (e: any) {
     // Otra corrida tomó ARCA entre el chequeo y el arranque: no se perdió nada, se reintenta.
     if (e instanceof CandadoArcaOcupado) return reintentarOSoltar();

@@ -4,6 +4,7 @@ import { faUserLock, faSpinner, faTriangleExclamation, faCircleInfo, faCalendarD
 import { InfoModal } from '../ui/InfoModal';
 import { Modal } from '../ui/Modal';
 import { afipAPI, SimplificacionStatus, CorridaObrasSocialesLog } from '../../api/afip';
+import { projectsAPI, EstadoValidacionAutomaticaOS } from '../../api/projects';
 import { sweetAlert } from '../../utils/sweetAlert';
 
 const seg = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
@@ -61,6 +62,36 @@ export const UsuarioSimplificacion: React.FC<{
   /** Con credenciales cargadas, el formulario aparece solo si se pide cambiarlas. */
   const [cambiando, setCambiando] = useState(false);
   const [verLogs, setVerLogs] = useState(false);
+  /*
+    LA VALIDACIÓN AUTOMÁTICA DE OBRAS SOCIALES (cola al crear el contrato + barrido cada 10 min) se
+    prende y apaga acá, al lado de la conexión que usa. Viene prendida por defecto.
+  */
+  const [autoOS, setAutoOS] = useState<EstadoValidacionAutomaticaOS | null>(null);
+  const [guardandoAutoOS, setGuardandoAutoOS] = useState(false);
+  const cargarAutoOS = useCallback(() => {
+    projectsAPI
+      .estadoValidacionAutomaticaOS()
+      .then(setAutoOS)
+      .catch(() => setAutoOS(null));
+  }, []);
+  useEffect(() => {
+    if (estado?.configurado) cargarAutoOS();
+  }, [estado?.configurado, cargarAutoOS]);
+  const cambiarAutoOS = async (activa: boolean) => {
+    if (activa) {
+      const r = await sweetAlert.confirm('Activar la validación automática', 'Cada contrato nuevo (Solicitudes o «Agregar miembro») valida sola su obra social contra ARCA a los pocos segundos, y un barrido cada 10 minutos reintenta lo que quedó sin validar. Nunca frena el alta.', 'Sí, activar', 'Cancelar');
+      if (!r.isConfirmed) return;
+    }
+    setGuardandoAutoOS(true);
+    try {
+      await projectsAPI.setValidacionAutomaticaOS(activa);
+      cargarAutoOS();
+    } catch (e: any) {
+      sweetAlert.error('No se pudo guardar', e?.response?.data?.error || e?.message || '');
+    } finally {
+      setGuardandoAutoOS(false);
+    }
+  };
   const [logs, setLogs] = useState<CorridaObrasSocialesLog[] | null>(null);
   const [cargandoLogs, setCargandoLogs] = useState(false);
   const [logAbierto, setLogAbierto] = useState<string | null>(null);
@@ -152,6 +183,7 @@ export const UsuarioSimplificacion: React.FC<{
                     <div className="flex items-center gap-2 flex-wrap">
                       <FontAwesomeIcon icon={ok ? faCheck : faXmark} className={`h-3 w-3 ${ok ? 'text-green-500' : 'text-red-500'}`} />
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{log.empresaRazonSocial || log.empresaCuit || 'Empleadora sin nombre'}</span>
+                      {log.automatica && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" title="La lanzó la validación automática, no una persona">Automática</span>}
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {log.validadas}/{log.total} con obra social · {log.guardadas} guardadas
                         {log.sinDeclarar > 0 ? ` · ${log.sinDeclarar} sin declarar` : ''}
@@ -287,6 +319,22 @@ export const UsuarioSimplificacion: React.FC<{
         <p className="text-sm text-gray-600 dark:text-gray-300">
           El servidor consulta <strong>solo</strong>: nadie tiene que instalar el Asistente ni dejar ninguna ventana abierta.
         </p>
+        {autoOS && (
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5 space-y-1">
+            <label className="inline-flex items-center gap-3 cursor-pointer select-none">
+              <input type="checkbox" className="sr-only peer" checked={autoOS.activa} disabled={guardandoAutoOS || autoOS.apagadaPorEntorno} onChange={(e) => cambiarAutoOS(e.target.checked)} />
+              <span className="relative w-11 h-6 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-green-600 peer-disabled:opacity-50 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Validar obras sociales automáticamente al crear contratos</span>
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {autoOS.apagadaPorEntorno
+                ? 'Apagada en este servidor por configuración (ARCA_VALIDACION_AUTOMATICA=0): es el server local, para no abrir una sesión de ARCA al lado de la del VPS.'
+                : autoOS.activa
+                  ? `Al crear un contrato se valida a los pocos segundos, de a tandas; un barrido cada 10 minutos reintenta lo que quedó sin validar.${autoOS.enCola ? ` En cola ahora: ${autoOS.enCola}.` : ''}`
+                  : 'Apagada: las obras sociales se validan sólo con los botones de Contratos.'}
+            </p>
+          </div>
+        )}
         <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
           <li className="flex items-start gap-2">
             <FontAwesomeIcon icon={faCheck} className="h-3 w-3 mt-1 shrink-0 text-green-600 dark:text-green-400" />

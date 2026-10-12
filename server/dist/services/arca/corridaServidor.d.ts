@@ -82,6 +82,8 @@ interface Corrida {
         cortada: boolean;
     };
     arrancadaEl: Date;
+    /** La lanzó la cola o el barrido, no una persona (ver `colaObrasSociales.ts`, `barridoObrasSociales.ts`). */
+    automatica: boolean;
 }
 export declare const corridaDe: (tenantId: string) => Corrida | undefined;
 export declare const corriendo: (tenantId: string) => boolean;
@@ -125,6 +127,7 @@ export declare function arrancarCorrida(opts: {
     tenantObjectId: any;
     grupos: GrupoCorrida[];
     usuarioId?: string;
+    automatica?: boolean;
 }): Promise<{
     total: number;
     grupos: Array<{

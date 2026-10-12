@@ -46,7 +46,10 @@ export interface DepsCola {
             cuils: string[];
         }>;
         usuarioId?: string;
+        automatica?: boolean;
     }) => Promise<unknown>;
+    /** ¿El tenant tiene prendida la validación automática? (Configuración → ARCA → Conexión). Ausente = sí. */
+    activaParaTenant?: (tenantObjectId: unknown) => Promise<boolean>;
     /** ¿Hay una corrida de ARCA en curso para el tenant? */
     ocupado: (tenantId: string) => boolean;
     /** Cuánto se espera desde el primer encolado para juntar los que vengan atrás. */
@@ -79,7 +82,7 @@ export declare function encolarValidacionObraSocial(p: {
     cuil: unknown;
     usuarioId?: string;
 }, deps?: DepsCola): boolean;
-export type ResultadoDeVaciar = "vacia" | "ocupado" | "abandonada" | "nada_pendiente" | "arrancada" | "fallo";
+export type ResultadoDeVaciar = "vacia" | "ocupado" | "abandonada" | "nada_pendiente" | "arrancada" | "fallo" | "apagada";
 /**
  * Saca la cola del tenant en UNA corrida. La llama el temporizador; exportada para probarla.
  *

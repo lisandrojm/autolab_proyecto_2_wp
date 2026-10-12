@@ -28,7 +28,11 @@ import { DIAS_ATRAS_PENDIENTES, configDe, sumarDias, validarConfig, yaPasoLaHora
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
-import { encolarSiCorresponde } from "../services/arca/colaObrasSociales.js";
+import { enCola, encolarSiCorresponde, validacionAutomaticaActiva } from "../services/arca/colaObrasSociales.js";
+import { esperandoReintento, validacionAutomaticaActivaEn } from "../services/arca/barridoObrasSociales.js";
+import { proximoBarridoDe } from "../services/barridoObrasSocialesCronService.js";
+import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
+import { credencialesDe } from "../services/arca/navegador.js";
 import { puestoParaGuardar } from "../services/arca/puestosDesempenados.js";
 import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "../compartido/sucursalesDeEmpresa.js";
 import { requirePermission } from "../middleware/permissions.js";
@@ -2795,7 +2799,49 @@ router.get("/contratos/obras-sociales/validar-servidor", requireTenant, authenti
         res.json({ hay: false, corriendo: false, eventos: [] });
         return;
     }
-    res.json({ hay: true, corriendo: !c.terminada, empresaId: c.empresaId, empresaIds: c.empresaIds, total: c.total, arrancadaEl: c.arrancadaEl, eventos: c.eventos });
+    res.json({ hay: true, corriendo: !c.terminada, empresaId: c.empresaId, empresaIds: c.empresaIds, total: c.total, arrancadaEl: c.arrancadaEl, eventos: c.eventos, automatica: !!c.automatica });
+});
+/**
+ * GET /contratos/obras-sociales/automatica — cómo viene la validación automática: si está prendida,
+ * qué hay en cola, cuántos esperan reintento, la última corrida automática y cuándo vuelve el barrido.
+ * Es la línea de estado junto al botón «Validar Masivo Obras Sociales» de Contratos.
+ */
+router.get("/contratos/obras-sociales/automatica", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const tenantId = String(req.tenantObjectId);
+        const [activa, cred, ultima] = await Promise.all([
+            validacionAutomaticaActivaEn(req.tenantObjectId),
+            credencialesDe(tenantId).catch(() => null),
+            ArcaObrasSocialesLog.findOne({ tenantId: req.tenantObjectId, automatica: true }).sort({ createdAt: -1 }).select("createdAt total validadas guardadas errores faltaron motivo error").lean(),
+        ]);
+        const c = corridaDe(tenantId);
+        res.json({
+            activa: activa && validacionAutomaticaActiva(),
+            apagadaPorEntorno: !validacionAutomaticaActiva(),
+            conCredenciales: !!cred,
+            enCola: enCola(tenantId).reduce((n, g) => n + g.cuils.length, 0),
+            esperandoReintento: esperandoReintento(tenantId),
+            corriendo: !!c && !c.terminada && !!c.automatica,
+            proximoBarrido: proximoBarridoDe(tenantId).toISOString(),
+            ultimaCorrida: ultima ? { fecha: ultima.createdAt, total: ultima.total, validadas: ultima.validadas, guardadas: ultima.guardadas, errores: ultima.errores, faltaron: ultima.faltaron, motivo: ultima.error || ultima.motivo || "" } : null,
+        });
+    }
+    catch (error) {
+        console.error("Estado validación automática OS error:", error);
+        res.status(500).json({ error: String(error?.message || "Internal server error") });
+    }
+});
+/** PUT /contratos/obras-sociales/automatica — prende o apaga la validación automática del tenant. */
+router.put("/contratos/obras-sociales/automatica", requireTenant, authenticateToken, requirePermission(["config_afip:view", "admin_contracts:view"]), async (req, res) => {
+    try {
+        const activa = req.body?.activa !== false;
+        await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: { "integrations.arcaSimplificacion.validacionAutomaticaObrasSociales.activa": activa } });
+        res.json({ activa });
+    }
+    catch (error) {
+        console.error("Put validación automática OS error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 /** POST /contratos/obras-sociales/validar-servidor/detener — lo ya guardado queda guardado. */
 router.post("/contratos/obras-sociales/validar-servidor/detener", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {

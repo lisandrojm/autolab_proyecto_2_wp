@@ -10,6 +10,7 @@ const depsReales = () => ({
     // Import perezoso: la corrida trae Playwright y los modelos, y encolar no los necesita hasta vaciar.
     pendientes: async (tenantObjectId, empresaId) => (await import("../obrasSocialesLoteService.js")).pendientesObraSocial(tenantObjectId, empresaId),
     arrancar: async (o) => (await import("./corridaServidor.js")).arrancarCorrida(o),
+    activaParaTenant: async (tenantObjectId) => (await import("./barridoObrasSociales.js")).validacionAutomaticaActivaEn(tenantObjectId),
     ocupado: (tenantId) => !!quienTiene(tenantId),
     esperaMs: segundos(process.env.ARCA_COLA_ESPERA_SEG, 20),
     reintentoMs: segundos(process.env.ARCA_COLA_REINTENTO_SEG, 30),
@@ -93,6 +94,22 @@ export async function vaciarCola(tenantId, deps = depsReales()) {
     };
     if (deps.ocupado(tenantId))
         return reintentarOSoltar();
+    // El tenant la apagó en Configuración: se vacía sin validar (quedan para el botón, como siempre).
+    if (deps.activaParaTenant) {
+        let activa = true;
+        try {
+            activa = await deps.activaParaTenant(c.tenantObjectId);
+        }
+        catch {
+            /* si no se pudo leer, se asume prendida */
+        }
+        if (!activa) {
+            if (c.temporizador)
+                clearTimeout(c.temporizador);
+            colas.delete(tenantId);
+            return "apagada";
+        }
+    }
     // Foto de lo encolado: lo que llegue durante los `await` de abajo queda para la próxima vuelta.
     const foto = new Map([...c.porEmpresa].map(([e, cuils]) => [e, new Set(cuils)]));
     const quitarFoto = () => {
@@ -132,7 +149,7 @@ export async function vaciarCola(tenantId, deps = depsReales()) {
         return "nada_pendiente";
     }
     try {
-        await deps.arrancar({ tenantId, tenantObjectId: c.tenantObjectId, grupos, usuarioId: c.usuarioId });
+        await deps.arrancar({ tenantId, tenantObjectId: c.tenantObjectId, grupos, usuarioId: c.usuarioId, automatica: true });
     }
     catch (e) {
         // Otra corrida tomó ARCA entre el chequeo y el arranque: no se perdió nada, se reintenta.

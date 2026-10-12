@@ -77,6 +77,7 @@ export async function arrancarCorrida(opts) {
             terminada: false,
             señal: { cortada: false },
             arrancadaEl: new Date(),
+            automatica: !!opts.automatica,
         };
         corridas.set(tenantId, corrida);
         const emitir = (e) => corrida.eventos.push(e);
@@ -386,6 +387,7 @@ async function correr(o) {
         const validadas = [...leidos.values()].filter(Boolean).length;
         await ArcaObrasSocialesLog.create({
             tenantId: tenantObjectId,
+            automatica: corrida.automatica,
             empresaId: primero?.empresaId,
             empresaRazonSocial: grupos.map((g) => g.razonSocial || g.empresaCuit).join(" + "),
             empresaCuit: primero?.empresaCuit,

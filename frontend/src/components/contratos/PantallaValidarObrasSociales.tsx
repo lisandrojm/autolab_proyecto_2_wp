@@ -417,7 +417,12 @@ export const PantallaValidarObrasSociales: React.FC<{
         estas mismas filas, y lo que no haya entrado queda pendiente para volver a apretar.
       */
       if (e?.response?.status === 409 && e?.response?.data?.ocupadaPor === 'obras_sociales') {
-        setFaseCorrida('El servidor ya las estaba validando solo. Siguiendo esa corrida…');
+        setFaseCorrida('Siguiendo la corrida en curso…');
+        // Automática o de otra persona: se dice cuál, para que no parezca que alguien más apretó el botón.
+        projectsAPI
+          .estadoValidacionServidor()
+          .then((r) => setFaseCorrida(r?.automatica ? 'Corrida automática en curso: se lanzó sola al crear los contratos. Siguiendo esa corrida…' : 'El servidor ya las estaba validando. Siguiendo esa corrida…'))
+          .catch(() => {});
         setMirando(true);
         setArrancando(false);
         seguirCorridaDelServidor();

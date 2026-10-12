@@ -276,7 +276,7 @@ export const RenovacionesPage: React.FC = () => {
                   </th>
                   <th className={`${th} sticky ${IZQ_USUARIO} z-[15] ${FIN_FIJAS}`}>
                     <BotonOrden columna="usuario" {...ordenProps}>
-                      Usuario
+                      Colaborador
                     </BotonOrden>
                   </th>
                   <th className={th}>

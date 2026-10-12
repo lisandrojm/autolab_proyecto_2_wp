@@ -47,6 +47,22 @@ describe("cola de validación de obras sociales", () => {
         assert.equal(arranques[0].usuarioId, "usuario9");
         assert.deepEqual(enCola(T), [], "lo que entró a la corrida sale de la cola");
     });
+    it("la corrida sale marcada como automática", async () => {
+        const marcas = [];
+        const { deps } = armar({ arrancar: async () => { } });
+        const conMarca = { ...deps, arrancar: async (x) => void marcas.push(!!x.automatica) };
+        encolar(conMarca, E1, A);
+        await vaciarCola(T, conMarca);
+        assert.deepEqual(marcas, [true]);
+    });
+    it("si el tenant apagó la automática, la cola se vacía sin abrir ARCA", async () => {
+        const { deps, arranques } = armar();
+        const apagada = { ...deps, activaParaTenant: async () => false };
+        encolar(apagada, E1, A);
+        assert.equal(await vaciarCola(T, apagada), "apagada");
+        assert.equal(arranques.length, 0);
+        assert.deepEqual(enCola(T), []);
+    });
     it("la misma persona encolada dos veces se valida una", async () => {
         const { deps, arranques } = armar();
         encolar(deps, E1, A);

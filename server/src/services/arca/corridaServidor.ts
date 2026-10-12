@@ -59,6 +59,8 @@ interface Corrida {
   terminada: boolean;
   señal: { cortada: boolean };
   arrancadaEl: Date;
+  /** La lanzó la cola o el barrido, no una persona (ver `colaObrasSociales.ts`, `barridoObrasSociales.ts`). */
+  automatica: boolean;
 }
 
 /**
@@ -117,7 +119,7 @@ interface MedicionLectura {
  * y cada una abría su Chromium y su sesión de ARCA. Ahora las empleadoras van en `grupos` y se leen
  * en la misma página, cambiando de CUIT en el selector (ver `prepararAltas` en el motor).
  */
-export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: any; grupos: GrupoCorrida[]; usuarioId?: string }): Promise<{ total: number; grupos: Array<{ empresaId: string; total: number }> }> {
+export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: any; grupos: GrupoCorrida[]; usuarioId?: string; automatica?: boolean }): Promise<{ total: number; grupos: Array<{ empresaId: string; total: number }> }> {
   const { tenantId, tenantObjectId, usuarioId } = opts;
 
   // El candado es COMPARTIDO con las corridas de altas (ver `candadoArca.ts`): usan la misma sesión.
@@ -157,6 +159,7 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
     terminada: false,
     señal: { cortada: false },
     arrancadaEl: new Date(),
+    automatica: !!opts.automatica,
   };
   corridas.set(tenantId, corrida);
   const emitir = (e: EventoCorrida) => corrida.eventos.push(e);
@@ -464,6 +467,7 @@ async function correr(o: {
     const validadas = [...leidos.values()].filter(Boolean).length;
     await ArcaObrasSocialesLog.create({
       tenantId: tenantObjectId,
+      automatica: corrida.automatica,
       empresaId: primero?.empresaId,
       empresaRazonSocial: grupos.map((g) => g.razonSocial || g.empresaCuit).join(" + "),
       empresaCuit: primero?.empresaCuit,

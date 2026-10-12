@@ -159,6 +159,8 @@ export interface CorridaObrasSocialesLog {
   /** `false` si alcanzó con la sesión guardada y no hubo que volver a loguearse. */
   seLogueo: boolean;
   duracionMs: number;
+  /** La lanzó la validación automática, no una persona. */
+  automatica?: boolean;
   /** La corrida entera se cayó. */
   error?: string;
   detalle: Array<{ cuil: string; rnos?: string; error?: string }>;

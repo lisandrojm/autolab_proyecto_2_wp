@@ -825,6 +825,8 @@ class ProjectsAPI {
     total?: number;
     arrancadaEl?: string;
     eventos: Array<Record<string, any>>;
+    /** La lanzó la validación automática (al crear contratos o el barrido), no una persona. */
+    automatica?: boolean;
   }> {
     const { data } = await axios.get(`/contratos/obras-sociales/validar-servidor`, { headers: this.getHeaders() });
     // La corrida guarda en los contratos de a una persona: mientras hay novedades, el listado
@@ -836,6 +838,18 @@ class ProjectsAPI {
   /** Corta la corrida. Lo ya validado queda guardado: se aplica de a una persona. */
   async detenerValidacionServidor(): Promise<{ detenida: boolean }> {
     const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor/detener`, {}, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Cómo viene la validación automática de obras sociales (la línea de estado de Contratos). */
+  async estadoValidacionAutomaticaOS(): Promise<EstadoValidacionAutomaticaOS> {
+    const { data } = await axios.get(`/contratos/obras-sociales/automatica`, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Prende o apaga la validación automática de obras sociales del tenant. */
+  async setValidacionAutomaticaOS(activa: boolean): Promise<{ activa: boolean }> {
+    const { data } = await axios.put(`/contratos/obras-sociales/automatica`, { activa }, { headers: this.getHeaders() });
     return data;
   }
 
@@ -1102,4 +1116,17 @@ export interface EstadoPresentacionAutomatica {
     error?: string;
   };
   contratos: AltaPendienteArca[];
+}
+
+/** Estado de la validación automática de obras sociales (ver `barridoObrasSociales.ts` en el server). */
+export interface EstadoValidacionAutomaticaOS {
+  activa: boolean;
+  /** Apagada por entorno (`ARCA_VALIDACION_AUTOMATICA=0`): el server local. */
+  apagadaPorEntorno: boolean;
+  conCredenciales: boolean;
+  enCola: number;
+  esperandoReintento: number;
+  corriendo: boolean;
+  proximoBarrido: string;
+  ultimaCorrida: null | { fecha: string; total: number; validadas: number; guardadas: number; errores: number; faltaron: number; motivo: string };
 }

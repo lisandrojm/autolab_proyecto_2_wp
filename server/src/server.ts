@@ -30,6 +30,7 @@ import { initParitariasScheduler } from "./services/paritariasCronService.js";
 import { initCentrosCostoScheduler } from "./services/centrosCostoCronService.js";
 import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
 import { initPresentacionAutomaticaScheduler } from "./services/presentacionAutomaticaCronService.js";
+import { initBarridoObrasSocialesScheduler } from "./services/barridoObrasSocialesCronService.js";
 
 
 
@@ -451,6 +452,13 @@ connectDB()
         initPresentacionAutomaticaScheduler();
       } catch (error) {
         console.error("❌ Failed to initialize presentacion-automatica scheduler:", error);
+      }
+
+      // Barrido de obras sociales sin validar: la red de seguridad de la cola (cada 10 min, por tenant).
+      try {
+        initBarridoObrasSocialesScheduler();
+      } catch (error) {
+        console.error("❌ Failed to initialize barrido-obras-sociales scheduler:", error);
       }
     }
 

@@ -152,6 +152,10 @@ export interface ITenant extends Document {
              * PRESENTACIÓN AUTOMÁTICA de las altas de cada día a las 14 h (ver `presentacionAutomatica.ts`).
              * Apagada por defecto: presenta en ARCA sin que nadie apriete nada, así que se prende a mano.
              */
+            /** Validar la obra social sola al crear el contrato (cola + barrido). Prendida por defecto; se apaga en Configuración → ARCA → Conexión. */
+            validacionAutomaticaObrasSociales?: {
+                activa?: boolean;
+            };
             presentacionAutomatica?: {
                 activa?: boolean;
                 /** "YYYY-MM-DD" del último día que corrió: no se repite en el mismo día. */

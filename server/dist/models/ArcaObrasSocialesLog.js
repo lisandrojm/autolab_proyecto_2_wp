@@ -5,6 +5,7 @@ const schema = new Schema({
     empresaRazonSocial: { type: String },
     empresaCuit: { type: String },
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
+    automatica: { type: Boolean },
     total: { type: Number, default: 0 },
     validadas: { type: Number, default: 0 },
     guardadas: { type: Number, default: 0 },

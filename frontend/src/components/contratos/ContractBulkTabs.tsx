@@ -36,6 +36,7 @@ import { buildAltaRecord85, buildAltasMasivasTexto } from './afipTxt85';
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
 import { CorridaAltasArca, LoteParaPresentar } from './CorridaAltasArca';
 import { HistorialAltasArca } from './HistorialAltasArca';
+import { EstadoValidacionAutomaticaOS } from './EstadoValidacionAutomaticaOS';
 import { arcaCatalogoAPI, DIAS_CATALOGO_VIEJO } from '../../api/arcaCatalogo';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { CeldaObraSocial, EstadoObraSocial, VistaObraSocial } from './CeldaObraSocial';
@@ -2076,6 +2077,8 @@ export const ContractBulkAfipTab: React.FC<{
           {/* El circuito ARCA, en el orden en que se hace: validar → TXT. La asignación masiva de
               Empresa, Convenio y Categoría y los ⓘ de cada botón se sacaron: cargaban la pantalla. */}
           <div className="flex flex-wrap items-center justify-end gap-3">
+            {/* Lo que pasa solo, dicho al lado del botón manual: hasta acá la automática era invisible. */}
+            <EstadoValidacionAutomaticaOS />
 
             <button
               type="button"
@@ -2357,7 +2360,7 @@ export const ContractBulkAfipTab: React.FC<{
                   */}
                   <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>
                     <BotonOrden columna="usuario" {...ordenProps}>
-                      Usuario
+                      Colaborador
                     </BotonOrden>
                   </th>
                   {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla. */}
@@ -3722,7 +3725,7 @@ export const ContractBulkFirmaTab: React.FC<{
                   </th>
                   <th className={`sticky ${FIRMA_IZQ_USUARIO} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${FIRMA_FIN_DE_FIJAS}`}>
                     <BotonOrden columna="usuario" {...ordenProps}>
-                      Usuario
+                      Colaborador
                     </BotonOrden>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">

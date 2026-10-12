@@ -26,6 +26,8 @@ export interface IArcaObrasSocialesLog extends Document {
   empresaCuit?: string;
   /** Quién la disparó. */
   usuarioId?: Types.ObjectId;
+  /** La lanzó la validación automática (cola al crear el contrato, o barrido), no una persona. */
+  automatica?: boolean;
   total: number;
   /** Cuántas personas ARCA contestó con un código de obra social. */
   validadas: number;
@@ -83,6 +85,7 @@ const schema = new Schema<IArcaObrasSocialesLog>(
     empresaRazonSocial: { type: String },
     empresaCuit: { type: String },
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
+    automatica: { type: Boolean },
     total: { type: Number, default: 0 },
     validadas: { type: Number, default: 0 },
     guardadas: { type: Number, default: 0 },
