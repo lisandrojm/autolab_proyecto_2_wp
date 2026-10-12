@@ -60,12 +60,11 @@ export interface ContractOverviewRow {
   projectName: string;
   nombreRolFrame: string;
   contractsInProject: number;
-  /** Para «Renovar»: ya hay otro contrato posterior en el proyecto. */
-  tienePosterior?: boolean;
-  /** El contrato todavía no empezó. */
-  contratoFuturo?: boolean;
-  /** Hay una solicitud de renovación pendiente de este contrato. */
-  renovacionEnCurso?: boolean;
+  /**
+   * Qué decir sobre su renovación: «renovar» (viejo, vencido, sin nada después), «en_proceso» (la
+   * renovación recorre el circuito), «renovado» (terminó y no venció) o nada. Ver `estadoDeRenovacion`.
+   */
+  renovacion?: "renovar" | "en_proceso" | "renovado" | null;
   contractIndex: number;
   nombre_contrato: string;
   nombre_estado_empleado: string;

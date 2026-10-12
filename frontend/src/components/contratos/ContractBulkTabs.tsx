@@ -662,11 +662,17 @@ const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: Afip
  * Solicitudes. Antes el botón salía siempre y se podía renovar dos veces.
  */
 export const EstadoRenovacion: React.FC<{ record: ContractOverviewRow; grande?: boolean }> = ({ record, grande }) => {
-  const tag = (texto: string, title: string) => <span title={title} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 whitespace-nowrap">{texto}</span>;
-  if (record.tienePosterior) return tag("Renovado", "La persona ya tiene otro contrato posterior en este proyecto.");
-  if (record.contratoFuturo) return tag("Empieza " + formatDate(record.fecha_alta_contrato), "Este contrato todavía no empezó: no hay nada que renovar.");
-  if (record.renovacionEnCurso) return tag("Renovación pedida", "Ya hay una solicitud de renovación pendiente de este contrato (ver Solicitudes).");
-  return <BotonRenovar record={record} grande={grande} />;
+  const tag = (texto: string, title: string, clase: string) => <span title={title} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold whitespace-nowrap ${clase}`}>{texto}</span>;
+  switch (record.renovacion) {
+    case "renovar":
+      return <BotonRenovar record={record} grande={grande} />;
+    case "en_proceso":
+      return tag("En proceso", "La renovación ya está en marcha (por Solicitudes o «Agregar miembro») y recorre el circuito de contratación.", "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300");
+    case "renovado":
+      return tag("Renovado", "La renovación terminó el circuito y todavía no venció. Cuando venza, se edita; no se renueva.", "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300");
+    default:
+      return null;
+  }
 };
 
 export const BotonRenovar: React.FC<{ record: ContractOverviewRow; grande?: boolean }> = ({ record, grande = false }) => {
@@ -2556,7 +2562,7 @@ export const ContractBulkAfipTab: React.FC<{
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5">
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                              {!vigente && <EstadoRenovacion record={r} />}
+                              <EstadoRenovacion record={r} />
                             </div>
                             <div className="flex flex-col gap-0.5 text-xs">
                               <span>

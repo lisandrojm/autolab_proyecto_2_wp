@@ -54,6 +54,7 @@ import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "..
 import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { momentoDeCarga } from "../utils/archivoDeContrato.js";
 import { claveEstado } from "../utils/estadoClave.js";
+import { estadoDeRenovacion, procesoTerminadoSegunEstados } from "../utils/estadoDeRenovacion.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
 
 const router = Router();
@@ -483,6 +484,8 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
 
     /** Campos del contrato que rige que muestran las columnas (además de los que la agregación ya trae). */
     const CAMPOS_CONTRATO_TABLA = [
+      "solicitudId",
+      "origen",
       "fecha_carga",
       "tipo_contrato_id",
       "nombre_estado_empleado",
@@ -776,7 +779,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       rige de cada persona del proyecto y los totales de la página iban en tres `await` en fila, y
       cada uno es una ida a Atlas: Gestionar Equipo pagaba la suma. Ahora se piden juntos.
     */
-    const [pendientes, contratoQueRige, rigeEnElPicker, filasTotales] = await Promise.all([
+    const [pendientes, contratoQueRige, rigeEnElPicker, filasTotales, estadosFlujo] = await Promise.all([
       idsPagina.length > 0
         ? (User.find({
             "metadata.isSolicitud": true,
@@ -796,7 +799,10 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
             { $group: { _id: "$userId", jornadas: { $sum: { $ifNull: ["$contracts.cantidad_jornadas_laborales", 0] } }, contratos: { $sum: 1 } } },
           ]) as Promise<any[]>)
         : Promise.resolve([] as any[]),
+      // Para decir si el contrato que rige está «En proceso» o «Renovado» (ver `estadoDeRenovacion`).
+      teamTable ? (Info.find({ tenantId: req.tenantObjectId, type: "estado-empleado" }).select("name data.ordenDependencia").lean() as Promise<any[]>) : Promise.resolve([] as any[]),
     ]);
+    const procesoTerminado = procesoTerminadoSegunEstados(estadosFlujo, claveEstado);
     const solicitudesPorUsuario = new Map<string, any[]>();
     if (idsPagina.length > 0) {
       pendientes.forEach((s: any) => {
@@ -858,7 +864,26 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           ...u,
           // Sólo en modo tabla. `lastContractIndex` es la posición en el array del UserProject: es lo
           // que esperan editar, descargar y subir documentación.
-          ...(teamTable ? { contractCount: rige?._total ?? 0, lastContract: rige, lastContractIndex: rige?._indice ?? -1 } : {}),
+          ...(teamTable
+            ? {
+                contractCount: rige?._total ?? 0,
+                // El que rige es el último: para un contrato viejo no hay posterior; para uno del sistema,
+                // es renovación si la persona tiene más de un contrato en el proyecto.
+                lastContract: rige
+                  ? {
+                      ...rige,
+                      renovacion: estadoDeRenovacion({
+                        contrato: { ...rige, delSistema: !!(rige.solicitudId || rige.origen === "agregar_miembro") },
+                        contratos: (rige._total ?? 0) > 1 ? [{ fecha_alta_contrato: "1900-01-01", fecha_baja_contrato: "1900-01-01", delSistema: false }, { ...rige, delSistema: !!(rige.solicitudId || rige.origen === "agregar_miembro") }] : [{ ...rige, delSistema: !!(rige.solicitudId || rige.origen === "agregar_miembro") }],
+                        hoy: hoyArgentina(),
+                        procesoTerminado,
+                        renovacionPedida: (solicitudesPorUsuario.get(String(u._id)) || []).some((s: any) => s.esRenovacion),
+                      }),
+                    }
+                  : null,
+                lastContractIndex: rige?._indice ?? -1,
+              }
+            : {}),
           // Sólo en modo selector: las dos fechas del contrato que rige hoy, o null si no tiene ninguno.
           ...(picker ? { contratoQueRige: rigeEnElPicker?.get(String(u._id)) ?? null } : {}),
           // `jornadasTotales`/`contratosTotales` sólo existen en el modo tabla; quien no los recibe
@@ -1037,10 +1062,12 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const soloRenovables = req.query.renovables === "true";
     const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
     if (necesitaNombreContrato) camposContrato.n = "$$x.nombre_contrato";
-    if (necesitaEstado) camposContrato.e = "$$x.nombre_estado_empleado";
+    // El estado viaja siempre: la regla de renovación lo necesita (ver `estadoDeRenovacion`).
+    camposContrato.e = "$$x.nombre_estado_empleado";
     if (necesitaReemplazo) camposContrato.m = "$$x.reemplazo";
     if (necesitaEmpresa) camposContrato.q = "$$x.empresaContratoId";
-    if (soloDelSistema) camposContrato.o = { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] };
+    // Y si vino por Solicitudes o por «Agregar miembro», también siempre: distingue un contrato viejo de una renovación.
+    camposContrato.o = { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] };
 
     /*
       LAS BANDEJAS FILTRAN EN MONGO, NO EN NODE.
@@ -1082,7 +1109,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       projectId: d.p,
       userId: d.u,
       nombre_rol_frame: d.r,
-      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q, delSistema: c.o })),
+      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q, delSistema: !!c.o })),
     }));
     const msFase1 = Date.now() - tFase1;
 
@@ -1174,13 +1201,13 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const rows: any[] = [];
 
     /*
-      RENOVAR SÓLO LO QUE DE VERDAD ESTÁ SIN RENOVAR (pedido del 11/10/2026). El botón salía en todo
-      contrato no vigente, también cuando la persona ya tenía otro contrato posterior en el proyecto
-      (renovado desde Gestionar Equipo), cuando el contrato que rige todavía no empezó, o cuando ya
-      había una solicitud de renovación pendiente: se podía renovar dos veces. Las tres cosas viajan
-      como flags por fila y la pantalla decide con eso.
+      QUÉ DICE CADA CONTRATO SOBRE SU RENOVACIÓN (regla del 12/10/2026, ver `utils/estadoDeRenovacion`):
+      «Renovar» sólo en contratos viejos vencidos sin nada después; «En proceso» / «Renovado» para lo que
+      vino por Solicitudes o «Agregar miembro», según cómo vaya el circuito. Antes el botón salía en
+      todo contrato no vigente y se podía renovar dos veces.
     */
     const hoyISO = hoyArgentina();
+    const procesoTerminado = procesoTerminadoSegunEstados((await Info.find({ tenantId: req.tenantObjectId, type: "estado-empleado" }).select("name data.ordenDependencia").lean()) as any[], claveEstado);
     const renovacionesPedidas = new Set<string>(
       (
         (await User.find({ tenantId: req.tenantObjectId, "metadata.isSolicitud": true, "metadata.esRenovacion": true, "metadata.solicitudStatus": { $in: ["pendiente", null] }, "metadata.renovacionDe.userProjectId": { $exists: true } })
@@ -1197,6 +1224,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       const contratos: any[] = m.contracts || [];
       const contratoActivo: any = getContratoActivo(contratos);
       if (!contratoActivo) continue;
+      const renovacionDe = (contrato: any) =>
+        estadoDeRenovacion({ contrato, contratos, hoy: hoyISO, procesoTerminado, renovacionPedida: renovacionesPedidas.has(`${m._id}::${fechaISO(contrato.fecha_baja_contrato)}`) });
 
       // Lo que es de la PERSONA descarta la asignación entera; lo del CONTRATO, sólo ese contrato.
       if (metadataActivo !== undefined && !!user.metadata?.activo !== metadataActivo) continue;
@@ -1232,11 +1261,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
 
       if (empresaContratoId && String(contrato.empresaContratoId ?? "") !== empresaContratoId) continue;
       if (soloDelSistema && !contrato.delSistema) continue;
-      if (soloRenovables) {
-        const alta = fechaISO(contrato.fecha_alta_contrato);
-        const fin = fechaISO(contrato.fecha_baja_contrato) || alta;
-        if (alta > hoyISO || contratos.some((o) => o !== contrato && fechaISO(o.fecha_alta_contrato) > fin) || renovacionesPedidas.has(`${m._id}::${fechaISO(contrato.fecha_baja_contrato)}`)) continue;
-      }
+      if (soloRenovables && renovacionDe(contrato) !== "renovar") continue;
 
       if (searchRegex) {
         const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim();
@@ -1264,12 +1289,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         nombreRolFrame: m.nombre_rol_frame || "",
         contractsInProject: contratos.length,
         contractIndex: contratos.indexOf(contrato),
-        // Para «Renovar»: ya hay otro contrato que empieza después de que termina éste.
-        tienePosterior: contratos.some((o) => o !== contrato && fechaISO(o.fecha_alta_contrato) > (fechaISO(contrato.fecha_baja_contrato) || fechaISO(contrato.fecha_alta_contrato))),
-        // El contrato todavía no empezó: no vigente, pero no hay nada que renovar.
-        contratoFuturo: fechaISO(contrato.fecha_alta_contrato) > hoyISO,
-        // Ya se pidió la renovación de ESTE contrato por Solicitudes y está pendiente.
-        renovacionEnCurso: renovacionesPedidas.has(`${m._id}::${fechaISO(contrato.fecha_baja_contrato)}`),
+        renovacion: renovacionDe(contrato),
         // Los campos del contrato se completan en la FASE 2 (solo para la página devuelta).
         contratoEmpresas: empresasPorProyecto.get(String(project._id))?.contratoEmpresas || [],
         releaseEmpresas: empresasPorProyecto.get(String(project._id))?.releaseEmpresas || [],

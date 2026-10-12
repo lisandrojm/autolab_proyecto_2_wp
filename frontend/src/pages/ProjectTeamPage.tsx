@@ -34,8 +34,8 @@ import { numeroALetras } from '../utils/numeroALetras';
 import { avisoIndeterminado, erroresDeJornadas, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
-import { estadoImpositivoDelContrato, formatDate as formatearFecha } from '../components/team/ContractCard';
-import { esContratoVigente, fechaISO, getContratoActivo, hoyISO } from '../utils/contratoVigencia';
+import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
+import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaActivaParaFiltrar } from '../api/contratosFrame';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
@@ -2890,17 +2890,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             <div className="flex flex-col gap-1">
               {(() => {
                 const vigente = esContratoVigente(activeContract);
-                // Sin renovar DOS VECES: un contrato que todavía no empezó es la renovación, y una
-                // solicitud de renovación pendiente ya está en camino (misma regla que en Contratos).
-                const futuro = !vigente && fechaISO(activeContract?.fecha_alta_contrato) > hoyISO();
-                const renovacionPedida = !vigente && ((user as any).solicitudesPendientes || []).some((s: any) => s?.esRenovacion);
-                const indice = vigente || futuro || renovacionPedida ? null : indiceDelContratoQueRige(user, projectId);
-                const motivoSinBoton = futuro ? `Empieza ${formatearFecha(activeContract?.fecha_alta_contrato)}` : renovacionPedida ? 'Renovación pedida' : '';
+                // Qué decir sobre la renovación lo calcula el server (`estadoDeRenovacion`): «Renovar»
+                // sólo en contratos viejos vencidos; «En proceso» / «Renovado» para los que vinieron
+                // por Solicitudes o «Agregar miembro». Misma regla que en Contratos.
+                const renovacion = (activeContract as any)?.renovacion ?? null;
+                const indice = renovacion === 'renovar' ? indiceDelContratoQueRige(user, projectId) : null;
                 return (
                   <div className="flex items-center gap-1.5">
-                    {!vigente && motivoSinBoton && (
-                      <span title={futuro ? 'Este contrato todavía no empezó: no hay nada que renovar.' : 'Ya hay una solicitud de renovación pendiente (ver Solicitudes).'} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 whitespace-nowrap">
-                        {motivoSinBoton}
+                    {renovacion === 'en_proceso' && (
+                      <span title="La renovación ya está en marcha y recorre el circuito de contratación." className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 whitespace-nowrap">
+                        En proceso
+                      </span>
+                    )}
+                    {renovacion === 'renovado' && (
+                      <span title="La renovación terminó el circuito y todavía no venció. Cuando venza, se edita; no se renueva." className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                        Renovado
                       </span>
                     )}
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>

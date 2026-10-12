@@ -41,6 +41,8 @@ export interface TenantRef {
 export interface Contract {
   fecha_alta_contrato: string;
   fecha_baja_contrato: string;
+  /** Sólo en `lastContract` de la tabla de equipo: qué decir sobre su renovación (ver `estadoDeRenovacion` en el server). */
+  renovacion?: "renovar" | "en_proceso" | "renovado" | null;
   nombre_proyecto: string;
   nombre_sede: string;
   nombre_rol_frame: string;
