@@ -4,6 +4,9 @@ import UserProject from "../../models/UserProject.js";
 import { Tenant } from "../../models/Tenant.js";
 import { yaConstatadaEnArca } from "../obrasSocialesLoteService.js";
 import { quienTiene, CandadoArcaOcupado } from "./candadoArca.js";
+import { destrabarCorridaColgada } from "./corridaServidor.js";
+/** Una corrida sin novedades de ARCA durante este tiempo se considera colgada y se destraba sola. */
+export const INACTIVIDAD_COLGADA_MS = 20 * 60_000;
 import { credencialesDe } from "./navegador.js";
 /**
  * EL BARRIDO DE OBRAS SOCIALES SIN VALIDAR: la red de seguridad de la cola.
@@ -51,7 +54,8 @@ const hace = (dias) => new Date(Date.now() - dias * 86_400_000).toISOString().sl
  * los `contracts` enteros (ver memoria «Latencia = bytes desde Atlas»).
  */
 export async function contratosSinValidar(tenantObjectId, diasAtras = DIAS_ATRAS) {
-    const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id").lean();
+    const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id name").lean();
+    const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), String(p.name || "")]));
     if (proyectos.length === 0)
         return [];
     const desde = hace(diasAtras);
@@ -68,6 +72,7 @@ export async function contratosSinValidar(tenantObjectId, diasAtras = DIAS_ATRAS
         {
             $project: {
                 userId: 1,
+                projectId: 1,
                 c: {
                     $map: {
                         input: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond } },
@@ -99,7 +104,7 @@ export async function contratosSinValidar(tenantObjectId, diasAtras = DIAS_ATRAS
         for (const c of f.c || []) {
             if (yaConstatadaEnArca(c))
                 continue;
-            out.push({ cuil, empresaId: String(c.empresaContratoId), userId: String(u._id), nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim(), fechaCarga: String(c.fecha_carga || "").slice(0, 10) });
+            out.push({ cuil, empresaId: String(c.empresaContratoId), userId: String(u._id), nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim(), fechaCarga: String(c.fecha_carga || "").slice(0, 10), projectId: String(f.projectId || ""), proyecto: nombreProyecto.get(String(f.projectId || "")) || "" });
         }
     }
     return out;
@@ -116,11 +121,14 @@ const minutos = (valor, porDefecto) => {
 export const reintentoMs = () => minutos(process.env.ARCA_BARRIDO_OS_REINTENTO_MIN, 60);
 /** Por tenant: cuándo se intentó cada CUIL por última vez (en memoria: con un reinicio se vuelve a intentar, que es lo deseado). */
 const intentos = new Map();
-/** Una pasada del barrido para UN tenant. Nunca tira. */
-export async function barrerTenant(tenantId, tenantObjectId, log = () => { }) {
+/** Una pasada del barrido para UN tenant. Nunca tira. `ignorarReintentos` es «Validar ahora»: manda también a quien espera reintento. */
+export async function barrerTenant(tenantId, tenantObjectId, log = () => { }, opts = {}) {
     try {
         if (!(await validacionAutomaticaActivaEn(tenantObjectId)))
             return { resultado: "apagada", total: 0, esperando: 0 };
+        // El vigilante: una corrida colgada se destraba acá, antes de rendirse por «ocupado».
+        if (destrabarCorridaColgada(tenantId, INACTIVIDAD_COLGADA_MS))
+            log("barrido: destrabé una corrida colgada");
         if (quienTiene(tenantId))
             return { resultado: "ocupado", total: 0, esperando: 0 };
         const sinValidar = await contratosSinValidar(tenantObjectId);
@@ -130,7 +138,7 @@ export async function barrerTenant(tenantId, tenantObjectId, log = () => { }) {
             return { resultado: "sin_credenciales", total: sinValidar.length, esperando: 0 };
         const porCuil = intentos.get(tenantId) || new Map();
         intentos.set(tenantId, porCuil);
-        const plan = planBarrido(sinValidar, porCuil, Date.now(), reintentoMs());
+        const plan = planBarrido(sinValidar, porCuil, Date.now(), opts.ignorarReintentos ? 0 : reintentoMs());
         if (plan.grupos.length === 0)
             return { resultado: "nada", total: 0, esperando: plan.esperando };
         const { arrancarCorrida } = await import("./corridaServidor.js");
@@ -155,6 +163,11 @@ export async function barrerTenant(tenantId, tenantObjectId, log = () => { }) {
         return { resultado: "fallo", total: 0, esperando: 0 };
     }
 }
+/** Para la pantalla: si ese CUIL está esperando reintento (se intentó hace poco y falló). */
+export const esperaReintento = (tenantId, cuil) => {
+    const t = intentos.get(tenantId)?.get(cuil);
+    return t !== undefined && Date.now() - t < reintentoMs();
+};
 /** Para la pantalla: cuántos CUILs del tenant están esperando reintento. */
 export const esperandoReintento = (tenantId) => {
     const porCuil = intentos.get(tenantId);

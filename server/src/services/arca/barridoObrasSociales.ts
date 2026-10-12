@@ -5,6 +5,10 @@ import UserProject from "../../models/UserProject.js";
 import { Tenant } from "../../models/Tenant.js";
 import { yaConstatadaEnArca } from "../obrasSocialesLoteService.js";
 import { quienTiene, CandadoArcaOcupado } from "./candadoArca.js";
+import { destrabarCorridaColgada } from "./corridaServidor.js";
+
+/** Una corrida sin novedades de ARCA durante este tiempo se considera colgada y se destraba sola. */
+export const INACTIVIDAD_COLGADA_MS = 20 * 60_000;
 import { credencialesDe } from "./navegador.js";
 
 /**
@@ -66,8 +70,9 @@ const hace = (dias: number): string => new Date(Date.now() - dias * 86_400_000).
  * Los contratos del tenant que la automática todavía debe validar. Proyectado en la base: no viajan
  * los `contracts` enteros (ver memoria «Latencia = bytes desde Atlas»).
  */
-export async function contratosSinValidar(tenantObjectId: Types.ObjectId, diasAtras: number = DIAS_ATRAS): Promise<Array<ContratoSinValidar & { userId: string; nombre: string; fechaCarga: string }>> {
-  const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id").lean();
+export async function contratosSinValidar(tenantObjectId: Types.ObjectId, diasAtras: number = DIAS_ATRAS): Promise<Array<ContratoSinValidar & { userId: string; nombre: string; fechaCarga: string; projectId: string; proyecto: string }>> {
+  const proyectos = await Project.find({ tenantId: tenantObjectId }).select("_id name").lean();
+  const nombreProyecto = new Map(proyectos.map((p: any) => [String(p._id), String(p.name || "")]));
   if (proyectos.length === 0) return [];
   const desde = hace(diasAtras);
   const cond = {
@@ -83,6 +88,7 @@ export async function contratosSinValidar(tenantObjectId: Types.ObjectId, diasAt
     {
       $project: {
         userId: 1,
+        projectId: 1,
         c: {
           $map: {
             input: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond } },
@@ -104,14 +110,14 @@ export async function contratosSinValidar(tenantObjectId: Types.ObjectId, diasAt
   if (filas.length === 0) return [];
   const usuarios: any[] = await User.find({ _id: { $in: filas.map((f) => f.userId) }, tenantId: tenantObjectId }).select("firstName lastName metadata.cuit").lean();
   const porId = new Map(usuarios.map((u) => [String(u._id), u]));
-  const out: Array<ContratoSinValidar & { userId: string; nombre: string; fechaCarga: string }> = [];
+  const out: Array<ContratoSinValidar & { userId: string; nombre: string; fechaCarga: string; projectId: string; proyecto: string }> = [];
   for (const f of filas) {
     const u = porId.get(String(f.userId));
     const cuil = String(u?.metadata?.cuit || "").replace(/\D/g, "");
     if (!u || cuil.length !== 11) continue;
     for (const c of f.c || []) {
       if (yaConstatadaEnArca(c)) continue;
-      out.push({ cuil, empresaId: String(c.empresaContratoId), userId: String(u._id), nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim(), fechaCarga: String(c.fecha_carga || "").slice(0, 10) });
+      out.push({ cuil, empresaId: String(c.empresaContratoId), userId: String(u._id), nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim(), fechaCarga: String(c.fecha_carga || "").slice(0, 10), projectId: String(f.projectId || ""), proyecto: nombreProyecto.get(String(f.projectId || "")) || "" });
     }
   }
   return out;
@@ -134,17 +140,19 @@ const intentos = new Map<string, Map<string, number>>();
 
 export type ResultadoBarrido = "apagada" | "sin_credenciales" | "ocupado" | "nada" | "arrancada" | "fallo";
 
-/** Una pasada del barrido para UN tenant. Nunca tira. */
-export async function barrerTenant(tenantId: string, tenantObjectId: Types.ObjectId, log: (l: string) => void = () => {}): Promise<{ resultado: ResultadoBarrido; total: number; esperando: number }> {
+/** Una pasada del barrido para UN tenant. Nunca tira. `ignorarReintentos` es «Validar ahora»: manda también a quien espera reintento. */
+export async function barrerTenant(tenantId: string, tenantObjectId: Types.ObjectId, log: (l: string) => void = () => {}, opts: { ignorarReintentos?: boolean } = {}): Promise<{ resultado: ResultadoBarrido; total: number; esperando: number }> {
   try {
     if (!(await validacionAutomaticaActivaEn(tenantObjectId))) return { resultado: "apagada", total: 0, esperando: 0 };
+    // El vigilante: una corrida colgada se destraba acá, antes de rendirse por «ocupado».
+    if (destrabarCorridaColgada(tenantId, INACTIVIDAD_COLGADA_MS)) log("barrido: destrabé una corrida colgada");
     if (quienTiene(tenantId)) return { resultado: "ocupado", total: 0, esperando: 0 };
     const sinValidar = await contratosSinValidar(tenantObjectId);
     if (sinValidar.length === 0) return { resultado: "nada", total: 0, esperando: 0 };
     if (!(await credencialesDe(tenantId))) return { resultado: "sin_credenciales", total: sinValidar.length, esperando: 0 };
     const porCuil = intentos.get(tenantId) || new Map<string, number>();
     intentos.set(tenantId, porCuil);
-    const plan = planBarrido(sinValidar, porCuil, Date.now(), reintentoMs());
+    const plan = planBarrido(sinValidar, porCuil, Date.now(), opts.ignorarReintentos ? 0 : reintentoMs());
     if (plan.grupos.length === 0) return { resultado: "nada", total: 0, esperando: plan.esperando };
     const { arrancarCorrida } = await import("./corridaServidor.js");
     const ahora = Date.now();
@@ -163,6 +171,12 @@ export async function barrerTenant(tenantId: string, tenantObjectId: Types.Objec
     return { resultado: "fallo", total: 0, esperando: 0 };
   }
 }
+
+/** Para la pantalla: si ese CUIL está esperando reintento (se intentó hace poco y falló). */
+export const esperaReintento = (tenantId: string, cuil: string): boolean => {
+  const t = intentos.get(tenantId)?.get(cuil);
+  return t !== undefined && Date.now() - t < reintentoMs();
+};
 
 /** Para la pantalla: cuántos CUILs del tenant están esperando reintento. */
 export const esperandoReintento = (tenantId: string): number => {

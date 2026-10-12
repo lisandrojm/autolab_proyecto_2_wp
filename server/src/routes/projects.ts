@@ -20,7 +20,7 @@ import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
 import { CentroCosto } from "../models/CentroCosto.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
-import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
+import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { candidatosDeAlta } from "../services/arca/presentacionAutomatica.js";
@@ -29,7 +29,7 @@ import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
 import { enCola, encolarSiCorresponde, validacionAutomaticaActiva } from "../services/arca/colaObrasSociales.js";
-import { esperandoReintento, validacionAutomaticaActivaEn } from "../services/arca/barridoObrasSociales.js";
+import { INACTIVIDAD_COLGADA_MS, barrerTenant, contratosSinValidar, esperaReintento, esperandoReintento, validacionAutomaticaActivaEn } from "../services/arca/barridoObrasSociales.js";
 import { proximoBarridoDe } from "../services/barridoObrasSocialesCronService.js";
 import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
 import { credencialesDe } from "../services/arca/navegador.js";
@@ -2998,26 +2998,65 @@ router.get("/contratos/obras-sociales/validar-servidor", requireTenant, authenti
 router.get("/contratos/obras-sociales/automatica", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const tenantId = String(req.tenantObjectId);
-    const [activa, cred, ultima] = await Promise.all([
+    const [activa, cred, ultimas, sinValidar] = await Promise.all([
       validacionAutomaticaActivaEn(req.tenantObjectId),
       credencialesDe(tenantId).catch(() => null),
-      ArcaObrasSocialesLog.findOne({ tenantId: req.tenantObjectId, automatica: true }).sort({ createdAt: -1 }).select("createdAt total validadas guardadas errores faltaron motivo error").lean(),
+      ArcaObrasSocialesLog.find({ tenantId: req.tenantObjectId, automatica: true }).sort({ createdAt: -1 }).limit(10).select("createdAt empresaRazonSocial total validadas guardadas sinDeclarar errores faltaron motivo error detalle").lean(),
+      contratosSinValidar(req.tenantObjectId as Types.ObjectId),
     ]);
     const c = corridaDe(tenantId);
+    const encolados = new Set(enCola(tenantId).flatMap((g) => g.cuils));
+    // El estado de cada persona en la corrida en curso: por sus eventos.
+    const enCorrida = new Map<string, string>();
+    if (c && !c.terminada) {
+      for (const e of c.eventos as any[]) {
+        if (e.tipo === "consultando") enCorrida.set(e.cuil, "consultando");
+        if (e.tipo === "resultado") enCorrida.set(e.cuil, `ARCA contestó ${e.rnos || "sin obra social"}; guardando…`);
+        if (e.tipo === "error") enCorrida.set(e.cuil, `error: ${e.motivo || "sin detalle"}`);
+      }
+    }
+    const empresas = await Company.find({ _id: { $in: [...new Set(sinValidar.map((x) => x.empresaId))] } }).select("razonSocial").lean();
+    const nombreEmpresa = new Map(empresas.map((e: any) => [String(e._id), String(e.razonSocial || "")]));
+    const pendientes = sinValidar.map((p) => {
+      const d = enCorrida.get(p.cuil);
+      const estado = d ? "en_corrida" : encolados.has(p.cuil) ? "en_cola" : esperaReintento(tenantId, p.cuil) ? "esperando_reintento" : "pendiente";
+      return { cuil: p.cuil, nombre: p.nombre, empresaId: p.empresaId, empresa: nombreEmpresa.get(p.empresaId) || p.empresaId, proyecto: p.proyecto, fechaCarga: p.fechaCarga, estado, detalle: d === "consultando" ? undefined : d };
+    });
+    const hechas = c ? (c.eventos as any[]).filter((e) => e.tipo === "resultado" || e.tipo === "error").length : 0;
+    const u = (ultimas as any[])[0];
     res.json({
       activa: activa && validacionAutomaticaActiva(),
       apagadaPorEntorno: !validacionAutomaticaActiva(),
       conCredenciales: !!cred,
-      enCola: enCola(tenantId).reduce((n, g) => n + g.cuils.length, 0),
+      enCola: encolados.size,
       esperandoReintento: esperandoReintento(tenantId),
       corriendo: !!c && !c.terminada && !!c.automatica,
       proximoBarrido: proximoBarridoDe(tenantId).toISOString(),
-      ultimaCorrida: ultima ? { fecha: (ultima as any).createdAt, total: (ultima as any).total, validadas: (ultima as any).validadas, guardadas: (ultima as any).guardadas, errores: (ultima as any).errores, faltaron: (ultima as any).faltaron, motivo: (ultima as any).error || (ultima as any).motivo || "" } : null,
+      ultimaCorrida: u ? { fecha: u.createdAt, total: u.total, validadas: u.validadas, guardadas: u.guardadas, errores: u.errores, faltaron: u.faltaron, motivo: u.error || u.motivo || "" } : null,
+      corrida: c ? { corriendo: !c.terminada, automatica: !!c.automatica, arrancadaEl: c.arrancadaEl, ultimoEventoEl: c.ultimoEventoEl, total: c.total, hechas, colgada: corridaColgada(tenantId, INACTIVIDAD_COLGADA_MS) } : null,
+      pendientes,
+      ultimas: (ultimas as any[]).map((l) => ({ _id: String(l._id), fecha: l.createdAt, empresaRazonSocial: l.empresaRazonSocial || "", total: l.total, validadas: l.validadas, guardadas: l.guardadas, sinDeclarar: l.sinDeclarar, errores: l.errores, faltaron: l.faltaron, motivo: l.motivo || "", error: l.error || "", detalle: l.detalle || [] })),
     });
   } catch (error: any) {
     console.error("Estado validación automática OS error:", error);
     res.status(500).json({ error: String(error?.message || "Internal server error") });
   }
+});
+
+/** POST /contratos/obras-sociales/automatica/validar-ahora — manda YA a todos los pendientes, sin esperar la cola ni el reintento. */
+router.post("/contratos/obras-sociales/automatica/validar-ahora", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const r = await barrerTenant(String(req.tenantObjectId), req.tenantObjectId as Types.ObjectId, (l) => console.log(`[barrido-obras-sociales] ${req.tenantObjectId}: ${l}`), { ignorarReintentos: true });
+    res.json(r);
+  } catch (error: any) {
+    res.status(400).json({ error: String(error?.message || error) });
+  }
+});
+
+/** POST /contratos/obras-sociales/automatica/destrabar — da por terminada una corrida colgada y libera ARCA. */
+router.post("/contratos/obras-sociales/automatica/destrabar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  // A mano alcanza con 5 minutos sin novedades: quien aprieta ya vio que no avanza.
+  res.json({ destrabada: destrabarCorridaColgada(String(req.tenantObjectId), 5 * 60_000) });
 });
 
 /** PUT /contratos/obras-sociales/automatica — prende o apaga la validación automática del tenant. */

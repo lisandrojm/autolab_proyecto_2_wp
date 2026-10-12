@@ -26,6 +26,7 @@ import { ClientProjectsPage } from "./pages/ClientProjectsPage";
 import { ContractsPage } from "./pages/ContractsPage";
 import { RenovacionesPage } from "./pages/RenovacionesPage";
 import { PresentacionesArcaPage } from "./pages/PresentacionesArcaPage";
+import { ValidacionObrasSocialesPage } from "./pages/ValidacionObrasSocialesPage";
 import { ArcaAltasAutomaticasConfigPage } from "./pages/ArcaAltasAutomaticasConfigPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
@@ -348,6 +349,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <PresentacionesArcaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/validacion-obras-sociales"
+                element={
+                  <ProtectedRoute>
+                    <ValidacionObrasSocialesPage />
                   </ProtectedRoute>
                 }
               />

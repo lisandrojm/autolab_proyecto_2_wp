@@ -78,9 +78,13 @@ export async function arrancarCorrida(opts) {
             señal: { cortada: false },
             arrancadaEl: new Date(),
             automatica: !!opts.automatica,
+            ultimoEventoEl: new Date(),
         };
         corridas.set(tenantId, corrida);
-        const emitir = (e) => corrida.eventos.push(e);
+        const emitir = (e) => {
+            corrida.eventos.push(e);
+            corrida.ultimoEventoEl = new Date();
+        };
         // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya. El candado lo suelta
         // `correr` al terminar.
         void correr({ corrida, emitir, tenantId, tenantObjectId, usuarioId, cred, grupos: conCuit, total: todos.size });
@@ -375,8 +379,10 @@ async function correr(o) {
         if (!(sana && dejarSesionTibia(tenantId, s)))
             await s?.browser.close().catch(() => { });
         // Recién con el navegador cerrado —o guardado tibio, que nadie más puede tomar sin el candado—
-        // se libera la sesión de ARCA para otra corrida.
-        soltarCandado(tenantId, "obras_sociales");
+        // se libera la sesión de ARCA para otra corrida. Salvo que ESTA corrida ya haya sido destrabada
+        // y otra tomado su lugar: ahí el candado es de la nueva y no se toca (ver `destrabarCorridaColgada`).
+        if (corridas.get(tenantId) === corrida)
+            soltarCandado(tenantId, "obras_sociales");
         tiempos.totalMs = Date.now() - inicio;
         tiempos.resumen = resumirTiempos(tiempos);
         // El log se escribe al final y de una sola vez, no evento por evento: una corrida son minutos
@@ -537,3 +543,29 @@ function detalleDeLoAplicado(r) {
         l.push(`${r.noRegistrada.length} con una obra social que la empleadora no tiene registrada ante ARCA: el organismo rechazaría el alta.`);
     return l;
 }
+/**
+ * UNA CORRIDA COLGADA BLOQUEA TODO: el candado no tiene vencimiento, así que si Playwright se quedó
+ * esperando a ARCA para siempre, ni la cola ni el barrido ni el botón vuelven a arrancar nunca, y la
+ * pantalla dice «validando ahora» eternamente. Esto la da por terminada si lleva más de
+ * `inactividadMs` sin emitir un evento, y suelta el candado. El proceso viejo, si algún día despierta,
+ * no toca el candado de la que vino después (ver el `finally` de `correr`).
+ */
+export function destrabarCorridaColgada(tenantId, inactividadMs) {
+    const c = corridas.get(tenantId);
+    if (!c || c.terminada)
+        return false;
+    if (Date.now() - c.ultimoEventoEl.getTime() < inactividadMs)
+        return false;
+    c.señal.cortada = true;
+    c.terminada = true;
+    c.eventos.push({ tipo: "fallo", mensaje: `Se destrabó: ${Math.round(inactividadMs / 60_000)} min sin novedades de ARCA.` });
+    c.ultimoEventoEl = new Date();
+    soltarCandado(tenantId, "obras_sociales");
+    console.warn(`[ARCA] corrida de obras sociales del tenant ${tenantId} destrabada por inactividad`);
+    return true;
+}
+/** ¿La corrida en curso lleva más de `inactividadMs` sin novedades? */
+export const corridaColgada = (tenantId, inactividadMs) => {
+    const c = corridas.get(tenantId);
+    return !!c && !c.terminada && Date.now() - c.ultimoEventoEl.getTime() >= inactividadMs;
+};

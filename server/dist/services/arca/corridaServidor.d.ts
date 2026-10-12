@@ -84,6 +84,8 @@ interface Corrida {
     arrancadaEl: Date;
     /** La lanzó la cola o el barrido, no una persona (ver `colaObrasSociales.ts`, `barridoObrasSociales.ts`). */
     automatica: boolean;
+    /** Cuándo emitió el último evento: una corrida sin novedades por mucho tiempo está colgada. */
+    ultimoEventoEl: Date;
 }
 export declare const corridaDe: (tenantId: string) => Corrida | undefined;
 export declare const corriendo: (tenantId: string) => boolean;
@@ -179,4 +181,14 @@ export declare function resumirTiempos(t: {
     };
     vaciarCon: string[];
 };
+/**
+ * UNA CORRIDA COLGADA BLOQUEA TODO: el candado no tiene vencimiento, así que si Playwright se quedó
+ * esperando a ARCA para siempre, ni la cola ni el barrido ni el botón vuelven a arrancar nunca, y la
+ * pantalla dice «validando ahora» eternamente. Esto la da por terminada si lleva más de
+ * `inactividadMs` sin emitir un evento, y suelta el candado. El proceso viejo, si algún día despierta,
+ * no toca el candado de la que vino después (ver el `finally` de `correr`).
+ */
+export declare function destrabarCorridaColgada(tenantId: string, inactividadMs: number): boolean;
+/** ¿La corrida en curso lleva más de `inactividadMs` sin novedades? */
+export declare const corridaColgada: (tenantId: string, inactividadMs: number) => boolean;
 export {};

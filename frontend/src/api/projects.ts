@@ -853,6 +853,18 @@ class ProjectsAPI {
     return data;
   }
 
+  /** Manda YA a todos los pendientes, sin esperar la cola ni el reintento. */
+  async validarObrasSocialesAhora(): Promise<{ resultado: string; total: number }> {
+    const { data } = await axios.post(`/contratos/obras-sociales/automatica/validar-ahora`, {}, { headers: this.getHeaders(), timeout: 120000 });
+    return data;
+  }
+
+  /** Da por terminada una corrida colgada y libera ARCA. */
+  async destrabarValidacionOS(): Promise<{ destrabada: boolean }> {
+    const { data } = await axios.post(`/contratos/obras-sociales/automatica/destrabar`, {}, { headers: this.getHeaders() });
+    return data;
+  }
+
   /**
    * Presenta altas en ARCA desde el servidor: Carga Masiva (registros de 130) o Altas Masivas (85,
    * cualquier cantidad: el servidor las presenta en tandas de a 9). El servidor coteja cada registro contra la base antes de abrir ARCA: si algo no
@@ -1129,4 +1141,21 @@ export interface EstadoValidacionAutomaticaOS {
   corriendo: boolean;
   proximoBarrido: string;
   ultimaCorrida: null | { fecha: string; total: number; validadas: number; guardadas: number; errores: number; faltaron: number; motivo: string };
+  /** La corrida de obras sociales en curso (o la última), y si quedó colgada. */
+  corrida: null | { corriendo: boolean; automatica: boolean; arrancadaEl: string; ultimoEventoEl: string; total: number; hechas: number; colgada: boolean };
+  /** Quiénes esperan validarse, con su estado. */
+  pendientes: PendienteValidacionOS[];
+  /** Las últimas corridas automáticas, con el resultado por persona. */
+  ultimas: Array<{ _id: string; fecha: string; empresaRazonSocial: string; total: number; validadas: number; guardadas: number; sinDeclarar: number; errores: number; faltaron: number; motivo: string; error: string; detalle: Array<{ cuil: string; rnos?: string; error?: string }> }>;
+}
+
+export interface PendienteValidacionOS {
+  cuil: string;
+  nombre: string;
+  empresaId: string;
+  empresa: string;
+  proyecto: string;
+  fechaCarga: string;
+  estado: "en_corrida" | "en_cola" | "esperando_reintento" | "pendiente";
+  detalle?: string;
 }

@@ -1,4 +1,6 @@
 import { Types } from "mongoose";
+/** Una corrida sin novedades de ARCA durante este tiempo se considera colgada y se destraba sola. */
+export declare const INACTIVIDAD_COLGADA_MS: number;
 /**
  * EL BARRIDO DE OBRAS SOCIALES SIN VALIDAR: la red de seguridad de la cola.
  *
@@ -41,16 +43,22 @@ export declare function contratosSinValidar(tenantObjectId: Types.ObjectId, dias
     userId: string;
     nombre: string;
     fechaCarga: string;
+    projectId: string;
+    proyecto: string;
 }>>;
 /** ¿El tenant tiene la validación automática prendida? Por defecto sí; se apaga en Configuración → ARCA → Conexión. */
 export declare function validacionAutomaticaActivaEn(tenantObjectId: unknown): Promise<boolean>;
 export declare const reintentoMs: () => number;
 export type ResultadoBarrido = "apagada" | "sin_credenciales" | "ocupado" | "nada" | "arrancada" | "fallo";
-/** Una pasada del barrido para UN tenant. Nunca tira. */
-export declare function barrerTenant(tenantId: string, tenantObjectId: Types.ObjectId, log?: (l: string) => void): Promise<{
+/** Una pasada del barrido para UN tenant. Nunca tira. `ignorarReintentos` es «Validar ahora»: manda también a quien espera reintento. */
+export declare function barrerTenant(tenantId: string, tenantObjectId: Types.ObjectId, log?: (l: string) => void, opts?: {
+    ignorarReintentos?: boolean;
+}): Promise<{
     resultado: ResultadoBarrido;
     total: number;
     esperando: number;
 }>;
+/** Para la pantalla: si ese CUIL está esperando reintento (se intentó hace poco y falló). */
+export declare const esperaReintento: (tenantId: string, cuil: string) => boolean;
 /** Para la pantalla: cuántos CUILs del tenant están esperando reintento. */
 export declare const esperandoReintento: (tenantId: string) => number;
