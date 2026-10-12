@@ -13,7 +13,7 @@ import { estiloValoracion } from '../proyectos/ChipValoracion';
 import { useThemeStore } from '../../stores/themeStore';
 import { valoracionesPorBrutoAPI, ValoracionSugerida } from '../../api/valoraciones';
 import { sweetAlert } from '../../utils/sweetAlert';
-import { SelectorPuestoDesempenado, listarPuestos } from '../arca/SelectorPuestoDesempenado';
+import { CampoPuestoCompacto, SelectorPuestoDesempenado, listarPuestos } from '../arca/SelectorPuestoDesempenado';
 
 /** Para qué sirve el puesto de la función: el mismo texto en la opción de cada tarjeta, el filtro y el formulario. */
 const TEXTO_PUESTO = "Lo pide el alta URGENTE (Altas Masivas, registro de 85). Es lo primero que se mira: si la función lo tiene, no hace falta en la categoría ni en el convenio";
@@ -961,11 +961,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
               <input type="text" required value={formName} onChange={(e) => setFormName(e.target.value)} className="input-field w-full px-3 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Ej: Motion Graphic" />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Puesto desempeñado (ARCA)</label>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">{TEXTO_PUESTO}.</p>
-              <SelectorPuestoDesempenado valor={formPuesto} onChange={setFormPuesto} />
-            </div>
+            {/* Compacto: el buscador abierto ocupaba media ventana, y el puesto es opcional (se abre con el «+»). */}
+            <CampoPuestoCompacto valor={formPuesto} onChange={setFormPuesto} ayuda={TEXTO_PUESTO} zIndex={90} />
 
             <div>
               <div className="flex items-center gap-2 mb-2">
