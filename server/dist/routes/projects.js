@@ -3018,7 +3018,9 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
             _id: String(l._id),
             createdAt: l.createdAt,
             // La de las 14 h no tiene persona detrás: se dice que fue la automática.
-            usuario: l.automatica ? "Automática (14 h)" : l.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "",
+            usuario: l.automatica ? "Automática" : l.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "",
+            // Como dato aparte, para filtrar sin depender del texto: la pestaña «Presentadas» muestra por defecto sólo estas.
+            automatica: !!l.automatica,
             empresaId: l.empresaId ? String(l.empresaId) : "",
             empresaCuit: l.empresaCuit || "",
             empresaRazonSocial: l.empresaRazonSocial || "",

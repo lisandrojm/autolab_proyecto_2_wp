@@ -4,7 +4,8 @@ import { faBolt, faClock, faTriangleExclamation, faCircleCheck } from "@fortawes
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
-import { projectsAPI, horaTexto, anticipacionTexto, type AltaPendienteArca, type EstadoPresentacionAutomatica } from "../api/projects";
+import { projectsAPI, horaTexto, anticipacionTexto, type AltaPendienteArca, type EstadoPresentacionAutomatica, type CorridaAltasGuardada } from "../api/projects";
+import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -55,6 +56,57 @@ export const PresentacionesArcaPage: React.FC = () => {
   const [guardando, setGuardando] = useState(false);
   const [ayuda, setAyuda] = useState(false);
   const [corridaAbierta, setCorridaAbierta] = useState(false);
+  /*
+    DOS PESTAÑAS: lo que falta presentar y lo que ya se presentó. El registro es el mismo que abre
+    «Alta Temprana A.R.C.A» en Contratos (las corridas guardadas, de todas las empleadoras), aplanado a
+    una fila por persona: acá se viene a buscar «¿salió el alta de fulano?», no la corrida.
+  */
+  const [tab, setTab] = useState<"pendientes" | "presentadas">("pendientes");
+  const [corridas, setCorridas] = useState<CorridaAltasGuardada[] | null>(null);
+  const [buscar, setBuscar] = useState("");
+  // Por defecto, sólo lo que salió solo: es lo que se viene a confirmar («¿se presentó?»). Las manuales y forzadas se ven destildando.
+  const [soloAutomaticas, setSoloAutomaticas] = useState(true);
+  const cargarRegistro = useCallback(async () => {
+    try {
+      setCorridas(await projectsAPI.historialAltasArca());
+    } catch (err: any) {
+      sweetAlert.error("No se pudo cargar el registro", err?.response?.data?.error || err?.message || "");
+      setCorridas([]);
+    }
+  }, []);
+  useEffect(() => {
+    if (tab === "presentadas" && corridas === null) void cargarRegistro();
+  }, [tab, corridas, cargarRegistro]);
+  const presentadas = useMemo(() => {
+    const filas = (corridas || []).filter((k) => !soloAutomaticas || k.automatica).flatMap((k) =>
+      k.contratos.map((x, i) => ({
+        clave: `${k._id}-${i}`,
+        fecha: k.createdAt,
+        nombre: x.nombre,
+        cuil: x.cuil,
+        empresa: k.empresaRazonSocial,
+        resultado: k.enSeco ? "seco" : x.resultado,
+        motivo: x.motivo || "",
+        quien: k.usuario || "—",
+        constancia: x.constancia,
+      })),
+    );
+    const q = buscar.trim().toLowerCase();
+    return q ? filas.filter((r) => r.nombre.toLowerCase().includes(q) || r.cuil.includes(q.replace(/\D/g, "")) || r.empresa.toLowerCase().includes(q)) : filas;
+  }, [corridas, buscar, soloAutomaticas]);
+  const { ordenados: presentadasOrdenadas, orden: ordenRegistro, alternar: alternarRegistro } = useOrdenTabla(
+    presentadas,
+    { fecha: (r) => r.fecha, persona: (r) => r.nombre, empresa: (r) => r.empresa, resultado: (r) => r.resultado, quien: (r) => r.quien },
+    { columna: "fecha", direccion: "desc" },
+  );
+  const RESULTADO: Record<string, { texto: string; clase: string }> = {
+    presentada: { texto: "Presentada", clase: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800" },
+    rechazada: { texto: "Rechazada", clase: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800" },
+    indeterminado: { texto: "Incierta", clase: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800" },
+    pendiente: { texto: "Sin presentar", clase: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700" },
+    seco: { texto: "En seco", clase: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700" },
+  };
+  const CONSTANCIA: Record<string, string> = { outbox: "En el Outbox", no_firmar: "No firmar", sin_subir: "Sin subir" };
   // La hora del SERVIDOR: la cuenta regresiva no puede depender de un reloj de PC atrasado.
   const [desfase, setDesfase] = useState(0);
   const [ahora, setAhora] = useState(Date.now());
@@ -278,6 +330,109 @@ export const PresentacionesArcaPage: React.FC = () => {
             {estado.enSeco && <p className="text-xs text-gray-500">Este servidor corre en prueba: llega hasta antes de presentar y no manda nada a ARCA.</p>}
           </div>
 
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            {(
+              [
+                ["pendientes", `Pendientes (${estado.contratos.length})`],
+                ["presentadas", `Presentadas${corridas ? ` (${presentadas.length})` : ""}`],
+              ] as const
+            ).map(([k, etiqueta]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setTab(k)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === k ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}
+              >
+                {etiqueta}
+              </button>
+            ))}
+          </div>
+
+          {tab === "presentadas" && (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por persona, CUIL o empresa…" className="input-field text-sm flex-1 min-w-[240px]" />
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  <input type="checkbox" checked={soloAutomaticas} onChange={(e) => setSoloAutomaticas(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  Solo las automáticas
+                </label>
+                <button type="button" onClick={() => void cargarRegistro()} className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
+                  Actualizar
+                </button>
+              </div>
+              {corridas === null ? (
+                <div className="flex justify-center py-10">
+                  <LoadingSpinner />
+                </div>
+              ) : presentadasOrdenadas.length === 0 ? (
+                <p className="text-sm text-gray-500">{buscar ? "Sin resultados para la búsqueda." : soloAutomaticas ? "La automática todavía no presentó ninguna alta. Destildá «Solo las automáticas» para ver las manuales y forzadas." : "Todavía no se presentó ninguna alta por Altas Masivas."}</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr>
+                        <th className={th}>
+                          <BotonOrden columna="fecha" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                            Fecha
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="persona" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                            Persona
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="empresa" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                            Empresa
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="resultado" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                            Resultado
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>Constancia</th>
+                        <th className={th}>
+                          <BotonOrden columna="quien" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                            Presentó
+                          </BotonOrden>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {presentadasOrdenadas.map((r) => {
+                        const res = RESULTADO[r.resultado] || { texto: r.resultado, clase: RESULTADO.pendiente.clase };
+                        return (
+                          <tr key={r.clave} className="border-t border-gray-100 dark:border-gray-800 align-top">
+                            <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                              {new Date(r.fecha).toLocaleDateString("es-AR")} {new Date(r.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.nombre}</p>
+                              <p className="text-xs font-mono text-gray-500">{fmtCuil(r.cuil)}</p>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.empresa}</td>
+                            <td className="px-4 py-3 text-xs max-w-[280px]">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${res.clase}`}>{res.texto}</span>
+                              {r.motivo && <p className="mt-1 text-gray-500">{r.motivo}</p>}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                              {r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}
+                              {r.constancia?.validadaEl && <p className="text-[11px] text-gray-400">validada el {fechaCorta(String(r.constancia.validadaEl).slice(0, 10))}</p>}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.quien}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+
+          {tab === "pendientes" && (
+            <>
           {u && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-2">
               <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -319,6 +474,8 @@ export const PresentacionesArcaPage: React.FC = () => {
               </p>
               {tabla(vencidas, true)}
             </section>
+          )}
+            </>
           )}
         </div>
       )}

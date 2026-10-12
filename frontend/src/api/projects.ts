@@ -997,8 +997,10 @@ export interface EstadoConstanciasAlta {
 export interface CorridaAltasGuardada {
   _id: string;
   createdAt: string;
-  /** Quién la lanzó. */
+  /** Quién la lanzó («Automática» si fue la corrida programada). */
   usuario: string;
+  /** La lanzó la presentación automática, no una persona. */
+  automatica?: boolean;
   empresaId: string;
   empresaCuit: string;
   empresaRazonSocial: string;
