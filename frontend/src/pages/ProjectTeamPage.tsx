@@ -18,7 +18,7 @@ import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { getHelp } from '../data/help/helpContent';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots , faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
@@ -2506,7 +2506,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     return faltan;
   };
 
+  /*
+    GUARDAR UNA SOLA VEZ. Dos clics seguidos en GUARDAR mandaban dos `assign-member` y creaban dos
+    contratos (o dos solicitudes). El ref corta la reentrada en el acto —el estado de React llega un
+    render tarde— y el estado apaga el botón y lo hace decir «Guardando…» mientras tanto.
+  */
+  const guardandoWizardRef = useRef(false);
+  const [guardandoWizard, setGuardandoWizard] = useState(false);
   const handleSaveWizard = async () => {
+    if (guardandoWizardRef.current) return;
+    guardandoWizardRef.current = true;
+    setGuardandoWizard(true);
+    try {
+      await guardarWizard();
+    } finally {
+      guardandoWizardRef.current = false;
+      setGuardandoWizard(false);
+    }
+  };
+  const guardarWizard = async () => {
     if (!selectedUserForWizard || !project) return;
 
     const faltan = faltantesPaso1();
@@ -4045,8 +4063,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         footer={
           <div className="flex gap-3 w-full">
             {/* Una sola acción: el formulario es uno solo y se guarda desde cualquier punto. */}
-            <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
-              GUARDAR
+            <button
+              type="button"
+              onClick={handleSaveWizard}
+              disabled={guardandoWizard}
+              aria-busy={guardandoWizard}
+              className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider disabled:opacity-60 disabled:cursor-wait disabled:active:scale-100"
+            >
+              {guardandoWizard ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                  GUARDANDO…
+                </>
+              ) : (
+                'GUARDAR'
+              )}
             </button>
           </div>
         }
