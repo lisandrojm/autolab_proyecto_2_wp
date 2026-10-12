@@ -29,6 +29,8 @@ export interface Nivel {
 export interface OfertaDeCategorias {
   documentos: CategoriaSatItem[];
   nivelDe: (cat: CategoriaSatItem) => Nivel | null;
+  /** Todos los niveles de la categoría (puede valer para más de uno). Sin esto se muestra sólo `nivelDe`. */
+  nivelesDe?: (cat: CategoriaSatItem) => Nivel[];
   /** La función FRAME tiene categorías, pero ninguna de este convenio: se muestran todas y se avisa. */
   rolNoTieneCategoriasDelConvenio: boolean;
   /** La función tiene categorías valoradas, pero ninguna de la valoración del proyecto. */
@@ -162,13 +164,14 @@ export function ModalCategoria({ abierto, onCerrar, subtitulo, oferta, verTodasD
                 const elegida = cat._id === categoriaId;
                 const grupo = cat.data?.numeroCategoria;
                 const n = oferta.nivelDe(cat);
+                const niveles = oferta.nivelesDe?.(cat) ?? (n ? [n] : []);
                 return (
                   <div key={cat._id} className={`flex items-center gap-2 rounded-lg border p-3 transition-all ${elegida ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}>
                     {/* Tocar la fila ELIGE, que es a lo que se viene. Ver la escala es el otro botón. */}
                     <button type="button" onClick={() => elegir(cat._id)} aria-pressed={elegida} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                       <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{elegida && <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</span>
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">{cat.name}</span>
-                      {n ? <ChipValoracion nombre={n.nombre} color={n.color} className="shrink-0" /> : <ChipSinValorar className="shrink-0" title="Sin valoración cargada en esta función: se ofrece en cualquier proyecto." />}
+                      {niveles.length > 0 ? niveles.map((x) => <ChipValoracion key={x.nombre} nombre={x.nombre} color={x.color} className="shrink-0" />) : <ChipSinValorar className="shrink-0" title="Sin valoración cargada en esta función: se ofrece en cualquier proyecto." />}
                     </button>
                     {/* El grupo. Tocarlo abre la escala; NO elige la categoría, para eso es la fila. */}
                     <button type="button" onClick={() => setDetalle(cat)} aria-label={`Ver la escala de ${cat.name}`} className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-slate-500 transition-colors active:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:active:bg-slate-800">

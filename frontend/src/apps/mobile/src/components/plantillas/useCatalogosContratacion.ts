@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { projectsAPI, Project } from "../../../../../api/projects";
 import { companiesAPI, Company } from "../../../../../api/companies";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../../../../api/simpleCatalog";
@@ -185,6 +186,8 @@ export function useCatalogosContratacion(activo = true) {
     );
 
   const categoriasPara = (proyecto: Project | null | undefined, empresaId: string | null | undefined, convenioId: string | null | undefined, rolesFrameIds: string[], verTodasDelConvenio = false, verTodasLasValoraciones = false, contratoId?: string | null) => {
+    // La que rige para ESTOS roles en el proyecto: la del proyecto, o la excepción del rol.
+    const rige = valoracionDeRoles(proyecto, rolesFrameIds, contratoId);
     const r = categoriasOfrecidas({
       rolesFrame: roleFrames.filter((rf) => rolesFrameIds.includes(rf._id)),
       convenioElegido: cctDeConvenio(convenioId),
@@ -192,21 +195,28 @@ export function useCatalogosContratacion(activo = true) {
       categorias: categoriasSat,
       verTodasDelConvenio,
       verTodasLasValoraciones,
-      // La que rige para ESTOS roles en el proyecto: la del proyecto, o la excepción del rol.
-      valoracionProyecto: valoracionDeRoles(proyecto, rolesFrameIds, contratoId),
+      valoracionProyecto: rige,
     });
     const porDataId = new Map(categoriasSat.map((c) => [String(c.data?.id), c]));
     // El nivel (Oro, Plata…) de cada categoría EN ESA FUNCIÓN, por `_id` del documento. Sale de las
     // categorías de la función y no sólo de la lista ofrecida: la categoría ya elegida puede haber
     // quedado afuera del filtro (la trae la plantilla), y su campo decía «Sin valorar» sin serlo.
+    // Una categoría puede tener VARIOS niveles: `nivelesPorId` los trae todos (en el orden del catálogo,
+    // el que rige primero) y `nivelPorId` el primero, para los campos que muestran uno solo.
+    const nivelesPorId = new Map<string, Array<{ nombre: string; color: string }>>();
     const nivelPorId = new Map<string, { nombre: string; color: string }>();
     const delRol = roleFrames.filter((rf) => rolesFrameIds.includes(rf._id)).flatMap((rf) => (Array.isArray(rf.data?.categoriasSat) ? (rf.data.categoriasSat as any[]) : []));
+    const ordenDe = (id: string) => Number(valoraciones.find((x) => String(x._id) === id)?.orden ?? Number.MAX_SAFE_INTEGER);
     for (const c of [...delRol, ...r.categorias]) {
       const doc = porDataId.get(String(c.id));
-      const v = c.valoracionId ? valoraciones.find((x) => String(x._id) === String(c.valoracionId)) : undefined;
-      if (doc && v && !nivelPorId.has(doc._id)) nivelPorId.set(doc._id, { nombre: String(v.name), color: String(v.color || "") });
+      if (!doc || nivelesPorId.has(doc._id)) continue;
+      const ids = valoracionesDeCategoria(c).sort((a, b) => (a === rige ? -1 : b === rige ? 1 : ordenDe(a) - ordenDe(b)));
+      const niveles = ids.map((id) => valoraciones.find((x) => String(x._id) === id)).filter(Boolean).map((v: any) => ({ nombre: String(v.name), color: String(v.color || "") }));
+      if (niveles.length === 0) continue;
+      nivelesPorId.set(doc._id, niveles);
+      nivelPorId.set(doc._id, niveles[0]);
     }
-    return { ...r, documentos: r.categorias.map((c) => porDataId.get(String(c.id))).filter(Boolean) as CategoriaSatItem[], nivelPorId };
+    return { ...r, documentos: r.categorias.map((c) => porDataId.get(String(c.id))).filter(Boolean) as CategoriaSatItem[], nivelPorId, nivelesPorId };
   };
 
   /** La valoración del proyecto (Plata, Oro…), o `null` si no está valorado. */

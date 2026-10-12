@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
@@ -1109,16 +1110,16 @@ export const ContractBulkAfipTab: React.FC<{
       .catch(() => setRolesFrame([]));
   }, []);
   const nivelDeCategoria = useMemo(() => {
-    const porRol = new Map<string, Map<string, string>>();
+    const porRol = new Map<string, Map<string, string[]>>();
     for (const rf of rolesFrame) {
-      const porCategoria = new Map<string, string>();
-      for (const c of (rf.data?.categoriasSat as any[]) || []) if (c?.valoracionId) porCategoria.set(String(c.id), String(c.valoracionId));
+      const porCategoria = new Map<string, string[]>();
+      for (const c of (rf.data?.categoriasSat as any[]) || []) if (valoracionesDeCategoria(c).length > 0) porCategoria.set(String(c.id), valoracionesDeCategoria(c));
       porRol.set(String(rf.data?.rol?.id ?? ""), porCategoria);
     }
+    // Con varios niveles se nombran todos: «Oro / Plata».
     return (rolFrameId: unknown, categoriaDataId: unknown) => {
-      const id = porRol.get(String(rolFrameId ?? ""))?.get(String(categoriaDataId ?? ""));
-      const v = id ? valoracionesCatalogo.find((x) => String(x._id) === id) : undefined;
-      return v ? String(v.name) : "";
+      const ids = porRol.get(String(rolFrameId ?? ""))?.get(String(categoriaDataId ?? "")) || [];
+      return ids.map((id) => valoracionesCatalogo.find((x) => String(x._id) === id)).filter(Boolean).map((v: any) => String(v.name)).join(" / ");
     };
   }, [rolesFrame, valoracionesCatalogo]);
 

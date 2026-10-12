@@ -18,6 +18,7 @@
  */
 
 import { CategoriaSatItem, esElegible } from "../api/categoriasSat";
+import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { importePorJornada } from "@compartido/jornadas";
 import { Company } from "../api/companies";
 import { RoleFrameItem } from "../api/roleFrames";
@@ -37,6 +38,8 @@ export interface CategoriaOfrecida {
    * código de ARCA puede ser Oro en una función y Plata en otra.
    */
   valoracionId?: string | null;
+  /** TODAS sus valoraciones en la función (puede valer para más de un nivel). `valoracionId` es la primera. */
+  valoracionIds?: string[];
   /**
    * El GRUPO del convenio al que pertenece (`data.numeroCategoria` del catálogo: «1» = Grupo 1). Vacío
    * si el convenio no publica grupos. No es `numeroCategoria` de arriba, que cae al id cuando no hay.
@@ -197,7 +200,8 @@ export const categoriasOfrecidas = ({
       nombre: c.nombre,
       numeroCategoria: c.numeroCategoria ?? c.id,
       codigoArca: "",
-      valoracionId: c.valoracionId ? String(c.valoracionId) : null,
+      valoracionId: valoracionesDeCategoria(c)[0] ?? null,
+      valoracionIds: valoracionesDeCategoria(c),
       grupo: grupoPorId.get(String(c.id)) || "",
     })),
   );
@@ -223,8 +227,8 @@ export const categoriasOfrecidas = ({
     TODAS se veían «Sin valorar», también las de la propia función que sí lo están. Se la devuelve
     desde la función: las que no son de ella siguen sin valorar, que es lo que realmente son acá.
   */
-  const valoracionDelRol = new Map(delRol.filter((c) => c.valoracionId).map((c) => [String(c.id), c.valoracionId as string]));
-  const desdeCatalogo = (c: CategoriaSatItem): CategoriaOfrecida => ({ id: c.data?.id, nombre: c.name, numeroCategoria: c.data?.numeroCategoria || c.data?.id, codigoArca: "", valoracionId: valoracionDelRol.get(String(c.data?.id)) ?? null, grupo: c.data?.numeroCategoria ? String(c.data.numeroCategoria) : "" });
+  const valoracionDelRol = new Map(delRol.filter((c) => valoracionesDeCategoria(c).length > 0).map((c) => [String(c.id), valoracionesDeCategoria(c)]));
+  const desdeCatalogo = (c: CategoriaSatItem): CategoriaOfrecida => ({ id: c.data?.id, nombre: c.name, numeroCategoria: c.data?.numeroCategoria || c.data?.id, codigoArca: "", valoracionId: valoracionDelRol.get(String(c.data?.id))?.[0] ?? null, valoracionIds: valoracionDelRol.get(String(c.data?.id)) ?? [], grupo: c.data?.numeroCategoria ? String(c.data.numeroCategoria) : "" });
 
   // Sin categorías por función, el catálogo entero. Se filtran las no elegibles (alias que existen
   // sólo para que resuelvan contratos históricos): acá se ELIGE una para un contrato nuevo.
@@ -277,9 +281,9 @@ export const categoriasOfrecidas = ({
     lista vacía sin explicación se lee como un error de la pantalla, no como un dato que falta.
   */
   let ocultasPorValoracion = 0;
-  const algunaValorada = list.some((c) => !!c.valoracionId);
+  const algunaValorada = list.some((c) => valoracionesDeCategoria(c).length > 0);
   // «Ver todas las de este convenio» es un escape explícito: ahí no se filtra ni se avisa por valoración.
-  const rolNoTieneCategoriasDeLaValoracion = !verTodasDelConvenio && !!valoracionProyecto && algunaValorada && !list.some((c) => c.valoracionId === valoracionProyecto);
+  const rolNoTieneCategoriasDeLaValoracion = !verTodasDelConvenio && !!valoracionProyecto && algunaValorada && !list.some((c) => valoracionesDeCategoria(c).includes(valoracionProyecto));
   // Con una sola no hay nada que explicar: el alta la elige sola, igual que si estuviera valorada.
   const rolSinValorar = !!valoracionProyecto && rolesFrame.length > 0 && list.length > 1 && !algunaValorada;
 
@@ -287,7 +291,7 @@ export const categoriasOfrecidas = ({
     const antes = list.length;
     // Una categoría SIN valorar dentro de una función que sí valoró otras queda afuera: no se puede
     // afirmar que corresponda a este nivel, y ofrecerla sería decidir por quien no la cargó.
-    list = list.filter((c) => c.valoracionId === valoracionProyecto);
+    list = list.filter((c) => valoracionesDeCategoria(c).includes(valoracionProyecto));
     ocultasPorValoracion = antes - list.length;
   }
 
@@ -402,17 +406,25 @@ export const categoriaPorDefecto = ({
   if (categorias.length === 1) return { id: String(categorias[0].id), motivo: "unica", candidatas: 1 };
   if (!valoracionProyecto) return null;
 
-  const delNivelDelProyecto = categorias.filter((c) => String(c.valoracionId || "") === valoracionProyecto);
+  // Una categoría con varios niveles coincide si CUALQUIERA es el del proyecto.
+  const delNivelDelProyecto = categorias.filter((c) => valoracionesDeCategoria(c).includes(valoracionProyecto));
   if (delNivelDelProyecto.length > 0) return { id: String(delNivelDelProyecto[0].id), motivo: "coincide", candidatas: delNivelDelProyecto.length };
 
   const ordenProyecto = ordenDelNivel(valoracionProyecto, niveles);
-  const valoradas = categorias.filter((c) => ordenDelNivel(c.valoracionId, niveles) !== null);
+  // De los niveles de una categoría, el más cercano al del proyecto (empate: el más alto, orden más chico).
+  const mejorOrden = (c: CategoriaOfrecida): number | null => {
+    const ordenes = valoracionesDeCategoria(c).map((id) => ordenDelNivel(id, niveles)).filter((o): o is number => o !== null);
+    if (ordenes.length === 0) return null;
+    if (ordenProyecto === null) return Math.min(...ordenes);
+    return [...ordenes].sort((a, b) => Math.abs(a - ordenProyecto) - Math.abs(b - ordenProyecto) || a - b)[0];
+  };
+  const valoradas = categorias.filter((c) => mejorOrden(c) !== null);
   // Sin orden del proyecto o sin categorías valoradas no hay con qué medir "cercanía": no se decide.
   if (ordenProyecto === null || valoradas.length === 0) return null;
 
   const masCercana = [...valoradas].sort((a, b) => {
-    const ordenA = ordenDelNivel(a.valoracionId, niveles) as number;
-    const ordenB = ordenDelNivel(b.valoracionId, niveles) as number;
+    const ordenA = mejorOrden(a) as number;
+    const ordenB = mejorOrden(b) as number;
     const distanciaA = Math.abs(ordenA - ordenProyecto);
     const distanciaB = Math.abs(ordenB - ordenProyecto);
     if (distanciaA !== distanciaB) return distanciaA - distanciaB;

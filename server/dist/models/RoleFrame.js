@@ -10,6 +10,7 @@ const roleFrameSchema = new Schema({
         categoriasSat: [
             {
                 valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
+                valoracionIds: [{ type: Schema.Types.ObjectId, ref: "Valoracion" }],
                 id: { type: Number },
                 numeroCategoria: { type: Number },
                 sueldoBruto: { type: Number },

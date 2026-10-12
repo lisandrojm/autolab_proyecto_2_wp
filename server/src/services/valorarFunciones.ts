@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { CategoriaSat } from "../models/CategoriaSat.js";
 import { Valoracion } from "../models/Valoracion.js";
@@ -89,7 +90,7 @@ export async function planValoracionPorBruto(tenantId: Types.ObjectId | string, 
 
   for (const f of funciones as any[]) {
     const asociadas: any[] = f.data?.categoriasSat || [];
-    if (!incluirValoradas && asociadas.some((c) => c?.valoracionId)) {
+    if (!incluirValoradas && asociadas.some((c) => valoracionesDeCategoria(c).length > 0)) {
       plan.salteadas.push(String(f.name));
       continue;
     }

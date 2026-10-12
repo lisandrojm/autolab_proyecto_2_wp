@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { Modal } from "./Modal";
 import { CampoTipoContrato, ModalTipoContrato } from "./contratacion/SelectorTipoContrato";
 import { CampoCategoria, ModalCategoria } from "./contratacion/SelectorCategoria";
@@ -1437,14 +1438,16 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     después enterarse de si corresponde al nivel del proyecto.
   */
   const valoraciones = useValoraciones();
-  const nivelDeCategoria = useMemo(() => {
-    const porDataId = new Map(categoriasOfrecidasLista.map((c) => [String(c.id), String(c.valoracionId || "")]));
-    return (cat: CategoriaSatItem) => {
-      const id = porDataId.get(String(cat.data?.id));
-      const v = id ? valoraciones.find((x) => String(x._id) === id) : undefined;
-      return v ? { nombre: String(v.name), color: String(v.color || "") } : null;
-    };
+  // Todos los niveles de cada categoría (puede valer para más de uno); `nivelDeCategoria` da el primero.
+  const nivelesDeCategoria = useMemo(() => {
+    const porDataId = new Map(categoriasOfrecidasLista.map((c) => [String(c.id), valoracionesDeCategoria(c)]));
+    return (cat: CategoriaSatItem) =>
+      (porDataId.get(String(cat.data?.id)) || [])
+        .map((id) => valoraciones.find((x) => String(x._id) === id))
+        .filter(Boolean)
+        .map((v: any) => ({ nombre: String(v.name), color: String(v.color || "") }));
   }, [categoriasOfrecidasLista, valoraciones]);
+  const nivelDeCategoria = useMemo(() => (cat: CategoriaSatItem) => nivelesDeCategoria(cat)[0] || null, [nivelesDeCategoria]);
 
 
   /*
@@ -3193,7 +3196,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           abierto={categoriaModalOpen}
           onCerrar={() => setCategoriaModalOpen(false)}
           subtitulo={convenioElegido ? `Del convenio ${convenioElegido.externalId}` : undefined}
-          oferta={{ documentos: categoriasDisponibles, nivelDe: nivelDeCategoria, rolNoTieneCategoriasDelConvenio, rolNoTieneCategoriasDeLaValoracion, ocultasPorValoracion }}
+          oferta={{ documentos: categoriasDisponibles, nivelDe: nivelDeCategoria, nivelesDe: nivelesDeCategoria, rolNoTieneCategoriasDelConvenio, rolNoTieneCategoriasDeLaValoracion, ocultasPorValoracion }}
           verTodasDelConvenio={verTodasDelConvenio}
           onVerTodasDelConvenio={() => setVerTodasDelConvenio(true)}
           categoriaId={formData.categoriaSatId}

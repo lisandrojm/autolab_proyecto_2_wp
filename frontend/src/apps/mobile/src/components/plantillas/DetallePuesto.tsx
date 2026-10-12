@@ -341,7 +341,7 @@ export default function DetallePuesto() {
         abierto={hoja === "categoria"}
         onCerrar={() => setHoja(null)}
         subtitulo={cct ? `Del convenio ${cct}` : undefined}
-        oferta={{ documentos: oferta.documentos, nivelDe: (c) => oferta.nivelPorId.get(c._id) || null, rolNoTieneCategoriasDelConvenio: oferta.rolNoTieneCategoriasDelConvenio, rolNoTieneCategoriasDeLaValoracion: oferta.rolNoTieneCategoriasDeLaValoracion, ocultasPorValoracion: oferta.ocultasPorValoracion }}
+        oferta={{ documentos: oferta.documentos, nivelDe: (c) => oferta.nivelPorId.get(c._id) || null, nivelesDe: (c) => oferta.nivelesPorId.get(c._id) || [], rolNoTieneCategoriasDelConvenio: oferta.rolNoTieneCategoriasDelConvenio, rolNoTieneCategoriasDeLaValoracion: oferta.rolNoTieneCategoriasDeLaValoracion, ocultasPorValoracion: oferta.ocultasPorValoracion }}
         verTodasDelConvenio={verTodasDelConvenio}
         onVerTodasDelConvenio={() => setVerTodasDelConvenio(true)}
         categoriaId={efectivo.categoriaSatId || ""}

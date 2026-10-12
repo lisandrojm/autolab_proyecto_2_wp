@@ -12,6 +12,12 @@ interface ICategoriaSat {
    * Es lo que permite desplegar esto sin frenar la contratación mientras se cargan las valoraciones.
    */
   valoracionId?: mongoose.Types.ObjectId | null;
+  /**
+   * TODAS las valoraciones de esta categoría en esta función: una categoría puede valer para más de un
+   * nivel (Oro y Plata a la vez). `valoracionId` es siempre la primera de esta lista, por compatibilidad
+   * con lo que lee un solo valor. Leer con `compartido/valoracionesDeCategoria`.
+   */
+  valoracionIds?: mongoose.Types.ObjectId[];
   id: number;
   numeroCategoria: number;
   sueldoBruto: number;
@@ -58,6 +64,7 @@ const roleFrameSchema = new Schema<IRoleFrame>(
       categoriasSat: [
         {
           valoracionId: { type: Schema.Types.ObjectId, ref: "Valoracion", default: null },
+          valoracionIds: [{ type: Schema.Types.ObjectId, ref: "Valoracion" }],
           id: { type: Number },
           numeroCategoria: { type: Number },
           sueldoBruto: { type: Number },

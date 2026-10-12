@@ -1,4 +1,5 @@
 import { codigoPuesto } from "../compartido/puestosDesempenados.js";
+import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { puestoActivo } from "../services/arca/puestosDesempenados.js";
 import { Router } from "express";
 import mongoose from "mongoose";
@@ -46,7 +47,7 @@ const clavesDeMas = (body) => (body && typeof body === "object" ? Object.keys(bo
 const normalizarCategorias = (body) => {
     if (Array.isArray(body?.categorias)) {
         return body.categorias
-            .map((c) => (typeof c === "string" ? { categoryId: c } : { categoryId: String(c?.categoryId || ""), valoracionId: c?.valoracionId ?? null }))
+            .map((c) => (typeof c === "string" ? { categoryId: c } : { categoryId: String(c?.categoryId || ""), valoracionId: c?.valoracionId ?? null, valoracionIds: Array.isArray(c?.valoracionIds) ? c.valoracionIds : undefined }))
             .filter((c) => !!c.categoryId);
     }
     if (Array.isArray(body?.categoryIds))
@@ -66,13 +67,15 @@ const normalizarCategorias = (body) => {
  * guarda como `null` (sin valorar) en vez de reventar el `save` con un CastError.
  */
 const armarCategoriasSatData = async (asociadas) => {
-    const valoracionPorCategoria = new Map(asociadas.map((c) => [String(c.categoryId), c.valoracionId]));
+    // Una categoría puede valer para varios niveles: se guardan todos, y `valoracionId` queda como el primero.
+    const valoracionesPorCategoria = new Map(asociadas.map((c) => [
+        String(c.categoryId),
+        [...new Set((c.valoracionIds ?? [c.valoracionId]).map((v) => String(v || "")).filter((v) => v && mongoose.Types.ObjectId.isValid(v)))].map((v) => new mongoose.Types.ObjectId(v)),
+    ]));
     const categories = await resolverCategoriasCompatPorId(asociadas.map((c) => c.categoryId));
     return categories.map((cat) => ({
-        valoracionId: (() => {
-            const v = valoracionPorCategoria.get(String(cat._id));
-            return v && mongoose.Types.ObjectId.isValid(String(v)) ? new mongoose.Types.ObjectId(String(v)) : null;
-        })(),
+        valoracionId: valoracionesPorCategoria.get(String(cat._id))?.[0] ?? null,
+        valoracionIds: valoracionesPorCategoria.get(String(cat._id)) ?? [],
         id: cat.data?.id || cat.data?.numeroCategoria,
         numeroCategoria: cat.data?.numeroCategoria,
         sueldoBruto: cat.data?.sueldoBruto,
@@ -150,14 +153,14 @@ router.get("/cobertura", requireTenant, authenticateToken, async (req, res) => {
         const todas = valoraciones.map((v) => ({ _id: String(v._id), name: v.name, orden: v.orden ?? null, color: v.color || "" }));
         res.json(roles.map((rol) => {
             const categorias = Array.isArray(rol.data?.categoriasSat) ? rol.data.categoriasSat : [];
-            const cubiertas = new Set(categorias.map((c) => (c?.valoracionId ? String(c.valoracionId) : "")).filter(Boolean));
+            const cubiertas = new Set(categorias.flatMap((c) => valoracionesDeCategoria(c)));
             return {
                 _id: String(rol._id),
                 nombre: rol.name,
                 categorias: categorias.length,
                 /* Cuántas categorías quedaron SIN valorar. Es distinto de «no cubre una valoración»: acá
                    el dato falta, y hasta que se cargue el filtro de contratación no se aplica. */
-                sinValorar: categorias.filter((c) => !c?.valoracionId).length,
+                sinValorar: categorias.filter((c) => valoracionesDeCategoria(c).length === 0).length,
                 cubre: todas.filter((v) => cubiertas.has(v._id)),
                 faltan: todas.filter((v) => !cubiertas.has(v._id)),
                 totalValoraciones: todas.length,

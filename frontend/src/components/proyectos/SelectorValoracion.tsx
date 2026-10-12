@@ -116,3 +116,115 @@ export const SelectorValoracion: React.FC<{
     </>
   );
 };
+
+/**
+ * EL MISMO DESPLEGABLE, PARA VARIAS A LA VEZ: una categoría puede valer para más de un nivel (Oro y
+ * Plata). Cada opción se tilda o destilda sin cerrar la lista; «Sin valorar» las saca todas y cierra.
+ * El botón muestra un chip por cada nivel elegido, de mayor a menor.
+ */
+export const SelectorValoraciones: React.FC<{
+  valoraciones: SimpleCatalogItem[];
+  valores: string[];
+  onChange: (ids: string[]) => void;
+  etiqueta?: string;
+}> = ({ valoraciones, valores, onChange, etiqueta }) => {
+  const [abierto, setAbierto] = useState(false);
+  const boton = useRef<HTMLButtonElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; minWidth: number } | null>(null);
+
+  const opciones = [...valoraciones].sort((a, b) => Number(a.orden ?? Number.MAX_SAFE_INTEGER) - Number(b.orden ?? Number.MAX_SAFE_INTEGER));
+  const elegidas = opciones.filter((v) => valores.includes(v._id));
+  const inactivas = valores.filter((id) => !valoraciones.some((v) => v._id === id));
+
+  useLayoutEffect(() => {
+    if (!abierto || !boton.current) return;
+    const r = boton.current.getBoundingClientRect();
+    setPos({ top: r.bottom + 4, left: r.left, minWidth: r.width });
+  }, [abierto]);
+
+  useEffect(() => {
+    if (!abierto) return;
+    const cerrar = (e: Event) => {
+      if (e.target instanceof Node && (lista.current?.contains(e.target) || boton.current?.contains(e.target))) return;
+      setAbierto(false);
+    };
+    const conTecla = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
+    const alMover = (e: Event) => {
+      if (e.target instanceof Node && lista.current?.contains(e.target)) return;
+      setAbierto(false);
+    };
+    document.addEventListener("mousedown", cerrar);
+    document.addEventListener("keydown", conTecla);
+    window.addEventListener("scroll", alMover, true);
+    window.addEventListener("resize", alMover);
+    return () => {
+      document.removeEventListener("mousedown", cerrar);
+      document.removeEventListener("keydown", conTecla);
+      window.removeEventListener("scroll", alMover, true);
+      window.removeEventListener("resize", alMover);
+    };
+  }, [abierto]);
+
+  // Se guarda en el orden del catálogo (mayor a menor), para que «la primera» sea siempre la más alta.
+  const alternar = (id: string) => {
+    const nuevas = valores.includes(id) ? valores.filter((x) => x !== id) : [...valores, id];
+    onChange(opciones.filter((v) => nuevas.includes(v._id)).map((v) => v._id).concat(nuevas.filter((x) => !valoraciones.some((v) => v._id === x))));
+  };
+
+  return (
+    <>
+      <button
+        ref={boton}
+        type="button"
+        onClick={() => setAbierto((a) => !a)}
+        aria-haspopup="listbox"
+        aria-expanded={abierto}
+        aria-label={etiqueta}
+        title={etiqueta}
+        className="inline-flex flex-wrap items-center gap-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-1.5 py-1 hover:border-blue-400 dark:hover:border-blue-600"
+      >
+        {elegidas.map((v) => (
+          <ChipValoracion key={v._id} nombre={String(v.name)} color={String(v.color || "")} />
+        ))}
+        {inactivas.length > 0 && <span className="px-1 text-xs text-gray-400">Inactiva</span>}
+        {elegidas.length === 0 && inactivas.length === 0 && <span className="px-1 text-xs text-gray-500 dark:text-gray-400">Sin valorar</span>}
+        <FontAwesomeIcon icon={faChevronDown} className="h-2.5 w-2.5 text-gray-400" />
+      </button>
+      {abierto &&
+        pos &&
+        createPortal(
+          <div
+            ref={lista}
+            role="listbox"
+            aria-multiselectable
+            style={{ position: "fixed", top: pos.top, left: pos.left, minWidth: pos.minWidth, zIndex: 200 }}
+            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-xl"
+          >
+            {opciones.map((v) => (
+              <button key={v._id} type="button" role="option" aria-selected={valores.includes(v._id)} onClick={() => alternar(v._id)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/60">
+                <span className="w-3 shrink-0 text-blue-600 dark:text-blue-400">{valores.includes(v._id) && <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}</span>
+                <ChipValoracion nombre={String(v.name)} color={String(v.color || "")} />
+              </button>
+            ))}
+            <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+            <button
+              type="button"
+              role="option"
+              aria-selected={valores.length === 0}
+              onClick={() => {
+                onChange([]);
+                setAbierto(false);
+                boton.current?.focus();
+              }}
+              className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/60"
+            >
+              <span className="w-3 shrink-0 text-blue-600 dark:text-blue-400">{valores.length === 0 && <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Sin valorar</span>
+            </button>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+};

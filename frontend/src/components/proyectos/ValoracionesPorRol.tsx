@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faXmark, faArrowRight, faPen, faCheck } from "@fortawesome/free-solid-svg-icons";
 import type { SimpleCatalogItem } from "../../api/simpleCatalog";
@@ -64,7 +65,7 @@ export const ValoracionesPorRol: React.FC<{
   const rolDe = (id: number) => roles.find((r) => Number(r.data?.rol?.id) === id);
   const nombreRol = (id: number) => rolDe(id)?.name || rolDe(id)?.data?.rol?.nombre || `Rol ${id}`;
   /** Qué valoraciones tiene el rol entre sus categorías: forzar una que no tiene no ofrecería ninguna. */
-  const cubre = (id: number, valoracionId: string) => (rolDe(id)?.data?.categoriasSat || []).some((c) => String(c.valoracionId || "") === valoracionId);
+  const cubre = (id: number, valoracionId: string) => (rolDe(id)?.data?.categoriasSat || []).some((c) => valoracionesDeCategoria(c).includes(valoracionId));
   const rolesOrdenados = useMemo(() => roles.filter((r) => r.data?.rol?.id != null).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" })), [roles]);
   // Para agregar una excepción, sólo los tipos activos; las filas ya cargadas muestran su nombre igual (`nombreContrato`).
   const contratosOrdenados = useMemo(() => tiposDeContratoActivos(contratos).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" })), [contratos]);

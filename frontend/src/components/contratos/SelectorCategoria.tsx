@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faSearch, faCheck } from "@fortawesome/free-solid-svg-icons";
 import type { SimpleCatalogItem } from "../../api/simpleCatalog";
@@ -12,6 +13,8 @@ export interface OpcionCategoria {
   codigoArca?: string;
   /** La valoración de la categoría EN LA FUNCIÓN elegida (`RoleFrame.data.categoriasSat[].valoracionId`). */
   valoracionId?: string | null;
+  /** Todas sus valoraciones en la función; `valoracionId` es la primera. */
+  valoracionIds?: string[];
   /** El grupo del convenio («1»): se muestra como «G1» al lado del nivel. */
   grupo?: string;
 }
@@ -52,8 +55,15 @@ export const SelectorCategoria: React.FC<{
 
   const valoracion = (id?: string | null) => (id ? valoraciones.find((v) => String(v._id) === String(id)) : undefined);
   const tag = (o: OpcionCategoria) => {
-    const v = valoracion(o.valoracionId);
-    return v ? <ChipValoracion nombre={String(v.name)} color={String(v.color || "")} /> : <ChipSinValorar title="Esta categoría no tiene valoración cargada en la función" />;
+    const vs = valoracionesDeCategoria(o).map((id) => valoracion(id)).filter(Boolean) as NonNullable<ReturnType<typeof valoracion>>[];
+    if (vs.length === 0) return <ChipSinValorar title="Esta categoría no tiene valoración cargada en la función" />;
+    return (
+      <>
+        {vs.map((v) => (
+          <ChipValoracion key={String(v._id)} nombre={String(v.name)} color={String(v.color || "")} />
+        ))}
+      </>
+    );
   };
   // El grupo al lado del nivel: «Director de Programas [Oro] G1».
   const grupo = (o: OpcionCategoria) => (etiquetaGrupo(o.grupo) ? <span className="shrink-0 text-[11px] font-bold text-gray-500 dark:text-gray-400" title={`Grupo ${o.grupo} del convenio`}>{etiquetaGrupo(o.grupo)}</span> : null);
@@ -97,7 +107,7 @@ export const SelectorCategoria: React.FC<{
             {filtradas.length === 0 && <li className="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">{opciones.length === 0 ? "No hay categorías para elegir." : "Nada coincide con la búsqueda."}</li>}
             {filtradas.map((o) => {
               const sel = String(o.id) === String(valor);
-              const delNivel = !!valoracionQueRige && String(o.valoracionId || "") === valoracionQueRige;
+              const delNivel = !!valoracionQueRige && valoracionesDeCategoria(o).includes(valoracionQueRige);
               return (
                 <li key={o.id} role="option" aria-selected={sel}>
                   <button

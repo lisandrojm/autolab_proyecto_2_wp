@@ -9,7 +9,7 @@ export interface RoleFrameItem {
       nombre: string;
     };
     /** Cada ítem es la copia de la categoría + lo de la asociación: `valoracionId`. */
-    categoriasSat: Array<{ id?: number; nombre?: string; codigoAfip?: number; sueldoBruto?: number; valoracionId?: string | null; [k: string]: unknown }>;
+    categoriasSat: Array<{ id?: number; nombre?: string; codigoAfip?: number; sueldoBruto?: number; valoracionId?: string | null; valoracionIds?: string[]; [k: string]: unknown }>;
     /** Puesto desempeñado de ARCA (4 díg.) de esta función. Primer escalón del registro de 85. */
     puestoDesempenado?: string;
   };
@@ -46,7 +46,10 @@ export interface FuncionRota {
  */
 export interface CategoriaAsociada {
   categoryId: string;
+  /** La primera de `valoracionIds`, por compatibilidad. */
   valoracionId?: string | null;
+  /** Todas las valoraciones de la categoría en esta función: puede valer para más de un nivel. */
+  valoracionIds?: string[];
 }
 
 /** Cobertura de valoraciones de una función: qué niveles puede atender y cuáles no. */

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
 import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
@@ -1541,8 +1542,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!valoracionProyectoId || !wizardData.categoria_sat_id) return false;
     const rol = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
     const asociada = ((rol?.data?.categoriasSat as any[]) || []).find((c) => String(c?.id) === String(wizardData.categoria_sat_id));
-    const deLaCategoria = asociada?.valoracionId ? String(asociada.valoracionId) : '';
-    return !!deLaCategoria && !valoracionesAceptadas.includes(deLaCategoria);
+    // Con varios niveles, alcanza con que UNO sea de los aceptados.
+    const deLaCategoria = valoracionesDeCategoria(asociada);
+    return deLaCategoria.length > 0 && !deLaCategoria.some((id) => valoracionesAceptadas.includes(id));
   }, [valoracionProyectoId, valoracionesAceptadas, allRoleFrames, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
 
   /*
@@ -4664,16 +4666,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         if (!wizardData.categoria_sat_id) return null;
                         const elegida = availableCategoriasSat.find((c: any) => String(c.id) === String(wizardData.categoria_sat_id));
                         if (!elegida) return null;
-                        const idCat = String(elegida.valoracionId || '');
-                        const v = valoraciones.find((x) => String(x._id) === idCat);
-                        if (!v) return <p className="ml-1 mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">Esta categoría no tiene valoración cargada en la función.</p>;
-                        const coincide = !!valoracionProyectoId && idCat === valoracionProyectoId;
+                        const idsCat = valoracionesDeCategoria(elegida);
+                        const vs = valoraciones.filter((x) => idsCat.includes(String(x._id)));
+                        if (vs.length === 0) return <p className="ml-1 mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">Esta categoría no tiene valoración cargada en la función.</p>;
+                        const coincide = !!valoracionProyectoId && idsCat.includes(valoracionProyectoId);
                         // Varias del mismo nivel: la elegida vino por ser la primera de la lista, no por ser
                         // LA correcta. Decirlo es la diferencia entre proponer y decidir por el otro.
-                        const delMismoNivel = coincide ? availableCategoriasSat.filter((c: any) => String(c.valoracionId || '') === valoracionProyectoId).length : 0;
+                        const delMismoNivel = coincide ? availableCategoriasSat.filter((c: any) => valoracionesDeCategoria(c).includes(valoracionProyectoId)).length : 0;
                         return (
                           <p className="ml-1 mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                            <ChipValoracion nombre={String(v.name)} color={String(v.color || '')} />
+                            {vs.map((v) => (
+                              <ChipValoracion key={String(v._id)} nombre={String(v.name)} color={String(v.color || '')} />
+                            ))}
                             {valoracionProyectoId ? (
                               <span className={coincide ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>
                                 {/* Cuando la función NO tiene ninguna del nivel del proyecto, la que quedó no es un

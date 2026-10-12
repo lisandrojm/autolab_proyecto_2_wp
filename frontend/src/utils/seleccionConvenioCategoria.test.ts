@@ -269,3 +269,24 @@ it("codigosDeConveniosDelProyecto: el proyecto acota los convenios de la emplead
   assert.deepEqual(codigosDeConveniosDelProyecto(["9999/99"], ["c634"], convenios), ["9999/99"]);
   assert.equal(codigosDeConveniosDelProyecto(null, ["c634"], convenios), null);
 });
+
+describe('una categoría con VARIAS valoraciones a la vez (Oro y Plata)', () => {
+  const niveles = [
+    { _id: ORO, orden: 1 },
+    { _id: PLATA, orden: 2 },
+  ];
+  const unitario = { id: 10, nombre: 'Unitario', numeroCategoria: 10, codigoArca: '', valoracionId: ORO, valoracionIds: [ORO, PLATA] };
+  const tira = { id: 11, nombre: 'Tira', numeroCategoria: 11, codigoArca: '', valoracionId: PLATA, valoracionIds: [PLATA] };
+
+  it('coincide con el proyecto si CUALQUIERA de sus niveles es el del proyecto', () => {
+    assert.equal(categoriaPorDefecto({ categorias: [tira, unitario], valoracionProyecto: ORO, niveles })?.id, '10');
+    const r = categoriaPorDefecto({ categorias: [unitario, tira], valoracionProyecto: PLATA, niveles });
+    assert.equal(r?.motivo, 'coincide');
+    assert.equal(r?.candidatas, 2);
+  });
+
+  it('la lista sin `valoracionIds` (datos viejos) se sigue leyendo por `valoracionId`', () => {
+    const vieja = { id: 12, nombre: 'Vieja', numeroCategoria: 12, codigoArca: '', valoracionId: ORO };
+    assert.equal(categoriaPorDefecto({ categorias: [tira, vieja], valoracionProyecto: ORO, niveles })?.id, '12');
+  });
+});

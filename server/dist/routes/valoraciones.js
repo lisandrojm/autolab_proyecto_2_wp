@@ -157,7 +157,7 @@ const bloquearBorradoEnUso = async (req, res, next) => {
             return next();
         const [proyectos, roles, contratos] = await Promise.all([
             Project.find({ tenantId: req.tenantObjectId, valoracionId: id }).select("name").limit(50).lean(),
-            RoleFrame.find({ "data.categoriasSat.valoracionId": id }).select("name").limit(50).lean(),
+            RoleFrame.find({ $or: [{ "data.categoriasSat.valoracionId": id }, { "data.categoriasSat.valoracionIds": id }] }).select("name").limit(50).lean(),
             UserProject.countDocuments({ "contracts.valoracion_id": id }),
         ]);
         if (proyectos.length === 0 && roles.length === 0 && contratos === 0)

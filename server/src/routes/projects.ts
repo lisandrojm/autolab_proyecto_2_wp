@@ -22,6 +22,7 @@ import { CentroCosto } from "../models/CentroCosto.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
 import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
+import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { candidatosDeAlta } from "../services/arca/presentacionAutomatica.js";
 import { DIAS_ATRAS_PENDIENTES, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
@@ -1741,26 +1742,28 @@ const revisarValoracion = async (args: { regla: { id: string; porExcepcion: bool
 
   const rolId = Number(args.rolFrameId);
   const catId = Number(args.categoriaSatId);
-  let deLaCategoriaId = "";
+  // Una categoría puede tener VARIAS valoraciones en la función (Oro y Plata a la vez).
+  let nivelesDeLaCategoria: string[] = [];
   let nombreFuncion = "";
   if (Number.isFinite(rolId) && Number.isFinite(catId)) {
     const rol: any = await RoleFrame.findOne({ "data.rol.id": rolId }).select("name data.categoriasSat").lean();
     const asociada = (rol?.data?.categoriasSat || []).find((c: any) => Number(c?.id) === catId);
-    if (asociada?.valoracionId) {
-      deLaCategoriaId = String(asociada.valoracionId);
-      nombreFuncion = String(rol?.name || "");
-    }
+    nivelesDeLaCategoria = valoracionesDeCategoria(asociada);
+    if (nivelesDeLaCategoria.length > 0) nombreFuncion = String(rol?.name || "");
   }
 
-  // Desalineada = la de la categoría no es NINGUNA de las aceptadas (ver `reglaDeValoracion`).
+  // Desalineada = NINGUNA de las de la categoría es de las aceptadas (ver `reglaDeValoracion`). Al
+  // contrato va la que rige si la categoría la tiene; si no, la primera.
   const aceptadas = args.regla.aceptadas?.length ? args.regla.aceptadas : [delProyectoId].filter(Boolean);
-  const desalineada = aceptadas.length > 0 && !!deLaCategoriaId && !aceptadas.includes(deLaCategoriaId);
+  const deLaCategoriaId = nivelesDeLaCategoria.find((id) => aceptadas.includes(id)) || nivelesDeLaCategoria[0] || "";
+  const desalineada = aceptadas.length > 0 && nivelesDeLaCategoria.length > 0 && !nivelesDeLaCategoria.some((id) => aceptadas.includes(id));
   // El nombre se busca acá, donde se puede esperar: `aGuardar` es sincrónico a propósito, para que
   // el que llama no tenga que acordarse de un `await` más en medio del armado del contrato.
   const nombreDeLaCategoria = deLaCategoriaId ? String(((await Valoracion.findById(deLaCategoriaId).select("name").lean()) as any)?.name || "") : "";
 
   if (desalineada && !motivo) {
-    const [delProyecto, deLaCategoria] = await Promise.all([Valoracion.findById(delProyectoId).select("name").lean(), Valoracion.findById(deLaCategoriaId).select("name").lean()]);
+    const [delProyecto, nombresCat] = await Promise.all([Valoracion.findById(delProyectoId).select("name").lean(), Valoracion.find({ _id: { $in: nivelesDeLaCategoria } }).select("name").lean()]);
+    const deLaCategoria = { name: (nombresCat as any[]).map((v) => v.name).join(" / ") };
     return {
       rechazo: {
         error: esExcepcionDelRol

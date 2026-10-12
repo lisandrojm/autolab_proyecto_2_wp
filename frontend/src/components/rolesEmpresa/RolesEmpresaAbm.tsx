@@ -8,7 +8,8 @@ import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { faUserShield, faLayerGroup, faTable, faGrip, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation, faPlus, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
-import { SelectorValoracion } from '../proyectos/SelectorValoracion';
+import { SelectorValoraciones } from '../proyectos/SelectorValoracion';
+import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { estiloValoracion } from '../proyectos/ChipValoracion';
 import { useThemeStore } from '../../stores/themeStore';
 import { valoracionesPorBrutoAPI, ValoracionSugerida } from '../../api/valoraciones';
@@ -45,7 +46,7 @@ const grupoDe = (c?: CategoriaSatItem): string => {
   return nombre && !/^grupo\b/i.test(nombre) ? `Grupo ${n} · ${nombre}` : nombre || `Grupo ${n}`;
 };
 
-const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; convenioNombre?: string; valoracion?: { name: string; color?: string }; grupo?: string; onQuitar?: () => void }> = ({ label, convenio, convenioNombre, valoracion, grupo, onQuitar }) => {
+const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; convenioNombre?: string; valoraciones?: Array<{ name: string; color?: string }>; grupo?: string; onQuitar?: () => void }> = ({ label, convenio, convenioNombre, valoraciones = [], grupo, onQuitar }) => {
   const oscuro = useThemeStore((st) => st.theme) === 'dark';
   return (
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -57,11 +58,12 @@ const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; convenioNo
     {label}
     {/* El nivel, pegado a la categoría: es lo que decide si esta categoría se ofrece o no en un
         proyecto, así que leerlo aparte obligaría a cruzar dos listas de memoria. */}
-    {valoracion && (
-      <span className="ml-0.5 px-1 rounded-sm font-bold border" style={estiloValoracion(valoracion.color, oscuro)} title={`Valoración: ${valoracion.name}`}>
+    {/* Uno por nivel: una categoría puede valer para más de uno (Oro y Plata). */}
+    {valoraciones.map((valoracion) => (
+      <span key={valoracion.name} className="ml-0.5 px-1 rounded-sm font-bold border" style={estiloValoracion(valoracion.color, oscuro)} title={`Valoración: ${valoracion.name}`}>
         {valoracion.name}
       </span>
-    )}
+    ))}
     {/* El grupo salarial, al final: es de donde sale la escala (el bruto) de la categoría. */}
     {grupo && (
       <>
@@ -141,15 +143,15 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
 
     Se guarda por `id` legacy, que es como la función las tiene adentro.
   */
-  const [valoracionesDetalle, setValoracionesDetalle] = useState<Record<string, string | null>>({});
+  const [valoracionesDetalle, setValoracionesDetalle] = useState<Record<string, string[]>>({});
   const [guardandoDetalle, setGuardandoDetalle] = useState(false);
   const abrirDetalle = (role: RoleFrameItem) => {
-    setValoracionesDetalle(Object.fromEntries(((role.data?.categoriasSat as any[]) || []).map((c) => [String(c?.id), c?.valoracionId ? String(c.valoracionId) : null])));
+    setValoracionesDetalle(Object.fromEntries(((role.data?.categoriasSat as any[]) || []).map((c) => [String(c?.id), valoracionesDeCategoria(c)])));
     setSelectedRole(role);
   };
   const hayCambiosEnDetalle = useMemo(() => {
     if (!selectedRole) return false;
-    return ((selectedRole.data?.categoriasSat as any[]) || []).some((c) => (valoracionesDetalle[String(c?.id)] ?? null) !== (c?.valoracionId ? String(c.valoracionId) : null));
+    return ((selectedRole.data?.categoriasSat as any[]) || []).some((c) => (valoracionesDetalle[String(c?.id)] || []).join(',') !== valoracionesDeCategoria(c).join(','));
   }, [selectedRole, valoracionesDetalle]);
   const [allCategories, setAllCategories] = useState<CategoriaSatItem[]>([]);
 
@@ -178,7 +180,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   */
   const [selectedCategorias, setSelectedCategorias] = useState<CategoriaAsociada[]>([]);
   const idsElegidos = useMemo(() => new Set(selectedCategorias.map((c) => c.categoryId)), [selectedCategorias]);
-  const valoracionDe = (categoryId: string) => selectedCategorias.find((c) => c.categoryId === categoryId)?.valoracionId || '';
+  const valoracionesDe = (categoryId: string) => selectedCategorias.find((c) => c.categoryId === categoryId)?.valoracionIds || [];
+  const conIds = (c: CategoriaAsociada, valoracionIds: string[]): CategoriaAsociada => ({ ...c, valoracionIds, valoracionId: valoracionIds[0] ?? null });
 
   /*
     LA VALORACIÓN POR DEFECTO SALE DEL BRUTO, y lo elegido a mano se respeta.
@@ -197,9 +200,9 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
   manualesRef.current = manuales;
   const [sugerencias, setSugerencias] = useState<Record<string, ValoracionSugerida>>({});
 
-  const ponerValoracion = (categoryId: string, valoracionId: string) => {
+  const ponerValoracion = (categoryId: string, valoracionIds: string[]) => {
     setManuales((prev) => new Set(prev).add(categoryId));
-    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId === categoryId ? { ...c, valoracionId: valoracionId || null } : c)));
+    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId === categoryId ? conIds(c, valoracionIds) : c)));
   };
   /** Vuelve una categoría a lo que dice el bruto, y la deja otra vez en manos de la regla. */
   const aplicarSugerencia = (categoryId: string) => {
@@ -210,13 +213,18 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
       n.delete(categoryId);
       return n;
     });
-    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId === categoryId ? { ...c, valoracionId: s.valoracionId } : c)));
+    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId === categoryId ? conIds(c, s.valoracionId ? [s.valoracionId] : []) : c)));
   };
   const aplicarTodasLasSugerencias = () => {
     setManuales(new Set());
-    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId in sugerencias ? { ...c, valoracionId: sugerencias[c.categoryId].valoracionId } : c)));
+    setSelectedCategorias((prev) => prev.map((c) => (c.categoryId in sugerencias ? conIds(c, sugerencias[c.categoryId].valoracionId ? [sugerencias[c.categoryId].valoracionId as string] : []) : c)));
   };
-  const difiereDelBruto = (categoryId: string, valoracionId: string) => categoryId in sugerencias && (sugerencias[categoryId].valoracionId || '') !== valoracionId;
+  // Difiere si la sugerida no está entre las elegidas (o hay elegidas y el bruto dice «sin valorar»).
+  const difiereDelBruto = (categoryId: string, valoracionIds: string[]) => {
+    if (!(categoryId in sugerencias)) return false;
+    const sugerida = sugerencias[categoryId].valoracionId || '';
+    return sugerida ? !valoracionIds.includes(sugerida) : valoracionIds.length > 0;
+  };
 
   /*
     LOS NOMBRES DE LOS CONVENIOS: «0102/90» no dice nada; «0102/90 ACTORES», sí.
@@ -252,7 +260,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         const s = await valoracionesPorBrutoAPI.sugerir(clavesElegidas.split(','));
         if (!vigente) return;
         setSugerencias(s);
-        setSelectedCategorias((prev) => prev.map((c) => (manualesRef.current.has(c.categoryId) || !(c.categoryId in s) ? c : { ...c, valoracionId: s[c.categoryId].valoracionId })));
+        setSelectedCategorias((prev) => prev.map((c) => (manualesRef.current.has(c.categoryId) || !(c.categoryId in s) ? c : conIds(c, s[c.categoryId].valoracionId ? [s[c.categoryId].valoracionId as string] : []))));
       } catch {
         // Sin sugerencia el formulario sigue andando a mano, que es como andaba antes.
       }
@@ -421,13 +429,13 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
    * (`numeroCategoria`) es el del GRUPO salarial — lo compartían decenas de categorías distintas, así
    * que como etiqueta no identificaba nada. Lo que identifica es el código de ARCA de 6 dígitos.
    */
-  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; nombre: string; convenio: string; convenioNombre: string; grupo: string; valoracion?: { name: string; color?: string } }> =>
+  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; nombre: string; convenio: string; convenioNombre: string; grupo: string; valoraciones: Array<{ name: string; color?: string }> }> =>
     (role.data?.categoriasSat || []).map((c: any, i: number) => {
       const vigente = catalogoPorId.get(String(c.id));
       const codigo = String(vigente?.data?.codigoArca || '').trim();
       const nombre = vigente?.data?.nombre || vigente?.name || c.nombre || c.name || 'Sin nombre';
       // El nivel de CADA categoría, no el de la función: es lo que decide a qué proyecto se le ofrece.
-      const v = c.valoracionId ? valoracionPorId.get(String(c.valoracionId)) : undefined;
+      const vs = valoracionesDeCategoria(c).map((id) => valoracionPorId.get(id)).filter(Boolean) as any[];
       const cct = String(vigente?.data?.convenio || '').trim();
       return {
         key: `${c.id ?? i}`,
@@ -436,7 +444,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         convenio: cct,
         convenioNombre: nombreDelConvenio(cct),
         grupo: grupoDe(vigente),
-        valoracion: v ? { name: String(v.name), color: String(v.color || '') } : undefined,
+        valoraciones: vs.map((v) => ({ name: String(v.name), color: String(v.color || '') })),
       };
     });
 
@@ -472,8 +480,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
 
     /* La valoración viene en la MISMA entrada de `categoriasSat` que la categoría, así que se
        resuelve por `data.id` (el legacy) y no por el `_id` del catálogo, que ahí no está. */
-    const valoracionPorLegacyId = new Map<number, string | null>(
-      ((selectedRole?.data?.categoriasSat as any[]) || role.data?.categoriasSat || []).map((c: any) => [Number(c?.id), c?.valoracionId ? String(c.valoracionId) : null]),
+    const valoracionPorLegacyId = new Map<number, string[]>(
+      ((selectedRole?.data?.categoriasSat as any[]) || role.data?.categoriasSat || []).map((c: any) => [Number(c?.id), valoracionesDeCategoria(c)]),
     );
     const asociadas: CategoriaAsociada[] = allCategories
       .filter((cat) => {
@@ -482,11 +490,11 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         const catName = cat.data?.nombre || cat.name;
         return associatedNames.includes(catName);
       })
-      .map((cat) => ({ categoryId: cat._id, valoracionId: valoracionPorLegacyId.get(Number(cat.data?.id)) ?? null }));
+      .map((cat) => conIds({ categoryId: cat._id }, valoracionPorLegacyId.get(Number(cat.data?.id)) ?? []));
 
     setSelectedCategorias(asociadas);
     // Lo que ya venía valorado lo decidió alguien (o la regla, antes): la sugerencia no lo pisa.
-    setManuales(new Set(asociadas.filter((a) => a.valoracionId).map((a) => a.categoryId)));
+    setManuales(new Set(asociadas.filter((a) => (a.valoracionIds || []).length > 0).map((a) => a.categoryId)));
     setCatSearch('');
     setCategoriasOpen(false);
     setShowModal(true);
@@ -535,7 +543,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     const categorias: CategoriaAsociada[] = ((selectedRole.data?.categoriasSat as any[]) || [])
       .map((c) => {
         const delCatalogo = catalogoPorId.get(String(c?.id));
-        return delCatalogo ? { categoryId: delCatalogo._id, valoracionId: valoracionesDetalle[String(c?.id)] ?? null } : null;
+        const ids = valoracionesDetalle[String(c?.id)] || [];
+        return delCatalogo ? { categoryId: delCatalogo._id, valoracionIds: ids, valoracionId: ids[0] ?? null } : null;
       })
       .filter(Boolean) as CategoriaAsociada[];
 
@@ -625,7 +634,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
         const c = cat as CategoriaSatItem;
         const codigo = String(c.data?.codigoArca || '').trim();
         const nombre = c.data?.nombre || c.name || 'Sin nombre';
-        const v = sel.valoracionId ? valoracionPorId.get(sel.valoracionId) : undefined;
+        const vs = (sel.valoracionIds || []).map((id) => valoracionPorId.get(id)).filter(Boolean) as any[];
         const bruto = Number(c.data?.sueldoBruto);
         return {
           id: c._id,
@@ -635,8 +644,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
           nombre,
           bruto: Number.isFinite(bruto) && bruto > 0 ? bruto : null,
           convenio: String(c.data?.convenio || '').trim(),
-          valoracionId: sel.valoracionId || '',
-          valoracion: v ? { name: String(v.name), color: String(v.color || '') } : undefined,
+          valoracionIds: sel.valoracionIds || [],
+          valoraciones: vs.map((v) => ({ name: String(v.name), color: String(v.color || '') })),
         };
       });
   }, [allCategories, selectedCategorias, valoracionPorId]);
@@ -751,7 +760,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                     {categoriasDe(role).map((c) => (
-                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} grupo={c.grupo} />
+                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoraciones={c.valoraciones} grupo={c.grupo} />
                     ))}
                   </>
                 )}
@@ -801,7 +810,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       return c && c.totalValoraciones > 0 && c.faltan.length > 0 ? <AvisoValoracionesFaltantes cubre={c.cubre.map((v) => v.name)} faltan={c.faltan.map((v) => v.name)} /> : null;
                     })()}
                             {categoriasDe(role).map((c) => (
-                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoracion={c.valoracion} grupo={c.grupo} />
+                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} convenioNombre={c.convenioNombre} valoraciones={c.valoraciones} grupo={c.grupo} />
                             ))}
                           </>
                         )}
@@ -904,10 +913,10 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                                 categoría cuesta lo que cuesta, y leerlo después del importe llega tarde. */}
                             <td className="px-4 py-2 text-xs">
                               {valoraciones.length > 0 ? (
-                                <SelectorValoracion
+                                <SelectorValoraciones
                                   valoraciones={valoraciones}
-                                  valor={valoracionesDetalle[String(cat.id)] ?? ''}
-                                  onChange={(id) => setValoracionesDetalle((prev) => ({ ...prev, [String(cat.id)]: id || null }))}
+                                  valores={valoracionesDetalle[String(cat.id)] || []}
+                                  onChange={(ids) => setValoracionesDetalle((prev) => ({ ...prev, [String(cat.id)]: ids }))}
                                   etiqueta={`Valoración de ${vigente?.data?.nombre || cat.nombre} en esta función`}
                                 />
                               ) : (
@@ -980,7 +989,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                     <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
                   </button>
                 )}
-                {filasElegidas.some((c) => difiereDelBruto(c.id, c.valoracionId)) && (
+                {filasElegidas.some((c) => difiereDelBruto(c.id, c.valoracionIds)) && (
                   <button type="button" onClick={aplicarTodasLasSugerencias} className="ml-auto text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline" title="Pone en cada categoría la valoración que le corresponde por su bruto, también en las elegidas a mano">
                     Valorar todas por bruto
                   </button>
@@ -1017,13 +1026,13 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                           <td className="px-3 py-2">
                             {valoraciones.length > 0 ? (
                               <>
-                                <SelectorValoracion valoraciones={valoraciones} valor={c.valoracionId} onChange={(id) => ponerValoracion(c.id, id)} etiqueta={`Valoración de ${c.nombre} en esta función`} />
+                                <SelectorValoraciones valoraciones={valoraciones} valores={c.valoracionIds} onChange={(ids) => ponerValoracion(c.id, ids)} etiqueta={`Valoración de ${c.nombre} en esta función`} />
                                 {/* La regla, a la vista: si lo elegido no coincide con el bruto, se ofrece alinearlo; si el bruto no alcanza para decidir, se dice por qué. */}
-                                {difiereDelBruto(c.id, c.valoracionId) ? (
+                                {difiereDelBruto(c.id, c.valoracionIds) ? (
                                   <button type="button" onClick={() => aplicarSugerencia(c.id)} className="mt-1 block text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                                     Por bruto: {sugerencias[c.id].valoracionId ? String(valoracionPorId.get(sugerencias[c.id].valoracionId as string)?.name || '?') : 'sin valorar'}
                                   </button>
-                                ) : !c.valoracionId && sugerencias[c.id]?.motivo ? (
+                                ) : c.valoracionIds.length === 0 && sugerencias[c.id]?.motivo ? (
                                   <span className="mt-1 block text-[10px] text-gray-500 dark:text-gray-400">Sin valorar: {sugerencias[c.id].motivo}</span>
                                 ) : null}
                               </>
@@ -1096,7 +1105,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
               // Con tope de alto, para que veinte categorías no se coman la ventana.
               <div className="flex flex-wrap gap-1.5 mb-3 shrink-0 max-h-24 overflow-y-auto">
                 {categoriasElegidas.map((c) => (
-                  <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} convenioNombre={nombreDelConvenio(c.convenio)} valoracion={c.valoracion} grupo={c.grupo} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
+                  <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} convenioNombre={nombreDelConvenio(c.convenio)} valoraciones={c.valoraciones} grupo={c.grupo} onQuitar={() => setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== c.id))} />
                 ))}
               </div>
             )}
@@ -1156,7 +1165,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                                     if (isChecked) {
                                       setSelectedCategorias(selectedCategorias.filter((x) => x.categoryId !== cat._id));
                                     } else {
-                                      setSelectedCategorias([...selectedCategorias, { categoryId: cat._id, valoracionId: null }]);
+                                      setSelectedCategorias([...selectedCategorias, { categoryId: cat._id, valoracionId: null, valoracionIds: [] }]);
                                     }
                                   }}
                                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -1175,7 +1184,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                                 elegido promete una decisión que no se guarda en ningún lado.
                               */}
                               {isChecked && valoraciones.length > 0 && (
-                                <SelectorValoracion valoraciones={valoraciones} valor={valoracionDe(cat._id)} onChange={(id) => ponerValoracion(cat._id, id)} etiqueta={`Valoración de ${cat.data?.nombre || cat.name} en esta función`} />
+                                <SelectorValoraciones valoraciones={valoraciones} valores={valoracionesDe(cat._id)} onChange={(ids) => ponerValoracion(cat._id, ids)} etiqueta={`Valoración de ${cat.data?.nombre || cat.name} en esta función`} />
                               )}
                             </div>
                           );
